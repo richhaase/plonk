@@ -90,6 +90,11 @@ func runInstall(args []string) error {
 }
 
 func installHomebrewPackages(mgr *managers.HomebrewManager, config *config.YAMLConfig) ([]string, error) {
+	// Skip if no packages to install
+	if len(config.Homebrew.Brews) == 0 && len(config.Homebrew.Casks) == 0 {
+		return []string{}, nil
+	}
+	
 	if !mgr.IsAvailable() {
 		return nil, fmt.Errorf("Homebrew is not available")
 	}
@@ -134,6 +139,11 @@ func installHomebrewPackages(mgr *managers.HomebrewManager, config *config.YAMLC
 }
 
 func installASDFTools(mgr *managers.AsdfManager, config *config.YAMLConfig) ([]string, error) {
+	// Skip if no tools to install
+	if len(config.ASDF) == 0 {
+		return []string{}, nil
+	}
+	
 	if !mgr.IsAvailable() {
 		return nil, fmt.Errorf("ASDF is not available")
 	}
@@ -159,6 +169,11 @@ func installASDFTools(mgr *managers.AsdfManager, config *config.YAMLConfig) ([]s
 }
 
 func installNPMPackages(mgr *managers.NpmManager, config *config.YAMLConfig) ([]string, error) {
+	// Skip if no packages to install
+	if len(config.NPM) == 0 {
+		return []string{}, nil
+	}
+	
 	if !mgr.IsAvailable() {
 		return nil, fmt.Errorf("NPM is not available")
 	}

@@ -29,6 +29,11 @@ This project was developed using **Test-Driven Development (TDD)** with Red-Gree
 - **Cobra Framework** - Professional CLI with help, autocompletion, and subcommands
 - **Status Command** - Shows availability and package counts for all managers
 - **Pkg Command** - Modular package listing with `plonk pkg list [manager]` structure
+- **Git Operations** - Clone and pull commands with configurable locations
+- **Package Management** - Install command with automatic config application
+- **Configuration Deployment** - Apply command for dotfiles and package configs
+- **Foundational Setup** - Setup command for installing core tools (Homebrew/ASDF/NPM)
+- **Convenience Commands** - Repository-based workflow and direct repo syntax
 
 ### Testing
 - **Comprehensive Test Coverage** - All components tested with TDD approach
@@ -47,10 +52,18 @@ plonk/
 │   ├── pkg.go                    # Package listing commands
 │   ├── clone.go                  # Clone command with git operations
 │   ├── pull.go                   # Pull command for updates
+│   ├── install.go                # Install command for packages from config
+│   ├── apply.go                  # Apply command for configuration deployment
+│   ├── setup.go                  # Setup command for foundational tools
+│   ├── repo.go                   # Repository convenience command
 │   ├── test_helpers.go          # Shared testing utilities
 │   ├── status_test.go           # Status command tests
 │   ├── clone_test.go            # Clone command tests
-│   └── pull_test.go             # Pull command tests
+│   ├── pull_test.go             # Pull command tests
+│   ├── install_test.go          # Install command tests
+│   ├── apply_test.go            # Apply command tests
+│   ├── setup_test.go            # Setup command tests
+│   └── repo_test.go             # Repository convenience command tests
 ├── pkg/managers/                 # Package manager implementations
 │   ├── common.go                 # CommandExecutor interface & CommandRunner
 │   ├── executor.go               # Real command execution for production
@@ -83,9 +96,21 @@ go build ./cmd/plonk
 ./plonk pkg list asdf            # List only ASDF tools
 ./plonk pkg list npm             # List only NPM packages
 
+# Foundational setup
+./plonk setup                    # Install Homebrew, ASDF, and Node.js/NPM
+
 # Git operations
 ./plonk clone <repo>             # Clone dotfiles repository
 ./plonk pull                     # Pull updates to existing repository
+
+# Package and configuration management
+./plonk install                  # Install packages from config
+./plonk apply                    # Apply all configuration files
+./plonk apply <package>          # Apply configuration for specific package
+
+# Convenience commands
+./plonk repo <repo>              # Complete setup: clone + install + apply
+./plonk <repo>                   # Same as above (convenience syntax)
 
 # Environment variable
 PLONK_DIR=~/my-dotfiles ./plonk clone <repo>  # Clone to custom location
@@ -223,18 +248,33 @@ npm:
     - Created mockable GitInterface for comprehensive testing
     - Built clean separation: clone always clones, pull always pulls
 
+19. **Implement plonk install command (install packages from config)** - ✅ Completed
+    - Created package installation from YAML config using existing package managers
+    - Added automatic configuration application for newly installed packages
+    - Implemented graceful handling when package managers are unavailable
+    - Built comprehensive test coverage with TDD methodology
+
+20. **Add plonk apply command (deploy config files)** - ✅ Completed
+    - Implemented dotfile deployment using source->target convention
+    - Added support for both global dotfiles and package-specific configurations
+    - Created package-specific application (plonk apply <package>)
+    - Built file and directory copying functionality with proper error handling
+
+21. **Create plonk setup command for foundational tool installation** - ✅ Completed
+    - Built setup command that installs Homebrew → ASDF → Node.js/NPM in sequence
+    - Added platform detection and prerequisite checking
+    - Implemented graceful handling when tools are already installed
+    - Created clear user guidance for foundational vs repository-based setup
+
+22. **Add plonk repo command (convenience: clone/pull + install + apply)** - ✅ Completed
+    - Renamed previous setup to repo command for repository-based setup
+    - Implemented complete workflow: git operations → package installation → config application
+    - Added root command support for `plonk <repo>` convenience syntax
+    - Built intelligent clone vs pull detection based on existing repository state
+
 ### 🔄 Current Pending Tasks
 
-19. **Add plonk <repo> command (convenience: pull + install + apply)** - 🟡 Pending
-    - Implement all-in-one convenience command
-
-20. **Implement plonk install command (install packages from config)** - 🟡 Pending
-    - Create package installation from YAML config
-
-21. **Add plonk apply command (deploy config files)** - 🟡 Pending
-    - Implement dotfile deployment using source->target convention
-
-22. **Enhance plonk status to show config drift detection** - 🟡 Pending
+23. **Enhance plonk status to show config drift detection** - 🟡 Pending
     - Compare current vs expected packages and configs
 
 ## Development Timeline
@@ -262,3 +302,7 @@ npm:
 - **Scoped Package Support** - Correctly handles NPM scoped packages (@vue/cli)
 - **Version Management** - ASDF integration for language tool versioning
 - **Global Package Focus** - Avoids local/project-specific package management complexity
+- **Git Operations** - Pure Go git operations with mockable interface for testing
+- **Configuration Management** - Automatic application of package-specific configurations
+- **Foundational Setup** - Automated installation of prerequisite tools
+- **Intelligent Workflows** - Smart detection of existing repositories and installed packages
