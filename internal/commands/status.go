@@ -17,15 +17,10 @@ var statusCmd = &cobra.Command{
 	RunE: runStatus,
 }
 
-func init() {
-	statusCmd.Flags().BoolP("all", "a", false, "Show all packages (don't truncate lists)")
-}
+// Removed --all flag - use 'plonk pkg list' for detailed package listings
 
 func runStatus(cmd *cobra.Command, args []string) error {
 	executor := managers.NewRealCommandExecutor()
-	
-	// Get the --all flag value
-	showAll, _ := cmd.Flags().GetBool("all")
 	
 	// Initialize package managers for shell environment management
 	packageManagers := []PackageManagerInfo{
@@ -64,26 +59,9 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		}
 		
 		if len(packages) == 0 {
-			fmt.Printf("📦 No packages installed\n\n")
-			continue
-		}
-		
-		fmt.Printf("📦 %d packages installed:\n", len(packages))
-		
-		// Show packages based on --all flag
-		const maxDisplay = 5
-		displayCount := len(packages)
-		
-		if !showAll && displayCount > maxDisplay {
-			displayCount = maxDisplay
-		}
-		
-		for i := 0; i < displayCount; i++ {
-			fmt.Printf("   - %s\n", packages[i])
-		}
-		
-		if !showAll && len(packages) > maxDisplay {
-			fmt.Printf("   ... and %d more (use --all to show all packages)\n", len(packages)-maxDisplay)
+			fmt.Printf("📦 No packages installed\n")
+		} else {
+			fmt.Printf("📦 %d packages installed\n", len(packages))
 		}
 		
 		fmt.Println()
