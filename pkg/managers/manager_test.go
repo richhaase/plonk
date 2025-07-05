@@ -733,3 +733,156 @@ func TestPipManager_ListInstalled_ReturnsErrorOnFailure(t *testing.T) {
 		t.Error("Expected nil packages when error occurs")
 	}
 }
+
+// Cargo Manager Tests
+func TestCargoManager_IsAvailable_Success(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	successCmd := exec.Command("echo", "cargo 1.70.0")
+	mockExec.SetCommand("cargo --version", successCmd)
+	
+	manager := NewCargoManager(mockExec)
+	available := manager.IsAvailable()
+	
+	if !available {
+		t.Error("Expected Cargo to be available when command succeeds")
+	}
+	
+	expectedCall := "cargo --version"
+	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
+		t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
+	}
+}
+
+func TestCargoManager_Install_CallsCorrectCommand(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	
+	manager := NewCargoManager(mockExec)
+	err := manager.Install("ripgrep")
+	
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	
+	expectedCall := "cargo install"
+	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
+		t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
+	}
+}
+
+func TestCargoManager_IsAvailable_Failure(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	failCmd := exec.Command("false")
+	mockExec.SetCommand("cargo --version", failCmd)
+	
+	manager := NewCargoManager(mockExec)
+	available := manager.IsAvailable()
+	
+	if available {
+		t.Error("Expected Cargo to be unavailable when command fails")
+	}
+}
+
+func TestCargoManager_Update_CallsCorrectCommand(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	
+	manager := NewCargoManager(mockExec)
+	err := manager.Update("ripgrep")
+	
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	
+	expectedCall := "cargo install"
+	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
+		t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
+	}
+}
+
+func TestCargoManager_ListInstalled_ParsesOutput(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	// cargo install --list returns package names with versions and binaries
+	listCmd := exec.Command("echo", "ripgrep v13.0.0:\n    rg\nbat v0.22.1:\n    bat\nexa v0.10.1:\n    exa")
+	mockExec.SetCommand("cargo install", listCmd)
+	
+	manager := NewCargoManager(mockExec)
+	packages, err := manager.ListInstalled()
+	
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	
+	expected := []string{"ripgrep", "bat", "exa"}
+	if len(packages) != len(expected) {
+		t.Errorf("Expected %d packages, got %d", len(expected), len(packages))
+	}
+	
+	for i, pkg := range expected {
+		if i >= len(packages) || packages[i] != pkg {
+			t.Errorf("Expected package '%s' at index %d, got '%s'", pkg, i, packages[i])
+		}
+	}
+}
+
+func TestCargoManager_IsInstalled_True(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	// cargo install --list shows the package
+	listCmd := exec.Command("echo", "ripgrep v13.0.0:\n    rg")
+	mockExec.SetCommand("cargo install", listCmd)
+	
+	manager := NewCargoManager(mockExec)
+	installed := manager.IsInstalled("ripgrep")
+	
+	if !installed {
+		t.Error("Expected package to be installed when found in list")
+	}
+}
+
+func TestCargoManager_IsInstalled_False(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	// cargo install --list doesn't show the package
+	listCmd := exec.Command("echo", "ripgrep v13.0.0:\n    rg")
+	mockExec.SetCommand("cargo install", listCmd)
+	
+	manager := NewCargoManager(mockExec)
+	installed := manager.IsInstalled("nonexistent")
+	
+	if installed {
+		t.Error("Expected package to not be installed when not found in list")
+	}
+}
+
+func TestCargoManager_UpdateAll_WithEmptyList(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	// Mock empty list of installed packages
+	listCmd := exec.Command("echo", "")
+	mockExec.SetCommand("cargo install", listCmd)
+	
+	manager := NewCargoManager(mockExec)
+	err := manager.UpdateAll()
+	
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	
+	// Should call cargo install --list once
+	if len(mockExec.Calls) != 1 {
+		t.Errorf("Expected exactly 1 call, got %d: %v", len(mockExec.Calls), mockExec.Calls)
+	}
+}
+
+func TestCargoManager_ListInstalled_ReturnsErrorOnFailure(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	failCmd := exec.Command("false")
+	mockExec.SetCommand("cargo install", failCmd)
+	
+	manager := NewCargoManager(mockExec)
+	packages, err := manager.ListInstalled()
+	
+	if err == nil {
+		t.Error("Expected error when list command fails")
+	}
+	
+	if packages != nil {
+		t.Error("Expected nil packages when error occurs")
+	}
+}
