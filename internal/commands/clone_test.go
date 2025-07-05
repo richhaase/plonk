@@ -145,3 +145,157 @@ func TestCloneCommand_CustomLocation(t *testing.T) {
 		t.Errorf("Expected clone to %s, got %s", customDir, clonedTo)
 	}
 }
+
+func TestCloneCommand_WithBranchFlag(t *testing.T) {
+	// Setup
+	tempHome := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	defer os.Setenv("HOME", originalHome)
+	os.Setenv("HOME", tempHome)
+	
+	// Mock git client
+	originalGitClient := gitClient
+	defer func() { gitClient = originalGitClient }()
+	
+	cloneCalled := false
+	var capturedBranch string
+	mockGit := &MockGitWithBranch{
+		CloneBranchFunc: func(repoURL, targetDir, branch string) error {
+			cloneCalled = true
+			capturedBranch = branch
+			// Simulate successful clone
+			if err := os.MkdirAll(targetDir, 0755); err != nil {
+				return err
+			}
+			configPath := filepath.Join(targetDir, "plonk.yaml")
+			return os.WriteFile(configPath, []byte("test config"), 0644)
+		},
+	}
+	gitClient = mockGit
+	
+	// Test with branch flag
+	err := runCloneWithBranch([]string{"git@github.com/user/dotfiles.git"}, "develop")
+	if err != nil {
+		t.Fatalf("Clone command with branch failed: %v", err)
+	}
+	
+	// Verify
+	if !cloneCalled {
+		t.Error("Expected clone to be called")
+	}
+	
+	if capturedBranch != "develop" {
+		t.Errorf("Expected branch 'develop', got '%s'", capturedBranch)
+	}
+}
+
+func TestCloneCommand_WithBranchInURL(t *testing.T) {
+	// Setup
+	tempHome := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	defer os.Setenv("HOME", originalHome)
+	os.Setenv("HOME", tempHome)
+	
+	// Mock git client
+	originalGitClient := gitClient
+	defer func() { gitClient = originalGitClient }()
+	
+	cloneCalled := false
+	var capturedRepoURL, capturedBranch string
+	mockGit := &MockGitWithBranch{
+		CloneBranchFunc: func(repoURL, targetDir, branch string) error {
+			cloneCalled = true
+			capturedRepoURL = repoURL
+			capturedBranch = branch
+			// Simulate successful clone
+			if err := os.MkdirAll(targetDir, 0755); err != nil {
+				return err
+			}
+			configPath := filepath.Join(targetDir, "plonk.yaml")
+			return os.WriteFile(configPath, []byte("test config"), 0644)
+		},
+	}
+	gitClient = mockGit
+	
+	// Test with branch in URL
+	err := runClone([]string{"git@github.com/user/dotfiles.git#feature-branch"})
+	if err != nil {
+		t.Fatalf("Clone command with branch in URL failed: %v", err)
+	}
+	
+	// Verify
+	if !cloneCalled {
+		t.Error("Expected clone to be called")
+	}
+	
+	if capturedRepoURL != "git@github.com/user/dotfiles.git" {
+		t.Errorf("Expected clean repo URL 'git@github.com/user/dotfiles.git', got '%s'", capturedRepoURL)
+	}
+	
+	if capturedBranch != "feature-branch" {
+		t.Errorf("Expected branch 'feature-branch', got '%s'", capturedBranch)
+	}
+}
+
+func TestCloneCommand_BranchFlagOverridesURL(t *testing.T) {
+	// Setup
+	tempHome := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	defer os.Setenv("HOME", originalHome)
+	os.Setenv("HOME", tempHome)
+	
+	// Mock git client
+	originalGitClient := gitClient
+	defer func() { gitClient = originalGitClient }()
+	
+	var capturedBranch string
+	mockGit := &MockGitWithBranch{
+		CloneBranchFunc: func(repoURL, targetDir, branch string) error {
+			capturedBranch = branch
+			// Simulate successful clone
+			if err := os.MkdirAll(targetDir, 0755); err != nil {
+				return err
+			}
+			configPath := filepath.Join(targetDir, "plonk.yaml")
+			return os.WriteFile(configPath, []byte("test config"), 0644)
+		},
+	}
+	gitClient = mockGit
+	
+	// Test with both branch in URL and flag (flag should win)
+	err := runCloneWithBranch([]string{"git@github.com/user/dotfiles.git#url-branch"}, "flag-branch")
+	if err != nil {
+		t.Fatalf("Clone command failed: %v", err)
+	}
+	
+	// Verify flag takes precedence
+	if capturedBranch != "flag-branch" {
+		t.Errorf("Expected flag branch 'flag-branch', got '%s'", capturedBranch)
+	}
+}
+
+func TestParseRepoURL(t *testing.T) {
+	tests := []struct {
+		input      string
+		expectURL  string
+		expectBranch string
+	}{
+		{"git@github.com/user/repo.git", "git@github.com/user/repo.git", ""},
+		{"git@github.com/user/repo.git#main", "git@github.com/user/repo.git", "main"},
+		{"https://github.com/user/repo.git#develop", "https://github.com/user/repo.git", "develop"},
+		{"git@github.com/user/repo.git#feature/new-ui", "git@github.com/user/repo.git", "feature/new-ui"},
+		{"simple-repo", "simple-repo", ""},
+	}
+	
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			url, branch := parseRepoURL(test.input)
+			if url != test.expectURL {
+				t.Errorf("Expected URL '%s', got '%s'", test.expectURL, url)
+			}
+			if branch != test.expectBranch {
+				t.Errorf("Expected branch '%s', got '%s'", test.expectBranch, branch)
+			}
+		})
+	}
+}

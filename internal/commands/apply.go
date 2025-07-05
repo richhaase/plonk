@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"plonk/pkg/config"
@@ -229,9 +228,19 @@ func copyDir(src, dst string) error {
 }
 
 func expandHomeDir(path string) string {
-	if strings.HasPrefix(path, "~/") {
-		homeDir, _ := os.UserHomeDir()
-		return filepath.Join(homeDir, path[2:])
+	if len(path) == 0 || path[0] != '~' {
+		return path
 	}
+	
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return path // fallback to original path
+	}
+	
+	if len(path) == 1 || path[1] == '/' {
+		return filepath.Join(homeDir, path[1:])
+	}
+	
+	// Handle ~user syntax (though we don't use it in plonk)
 	return path
 }

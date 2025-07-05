@@ -4,14 +4,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/spf13/cobra"
 )
 
 // GitInterface defines git operations for dependency injection
 type GitInterface interface {
 	Clone(repoURL, targetDir string) error
+	CloneBranch(repoURL, targetDir, branch string) error
 	Pull(repoDir string) error
 	IsRepo(dir string) bool
 }
@@ -20,16 +23,29 @@ type GitInterface interface {
 type RealGit struct{}
 
 func (g *RealGit) Clone(repoURL, targetDir string) error {
+	return g.CloneBranch(repoURL, targetDir, "")
+}
+
+func (g *RealGit) CloneBranch(repoURL, targetDir, branch string) error {
 	// Create parent directory if needed
 	parentDir := filepath.Dir(targetDir)
 	if err := os.MkdirAll(parentDir, 0755); err != nil {
 		return fmt.Errorf("failed to create parent directory: %w", err)
 	}
 	
-	// Clone the repository
-	_, err := git.PlainClone(targetDir, false, &git.CloneOptions{
+	// Setup clone options
+	cloneOptions := &git.CloneOptions{
 		URL: repoURL,
-	})
+	}
+	
+	// Add branch reference if specified
+	if branch != "" {
+		cloneOptions.ReferenceName = plumbing.ReferenceName("refs/heads/" + branch)
+		cloneOptions.SingleBranch = true
+	}
+	
+	// Clone the repository
+	_, err := git.PlainClone(targetDir, false, cloneOptions)
 	if err != nil {
 		return fmt.Errorf("failed to clone repository: %w", err)
 	}
@@ -91,6 +107,11 @@ var cloneCmd = &cobra.Command{
 The clone location defaults to ~/.config/plonk/ but can be customized by setting 
 the PLONK_DIR environment variable.
 
+Branch Support:
+  plonk clone repo.git --branch develop           # Clone specific branch
+  plonk clone repo.git#feature-branch             # Branch in URL
+  plonk clone repo.git#branch --branch main       # Flag overrides URL
+
 Examples:
   plonk clone git@github.com/user/dotfiles.git    # Clone to ~/.config/plonk/
   PLONK_DIR=~/my-dotfiles plonk clone <repo>       # Clone to custom location`,
@@ -98,15 +119,32 @@ Examples:
 	Args: cobra.ExactArgs(1),
 }
 
+var branchFlag string
+
 func init() {
+	cloneCmd.Flags().StringVar(&branchFlag, "branch", "", "Branch to clone")
 	rootCmd.AddCommand(cloneCmd)
 }
 
 func cloneCmdRun(cmd *cobra.Command, args []string) error {
-	return runClone(args)
+	return runCloneWithBranch(args, branchFlag)
+}
+
+// parseRepoURL extracts the repository URL and branch from a URL that may contain #branch
+func parseRepoURL(input string) (url, branch string) {
+	parts := strings.SplitN(input, "#", 2)
+	url = parts[0]
+	if len(parts) > 1 {
+		branch = parts[1]
+	}
+	return url, branch
 }
 
 func runClone(args []string) error {
+	return runCloneWithBranch(args, "")
+}
+
+func runCloneWithBranch(args []string, flagBranch string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("repository URL is required")
 	}
@@ -118,12 +156,31 @@ func runClone(args []string) error {
 		return fmt.Errorf("target directory %s already exists, use 'plonk pull' to update", plonkDir)
 	}
 	
-	repoURL := args[0]
-	err := gitClient.Clone(repoURL, plonkDir)
+	// Parse URL for branch information
+	repoURL, urlBranch := parseRepoURL(args[0])
+	
+	// Flag takes precedence over URL branch
+	branch := flagBranch
+	if branch == "" {
+		branch = urlBranch
+	}
+	
+	// Use appropriate clone method
+	var err error
+	if branch != "" {
+		err = gitClient.CloneBranch(repoURL, plonkDir, branch)
+	} else {
+		err = gitClient.Clone(repoURL, plonkDir)
+	}
+	
 	if err != nil {
 		return err
 	}
 	
-	fmt.Printf("Successfully cloned %s to %s\n", repoURL, plonkDir)
+	if branch != "" {
+		fmt.Printf("Successfully cloned %s (branch: %s) to %s\n", repoURL, branch, plonkDir)
+	} else {
+		fmt.Printf("Successfully cloned %s to %s\n", repoURL, plonkDir)
+	}
 	return nil
 }

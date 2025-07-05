@@ -106,9 +106,11 @@ func (a *AsdfManager) GetInstalledVersions(toolName string) ([]string, error) {
 			continue
 		}
 		
-		// Remove the * marker for current version
+		// Remove the * marker for current version (can be "* " or just "*")
 		if strings.HasPrefix(line, "* ") {
 			line = strings.TrimPrefix(line, "* ")
+		} else if strings.HasPrefix(line, "*") {
+			line = strings.TrimPrefix(line, "*")
 		}
 		
 		version := strings.TrimSpace(line)
