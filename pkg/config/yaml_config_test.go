@@ -192,3 +192,205 @@ func TestGetDotfileTargets(t *testing.T) {
 		}
 	}
 }
+
+func TestZSHConfig_BasicParsing(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "plonk.yaml")
+
+	configContent := `settings:
+  default_manager: homebrew
+
+zsh:
+  env_vars:
+    EDITOR: nvim
+    LANG: en_US.UTF-8
+    FZF_DEFAULT_COMMAND: 'fd --type f --hidden --follow --exclude .git'
+  
+  shell_options:
+    - AUTO_MENU
+    - COMPLETE_IN_WORD
+    
+  auto_init_tools: true
+  
+  manual_inits:
+    - 'eval "$(some-custom-tool init zsh)"'
+    
+  plugins:
+    - zsh-users/zsh-syntax-highlighting
+    - zsh-users/zsh-autosuggestions
+    
+  aliases:
+    '..': 'cd ..'
+    ll: "eza -la --icons --group-directories-first"
+    vim: nvim
+    
+  functions:
+    y: |
+      local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+      yazi "$@" --cwd-file="$tmp"
+      if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+        builtin cd -- "$cwd"
+      fi
+      rm -f -- "$tmp"
+      
+  source_after:
+    - "$HOME/.zshrc.local"
+`
+
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write config file: %v", err)
+	}
+
+	config, err := LoadYAMLConfig(tempDir)
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
+	// Test env vars
+	if config.ZSH.EnvVars["EDITOR"] != "nvim" {
+		t.Errorf("Expected EDITOR=nvim, got %s", config.ZSH.EnvVars["EDITOR"])
+	}
+
+	if config.ZSH.EnvVars["LANG"] != "en_US.UTF-8" {
+		t.Errorf("Expected LANG=en_US.UTF-8, got %s", config.ZSH.EnvVars["LANG"])
+	}
+
+	// Test shell options
+	expectedOptions := []string{"AUTO_MENU", "COMPLETE_IN_WORD"}
+	if len(config.ZSH.ShellOptions) != len(expectedOptions) {
+		t.Fatalf("Expected %d shell options, got %d", len(expectedOptions), len(config.ZSH.ShellOptions))
+	}
+
+	for i, option := range expectedOptions {
+		if config.ZSH.ShellOptions[i] != option {
+			t.Errorf("Expected shell option %s, got %s", option, config.ZSH.ShellOptions[i])
+		}
+	}
+
+	// Test auto init tools
+	if !config.ZSH.AutoInitTools {
+		t.Error("Expected auto_init_tools to be true")
+	}
+
+	// Test manual inits
+	if len(config.ZSH.ManualInits) != 1 {
+		t.Fatalf("Expected 1 manual init, got %d", len(config.ZSH.ManualInits))
+	}
+
+	if config.ZSH.ManualInits[0] != `eval "$(some-custom-tool init zsh)"` {
+		t.Errorf("Unexpected manual init: %s", config.ZSH.ManualInits[0])
+	}
+
+	// Test plugins
+	expectedPlugins := []string{"zsh-users/zsh-syntax-highlighting", "zsh-users/zsh-autosuggestions"}
+	if len(config.ZSH.Plugins) != len(expectedPlugins) {
+		t.Fatalf("Expected %d plugins, got %d", len(expectedPlugins), len(config.ZSH.Plugins))
+	}
+
+	for i, plugin := range expectedPlugins {
+		if config.ZSH.Plugins[i] != plugin {
+			t.Errorf("Expected plugin %s, got %s", plugin, config.ZSH.Plugins[i])
+		}
+	}
+
+	// Test aliases
+	if config.ZSH.Aliases[".."] != "cd .." {
+		t.Errorf("Expected alias .. = 'cd ..', got %s", config.ZSH.Aliases[".."])
+	}
+
+	if config.ZSH.Aliases["vim"] != "nvim" {
+		t.Errorf("Expected alias vim = nvim, got %s", config.ZSH.Aliases["vim"])
+	}
+
+	// Test functions
+	if _, exists := config.ZSH.Functions["y"]; !exists {
+		t.Error("Expected function 'y' to exist")
+	}
+
+	// Test source after
+	if len(config.ZSH.SourceAfter) != 1 {
+		t.Fatalf("Expected 1 source_after entry, got %d", len(config.ZSH.SourceAfter))
+	}
+
+	if config.ZSH.SourceAfter[0] != "$HOME/.zshrc.local" {
+		t.Errorf("Expected source_after '$HOME/.zshrc.local', got %s", config.ZSH.SourceAfter[0])
+	}
+}
+
+func TestZSHConfig_EmptyConfiguration(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "plonk.yaml")
+
+	configContent := `settings:
+  default_manager: homebrew
+
+# No ZSH configuration section
+`
+
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write config file: %v", err)
+	}
+
+	config, err := LoadYAMLConfig(tempDir)
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
+	// Test that ZSH config is empty but not nil
+	if config.ZSH.EnvVars == nil {
+		config.ZSH.EnvVars = make(map[string]string)
+	}
+
+	if len(config.ZSH.EnvVars) != 0 {
+		t.Errorf("Expected empty env vars, got %d entries", len(config.ZSH.EnvVars))
+	}
+
+	if len(config.ZSH.Plugins) != 0 {
+		t.Errorf("Expected empty plugins, got %d entries", len(config.ZSH.Plugins))
+	}
+}
+
+func TestZSHConfig_MinimalConfiguration(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "plonk.yaml")
+
+	configContent := `settings:
+  default_manager: homebrew
+
+zsh:
+  plugins:
+    - zsh-users/zsh-syntax-highlighting
+  aliases:
+    vim: nvim
+`
+
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write config file: %v", err)
+	}
+
+	config, err := LoadYAMLConfig(tempDir)
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
+	// Test minimal config
+	if len(config.ZSH.Plugins) != 1 {
+		t.Fatalf("Expected 1 plugin, got %d", len(config.ZSH.Plugins))
+	}
+
+	if config.ZSH.Plugins[0] != "zsh-users/zsh-syntax-highlighting" {
+		t.Errorf("Expected plugin 'zsh-users/zsh-syntax-highlighting', got %s", config.ZSH.Plugins[0])
+	}
+
+	if config.ZSH.Aliases["vim"] != "nvim" {
+		t.Errorf("Expected alias vim = nvim, got %s", config.ZSH.Aliases["vim"])
+	}
+
+	// Test defaults
+	if config.ZSH.AutoInitTools {
+		t.Error("Expected auto_init_tools to be false by default")
+	}
+}

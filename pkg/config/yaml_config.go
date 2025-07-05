@@ -15,6 +15,7 @@ type YAMLConfig struct {
 	Homebrew  HomebrewConfig  `yaml:"homebrew,omitempty"`
 	ASDF      []ASDFTool      `yaml:"asdf,omitempty"`
 	NPM       []NPMPackage    `yaml:"npm,omitempty"`
+	ZSH       ZSHConfig       `yaml:"zsh,omitempty"`
 }
 
 // YAMLSettings contains global configuration settings
@@ -46,6 +47,19 @@ type NPMPackage struct {
 	Name    string `yaml:"name,omitempty"`
 	Package string `yaml:"package,omitempty"` // If different from name
 	Config  string `yaml:"config,omitempty"`
+}
+
+// ZSHConfig represents ZSH shell configuration
+type ZSHConfig struct {
+	EnvVars         map[string]string `yaml:"env_vars,omitempty"`
+	ShellOptions    []string          `yaml:"shell_options,omitempty"`
+	AutoInitTools   bool              `yaml:"auto_init_tools,omitempty"`
+	ManualInits     []string          `yaml:"manual_inits,omitempty"`
+	Plugins         []string          `yaml:"plugins,omitempty"`
+	Aliases         map[string]string `yaml:"aliases,omitempty"`
+	Functions       map[string]string `yaml:"functions,omitempty"`
+	SourceBefore    []string          `yaml:"source_before,omitempty"`
+	SourceAfter     []string          `yaml:"source_after,omitempty"`
 }
 
 // UnmarshalYAML implements custom unmarshaling for HomebrewPackage
@@ -89,6 +103,11 @@ func LoadYAMLConfig(configDir string) (*YAMLConfig, error) {
 	config := &YAMLConfig{
 		Settings: YAMLSettings{
 			DefaultManager: "homebrew", // Default value
+		},
+		ZSH: ZSHConfig{
+			EnvVars:   make(map[string]string),
+			Aliases:   make(map[string]string),
+			Functions: make(map[string]string),
 		},
 	}
 
@@ -148,7 +167,61 @@ func loadYAMLConfigFile(path string, config *YAMLConfig) error {
 	// Merge NPM packages
 	config.NPM = append(config.NPM, tempConfig.NPM...)
 
+	// Merge ZSH configuration
+	mergeZSHConfig(&config.ZSH, &tempConfig.ZSH)
+
 	return nil
+}
+
+// mergeZSHConfig merges ZSH configuration from source into target
+func mergeZSHConfig(target, source *ZSHConfig) {
+	// Merge environment variables
+	if source.EnvVars != nil {
+		if target.EnvVars == nil {
+			target.EnvVars = make(map[string]string)
+		}
+		for key, value := range source.EnvVars {
+			target.EnvVars[key] = value
+		}
+	}
+
+	// Merge shell options
+	target.ShellOptions = append(target.ShellOptions, source.ShellOptions...)
+
+	// Merge boolean settings (source takes precedence)
+	if source.AutoInitTools {
+		target.AutoInitTools = source.AutoInitTools
+	}
+
+	// Merge manual inits
+	target.ManualInits = append(target.ManualInits, source.ManualInits...)
+
+	// Merge plugins
+	target.Plugins = append(target.Plugins, source.Plugins...)
+
+	// Merge aliases
+	if source.Aliases != nil {
+		if target.Aliases == nil {
+			target.Aliases = make(map[string]string)
+		}
+		for key, value := range source.Aliases {
+			target.Aliases[key] = value
+		}
+	}
+
+	// Merge functions
+	if source.Functions != nil {
+		if target.Functions == nil {
+			target.Functions = make(map[string]string)
+		}
+		for key, value := range source.Functions {
+			target.Functions[key] = value
+		}
+	}
+
+	// Merge source before/after
+	target.SourceBefore = append(target.SourceBefore, source.SourceBefore...)
+	target.SourceAfter = append(target.SourceAfter, source.SourceAfter...)
 }
 
 // validate ensures the configuration is valid
