@@ -67,3 +67,8 @@ func (h *HomebrewManager) IsInstalled(packageName string) bool {
 	err := h.runner.RunCommand("list", packageName)
 	return err == nil
 }
+
+// InstallCask installs a cask via Homebrew
+func (h *HomebrewManager) InstallCask(caskName string) error {
+	return h.runner.RunCommand("install", "--cask", caskName)
+}

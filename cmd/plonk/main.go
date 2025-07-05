@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rdh/plonk/internal/commands"
+	"plonk/internal/commands"
 )
 
 func main() {

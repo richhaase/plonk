@@ -119,3 +119,23 @@ func (a *AsdfManager) GetInstalledVersions(toolName string) ([]string, error) {
 	
 	return result, nil
 }
+
+// IsVersionInstalled checks if a specific version of a tool is installed
+func (a *AsdfManager) IsVersionInstalled(toolName, version string) bool {
+	versions, err := a.GetInstalledVersions(toolName)
+	if err != nil {
+		return false
+	}
+	
+	for _, installedVersion := range versions {
+		if installedVersion == version {
+			return true
+		}
+	}
+	return false
+}
+
+// InstallVersion installs a specific version of a tool
+func (a *AsdfManager) InstallVersion(toolName, version string) error {
+	return a.runner.RunCommand("install", toolName, version)
+}

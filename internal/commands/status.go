@@ -3,7 +3,7 @@ package commands
 import (
 	"fmt"
 
-	"github.com/rdh/plonk/pkg/managers"
+	"plonk/pkg/managers"
 	"github.com/spf13/cobra"
 )
 
