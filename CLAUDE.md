@@ -75,7 +75,9 @@ plonk/
 │   ├── config.go                 # Legacy TOML config support
 │   ├── config_test.go           # TOML config tests
 │   ├── yaml_config.go           # Primary YAML config implementation
-│   └── yaml_config_test.go      # YAML config tests
+│   ├── yaml_config_test.go      # YAML config tests
+│   ├── zsh_generator.go         # ZSH configuration file generation
+│   └── zsh_generator_test.go    # ZSH generator tests
 ├── go.mod                       # Go module definition
 └── CLAUDE.md                    # This documentation
 ```
@@ -272,10 +274,29 @@ npm:
     - Added root command support for `plonk <repo>` convenience syntax
     - Built intelligent clone vs pull detection based on existing repository state
 
+23. **Add config drift detection (Red-Green-Refactor)** - ✅ Completed
+    - Implemented config drift detection tests (Red phase)
+    - Built drift detection in status command (Green phase)
+    - Refactored status command for better drift reporting (Refactor phase)
+    - Added SHA256 file comparison for detecting configuration changes
+
+24. **Add branch support for clone command (Red-Green-Refactor)** - ✅ Completed
+    - Added branch support tests for clone command (Red phase)
+    - Implemented branch support in git operations (Green phase)
+    - Refactored clone command with flag and URL syntax (Refactor phase)
+    - Supports both `--branch` flag and `repo#branch` URL syntax
+
+25. **Design and implement ZSH configuration management** - ✅ Completed
+    - Designed ZSH configuration structure with plugins, env vars, aliases, and functions
+    - Implemented ZSH plugin manager with auto-clone and update functionality
+    - Replaced auto-detection with explicit initialization and completion commands in config
+    - Generated complete .zshrc and .zshenv files from plonk configuration using TDD
+
 ### 🔄 Current Pending Tasks
 
-23. **Enhance plonk status to show config drift detection** - 🟡 Pending
-    - Compare current vs expected packages and configs
+26. **Integrate ZSH management into apply command** - 🟡 Pending
+    - Add ZSH configuration file generation to apply command
+    - Support both global ZSH config generation and integration with existing apply workflow
 
 ## Development Timeline
 
@@ -306,3 +327,5 @@ npm:
 - **Configuration Management** - Automatic application of package-specific configurations
 - **Foundational Setup** - Automated installation of prerequisite tools
 - **Intelligent Workflows** - Smart detection of existing repositories and installed packages
+- **ZSH Configuration Generation** - Complete .zshrc and .zshenv file generation from YAML config
+- **Shell Best Practices** - Proper separation of environment variables (.zshenv) and interactive config (.zshrc)

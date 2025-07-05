@@ -53,8 +53,8 @@ type NPMPackage struct {
 type ZSHConfig struct {
 	EnvVars         map[string]string `yaml:"env_vars,omitempty"`
 	ShellOptions    []string          `yaml:"shell_options,omitempty"`
-	AutoInitTools   bool              `yaml:"auto_init_tools,omitempty"`
-	ManualInits     []string          `yaml:"manual_inits,omitempty"`
+	Inits           []string          `yaml:"inits,omitempty"`
+	Completions     []string          `yaml:"completions,omitempty"`
 	Plugins         []string          `yaml:"plugins,omitempty"`
 	Aliases         map[string]string `yaml:"aliases,omitempty"`
 	Functions       map[string]string `yaml:"functions,omitempty"`
@@ -188,13 +188,9 @@ func mergeZSHConfig(target, source *ZSHConfig) {
 	// Merge shell options
 	target.ShellOptions = append(target.ShellOptions, source.ShellOptions...)
 
-	// Merge boolean settings (source takes precedence)
-	if source.AutoInitTools {
-		target.AutoInitTools = source.AutoInitTools
-	}
-
-	// Merge manual inits
-	target.ManualInits = append(target.ManualInits, source.ManualInits...)
+	// Merge inits and completions
+	target.Inits = append(target.Inits, source.Inits...)
+	target.Completions = append(target.Completions, source.Completions...)
 
 	// Merge plugins
 	target.Plugins = append(target.Plugins, source.Plugins...)

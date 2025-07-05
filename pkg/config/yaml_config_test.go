@@ -210,10 +210,12 @@ zsh:
     - AUTO_MENU
     - COMPLETE_IN_WORD
     
-  auto_init_tools: true
-  
-  manual_inits:
+  inits:
+    - 'eval "$(starship init zsh)"'
     - 'eval "$(some-custom-tool init zsh)"'
+  
+  completions:
+    - 'source <(kubectl completion zsh)'
     
   plugins:
     - zsh-users/zsh-syntax-highlighting
@@ -268,18 +270,29 @@ zsh:
 		}
 	}
 
-	// Test auto init tools
-	if !config.ZSH.AutoInitTools {
-		t.Error("Expected auto_init_tools to be true")
+	// Test inits
+	expectedInits := []string{
+		`eval "$(starship init zsh)"`,
+		`eval "$(some-custom-tool init zsh)"`,
+	}
+	if len(config.ZSH.Inits) != len(expectedInits) {
+		t.Fatalf("Expected %d inits, got %d", len(expectedInits), len(config.ZSH.Inits))
 	}
 
-	// Test manual inits
-	if len(config.ZSH.ManualInits) != 1 {
-		t.Fatalf("Expected 1 manual init, got %d", len(config.ZSH.ManualInits))
+	for i, expectedInit := range expectedInits {
+		if config.ZSH.Inits[i] != expectedInit {
+			t.Errorf("Expected init %d to be '%s', got '%s'", i, expectedInit, config.ZSH.Inits[i])
+		}
 	}
 
-	if config.ZSH.ManualInits[0] != `eval "$(some-custom-tool init zsh)"` {
-		t.Errorf("Unexpected manual init: %s", config.ZSH.ManualInits[0])
+	// Test completions
+	expectedCompletions := []string{`source <(kubectl completion zsh)`}
+	if len(config.ZSH.Completions) != len(expectedCompletions) {
+		t.Fatalf("Expected %d completions, got %d", len(expectedCompletions), len(config.ZSH.Completions))
+	}
+
+	if config.ZSH.Completions[0] != expectedCompletions[0] {
+		t.Errorf("Expected completion to be '%s', got '%s'", expectedCompletions[0], config.ZSH.Completions[0])
 	}
 
 	// Test plugins
@@ -389,8 +402,12 @@ zsh:
 		t.Errorf("Expected alias vim = nvim, got %s", config.ZSH.Aliases["vim"])
 	}
 
-	// Test defaults
-	if config.ZSH.AutoInitTools {
-		t.Error("Expected auto_init_tools to be false by default")
+	// Test defaults (empty init and completions lists)
+	if len(config.ZSH.Inits) != 0 {
+		t.Errorf("Expected no inits by default, got %d", len(config.ZSH.Inits))
+	}
+	
+	if len(config.ZSH.Completions) != 0 {
+		t.Errorf("Expected no completions by default, got %d", len(config.ZSH.Completions))
 	}
 }
