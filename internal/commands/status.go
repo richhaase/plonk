@@ -10,19 +10,24 @@ import (
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show status of all package managers",
-	Long: `Display the availability and installed packages for all supported package managers:
-- Homebrew (macOS packages)
+	Long: `Display the availability and installed packages for shell environment management:
+- Homebrew (primary package installation)
 - ASDF (programming language tools and versions)
-- NPM (Node.js global packages)
-- Pip (Python packages)
-- Cargo (Rust packages)`,
+- NPM (packages not available via Homebrew, like claude-code)`,
 	RunE: runStatus,
+}
+
+func init() {
+	statusCmd.Flags().BoolP("all", "a", false, "Show all packages (don't truncate lists)")
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {
 	executor := managers.NewRealCommandExecutor()
 	
-	// Initialize all package managers
+	// Get the --all flag value
+	showAll, _ := cmd.Flags().GetBool("all")
+	
+	// Initialize package managers for shell environment management
 	packageManagers := []PackageManagerInfo{
 		{
 			name:    "Homebrew",
@@ -35,14 +40,6 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		{
 			name:    "NPM",
 			manager: managers.NewNpmManager(executor),
-		},
-		{
-			name:    "Pip",
-			manager: managers.NewPipManager(executor),
-		},
-		{
-			name:    "Cargo",
-			manager: managers.NewCargoManager(executor),
 		},
 	}
 	
@@ -73,10 +70,11 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		
 		fmt.Printf("📦 %d packages installed:\n", len(packages))
 		
-		// Show first few packages, with option to show all
+		// Show packages based on --all flag
 		const maxDisplay = 5
 		displayCount := len(packages)
-		if displayCount > maxDisplay {
+		
+		if !showAll && displayCount > maxDisplay {
 			displayCount = maxDisplay
 		}
 		
@@ -84,8 +82,8 @@ func runStatus(cmd *cobra.Command, args []string) error {
 			fmt.Printf("   - %s\n", packages[i])
 		}
 		
-		if len(packages) > maxDisplay {
-			fmt.Printf("   ... and %d more\n", len(packages)-maxDisplay)
+		if !showAll && len(packages) > maxDisplay {
+			fmt.Printf("   ... and %d more (use --all to show all packages)\n", len(packages)-maxDisplay)
 		}
 		
 		fmt.Println()
