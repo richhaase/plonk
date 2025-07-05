@@ -5,11 +5,6 @@ import (
 	"testing"
 )
 
-// CommandExecutor interface for dependency injection
-type CommandExecutor interface {
-	Execute(name string, args ...string) *exec.Cmd
-}
-
 // MockCommandExecutor for testing
 type MockCommandExecutor struct {
 	Commands map[string]*exec.Cmd

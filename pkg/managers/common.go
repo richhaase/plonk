@@ -1,6 +1,14 @@
 package managers
 
-import "bytes"
+import (
+	"bytes"
+	"os/exec"
+)
+
+// CommandExecutor interface for dependency injection
+type CommandExecutor interface {
+	Execute(name string, args ...string) *exec.Cmd
+}
 
 // CommandRunner provides common command execution functionality
 type CommandRunner struct {
