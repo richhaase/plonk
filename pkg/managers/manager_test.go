@@ -152,3 +152,71 @@ func TestHomebrewManager_ListInstalled_ReturnsErrorOnFailure(t *testing.T) {
 		t.Error("Expected nil packages when error occurs")
 	}
 }
+
+func TestHomebrewManager_Update_SinglePackage(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	
+	manager := NewHomebrewManager(mockExec)
+	err := manager.Update("git")
+	
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	
+	// Verify the right command was called
+	expectedCall := "brew upgrade"
+	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
+		t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
+	}
+}
+
+func TestHomebrewManager_Update_AllPackages(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	
+	manager := NewHomebrewManager(mockExec)
+	err := manager.UpdateAll()
+	
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	
+	// Verify the right command was called
+	expectedCall := "brew upgrade"
+	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
+		t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
+	}
+}
+
+func TestHomebrewManager_IsInstalled_True(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	// brew list <package> succeeds when package is installed
+	successCmd := exec.Command("echo", "git installed")
+	mockExec.SetCommand("brew list", successCmd)
+	
+	manager := NewHomebrewManager(mockExec)
+	installed := manager.IsInstalled("git")
+	
+	if !installed {
+		t.Error("Expected package to be installed when command succeeds")
+	}
+	
+	// Verify the right command was called
+	expectedCall := "brew list"
+	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
+		t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
+	}
+}
+
+func TestHomebrewManager_IsInstalled_False(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	// brew list <package> fails when package is not installed
+	failCmd := exec.Command("false")
+	mockExec.SetCommand("brew list", failCmd)
+	
+	manager := NewHomebrewManager(mockExec)
+	installed := manager.IsInstalled("nonexistent")
+	
+	if installed {
+		t.Error("Expected package to not be installed when command fails")
+	}
+}
