@@ -57,6 +57,11 @@ func applyAllConfigurations(plonkDir string, config *config.YAMLConfig) error {
 		return fmt.Errorf("failed to apply dotfiles: %w", err)
 	}
 	
+	// Apply ZSH configuration
+	if err := applyZSHConfiguration(config); err != nil {
+		return fmt.Errorf("failed to apply ZSH configuration: %w", err)
+	}
+	
 	// Apply package configurations
 	if err := applyPackageConfigurations(plonkDir, config); err != nil {
 		return fmt.Errorf("failed to apply package configurations: %w", err)
@@ -243,4 +248,36 @@ func expandHomeDir(path string) string {
 	
 	// Handle ~user syntax (though we don't use it in plonk)
 	return path
+}
+
+func applyZSHConfiguration(cfg *config.YAMLConfig) error {
+	// Skip if no ZSH configuration is defined
+	if len(cfg.ZSH.EnvVars) == 0 && len(cfg.ZSH.Aliases) == 0 && 
+	   len(cfg.ZSH.Inits) == 0 && len(cfg.ZSH.Completions) == 0 &&
+	   len(cfg.ZSH.Functions) == 0 && len(cfg.ZSH.ShellOptions) == 0 {
+		return nil
+	}
+	
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home directory: %w", err)
+	}
+	
+	// Generate and write .zshrc
+	zshrcContent := config.GenerateZshrc(&cfg.ZSH)
+	zshrcPath := filepath.Join(homeDir, ".zshrc")
+	if err := os.WriteFile(zshrcPath, []byte(zshrcContent), 0644); err != nil {
+		return fmt.Errorf("failed to write .zshrc: %w", err)
+	}
+	
+	// Generate and write .zshenv (only if there are environment variables)
+	if len(cfg.ZSH.EnvVars) > 0 {
+		zshenvContent := config.GenerateZshenv(&cfg.ZSH)
+		zshenvPath := filepath.Join(homeDir, ".zshenv")
+		if err := os.WriteFile(zshenvPath, []byte(zshenvContent), 0644); err != nil {
+			return fmt.Errorf("failed to write .zshenv: %w", err)
+		}
+	}
+	
+	return nil
 }
