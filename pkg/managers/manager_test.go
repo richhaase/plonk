@@ -575,3 +575,161 @@ func TestNpmManager_Update_ReturnsErrorOnFailure(t *testing.T) {
 		t.Error("Expected error when update fails")
 	}
 }
+
+// Pip Manager Tests
+func TestPipManager_IsAvailable_Success(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	successCmd := exec.Command("echo", "pip 22.3.1")
+	mockExec.SetCommand("pip --version", successCmd)
+	
+	manager := NewPipManager(mockExec)
+	available := manager.IsAvailable()
+	
+	if !available {
+		t.Error("Expected Pip to be available when command succeeds")
+	}
+	
+	expectedCall := "pip --version"
+	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
+		t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
+	}
+}
+
+func TestPipManager_Install_CallsCorrectCommand(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	
+	manager := NewPipManager(mockExec)
+	err := manager.Install("requests")
+	
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	
+	expectedCall := "pip install"
+	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
+		t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
+	}
+}
+
+func TestPipManager_IsAvailable_Failure(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	failCmd := exec.Command("false")
+	mockExec.SetCommand("pip --version", failCmd)
+	
+	manager := NewPipManager(mockExec)
+	available := manager.IsAvailable()
+	
+	if available {
+		t.Error("Expected Pip to be unavailable when command fails")
+	}
+}
+
+func TestPipManager_Update_CallsCorrectCommand(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	
+	manager := NewPipManager(mockExec)
+	err := manager.Update("requests")
+	
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	
+	expectedCall := "pip install"
+	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
+		t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
+	}
+}
+
+func TestPipManager_ListInstalled_ParsesOutput(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	// pip list --format=freeze returns package==version format
+	listCmd := exec.Command("echo", "requests==2.28.1\nnumpy==1.24.0\npandas==1.5.2")
+	mockExec.SetCommand("pip list", listCmd)
+	
+	manager := NewPipManager(mockExec)
+	packages, err := manager.ListInstalled()
+	
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	
+	expected := []string{"requests", "numpy", "pandas"}
+	if len(packages) != len(expected) {
+		t.Errorf("Expected %d packages, got %d", len(expected), len(packages))
+	}
+	
+	for i, pkg := range expected {
+		if i >= len(packages) || packages[i] != pkg {
+			t.Errorf("Expected package '%s' at index %d, got '%s'", pkg, i, packages[i])
+		}
+	}
+}
+
+func TestPipManager_IsInstalled_True(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	// pip show <package> succeeds when package is installed
+	successCmd := exec.Command("echo", "Name: requests")
+	mockExec.SetCommand("pip show", successCmd)
+	
+	manager := NewPipManager(mockExec)
+	installed := manager.IsInstalled("requests")
+	
+	if !installed {
+		t.Error("Expected package to be installed when command succeeds")
+	}
+}
+
+func TestPipManager_IsInstalled_False(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	// pip show <package> fails when package is not installed
+	failCmd := exec.Command("false")
+	mockExec.SetCommand("pip show", failCmd)
+	
+	manager := NewPipManager(mockExec)
+	installed := manager.IsInstalled("nonexistent")
+	
+	if installed {
+		t.Error("Expected package to not be installed when command fails")
+	}
+}
+
+func TestPipManager_UpdateAll_CallsCorrectCommands(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	// Mock outdated packages list
+	outdatedCmd := exec.Command("echo", "requests==2.28.0\nnumpy==1.23.0")
+	mockExec.SetCommand("pip list", outdatedCmd)
+	
+	manager := NewPipManager(mockExec)
+	err := manager.UpdateAll()
+	
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	
+	// Should call pip list --outdated and then pip install --upgrade for each package
+	if len(mockExec.Calls) < 3 {
+		t.Errorf("Expected at least 3 calls (list + 2 updates), got %d: %v", len(mockExec.Calls), mockExec.Calls)
+	}
+	
+	// First call should be the list command
+	if mockExec.Calls[0] != "pip list" {
+		t.Errorf("Expected first call to be 'pip list', got '%s'", mockExec.Calls[0])
+	}
+}
+
+func TestPipManager_ListInstalled_ReturnsErrorOnFailure(t *testing.T) {
+	mockExec := NewMockCommandExecutor()
+	failCmd := exec.Command("false")
+	mockExec.SetCommand("pip list", failCmd)
+	
+	manager := NewPipManager(mockExec)
+	packages, err := manager.ListInstalled()
+	
+	if err == nil {
+		t.Error("Expected error when list command fails")
+	}
+	
+	if packages != nil {
+		t.Error("Expected nil packages when error occurs")
+	}
+}
