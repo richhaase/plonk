@@ -63,7 +63,9 @@ plonk/
 │   ├── install_test.go          # Install command tests
 │   ├── apply_test.go            # Apply command tests
 │   ├── setup_test.go            # Setup command tests
-│   └── repo_test.go             # Repository convenience command tests
+│   ├── repo_test.go             # Repository convenience command tests
+│   ├── backup.go                # Backup functionality with configurable location
+│   └── backup_test.go           # Backup functionality tests
 ├── pkg/managers/                 # Package manager implementations
 │   ├── common.go                 # CommandExecutor interface & CommandRunner
 │   ├── executor.go               # Real command execution for production
@@ -292,11 +294,24 @@ npm:
     - Replaced auto-detection with explicit initialization and completion commands in config
     - Generated complete .zshrc and .zshenv files from plonk configuration using TDD
 
+26. **Integrate ZSH management into apply command** - ✅ Completed
+    - Added ZSH configuration file generation to apply command workflow
+    - Integrated .zshrc and .zshenv generation with existing dotfiles and package config application
+    - Built comprehensive test coverage for ZSH config integration scenarios
+
+27. **Implement backup functionality with configurable location and count-based cleanup** - ✅ Completed
+    - Created BackupExistingFile() for individual file backups with timestamp
+    - Implemented BackupConfigurationFiles() with configurable backup directory
+    - Added BackupConfig structure to YAML config with location and keep_count settings
+    - Built automatic cleanup of old backups to maintain configured count limit
+    - Defaults to ~/.config/plonk/backups/ with 5 backup retention
+    - Comprehensive TDD implementation with edge case testing
+
 ### 🔄 Current Pending Tasks
 
-26. **Integrate ZSH management into apply command** - 🟡 Pending
-    - Add ZSH configuration file generation to apply command
-    - Support both global ZSH config generation and integration with existing apply workflow
+28. **Add --backup flag to apply command that runs backup before apply** - 🟡 Pending
+    - Add --backup flag to apply command
+    - Implement apply --backup workflow that runs plonk backup before apply
 
 ## Development Timeline
 

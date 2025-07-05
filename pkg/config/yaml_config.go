@@ -11,6 +11,7 @@ import (
 // YAMLConfig represents the new YAML-based configuration
 type YAMLConfig struct {
 	Settings  YAMLSettings    `yaml:"settings"`
+	Backup    BackupConfig    `yaml:"backup,omitempty"`
 	Dotfiles  []string        `yaml:"dotfiles,omitempty"`
 	Homebrew  HomebrewConfig  `yaml:"homebrew,omitempty"`
 	ASDF      []ASDFTool      `yaml:"asdf,omitempty"`
@@ -21,6 +22,12 @@ type YAMLConfig struct {
 // YAMLSettings contains global configuration settings
 type YAMLSettings struct {
 	DefaultManager string `yaml:"default_manager"`
+}
+
+// BackupConfig contains backup configuration settings
+type BackupConfig struct {
+	Location  string `yaml:"location,omitempty"`
+	KeepCount int    `yaml:"keep_count,omitempty"`
 }
 
 // HomebrewConfig contains homebrew package lists
