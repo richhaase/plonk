@@ -19,15 +19,22 @@ This project was developed using **Test-Driven Development (TDD)** with Red-Gree
 - **CommandRunner** - Shared command execution logic to eliminate code duplication
 - **Individual Managers** - Homebrew, ASDF, NPM with consistent interfaces
 
+### Configuration Management (`pkg/config/`)
+- **YAML-First Design** - Primary config format with TOML legacy support
+- **Package-Centric Structure** - Organized by package manager with dotfiles section
+- **Source-Target Convention** - Automatic path mapping (config/nvim/ → ~/.config/nvim/)
+- **Local Overrides** - Support for plonk.local.yaml for machine-specific settings
+
 ### CLI (`internal/commands/`)
 - **Cobra Framework** - Professional CLI with help, autocompletion, and subcommands
 - **Status Command** - Shows availability and package counts for all managers
-- **`--all` Flag** - Option to show complete package lists vs. truncated view
+- **Pkg Command** - Modular package listing with `plonk pkg list [manager]` structure
 
 ### Testing
-- **47 Total Tests** - Comprehensive test coverage across all components
+- **Comprehensive Test Coverage** - All components tested with TDD approach
 - **Mock Command Executor** - Enables testing without actual command execution
 - **Interface Compliance Tests** - Ensures consistent behavior across managers
+- **Config Validation Tests** - YAML/TOML parsing and validation coverage
 
 ## File Structure
 
@@ -37,6 +44,7 @@ plonk/
 ├── internal/commands/             # CLI commands
 │   ├── root.go                   # Root command definition
 │   ├── status.go                 # Status command implementation
+│   ├── pkg.go                    # Package listing commands
 │   └── status_test.go            # Status command tests
 ├── pkg/managers/                 # Package manager implementations
 │   ├── common.go                 # CommandExecutor interface & CommandRunner
@@ -45,6 +53,11 @@ plonk/
 │   ├── asdf.go                  # ASDF tool manager
 │   ├── npm.go                   # NPM global package manager
 │   └── manager_test.go          # Comprehensive test suite
+├── pkg/config/                   # Configuration management
+│   ├── config.go                 # Legacy TOML config support
+│   ├── config_test.go           # TOML config tests
+│   ├── yaml_config.go           # Primary YAML config implementation
+│   └── yaml_config_test.go      # YAML config tests
 ├── go.mod                       # Go module definition
 └── CLAUDE.md                    # This documentation
 ```
@@ -59,9 +72,11 @@ go build ./cmd/plonk
 ### Commands
 ```bash
 ./plonk --help                   # Show main help
-./plonk status                   # Quick package overview (first 5 per manager)
-./plonk status --all            # Complete package lists
-./plonk status --help           # Status command help
+./plonk status                   # Package manager availability and counts
+./plonk pkg list                 # List packages from all managers
+./plonk pkg list brew            # List only Homebrew packages
+./plonk pkg list asdf            # List only ASDF tools
+./plonk pkg list npm             # List only NPM packages
 ```
 
 ### Example Output
@@ -71,32 +86,58 @@ Package Manager Status
 
 ## Homebrew
 ✅ Available
-📦 139 packages installed:
-   - aichat
-   - aider
-   - ansible
-   - ansible-lint
-   - asdf
-   ... and 134 more (use --all to show all packages)
+📦 139 packages installed
 
 ## ASDF
 ✅ Available
-📦 8 packages installed:
-   - golang
-   - nodejs
-   - opentofu
-   - python
-   - terraform-docs
-   ... and 3 more (use --all to show all packages)
+📦 8 packages installed
 
 ## NPM
 ✅ Available
-📦 5 packages installed:
-   - lib
-   - corepack
-   - eslint
-   - prettier
-   - typescript
+📦 6 packages installed
+```
+
+## Configuration Format
+
+The new YAML-based configuration supports both simple and complex package definitions:
+
+```yaml
+settings:
+  default_manager: homebrew
+
+# Standalone config files (no package install needed)
+dotfiles:
+  - zshrc                    # -> ~/.zshrc
+  - zshenv                   # -> ~/.zshenv
+  - plugins.zsh              # -> ~/.plugins.zsh
+  - dot_gitconfig            # -> ~/.gitconfig
+
+homebrew:
+  brews:
+    - aichat                 # Simple package
+    - aider
+    - name: neovim           # Package with config
+      config: config/nvim/   # -> ~/.config/nvim/
+    - name: mcfly
+      config: config/mcfly/  # -> ~/.config/mcfly/
+  
+  casks:
+    - font-hack-nerd-font
+    - google-cloud-sdk
+
+asdf:
+  - name: nodejs
+    version: "24.2.0"
+    config: config/npm/      # -> ~/.config/npm/
+  - name: python
+    version: "3.13.2"
+  - name: golang
+    version: "1.24.4"
+
+npm:
+  - "@anthropic-ai/claude-code"
+  - name: some-tool
+    package: "@scope/different-name"
 ```
 
 ## Todo List History
@@ -137,7 +178,48 @@ Package Manager Status
     - Focused approach: removed Pip/Cargo, kept Homebrew/ASDF/NPM
 
 12. **Remove Pip and Cargo managers, keep only Homebrew, ASDF, and NPM** - ✅ Completed
-    - Streamlined to preferred toolchain with --all flag for detailed views
+    - Streamlined to preferred toolchain
+
+13. **Implement pkg list command structure to replace --all flag** - ✅ Completed
+    - Added modular `plonk pkg list [manager]` command structure
+    - Supports individual manager listing and all managers
+    - Correctly handles NPM scoped packages like @anthropic-ai/claude-code
+
+14. **Design package-centric config with default_manager and simplified npm handling** - ✅ Completed
+    - Created package-centric TOML configuration structure
+    - Added default manager support to reduce repetition
+
+15. **Implement TOML config parsing with package definitions** - ✅ Completed
+    - Built TOML parsing with package validation
+    - Added local config override support (plonk.local.toml)
+
+16. **Create config package struct and validation logic** - ✅ Completed
+    - Implemented comprehensive validation for all package managers
+    - Added ASDF version requirement validation
+
+17. **Refactor config to use YAML with simplified source->target convention** - ✅ Completed
+    - Migrated from TOML to YAML for better nested structure support
+    - Added dotfiles section for standalone configuration files
+    - Implemented source-to-target path convention (config/nvim/ -> ~/.config/nvim/)
+    - Created mixed simple/complex package definitions within manager lists
+    - Added comprehensive test coverage following TDD methodology
+
+### 🔄 Current Pending Tasks
+
+18. **Add plonk config command group (init, show, edit)** - 🟡 Pending
+    - Implement CLI commands for config management
+
+19. **Implement package sync logic (install + deploy config)** - 🟡 Pending
+    - Create package installation and config file deployment
+
+20. **Add config file discovery (plonk.yaml + plonk.local.yaml)** - 🟡 Pending
+    - Implement automatic config file location and loading
+
+21. **Create sync command to install packages from config** - 🟡 Pending
+    - Build comprehensive sync functionality
+
+22. **Add drift detection (compare current vs config expected packages)** - 🟡 Pending
+    - Detect differences between installed and configured packages
 
 ## Development Timeline
 
