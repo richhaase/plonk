@@ -45,7 +45,12 @@ plonk/
 │   ├── root.go                   # Root command definition
 │   ├── status.go                 # Status command implementation
 │   ├── pkg.go                    # Package listing commands
-│   └── status_test.go            # Status command tests
+│   ├── clone.go                  # Clone command with git operations
+│   ├── pull.go                   # Pull command for updates
+│   ├── test_helpers.go          # Shared testing utilities
+│   ├── status_test.go           # Status command tests
+│   ├── clone_test.go            # Clone command tests
+│   └── pull_test.go             # Pull command tests
 ├── pkg/managers/                 # Package manager implementations
 │   ├── common.go                 # CommandExecutor interface & CommandRunner
 │   ├── executor.go               # Real command execution for production
@@ -77,6 +82,13 @@ go build ./cmd/plonk
 ./plonk pkg list brew            # List only Homebrew packages
 ./plonk pkg list asdf            # List only ASDF tools
 ./plonk pkg list npm             # List only NPM packages
+
+# Git operations
+./plonk clone <repo>             # Clone dotfiles repository
+./plonk pull                     # Pull updates to existing repository
+
+# Environment variable
+PLONK_DIR=~/my-dotfiles ./plonk clone <repo>  # Clone to custom location
 ```
 
 ### Example Output
@@ -204,22 +216,26 @@ npm:
     - Created mixed simple/complex package definitions within manager lists
     - Added comprehensive test coverage following TDD methodology
 
+18. **Implement separate plonk clone and plonk pull commands with configurable location** - ✅ Completed
+    - Separated clone and pull functionality for Unix-like simplicity
+    - Added go-git integration for pure Go git operations
+    - Implemented configurable clone location via PLONK_DIR environment variable
+    - Created mockable GitInterface for comprehensive testing
+    - Built clean separation: clone always clones, pull always pulls
+
 ### 🔄 Current Pending Tasks
 
-18. **Add plonk config command group (init, show, edit)** - 🟡 Pending
-    - Implement CLI commands for config management
+19. **Add plonk <repo> command (convenience: pull + install + apply)** - 🟡 Pending
+    - Implement all-in-one convenience command
 
-19. **Implement package sync logic (install + deploy config)** - 🟡 Pending
-    - Create package installation and config file deployment
+20. **Implement plonk install command (install packages from config)** - 🟡 Pending
+    - Create package installation from YAML config
 
-20. **Add config file discovery (plonk.yaml + plonk.local.yaml)** - 🟡 Pending
-    - Implement automatic config file location and loading
+21. **Add plonk apply command (deploy config files)** - 🟡 Pending
+    - Implement dotfile deployment using source->target convention
 
-21. **Create sync command to install packages from config** - 🟡 Pending
-    - Build comprehensive sync functionality
-
-22. **Add drift detection (compare current vs config expected packages)** - 🟡 Pending
-    - Detect differences between installed and configured packages
+22. **Enhance plonk status to show config drift detection** - 🟡 Pending
+    - Compare current vs expected packages and configs
 
 ## Development Timeline
 
