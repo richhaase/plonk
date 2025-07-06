@@ -52,28 +52,31 @@ func runInstall(args []string) error {
 	npmMgr := managers.NewNpmManager(executor)
 	
 	// Track packages that were installed and have configs
-	var packagesWithConfigs []string
+	installedPackages := make(map[string][]string)
 	
 	// Install Homebrew packages
 	installedHomebrewPackages, err := installHomebrewPackages(homebrewMgr, config)
 	if err != nil {
 		return fmt.Errorf("failed to install Homebrew packages: %w", err)
 	}
-	packagesWithConfigs = append(packagesWithConfigs, installedHomebrewPackages...)
+	installedPackages["homebrew"] = installedHomebrewPackages
 	
 	// Install ASDF tools
 	installedASDFTools, err := installASDFTools(asdfMgr, config)
 	if err != nil {
 		return fmt.Errorf("failed to install ASDF tools: %w", err)
 	}
-	packagesWithConfigs = append(packagesWithConfigs, installedASDFTools...)
+	installedPackages["asdf"] = installedASDFTools
 	
 	// Install NPM packages
 	installedNPMPackages, err := installNPMPackages(npmMgr, config)
 	if err != nil {
 		return fmt.Errorf("failed to install NPM packages: %w", err)
 	}
-	packagesWithConfigs = append(packagesWithConfigs, installedNPMPackages...)
+	installedPackages["npm"] = installedNPMPackages
+	
+	// Extract all packages with configs
+	packagesWithConfigs := extractInstalledPackages(installedPackages)
 	
 	// Apply configurations for newly installed packages
 	if len(packagesWithConfigs) > 0 {
@@ -104,35 +107,33 @@ func installHomebrewPackages(mgr *managers.HomebrewManager, config *config.Confi
 	
 	// Install brews
 	for _, pkg := range config.Homebrew.Brews {
-		packageName := pkg.Name
-		if !mgr.IsInstalled(packageName) {
-			fmt.Printf("Installing Homebrew package: %s\n", packageName)
-			if err := mgr.Install(packageName); err != nil {
-				return nil, fmt.Errorf("failed to install %s: %w", packageName, err)
+		if shouldInstallPackage(pkg.Name, mgr.IsInstalled(pkg.Name)) {
+			fmt.Printf("Installing Homebrew package: %s\n", pkg.Name)
+			if err := mgr.Install(pkg.Name); err != nil {
+				return nil, fmt.Errorf("failed to install %s: %w", pkg.Name, err)
 			}
 			// If package has config and was installed, add to list
-			if pkg.Config != "" {
-				installedWithConfigs = append(installedWithConfigs, packageName)
+			if getPackageConfig(pkg) != "" {
+				installedWithConfigs = append(installedWithConfigs, getPackageName(pkg))
 			}
 		} else {
-			fmt.Printf("Homebrew package %s already installed\n", packageName)
+			fmt.Printf("Homebrew package %s already installed\n", pkg.Name)
 		}
 	}
 	
 	// Install casks
 	for _, pkg := range config.Homebrew.Casks {
-		packageName := pkg.Name
-		if !mgr.IsInstalled(packageName) {
-			fmt.Printf("Installing Homebrew cask: %s\n", packageName)
-			if err := mgr.InstallCask(packageName); err != nil {
-				return nil, fmt.Errorf("failed to install cask %s: %w", packageName, err)
+		if shouldInstallPackage(pkg.Name, mgr.IsInstalled(pkg.Name)) {
+			fmt.Printf("Installing Homebrew cask: %s\n", pkg.Name)
+			if err := mgr.InstallCask(pkg.Name); err != nil {
+				return nil, fmt.Errorf("failed to install cask %s: %w", pkg.Name, err)
 			}
 			// If package has config and was installed, add to list
-			if pkg.Config != "" {
-				installedWithConfigs = append(installedWithConfigs, packageName)
+			if getPackageConfig(pkg) != "" {
+				installedWithConfigs = append(installedWithConfigs, getPackageName(pkg))
 			}
 		} else {
-			fmt.Printf("Homebrew cask %s already installed\n", packageName)
+			fmt.Printf("Homebrew cask %s already installed\n", pkg.Name)
 		}
 	}
 	
@@ -152,17 +153,18 @@ func installASDFTools(mgr *managers.AsdfManager, config *config.Config) ([]strin
 	var installedWithConfigs []string
 	
 	for _, tool := range config.ASDF {
-		if !mgr.IsVersionInstalled(tool.Name, tool.Version) {
-			fmt.Printf("Installing ASDF tool: %s@%s\n", tool.Name, tool.Version)
+		if shouldInstallPackage(tool.Name, mgr.IsVersionInstalled(tool.Name, tool.Version)) {
+			displayName := getPackageDisplayName(tool)
+			fmt.Printf("Installing ASDF tool: %s\n", displayName)
 			if err := mgr.InstallVersion(tool.Name, tool.Version); err != nil {
-				return nil, fmt.Errorf("failed to install %s@%s: %w", tool.Name, tool.Version, err)
+				return nil, fmt.Errorf("failed to install %s: %w", displayName, err)
 			}
 			// If tool has config and was installed, add to list
 			if tool.Config != "" {
 				installedWithConfigs = append(installedWithConfigs, tool.Name)
 			}
 		} else {
-			fmt.Printf("ASDF tool %s@%s already installed\n", tool.Name, tool.Version)
+			fmt.Printf("ASDF tool %s already installed\n", getPackageDisplayName(tool))
 		}
 	}
 	
@@ -183,19 +185,16 @@ func installNPMPackages(mgr *managers.NpmManager, config *config.Config) ([]stri
 	
 	for _, pkg := range config.NPM {
 		// Use package name if specified, otherwise use name
-		packageName := pkg.Name
-		if pkg.Package != "" {
-			packageName = pkg.Package
-		}
+		packageName := getPackageDisplayName(pkg)
 		
-		if !mgr.IsInstalled(packageName) {
+		if shouldInstallPackage(packageName, mgr.IsInstalled(packageName)) {
 			fmt.Printf("Installing NPM package: %s\n", packageName)
 			if err := mgr.Install(packageName); err != nil {
 				return nil, fmt.Errorf("failed to install %s: %w", packageName, err)
 			}
 			// If package has config and was installed, add to list
-			if pkg.Config != "" {
-				installedWithConfigs = append(installedWithConfigs, pkg.Name)
+			if getPackageConfig(pkg) != "" {
+				installedWithConfigs = append(installedWithConfigs, getPackageName(pkg))
 			}
 		} else {
 			fmt.Printf("NPM package %s already installed\n", packageName)

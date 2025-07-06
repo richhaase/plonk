@@ -12,6 +12,16 @@ Plonk is a CLI tool for managing shell environments across multiple machines. It
 
 This project was developed using **Test-Driven Development (TDD)** with Red-Green-Refactor cycles throughout the implementation.
 
+### REQUIRED TDD WORKFLOW
+**IMPORTANT**: All changes to this codebase MUST follow the TDD pattern:
+1. **RED**: Write failing tests first
+2. **GREEN**: Write minimal code to make tests pass
+3. **REFACTOR**: Improve code while keeping tests green
+4. **COMMIT**: Commit the changes
+5. **UPDATE MEMORY**: Update CLAUDE.md to reflect completed work
+
+This is a strict requirement for maintaining code quality and consistency.
+
 ## Architecture
 
 ### Package Managers (`pkg/managers/`)
