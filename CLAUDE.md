@@ -329,6 +329,23 @@ npm:
     - Comprehensive test coverage including unit tests and integration tests
     - Enables users to manage .gitconfig declaratively through plonk.yaml
 
+30. **Implement YAML syntax validation with TDD cycle (Task 47a1-47a2)** - ✅ Completed
+    - Created comprehensive YAML syntax validation tests (Red phase)
+    - Implemented ValidateYAML function for config validation (Green phase)
+    - Handles empty content, comments, and various YAML syntax errors
+    - Uses gopkg.in/yaml.v3 decoder for robust validation
+    - Provides specific error messages for common syntax issues
+    - All tests passing with proper edge case handling
+
+31. **Implement package name validation with TDD cycle (Task 47a3-47a4)** - ✅ Completed
+    - Added tests for package name validation across all manager sections (Red phase)
+    - Implemented ValidatePackageName and ValidateConfigContent functions (Green phase)
+    - Support for homebrew (brews/casks), npm, and asdf package validation
+    - Character validation without regex - allows letters, numbers, hyphens, underscores, dots, @, /
+    - Prevents empty names, whitespace, and invalid patterns (starting/ending with hyphens)
+    - Validates both simple string packages and complex objects with name fields
+    - Clear error messages with section and index information for debugging
+
 ### 🔄 Current Pending Tasks (Re-prioritized)
 
 **Prioritization Rationale**: Foundation & daily value over new features. Prioritize what makes plonk safer and more reliable for daily use.
