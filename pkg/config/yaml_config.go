@@ -4,25 +4,26 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
 // Config represents the configuration structure
 type Config struct {
-	Settings  Settings    `yaml:"settings"`
-	Backup    BackupConfig    `yaml:"backup,omitempty"`
-	Dotfiles  []string        `yaml:"dotfiles,omitempty"`
-	Homebrew  HomebrewConfig  `yaml:"homebrew,omitempty"`
-	ASDF      []ASDFTool      `yaml:"asdf,omitempty"`
-	NPM       []NPMPackage    `yaml:"npm,omitempty"`
-	ZSH       ZSHConfig       `yaml:"zsh,omitempty"`
-	Git       GitConfig       `yaml:"git,omitempty"`
+	Settings  Settings       `yaml:"settings" validate:"required"`
+	Backup    BackupConfig   `yaml:"backup,omitempty"`
+	Dotfiles  []string       `yaml:"dotfiles,omitempty" validate:"dive,file_path"`
+	Homebrew  HomebrewConfig `yaml:"homebrew,omitempty"`
+	ASDF      []ASDFTool     `yaml:"asdf,omitempty" validate:"dive"`
+	NPM       []NPMPackage   `yaml:"npm,omitempty" validate:"dive"`
+	ZSH       ZSHConfig      `yaml:"zsh,omitempty"`
+	Git       GitConfig      `yaml:"git,omitempty"`
 }
 
 // Settings contains global configuration settings
 type Settings struct {
-	DefaultManager string `yaml:"default_manager"`
+	DefaultManager string `yaml:"default_manager" validate:"required,oneof=homebrew asdf npm"`
 }
 
 // BackupConfig contains backup configuration settings
@@ -33,28 +34,28 @@ type BackupConfig struct {
 
 // HomebrewConfig contains homebrew package lists
 type HomebrewConfig struct {
-	Brews []HomebrewPackage `yaml:"brews,omitempty"`
-	Casks []HomebrewPackage `yaml:"casks,omitempty"`
+	Brews []HomebrewPackage `yaml:"brews,omitempty" validate:"dive"`
+	Casks []HomebrewPackage `yaml:"casks,omitempty" validate:"dive"`
 }
 
 // HomebrewPackage can be a simple string or complex object
 type HomebrewPackage struct {
-	Name   string `yaml:"name,omitempty"`
-	Config string `yaml:"config,omitempty"`
+	Name   string `yaml:"name,omitempty" validate:"required,package_name"`
+	Config string `yaml:"config,omitempty" validate:"omitempty,file_path"`
 }
 
 // ASDFTool represents an ASDF tool configuration
 type ASDFTool struct {
-	Name    string `yaml:"name"`
-	Version string `yaml:"version"`
-	Config  string `yaml:"config,omitempty"`
+	Name    string `yaml:"name" validate:"required,package_name"`
+	Version string `yaml:"version" validate:"required"`
+	Config  string `yaml:"config,omitempty" validate:"omitempty,file_path"`
 }
 
 // NPMPackage represents an NPM package configuration
 type NPMPackage struct {
-	Name    string `yaml:"name,omitempty"`
-	Package string `yaml:"package,omitempty"` // If different from name
-	Config  string `yaml:"config,omitempty"`
+	Name    string `yaml:"name,omitempty" validate:"omitempty,package_name"`
+	Package string `yaml:"package,omitempty" validate:"omitempty,package_name"` // If different from name
+	Config  string `yaml:"config,omitempty" validate:"omitempty,file_path"`
 }
 
 // ZSHConfig represents ZSH shell configuration
@@ -167,9 +168,11 @@ func LoadConfig(configDir string) (*Config, error) {
 		}
 	}
 
-	// Validate configuration
-	if err := config.validate(); err != nil {
-		return nil, fmt.Errorf("config validation failed: %w", err)
+	// Validate configuration with new unified validator
+	validator := NewSimpleValidator()
+	result := validator.ValidateConfig(config)
+	if !result.IsValid() {
+		return nil, fmt.Errorf("config validation failed: %s", strings.Join(result.Errors, "; "))
 	}
 
 	return config, nil
@@ -315,28 +318,6 @@ func mergeGitConfig(target, source *GitConfig) {
 	}
 }
 
-// validate ensures the configuration is valid
-func (c *Config) validate() error {
-	validManagers := map[string]bool{
-		"homebrew": true,
-		"asdf":     true,
-		"npm":      true,
-	}
-
-	// Validate default manager
-	if !validManagers[c.Settings.DefaultManager] {
-		return fmt.Errorf("invalid default_manager: %s (must be: homebrew, asdf, npm)", c.Settings.DefaultManager)
-	}
-
-	// Validate ASDF tools have versions
-	for _, tool := range c.ASDF {
-		if tool.Version == "" {
-			return fmt.Errorf("version is required for ASDF tool: %s", tool.Name)
-		}
-	}
-
-	return nil
-}
 
 // GetDotfileTargets returns dotfiles with their target paths
 func (c *Config) GetDotfileTargets() map[string]string {

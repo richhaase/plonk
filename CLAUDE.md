@@ -365,6 +365,24 @@ npm:
     - YAML is now the pure configuration format after TOML removal
     - Improved code organization and eliminated architectural duplication
 
+34. **Create centralized DirectoryManager for all path operations (Task 52d)** - ✅ Completed
+    - Built centralized DirectoryManager with caching for performance optimization
+    - Replaced scattered directory functions (getPlonkDir, getRepoDir, getBackupsDir, expandHomeDir) 
+    - Added Reset() method for proper test isolation with environment variables
+    - Updated all commands to use directories.Default instead of individual functions
+    - Removed redundant internal/commands/directory.go file entirely
+    - Fixed test failures by implementing proper cleanup in test environments
+    - Followed strict TDD methodology: Red-Green-Refactor cycle with comprehensive tests
+
+35. **Consolidate test helper functions to eliminate repetitive patterns (Task 52f)** - ✅ Completed
+    - Created centralized test setup helpers in internal/commands/test_helpers.go
+    - setupTestEnv(t) for basic HOME environment isolation with cleanup
+    - setupTestEnvWithPlonkDir(t, dir) for tests requiring custom PLONK_DIR
+    - Updated 33+ test functions across 10 files to use helpers instead of 6-8 lines of repetitive setup
+    - Eliminated repetitive patterns: t.TempDir(), os.Getenv("HOME"), defer cleanup, os.Setenv()
+    - Improved maintainability while preserving test isolation and functionality
+    - All tests continue to pass with cleaner, more consistent code organization
+
 ### 🔄 Current Pending Tasks (Re-prioritized)
 
 **Prioritization Rationale**: Foundation & daily value over new features. Prioritize what makes plonk safer and more reliable for daily use.
