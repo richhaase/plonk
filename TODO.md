@@ -9,9 +9,10 @@ Active work items for current development session. Maintained by AI agents.
 ### Import Command Implementation (TDD Breakdown)
 - ✅ **RED-GREEN-REFACTOR: Basic import command structure** - CLI interface and command registration complete
 - ✅ **RED-GREEN-REFACTOR: Homebrew package discovery** - HomebrewDiscoverer with brew list parsing complete
-- 🔴 **RED: ASDF package discovery** - Write failing test for `asdf list` tool/version detection  
-- 🔴 **RED: NPM package discovery** - Write failing test for `npm list -g` global package detection
-- 🔴 **RED: Dotfile detection** - Write failing test for discovering .zshrc, .gitconfig, .zshenv files
+- ✅ **RED-GREEN-REFACTOR: AsdfManager.ListGlobalTools() enhancement** - Added ~/.tool-versions file reading capability
+- 🔴 **RED: ASDF package discovery** - Implement AsdfDiscoverer using new ListGlobalTools() method
+- ✅ **RED-GREEN-REFACTOR: NPM package discovery** - NpmDiscoverer reusing existing NpmManager complete
+- ✅ **RED-GREEN-REFACTOR: Dotfile detection** - DotfileDiscoverer for managed dotfiles complete
 - 🔴 **RED: YAML config generation** - Write failing test for converting discovered packages to plonk.yaml format
 - 🔴 **RED: Integration test** - Write failing test for complete import workflow
 
