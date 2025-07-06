@@ -66,7 +66,7 @@ func (n *NpmManager) ListInstalled() ([]string, error) {
 			continue
 		}
 
-		// Extract package name from path
+		// Extract package name from path.
 		// Handle scoped packages like /usr/local/lib/node_modules/@vue/cli.
 		packageName := filepath.Base(line)
 

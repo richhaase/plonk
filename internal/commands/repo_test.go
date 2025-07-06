@@ -7,11 +7,11 @@ import (
 )
 
 func TestRepoCommand_Success(t *testing.T) {
-		// Setup.
+	// Setup
 	_, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Mock git client.
+	// Mock git client
 	originalGitClient := gitClient
 	defer func() { gitClient = originalGitClient }()
 
@@ -19,12 +19,12 @@ func TestRepoCommand_Success(t *testing.T) {
 	pullCalled := false
 	mockGit := &MockGit{
 		IsRepoFunc: func(dir string) bool {
-			return false 			return false // No existing repo, should clone.
+			return false // No existing repo, should clone
 		},
 		CloneFunc: func(repoURL, targetDir string) error {
 			cloneCalled = true
 
-						// Create a mock config file to simulate successful clone.
+			// Create a mock config file to simulate successful clone
 			err := os.MkdirAll(targetDir, 0755)
 			if err != nil {
 				return err
@@ -42,7 +42,7 @@ dotfiles:
 				return err
 			}
 
-						// Create source file for dotfile.
+			// Create source file for dotfile
 			return os.WriteFile(filepath.Join(targetDir, "zshrc"), []byte("# test zshrc"), 0644)
 		},
 		PullFunc: func(repoDir string) error {
@@ -52,13 +52,13 @@ dotfiles:
 	}
 	gitClient = mockGit
 
-		// Test.
+	// Test
 	err := runRepo([]string{"git@github.com/user/dotfiles.git"})
 	if err != nil {
 		t.Fatalf("Setup command failed: %v", err)
 	}
 
-		// Verify clone was called (not pull, since no existing repo).
+	// Verify clone was called (not pull, since no existing repo)
 	if !cloneCalled {
 		t.Error("Expected clone to be called")
 	}
@@ -69,11 +69,11 @@ dotfiles:
 }
 
 func TestRepoCommand_ExistingRepo(t *testing.T) {
-		// Setup.
+	// Setup
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create existing plonk directory with config.
+	// Create existing plonk directory with config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err := os.MkdirAll(plonkDir, 0755)
 	if err != nil {
@@ -92,13 +92,13 @@ dotfiles:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Create source file for dotfile.
+	// Create source file for dotfile
 	err = os.WriteFile(filepath.Join(plonkDir, "zshrc"), []byte("# test zshrc"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create source file: %v", err)
 	}
 
-		// Mock git client.
+	// Mock git client
 	originalGitClient := gitClient
 	defer func() { gitClient = originalGitClient }()
 
@@ -106,7 +106,7 @@ dotfiles:
 	pullCalled := false
 	mockGit := &MockGit{
 		IsRepoFunc: func(dir string) bool {
-			return true 			return true // Existing repo, should pull.
+			return true // Existing repo, should pull
 		},
 		CloneFunc: func(repoURL, targetDir string) error {
 			cloneCalled = true
@@ -119,13 +119,13 @@ dotfiles:
 	}
 	gitClient = mockGit
 
-		// Test.
+	// Test
 	err = runRepo([]string{"git@github.com/user/dotfiles.git"})
 	if err != nil {
 		t.Fatalf("Setup command failed: %v", err)
 	}
 
-		// Verify pull was called (not clone, since repo exists).
+	// Verify pull was called (not clone, since repo exists)
 	if cloneCalled {
 		t.Error("Expected clone NOT to be called when repo exists")
 	}
@@ -136,7 +136,7 @@ dotfiles:
 }
 
 func TestRepoCommand_NoRepository(t *testing.T) {
-		// Test - should error when no repository URL provided.
+	// Test - should error when no repository URL provided
 	err := runRepo([]string{})
 	if err == nil {
 		t.Error("Expected error when no repository URL provided")
@@ -144,7 +144,7 @@ func TestRepoCommand_NoRepository(t *testing.T) {
 }
 
 func TestRepoCommand_TooManyArguments(t *testing.T) {
-		// Test - should error when too many arguments provided.
+	// Test - should error when too many arguments provided
 	err := runRepo([]string{"repo1", "repo2"})
 	if err == nil {
 		t.Error("Expected error when too many arguments provided")

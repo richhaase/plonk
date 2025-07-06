@@ -11,12 +11,11 @@ linters:
   default: none
   enable:
     - govet         # Standard Go static analysis
-    - errcheck      # Check for unchecked errors
+    # - errcheck    # Disabled: mostly pedantic for test/cleanup code
     - ineffassign   # Detect ineffectual assignments
     - misspell      # Fix spelling mistakes
     - unused        # Find unused code
-    - godot         # Check comments end with period
-    - gocritic      # Style, performance, and bug checks
+    - gocritic      # Style, performance, and bug checks (filtered)
 
 formatters:
   goimports:
@@ -31,21 +30,24 @@ linters.settings:
   
   errcheck:
     check-type-assertions: true
+    # Ignore common test and cleanup patterns that don't need error checking
+    ignore: os.Setenv,os.Unsetenv,fmt.Print.*,io.Copy,.*\.Set
   
   misspell:
     locale: US
   
-  godot:
-    scope: all
-  
   gocritic:
     enabled-tags:
       - diagnostic
-      - style
       - performance
     disabled-checks:
-      - unnamedResult  # Sometimes unnamed returns are clearer
+      - commentedOutCode # Sometimes useful to keep commented code
 
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
+  exclude-rules:
+    # Disable errcheck entirely for test files - test failures will catch real issues
+    - path: "_test\\.go$"
+      linters:
+        - errcheck

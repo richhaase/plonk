@@ -34,14 +34,14 @@ func runPull(args []string) error {
 		return err
 	}
 
-	// Ensure directory structure exists and handle migration if needed.
+	// Ensure directory structure exists and handle migration if needed
 	if err := directories.Default.EnsureStructure(); err != nil {
 		return fmt.Errorf("failed to setup directory structure: %w", err)
 	}
 
 	repoDir := directories.Default.RepoDir()
 
-	// Check if repo directory exists and is a git repo.
+	// Check if repo directory exists and is a git repo
 	if !gitClient.IsRepo(repoDir) {
 		return fmt.Errorf("no repository found in %s, use 'plonk clone <repo>' first", repoDir)
 	}

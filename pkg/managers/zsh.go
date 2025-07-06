@@ -48,17 +48,17 @@ func (z *ZSHManager) Install(pluginRepo string) error {
 	pluginName := getPluginName(pluginRepo)
 	pluginPath := filepath.Join(z.pluginDir, pluginName)
 
-		// Check if plugin already exists.
+	// Check if plugin already exists
 	if _, err := os.Stat(pluginPath); err == nil {
 		return nil // Already installed.
 	}
 
-		// Create plugin directory if it doesn't exist.
+	// Create plugin directory if it doesn't exist.
 	if err := os.MkdirAll(z.pluginDir, 0755); err != nil {
 		return fmt.Errorf("failed to create plugin directory: %w", err)
 	}
 
-		// Clone the plugin.
+	// Clone the plugin.
 	githubURL := fmt.Sprintf("https://github.com/%s", pluginRepo)
 	cmd := z.executor.Execute("git", "clone", "-q", "--depth", "1", "--recursive", "--shallow-submodules", githubURL, pluginPath)
 	return cmd.Run()

@@ -95,12 +95,12 @@ type GitConfig struct {
 // UnmarshalYAML implements custom unmarshaling for HomebrewPackage.
 func (h *HomebrewPackage) UnmarshalYAML(node *yaml.Node) error {
 	if node.Kind == yaml.ScalarNode {
-				// Simple string case.
+		// Simple string case.
 		h.Name = node.Value
 		return nil
 	}
 
-		// Complex object case.
+	// Complex object case.
 	type homebrewPackageAlias HomebrewPackage
 	var pkg homebrewPackageAlias
 	if err := node.Decode(&pkg); err != nil {
@@ -113,12 +113,12 @@ func (h *HomebrewPackage) UnmarshalYAML(node *yaml.Node) error {
 // UnmarshalYAML implements custom unmarshaling for NPMPackage.
 func (n *NPMPackage) UnmarshalYAML(node *yaml.Node) error {
 	if node.Kind == yaml.ScalarNode {
-				// Simple string case.
+		// Simple string case.
 		n.Name = node.Value
 		return nil
 	}
 
-		// Complex object case.
+	// Complex object case.
 	type npmPackageAlias NPMPackage
 	var pkg npmPackageAlias
 	if err := node.Decode(&pkg); err != nil {
@@ -141,14 +141,14 @@ func LoadConfig(configDir string) (*Config, error) {
 		},
 	}
 
-		// Load main config file - check both main directory and repo subdirectory.
+	// Load main config file - check both main directory and repo subdirectory.
 	mainConfigPath := filepath.Join(configDir, "plonk.yaml")
 	repoConfigPath := filepath.Join(configDir, "repo", "plonk.yaml")
 
-		// Try main directory first.
+	// Try main directory first.
 	if err := loadConfigFile(mainConfigPath, config); err != nil {
 		if os.IsNotExist(err) {
-						// Try repo subdirectory.
+			// Try repo subdirectory.
 			if err := loadConfigFile(repoConfigPath, config); err != nil {
 				if os.IsNotExist(err) {
 					return nil, fmt.Errorf("config file not found in %s or %s", mainConfigPath, repoConfigPath)
@@ -160,7 +160,7 @@ func LoadConfig(configDir string) (*Config, error) {
 		}
 	}
 
-		// Load local config file if it exists.
+	// Load local config file if it exists.
 	localConfigPath := filepath.Join(configDir, "plonk.local.yaml")
 	if _, err := os.Stat(localConfigPath); err == nil {
 		if err := loadConfigFile(localConfigPath, config); err != nil {
@@ -168,7 +168,7 @@ func LoadConfig(configDir string) (*Config, error) {
 		}
 	}
 
-		// Validate configuration with new unified validator.
+	// Validate configuration with new unified validator.
 	validator := NewSimpleValidator()
 	result := validator.ValidateConfig(config)
 	if !result.IsValid() {
@@ -185,31 +185,31 @@ func loadConfigFile(path string, config *Config) error {
 		return err
 	}
 
-		// Create a temporary config to decode into.
+	// Create a temporary config to decode into.
 	var tempConfig Config
 	if err := yaml.Unmarshal(data, &tempConfig); err != nil {
 		return fmt.Errorf("failed to parse YAML: %w", err)
 	}
 
-		// Merge settings.
+	// Merge settings.
 	if tempConfig.Settings.DefaultManager != "" {
 		config.Settings.DefaultManager = tempConfig.Settings.DefaultManager
 	}
 
-		// Merge dotfiles.
+	// Merge dotfiles.
 	config.Dotfiles = append(config.Dotfiles, tempConfig.Dotfiles...)
 
-		// Merge homebrew packages.
+	// Merge homebrew packages.
 	config.Homebrew.Brews = append(config.Homebrew.Brews, tempConfig.Homebrew.Brews...)
 	config.Homebrew.Casks = append(config.Homebrew.Casks, tempConfig.Homebrew.Casks...)
 
-		// Merge ASDF tools.
+	// Merge ASDF tools.
 	config.ASDF = append(config.ASDF, tempConfig.ASDF...)
 
-		// Merge NPM packages.
+	// Merge NPM packages.
 	config.NPM = append(config.NPM, tempConfig.NPM...)
 
-		// Merge backup configuration.
+	// Merge backup configuration.
 	if tempConfig.Backup.Location != "" {
 		config.Backup.Location = tempConfig.Backup.Location
 	}
@@ -217,10 +217,10 @@ func loadConfigFile(path string, config *Config) error {
 		config.Backup.KeepCount = tempConfig.Backup.KeepCount
 	}
 
-		// Merge ZSH configuration.
+	// Merge ZSH configuration.
 	mergeZSHConfig(&config.ZSH, &tempConfig.ZSH)
 
-		// Merge Git configuration.
+	// Merge Git configuration.
 	mergeGitConfig(&config.Git, &tempConfig.Git)
 
 	return nil
@@ -228,7 +228,7 @@ func loadConfigFile(path string, config *Config) error {
 
 // mergeZSHConfig merges ZSH configuration from source into target.
 func mergeZSHConfig(target, source *ZSHConfig) {
-		// Merge environment variables.
+	// Merge environment variables.
 	if source.EnvVars != nil {
 		if target.EnvVars == nil {
 			target.EnvVars = make(map[string]string)
@@ -238,17 +238,17 @@ func mergeZSHConfig(target, source *ZSHConfig) {
 		}
 	}
 
-		// Merge shell options.
+	// Merge shell options.
 	target.ShellOptions = append(target.ShellOptions, source.ShellOptions...)
 
-		// Merge inits and completions.
+	// Merge inits and completions.
 	target.Inits = append(target.Inits, source.Inits...)
 	target.Completions = append(target.Completions, source.Completions...)
 
-		// Merge plugins.
+	// Merge plugins.
 	target.Plugins = append(target.Plugins, source.Plugins...)
 
-		// Merge aliases.
+	// Merge aliases.
 	if source.Aliases != nil {
 		if target.Aliases == nil {
 			target.Aliases = make(map[string]string)
@@ -258,7 +258,7 @@ func mergeZSHConfig(target, source *ZSHConfig) {
 		}
 	}
 
-		// Merge functions.
+	// Merge functions.
 	if source.Functions != nil {
 		if target.Functions == nil {
 			target.Functions = make(map[string]string)
@@ -268,14 +268,14 @@ func mergeZSHConfig(target, source *ZSHConfig) {
 		}
 	}
 
-		// Merge source before/after.
+	// Merge source before/after.
 	target.SourceBefore = append(target.SourceBefore, source.SourceBefore...)
 	target.SourceAfter = append(target.SourceAfter, source.SourceAfter...)
 }
 
 // mergeGitConfig merges Git configuration from source into target.
 func mergeGitConfig(target, source *GitConfig) {
-		// Helper function to merge string maps.
+	// Helper function to merge string maps.
 	mergeStringMap := func(targetMap, sourceMap map[string]string) map[string]string {
 		if sourceMap == nil {
 			return targetMap
@@ -289,7 +289,7 @@ func mergeGitConfig(target, source *GitConfig) {
 		return targetMap
 	}
 
-		// Merge all simple string map sections.
+	// Merge all simple string map sections.
 	target.User = mergeStringMap(target.User, source.User)
 	target.Core = mergeStringMap(target.Core, source.Core)
 	target.Delta = mergeStringMap(target.Delta, source.Delta)
@@ -307,7 +307,7 @@ func mergeGitConfig(target, source *GitConfig) {
 	target.Rebase = mergeStringMap(target.Rebase, source.Rebase)
 	target.Merge = mergeStringMap(target.Merge, source.Merge)
 
-		// Merge filter sections (nested maps).
+	// Merge filter sections (nested maps).
 	if source.Filter != nil {
 		if target.Filter == nil {
 			target.Filter = make(map[string]map[string]string)
@@ -334,16 +334,16 @@ func (c *Config) GetDotfileTargets() map[string]string {
 //	zshrc -> ~/.zshrc
 //	dot_gitconfig -> ~/.gitconfig
 func sourceToTarget(source string) string {
-		// Handle dot_ prefix convention.
+	// Handle dot_ prefix convention.
 	if len(source) > 4 && source[:4] == "dot_" {
 		return "~/." + source[4:]
 	}
 
-		// Handle config/ directory.
+	// Handle config/ directory.
 	if len(source) > 7 && source[:7] == "config/" {
 		return "~/." + source
 	}
 
-		// Default: add ~/. prefix.
+	// Default: add ~/. prefix.
 	return "~/." + source
 }

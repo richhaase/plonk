@@ -10,11 +10,11 @@ import (
 )
 
 func TestBackupExistingFile_CreatesBackup(t *testing.T) {
-	// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	// Create existing file to backup.
+	// Create existing file to backup
 	existingFile := filepath.Join(tempHome, ".zshrc")
 	originalContent := "# Original zshrc content\nexport PATH=/usr/local/bin:$PATH"
 	err := os.WriteFile(existingFile, []byte(originalContent), 0644)
@@ -22,18 +22,18 @@ func TestBackupExistingFile_CreatesBackup(t *testing.T) {
 		t.Fatalf("Failed to create existing file: %v", err)
 	}
 
-	// Test backup functionality.
+	// Test backup functionality
 	backupPath, err := BackupExistingFile(existingFile)
 	if err != nil {
 		t.Fatalf("BackupExistingFile failed: %v", err)
 	}
 
-	// Verify backup was created.
+	// Verify backup was created
 	if !utils.FileExists(backupPath) {
 		t.Fatalf("Backup file was not created at %s", backupPath)
 	}
 
-	// Verify backup contains original content.
+	// Verify backup contains original content
 	backupContent, err := os.ReadFile(backupPath)
 	if err != nil {
 		t.Fatalf("Failed to read backup file: %v", err)
@@ -44,22 +44,22 @@ func TestBackupExistingFile_CreatesBackup(t *testing.T) {
 			originalContent, string(backupContent))
 	}
 
-	// Verify backup path format (should include timestamp).
+	// Verify backup path format (should include timestamp)
 	if !strings.Contains(backupPath, ".zshrc.backup.") {
 		t.Errorf("Expected backup path to contain '.zshrc.backup.', got %s", backupPath)
 	}
 }
 
 func TestBackupExistingFile_NonExistentFile(t *testing.T) {
-	// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	// Test backup of non-existent file.
+	// Test backup of non-existent file
 	nonExistentFile := filepath.Join(tempHome, ".nonexistent")
 	backupPath, err := BackupExistingFile(nonExistentFile)
 
-	// Should not error, but should return empty string.
+	// Should not error, but should return empty string
 	if err != nil {
 		t.Errorf("BackupExistingFile should not error for non-existent file: %v", err)
 	}
@@ -70,11 +70,11 @@ func TestBackupExistingFile_NonExistentFile(t *testing.T) {
 }
 
 func TestBackupConfigurationFiles_CreatesBackupsInConfigurableLocation(t *testing.T) {
-	// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	// Create existing .zshrc.
+	// Create existing .zshrc
 	existingZshrc := filepath.Join(tempHome, ".zshrc")
 	originalZshrcContent := "# My existing zshrc\nalias ls='ls -la'"
 	err := os.WriteFile(existingZshrc, []byte(originalZshrcContent), 0644)
@@ -82,14 +82,14 @@ func TestBackupConfigurationFiles_CreatesBackupsInConfigurableLocation(t *testin
 		t.Fatalf("Failed to create existing .zshrc: %v", err)
 	}
 
-	// Create plonk directory and config.
+	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err = os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-	// Create config file with backup configuration.
+	// Create config file with backup configuration
 	configContent := `settings:
   default_manager: homebrew
 
@@ -108,13 +108,13 @@ zsh:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-	// Test backup functionality.
+	// Test backup functionality
 	err = BackupConfigurationFiles([]string{existingZshrc})
 	if err != nil {
 		t.Fatalf("BackupConfigurationFiles failed: %v", err)
 	}
 
-	// Verify backup was created in configured location.
+	// Verify backup was created in configured location
 	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
 	if !utils.FileExists(backupDir) {
 		t.Fatal("Expected backup directory to be created")
@@ -129,7 +129,7 @@ zsh:
 		t.Errorf("Expected 1 .zshrc backup file, found %d: %v", len(backupFiles), backupFiles)
 	}
 
-	// Verify backup contains original content.
+	// Verify backup contains original content
 	if len(backupFiles) > 0 {
 		backupContent, err := os.ReadFile(backupFiles[0])
 		if err != nil {

@@ -10,18 +10,18 @@ import (
 )
 
 func TestRestoreCommand_ListBackups_WithExistingBackups(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create plonk directory and config.
+	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err := os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-		// Create config file with backup configuration.
+	// Create config file with backup configuration
 	configContent := `settings:
   default_manager: homebrew
 
@@ -36,14 +36,14 @@ backup:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Create backup directory with some existing backups.
+	// Create backup directory with some existing backups
 	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
 	err = os.MkdirAll(backupDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create backup directory: %v", err)
 	}
 
-		// Create some backup files.
+	// Create some backup files
 	backupFiles := []struct {
 		filename string
 		content  string
@@ -62,13 +62,13 @@ backup:
 		}
 	}
 
-		// Test restore --list command.
+	// Test restore --list command
 	output, err := runRestoreCommand([]string{"--list"})
 	if err != nil {
 		t.Fatalf("Restore --list command failed: %v", err)
 	}
 
-		// Verify output contains all backup timestamps.
+	// Verify output contains all backup timestamps
 	if !strings.Contains(output, "20241206-143022") {
 		t.Error("Expected output to contain timestamp 20241206-143022")
 	}
@@ -79,7 +79,7 @@ backup:
 		t.Error("Expected output to contain timestamp 20241205-120000")
 	}
 
-		// Verify output is organized by original file.
+	// Verify output is organized by original file
 	if !strings.Contains(output, "~/.zshrc") {
 		t.Error("Expected output to show original file path ~/.zshrc")
 	}
@@ -92,18 +92,18 @@ backup:
 }
 
 func TestRestoreCommand_ListBackups_NoBackups(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create plonk directory and config.
+	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err := os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-		// Create config file.
+	// Create config file
 	configContent := `settings:
   default_manager: homebrew
 
@@ -118,24 +118,24 @@ backup:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Test restore --list command when no backups exist.
+	// Test restore --list command when no backups exist
 	output, err := runRestoreCommand([]string{"--list"})
 	if err != nil {
 		t.Fatalf("Restore --list command should not fail when no backups exist: %v", err)
 	}
 
-		// Verify output indicates no backups found.
+	// Verify output indicates no backups found
 	if !strings.Contains(output, "No backups found") {
 		t.Error("Expected output to indicate no backups found")
 	}
 }
 
 func TestRestoreCommand_ListBackups_NoConfig(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	_, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Test restore --list command when no config exists.
+	// Test restore --list command when no config exists
 	_, err := runRestoreCommand([]string{"--list"})
 	if err == nil {
 		t.Error("Expected error when no config file exists")
@@ -146,14 +146,14 @@ func TestRestoreCommand_ListBackups_NoConfig(t *testing.T) {
 	}
 }
 
-// runRestoreCommand is a test helper function.
+// runRestoreCommand is a test helper function
 func runRestoreCommand(args []string) (string, error) {
-		// Capture stdout to get command output.
+	// Capture stdout to get command output
 	oldStdout := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
-		// Buffer to capture output.
+	// Buffer to capture output
 	outC := make(chan string)
 	go func() {
 		var buf bytes.Buffer
@@ -161,12 +161,12 @@ func runRestoreCommand(args []string) (string, error) {
 		outC <- buf.String()
 	}()
 
-		// Reset flags to avoid test interference.
+	// Reset flags to avoid test interference
 	restoreCmd.Flags().Set("list", "false")
 	restoreCmd.Flags().Set("all", "false")
 	restoreCmd.Flags().Set("timestamp", "")
 
-		// Parse the arguments to set flags.
+	// Parse the arguments to set flags
 	for i, arg := range args {
 		switch arg {
 		case "--list":
@@ -180,21 +180,21 @@ func runRestoreCommand(args []string) (string, error) {
 		}
 	}
 
-		// Filter out flag arguments to get positional args.
+	// Filter out flag arguments to get positional args
 	var positionalArgs []string
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
 		if !strings.HasPrefix(arg, "--") {
 			positionalArgs = append(positionalArgs, arg)
 		} else if arg == "--timestamp" && i+1 < len(args) {
-			i++ 			i++ // Skip the timestamp value.
+			i++ // Skip the timestamp value
 		}
 	}
 
-		// Execute the command.
+	// Execute the command
 	err := restoreCmdRun(restoreCmd, positionalArgs)
 
-		// Restore stdout and get captured output.
+	// Restore stdout and get captured output
 	w.Close()
 	os.Stdout = oldStdout
 	output := <-outC
@@ -203,11 +203,11 @@ func runRestoreCommand(args []string) (string, error) {
 }
 
 func TestRestoreCommand_RestoreLatestFile(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create existing .zshrc file (will be overwritten by restore).
+	// Create existing .zshrc file (will be overwritten by restore)
 	existingZshrc := filepath.Join(tempHome, ".zshrc")
 	currentContent := "# Current zshrc content\nalias current='echo current'"
 	err := os.WriteFile(existingZshrc, []byte(currentContent), 0644)
@@ -215,14 +215,14 @@ func TestRestoreCommand_RestoreLatestFile(t *testing.T) {
 		t.Fatalf("Failed to create existing .zshrc: %v", err)
 	}
 
-		// Create plonk directory and config.
+	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err = os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-		// Create config file.
+	// Create config file
 	configContent := `settings:
   default_manager: homebrew
 
@@ -237,14 +237,14 @@ backup:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Create backup directory with backup files.
+	// Create backup directory with backup files
 	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
 	err = os.MkdirAll(backupDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create backup directory: %v", err)
 	}
 
-		// Create backup files (older and newer).
+	// Create backup files (older and newer)
 	olderBackup := filepath.Join(backupDir, "zshrc.backup.20241205-120000")
 	olderContent := "# Older zshrc backup\nalias old='echo old'"
 	err = os.WriteFile(olderBackup, []byte(olderContent), 0644)
@@ -259,18 +259,18 @@ backup:
 		t.Fatalf("Failed to create newer backup: %v", err)
 	}
 
-		// Test restore command for latest backup.
+	// Test restore command for latest backup
 	output, err := runRestoreCommand([]string{existingZshrc})
 	if err != nil {
 		t.Fatalf("Restore command failed: %v", err)
 	}
 
-		// Verify output indicates successful restore.
+	// Verify output indicates successful restore
 	if !strings.Contains(output, "Restored") {
 		t.Error("Expected output to indicate successful restore")
 	}
 
-		// Verify file was restored with latest backup content.
+	// Verify file was restored with latest backup content
 	restoredContent, err := os.ReadFile(existingZshrc)
 	if err != nil {
 		t.Fatalf("Failed to read restored file: %v", err)
@@ -283,18 +283,18 @@ backup:
 }
 
 func TestRestoreCommand_RestoreFile_NoBackups(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create plonk directory and config.
+	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err := os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-		// Create config file.
+	// Create config file
 	configContent := `settings:
   default_manager: homebrew
 
@@ -309,7 +309,7 @@ backup:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Test restore command when no backups exist.
+	// Test restore command when no backups exist
 	_, err = runRestoreCommand([]string{filepath.Join(tempHome, ".zshrc")})
 	if err == nil {
 		t.Error("Expected error when trying to restore file with no backups")
@@ -321,18 +321,18 @@ backup:
 }
 
 func TestRestoreCommand_RestoreFile_FileNotExist(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create plonk directory and config.
+	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err := os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-		// Create config file.
+	// Create config file
 	configContent := `settings:
   default_manager: homebrew
 
@@ -347,21 +347,21 @@ backup:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Create backup directory with backup for different file.
+	// Create backup directory with backup for different file
 	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
 	err = os.MkdirAll(backupDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create backup directory: %v", err)
 	}
 
-		// Create backup for vimrc but try to restore zshrc.
+	// Create backup for vimrc but try to restore zshrc
 	vimrcBackup := filepath.Join(backupDir, "vimrc.backup.20241206-150330")
 	err = os.WriteFile(vimrcBackup, []byte("\" vimrc backup"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create vimrc backup: %v", err)
 	}
 
-		// Test restore command for file that has no backups.
+	// Test restore command for file that has no backups
 	_, err = runRestoreCommand([]string{filepath.Join(tempHome, ".zshrc")})
 	if err == nil {
 		t.Error("Expected error when trying to restore file with no backups")
@@ -373,11 +373,11 @@ backup:
 }
 
 func TestRestoreCommand_RestoreSpecificTimestamp(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create existing .zshrc file (will be overwritten by restore).
+	// Create existing .zshrc file (will be overwritten by restore)
 	existingZshrc := filepath.Join(tempHome, ".zshrc")
 	currentContent := "# Current zshrc content\nalias current='echo current'"
 	err := os.WriteFile(existingZshrc, []byte(currentContent), 0644)
@@ -385,14 +385,14 @@ func TestRestoreCommand_RestoreSpecificTimestamp(t *testing.T) {
 		t.Fatalf("Failed to create existing .zshrc: %v", err)
 	}
 
-		// Create plonk directory and config.
+	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err = os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-		// Create config file.
+	// Create config file
 	configContent := `settings:
   default_manager: homebrew
 
@@ -407,14 +407,14 @@ backup:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Create backup directory with backup files.
+	// Create backup directory with backup files
 	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
 	err = os.MkdirAll(backupDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create backup directory: %v", err)
 	}
 
-		// Create backup files with different timestamps.
+	// Create backup files with different timestamps
 	olderBackup := filepath.Join(backupDir, "zshrc.backup.20241205-120000")
 	olderContent := "# Older zshrc backup\nalias old='echo old'"
 	err = os.WriteFile(olderBackup, []byte(olderContent), 0644)
@@ -429,13 +429,13 @@ backup:
 		t.Fatalf("Failed to create newer backup: %v", err)
 	}
 
-		// Test restore command with specific older timestamp.
+	// Test restore command with specific older timestamp
 	output, err := runRestoreCommand([]string{existingZshrc, "--timestamp", "20241205-120000"})
 	if err != nil {
 		t.Fatalf("Restore command with timestamp failed: %v", err)
 	}
 
-		// Verify output indicates successful restore with correct timestamp.
+	// Verify output indicates successful restore with correct timestamp
 	if !strings.Contains(output, "Restored") {
 		t.Error("Expected output to indicate successful restore")
 	}
@@ -443,7 +443,7 @@ backup:
 		t.Error("Expected output to show the specific timestamp used")
 	}
 
-		// Verify file was restored with older backup content (not the newer one).
+	// Verify file was restored with older backup content (not the newer one)
 	restoredContent, err := os.ReadFile(existingZshrc)
 	if err != nil {
 		t.Fatalf("Failed to read restored file: %v", err)
@@ -456,18 +456,18 @@ backup:
 }
 
 func TestRestoreCommand_RestoreInvalidTimestamp(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create plonk directory and config.
+	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err := os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-		// Create config file.
+	// Create config file
 	configContent := `settings:
   default_manager: homebrew
 
@@ -482,21 +482,21 @@ backup:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Create backup directory with one backup.
+	// Create backup directory with one backup
 	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
 	err = os.MkdirAll(backupDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create backup directory: %v", err)
 	}
 
-		// Create a backup file.
+	// Create a backup file
 	backup := filepath.Join(backupDir, "zshrc.backup.20241206-150330")
 	err = os.WriteFile(backup, []byte("# backup content"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create backup: %v", err)
 	}
 
-		// Test restore command with non-existent timestamp.
+	// Test restore command with non-existent timestamp
 	_, err = runRestoreCommand([]string{filepath.Join(tempHome, ".zshrc"), "--timestamp", "20241201-000000"})
 	if err == nil {
 		t.Error("Expected error when trying to restore with non-existent timestamp")
@@ -508,11 +508,11 @@ backup:
 }
 
 func TestRestoreCommand_RestoreAll(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create existing files that will be overwritten by restore.
+	// Create existing files that will be overwritten by restore
 	existingZshrc := filepath.Join(tempHome, ".zshrc")
 	currentZshrcContent := "# Current zshrc\nalias current='echo current'"
 	err := os.WriteFile(existingZshrc, []byte(currentZshrcContent), 0644)
@@ -527,14 +527,14 @@ func TestRestoreCommand_RestoreAll(t *testing.T) {
 		t.Fatalf("Failed to create existing .vimrc: %v", err)
 	}
 
-		// Create plonk directory and config.
+	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err = os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-		// Create config file.
+	// Create config file
 	configContent := `settings:
   default_manager: homebrew
 
@@ -549,14 +549,14 @@ backup:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Create backup directory with backup files for multiple files.
+	// Create backup directory with backup files for multiple files
 	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
 	err = os.MkdirAll(backupDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create backup directory: %v", err)
 	}
 
-		// Create backup files for .zshrc.
+	// Create backup files for .zshrc
 	zshrcBackup1 := filepath.Join(backupDir, "zshrc.backup.20241205-120000")
 	zshrcBackupContent1 := "# Older zshrc backup\nalias old='echo old'"
 	err = os.WriteFile(zshrcBackup1, []byte(zshrcBackupContent1), 0644)
@@ -571,7 +571,7 @@ backup:
 		t.Fatalf("Failed to create zshrc backup 2: %v", err)
 	}
 
-		// Create backup files for .vimrc.
+	// Create backup files for .vimrc
 	vimrcBackup1 := filepath.Join(backupDir, "vimrc.backup.20241205-130000")
 	vimrcBackupContent1 := "\" Older vimrc backup\nset relativenumber"
 	err = os.WriteFile(vimrcBackup1, []byte(vimrcBackupContent1), 0644)
@@ -586,13 +586,13 @@ backup:
 		t.Fatalf("Failed to create vimrc backup 2: %v", err)
 	}
 
-		// Test restore --all command.
+	// Test restore --all command
 	output, err := runRestoreCommand([]string{"--all"})
 	if err != nil {
 		t.Fatalf("Restore --all command failed: %v", err)
 	}
 
-		// Verify output indicates successful restore of multiple files.
+	// Verify output indicates successful restore of multiple files
 	if !strings.Contains(output, "Restored") {
 		t.Error("Expected output to indicate successful restore")
 	}
@@ -603,7 +603,7 @@ backup:
 		t.Error("Expected output to mention .vimrc restoration")
 	}
 
-		// Verify .zshrc was restored with latest backup content.
+	// Verify .zshrc was restored with latest backup content
 	restoredZshrcContent, err := os.ReadFile(existingZshrc)
 	if err != nil {
 		t.Fatalf("Failed to read restored .zshrc: %v", err)
@@ -614,7 +614,7 @@ backup:
 			zshrcBackupContent2, string(restoredZshrcContent))
 	}
 
-		// Verify .vimrc was restored with latest backup content.
+	// Verify .vimrc was restored with latest backup content
 	restoredVimrcContent, err := os.ReadFile(existingVimrc)
 	if err != nil {
 		t.Fatalf("Failed to read restored .vimrc: %v", err)
@@ -627,18 +627,18 @@ backup:
 }
 
 func TestRestoreCommand_RestoreAll_NoBackups(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create plonk directory and config.
+	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err := os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-		// Create config file.
+	// Create config file
 	configContent := `settings:
   default_manager: homebrew
 
@@ -653,24 +653,24 @@ backup:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Test restore --all command when no backups exist.
+	// Test restore --all command when no backups exist
 	output, err := runRestoreCommand([]string{"--all"})
 	if err != nil {
 		t.Fatalf("Restore --all should not fail when no backups exist: %v", err)
 	}
 
-		// Verify output indicates no backups found.
+	// Verify output indicates no backups found
 	if !strings.Contains(output, "No backups found") {
 		t.Error("Expected output to indicate no backups found")
 	}
 }
 
 func TestRestoreCommand_RestoreAll_PartialBackups(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create existing .zshrc file.
+	// Create existing .zshrc file
 	existingZshrc := filepath.Join(tempHome, ".zshrc")
 	currentContent := "# Current zshrc\nalias current='echo current'"
 	err := os.WriteFile(existingZshrc, []byte(currentContent), 0644)
@@ -678,14 +678,14 @@ func TestRestoreCommand_RestoreAll_PartialBackups(t *testing.T) {
 		t.Fatalf("Failed to create existing .zshrc: %v", err)
 	}
 
-		// Create plonk directory and config.
+	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err = os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-		// Create config file.
+	// Create config file
 	configContent := `settings:
   default_manager: homebrew
 
@@ -700,14 +700,14 @@ backup:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Create backup directory with only one backup file.
+	// Create backup directory with only one backup file
 	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
 	err = os.MkdirAll(backupDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create backup directory: %v", err)
 	}
 
-		// Create backup file for .zshrc only.
+	// Create backup file for .zshrc only
 	zshrcBackup := filepath.Join(backupDir, "zshrc.backup.20241206-150330")
 	zshrcBackupContent := "# Zshrc backup\nalias backup='echo backup'"
 	err = os.WriteFile(zshrcBackup, []byte(zshrcBackupContent), 0644)
@@ -715,18 +715,18 @@ backup:
 		t.Fatalf("Failed to create zshrc backup: %v", err)
 	}
 
-		// Test restore --all command with only partial backups.
+	// Test restore --all command with only partial backups
 	output, err := runRestoreCommand([]string{"--all"})
 	if err != nil {
 		t.Fatalf("Restore --all command failed: %v", err)
 	}
 
-		// Verify output indicates restore of available files.
+	// Verify output indicates restore of available files
 	if !strings.Contains(output, "Restored") {
 		t.Error("Expected output to indicate successful restore")
 	}
 
-		// Verify .zshrc was restored.
+	// Verify .zshrc was restored
 	restoredContent, err := os.ReadFile(existingZshrc)
 	if err != nil {
 		t.Fatalf("Failed to read restored .zshrc: %v", err)

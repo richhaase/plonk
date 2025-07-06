@@ -20,7 +20,7 @@ Includes configuration drift detection comparing current system state with plonk
 }
 
 func init() {
-		// No flags needed - drift detection is always enabled.
+	// No flags needed - drift detection is always enabled.
 }
 
 // Removed --all flag - use 'plonk pkg list' for detailed package listings.
@@ -28,7 +28,7 @@ func init() {
 func runStatus(cmd *cobra.Command, args []string) error {
 	executor := managers.NewRealCommandExecutor()
 
-		// Initialize package managers for shell environment management.
+	// Initialize package managers for shell environment management.
 	packageManagers := []managers.PackageManagerInfo{
 		{
 			Name:    "Homebrew",
@@ -73,7 +73,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		fmt.Println()
 	}
 
-		// Always show drift detection.
+	// Always show drift detection.
 	return showDriftStatus()
 }
 
@@ -91,7 +91,7 @@ func showDriftStatus() error {
 	drift, err := detectConfigDrift()
 	if err != nil {
 		fmt.Printf("⚠️  Error detecting drift: %v\n", err)
-		return nil 		return nil // Don't fail status command for drift errors.
+		return nil // Don't fail status command for drift errors.
 	}
 
 	if !drift.HasDrift() {
@@ -104,7 +104,7 @@ func showDriftStatus() error {
 	fmt.Println("🔄 Configuration drift detected:")
 	fmt.Println()
 
-		// Show missing files.
+	// Show missing files.
 	if len(drift.MissingFiles) > 0 {
 		fmt.Printf("📄 Missing configuration files (%d):\n", len(drift.MissingFiles))
 		for _, file := range drift.MissingFiles {
@@ -113,7 +113,7 @@ func showDriftStatus() error {
 		fmt.Println()
 	}
 
-		// Show modified files.
+	// Show modified files.
 	if len(drift.ModifiedFiles) > 0 {
 		fmt.Printf("📝 Modified configuration files (%d):\n", len(drift.ModifiedFiles))
 		for _, file := range drift.ModifiedFiles {
@@ -122,7 +122,7 @@ func showDriftStatus() error {
 		fmt.Println()
 	}
 
-		// Show missing packages.
+	// Show missing packages.
 	if len(drift.MissingPackages) > 0 {
 		fmt.Printf("📦 Missing packages (%d):\n", len(drift.MissingPackages))
 		for _, pkg := range drift.MissingPackages {
@@ -131,7 +131,7 @@ func showDriftStatus() error {
 		fmt.Println()
 	}
 
-		// Show extra packages.
+	// Show extra packages.
 	if len(drift.ExtraPackages) > 0 {
 		fmt.Printf("➕ Extra packages (%d):\n", len(drift.ExtraPackages))
 		for _, pkg := range drift.ExtraPackages {

@@ -23,7 +23,7 @@ func TestGenerateZshrc_BasicStructure(t *testing.T) {
 
 	result := GenerateZshrc(config)
 
-	// Should contain env vars.
+	// Should contain env vars
 	if !strings.Contains(result, "export EDITOR='nvim'") {
 		t.Error("Expected EDITOR export in zshrc")
 	}
@@ -31,7 +31,7 @@ func TestGenerateZshrc_BasicStructure(t *testing.T) {
 		t.Error("Expected PAGER export in zshrc")
 	}
 
-	// Should contain aliases.
+	// Should contain aliases
 	if !strings.Contains(result, "alias ll='eza -la'") {
 		t.Error("Expected ll alias in zshrc")
 	}
@@ -39,7 +39,7 @@ func TestGenerateZshrc_BasicStructure(t *testing.T) {
 		t.Error("Expected cat alias in zshrc")
 	}
 
-	// Should contain inits.
+	// Should contain inits
 	if !strings.Contains(result, `eval "$(starship init zsh)"`) {
 		t.Error("Expected starship init in zshrc")
 	}
@@ -69,7 +69,7 @@ esac`,
 
 	result := GenerateZshrc(config)
 
-	// Should contain completions.
+	// Should contain completions
 	if !strings.Contains(result, `source <(kubectl completion zsh)`) {
 		t.Error("Expected kubectl completion in zshrc")
 	}
@@ -77,7 +77,7 @@ esac`,
 		t.Error("Expected gh completion in zshrc")
 	}
 
-	// Should contain functions.
+	// Should contain functions
 	if !strings.Contains(result, "function mkcd() {") {
 		t.Error("Expected mkcd function definition in zshrc")
 	}
@@ -88,7 +88,7 @@ esac`,
 		t.Error("Expected extract function definition in zshrc")
 	}
 
-	// Should contain shell options.
+	// Should contain shell options
 	if !strings.Contains(result, "setopt AUTO_MENU") {
 		t.Error("Expected AUTO_MENU setopt in zshrc")
 	}
@@ -105,16 +105,16 @@ func TestGenerateZshenv_OnlyEnvVars(t *testing.T) {
 			"PATH":   "$PATH:/usr/local/bin",
 		},
 		Aliases: map[string]string{
-			"ll": "eza -la", "ll": "eza -la", // Should not appear in .zshenv.
+			"ll": "eza -la", // Should not appear in .zshenv
 		},
 		Inits: []string{
-			`eval "$(starship init zsh)"`, `eval "$(starship init zsh)"`, // Should not appear in .zshenv.
+			`eval "$(starship init zsh)"`, // Should not appear in .zshenv
 		},
 	}
 
 	result := GenerateZshenv(config)
 
-	// Should contain env vars.
+	// Should contain env vars
 	if !strings.Contains(result, "export EDITOR='nvim'") {
 		t.Error("Expected EDITOR export in zshenv")
 	}
@@ -125,7 +125,7 @@ func TestGenerateZshenv_OnlyEnvVars(t *testing.T) {
 		t.Error("Expected PATH export in zshenv")
 	}
 
-	// Should NOT contain aliases or inits (those belong in .zshrc).
+	// Should NOT contain aliases or inits (those belong in .zshrc)
 	if strings.Contains(result, "alias") {
 		t.Error("zshenv should not contain aliases")
 	}
@@ -150,7 +150,7 @@ func TestGenerateZshrc_WithSourceBeforeAfter(t *testing.T) {
 
 	result := GenerateZshrc(config)
 
-	// Should source before files at the beginning (after header).
+	// Should source before files at the beginning (after header)
 	lines := strings.Split(result, "\n")
 	var beforeIndex, aliasIndex, afterIndex int
 
@@ -166,7 +166,7 @@ func TestGenerateZshrc_WithSourceBeforeAfter(t *testing.T) {
 		}
 	}
 
-	// Verify ordering: before < alias < after.
+	// Verify ordering: before < alias < after
 	if beforeIndex == 0 || aliasIndex == 0 || afterIndex == 0 {
 		t.Error("Could not find expected source statements or alias")
 	}
@@ -179,7 +179,7 @@ func TestGenerateZshrc_WithSourceBeforeAfter(t *testing.T) {
 		t.Error("SourceAfter should come after main config")
 	}
 
-	// Should contain both source statements.
+	// Should contain both source statements
 	if !strings.Contains(result, "source ~/.config/zsh/custom-before.zsh") {
 		t.Error("Expected SourceBefore statement in zshrc")
 	}

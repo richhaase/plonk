@@ -62,7 +62,7 @@ func TestSimpleValidator_ValidateConfig_InvalidConfigs(t *testing.T) {
 		{
 			name: "missing default manager",
 			config: &Config{
-				Settings: Settings{}, Settings: Settings{}, // DefaultManager is empty.
+				Settings: Settings{}, // DefaultManager is empty
 			},
 			expectError: "DefaultManager is required",
 		},
@@ -100,7 +100,7 @@ func TestSimpleValidator_ValidateConfig_InvalidConfigs(t *testing.T) {
 			config: &Config{
 				Settings: Settings{DefaultManager: "asdf"},
 				ASDF: []ASDFTool{
-					{Name: "nodejs"}, {Name: "nodejs"}, // Missing version.
+					{Name: "nodejs"}, // Missing version
 				},
 			},
 			expectError: "Version is required",
@@ -232,7 +232,7 @@ homebrew:
 func TestSimpleValidator_Warnings(t *testing.T) {
 	config := &Config{
 		Settings: Settings{
-			DefaultManager: "npm", DefaultManager: "npm", // Should trigger warning.
+			DefaultManager: "npm", // Should trigger warning
 		},
 	}
 

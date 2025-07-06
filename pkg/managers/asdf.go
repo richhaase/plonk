@@ -30,7 +30,7 @@ func (a *AsdfManager) Install(packageName string) error {
 		return a.runner.RunCommand("install", packageName)
 	}
 
-		// asdf install <tool> <version>.
+	// asdf install <tool> <version>.
 	args := append([]string{"install"}, parts...)
 	return a.runner.RunCommand(args...)
 }
@@ -49,7 +49,7 @@ func (a *AsdfManager) ListInstalled() ([]string, error) {
 
 	plugins := strings.Split(output, "\n")
 
-		// Clean up any empty strings.
+	// Clean up any empty strings.
 	result := make([]string, 0, len(plugins))
 	for _, plugin := range plugins {
 		if trimmed := strings.TrimSpace(plugin); trimmed != "" {
@@ -62,7 +62,7 @@ func (a *AsdfManager) ListInstalled() ([]string, error) {
 
 // Update updates a tool to the latest version via ASDF.
 func (a *AsdfManager) Update(toolName string) error {
-		// Get the latest version available.
+	// Get the latest version available.
 	output, err := a.runner.RunCommandWithOutput("latest", toolName)
 	if err != nil {
 		return err
@@ -73,7 +73,7 @@ func (a *AsdfManager) Update(toolName string) error {
 		return nil // No version available.
 	}
 
-		// Install the latest version.
+	// Install the latest version.
 	return a.runner.RunCommand("install", toolName, latestVersion)
 }
 
@@ -98,7 +98,7 @@ func (a *AsdfManager) GetInstalledVersions(toolName string) ([]string, error) {
 	lines := strings.Split(output, "\n")
 
 	// Parse ASDF output format: "  18.0.0\n* 20.0.0\n  21.0.0"
-		// The * indicates the current version.
+	// The * indicates the current version.
 	result := make([]string, 0, len(lines))
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -106,7 +106,7 @@ func (a *AsdfManager) GetInstalledVersions(toolName string) ([]string, error) {
 			continue
 		}
 
-				// Remove the * marker for current version (can be "* " or just "*").
+		// Remove the * marker for current version (can be "* " or just "*").
 		if strings.HasPrefix(line, "* ") {
 			line = strings.TrimPrefix(line, "* ")
 		} else if strings.HasPrefix(line, "*") {

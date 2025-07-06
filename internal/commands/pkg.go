@@ -40,7 +40,7 @@ func init() {
 func runPkgList(cmd *cobra.Command, args []string) error {
 	executor := managers.NewRealCommandExecutor()
 
-	// Initialize all package managers.
+	// Initialize all package managers
 	allManagers := map[string]managers.PackageManagerInfo{
 		"brew": {
 			Name:    "Homebrew",
@@ -56,17 +56,17 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 		},
 	}
 
-	// Determine which managers to show.
+	// Determine which managers to show
 	var managersToShow []managers.PackageManagerInfo
 	if len(args) == 0 {
-		// Show all managers.
+		// Show all managers
 		managersToShow = []managers.PackageManagerInfo{
 			allManagers["brew"],
 			allManagers["asdf"],
 			allManagers["npm"],
 		}
 	} else {
-		// Show specific manager.
+		// Show specific manager
 		managerKey := strings.ToLower(args[0])
 		if mgr, exists := allManagers[managerKey]; exists {
 			managersToShow = []managers.PackageManagerInfo{mgr}
@@ -75,7 +75,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// List packages for each manager.
+	// List packages for each manager
 	for i, mgr := range managersToShow {
 		if len(managersToShow) > 1 {
 			fmt.Printf("## %s\n", mgr.Name)
@@ -107,7 +107,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		// Add spacing between managers (except for the last one).
+		// Add spacing between managers (except for the last one)
 		if len(managersToShow) > 1 && i < len(managersToShow)-1 {
 			fmt.Println()
 		}

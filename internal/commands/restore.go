@@ -50,22 +50,22 @@ func restoreCmdRun(cmd *cobra.Command, args []string) error {
 }
 
 func runRestoreList() error {
-		// Ensure plonk is properly set up.
+	// Ensure plonk is properly set up
 	plonkDir := directories.Default.PlonkDir()
 	if _, err := config.LoadConfig(plonkDir); err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-		// Get backup directory using new directory structure.
+	// Get backup directory using new directory structure
 	backupDir := directories.Default.BackupsDir()
 
-		// Check if backup directory exists.
+	// Check if backup directory exists
 	if !utils.FileExists(backupDir) {
 		fmt.Println("No backups found - backup directory does not exist")
 		return nil
 	}
 
-		// Find all backup files.
+	// Find all backup files
 	backupPattern := filepath.Join(backupDir, "*.backup.*")
 	backupFiles, err := filepath.Glob(backupPattern)
 	if err != nil {
@@ -77,7 +77,7 @@ func runRestoreList() error {
 		return nil
 	}
 
-		// Group backups by original file.
+	// Group backups by original file
 	backupGroups := groupBackupsByOriginalFile(backupFiles)
 
 	if len(backupGroups) == 0 {
@@ -85,23 +85,23 @@ func runRestoreList() error {
 		return nil
 	}
 
-		// Display the grouped backups.
+	// Display the grouped backups
 	displayBackupGroups(backupGroups)
 
 	return nil
 }
 
 func runRestoreAll() error {
-		// Get backup directory using new directory structure.
+	// Get backup directory using new directory structure
 	backupDir := directories.Default.BackupsDir()
 
-		// Check if backup directory exists.
+	// Check if backup directory exists
 	if !utils.FileExists(backupDir) {
 		fmt.Println("No backups found - backup directory does not exist")
 		return nil
 	}
 
-		// Find all backup files.
+	// Find all backup files
 	backupPattern := filepath.Join(backupDir, "*.backup.*")
 	backupFiles, err := filepath.Glob(backupPattern)
 	if err != nil {
@@ -113,7 +113,7 @@ func runRestoreAll() error {
 		return nil
 	}
 
-		// Group backups by original file.
+	// Group backups by original file
 	backupGroups := groupBackupsByOriginalFile(backupFiles)
 
 	if len(backupGroups) == 0 {
@@ -121,17 +121,17 @@ func runRestoreAll() error {
 		return nil
 	}
 
-		// Restore latest backup for each file.
+	// Restore latest backup for each file
 	restoredCount := 0
 	failedCount := 0
 	fmt.Printf("Restoring %d file(s) from latest backups...\n", len(backupGroups))
 
 	for originalFile, backups := range backupGroups {
-				// Sort backups by timestamp (newest first).
+		// Sort backups by timestamp (newest first)
 		sort.Sort(sort.Reverse(sort.StringSlice(backups)))
 		latestBackup := backups[0]
 
-				// Restore the backup file.
+		// Restore the backup file
 		if err := restoreBackupToFile(latestBackup, originalFile); err != nil {
 			fmt.Printf("⚠️  Failed to restore %s: %v\n", originalFile, err)
 			failedCount++
@@ -141,7 +141,7 @@ func runRestoreAll() error {
 		restoredCount++
 	}
 
-		// Provide summary feedback.
+	// Provide summary feedback
 	if restoredCount > 0 {
 		fmt.Printf("✅ Successfully restored %d file(s) from backups\n", restoredCount)
 	}
@@ -153,18 +153,18 @@ func runRestoreAll() error {
 }
 
 func runRestoreFile(filePath, timestamp string) error {
-		// Get backup directory using new directory structure.
+	// Get backup directory using new directory structure
 	backupDir := directories.Default.BackupsDir()
 
-		// Check if backup directory exists.
+	// Check if backup directory exists
 	if !utils.FileExists(backupDir) {
 		return fmt.Errorf("no backups found for %s - backup directory does not exist", filePath)
 	}
 
-		// Convert file path to backup filename format.
+	// Convert file path to backup filename format
 	backupFilename := originalPathToBackupFilename(filePath)
 
-		// Find backup files for this file.
+	// Find backup files for this file
 	backupPattern := filepath.Join(backupDir, backupFilename+".backup.*")
 	backupFiles, err := filepath.Glob(backupPattern)
 	if err != nil {
@@ -175,13 +175,13 @@ func runRestoreFile(filePath, timestamp string) error {
 		return fmt.Errorf("no backups found for %s", filePath)
 	}
 
-		// Find the backup to restore.
+	// Find the backup to restore
 	backupToRestore, err := selectBackupToRestore(backupDir, backupFilename, backupFiles, timestamp)
 	if err != nil {
 		return err
 	}
 
-		// Restore the backup file.
+	// Restore the backup file
 	if err := restoreBackupToFile(backupToRestore, filePath); err != nil {
 		return fmt.Errorf("failed to restore %s: %w", filePath, err)
 	}
@@ -189,16 +189,16 @@ func runRestoreFile(filePath, timestamp string) error {
 	return nil
 }
 
-// groupBackupsByOriginalFile groups backup files by their original file path.
+// groupBackupsByOriginalFile groups backup files by their original file path
 func groupBackupsByOriginalFile(backupFiles []string) map[string][]string {
 	backupGroups := make(map[string][]string)
 
 	for _, backupFile := range backupFiles {
 		baseName := filepath.Base(backupFile)
-				// Parse filename like "zshrc.backup.20241206-143022".
+		// Parse filename like "zshrc.backup.20241206-143022"
 		parts := strings.Split(baseName, ".backup.")
 		if len(parts) != 2 {
-			continue 			continue // Skip malformed backup files.
+			continue // Skip malformed backup files
 		}
 
 		originalFile := backupFilenameToOriginalPath(parts[0])
@@ -208,18 +208,18 @@ func groupBackupsByOriginalFile(backupFiles []string) map[string][]string {
 	return backupGroups
 }
 
-// backupFilenameToOriginalPath converts backup filename to original file path.
+// backupFilenameToOriginalPath converts backup filename to original file path
 func backupFilenameToOriginalPath(backupFilename string) string {
-		// Convert back to dotfile format (zshrc -> ~/.zshrc).
+	// Convert back to dotfile format (zshrc -> ~/.zshrc)
 	if backupFilename == "gitconfig" {
 		return "~/.gitconfig"
 	}
 	return "~/." + backupFilename
 }
 
-// displayBackupGroups displays backup files grouped by original file.
+// displayBackupGroups displays backup files grouped by original file
 func displayBackupGroups(backupGroups map[string][]string) {
-		// Sort original files for consistent output.
+	// Sort original files for consistent output
 	var originalFiles []string
 	for originalFile := range backupGroups {
 		originalFiles = append(originalFiles, originalFile)
@@ -232,7 +232,7 @@ func displayBackupGroups(backupGroups map[string][]string) {
 	for _, originalFile := range originalFiles {
 		fmt.Printf("\n%s:\n", originalFile)
 
-				// Sort backups by timestamp (newest first).
+		// Sort backups by timestamp (newest first)
 		backups := backupGroups[originalFile]
 		sort.Sort(sort.Reverse(sort.StringSlice(backups)))
 
@@ -245,7 +245,7 @@ func displayBackupGroups(backupGroups map[string][]string) {
 	}
 }
 
-// extractTimestampFromBackup extracts timestamp from backup filename.
+// extractTimestampFromBackup extracts timestamp from backup filename
 func extractTimestampFromBackup(backupPath string) string {
 	baseName := filepath.Base(backupPath)
 	parts := strings.Split(baseName, ".backup.")
@@ -255,15 +255,15 @@ func extractTimestampFromBackup(backupPath string) string {
 	return ""
 }
 
-// originalPathToBackupFilename converts original file path to backup filename.
+// originalPathToBackupFilename converts original file path to backup filename
 func originalPathToBackupFilename(originalPath string) string {
-		// Expand ~ to full path first.
+	// Expand ~ to full path first
 	expandedPath := directories.Default.ExpandHomeDir(originalPath)
 
-		// Get just the filename without directory.
+	// Get just the filename without directory
 	filename := filepath.Base(expandedPath)
 
-		// Remove leading dot (e.g., .zshrc -> zshrc).
+	// Remove leading dot (e.g., .zshrc -> zshrc)
 	if strings.HasPrefix(filename, ".") {
 		filename = filename[1:]
 	}
@@ -271,10 +271,10 @@ func originalPathToBackupFilename(originalPath string) string {
 	return filename
 }
 
-// selectBackupToRestore selects which backup file to restore based on timestamp preference.
+// selectBackupToRestore selects which backup file to restore based on timestamp preference
 func selectBackupToRestore(backupDir, backupFilename string, backupFiles []string, timestamp string) (string, error) {
 	if timestamp != "" {
-				// Look for specific timestamp.
+		// Look for specific timestamp
 		targetBackup := filepath.Join(backupDir, backupFilename+".backup."+timestamp)
 		if !utils.FileExists(targetBackup) {
 			return "", fmt.Errorf("backup with timestamp %s not found", timestamp)
@@ -282,34 +282,34 @@ func selectBackupToRestore(backupDir, backupFilename string, backupFiles []strin
 		return targetBackup, nil
 	}
 
-		// Use latest backup (sort by timestamp, newest first).
+	// Use latest backup (sort by timestamp, newest first)
 	sort.Sort(sort.Reverse(sort.StringSlice(backupFiles)))
 	return backupFiles[0], nil
 }
 
-// restoreBackupToFile restores a backup file to the target location.
+// restoreBackupToFile restores a backup file to the target location
 func restoreBackupToFile(backupPath, targetPath string) error {
-		// Read backup content.
+	// Read backup content
 	backupContent, err := os.ReadFile(backupPath)
 	if err != nil {
 		return fmt.Errorf("failed to read backup file %s: %w", backupPath, err)
 	}
 
-		// Expand home directory if needed.
+	// Expand home directory if needed
 	expandedTargetPath := directories.Default.ExpandHomeDir(targetPath)
 
-		// Ensure directory exists for target file.
+	// Ensure directory exists for target file
 	targetDir := filepath.Dir(expandedTargetPath)
 	if err := os.MkdirAll(targetDir, 0755); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", targetDir, err)
 	}
 
-		// Write backup content to target file.
+	// Write backup content to target file
 	if err := os.WriteFile(expandedTargetPath, backupContent, 0644); err != nil {
 		return fmt.Errorf("failed to write to %s: %w", expandedTargetPath, err)
 	}
 
-		// Extract timestamp for user feedback.
+	// Extract timestamp for user feedback
 	usedTimestamp := extractTimestampFromBackup(backupPath)
 	fmt.Printf("Restored %s from backup %s\n", targetPath, usedTimestamp)
 

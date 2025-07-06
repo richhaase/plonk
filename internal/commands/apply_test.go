@@ -11,11 +11,11 @@ import (
 )
 
 func TestApplyCommand_NoConfig(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	_, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Test - should error when no config exists.
+	// Test - should error when no config exists
 	err := runApply([]string{})
 	if err == nil {
 		t.Error("Expected error when no config file exists")
@@ -23,18 +23,18 @@ func TestApplyCommand_NoConfig(t *testing.T) {
 }
 
 func TestApplyCommand_AllDotfiles(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create plonk directory and config.
+	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err := os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-		// Create source files.
+	// Create source files
 	err = os.WriteFile(filepath.Join(plonkDir, "zshrc"), []byte("# test zshrc"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create source file: %v", err)
@@ -45,7 +45,7 @@ func TestApplyCommand_AllDotfiles(t *testing.T) {
 		t.Fatalf("Failed to create source file: %v", err)
 	}
 
-		// Create config directory structure.
+	// Create config directory structure
 	configDir := filepath.Join(plonkDir, "config", "nvim")
 	err = os.MkdirAll(configDir, 0755)
 	if err != nil {
@@ -57,7 +57,7 @@ func TestApplyCommand_AllDotfiles(t *testing.T) {
 		t.Fatalf("Failed to create nvim config: %v", err)
 	}
 
-		// Create config file.
+	// Create config file
 	configContent := `settings:
   default_manager: homebrew
 
@@ -77,13 +77,13 @@ homebrew:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Test applying all dotfiles.
+	// Test applying all dotfiles
 	err = runApply([]string{})
 	if err != nil {
 		t.Fatalf("Apply command failed: %v", err)
 	}
 
-		// Verify files were created.
+	// Verify files were created
 	if !utils.FileExists(filepath.Join(tempHome, ".zshrc")) {
 		t.Error("Expected ~/.zshrc to be created")
 	}
@@ -98,24 +98,24 @@ homebrew:
 }
 
 func TestApplyCommand_PackageSpecific(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create plonk directory and config.
+	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err := os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-		// Create source files.
+	// Create source files
 	err = os.WriteFile(filepath.Join(plonkDir, "zshrc"), []byte("# test zshrc"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create source file: %v", err)
 	}
 
-		// Create config directory for neovim.
+	// Create config directory for neovim
 	nvimConfigDir := filepath.Join(plonkDir, "config", "nvim")
 	err = os.MkdirAll(nvimConfigDir, 0755)
 	if err != nil {
@@ -127,7 +127,7 @@ func TestApplyCommand_PackageSpecific(t *testing.T) {
 		t.Fatalf("Failed to create nvim config: %v", err)
 	}
 
-		// Create config directory for mcfly.
+	// Create config directory for mcfly
 	mcflyConfigDir := filepath.Join(plonkDir, "config", "mcfly")
 	err = os.MkdirAll(mcflyConfigDir, 0755)
 	if err != nil {
@@ -139,7 +139,7 @@ func TestApplyCommand_PackageSpecific(t *testing.T) {
 		t.Fatalf("Failed to create mcfly config: %v", err)
 	}
 
-		// Create config file.
+	// Create config file
 	configContent := `settings:
   default_manager: homebrew
 
@@ -160,13 +160,13 @@ homebrew:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Test applying only neovim package config.
+	// Test applying only neovim package config
 	err = runApply([]string{"neovim"})
 	if err != nil {
 		t.Fatalf("Apply command failed: %v", err)
 	}
 
-		// Verify only neovim config was applied, not global dotfiles or mcfly.
+	// Verify only neovim config was applied, not global dotfiles or mcfly
 	if !utils.FileExists(filepath.Join(tempHome, ".config", "nvim", "init.vim")) {
 		t.Error("Expected ~/.config/nvim/init.vim to be created")
 	}
@@ -181,18 +181,18 @@ homebrew:
 }
 
 func TestApplyCommand_InvalidPackage(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create plonk directory and config.
+	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err := os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-		// Create simple config file.
+	// Create simple config file
 	configContent := `settings:
   default_manager: homebrew
 
@@ -208,7 +208,7 @@ homebrew:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Test applying non-existent package.
+	// Test applying non-existent package
 	err = runApply([]string{"non-existent-package"})
 	if err == nil {
 		t.Error("Expected error when applying config for non-existent package")
@@ -216,18 +216,18 @@ homebrew:
 }
 
 func TestApplyCommand_ZSHConfiguration(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create plonk directory and config.
+	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err := os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-		// Create config file with ZSH configuration.
+	// Create config file with ZSH configuration
 	configContent := `settings:
   default_manager: homebrew
 
@@ -260,13 +260,13 @@ zsh:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Test applying ZSH configuration.
+	// Test applying ZSH configuration
 	err = runApply([]string{})
 	if err != nil {
 		t.Fatalf("Apply command failed: %v", err)
 	}
 
-		// Verify .zshrc was created and contains expected content.
+	// Verify .zshrc was created and contains expected content
 	zshrcPath := filepath.Join(tempHome, ".zshrc")
 	if !utils.FileExists(zshrcPath) {
 		t.Fatal("Expected ~/.zshrc to be generated")
@@ -279,12 +279,12 @@ zsh:
 
 	zshrcStr := string(zshrcContent)
 
-		// Check for generated header.
+	// Check for generated header
 	if !strings.Contains(zshrcStr, "# Generated by plonk") {
 		t.Error("Expected generated header in .zshrc")
 	}
 
-		// Check for aliases.
+	// Check for aliases
 	if !strings.Contains(zshrcStr, "alias ll='eza -la'") {
 		t.Error("Expected ll alias in generated .zshrc")
 	}
@@ -292,7 +292,7 @@ zsh:
 		t.Error("Expected cat alias in generated .zshrc")
 	}
 
-		// Check for inits.
+	// Check for inits
 	if !strings.Contains(zshrcStr, `eval "$(starship init zsh)"`) {
 		t.Error("Expected starship init in generated .zshrc")
 	}
@@ -300,22 +300,22 @@ zsh:
 		t.Error("Expected zoxide init in generated .zshrc")
 	}
 
-		// Check for completions.
+	// Check for completions
 	if !strings.Contains(zshrcStr, `source <(kubectl completion zsh)`) {
 		t.Error("Expected kubectl completion in generated .zshrc")
 	}
 
-		// Check for shell options.
+	// Check for shell options
 	if !strings.Contains(zshrcStr, "setopt AUTO_MENU") {
 		t.Error("Expected AUTO_MENU setopt in generated .zshrc")
 	}
 
-		// Check for functions.
+	// Check for functions
 	if !strings.Contains(zshrcStr, "function mkcd() {") {
 		t.Error("Expected mkcd function in generated .zshrc")
 	}
 
-		// Verify .zshenv was created and contains expected content.
+	// Verify .zshenv was created and contains expected content
 	zshenvPath := filepath.Join(tempHome, ".zshenv")
 	if !utils.FileExists(zshenvPath) {
 		t.Fatal("Expected ~/.zshenv to be generated")
@@ -328,7 +328,7 @@ zsh:
 
 	zshenvStr := string(zshenvContent)
 
-		// Check for environment variables in .zshenv.
+	// Check for environment variables in .zshenv
 	if !strings.Contains(zshenvStr, "export EDITOR='nvim'") {
 		t.Error("Expected EDITOR export in generated .zshenv")
 	}
@@ -336,25 +336,25 @@ zsh:
 		t.Error("Expected PAGER export in generated .zshenv")
 	}
 
-		// Check that .zshenv doesn't contain aliases (should only be in .zshrc).
+	// Check that .zshenv doesn't contain aliases (should only be in .zshrc)
 	if strings.Contains(zshenvStr, "alias") {
 		t.Error("Expected .zshenv to not contain aliases")
 	}
 }
 
 func TestApplyCommand_ZSHConfiguration_NoEnvVars(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create plonk directory and config.
+	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err := os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-		// Create config file with ZSH configuration but no env vars.
+	// Create config file with ZSH configuration but no env vars
 	configContent := `settings:
   default_manager: homebrew
 
@@ -372,19 +372,19 @@ zsh:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Test applying ZSH configuration.
+	// Test applying ZSH configuration
 	err = runApply([]string{})
 	if err != nil {
 		t.Fatalf("Apply command failed: %v", err)
 	}
 
-		// Verify .zshrc was created.
+	// Verify .zshrc was created
 	zshrcPath := filepath.Join(tempHome, ".zshrc")
 	if !utils.FileExists(zshrcPath) {
 		t.Fatal("Expected ~/.zshrc to be generated")
 	}
 
-		// Verify .zshenv was NOT created (no env vars).
+	// Verify .zshenv was NOT created (no env vars)
 	zshenvPath := filepath.Join(tempHome, ".zshenv")
 	if utils.FileExists(zshenvPath) {
 		t.Error("Expected ~/.zshenv NOT to be created when no env vars are present")
@@ -392,11 +392,11 @@ zsh:
 }
 
 func TestApplyCommand_WithBackupFlag(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create existing .zshrc that should be backed up.
+	// Create existing .zshrc that should be backed up
 	existingZshrc := filepath.Join(tempHome, ".zshrc")
 	existingContent := "# My existing zshrc\nalias ls='ls -la'"
 	err := os.WriteFile(existingZshrc, []byte(existingContent), 0644)
@@ -404,14 +404,14 @@ func TestApplyCommand_WithBackupFlag(t *testing.T) {
 		t.Fatalf("Failed to create existing .zshrc: %v", err)
 	}
 
-		// Create plonk directory and config.
+	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err = os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-		// Create config file with backup configuration.
+	// Create config file with backup configuration
 	configContent := `settings:
   default_manager: homebrew
 
@@ -430,13 +430,13 @@ zsh:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Test applying with backup flag - this should backup .zshrc before applying.
-	err = runApplyWithFlags([]string{}, true) 	err = runApplyWithFlags([]string{}, true) // backup=true.
+	// Test applying with backup flag - this should backup .zshrc before applying
+	err = runApplyWithFlags([]string{}, true) // backup=true
 	if err != nil {
 		t.Fatalf("Apply command with backup failed: %v", err)
 	}
 
-		// Verify backup was created.
+	// Verify backup was created
 	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
 	if !utils.FileExists(backupDir) {
 		t.Fatal("Expected backup directory to be created")
@@ -451,7 +451,7 @@ zsh:
 		t.Errorf("Expected 1 backup file, found %d: %v", len(backupFiles), backupFiles)
 	}
 
-		// Verify backup contains original content.
+	// Verify backup contains original content
 	if len(backupFiles) > 0 {
 		backupContent, err := os.ReadFile(backupFiles[0])
 		if err != nil {
@@ -464,7 +464,7 @@ zsh:
 		}
 	}
 
-		// Verify new .zshrc was created with plonk content.
+	// Verify new .zshrc was created with plonk content
 	newZshrcContent, err := os.ReadFile(existingZshrc)
 	if err != nil {
 		t.Fatalf("Failed to read new .zshrc: %v", err)
@@ -481,11 +481,11 @@ zsh:
 }
 
 func TestApplyCommand_WithoutBackupFlag(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create existing .zshrc that should NOT be backed up.
+	// Create existing .zshrc that should NOT be backed up
 	existingZshrc := filepath.Join(tempHome, ".zshrc")
 	existingContent := "# My existing zshrc\nalias ls='ls -la'"
 	err := os.WriteFile(existingZshrc, []byte(existingContent), 0644)
@@ -493,14 +493,14 @@ func TestApplyCommand_WithoutBackupFlag(t *testing.T) {
 		t.Fatalf("Failed to create existing .zshrc: %v", err)
 	}
 
-		// Create plonk directory and config.
+	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err = os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-		// Create config file.
+	// Create config file
 	configContent := `settings:
   default_manager: homebrew
 
@@ -515,19 +515,19 @@ zsh:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Test applying without backup flag - should not backup.
-	err = runApplyWithFlags([]string{}, false) 	err = runApplyWithFlags([]string{}, false) // backup=false.
+	// Test applying without backup flag - should not backup
+	err = runApplyWithFlags([]string{}, false) // backup=false
 	if err != nil {
 		t.Fatalf("Apply command failed: %v", err)
 	}
 
-		// Verify no backup directory was created.
+	// Verify no backup directory was created
 	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
 	if utils.FileExists(backupDir) {
 		t.Error("Expected backup directory NOT to be created when --backup flag is not used")
 	}
 
-		// Verify new .zshrc was still created with plonk content.
+	// Verify new .zshrc was still created with plonk content
 	newZshrcContent, err := os.ReadFile(existingZshrc)
 	if err != nil {
 		t.Fatalf("Failed to read new .zshrc: %v", err)
@@ -540,18 +540,18 @@ zsh:
 }
 
 func TestApplyCommand_GitConfiguration(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create plonk directory and config.
+	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err := os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-		// Create config file with Git configuration.
+	// Create config file with Git configuration
 	configContent := `settings:
   default_manager: homebrew
 
@@ -580,19 +580,19 @@ git:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Test applying Git configuration.
+	// Test applying Git configuration
 	err = runApply([]string{})
 	if err != nil {
 		t.Fatalf("Apply command with Git config failed: %v", err)
 	}
 
-		// Verify .gitconfig was created.
+	// Verify .gitconfig was created
 	gitconfigPath := filepath.Join(tempHome, ".gitconfig")
 	if !utils.FileExists(gitconfigPath) {
 		t.Fatal("Expected .gitconfig to be created")
 	}
 
-		// Read and verify .gitconfig content.
+	// Read and verify .gitconfig content
 	gitconfigContent, err := os.ReadFile(gitconfigPath)
 	if err != nil {
 		t.Fatalf("Failed to read .gitconfig: %v", err)
@@ -600,12 +600,12 @@ git:
 
 	gitconfigStr := string(gitconfigContent)
 
-		// Verify header comment.
+	// Verify header comment
 	if !strings.Contains(gitconfigStr, "# Generated by plonk - Do not edit manually") {
 		t.Error("Expected .gitconfig to contain plonk header comment")
 	}
 
-		// Verify user section.
+	// Verify user section
 	if !strings.Contains(gitconfigStr, "[user]") {
 		t.Error("Expected .gitconfig to contain [user] section")
 	}
@@ -616,7 +616,7 @@ git:
 		t.Error("Expected .gitconfig to contain user email")
 	}
 
-		// Verify core section.
+	// Verify core section
 	if !strings.Contains(gitconfigStr, "[core]") {
 		t.Error("Expected .gitconfig to contain [core] section")
 	}
@@ -627,7 +627,7 @@ git:
 		t.Error("Expected .gitconfig to contain core excludesfile setting")
 	}
 
-		// Verify alias section.
+	// Verify alias section
 	if !strings.Contains(gitconfigStr, "[alias]") {
 		t.Error("Expected .gitconfig to contain [alias] section")
 	}
@@ -641,7 +641,7 @@ git:
 		t.Error("Expected .gitconfig to contain br alias")
 	}
 
-		// Verify color section.
+	// Verify color section
 	if !strings.Contains(gitconfigStr, "[color]") {
 		t.Error("Expected .gitconfig to contain [color] section")
 	}
@@ -652,7 +652,7 @@ git:
 		t.Error("Expected .gitconfig to contain color branch setting")
 	}
 
-		// Verify push section.
+	// Verify push section
 	if !strings.Contains(gitconfigStr, "[push]") {
 		t.Error("Expected .gitconfig to contain [push] section")
 	}
@@ -665,11 +665,11 @@ git:
 }
 
 func TestApplyCommand_GitConfigurationWithBackup(t *testing.T) {
-		// Setup temporary directory.
+	// Setup temporary directory
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create existing .gitconfig that should be backed up.
+	// Create existing .gitconfig that should be backed up
 	existingGitconfig := filepath.Join(tempHome, ".gitconfig")
 	existingContent := `[user]
 	name = "Old User"
@@ -679,14 +679,14 @@ func TestApplyCommand_GitConfigurationWithBackup(t *testing.T) {
 		t.Fatalf("Failed to create existing .gitconfig: %v", err)
 	}
 
-		// Create plonk directory and config.
+	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err = os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-		// Create config file with backup and Git configuration.
+	// Create config file with backup and Git configuration
 	configContent := `settings:
   default_manager: homebrew
 
@@ -708,19 +708,19 @@ git:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Test applying with backup flag.
-	err = runApplyWithFlags([]string{}, true) 	err = runApplyWithFlags([]string{}, true) // backup=true.
+	// Test applying with backup flag
+	err = runApplyWithFlags([]string{}, true) // backup=true
 	if err != nil {
 		t.Fatalf("Apply command with backup failed: %v", err)
 	}
 
-		// Verify backup was created.
+	// Verify backup was created
 	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
 	if !utils.FileExists(backupDir) {
 		t.Fatal("Expected backup directory to be created")
 	}
 
-		// Verify .gitconfig backup exists.
+	// Verify .gitconfig backup exists
 	backupFiles, err := os.ReadDir(backupDir)
 	if err != nil {
 		t.Fatalf("Failed to read backup directory: %v", err)
@@ -738,7 +738,7 @@ git:
 		t.Error("Expected gitconfig backup file to be created")
 	}
 
-		// Verify new .gitconfig was created with plonk content.
+	// Verify new .gitconfig was created with plonk content
 	newGitconfigContent, err := os.ReadFile(existingGitconfig)
 	if err != nil {
 		t.Fatalf("Failed to read new .gitconfig: %v", err)
@@ -809,12 +809,12 @@ func TestApplyCommand_DryRunFlagParsing(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-						// Create a new command instance to test flag parsing.
+			// Create a new command instance to test flag parsing
 			cmd := &cobra.Command{}
 			cmd.Flags().Bool("backup", false, "test backup flag")
 			cmd.Flags().Bool("dry-run", false, "test dry-run flag")
 
-						// Set the flags.
+			// Set the flags
 			if tt.backupFlag {
 				cmd.Flags().Set("backup", "true")
 			}
@@ -822,7 +822,7 @@ func TestApplyCommand_DryRunFlagParsing(t *testing.T) {
 				cmd.Flags().Set("dry-run", "true")
 			}
 
-						// Test flag parsing.
+			// Test flag parsing
 			backup, err := cmd.Flags().GetBool("backup")
 			if err != nil {
 				t.Fatalf("Failed to get backup flag: %v", err)
@@ -833,7 +833,7 @@ func TestApplyCommand_DryRunFlagParsing(t *testing.T) {
 				t.Fatalf("Failed to get dry-run flag: %v", err)
 			}
 
-						// Verify the flags are parsed correctly.
+			// Verify the flags are parsed correctly
 			if backup != tt.expectBackup {
 				t.Errorf("Expected backup=%v, got %v", tt.expectBackup, backup)
 			}
@@ -847,18 +847,18 @@ func TestApplyCommand_DryRunFlagParsing(t *testing.T) {
 
 func TestApplyCommand_DryRunDoesNotCreateFiles(t *testing.T) {
 	// This test verifies that dry-run mode doesn't actually create files
-		// Setup test environment.
+	// Setup test environment
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-		// Create plonk directory and config with dotfiles.
+	// Create plonk directory and config with dotfiles
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err := os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-		// Create source files.
+	// Create source files
 	err = os.WriteFile(filepath.Join(plonkDir, "zshrc"), []byte("# test zshrc"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create source file: %v", err)
@@ -880,13 +880,13 @@ zsh:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-		// Test dry-run mode - should not create any files.
-	err = runApplyWithAllFlags([]string{}, false, true) 	err = runApplyWithAllFlags([]string{}, false, true) // backup=false, dryRun=true.
+	// Test dry-run mode - should not create any files
+	err = runApplyWithAllFlags([]string{}, false, true) // backup=false, dryRun=true
 	if err != nil {
 		t.Fatalf("Dry-run apply should not fail: %v", err)
 	}
 
-		// Verify NO files were actually created in dry-run mode.
+	// Verify NO files were actually created in dry-run mode
 	if utils.FileExists(filepath.Join(tempHome, ".zshrc")) {
 		t.Error("Expected .zshrc NOT to be created in dry-run mode")
 	}

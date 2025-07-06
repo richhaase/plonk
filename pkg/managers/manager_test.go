@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-// MockCommandExecutor for testing.
+// MockCommandExecutor for testing
 type MockCommandExecutor struct {
 	Commands map[string]*exec.Cmd
 	Calls    []string
@@ -29,7 +29,7 @@ func (m *MockCommandExecutor) Execute(name string, args ...string) *exec.Cmd {
 		return cmd
 	}
 
-		// Return a command that will succeed by default.
+	// Return a command that will succeed by default
 	return exec.Command("echo", "mock success")
 }
 
@@ -37,9 +37,9 @@ func (m *MockCommandExecutor) SetCommand(key string, cmd *exec.Cmd) {
 	m.Commands[key] = cmd
 }
 
-// Test that we can check if Homebrew is available.
+// Test that we can check if Homebrew is available
 func TestHomebrewManager_IsAvailable_Success(t *testing.T) {
-		// Create a mock executor that returns success for "brew --version".
+	// Create a mock executor that returns success for "brew --version"
 	mockExec := NewMockCommandExecutor()
 	successCmd := exec.Command("echo", "Homebrew 4.0.0")
 	mockExec.SetCommand("brew --version", successCmd)
@@ -52,7 +52,7 @@ func TestHomebrewManager_IsAvailable_Success(t *testing.T) {
 		t.Error("Expected Homebrew to be available when command succeeds")
 	}
 
-		// Verify the right command was called.
+	// Verify the right command was called
 	expectedCall := "brew --version"
 	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
 		t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
@@ -61,8 +61,8 @@ func TestHomebrewManager_IsAvailable_Success(t *testing.T) {
 
 func TestHomebrewManager_IsAvailable_Failure(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-		// Set up a command that will fail.
-	failCmd := exec.Command("false") // 'false' command always exits with code 1.
+	// Set up a command that will fail
+	failCmd := exec.Command("false") // 'false' command always exits with code 1
 	mockExec.SetCommand("brew --version", failCmd)
 
 	manager := NewHomebrewManager(mockExec)
@@ -84,7 +84,7 @@ func TestHomebrewManager_Install_CallsCorrectCommand(t *testing.T) {
 		t.Errorf("Expected no error, got %v", err)
 	}
 
-		// Verify the right command was called.
+	// Verify the right command was called
 	expectedCall := "brew install"
 	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
 		t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
@@ -93,7 +93,7 @@ func TestHomebrewManager_Install_CallsCorrectCommand(t *testing.T) {
 
 func TestHomebrewManager_ListInstalled_ParsesOutput(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-		// Set up a command that returns a list of packages.
+	// Set up a command that returns a list of packages
 	listCmd := exec.Command("echo", "git\ncurl\njq")
 	mockExec.SetCommand("brew list", listCmd)
 
@@ -118,7 +118,7 @@ func TestHomebrewManager_ListInstalled_ParsesOutput(t *testing.T) {
 
 func TestHomebrewManager_Install_ReturnsErrorOnFailure(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-		// Set up a command that will fail.
+	// Set up a command that will fail
 	failCmd := exec.Command("false")
 	mockExec.SetCommand("brew install", failCmd)
 
@@ -132,7 +132,7 @@ func TestHomebrewManager_Install_ReturnsErrorOnFailure(t *testing.T) {
 
 func TestHomebrewManager_ListInstalled_ReturnsErrorOnFailure(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-		// Set up a command that will fail.
+	// Set up a command that will fail
 	failCmd := exec.Command("false")
 	mockExec.SetCommand("brew list", failCmd)
 
@@ -158,7 +158,7 @@ func TestHomebrewManager_Update_SinglePackage(t *testing.T) {
 		t.Errorf("Expected no error, got %v", err)
 	}
 
-		// Verify the right command was called.
+	// Verify the right command was called
 	expectedCall := "brew upgrade"
 	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
 		t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
@@ -175,7 +175,7 @@ func TestHomebrewManager_Update_AllPackages(t *testing.T) {
 		t.Errorf("Expected no error, got %v", err)
 	}
 
-		// Verify the right command was called.
+	// Verify the right command was called
 	expectedCall := "brew upgrade"
 	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
 		t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
@@ -184,7 +184,7 @@ func TestHomebrewManager_Update_AllPackages(t *testing.T) {
 
 func TestHomebrewManager_IsInstalled_True(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-		// brew list <package> succeeds when package is installed.
+	// brew list <package> succeeds when package is installed
 	successCmd := exec.Command("echo", "git installed")
 	mockExec.SetCommand("brew list", successCmd)
 
@@ -195,7 +195,7 @@ func TestHomebrewManager_IsInstalled_True(t *testing.T) {
 		t.Error("Expected package to be installed when command succeeds")
 	}
 
-		// Verify the right command was called.
+	// Verify the right command was called
 	expectedCall := "brew list"
 	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
 		t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
@@ -204,7 +204,7 @@ func TestHomebrewManager_IsInstalled_True(t *testing.T) {
 
 func TestHomebrewManager_IsInstalled_False(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-		// brew list <package> fails when package is not installed.
+	// brew list <package> fails when package is not installed
 	failCmd := exec.Command("false")
 	mockExec.SetCommand("brew list", failCmd)
 
@@ -216,7 +216,7 @@ func TestHomebrewManager_IsInstalled_False(t *testing.T) {
 	}
 }
 
-// ASDF Manager Tests.
+// ASDF Manager Tests
 func TestAsdfManager_IsAvailable_Success(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
 	successCmd := exec.Command("echo", "v0.11.3")
@@ -290,10 +290,10 @@ func TestAsdfManager_ListInstalled_ParsesOutput(t *testing.T) {
 
 func TestAsdfManager_Update_WithToolAndVersion(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-		// Mock the "asdf latest" command to return a version.
+	// Mock the "asdf latest" command to return a version
 	latestCmd := exec.Command("echo", "20.11.0")
 	mockExec.SetCommand("asdf latest", latestCmd)
-		// Mock the install command.
+	// Mock the install command
 	installCmd := exec.Command("echo", "installed")
 	mockExec.SetCommand("asdf install", installCmd)
 
@@ -304,7 +304,7 @@ func TestAsdfManager_Update_WithToolAndVersion(t *testing.T) {
 		t.Errorf("Expected no error, got %v", err)
 	}
 
-		// Should call both "asdf latest nodejs" and "asdf install nodejs 20.11.0".
+	// Should call both "asdf latest nodejs" and "asdf install nodejs 20.11.0"
 	if len(mockExec.Calls) != 2 {
 		t.Errorf("Expected 2 calls, got %d: %v", len(mockExec.Calls), mockExec.Calls)
 	}
@@ -319,7 +319,7 @@ func TestAsdfManager_Update_WithToolAndVersion(t *testing.T) {
 
 func TestAsdfManager_IsInstalled_True(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-		// asdf list <tool> succeeds when tool has versions installed.
+	// asdf list <tool> succeeds when tool has versions installed
 	successCmd := exec.Command("echo", "  18.0.0\n* 20.0.0")
 	mockExec.SetCommand("asdf list", successCmd)
 
@@ -338,7 +338,7 @@ func TestAsdfManager_IsInstalled_True(t *testing.T) {
 
 func TestAsdfManager_IsInstalled_False(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-		// asdf list <tool> fails when tool is not installed.
+	// asdf list <tool> fails when tool is not installed
 	failCmd := exec.Command("false")
 	mockExec.SetCommand("asdf list", failCmd)
 
@@ -352,7 +352,7 @@ func TestAsdfManager_IsInstalled_False(t *testing.T) {
 
 func TestAsdfManager_GetInstalledVersions_ParsesOutput(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-		// asdf list <tool> returns versions.
+	// asdf list <tool> returns versions
 	listCmd := exec.Command("echo", "  18.0.0\n* 20.0.0\n  21.0.0")
 	mockExec.SetCommand("asdf list", listCmd)
 
@@ -377,7 +377,7 @@ func TestAsdfManager_GetInstalledVersions_ParsesOutput(t *testing.T) {
 
 func TestAsdfManager_Update_ReturnsErrorOnLatestFailure(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-		// Mock the "asdf latest" command to fail.
+	// Mock the "asdf latest" command to fail
 	failCmd := exec.Command("false")
 	mockExec.SetCommand("asdf latest", failCmd)
 
@@ -391,7 +391,7 @@ func TestAsdfManager_Update_ReturnsErrorOnLatestFailure(t *testing.T) {
 
 func TestAsdfManager_GetInstalledVersions_ReturnsErrorOnFailure(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-		// asdf list <tool> fails.
+	// asdf list <tool> fails
 	failCmd := exec.Command("false")
 	mockExec.SetCommand("asdf list", failCmd)
 
@@ -407,7 +407,7 @@ func TestAsdfManager_GetInstalledVersions_ReturnsErrorOnFailure(t *testing.T) {
 	}
 }
 
-// NPM Manager Tests.
+// NPM Manager Tests
 func TestNpmManager_IsAvailable_Success(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
 	successCmd := exec.Command("echo", "8.19.2")
@@ -489,7 +489,7 @@ func TestNpmManager_UpdateAll_CallsCorrectCommand(t *testing.T) {
 
 func TestNpmManager_ListInstalled_ParsesOutput(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-		// npm list -g --depth=0 --parseable returns paths.
+	// npm list -g --depth=0 --parseable returns paths
 	listCmd := exec.Command("echo", "/usr/local/lib/node_modules/npm\n/usr/local/lib/node_modules/typescript\n/usr/local/lib/node_modules/@vue/cli")
 	mockExec.SetCommand("npm list", listCmd)
 
@@ -500,7 +500,7 @@ func TestNpmManager_ListInstalled_ParsesOutput(t *testing.T) {
 		t.Errorf("Expected no error, got %v", err)
 	}
 
-		// Should exclude npm itself and parse package names from paths.
+	// Should exclude npm itself and parse package names from paths
 	expected := []string{"typescript", "@vue/cli"}
 	if len(packages) != len(expected) {
 		t.Errorf("Expected %d packages, got %d", len(expected), len(packages))
@@ -515,7 +515,7 @@ func TestNpmManager_ListInstalled_ParsesOutput(t *testing.T) {
 
 func TestNpmManager_IsInstalled_True(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-		// npm list -g typescript succeeds when package is installed.
+	// npm list -g typescript succeeds when package is installed
 	successCmd := exec.Command("echo", "typescript@4.8.4")
 	mockExec.SetCommand("npm list", successCmd)
 
@@ -529,7 +529,7 @@ func TestNpmManager_IsInstalled_True(t *testing.T) {
 
 func TestNpmManager_IsInstalled_False(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-		// npm list -g nonexistent fails when package is not installed.
+	// npm list -g nonexistent fails when package is not installed
 	failCmd := exec.Command("false")
 	mockExec.SetCommand("npm list", failCmd)
 

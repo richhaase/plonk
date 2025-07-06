@@ -150,7 +150,7 @@ func TestValidateYAML_EmptyConfig(t *testing.T) {
 		{
 			name:    "empty string",
 			yaml:    "",
-			wantErr: false, wantErr: false, // Empty is technically valid YAML.
+			wantErr: false, // Empty is technically valid YAML
 		},
 		{
 			name:    "only comments",
