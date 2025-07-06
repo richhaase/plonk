@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- **Import command** - Generate plonk.yaml from existing shell environment
+  - Discovers Homebrew packages via `brew list`
+  - Discovers ASDF tools from `~/.tool-versions` (global only)
+  - Discovers NPM global packages via `npm list -g`
+  - Detects managed dotfiles (.zshrc, .gitconfig, .zshenv)
+  - Generates clean YAML configuration file
+  - Shows progress with emojis and summary statistics
+
+### Enhanced
+- AsdfManager now supports `ListGlobalTools()` method for reading `~/.tool-versions`
+
 ### Code Quality
 - Fixed pre-commit hooks for reliable development workflow
 - Standardized import organization using goimports with local prefixes

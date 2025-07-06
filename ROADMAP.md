@@ -58,16 +58,14 @@ Features ready for implementation, roughly in priority order:
 
 ## In Progress
 
-### Core Features
-- **Import command** - Generate plonk.yaml from existing shell configs, including package discovery (brew list, asdf list, npm list) and dotfile copying (.zshrc, .gitconfig, .zshenv) - *TDD implementation in progress*
-
 Active work items are tracked in [TODO.md](TODO.md).
 
 ## Completed
 
 Major features completed (see [CHANGELOG.md](CHANGELOG.md) for details):
 
-- ✅ Core CLI with 8 commands (status, install, apply, etc.)
+- ✅ Core CLI with 9 commands (status, install, apply, import, etc.)
+- ✅ Import command - Generate plonk.yaml from existing environment
 - ✅ Package manager support (Homebrew, ASDF, NPM)
 - ✅ YAML configuration system with validation
 - ✅ Configuration drift detection

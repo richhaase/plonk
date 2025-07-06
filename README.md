@@ -40,6 +40,9 @@ go build ./cmd/plonk
 ./plonk clone <repo>             # Clone dotfiles repository
 ./plonk pull                     # Pull updates to existing repository
 
+# Import existing environment
+./plonk import                   # Generate plonk.yaml from current environment
+
 # Package and configuration management
 ./plonk install                  # Install packages from config
 ./plonk apply                    # Apply all configuration files
