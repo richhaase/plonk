@@ -90,7 +90,7 @@ func runImport(cmd *cobra.Command, args []string) error {
 	generatedConfig := config.GenerateConfig(results)
 
 	// Save config to plonk.yaml
-	configPath := filepath.Join(directories.Default.PlonkDir(), "plonk.yaml")
+	configPath := filepath.Join(directories.Default.RepoDir(), "plonk.yaml")
 	fmt.Printf("💾 Saving configuration to %s... ", configPath)
 
 	if err := config.SaveConfig(generatedConfig, configPath); err != nil {
