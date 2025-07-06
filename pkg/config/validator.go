@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -96,6 +97,37 @@ func ValidatePackageName(name string) error {
 	return nil
 }
 
+// ValidateFilePath checks if a file path is valid for plonk configuration
+func ValidateFilePath(path string) error {
+	// Trim and check for empty
+	trimmed := strings.TrimSpace(path)
+	if trimmed == "" {
+		return fmt.Errorf("file path cannot be empty")
+	}
+	
+	// Check for absolute paths
+	if filepath.IsAbs(trimmed) {
+		return fmt.Errorf("file path cannot be absolute: %q", path)
+	}
+	
+	// Check for invalid characters
+	for _, char := range trimmed {
+		if char == ' ' || char == '\t' || char == '\n' || char == '\r' {
+			return fmt.Errorf("invalid file path - cannot contain whitespace: %q", path)
+		}
+		// Disallow special characters that could be problematic
+		if char == '!' || char == '@' || char == '#' || char == '$' || char == '%' || 
+		   char == '^' || char == '&' || char == '*' || char == '(' || char == ')' ||
+		   char == '=' || char == '+' || char == '[' || char == ']' || char == '{' ||
+		   char == '}' || char == '|' || char == '\\' || char == ':' || char == ';' ||
+		   char == '"' || char == '\'' || char == '<' || char == '>' || char == '?' {
+			return fmt.Errorf("invalid file path - contains invalid character %q: %q", char, path)
+		}
+	}
+	
+	return nil
+}
+
 // ValidateConfigContent validates the content of a plonk configuration
 func ValidateConfigContent(content []byte) error {
 	// First validate YAML syntax
@@ -126,6 +158,13 @@ func ValidateConfigContent(content []byte) error {
 	// Validate package names in asdf section
 	if asdf, ok := config["asdf"]; ok {
 		if err := validateASDF(asdf); err != nil {
+			return err
+		}
+	}
+	
+	// Validate dotfiles section
+	if dotfiles, ok := config["dotfiles"]; ok {
+		if err := validateDotfiles(dotfiles); err != nil {
 			return err
 		}
 	}
@@ -167,6 +206,24 @@ func validateASDF(asdf interface{}) error {
 	return validatePackageList(asdf, "asdf")
 }
 
+// validateDotfiles validates file paths in dotfiles section
+func validateDotfiles(dotfiles interface{}) error {
+	dotfilesList, ok := dotfiles.([]interface{})
+	if !ok {
+		return nil // Skip if not a list
+	}
+	
+	for i, dotfile := range dotfilesList {
+		if dotfilePath, ok := dotfile.(string); ok {
+			if err := ValidateFilePath(dotfilePath); err != nil {
+				return fmt.Errorf("invalid file path in dotfiles[%d]: %w", i, err)
+			}
+		}
+	}
+	
+	return nil
+}
+
 // validatePackageList validates a list of packages (can be strings or objects with name field)
 func validatePackageList(packages interface{}, section string) error {
 	packageList, ok := packages.([]interface{})
@@ -176,6 +233,8 @@ func validatePackageList(packages interface{}, section string) error {
 	
 	for i, pkg := range packageList {
 		var packageName string
+		var configPath string
+		var hasConfig bool
 		
 		// Handle string packages
 		if name, ok := pkg.(string); ok {
@@ -194,11 +253,26 @@ func validatePackageList(packages interface{}, section string) error {
 					}
 				}
 			}
+			
+			// Check for config field
+			if config, ok := pkgMap["config"]; ok {
+				hasConfig = true
+				if configStr, ok := config.(string); ok {
+					configPath = configStr
+				}
+			}
 		}
 		
 		// Always validate package names, even if empty (to catch empty strings)
 		if err := ValidatePackageName(packageName); err != nil {
 			return fmt.Errorf("invalid package name in %s[%d]: %w", section, i, err)
+		}
+		
+		// Validate config path if config field was present (including empty strings)
+		if hasConfig {
+			if err := ValidateFilePath(configPath); err != nil {
+				return fmt.Errorf("invalid file path in %s[%d]: %w", section, i, err)
+			}
 		}
 	}
 	

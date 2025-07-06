@@ -368,3 +368,204 @@ func TestValidateConfigContent_InvalidPackageNames(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateFilePaths_ValidPaths(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+	}{
+		{
+			name: "simple config path",
+			path: "config/nvim/",
+		},
+		{
+			name: "nested config path",
+			path: "config/apps/neovim/",
+		},
+		{
+			name: "dotfile path",
+			path: "dotfiles/zshrc",
+		},
+		{
+			name: "path with underscores",
+			path: "config/my_app/",
+		},
+		{
+			name: "path with numbers",
+			path: "config/app2/",
+		},
+		{
+			name: "relative path with dots",
+			path: "../config/shared/",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateFilePath(tt.path)
+			if err != nil {
+				t.Errorf("ValidateFilePath() error = %v, expected no error for valid path", err)
+			}
+		})
+	}
+}
+
+func TestValidateFilePaths_InvalidPaths(t *testing.T) {
+	tests := []struct {
+		name    string
+		path    string
+		wantErr string
+	}{
+		{
+			name:    "empty path",
+			path:    "",
+			wantErr: "empty",
+		},
+		{
+			name:    "only whitespace",
+			path:    "   ",
+			wantErr: "empty",
+		},
+		{
+			name:    "absolute path",
+			path:    "/absolute/path",
+			wantErr: "absolute",
+		},
+		{
+			name:    "path with spaces",
+			path:    "config/my app/",
+			wantErr: "invalid",
+		},
+		{
+			name:    "path with special chars",
+			path:    "config/app!@#/",
+			wantErr: "invalid",
+		},
+		{
+			name:    "path with newline",
+			path:    "config/app\n/",
+			wantErr: "invalid",
+		},
+		{
+			name:    "path with colon",
+			path:    "config:invalid",
+			wantErr: "invalid",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateFilePath(tt.path)
+			if err == nil {
+				t.Errorf("ValidateFilePath() error = nil, expected error containing %q", tt.wantErr)
+			} else if !strings.Contains(strings.ToLower(err.Error()), tt.wantErr) {
+				t.Errorf("ValidateFilePath() error = %v, expected error containing %q", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateConfigContent_ValidFilePaths(t *testing.T) {
+	tests := []struct {
+		name string
+		yaml string
+	}{
+		{
+			name: "valid homebrew config paths",
+			yaml: `homebrew:
+  brews:
+    - name: neovim
+      config: config/nvim/
+    - name: aider
+      config: config/aider/`,
+		},
+		{
+			name: "valid npm config paths",
+			yaml: `npm:
+  - name: some-tool
+    package: "@scope/tool"
+    config: config/npm-tools/`,
+		},
+		{
+			name: "valid asdf config paths",
+			yaml: `asdf:
+  - name: nodejs
+    version: "24.2.0"
+    config: config/node/`,
+		},
+		{
+			name: "valid dotfiles",
+			yaml: `dotfiles:
+  - zshrc
+  - vimrc
+  - config/git/gitconfig`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateConfigContent([]byte(tt.yaml))
+			if err != nil {
+				t.Errorf("ValidateConfigContent() error = %v, expected no error for valid config", err)
+			}
+		})
+	}
+}
+
+func TestValidateConfigContent_InvalidFilePaths(t *testing.T) {
+	tests := []struct {
+		name    string
+		yaml    string
+		wantErr string
+	}{
+		{
+			name: "empty config path",
+			yaml: `homebrew:
+  brews:
+    - name: neovim
+      config: ""`,
+			wantErr: "file path",
+		},
+		{
+			name: "absolute config path",
+			yaml: `homebrew:
+  brews:
+    - name: neovim
+      config: "/absolute/path"`,
+			wantErr: "file path",
+		},
+		{
+			name: "config path with spaces",
+			yaml: `homebrew:
+  brews:
+    - name: neovim
+      config: "config/my app/"`,
+			wantErr: "file path",
+		},
+		{
+			name: "invalid dotfile path",
+			yaml: `dotfiles:
+  - "/absolute/dotfile"`,
+			wantErr: "file path",
+		},
+		{
+			name: "config path with special chars",
+			yaml: `asdf:
+  - name: nodejs
+    version: "24.2.0"
+    config: "config/node!@#/"`,
+			wantErr: "file path",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateConfigContent([]byte(tt.yaml))
+			if err == nil {
+				t.Errorf("ValidateConfigContent() error = nil, expected error containing %q", tt.wantErr)
+			} else if !strings.Contains(strings.ToLower(err.Error()), tt.wantErr) {
+				t.Errorf("ValidateConfigContent() error = %v, expected error containing %q", err, tt.wantErr)
+			}
+		})
+	}
+}
