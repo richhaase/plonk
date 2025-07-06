@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	
+	"plonk/internal/utils"
 )
 
 func TestInstallCommand_NoConfig(t *testing.T) {
@@ -70,7 +72,7 @@ npm:
 	
 	// Test that we can at least parse the config without errors
 	// This validates the install command's config loading logic
-	if !fileExists(configPath) {
+	if !utils.FileExists(configPath) {
 		t.Error("Config file should exist")
 	}
 }
@@ -123,17 +125,12 @@ homebrew:
 	
 	// This test verifies the integration between install and apply commands
 	// In a real implementation, after installing neovim, its config should be applied
-	if !fileExists(configPath) {
+	if !utils.FileExists(configPath) {
 		t.Error("Config file should exist for integration test")
 	}
 	
 	// Verify config directory structure exists for apply integration
-	if !fileExists(nvimConfigDir) {
+	if !utils.FileExists(nvimConfigDir) {
 		t.Error("Neovim config directory should exist for apply integration")
 	}
-}
-
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
 }

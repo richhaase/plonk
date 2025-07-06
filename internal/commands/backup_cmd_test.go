@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	
+	"plonk/internal/utils"
 )
 
 func TestBackupCommand_SpecificFiles(t *testing.T) {
@@ -58,7 +60,7 @@ backup:
 	
 	// Verify backups were created
 	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
-	if !fileExists(backupDir) {
+	if !utils.FileExists(backupDir) {
 		t.Fatal("Expected backup directory to be created")
 	}
 	
@@ -145,7 +147,7 @@ zsh:
 	
 	// Verify backup was created for .zshrc
 	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
-	if !fileExists(backupDir) {
+	if !utils.FileExists(backupDir) {
 		t.Fatal("Expected backup directory to be created")
 	}
 	
@@ -213,7 +215,7 @@ zsh:
 	
 	// Backup directory should be created but empty of actual backups
 	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
-	if !fileExists(backupDir) {
+	if !utils.FileExists(backupDir) {
 		t.Fatal("Expected backup directory to be created")
 	}
 	

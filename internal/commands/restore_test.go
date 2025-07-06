@@ -207,3 +207,179 @@ func runRestoreCommand(args []string) (string, error) {
 	
 	return output, err
 }
+
+func TestRestoreCommand_RestoreLatestFile(t *testing.T) {
+	// Setup temporary directory
+	tempHome := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	defer os.Setenv("HOME", originalHome)
+	os.Setenv("HOME", tempHome)
+	
+	// Create existing .zshrc file (will be overwritten by restore)
+	existingZshrc := filepath.Join(tempHome, ".zshrc")
+	currentContent := "# Current zshrc content\nalias current='echo current'"
+	err := os.WriteFile(existingZshrc, []byte(currentContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create existing .zshrc: %v", err)
+	}
+	
+	// Create plonk directory and config
+	plonkDir := filepath.Join(tempHome, ".config", "plonk")
+	err = os.MkdirAll(plonkDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create plonk directory: %v", err)
+	}
+	
+	// Create config file
+	configContent := `settings:
+  default_manager: homebrew
+
+backup:
+  location: "~/.config/plonk/backups"
+  keep_count: 5
+`
+	
+	configPath := filepath.Join(plonkDir, "plonk.yaml")
+	err = os.WriteFile(configPath, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write config file: %v", err)
+	}
+	
+	// Create backup directory with backup files
+	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
+	err = os.MkdirAll(backupDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create backup directory: %v", err)
+	}
+	
+	// Create backup files (older and newer)
+	olderBackup := filepath.Join(backupDir, "zshrc.backup.20241205-120000")
+	olderContent := "# Older zshrc backup\nalias old='echo old'"
+	err = os.WriteFile(olderBackup, []byte(olderContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create older backup: %v", err)
+	}
+	
+	newerBackup := filepath.Join(backupDir, "zshrc.backup.20241206-150330")
+	newerContent := "# Newer zshrc backup\nalias new='echo new'"
+	err = os.WriteFile(newerBackup, []byte(newerContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create newer backup: %v", err)
+	}
+	
+	// Test restore command for latest backup
+	output, err := runRestoreCommand([]string{existingZshrc})
+	if err != nil {
+		t.Fatalf("Restore command failed: %v", err)
+	}
+	
+	// Verify output indicates successful restore
+	if !strings.Contains(output, "Restored") {
+		t.Error("Expected output to indicate successful restore")
+	}
+	
+	// Verify file was restored with latest backup content
+	restoredContent, err := os.ReadFile(existingZshrc)
+	if err != nil {
+		t.Fatalf("Failed to read restored file: %v", err)
+	}
+	
+	if string(restoredContent) != newerContent {
+		t.Errorf("File was not restored with latest backup content.\nExpected: %s\nGot: %s", 
+			newerContent, string(restoredContent))
+	}
+}
+
+func TestRestoreCommand_RestoreFile_NoBackups(t *testing.T) {
+	// Setup temporary directory
+	tempHome := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	defer os.Setenv("HOME", originalHome)
+	os.Setenv("HOME", tempHome)
+	
+	// Create plonk directory and config
+	plonkDir := filepath.Join(tempHome, ".config", "plonk")
+	err := os.MkdirAll(plonkDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create plonk directory: %v", err)
+	}
+	
+	// Create config file
+	configContent := `settings:
+  default_manager: homebrew
+
+backup:
+  location: "~/.config/plonk/backups"
+  keep_count: 5
+`
+	
+	configPath := filepath.Join(plonkDir, "plonk.yaml")
+	err = os.WriteFile(configPath, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write config file: %v", err)
+	}
+	
+	// Test restore command when no backups exist
+	_, err = runRestoreCommand([]string{filepath.Join(tempHome, ".zshrc")})
+	if err == nil {
+		t.Error("Expected error when trying to restore file with no backups")
+	}
+	
+	if !strings.Contains(err.Error(), "no backups found") {
+		t.Errorf("Expected error about no backups found, got: %v", err)
+	}
+}
+
+func TestRestoreCommand_RestoreFile_FileNotExist(t *testing.T) {
+	// Setup temporary directory
+	tempHome := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	defer os.Setenv("HOME", originalHome)
+	os.Setenv("HOME", tempHome)
+	
+	// Create plonk directory and config
+	plonkDir := filepath.Join(tempHome, ".config", "plonk")
+	err := os.MkdirAll(plonkDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create plonk directory: %v", err)
+	}
+	
+	// Create config file
+	configContent := `settings:
+  default_manager: homebrew
+
+backup:
+  location: "~/.config/plonk/backups"
+  keep_count: 5
+`
+	
+	configPath := filepath.Join(plonkDir, "plonk.yaml")
+	err = os.WriteFile(configPath, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write config file: %v", err)
+	}
+	
+	// Create backup directory with backup for different file
+	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
+	err = os.MkdirAll(backupDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create backup directory: %v", err)
+	}
+	
+	// Create backup for vimrc but try to restore zshrc
+	vimrcBackup := filepath.Join(backupDir, "vimrc.backup.20241206-150330")
+	err = os.WriteFile(vimrcBackup, []byte("\" vimrc backup"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create vimrc backup: %v", err)
+	}
+	
+	// Test restore command for file that has no backups
+	_, err = runRestoreCommand([]string{filepath.Join(tempHome, ".zshrc")})
+	if err == nil {
+		t.Error("Expected error when trying to restore file with no backups")
+	}
+	
+	if !strings.Contains(err.Error(), "no backups found") {
+		t.Errorf("Expected error about no backups found, got: %v", err)
+	}
+}

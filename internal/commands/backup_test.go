@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	
+	"plonk/internal/utils"
 )
 
 func TestBackupExistingFile_CreatesBackup(t *testing.T) {
@@ -29,7 +31,7 @@ func TestBackupExistingFile_CreatesBackup(t *testing.T) {
 	}
 	
 	// Verify backup was created
-	if !fileExists(backupPath) {
+	if !utils.FileExists(backupPath) {
 		t.Fatalf("Backup file was not created at %s", backupPath)
 	}
 	
@@ -120,7 +122,7 @@ zsh:
 	
 	// Verify backup was created in configured location
 	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
-	if !fileExists(backupDir) {
+	if !utils.FileExists(backupDir) {
 		t.Fatal("Expected backup directory to be created")
 	}
 	

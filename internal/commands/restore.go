@@ -2,11 +2,13 @@ package commands
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"plonk/internal/utils"
 	"plonk/pkg/config"
 )
 
@@ -85,8 +87,43 @@ func runRestoreAll() error {
 }
 
 func runRestoreFile(filePath, timestamp string) error {
-	// This will be implemented later
-	return fmt.Errorf("restore file not implemented yet")
+	plonkDir := getPlonkDir()
+	
+	// Load configuration to get backup settings
+	cfg, err := config.LoadYAMLConfig(plonkDir)
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+	
+	// Get backup directory
+	backupDir := getBackupDirectory(cfg)
+	
+	// Convert file path to backup filename format
+	backupFilename := originalPathToBackupFilename(filePath)
+	
+	// Find backup files for this file
+	backupPattern := filepath.Join(backupDir, backupFilename+".backup.*")
+	backupFiles, err := filepath.Glob(backupPattern)
+	if err != nil {
+		return fmt.Errorf("failed to search for backup files: %w", err)
+	}
+	
+	if len(backupFiles) == 0 {
+		return fmt.Errorf("no backups found for %s", filePath)
+	}
+	
+	// Find the backup to restore
+	backupToRestore, err := selectBackupToRestore(backupDir, backupFilename, backupFiles, timestamp)
+	if err != nil {
+		return err
+	}
+	
+	// Restore the backup file
+	if err := restoreBackupToFile(backupToRestore, filePath); err != nil {
+		return err
+	}
+	
+	return nil
 }
 
 // groupBackupsByOriginalFile groups backup files by their original file path
@@ -154,3 +191,61 @@ func extractTimestampFromBackup(backupPath string) string {
 	}
 	return ""
 }
+
+// originalPathToBackupFilename converts original file path to backup filename
+func originalPathToBackupFilename(originalPath string) string {
+	// Expand ~ to full path first
+	expandedPath := expandHomeDir(originalPath)
+	
+	// Get just the filename without directory
+	filename := filepath.Base(expandedPath)
+	
+	// Remove leading dot (e.g., .zshrc -> zshrc)
+	if strings.HasPrefix(filename, ".") {
+		filename = filename[1:]
+	}
+	
+	return filename
+}
+
+// selectBackupToRestore selects which backup file to restore based on timestamp preference
+func selectBackupToRestore(backupDir, backupFilename string, backupFiles []string, timestamp string) (string, error) {
+	if timestamp != "" {
+		// Look for specific timestamp
+		targetBackup := filepath.Join(backupDir, backupFilename+".backup."+timestamp)
+		if !utils.FileExists(targetBackup) {
+			return "", fmt.Errorf("backup with timestamp %s not found", timestamp)
+		}
+		return targetBackup, nil
+	}
+	
+	// Use latest backup (sort by timestamp, newest first)
+	sort.Sort(sort.Reverse(sort.StringSlice(backupFiles)))
+	return backupFiles[0], nil
+}
+
+// restoreBackupToFile restores a backup file to the target location
+func restoreBackupToFile(backupPath, targetPath string) error {
+	// Read backup content
+	backupContent, err := os.ReadFile(backupPath)
+	if err != nil {
+		return fmt.Errorf("failed to read backup file: %w", err)
+	}
+	
+	// Ensure directory exists for target file
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+		return fmt.Errorf("failed to create directory for %s: %w", targetPath, err)
+	}
+	
+	// Write backup content to target file
+	if err := os.WriteFile(targetPath, backupContent, 0644); err != nil {
+		return fmt.Errorf("failed to restore %s: %w", targetPath, err)
+	}
+	
+	// Extract timestamp for user feedback
+	usedTimestamp := extractTimestampFromBackup(backupPath)
+	fmt.Printf("Restored %s from backup %s\n", targetPath, usedTimestamp)
+	
+	return nil
+}
+

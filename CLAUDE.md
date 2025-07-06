@@ -326,8 +326,8 @@ npm:
 
 29a. **Add restore command tests for listing available backups (Red phase)** - ✅ Completed
 29b. **Implement plonk restore --list functionality (Green phase)** - ✅ Completed  
-29c. **Add restore command tests for single file restoration (Red phase)** - 🟡 Pending
-29d. **Implement plonk restore <file> functionality (Green phase)** - 🟡 Pending
+29c. **Add restore command tests for single file restoration (Red phase)** - ✅ Completed
+29d. **Implement plonk restore <file> functionality (Green phase)** - ✅ Completed
 29e. **Add restore command tests for timestamp-specific restoration (Red phase)** - 🟡 Pending
 29f. **Implement plonk restore <file> --timestamp functionality (Green phase)** - 🟡 Pending
 29g. **Add restore command tests for bulk restoration (Red phase)** - 🟡 Pending

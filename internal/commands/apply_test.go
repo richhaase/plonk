@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	
+	"plonk/internal/utils"
 )
 
 func TestApplyCommand_NoConfig(t *testing.T) {
@@ -85,15 +87,15 @@ homebrew:
 	}
 	
 	// Verify files were created
-	if !fileExists(filepath.Join(tempHome, ".zshrc")) {
+	if !utils.FileExists(filepath.Join(tempHome, ".zshrc")) {
 		t.Error("Expected ~/.zshrc to be created")
 	}
 	
-	if !fileExists(filepath.Join(tempHome, ".gitconfig")) {
+	if !utils.FileExists(filepath.Join(tempHome, ".gitconfig")) {
 		t.Error("Expected ~/.gitconfig to be created")
 	}
 	
-	if !fileExists(filepath.Join(tempHome, ".config", "nvim", "init.vim")) {
+	if !utils.FileExists(filepath.Join(tempHome, ".config", "nvim", "init.vim")) {
 		t.Error("Expected ~/.config/nvim/init.vim to be created")
 	}
 }
@@ -170,15 +172,15 @@ homebrew:
 	}
 	
 	// Verify only neovim config was applied, not global dotfiles or mcfly
-	if !fileExists(filepath.Join(tempHome, ".config", "nvim", "init.vim")) {
+	if !utils.FileExists(filepath.Join(tempHome, ".config", "nvim", "init.vim")) {
 		t.Error("Expected ~/.config/nvim/init.vim to be created")
 	}
 	
-	if fileExists(filepath.Join(tempHome, ".zshrc")) {
+	if utils.FileExists(filepath.Join(tempHome, ".zshrc")) {
 		t.Error("Expected ~/.zshrc NOT to be created when applying package-specific config")
 	}
 	
-	if fileExists(filepath.Join(tempHome, ".config", "mcfly", "config.yaml")) {
+	if utils.FileExists(filepath.Join(tempHome, ".config", "mcfly", "config.yaml")) {
 		t.Error("Expected ~/.config/mcfly/config.yaml NOT to be created when applying only neovim")
 	}
 }
@@ -275,7 +277,7 @@ zsh:
 	
 	// Verify .zshrc was created and contains expected content
 	zshrcPath := filepath.Join(tempHome, ".zshrc")
-	if !fileExists(zshrcPath) {
+	if !utils.FileExists(zshrcPath) {
 		t.Fatal("Expected ~/.zshrc to be generated")
 	}
 	
@@ -324,7 +326,7 @@ zsh:
 	
 	// Verify .zshenv was created and contains expected content
 	zshenvPath := filepath.Join(tempHome, ".zshenv")
-	if !fileExists(zshenvPath) {
+	if !utils.FileExists(zshenvPath) {
 		t.Fatal("Expected ~/.zshenv to be generated")
 	}
 	
@@ -389,13 +391,13 @@ zsh:
 	
 	// Verify .zshrc was created
 	zshrcPath := filepath.Join(tempHome, ".zshrc")
-	if !fileExists(zshrcPath) {
+	if !utils.FileExists(zshrcPath) {
 		t.Fatal("Expected ~/.zshrc to be generated")
 	}
 	
 	// Verify .zshenv was NOT created (no env vars)
 	zshenvPath := filepath.Join(tempHome, ".zshenv")
-	if fileExists(zshenvPath) {
+	if utils.FileExists(zshenvPath) {
 		t.Error("Expected ~/.zshenv NOT to be created when no env vars are present")
 	}
 }
@@ -449,7 +451,7 @@ zsh:
 	
 	// Verify backup was created
 	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
-	if !fileExists(backupDir) {
+	if !utils.FileExists(backupDir) {
 		t.Fatal("Expected backup directory to be created")
 	}
 	
@@ -536,7 +538,7 @@ zsh:
 	
 	// Verify no backup directory was created
 	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
-	if fileExists(backupDir) {
+	if utils.FileExists(backupDir) {
 		t.Error("Expected backup directory NOT to be created when --backup flag is not used")
 	}
 	
