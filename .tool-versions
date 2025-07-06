@@ -1,0 +1,11 @@
+# Development tools for Plonk project
+# Install with: asdf install
+
+# Go programming language
+golang 1.24.4
+
+# Linting and formatting tools
+golangci-lint 2.2.1
+
+# Task runner
+just 1.41.0

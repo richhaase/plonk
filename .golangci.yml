@@ -1,0 +1,38 @@
+# golangci-lint v2 configuration for Plonk
+# https://golangci-lint.run/usage/configuration/
+
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: none
+  enable:
+    - govet         # Standard Go static analysis
+    - errcheck      # Check for unchecked errors
+    - ineffassign   # Detect ineffectual assignments
+    - misspell      # Fix spelling mistakes
+    - unused        # Find unused code
+
+formatters:
+  goimports:
+    local-prefixes: plonk
+  
+  gofmt:
+    simplify: true
+
+linters.settings:
+  govet:
+    shadow: true
+  
+  errcheck:
+    check-type-assertions: true
+  
+  misspell:
+    locale: US
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
