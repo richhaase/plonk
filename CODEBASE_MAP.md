@@ -23,6 +23,9 @@ plonk/
 ├── pkg/                          # 📦 Public Packages
 │   ├── config/                   # ⚙️ Configuration Management
 │   └── managers/                 # 📋 Package Manager Abstractions
+├── .tool-versions                # 🔧 ASDF development tools
+├── .golangci.yml                 # 🔍 Linting configuration
+├── justfile                      # ⚡ Task runner commands
 ├── go.mod                        # 🔧 Go Module Definition
 ├── go.sum                        # 🔒 Dependency Lock File
 ├── CLAUDE.md                     # 📖 Project Documentation
@@ -51,6 +54,11 @@ plonk/
 - `internal/commands/package_installer.go` - Installation helpers
 - `internal/directories/manager.go` - Centralized path management
 - `internal/commands/test_helpers.go` - Shared test utilities
+
+### ⚡ **Development Infrastructure**
+- `justfile` - Task runner commands (build, test, lint, format, ci)
+- `.tool-versions` - ASDF development tools specification
+- `.golangci.yml` - Linting and formatting configuration
 
 ### ⚙️ **Configuration System** (pkg/config/)
 - `yaml_config.go` - Primary YAML configuration parsing
@@ -197,7 +205,28 @@ if shouldInstallPackage(name, isInstalled) {
 
 ## 🔧 Development Tools
 
-### Useful Commands
+### Just Commands (Primary)
+```bash
+# See all available commands
+just
+
+# Development workflow
+just dev          # format + lint + test
+just ci           # format + lint + test + build
+
+# Individual tasks
+just build        # Build the plonk binary
+just test         # Run all tests
+just test-coverage # Run tests with coverage
+just lint         # Run linter
+just lint-fix     # Fix linter issues automatically
+just format       # Format code (goimports + gofmt)
+just clean        # Clean build artifacts
+just install      # Install binary to $GOPATH/bin
+just status       # Show project status
+```
+
+### Traditional Go Commands
 ```bash
 # Run all tests
 go test ./...
