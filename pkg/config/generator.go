@@ -1,0 +1,54 @@
+package config
+
+import (
+	"strings"
+)
+
+// DiscoveryResults contains the results from package and dotfile discovery.
+type DiscoveryResults struct {
+	HomebrewPackages []string
+	AsdfTools        []string
+	NpmPackages      []string
+	Dotfiles         []string
+}
+
+// GenerateConfig creates a Config struct from discovery results.
+func GenerateConfig(results DiscoveryResults) Config {
+	config := Config{
+		Settings: Settings{
+			DefaultManager: "homebrew",
+		},
+		Dotfiles: make([]string, len(results.Dotfiles)),
+		Homebrew: HomebrewConfig{
+			Brews: make([]HomebrewPackage, len(results.HomebrewPackages)),
+		},
+		ASDF: make([]ASDFTool, len(results.AsdfTools)),
+		NPM:  make([]NPMPackage, len(results.NpmPackages)),
+	}
+
+	// Copy dotfiles
+	copy(config.Dotfiles, results.Dotfiles)
+
+	// Convert Homebrew packages
+	for i, pkg := range results.HomebrewPackages {
+		config.Homebrew.Brews[i] = HomebrewPackage{Name: pkg}
+	}
+
+	// Convert ASDF tools (format: "tool version")
+	for i, tool := range results.AsdfTools {
+		parts := strings.Fields(tool)
+		if len(parts) >= 2 {
+			config.ASDF[i] = ASDFTool{
+				Name:    parts[0],
+				Version: parts[1],
+			}
+		}
+	}
+
+	// Convert NPM packages
+	for i, pkg := range results.NpmPackages {
+		config.NPM[i] = NPMPackage{Name: pkg}
+	}
+
+	return config
+}
