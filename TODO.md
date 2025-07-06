@@ -14,6 +14,7 @@ Active work items for current development session. Maintained by AI agents.
 - [x] Extract ROADMAP.md from README with future development plans
 - [x] Design TODO.md format and usage pattern
 - [x] Extract CONTRIBUTING.md with TDD workflow and development approach
+- [x] Extract ARCHITECTURE.md with system design and technical details
 
 ## Notes
 - Focus: Documentation refactoring sprint
