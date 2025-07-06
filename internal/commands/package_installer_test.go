@@ -43,7 +43,7 @@ func TestPackageInstaller_ExtractInstalledPackages(t *testing.T) {
 				t.Errorf("Expected %d packages, got %d", len(tt.expected), len(result))
 			}
 
-			// Check all expected packages are present
+			// Check all expected packages are present.
 			resultMap := make(map[string]bool)
 			for _, pkg := range result {
 				resultMap[pkg] = true
@@ -189,7 +189,7 @@ func TestPackageInstaller_GetPackageName(t *testing.T) {
 		{
 			name:     "npm package with custom package name",
 			pkg:      config.NPMPackage{Name: "tool", Package: "@scope/actual-package"},
-			expected: "tool", // Should return Name, not Package
+			expected: "tool", expected: "tool", // Should return Name, not Package.
 		},
 		{
 			name:     "unknown package type",

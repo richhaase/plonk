@@ -49,13 +49,13 @@ func runApplyWithBackup(args []string, backup bool) error {
 func runApplyWithAllOptions(args []string, backup bool, dryRun bool) error {
 	plonkDir := directories.Default.PlonkDir()
 
-	// Load configuration
+	// Load configuration.
 	cfg, err := config.LoadConfig(plonkDir)
 	if err != nil {
 		return WrapConfigError(err)
 	}
 
-	// In dry-run mode, show what would be applied
+	// In dry-run mode, show what would be applied.
 	if dryRun {
 		if len(args) == 0 {
 			return previewAllConfigurations(plonkDir, cfg)
@@ -65,7 +65,7 @@ func runApplyWithAllOptions(args []string, backup bool, dryRun bool) error {
 		}
 	}
 
-	// If backup is requested, create backups before applying
+	// If backup is requested, create backups before applying.
 	if backup {
 		if err := createBackupsBeforeApply(cfg, args); err != nil {
 			return fmt.Errorf("failed to create backups: %w", err)
@@ -73,32 +73,32 @@ func runApplyWithAllOptions(args []string, backup bool, dryRun bool) error {
 	}
 
 	if len(args) == 0 {
-		// Apply all configurations
+		// Apply all configurations.
 		return applyAllConfigurations(plonkDir, cfg)
 	} else {
-		// Apply specific package configuration
+		// Apply specific package configuration.
 		packageName := args[0]
 		return applyPackageConfiguration(plonkDir, cfg, packageName)
 	}
 }
 
 func applyAllConfigurations(plonkDir string, config *config.Config) error {
-	// Apply global dotfiles
+	// Apply global dotfiles.
 	if err := applyDotfiles(plonkDir, config); err != nil {
 		return fmt.Errorf("failed to apply dotfiles: %w", err)
 	}
 
-	// Apply ZSH configuration
+	// Apply ZSH configuration.
 	if err := applyZSHConfiguration(config); err != nil {
 		return fmt.Errorf("failed to apply ZSH configuration: %w", err)
 	}
 
-	// Apply Git configuration
+	// Apply Git configuration.
 	if err := applyGitConfiguration(config); err != nil {
 		return fmt.Errorf("failed to apply Git configuration: %w", err)
 	}
 
-	// Apply package configurations
+	// Apply package configurations.
 	if err := applyPackageConfigurations(plonkDir, config); err != nil {
 		return fmt.Errorf("failed to apply package configurations: %w", err)
 	}
@@ -108,13 +108,13 @@ func applyAllConfigurations(plonkDir string, config *config.Config) error {
 }
 
 func applyPackageConfiguration(plonkDir string, config *config.Config, packageName string) error {
-	// Find the package and apply its configuration
+	// Find the package and apply its configuration.
 	packageConfig := findPackageConfig(config, packageName)
 	if packageConfig == "" {
 		return fmt.Errorf("package '%s' not found or has no configuration", packageName)
 	}
 
-	// Determine the correct source directory
+	// Determine the correct source directory.
 	sourceDir := getSourceDirectory(plonkDir)
 
 	if err := applyConfigPath(sourceDir, packageConfig); err != nil {
@@ -128,7 +128,7 @@ func applyPackageConfiguration(plonkDir string, config *config.Config, packageNa
 func applyDotfiles(plonkDir string, config *config.Config) error {
 	dotfileTargets := config.GetDotfileTargets()
 
-	// Determine the correct source directory (check repo subdirectory first)
+	// Determine the correct source directory (check repo subdirectory first).
 	sourceDir := getSourceDirectory(plonkDir)
 
 	for source, target := range dotfileTargets {
@@ -144,10 +144,10 @@ func applyDotfiles(plonkDir string, config *config.Config) error {
 }
 
 func applyPackageConfigurations(plonkDir string, config *config.Config) error {
-	// Determine the correct source directory
+	// Determine the correct source directory.
 	sourceDir := getSourceDirectory(plonkDir)
 
-	// Apply Homebrew package configurations
+	// Apply Homebrew package configurations.
 	for _, pkg := range config.Homebrew.Brews {
 		if pkg.Config != "" {
 			if err := applyConfigPath(sourceDir, pkg.Config); err != nil {
@@ -164,7 +164,7 @@ func applyPackageConfigurations(plonkDir string, config *config.Config) error {
 		}
 	}
 
-	// Apply ASDF package configurations
+	// Apply ASDF package configurations.
 	for _, tool := range config.ASDF {
 		if tool.Config != "" {
 			if err := applyConfigPath(sourceDir, tool.Config); err != nil {
@@ -173,7 +173,7 @@ func applyPackageConfigurations(plonkDir string, config *config.Config) error {
 		}
 	}
 
-	// Apply NPM package configurations
+	// Apply NPM package configurations.
 	for _, pkg := range config.NPM {
 		if pkg.Config != "" {
 			if err := applyConfigPath(sourceDir, pkg.Config); err != nil {
@@ -186,21 +186,21 @@ func applyPackageConfigurations(plonkDir string, config *config.Config) error {
 }
 
 // getSourceDirectory returns the directory where source files are located
-// Checks repo subdirectory first, then falls back to main plonk directory
+// Checks repo subdirectory first, then falls back to main plonk directory.
 func getSourceDirectory(plonkDir string) string {
 	repoDir := filepath.Join(plonkDir, "repo")
 
-	// Check if repo directory exists and has content
+	// Check if repo directory exists and has content.
 	if entries, err := os.ReadDir(repoDir); err == nil && len(entries) > 0 {
 		return repoDir
 	}
 
-	// Fall back to main plonk directory
+	// Fall back to main plonk directory.
 	return plonkDir
 }
 
 func findPackageConfig(config *config.Config, packageName string) string {
-	// Check Homebrew packages
+	// Check Homebrew packages.
 	for _, pkg := range config.Homebrew.Brews {
 		if pkg.Name == packageName && pkg.Config != "" {
 			return pkg.Config
@@ -213,14 +213,14 @@ func findPackageConfig(config *config.Config, packageName string) string {
 		}
 	}
 
-	// Check ASDF tools
+	// Check ASDF tools.
 	for _, tool := range config.ASDF {
 		if tool.Name == packageName && tool.Config != "" {
 			return tool.Config
 		}
 	}
 
-	// Check NPM packages
+	// Check NPM packages.
 	for _, pkg := range config.NPM {
 		if pkg.Name == packageName && pkg.Config != "" {
 			return pkg.Config
@@ -238,18 +238,18 @@ func applyConfigPath(plonkDir, configPath string) error {
 }
 
 func copyFile(src, dst string) error {
-	// Ensure destination directory exists
+	// Ensure destination directory exists.
 	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
 		return err
 	}
 
-	// Read source file
+	// Read source file.
 	data, err := os.ReadFile(src)
 	if err != nil {
 		return err
 	}
 
-	// Write to destination
+	// Write to destination.
 	return os.WriteFile(dst, data, 0644)
 }
 
@@ -267,18 +267,18 @@ func copyFileOrDir(src, dst string) error {
 }
 
 func copyDir(src, dst string) error {
-	// Create destination directory
+	// Create destination directory.
 	if err := os.MkdirAll(dst, 0755); err != nil {
 		return err
 	}
 
-	// Read source directory
+	// Read source directory.
 	entries, err := os.ReadDir(src)
 	if err != nil {
 		return err
 	}
 
-	// Copy each entry
+	// Copy each entry.
 	for _, entry := range entries {
 		srcPath := filepath.Join(src, entry.Name())
 		dstPath := filepath.Join(dst, entry.Name())
@@ -292,7 +292,7 @@ func copyDir(src, dst string) error {
 }
 
 func applyZSHConfiguration(cfg *config.Config) error {
-	// Skip if no ZSH configuration is defined
+	// Skip if no ZSH configuration is defined.
 	if len(cfg.ZSH.EnvVars) == 0 && len(cfg.ZSH.Aliases) == 0 &&
 		len(cfg.ZSH.Inits) == 0 && len(cfg.ZSH.Completions) == 0 &&
 		len(cfg.ZSH.Functions) == 0 && len(cfg.ZSH.ShellOptions) == 0 {
@@ -304,14 +304,14 @@ func applyZSHConfiguration(cfg *config.Config) error {
 		return fmt.Errorf("failed to get home directory: %w", err)
 	}
 
-	// Generate and write .zshrc
+	// Generate and write .zshrc.
 	zshrcContent := config.GenerateZshrc(&cfg.ZSH)
 	zshrcPath := filepath.Join(homeDir, ".zshrc")
 	if err := os.WriteFile(zshrcPath, []byte(zshrcContent), 0644); err != nil {
 		return fmt.Errorf("failed to write .zshrc: %w", err)
 	}
 
-	// Generate and write .zshenv (only if there are environment variables)
+	// Generate and write .zshenv (only if there are environment variables).
 	if len(cfg.ZSH.EnvVars) > 0 {
 		zshenvContent := config.GenerateZshenv(&cfg.ZSH)
 		zshenvPath := filepath.Join(homeDir, ".zshenv")
@@ -324,7 +324,7 @@ func applyZSHConfiguration(cfg *config.Config) error {
 }
 
 func applyGitConfiguration(cfg *config.Config) error {
-	// Skip if no Git configuration is defined
+	// Skip if no Git configuration is defined.
 	if len(cfg.Git.User) == 0 && len(cfg.Git.Core) == 0 && len(cfg.Git.Aliases) == 0 &&
 		len(cfg.Git.Color) == 0 && len(cfg.Git.Delta) == 0 && len(cfg.Git.Fetch) == 0 &&
 		len(cfg.Git.Pull) == 0 && len(cfg.Git.Push) == 0 && len(cfg.Git.Status) == 0 &&
@@ -339,7 +339,7 @@ func applyGitConfiguration(cfg *config.Config) error {
 		return fmt.Errorf("failed to get home directory: %w", err)
 	}
 
-	// Generate and write .gitconfig
+	// Generate and write .gitconfig.
 	gitconfigContent := config.GenerateGitconfig(&cfg.Git)
 	gitconfigPath := filepath.Join(homeDir, ".gitconfig")
 	if err := os.WriteFile(gitconfigPath, []byte(gitconfigContent), 0644); err != nil {
@@ -349,7 +349,7 @@ func applyGitConfiguration(cfg *config.Config) error {
 	return nil
 }
 
-// createBackupsBeforeApply determines which files will be overwritten and creates backups
+// createBackupsBeforeApply determines which files will be overwritten and creates backups.
 func createBackupsBeforeApply(cfg *config.Config, args []string) error {
 	var filesToBackup []string
 	homeDir, err := os.UserHomeDir()
@@ -358,28 +358,28 @@ func createBackupsBeforeApply(cfg *config.Config, args []string) error {
 	}
 
 	if len(args) == 0 {
-		// Backing up for full apply - check all files that will be written
+		// Backing up for full apply - check all files that will be written.
 
-		// Add dotfiles
+		// Add dotfiles.
 		dotfileTargets := cfg.GetDotfileTargets()
 		for _, target := range dotfileTargets {
 			targetPath := directories.Default.ExpandHomeDir(target)
 			filesToBackup = append(filesToBackup, targetPath)
 		}
 
-		// Add ZSH configuration files if ZSH config exists
+		// Add ZSH configuration files if ZSH config exists.
 		if len(cfg.ZSH.EnvVars) > 0 || len(cfg.ZSH.Aliases) > 0 ||
 			len(cfg.ZSH.Inits) > 0 || len(cfg.ZSH.Completions) > 0 ||
 			len(cfg.ZSH.Functions) > 0 || len(cfg.ZSH.ShellOptions) > 0 {
 			filesToBackup = append(filesToBackup, filepath.Join(homeDir, ".zshrc"))
 
-			// Only backup .zshenv if there are environment variables
+			// Only backup .zshenv if there are environment variables.
 			if len(cfg.ZSH.EnvVars) > 0 {
 				filesToBackup = append(filesToBackup, filepath.Join(homeDir, ".zshenv"))
 			}
 		}
 
-		// Add Git configuration file if Git config exists
+		// Add Git configuration file if Git config exists.
 		if len(cfg.Git.User) > 0 || len(cfg.Git.Core) > 0 || len(cfg.Git.Aliases) > 0 ||
 			len(cfg.Git.Color) > 0 || len(cfg.Git.Delta) > 0 || len(cfg.Git.Fetch) > 0 ||
 			len(cfg.Git.Pull) > 0 || len(cfg.Git.Push) > 0 || len(cfg.Git.Status) > 0 ||
@@ -389,10 +389,10 @@ func createBackupsBeforeApply(cfg *config.Config, args []string) error {
 			filesToBackup = append(filesToBackup, filepath.Join(homeDir, ".gitconfig"))
 		}
 
-		// Add package configuration files
+		// Add package configuration files.
 		filesToBackup = append(filesToBackup, getPackageConfigFilesToBackup(cfg)...)
 	} else {
-		// Backing up for specific package apply - only backup that package's config
+		// Backing up for specific package apply - only backup that package's config.
 		packageName := args[0]
 		packageConfig := findPackageConfig(cfg, packageName)
 		if packageConfig != "" {
@@ -401,15 +401,15 @@ func createBackupsBeforeApply(cfg *config.Config, args []string) error {
 		}
 	}
 
-	// Create backups using existing backup functionality
+	// Create backups using existing backup functionality.
 	return BackupConfigurationFiles(filesToBackup)
 }
 
-// getPackageConfigFilesToBackup returns all package configuration file paths
+// getPackageConfigFilesToBackup returns all package configuration file paths.
 func getPackageConfigFilesToBackup(cfg *config.Config) []string {
 	var filesToBackup []string
 
-	// Homebrew package configurations
+	// Homebrew package configurations.
 	for _, pkg := range cfg.Homebrew.Brews {
 		if pkg.Config != "" {
 			targetPath := directories.Default.ExpandHomeDir("~/." + pkg.Config)
@@ -424,7 +424,7 @@ func getPackageConfigFilesToBackup(cfg *config.Config) []string {
 		}
 	}
 
-	// ASDF package configurations
+	// ASDF package configurations.
 	for _, tool := range cfg.ASDF {
 		if tool.Config != "" {
 			targetPath := directories.Default.ExpandHomeDir("~/." + tool.Config)
@@ -432,7 +432,7 @@ func getPackageConfigFilesToBackup(cfg *config.Config) []string {
 		}
 	}
 
-	// NPM package configurations
+	// NPM package configurations.
 	for _, pkg := range cfg.NPM {
 		if pkg.Config != "" {
 			targetPath := directories.Default.ExpandHomeDir("~/." + pkg.Config)
@@ -443,26 +443,26 @@ func getPackageConfigFilesToBackup(cfg *config.Config) []string {
 	return filesToBackup
 }
 
-// previewAllConfigurations shows what would be applied for all configurations
+// previewAllConfigurations shows what would be applied for all configurations.
 func previewAllConfigurations(plonkDir string, config *config.Config) error {
 	fmt.Printf("Dry-run mode: Showing what would be applied from %s\n\n", plonkDir)
 
-	// Preview global dotfiles
+	// Preview global dotfiles.
 	if err := previewDotfiles(plonkDir, config); err != nil {
 		return fmt.Errorf("failed to preview dotfiles: %w", err)
 	}
 
-	// Preview ZSH configuration
+	// Preview ZSH configuration.
 	if err := previewZSHConfiguration(config); err != nil {
 		return fmt.Errorf("failed to preview ZSH configuration: %w", err)
 	}
 
-	// Preview Git configuration
+	// Preview Git configuration.
 	if err := previewGitConfiguration(config); err != nil {
 		return fmt.Errorf("failed to preview Git configuration: %w", err)
 	}
 
-	// Preview package configurations
+	// Preview package configurations.
 	if err := previewPackageConfigurations(plonkDir, config); err != nil {
 		return fmt.Errorf("failed to preview package configurations: %w", err)
 	}
@@ -471,17 +471,17 @@ func previewAllConfigurations(plonkDir string, config *config.Config) error {
 	return nil
 }
 
-// previewPackageConfiguration shows what would be applied for a specific package
+// previewPackageConfiguration shows what would be applied for a specific package.
 func previewPackageConfiguration(plonkDir string, config *config.Config, packageName string) error {
 	fmt.Printf("Dry-run mode: Showing what would be applied for package '%s'\n\n", packageName)
 
-	// Find the package and preview its configuration
+	// Find the package and preview its configuration.
 	packageConfig := findPackageConfig(config, packageName)
 	if packageConfig == "" {
 		return fmt.Errorf("package '%s' not found or has no configuration", packageName)
 	}
 
-	// Determine the correct source directory
+	// Determine the correct source directory.
 	sourceDir := getSourceDirectory(plonkDir)
 
 	if err := previewConfigPath(sourceDir, packageConfig); err != nil {
@@ -492,7 +492,7 @@ func previewPackageConfiguration(plonkDir string, config *config.Config, package
 	return nil
 }
 
-// previewDotfiles shows what dotfiles would be applied
+// previewDotfiles shows what dotfiles would be applied.
 func previewDotfiles(plonkDir string, config *config.Config) error {
 	dotfileTargets := config.GetDotfileTargets()
 
@@ -502,18 +502,18 @@ func previewDotfiles(plonkDir string, config *config.Config) error {
 
 	fmt.Printf("Dotfiles that would be applied:\n")
 
-	// Determine the correct source directory (check repo subdirectory first)
+	// Determine the correct source directory (check repo subdirectory first).
 	sourceDir := getSourceDirectory(plonkDir)
 
 	for source, target := range dotfileTargets {
 		sourcePath := filepath.Join(sourceDir, source)
 		targetPath := directories.Default.ExpandHomeDir(target)
 
-		// Check if source exists
+		// Check if source exists.
 		if _, err := os.Stat(sourcePath); err != nil {
 			fmt.Printf("  ⚠️  %s -> %s (source not found)\n", source, target)
 		} else {
-			// Check if target exists
+			// Check if target exists.
 			if _, err := os.Stat(targetPath); err == nil {
 				fmt.Printf("  📝 %s -> %s (would overwrite existing file)\n", source, target)
 			} else {
@@ -526,9 +526,9 @@ func previewDotfiles(plonkDir string, config *config.Config) error {
 	return nil
 }
 
-// previewZSHConfiguration shows what ZSH configuration would be applied
+// previewZSHConfiguration shows what ZSH configuration would be applied.
 func previewZSHConfiguration(cfg *config.Config) error {
-	// Skip if no ZSH configuration is defined
+	// Skip if no ZSH configuration is defined.
 	if len(cfg.ZSH.EnvVars) == 0 && len(cfg.ZSH.Aliases) == 0 &&
 		len(cfg.ZSH.Inits) == 0 && len(cfg.ZSH.Completions) == 0 &&
 		len(cfg.ZSH.Functions) == 0 && len(cfg.ZSH.ShellOptions) == 0 {
@@ -542,7 +542,7 @@ func previewZSHConfiguration(cfg *config.Config) error {
 		return fmt.Errorf("failed to get home directory: %w", err)
 	}
 
-	// Check .zshrc
+	// Check .zshrc.
 	zshrcPath := filepath.Join(homeDir, ".zshrc")
 	if _, err := os.Stat(zshrcPath); err == nil {
 		fmt.Printf("  📝 .zshrc (would overwrite existing file)\n")
@@ -550,7 +550,7 @@ func previewZSHConfiguration(cfg *config.Config) error {
 		fmt.Printf("  ✨ .zshrc (would create new file)\n")
 	}
 
-	// Check .zshenv (only if there are environment variables)
+	// Check .zshenv (only if there are environment variables).
 	if len(cfg.ZSH.EnvVars) > 0 {
 		zshenvPath := filepath.Join(homeDir, ".zshenv")
 		if _, err := os.Stat(zshenvPath); err == nil {
@@ -564,9 +564,9 @@ func previewZSHConfiguration(cfg *config.Config) error {
 	return nil
 }
 
-// previewGitConfiguration shows what Git configuration would be applied
+// previewGitConfiguration shows what Git configuration would be applied.
 func previewGitConfiguration(cfg *config.Config) error {
-	// Skip if no Git configuration is defined
+	// Skip if no Git configuration is defined.
 	if len(cfg.Git.User) == 0 && len(cfg.Git.Core) == 0 && len(cfg.Git.Aliases) == 0 &&
 		len(cfg.Git.Color) == 0 && len(cfg.Git.Delta) == 0 && len(cfg.Git.Fetch) == 0 &&
 		len(cfg.Git.Pull) == 0 && len(cfg.Git.Push) == 0 && len(cfg.Git.Status) == 0 &&
@@ -583,7 +583,7 @@ func previewGitConfiguration(cfg *config.Config) error {
 		return fmt.Errorf("failed to get home directory: %w", err)
 	}
 
-	// Check .gitconfig
+	// Check .gitconfig.
 	gitconfigPath := filepath.Join(homeDir, ".gitconfig")
 	if _, err := os.Stat(gitconfigPath); err == nil {
 		fmt.Printf("  📝 .gitconfig (would overwrite existing file)\n")
@@ -595,11 +595,11 @@ func previewGitConfiguration(cfg *config.Config) error {
 	return nil
 }
 
-// previewPackageConfigurations shows what package configurations would be applied
+// previewPackageConfigurations shows what package configurations would be applied.
 func previewPackageConfigurations(plonkDir string, config *config.Config) error {
 	hasAnyPackageConfig := false
 
-	// Check Homebrew package configurations
+	// Check Homebrew package configurations.
 	for _, pkg := range config.Homebrew.Brews {
 		if pkg.Config != "" {
 			hasAnyPackageConfig = true
@@ -616,7 +616,7 @@ func previewPackageConfigurations(plonkDir string, config *config.Config) error 
 		}
 	}
 
-	// Check ASDF package configurations
+	// Check ASDF package configurations.
 	if !hasAnyPackageConfig {
 		for _, tool := range config.ASDF {
 			if tool.Config != "" {
@@ -626,7 +626,7 @@ func previewPackageConfigurations(plonkDir string, config *config.Config) error 
 		}
 	}
 
-	// Check NPM package configurations
+	// Check NPM package configurations.
 	if !hasAnyPackageConfig {
 		for _, pkg := range config.NPM {
 			if pkg.Config != "" {
@@ -642,10 +642,10 @@ func previewPackageConfigurations(plonkDir string, config *config.Config) error 
 
 	fmt.Printf("Package configurations that would be applied:\n")
 
-	// Determine the correct source directory
+	// Determine the correct source directory.
 	sourceDir := getSourceDirectory(plonkDir)
 
-	// Preview Homebrew package configurations
+	// Preview Homebrew package configurations.
 	for _, pkg := range config.Homebrew.Brews {
 		if pkg.Config != "" {
 			if err := previewConfigPath(sourceDir, pkg.Config); err != nil {
@@ -662,7 +662,7 @@ func previewPackageConfigurations(plonkDir string, config *config.Config) error 
 		}
 	}
 
-	// Preview ASDF package configurations
+	// Preview ASDF package configurations.
 	for _, tool := range config.ASDF {
 		if tool.Config != "" {
 			if err := previewConfigPath(sourceDir, tool.Config); err != nil {
@@ -671,7 +671,7 @@ func previewPackageConfigurations(plonkDir string, config *config.Config) error 
 		}
 	}
 
-	// Preview NPM package configurations
+	// Preview NPM package configurations.
 	for _, pkg := range config.NPM {
 		if pkg.Config != "" {
 			if err := previewConfigPath(sourceDir, pkg.Config); err != nil {
@@ -684,19 +684,19 @@ func previewPackageConfigurations(plonkDir string, config *config.Config) error 
 	return nil
 }
 
-// previewConfigPath shows what would happen for a specific config path
+// previewConfigPath shows what would happen for a specific config path.
 func previewConfigPath(plonkDir, configPath string) error {
 	sourcePath := filepath.Join(plonkDir, configPath)
 	targetPath := directories.Default.ExpandHomeDir("~/." + configPath)
 
-	// Check if source exists
+	// Check if source exists.
 	sourceInfo, err := os.Stat(sourcePath)
 	if err != nil {
 		fmt.Printf("  ⚠️  %s -> %s (source not found)\n", configPath, "~/."+configPath)
 		return nil
 	}
 
-	// Check if target exists
+	// Check if target exists.
 	if _, err := os.Stat(targetPath); err == nil {
 		if sourceInfo.IsDir() {
 			fmt.Printf("  📁 %s -> %s (would overwrite existing directory)\n", configPath, "~/."+configPath)

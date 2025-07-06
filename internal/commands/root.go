@@ -26,16 +26,16 @@ func Execute() error {
 
 func rootCmdRun(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
-		// No arguments, show help
+		// No arguments, show help.
 		return cmd.Help()
 	}
 
-	// Single argument should be a repository URL for convenience setup
+	// Single argument should be a repository URL for convenience setup.
 	return runRepo(args)
 }
 
 func init() {
-	// Add subcommands here
+	// Add subcommands here.
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(pkgCmd)
 }

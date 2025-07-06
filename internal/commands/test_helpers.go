@@ -8,7 +8,7 @@ import (
 )
 
 // setupTestEnv sets up a temporary test environment with isolated HOME directory
-// and returns a cleanup function that should be called with defer
+// and returns a cleanup function that should be called with defer.
 func setupTestEnv(t *testing.T) (tempHome string, cleanup func()) {
 	tempHome = t.TempDir()
 	originalHome := os.Getenv("HOME")
@@ -23,7 +23,7 @@ func setupTestEnv(t *testing.T) (tempHome string, cleanup func()) {
 }
 
 // setupTestEnvWithPlonkDir sets up a temporary test environment with both HOME and PLONK_DIR
-// and returns a cleanup function that should be called with defer
+// and returns a cleanup function that should be called with defer.
 func setupTestEnvWithPlonkDir(t *testing.T, plonkDir string) (tempHome string, cleanup func()) {
 	tempHome = t.TempDir()
 	originalHome := os.Getenv("HOME")
@@ -40,14 +40,14 @@ func setupTestEnvWithPlonkDir(t *testing.T, plonkDir string) (tempHome string, c
 	return tempHome, cleanup
 }
 
-// MockGit implements GitInterface for testing
+// MockGit implements GitInterface for testing.
 type MockGit struct {
 	CloneFunc  func(repoURL, targetDir string) error
 	PullFunc   func(repoDir string) error
 	IsRepoFunc func(dir string) bool
 }
 
-// MockGitWithBranch implements GitInterface with branch support for testing
+// MockGitWithBranch implements GitInterface with branch support for testing.
 type MockGitWithBranch struct {
 	CloneBranchFunc func(repoURL, targetDir, branch string) error
 	PullFunc        func(repoDir string) error
@@ -87,7 +87,7 @@ func (m *MockGit) Clone(repoURL, targetDir string) error {
 }
 
 func (m *MockGit) CloneBranch(repoURL, targetDir, branch string) error {
-	// For basic MockGit, just call Clone
+	// For basic MockGit, just call Clone.
 	return m.Clone(repoURL, targetDir)
 }
 
@@ -105,13 +105,13 @@ func (m *MockGit) IsRepo(dir string) bool {
 	return false
 }
 
-// runApplyWithFlags runs the apply command with flag support for testing
+// runApplyWithFlags runs the apply command with flag support for testing.
 func runApplyWithFlags(args []string, backup bool) error {
 	return runApplyWithBackup(args, backup)
 }
 
-// runApplyWithAllFlags runs the apply command with both backup and dry-run flag support for testing
+// runApplyWithAllFlags runs the apply command with both backup and dry-run flag support for testing.
 func runApplyWithAllFlags(args []string, backup bool, dryRun bool) error {
-	// This will call a function that doesn't exist yet - that's fine for Red phase TDD
+	// This will call a function that doesn't exist yet - that's fine for Red phase TDD.
 	return runApplyWithAllOptions(args, backup, dryRun)
 }

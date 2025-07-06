@@ -9,7 +9,7 @@ import (
 )
 
 func TestStatusCommandExists(t *testing.T) {
-	// Test that the status command is properly configured
+	// Test that the status command is properly configured.
 	if statusCmd == nil {
 		t.Error("Status command should not be nil")
 	}
@@ -29,23 +29,23 @@ func TestStatusCommandExists(t *testing.T) {
 
 func TestPackageManagerInterface(t *testing.T) {
 	// Test that the PackageManager interface has the expected methods
-	// This is a compile-time check - if the interface changes, this won't compile
+	// This is a compile-time check - if the interface changes, this won't compile.
 	var _ managers.PackageManager = &testPackageManager{}
 }
 
 func TestStatusWithDrift(t *testing.T) {
-	// Setup temporary directory
+	// Setup temporary directory.
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	// Create plonk directory and config
+	// Create plonk directory and config.
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err := os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-	// Create config with dotfiles that will have drift
+	// Create config with dotfiles that will have drift.
 	configContent := `settings:
   default_manager: homebrew
 
@@ -59,13 +59,13 @@ dotfiles:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-	// Create source file but not target (drift)
+	// Create source file but not target (drift).
 	err = os.WriteFile(filepath.Join(plonkDir, "zshrc"), []byte("# test zshrc"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create source file: %v", err)
 	}
 
-	// Test status with drift flag
+	// Test status with drift flag.
 	err = runStatusWithDrift()
 	if err != nil {
 		t.Fatalf("Status with drift failed: %v", err)
@@ -73,18 +73,18 @@ dotfiles:
 }
 
 func TestStatusNoDrift(t *testing.T) {
-	// Setup temporary directory
+	// Setup temporary directory.
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	// Create plonk directory and config
+	// Create plonk directory and config.
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err := os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-	// Create config with dotfiles
+	// Create config with dotfiles.
 	configContent := `settings:
   default_manager: homebrew
 
@@ -98,7 +98,7 @@ dotfiles:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-	// Create both source and matching target files (no drift)
+	// Create both source and matching target files (no drift).
 	err = os.WriteFile(filepath.Join(plonkDir, "zshrc"), []byte("# test zshrc"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create source file: %v", err)
@@ -109,14 +109,14 @@ dotfiles:
 		t.Fatalf("Failed to create target file: %v", err)
 	}
 
-	// Test status with drift detection (should show no drift)
+	// Test status with drift detection (should show no drift).
 	err = runStatusWithDrift()
 	if err != nil {
 		t.Fatalf("Status with drift failed: %v", err)
 	}
 }
 
-// testPackageManager implements PackageManager for testing
+// testPackageManager implements PackageManager for testing.
 type testPackageManager struct{}
 
 func (t *testPackageManager) IsAvailable() bool {

@@ -9,11 +9,11 @@ import (
 )
 
 func TestBackupCommand_SpecificFiles(t *testing.T) {
-	// Setup temporary directory
+	// Setup temporary directory.
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	// Create existing files to backup
+	// Create existing files to backup.
 	existingZshrc := filepath.Join(tempHome, ".zshrc")
 	existingContent := "# My existing zshrc\nalias ls='ls -la'"
 	err := os.WriteFile(existingZshrc, []byte(existingContent), 0644)
@@ -28,14 +28,14 @@ func TestBackupCommand_SpecificFiles(t *testing.T) {
 		t.Fatalf("Failed to create existing .vimrc: %v", err)
 	}
 
-	// Create plonk directory and config
+	// Create plonk directory and config.
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err = os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-	// Create config file with backup configuration
+	// Create config file with backup configuration.
 	configContent := `settings:
   default_manager: homebrew
 
@@ -50,19 +50,19 @@ backup:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-	// Test backing up specific files
+	// Test backing up specific files.
 	err = backupCmdRun(nil, []string{existingZshrc, existingVimrc})
 	if err != nil {
 		t.Fatalf("Backup command failed: %v", err)
 	}
 
-	// Verify backups were created
+	// Verify backups were created.
 	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
 	if !utils.FileExists(backupDir) {
 		t.Fatal("Expected backup directory to be created")
 	}
 
-	// Check for .zshrc backup
+	// Check for .zshrc backup.
 	zshrcBackups, err := filepath.Glob(filepath.Join(backupDir, "zshrc.backup.*"))
 	if err != nil {
 		t.Fatalf("Failed to search for zshrc backup files: %v", err)
@@ -72,7 +72,7 @@ backup:
 		t.Errorf("Expected 1 .zshrc backup file, found %d: %v", len(zshrcBackups), zshrcBackups)
 	}
 
-	// Check for .vimrc backup
+	// Check for .vimrc backup.
 	vimrcBackups, err := filepath.Glob(filepath.Join(backupDir, "vimrc.backup.*"))
 	if err != nil {
 		t.Fatalf("Failed to search for vimrc backup files: %v", err)
@@ -82,7 +82,7 @@ backup:
 		t.Errorf("Expected 1 .vimrc backup file, found %d: %v", len(vimrcBackups), vimrcBackups)
 	}
 
-	// Verify backup contents
+	// Verify backup contents.
 	if len(zshrcBackups) > 0 {
 		backupContent, err := os.ReadFile(zshrcBackups[0])
 		if err != nil {
@@ -97,11 +97,11 @@ backup:
 }
 
 func TestBackupCommand_AllFiles(t *testing.T) {
-	// Setup temporary directory
+	// Setup temporary directory.
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	// Create existing .zshrc that would be overwritten by apply
+	// Create existing .zshrc that would be overwritten by apply.
 	existingZshrc := filepath.Join(tempHome, ".zshrc")
 	existingContent := "# My existing zshrc\nalias ls='ls -la'"
 	err := os.WriteFile(existingZshrc, []byte(existingContent), 0644)
@@ -109,14 +109,14 @@ func TestBackupCommand_AllFiles(t *testing.T) {
 		t.Fatalf("Failed to create existing .zshrc: %v", err)
 	}
 
-	// Create plonk directory and config
+	// Create plonk directory and config.
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err = os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-	// Create config file with ZSH configuration (so apply would overwrite .zshrc)
+	// Create config file with ZSH configuration (so apply would overwrite .zshrc).
 	configContent := `settings:
   default_manager: homebrew
 
@@ -135,13 +135,13 @@ zsh:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-	// Test backing up all files (no arguments)
+	// Test backing up all files (no arguments).
 	err = backupCmdRun(nil, []string{})
 	if err != nil {
 		t.Fatalf("Backup command failed: %v", err)
 	}
 
-	// Verify backup was created for .zshrc
+	// Verify backup was created for .zshrc.
 	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
 	if !utils.FileExists(backupDir) {
 		t.Fatal("Expected backup directory to be created")
@@ -156,7 +156,7 @@ zsh:
 		t.Errorf("Expected 1 backup file, found %d: %v", len(backupFiles), backupFiles)
 	}
 
-	// Verify backup contains original content
+	// Verify backup contains original content.
 	if len(backupFiles) > 0 {
 		backupContent, err := os.ReadFile(backupFiles[0])
 		if err != nil {
@@ -171,18 +171,18 @@ zsh:
 }
 
 func TestBackupCommand_NoExistingFiles(t *testing.T) {
-	// Setup temporary directory
+	// Setup temporary directory.
 	tempHome, cleanup := setupTestEnv(t)
 	defer cleanup()
 
-	// Create plonk directory and config but no existing files
+	// Create plonk directory and config but no existing files.
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
 	err := os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-	// Create config file
+	// Create config file.
 	configContent := `settings:
   default_manager: homebrew
 
@@ -201,19 +201,19 @@ zsh:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-	// Test backing up all files when no files exist - should not error
+	// Test backing up all files when no files exist - should not error.
 	err = backupCmdRun(nil, []string{})
 	if err != nil {
 		t.Fatalf("Backup command should not fail when no files exist: %v", err)
 	}
 
-	// Backup directory should be created but empty of actual backups
+	// Backup directory should be created but empty of actual backups.
 	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
 	if !utils.FileExists(backupDir) {
 		t.Fatal("Expected backup directory to be created")
 	}
 
-	// No backup files should exist since no source files existed
+	// No backup files should exist since no source files existed.
 	backupFiles, err := filepath.Glob(filepath.Join(backupDir, "*.backup.*"))
 	if err != nil {
 		t.Fatalf("Failed to search for backup files: %v", err)

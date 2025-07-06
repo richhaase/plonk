@@ -12,7 +12,7 @@ import (
 	"plonk/internal/directories"
 )
 
-// GitInterface defines git operations for dependency injection
+// GitInterface defines git operations for dependency injection.
 type GitInterface interface {
 	Clone(repoURL, targetDir string) error
 	CloneBranch(repoURL, targetDir, branch string) error
@@ -20,7 +20,7 @@ type GitInterface interface {
 	IsRepo(dir string) bool
 }
 
-// RealGit implements GitInterface using go-git
+// RealGit implements GitInterface using go-git.
 type RealGit struct{}
 
 func (g *RealGit) Clone(repoURL, targetDir string) error {
@@ -28,24 +28,24 @@ func (g *RealGit) Clone(repoURL, targetDir string) error {
 }
 
 func (g *RealGit) CloneBranch(repoURL, targetDir, branch string) error {
-	// Create parent directory if needed
+	// Create parent directory if needed.
 	parentDir := filepath.Dir(targetDir)
 	if err := os.MkdirAll(parentDir, 0755); err != nil {
 		return fmt.Errorf("failed to create parent directory: %w", err)
 	}
 
-	// Setup clone options
+	// Setup clone options.
 	cloneOptions := &git.CloneOptions{
 		URL: repoURL,
 	}
 
-	// Add branch reference if specified
+	// Add branch reference if specified.
 	if branch != "" {
 		cloneOptions.ReferenceName = plumbing.ReferenceName("refs/heads/" + branch)
 		cloneOptions.SingleBranch = true
 	}
 
-	// Clone the repository
+	// Clone the repository.
 	_, err := git.PlainClone(targetDir, false, cloneOptions)
 	if err != nil {
 		return fmt.Errorf("failed to clone repository: %w", err)
@@ -55,19 +55,19 @@ func (g *RealGit) CloneBranch(repoURL, targetDir, branch string) error {
 }
 
 func (g *RealGit) Pull(repoDir string) error {
-	// Open the repository
+	// Open the repository.
 	repo, err := git.PlainOpen(repoDir)
 	if err != nil {
 		return fmt.Errorf("failed to open repository: %w", err)
 	}
 
-	// Get the working tree
+	// Get the working tree.
 	worktree, err := repo.Worktree()
 	if err != nil {
 		return fmt.Errorf("failed to get worktree: %w", err)
 	}
 
-	// Pull updates
+	// Pull updates.
 	err = worktree.Pull(&git.PullOptions{})
 	if err != nil && err != git.NoErrAlreadyUpToDate {
 		return fmt.Errorf("failed to pull updates: %w", err)
@@ -81,7 +81,7 @@ func (g *RealGit) IsRepo(dir string) bool {
 	return err == nil
 }
 
-// Global git instance (can be mocked for testing)
+// Global git instance (can be mocked for testing).
 var gitClient GitInterface = &RealGit{}
 
 var cloneCmd = &cobra.Command{
@@ -115,7 +115,7 @@ func cloneCmdRun(cmd *cobra.Command, args []string) error {
 	return runCloneWithBranch(args, branchFlag)
 }
 
-// parseRepoURL extracts the repository URL and branch from a URL that may contain #branch
+// parseRepoURL extracts the repository URL and branch from a URL that may contain #branch.
 func parseRepoURL(input string) (url, branch string) {
 	parts := strings.SplitN(input, "#", 2)
 	url = parts[0]
@@ -134,28 +134,28 @@ func runCloneWithBranch(args []string, flagBranch string) error {
 		return err
 	}
 
-	// Ensure directory structure exists
+	// Ensure directory structure exists.
 	if err := directories.Default.EnsureStructure(); err != nil {
 		return fmt.Errorf("failed to setup directory structure: %w", err)
 	}
 
 	repoDir := directories.Default.RepoDir()
 
-	// Check if target directory already exists and has content
+	// Check if target directory already exists and has content.
 	if entries, err := os.ReadDir(repoDir); err == nil && len(entries) > 0 {
 		return fmt.Errorf("target directory %s already contains files, use 'plonk pull' to update", repoDir)
 	}
 
-	// Parse URL for branch information
+	// Parse URL for branch information.
 	repoURL, urlBranch := parseRepoURL(args[0])
 
-	// Flag takes precedence over URL branch
+	// Flag takes precedence over URL branch.
 	branch := flagBranch
 	if branch == "" {
 		branch = urlBranch
 	}
 
-	// Use appropriate clone method
+	// Use appropriate clone method.
 	var err error
 	if branch != "" {
 		err = gitClient.CloneBranch(repoURL, repoDir, branch)

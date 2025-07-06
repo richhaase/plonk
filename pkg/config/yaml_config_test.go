@@ -45,18 +45,18 @@ npm:
 		t.Fatalf("Failed to write test config: %v", err)
 	}
 
-	// Load configuration
+	// Load configuration.
 	config, err := LoadConfig(tempDir)
 	if err != nil {
 		t.Fatalf("LoadConfig failed: %v", err)
 	}
 
-	// Verify settings
+	// Verify settings.
 	if config.Settings.DefaultManager != "homebrew" {
 		t.Errorf("Expected default_manager 'homebrew', got '%s'", config.Settings.DefaultManager)
 	}
 
-	// Verify dotfiles
+	// Verify dotfiles.
 	expectedDotfiles := []string{"zshrc", "zshenv", "plugins.zsh"}
 	if len(config.Dotfiles) != len(expectedDotfiles) {
 		t.Errorf("Expected %d dotfiles, got %d", len(expectedDotfiles), len(config.Dotfiles))
@@ -67,17 +67,17 @@ npm:
 		}
 	}
 
-	// Verify homebrew packages
+	// Verify homebrew packages.
 	if len(config.Homebrew.Brews) != 3 {
 		t.Errorf("Expected 3 homebrew brews, got %d", len(config.Homebrew.Brews))
 	}
 
-	// Check simple brew
+	// Check simple brew.
 	if config.Homebrew.Brews[0].Name != "aichat" {
 		t.Errorf("Expected first brew 'aichat', got '%s'", config.Homebrew.Brews[0].Name)
 	}
 
-	// Check brew with config
+	// Check brew with config.
 	neovim := config.Homebrew.Brews[2]
 	if neovim.Name != "neovim" {
 		t.Errorf("Expected neovim name 'neovim', got '%s'", neovim.Name)
@@ -86,7 +86,7 @@ npm:
 		t.Errorf("Expected neovim config 'config/nvim/', got '%s'", neovim.Config)
 	}
 
-	// Verify asdf tools
+	// Verify asdf tools.
 	if len(config.ASDF) != 2 {
 		t.Errorf("Expected 2 asdf tools, got %d", len(config.ASDF))
 	}
@@ -101,7 +101,7 @@ npm:
 		t.Errorf("python tool not parsed correctly: %+v", python)
 	}
 
-	// Verify npm packages
+	// Verify npm packages.
 	if len(config.NPM) != 2 {
 		t.Errorf("Expected 2 npm packages, got %d", len(config.NPM))
 	}
@@ -130,7 +130,7 @@ func TestConfigValidation(t *testing.T) {
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "plonk.yaml")
 
-	// Test ASDF tool without version should fail
+	// Test ASDF tool without version should fail.
 	configContent := `settings:
   default_manager: homebrew
 
@@ -249,7 +249,7 @@ zsh:
 		t.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Test env vars
+	// Test env vars.
 	if config.ZSH.EnvVars["EDITOR"] != "nvim" {
 		t.Errorf("Expected EDITOR=nvim, got %s", config.ZSH.EnvVars["EDITOR"])
 	}
@@ -258,7 +258,7 @@ zsh:
 		t.Errorf("Expected LANG=en_US.UTF-8, got %s", config.ZSH.EnvVars["LANG"])
 	}
 
-	// Test shell options
+	// Test shell options.
 	expectedOptions := []string{"AUTO_MENU", "COMPLETE_IN_WORD"}
 	if len(config.ZSH.ShellOptions) != len(expectedOptions) {
 		t.Fatalf("Expected %d shell options, got %d", len(expectedOptions), len(config.ZSH.ShellOptions))
@@ -270,7 +270,7 @@ zsh:
 		}
 	}
 
-	// Test inits
+	// Test inits.
 	expectedInits := []string{
 		`eval "$(starship init zsh)"`,
 		`eval "$(some-custom-tool init zsh)"`,
@@ -285,7 +285,7 @@ zsh:
 		}
 	}
 
-	// Test completions
+	// Test completions.
 	expectedCompletions := []string{`source <(kubectl completion zsh)`}
 	if len(config.ZSH.Completions) != len(expectedCompletions) {
 		t.Fatalf("Expected %d completions, got %d", len(expectedCompletions), len(config.ZSH.Completions))
@@ -295,7 +295,7 @@ zsh:
 		t.Errorf("Expected completion to be '%s', got '%s'", expectedCompletions[0], config.ZSH.Completions[0])
 	}
 
-	// Test plugins
+	// Test plugins.
 	expectedPlugins := []string{"zsh-users/zsh-syntax-highlighting", "zsh-users/zsh-autosuggestions"}
 	if len(config.ZSH.Plugins) != len(expectedPlugins) {
 		t.Fatalf("Expected %d plugins, got %d", len(expectedPlugins), len(config.ZSH.Plugins))
@@ -307,7 +307,7 @@ zsh:
 		}
 	}
 
-	// Test aliases
+	// Test aliases.
 	if config.ZSH.Aliases[".."] != "cd .." {
 		t.Errorf("Expected alias .. = 'cd ..', got %s", config.ZSH.Aliases[".."])
 	}
@@ -316,12 +316,12 @@ zsh:
 		t.Errorf("Expected alias vim = nvim, got %s", config.ZSH.Aliases["vim"])
 	}
 
-	// Test functions
+	// Test functions.
 	if _, exists := config.ZSH.Functions["y"]; !exists {
 		t.Error("Expected function 'y' to exist")
 	}
 
-	// Test source after
+	// Test source after.
 	if len(config.ZSH.SourceAfter) != 1 {
 		t.Fatalf("Expected 1 source_after entry, got %d", len(config.ZSH.SourceAfter))
 	}
@@ -351,7 +351,7 @@ func TestZSHConfig_EmptyConfiguration(t *testing.T) {
 		t.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Test that ZSH config is empty but not nil
+	// Test that ZSH config is empty but not nil.
 	if config.ZSH.EnvVars == nil {
 		config.ZSH.EnvVars = make(map[string]string)
 	}
@@ -389,7 +389,7 @@ zsh:
 		t.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Test minimal config
+	// Test minimal config.
 	if len(config.ZSH.Plugins) != 1 {
 		t.Fatalf("Expected 1 plugin, got %d", len(config.ZSH.Plugins))
 	}
@@ -402,7 +402,7 @@ zsh:
 		t.Errorf("Expected alias vim = nvim, got %s", config.ZSH.Aliases["vim"])
 	}
 
-	// Test defaults (empty init and completions lists)
+	// Test defaults (empty init and completions lists).
 	if len(config.ZSH.Inits) != 0 {
 		t.Errorf("Expected no inits by default, got %d", len(config.ZSH.Inits))
 	}

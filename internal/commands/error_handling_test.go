@@ -59,7 +59,7 @@ func TestErrorHandling_StandardErrorMessages(t *testing.T) {
 				t.Errorf("Error message should start with %q, got %q", tt.expectedPrefix, errMsg)
 			}
 
-			// Verify that the error is properly wrapped (contains original error)
+			// Verify that the error is properly wrapped (contains original error).
 			if !strings.Contains(errMsg, ":") {
 				t.Error("Error should be wrapped with original error")
 			}
@@ -190,12 +190,12 @@ func TestErrorHandling_ErrorWrappingConsistency(t *testing.T) {
 			wrappedErr := tt.wrapFunc(originalErr)
 
 			if tt.expectsWrap {
-				// Verify the error is properly wrapped
+				// Verify the error is properly wrapped.
 				if !errors.Is(wrappedErr, originalErr) {
 					t.Error("Error should be properly wrapped with errors.Is compatibility")
 				}
 
-				// Verify error chain can be unwrapped
+				// Verify error chain can be unwrapped.
 				if errors.Unwrap(wrappedErr) == nil {
 					t.Error("Error should be unwrappable")
 				}

@@ -32,7 +32,7 @@ func TestZSHManager_IsAvailable_Failure(t *testing.T) {
 func TestZSHManager_Install_ClonesPlugin(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Set custom plugin directory
+	// Set custom plugin directory.
 	originalZPluginDir := os.Getenv("ZPLUGINDIR")
 	defer os.Setenv("ZPLUGINDIR", originalZPluginDir)
 	os.Setenv("ZPLUGINDIR", tempDir)
@@ -45,7 +45,7 @@ func TestZSHManager_Install_ClonesPlugin(t *testing.T) {
 		t.Fatalf("Install failed: %v", err)
 	}
 
-	// Verify git clone command was called
+	// Verify git clone command was called.
 	expectedCall := "git clone"
 	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
 		t.Errorf("Expected git clone command not executed. Got: %v", mockExec.Calls)
@@ -55,14 +55,14 @@ func TestZSHManager_Install_ClonesPlugin(t *testing.T) {
 func TestZSHManager_Install_SkipsExistingPlugin(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Create existing plugin directory
+	// Create existing plugin directory.
 	pluginDir := filepath.Join(tempDir, "zsh-syntax-highlighting")
 	err := os.MkdirAll(pluginDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create existing plugin dir: %v", err)
 	}
 
-	// Set custom plugin directory
+	// Set custom plugin directory.
 	originalZPluginDir := os.Getenv("ZPLUGINDIR")
 	defer os.Setenv("ZPLUGINDIR", originalZPluginDir)
 	os.Setenv("ZPLUGINDIR", tempDir)
@@ -75,7 +75,7 @@ func TestZSHManager_Install_SkipsExistingPlugin(t *testing.T) {
 		t.Fatalf("Install failed: %v", err)
 	}
 
-	// Verify no git clone command was executed
+	// Verify no git clone command was executed.
 	if len(mockExec.Calls) > 0 {
 		t.Errorf("Expected no commands to be executed, but got: %v", mockExec.Calls)
 	}
@@ -84,7 +84,7 @@ func TestZSHManager_Install_SkipsExistingPlugin(t *testing.T) {
 func TestZSHManager_ListInstalled_ReturnsPlugins(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Create some plugin directories
+	// Create some plugin directories.
 	plugins := []string{"zsh-syntax-highlighting", "zsh-autosuggestions", "powerlevel10k"}
 	for _, plugin := range plugins {
 		err := os.MkdirAll(filepath.Join(tempDir, plugin), 0755)
@@ -93,7 +93,7 @@ func TestZSHManager_ListInstalled_ReturnsPlugins(t *testing.T) {
 		}
 	}
 
-	// Set custom plugin directory
+	// Set custom plugin directory.
 	originalZPluginDir := os.Getenv("ZPLUGINDIR")
 	defer os.Setenv("ZPLUGINDIR", originalZPluginDir)
 	os.Setenv("ZPLUGINDIR", tempDir)
@@ -120,7 +120,7 @@ func TestZSHManager_ListInstalled_ReturnsPlugins(t *testing.T) {
 func TestZSHManager_ListInstalled_EmptyDirectory(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Set custom plugin directory
+	// Set custom plugin directory.
 	originalZPluginDir := os.Getenv("ZPLUGINDIR")
 	defer os.Setenv("ZPLUGINDIR", originalZPluginDir)
 	os.Setenv("ZPLUGINDIR", tempDir)
@@ -141,7 +141,7 @@ func TestZSHManager_ListInstalled_EmptyDirectory(t *testing.T) {
 func TestZSHManager_ListInstalled_NonExistentDirectory(t *testing.T) {
 	tempDir := filepath.Join(t.TempDir(), "nonexistent")
 
-	// Set custom plugin directory to non-existent path
+	// Set custom plugin directory to non-existent path.
 	originalZPluginDir := os.Getenv("ZPLUGINDIR")
 	defer os.Setenv("ZPLUGINDIR", originalZPluginDir)
 	os.Setenv("ZPLUGINDIR", tempDir)
@@ -162,14 +162,14 @@ func TestZSHManager_ListInstalled_NonExistentDirectory(t *testing.T) {
 func TestZSHManager_Update_SinglePlugin(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Create plugin directory
+	// Create plugin directory.
 	pluginDir := filepath.Join(tempDir, "zsh-syntax-highlighting")
 	err := os.MkdirAll(pluginDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plugin dir: %v", err)
 	}
 
-	// Set custom plugin directory
+	// Set custom plugin directory.
 	originalZPluginDir := os.Getenv("ZPLUGINDIR")
 	defer os.Setenv("ZPLUGINDIR", originalZPluginDir)
 	os.Setenv("ZPLUGINDIR", tempDir)
@@ -182,7 +182,7 @@ func TestZSHManager_Update_SinglePlugin(t *testing.T) {
 		t.Fatalf("Update failed: %v", err)
 	}
 
-	// Verify git pull command was called
+	// Verify git pull command was called.
 	expectedCall := "git -C"
 	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
 		t.Errorf("Expected git pull command not executed. Got: %v", mockExec.Calls)
@@ -192,7 +192,7 @@ func TestZSHManager_Update_SinglePlugin(t *testing.T) {
 func TestZSHManager_Update_AllPlugins(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Create plugin directories
+	// Create plugin directories.
 	plugins := []string{"zsh-syntax-highlighting", "zsh-autosuggestions"}
 	for _, plugin := range plugins {
 		err := os.MkdirAll(filepath.Join(tempDir, plugin), 0755)
@@ -201,7 +201,7 @@ func TestZSHManager_Update_AllPlugins(t *testing.T) {
 		}
 	}
 
-	// Set custom plugin directory
+	// Set custom plugin directory.
 	originalZPluginDir := os.Getenv("ZPLUGINDIR")
 	defer os.Setenv("ZPLUGINDIR", originalZPluginDir)
 	os.Setenv("ZPLUGINDIR", tempDir)
@@ -209,13 +209,13 @@ func TestZSHManager_Update_AllPlugins(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
 	zshMgr := NewZSHManager(mockExec)
 
-	// Update all plugins (empty string means all)
+	// Update all plugins (empty string means all).
 	err := zshMgr.Update("")
 	if err != nil {
 		t.Fatalf("Update all failed: %v", err)
 	}
 
-	// Verify git pull commands were called for both plugins
+	// Verify git pull commands were called for both plugins.
 	if len(mockExec.Calls) != len(plugins) {
 		t.Errorf("Expected %d git pull commands, got %d: %v", len(plugins), len(mockExec.Calls), mockExec.Calls)
 	}
@@ -224,14 +224,14 @@ func TestZSHManager_Update_AllPlugins(t *testing.T) {
 func TestZSHManager_IsInstalled_True(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Create plugin directory
+	// Create plugin directory.
 	pluginDir := filepath.Join(tempDir, "zsh-syntax-highlighting")
 	err := os.MkdirAll(pluginDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plugin dir: %v", err)
 	}
 
-	// Set custom plugin directory
+	// Set custom plugin directory.
 	originalZPluginDir := os.Getenv("ZPLUGINDIR")
 	defer os.Setenv("ZPLUGINDIR", originalZPluginDir)
 	os.Setenv("ZPLUGINDIR", tempDir)
@@ -247,7 +247,7 @@ func TestZSHManager_IsInstalled_True(t *testing.T) {
 func TestZSHManager_IsInstalled_False(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Set custom plugin directory
+	// Set custom plugin directory.
 	originalZPluginDir := os.Getenv("ZPLUGINDIR")
 	defer os.Setenv("ZPLUGINDIR", originalZPluginDir)
 	os.Setenv("ZPLUGINDIR", tempDir)
@@ -263,14 +263,14 @@ func TestZSHManager_IsInstalled_False(t *testing.T) {
 func TestZSHManager_Remove_Success(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Create plugin directory
+	// Create plugin directory.
 	pluginDir := filepath.Join(tempDir, "zsh-syntax-highlighting")
 	err := os.MkdirAll(pluginDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plugin dir: %v", err)
 	}
 
-	// Set custom plugin directory
+	// Set custom plugin directory.
 	originalZPluginDir := os.Getenv("ZPLUGINDIR")
 	defer os.Setenv("ZPLUGINDIR", originalZPluginDir)
 	os.Setenv("ZPLUGINDIR", tempDir)
@@ -283,7 +283,7 @@ func TestZSHManager_Remove_Success(t *testing.T) {
 		t.Fatalf("Remove failed: %v", err)
 	}
 
-	// Verify plugin directory was removed
+	// Verify plugin directory was removed.
 	if _, err := os.Stat(pluginDir); !os.IsNotExist(err) {
 		t.Error("Expected plugin directory to be removed")
 	}
@@ -292,7 +292,7 @@ func TestZSHManager_Remove_Success(t *testing.T) {
 func TestZSHManager_Remove_NonExistent(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Set custom plugin directory
+	// Set custom plugin directory.
 	originalZPluginDir := os.Getenv("ZPLUGINDIR")
 	defer os.Setenv("ZPLUGINDIR", originalZPluginDir)
 	os.Setenv("ZPLUGINDIR", tempDir)
@@ -325,7 +325,7 @@ func TestGetPluginName(t *testing.T) {
 	}
 }
 
-// Helper function to check if a slice contains a string
+// Helper function to check if a slice contains a string.
 func contains(slice []string, item string) bool {
 	for _, s := range slice {
 		if s == item {

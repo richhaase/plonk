@@ -7,13 +7,13 @@ import (
 	"strings"
 )
 
-// ZSHManager manages ZSH plugins and configurations
+// ZSHManager manages ZSH plugins and configurations.
 type ZSHManager struct {
 	executor  CommandExecutor
 	pluginDir string
 }
 
-// NewZSHManager creates a new ZSH manager
+// NewZSHManager creates a new ZSH manager.
 func NewZSHManager(executor CommandExecutor) *ZSHManager {
 	pluginDir := getZSHPluginDir()
 	return &ZSHManager{
@@ -22,7 +22,7 @@ func NewZSHManager(executor CommandExecutor) *ZSHManager {
 	}
 }
 
-// getZSHPluginDir returns the ZSH plugin directory location
+// getZSHPluginDir returns the ZSH plugin directory location.
 func getZSHPluginDir() string {
 	if dir := os.Getenv("ZPLUGINDIR"); dir != "" {
 		return dir
@@ -30,41 +30,41 @@ func getZSHPluginDir() string {
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return ".config/zsh/plugins" // fallback
+		return ".config/zsh/plugins" // fallback.
 	}
 
 	return filepath.Join(homeDir, ".config", "zsh", "plugins")
 }
 
-// IsAvailable checks if ZSH is available
+// IsAvailable checks if ZSH is available.
 func (z *ZSHManager) IsAvailable() bool {
 	cmd := z.executor.Execute("zsh", "--version")
 	err := cmd.Run()
 	return err == nil
 }
 
-// Install installs a ZSH plugin by cloning from GitHub
+// Install installs a ZSH plugin by cloning from GitHub.
 func (z *ZSHManager) Install(pluginRepo string) error {
 	pluginName := getPluginName(pluginRepo)
 	pluginPath := filepath.Join(z.pluginDir, pluginName)
 
-	// Check if plugin already exists
+		// Check if plugin already exists.
 	if _, err := os.Stat(pluginPath); err == nil {
-		return nil // Already installed
+		return nil // Already installed.
 	}
 
-	// Create plugin directory if it doesn't exist
+		// Create plugin directory if it doesn't exist.
 	if err := os.MkdirAll(z.pluginDir, 0755); err != nil {
 		return fmt.Errorf("failed to create plugin directory: %w", err)
 	}
 
-	// Clone the plugin
+		// Clone the plugin.
 	githubURL := fmt.Sprintf("https://github.com/%s", pluginRepo)
 	cmd := z.executor.Execute("git", "clone", "-q", "--depth", "1", "--recursive", "--shallow-submodules", githubURL, pluginPath)
 	return cmd.Run()
 }
 
-// ListInstalled lists all installed ZSH plugins
+// ListInstalled lists all installed ZSH plugins.
 func (z *ZSHManager) ListInstalled() ([]string, error) {
 	if _, err := os.Stat(z.pluginDir); os.IsNotExist(err) {
 		return []string{}, nil
@@ -85,7 +85,7 @@ func (z *ZSHManager) ListInstalled() ([]string, error) {
 	return plugins, nil
 }
 
-// Update updates a specific plugin or all plugins
+// Update updates a specific plugin or all plugins.
 func (z *ZSHManager) Update(pluginName string) error {
 	if pluginName == "" {
 		return z.updateAllPlugins()
@@ -100,7 +100,7 @@ func (z *ZSHManager) Update(pluginName string) error {
 	return cmd.Run()
 }
 
-// updateAllPlugins updates all installed plugins
+// updateAllPlugins updates all installed plugins.
 func (z *ZSHManager) updateAllPlugins() error {
 	plugins, err := z.ListInstalled()
 	if err != nil {
@@ -116,7 +116,7 @@ func (z *ZSHManager) updateAllPlugins() error {
 	return nil
 }
 
-// IsInstalled checks if a plugin is installed
+// IsInstalled checks if a plugin is installed.
 func (z *ZSHManager) IsInstalled(pluginRepo string) bool {
 	pluginName := getPluginName(pluginRepo)
 	pluginPath := filepath.Join(z.pluginDir, pluginName)
@@ -124,7 +124,7 @@ func (z *ZSHManager) IsInstalled(pluginRepo string) bool {
 	return err == nil
 }
 
-// Remove removes a ZSH plugin
+// Remove removes a ZSH plugin.
 func (z *ZSHManager) Remove(pluginName string) error {
 	pluginPath := filepath.Join(z.pluginDir, pluginName)
 	if _, err := os.Stat(pluginPath); os.IsNotExist(err) {
@@ -134,11 +134,11 @@ func (z *ZSHManager) Remove(pluginName string) error {
 	return os.RemoveAll(pluginPath)
 }
 
-// getPluginName extracts the plugin name from a GitHub repository path
+// getPluginName extracts the plugin name from a GitHub repository path.
 func getPluginName(pluginRepo string) string {
 	parts := strings.Split(pluginRepo, "/")
 	if len(parts) >= 2 {
-		return parts[len(parts)-1] // Return the last part (repository name)
+		return parts[len(parts)-1] // Return the last part (repository name).
 	}
 	return pluginRepo
 }

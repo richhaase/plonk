@@ -14,7 +14,7 @@ func TestNewManager(t *testing.T) {
 }
 
 func TestPlonkDir_Default(t *testing.T) {
-	// Clear any PLONK_DIR environment variable
+	// Clear any PLONK_DIR environment variable.
 	originalPlonkDir := os.Getenv("PLONK_DIR")
 	defer os.Setenv("PLONK_DIR", originalPlonkDir)
 	os.Unsetenv("PLONK_DIR")
@@ -34,7 +34,7 @@ func TestPlonkDir_Default(t *testing.T) {
 }
 
 func TestPlonkDir_CustomEnvironment(t *testing.T) {
-	// Set custom PLONK_DIR
+	// Set custom PLONK_DIR.
 	tempDir := t.TempDir()
 	customPlonkDir := filepath.Join(tempDir, "custom-plonk")
 
@@ -53,10 +53,10 @@ func TestPlonkDir_CustomEnvironment(t *testing.T) {
 func TestPlonkDir_Caching(t *testing.T) {
 	manager := NewManager()
 
-	// First call
+	// First call.
 	plonkDir1 := manager.PlonkDir()
 
-	// Second call should return the same cached value
+	// Second call should return the same cached value.
 	plonkDir2 := manager.PlonkDir()
 
 	if plonkDir1 != plonkDir2 {
@@ -79,7 +79,7 @@ func TestRepoDir_CreatesDirectory(t *testing.T) {
 		t.Errorf("Expected RepoDir to be %s, got %s", expectedRepoDir, repoDir)
 	}
 
-	// Verify directory was created
+	// Verify directory was created.
 	if _, err := os.Stat(repoDir); os.IsNotExist(err) {
 		t.Errorf("RepoDir should create the directory, but %s does not exist", repoDir)
 	}
@@ -100,7 +100,7 @@ func TestBackupsDir_Default(t *testing.T) {
 		t.Errorf("Expected BackupsDir to be %s, got %s", expectedBackupsDir, backupsDir)
 	}
 
-	// Verify directory was created
+	// Verify directory was created.
 	if _, err := os.Stat(backupsDir); os.IsNotExist(err) {
 		t.Errorf("BackupsDir should create the directory, but %s does not exist", backupsDir)
 	}
@@ -114,7 +114,7 @@ func TestBackupsDir_CustomConfigLocation(t *testing.T) {
 	defer os.Setenv("PLONK_DIR", originalPlonkDir)
 	os.Setenv("PLONK_DIR", tempDir)
 
-	// Create a config file with custom backup location
+	// Create a config file with custom backup location.
 	configContent := `backup:
   location: ` + customBackupDir + `
 settings:
@@ -133,7 +133,7 @@ settings:
 		t.Errorf("Expected BackupsDir to be %s, got %s", customBackupDir, backupsDir)
 	}
 
-	// Verify directory was created
+	// Verify directory was created.
 	if _, err := os.Stat(backupsDir); os.IsNotExist(err) {
 		t.Errorf("BackupsDir should create the custom directory, but %s does not exist", backupsDir)
 	}
@@ -194,21 +194,21 @@ func TestReset_ClearsCachedPaths(t *testing.T) {
 
 	manager := NewManager()
 
-	// Cache some paths
+	// Cache some paths.
 	plonkDir1 := manager.PlonkDir()
 	repoDir1 := manager.RepoDir()
 
-	// Change environment
+	// Change environment.
 	newTempDir := t.TempDir()
 	os.Setenv("PLONK_DIR", newTempDir)
 
-	// Without reset, should return cached values
+	// Without reset, should return cached values.
 	plonkDir2 := manager.PlonkDir()
 	if plonkDir2 != plonkDir1 {
 		t.Errorf("Without reset, should return cached PlonkDir: %s != %s", plonkDir2, plonkDir1)
 	}
 
-	// After reset, should respect new environment
+	// After reset, should respect new environment.
 	manager.Reset()
 	plonkDir3 := manager.PlonkDir()
 	repoDir3 := manager.RepoDir()
@@ -244,7 +244,7 @@ func TestEnsureStructure_NewInstallation(t *testing.T) {
 		t.Fatalf("EnsureStructure failed: %v", err)
 	}
 
-	// Verify both directories exist
+	// Verify both directories exist.
 	repoDir := filepath.Join(tempDir, "repo")
 	backupsDir := filepath.Join(tempDir, "backups")
 
@@ -263,7 +263,7 @@ func TestEnsureStructure_MigrationNeeded(t *testing.T) {
 	defer os.Setenv("PLONK_DIR", originalPlonkDir)
 	os.Setenv("PLONK_DIR", tempDir)
 
-	// Create some files in the flat structure (simulating old installation)
+	// Create some files in the flat structure (simulating old installation).
 	err := os.WriteFile(filepath.Join(tempDir, "some-file.txt"), []byte("content"), 0644)
 	if err != nil {
 		t.Fatalf("Failed to create test file: %v", err)
@@ -283,7 +283,7 @@ func TestEnsureStructure_MigrationNeeded(t *testing.T) {
 		t.Fatalf("EnsureStructure failed: %v", err)
 	}
 
-	// Verify migration occurred
+	// Verify migration occurred.
 	repoFile := filepath.Join(tempDir, "repo", "some-file.txt")
 	backupFile := filepath.Join(tempDir, "backups", "backup.backup.20241206")
 	configFile := filepath.Join(tempDir, "plonk.yaml")
@@ -298,7 +298,7 @@ func TestEnsureStructure_MigrationNeeded(t *testing.T) {
 		t.Errorf("Config file should remain in root directory")
 	}
 
-	// Original files should be gone
+	// Original files should be gone.
 	if _, err := os.Stat(filepath.Join(tempDir, "some-file.txt")); !os.IsNotExist(err) {
 		t.Errorf("Original file should be moved from root")
 	}

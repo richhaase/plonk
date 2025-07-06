@@ -28,24 +28,24 @@ func init() {
 
 func backupCmdRun(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
-		// Backup all files that apply would overwrite
+		// Backup all files that apply would overwrite.
 		return backupFilesForApply()
 	} else {
-		// Backup specific files
+		// Backup specific files.
 		return BackupConfigurationFiles(args)
 	}
 }
 
-// backupFilesForApply backs up all files that would be overwritten by apply
+// backupFilesForApply backs up all files that would be overwritten by apply.
 func backupFilesForApply() error {
 	plonkDir := directories.Default.PlonkDir()
 
-	// Load configuration
+	// Load configuration.
 	cfg, err := config.LoadConfig(plonkDir)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// Use the same logic as apply --backup to determine which files to backup
+	// Use the same logic as apply --backup to determine which files to backup.
 	return createBackupsBeforeApply(cfg, []string{})
 }

@@ -6,9 +6,9 @@ import (
 	"plonk/pkg/config"
 )
 
-// Helper functions to reduce duplication in package installation
+// Helper functions to reduce duplication in package installation.
 
-// extractInstalledPackages combines package lists from all managers
+// extractInstalledPackages combines package lists from all managers.
 func extractInstalledPackages(packages map[string][]string) []string {
 	var result []string
 	for _, pkgs := range packages {
@@ -17,12 +17,12 @@ func extractInstalledPackages(packages map[string][]string) []string {
 	return result
 }
 
-// shouldInstallPackage determines if a package needs to be installed
+// shouldInstallPackage determines if a package needs to be installed.
 func shouldInstallPackage(packageName string, isInstalled bool) bool {
 	return !isInstalled
 }
 
-// getPackageDisplayName returns the display name for a package
+// getPackageDisplayName returns the display name for a package.
 func getPackageDisplayName(pkg interface{}) string {
 	switch p := pkg.(type) {
 	case config.HomebrewPackage:
@@ -39,7 +39,7 @@ func getPackageDisplayName(pkg interface{}) string {
 	}
 }
 
-// getPackageConfig returns the config path for a package
+// getPackageConfig returns the config path for a package.
 func getPackageConfig(pkg interface{}) string {
 	switch p := pkg.(type) {
 	case config.HomebrewPackage:
@@ -53,7 +53,7 @@ func getPackageConfig(pkg interface{}) string {
 	}
 }
 
-// getPackageName returns the base name for a package (used for configs)
+// getPackageName returns the base name for a package (used for configs).
 func getPackageName(pkg interface{}) string {
 	switch p := pkg.(type) {
 	case config.HomebrewPackage:

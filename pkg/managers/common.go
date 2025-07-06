@@ -5,30 +5,30 @@ import (
 	"os/exec"
 )
 
-// CommandExecutor interface for dependency injection
+// CommandExecutor interface for dependency injection.
 type CommandExecutor interface {
 	Execute(name string, args ...string) *exec.Cmd
 }
 
-// PackageManager interface defines the common operations for all package managers
+// PackageManager interface defines the common operations for all package managers.
 type PackageManager interface {
 	IsAvailable() bool
 	ListInstalled() ([]string, error)
 }
 
-// PackageManagerInfo holds a package manager and its display name
+// PackageManagerInfo holds a package manager and its display name.
 type PackageManagerInfo struct {
 	Name    string
 	Manager PackageManager
 }
 
-// CommandRunner provides common command execution functionality
+// CommandRunner provides common command execution functionality.
 type CommandRunner struct {
 	executor    CommandExecutor
 	commandName string
 }
 
-// NewCommandRunner creates a new command runner for a specific command
+// NewCommandRunner creates a new command runner for a specific command.
 func NewCommandRunner(executor CommandExecutor, commandName string) *CommandRunner {
 	return &CommandRunner{
 		executor:    executor,
@@ -36,7 +36,7 @@ func NewCommandRunner(executor CommandExecutor, commandName string) *CommandRunn
 	}
 }
 
-// RunCommandWithOutput executes a command and returns output + error
+// RunCommandWithOutput executes a command and returns output + error.
 func (c *CommandRunner) RunCommandWithOutput(args ...string) (string, error) {
 	cmd := c.executor.Execute(c.commandName, args...)
 
@@ -48,7 +48,7 @@ func (c *CommandRunner) RunCommandWithOutput(args ...string) (string, error) {
 	return out.String(), err
 }
 
-// RunCommand executes a command and returns success/error (ignores output)
+// RunCommand executes a command and returns success/error (ignores output).
 func (c *CommandRunner) RunCommand(args ...string) error {
 	_, err := c.RunCommandWithOutput(args...)
 	return err
