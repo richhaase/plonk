@@ -49,4 +49,5 @@ func init() {
 	// Add subcommands here
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(pkgCmd)
+	rootCmd.AddCommand(importCmd)
 }
