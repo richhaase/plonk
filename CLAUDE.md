@@ -6,29 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Plonk** is a CLI tool for managing shell environments across multiple machines using Homebrew, ASDF, and NPM package managers. Written in Go with strict Test-Driven Development (TDD) practices.
 
-## Development Commands
+## Development Environment
 
-### Primary Workflow (via justfile)
-```bash
-just dev          # format + lint + test (main development workflow)
-just ci           # format + lint + test + build (CI pipeline)
-just build        # Build plonk binary
-just test         # Run all tests
-just lint         # Run golangci-lint
-just format       # Format code with goimports/gofmt
-```
-
-### Testing Commands
-```bash
-go test ./...                          # Run all tests
-go test ./pkg/config -v               # Run specific package tests
-go test ./internal/commands -run TestStatus  # Run specific test
-```
-
-### Tool Management
-- **ASDF tools**: Go 1.24.4, golangci-lint 2.2.1, just 1.41.0 (`.tool-versions`)
-- **Pre-commit hooks**: Automatic formatting, linting, and testing before commits
-- **Linting**: golangci-lint v2 with errcheck, gocritic, govet enabled
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and workflow commands.
 
 ## Architecture
 

@@ -3,10 +3,10 @@
 Active work items for current development session. Maintained by AI agents.
 
 ## In Progress
+- [ ] Refactor CLAUDE.md to focus on AI development guidance
 
 ## Pending
 - [ ] Create new README.md focused on user-facing information
-- [ ] Refactor CLAUDE.md to focus on AI development guidance
 - [ ] Refactor ROADMAP.md to improve organization and clarity
 
 ## Completed (This Session)
