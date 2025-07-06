@@ -57,6 +57,16 @@ Follow the Test-Driven Development workflow described in [CONTRIBUTING.md](CONTR
 - **exa** instead of ls
 - **sd** instead of sed
 
+## Code Generation Guidelines
+
+### AI-Specific Rules
+- **No comments** unless explicitly requested
+- **Follow existing patterns** found in the codebase
+- **Read before editing** - always use Read tool before Edit/Write
+- **Prefer editing** existing files over creating new ones
+- **Use established error handling** patterns from error_handling.go
+- **Mock external dependencies** in tests using MockCommandExecutor
+
 ### Testing Patterns
 - **MockCommandExecutor** for unit tests (avoid actual command execution)
 - **setupTestEnv(t)** helper for test isolation
