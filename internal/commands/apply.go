@@ -76,6 +76,11 @@ func applyAllConfigurations(plonkDir string, config *config.YAMLConfig) error {
 		return fmt.Errorf("failed to apply ZSH configuration: %w", err)
 	}
 	
+	// Apply Git configuration
+	if err := applyGitConfiguration(config); err != nil {
+		return fmt.Errorf("failed to apply Git configuration: %w", err)
+	}
+	
 	// Apply package configurations
 	if err := applyPackageConfigurations(plonkDir, config); err != nil {
 		return fmt.Errorf("failed to apply package configurations: %w", err)
@@ -319,6 +324,32 @@ func applyZSHConfiguration(cfg *config.YAMLConfig) error {
 	return nil
 }
 
+func applyGitConfiguration(cfg *config.YAMLConfig) error {
+	// Skip if no Git configuration is defined
+	if len(cfg.Git.User) == 0 && len(cfg.Git.Core) == 0 && len(cfg.Git.Aliases) == 0 && 
+	   len(cfg.Git.Color) == 0 && len(cfg.Git.Delta) == 0 && len(cfg.Git.Fetch) == 0 &&
+	   len(cfg.Git.Pull) == 0 && len(cfg.Git.Push) == 0 && len(cfg.Git.Status) == 0 &&
+	   len(cfg.Git.Diff) == 0 && len(cfg.Git.Log) == 0 && len(cfg.Git.Init) == 0 &&
+	   len(cfg.Git.Rerere) == 0 && len(cfg.Git.Branch) == 0 && len(cfg.Git.Rebase) == 0 &&
+	   len(cfg.Git.Merge) == 0 && len(cfg.Git.Filter) == 0 {
+		return nil
+	}
+	
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home directory: %w", err)
+	}
+	
+	// Generate and write .gitconfig
+	gitconfigContent := config.GenerateGitconfig(&cfg.Git)
+	gitconfigPath := filepath.Join(homeDir, ".gitconfig")
+	if err := os.WriteFile(gitconfigPath, []byte(gitconfigContent), 0644); err != nil {
+		return fmt.Errorf("failed to write .gitconfig: %w", err)
+	}
+	
+	return nil
+}
+
 // createBackupsBeforeApply determines which files will be overwritten and creates backups
 func createBackupsBeforeApply(cfg *config.YAMLConfig, args []string) error {
 	var filesToBackup []string
@@ -347,6 +378,16 @@ func createBackupsBeforeApply(cfg *config.YAMLConfig, args []string) error {
 			if len(cfg.ZSH.EnvVars) > 0 {
 				filesToBackup = append(filesToBackup, filepath.Join(homeDir, ".zshenv"))
 			}
+		}
+		
+		// Add Git configuration file if Git config exists
+		if len(cfg.Git.User) > 0 || len(cfg.Git.Core) > 0 || len(cfg.Git.Aliases) > 0 || 
+		   len(cfg.Git.Color) > 0 || len(cfg.Git.Delta) > 0 || len(cfg.Git.Fetch) > 0 ||
+		   len(cfg.Git.Pull) > 0 || len(cfg.Git.Push) > 0 || len(cfg.Git.Status) > 0 ||
+		   len(cfg.Git.Diff) > 0 || len(cfg.Git.Log) > 0 || len(cfg.Git.Init) > 0 ||
+		   len(cfg.Git.Rerere) > 0 || len(cfg.Git.Branch) > 0 || len(cfg.Git.Rebase) > 0 ||
+		   len(cfg.Git.Merge) > 0 || len(cfg.Git.Filter) > 0 {
+			filesToBackup = append(filesToBackup, filepath.Join(homeDir, ".gitconfig"))
 		}
 		
 		// Add package configuration files
