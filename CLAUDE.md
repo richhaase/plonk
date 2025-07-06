@@ -452,12 +452,17 @@ npm:
       - Setup ASDF-based tool management for reproducible development environment
     - **Linting and Formatting Infrastructure:**
       - Configured golangci-lint v2 with proper formatters and linters
-      - Automated import organization via goimports integration
+      - Automated code formatting via go fmt integration
       - Found 59 errcheck issues ready for systematic fixing
     - **Task Runner Implementation:**
       - Created `justfile` with development workflow commands
       - Automated Task 52h (import organization) via `just format`
       - Implemented `just dev` (format+lint+test) and `just ci` (full pipeline)
+    - **Pre-commit Hook Integration:**
+      - Added Git pre-commit hook for automatic code formatting and quality checks
+      - Runs go fmt, golangci-lint, and tests before each commit
+      - Prevents commits with linting errors or test failures
+      - Uses only local ASDF-managed tools without external dependencies
     - **Updated Documentation:**
       - Enhanced CODEBASE_MAP.md with development infrastructure
       - Documented justfile commands and workflow
@@ -647,7 +652,7 @@ npm:
    - **Setup local development tools with asdf (.tool-versions)** ✅ **COMPLETED**
    - **Setup golangci-lint configuration** ✅ **COMPLETED**  
    - **Create justfile for common tasks** ✅ **COMPLETED**
-   - **Add pre-commit hooks for Go formatting** ⚡ **NEXT**
+   - **Add pre-commit hooks for Go formatting** ✅ **COMPLETED**
    - **Task 52i**: Standardize function documentation  
    - **Task 52j**: Convert remaining tests to table-driven format
 3. **Development utilities**: Create helper functions for codebase analysis
@@ -657,6 +662,7 @@ npm:
 - ✅ golangci-lint v2.2.1 configured and working (found 59 errcheck issues)
 - ✅ justfile with dev tasks: build, test, lint, format, ci, dev workflow
 - ✅ .tool-versions: golang 1.24.4, golangci-lint 2.2.1, just 1.41.0
+- ✅ Pre-commit hooks: automatic formatting, linting, and testing before commits
 - 🔧 Task 52h (import organization) automated via `just format` command
 
 **Rationale**: With 39 completed tasks and 2000+ lines of code across multiple packages, the codebase needs better organization and documentation to maintain development velocity.

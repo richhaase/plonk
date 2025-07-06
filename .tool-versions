@@ -6,7 +6,6 @@ golang 1.24.4
 
 # Linting and formatting tools
 golangci-lint 2.2.1
-goimports 0.28.0
 
 # Task runner
 just 1.41.0

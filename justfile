@@ -37,10 +37,9 @@ lint-fix:
     @echo "Running linter with automatic fixes..."
     golangci-lint run --fix --timeout=10m
 
-# Format code (goimports + gofmt)
+# Format code (gofmt)
 format:
     @echo "Formatting code..."
-    goimports -local plonk -w .
     go fmt ./...
 
 # Clean build artifacts
