@@ -92,7 +92,10 @@ func applyPackageConfiguration(plonkDir string, config *config.YAMLConfig, packa
 		return fmt.Errorf("package '%s' not found or has no configuration", packageName)
 	}
 	
-	if err := applyConfigPath(plonkDir, packageConfig); err != nil {
+	// Determine the correct source directory
+	sourceDir := getSourceDirectory(plonkDir)
+	
+	if err := applyConfigPath(sourceDir, packageConfig); err != nil {
 		return fmt.Errorf("failed to apply %s configuration: %w", packageName, err)
 	}
 	
@@ -103,8 +106,11 @@ func applyPackageConfiguration(plonkDir string, config *config.YAMLConfig, packa
 func applyDotfiles(plonkDir string, config *config.YAMLConfig) error {
 	dotfileTargets := config.GetDotfileTargets()
 	
+	// Determine the correct source directory (check repo subdirectory first)
+	sourceDir := getSourceDirectory(plonkDir)
+	
 	for source, target := range dotfileTargets {
-		sourcePath := filepath.Join(plonkDir, source)
+		sourcePath := filepath.Join(sourceDir, source)
 		targetPath := expandHomeDir(target)
 		
 		if err := copyFile(sourcePath, targetPath); err != nil {
@@ -116,10 +122,13 @@ func applyDotfiles(plonkDir string, config *config.YAMLConfig) error {
 }
 
 func applyPackageConfigurations(plonkDir string, config *config.YAMLConfig) error {
+	// Determine the correct source directory
+	sourceDir := getSourceDirectory(plonkDir)
+	
 	// Apply Homebrew package configurations
 	for _, pkg := range config.Homebrew.Brews {
 		if pkg.Config != "" {
-			if err := applyConfigPath(plonkDir, pkg.Config); err != nil {
+			if err := applyConfigPath(sourceDir, pkg.Config); err != nil {
 				return fmt.Errorf("failed to apply %s config: %w", pkg.Name, err)
 			}
 		}
@@ -127,7 +136,7 @@ func applyPackageConfigurations(plonkDir string, config *config.YAMLConfig) erro
 	
 	for _, pkg := range config.Homebrew.Casks {
 		if pkg.Config != "" {
-			if err := applyConfigPath(plonkDir, pkg.Config); err != nil {
+			if err := applyConfigPath(sourceDir, pkg.Config); err != nil {
 				return fmt.Errorf("failed to apply %s config: %w", pkg.Name, err)
 			}
 		}
@@ -136,7 +145,7 @@ func applyPackageConfigurations(plonkDir string, config *config.YAMLConfig) erro
 	// Apply ASDF package configurations
 	for _, tool := range config.ASDF {
 		if tool.Config != "" {
-			if err := applyConfigPath(plonkDir, tool.Config); err != nil {
+			if err := applyConfigPath(sourceDir, tool.Config); err != nil {
 				return fmt.Errorf("failed to apply %s config: %w", tool.Name, err)
 			}
 		}
@@ -145,13 +154,27 @@ func applyPackageConfigurations(plonkDir string, config *config.YAMLConfig) erro
 	// Apply NPM package configurations
 	for _, pkg := range config.NPM {
 		if pkg.Config != "" {
-			if err := applyConfigPath(plonkDir, pkg.Config); err != nil {
+			if err := applyConfigPath(sourceDir, pkg.Config); err != nil {
 				return fmt.Errorf("failed to apply %s config: %w", pkg.Name, err)
 			}
 		}
 	}
 	
 	return nil
+}
+
+// getSourceDirectory returns the directory where source files are located
+// Checks repo subdirectory first, then falls back to main plonk directory
+func getSourceDirectory(plonkDir string) string {
+	repoDir := filepath.Join(plonkDir, "repo")
+	
+	// Check if repo directory exists and has content
+	if entries, err := os.ReadDir(repoDir); err == nil && len(entries) > 0 {
+		return repoDir
+	}
+	
+	// Fall back to main plonk directory
+	return plonkDir
 }
 
 func findPackageConfig(config *config.YAMLConfig, packageName string) string {

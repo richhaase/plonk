@@ -42,8 +42,9 @@ func TestCloneCommand_Success(t *testing.T) {
 		t.Error("Expected plonk directory to be created")
 	}
 	
-	// Verify plonk.yaml exists in cloned repo
-	configPath := filepath.Join(plonkDir, "plonk.yaml")
+	// Verify plonk.yaml exists in cloned repo (now in repo subdirectory)
+	repoDir := getRepoDir()
+	configPath := filepath.Join(repoDir, "plonk.yaml")
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		t.Error("Expected plonk.yaml to exist in cloned repo")
 	}
@@ -140,9 +141,10 @@ func TestCloneCommand_CustomLocation(t *testing.T) {
 		t.Fatalf("Clone command failed: %v", err)
 	}
 	
-	// Verify it cloned to the custom location
-	if clonedTo != customDir {
-		t.Errorf("Expected clone to %s, got %s", customDir, clonedTo)
+	// Verify it cloned to the custom location (with repo subdirectory)
+	expectedRepoDir := filepath.Join(customDir, "repo")
+	if clonedTo != expectedRepoDir {
+		t.Errorf("Expected clone to %s, got %s", expectedRepoDir, clonedTo)
 	}
 }
 

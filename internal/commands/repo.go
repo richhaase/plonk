@@ -42,24 +42,30 @@ func runRepo(args []string) error {
 	}
 	
 	repoURL := args[0]
-	plonkDir := getPlonkDir()
+	
+	// Ensure directory structure exists and handle migration if needed
+	if err := ensureDirectoryStructure(); err != nil {
+		return fmt.Errorf("failed to setup directory structure: %w", err)
+	}
+	
+	repoDir := getRepoDir()
 	
 	// Step 1: Clone or pull repository
 	fmt.Println("Step 1: Setting up repository...")
-	if gitClient.IsRepo(plonkDir) {
+	if gitClient.IsRepo(repoDir) {
 		// Repository exists, pull updates
 		fmt.Printf("Repository exists, pulling updates...\n")
-		if err := gitClient.Pull(plonkDir); err != nil {
+		if err := gitClient.Pull(repoDir); err != nil {
 			return fmt.Errorf("failed to pull repository: %w", err)
 		}
-		fmt.Printf("Successfully pulled updates in %s\n", plonkDir)
+		fmt.Printf("Successfully pulled updates in %s\n", repoDir)
 	} else {
 		// No repository, clone it
 		fmt.Printf("Cloning repository %s...\n", repoURL)
-		if err := gitClient.Clone(repoURL, plonkDir); err != nil {
+		if err := gitClient.Clone(repoURL, repoDir); err != nil {
 			return fmt.Errorf("failed to clone repository: %w", err)
 		}
-		fmt.Printf("Successfully cloned %s to %s\n", repoURL, plonkDir)
+		fmt.Printf("Successfully cloned %s to %s\n", repoURL, repoDir)
 	}
 	
 	// Step 2: Install packages

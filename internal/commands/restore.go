@@ -49,19 +49,14 @@ func restoreCmdRun(cmd *cobra.Command, args []string) error {
 }
 
 func runRestoreList() error {
+	// Ensure plonk is properly set up
 	plonkDir := getPlonkDir()
-	
-	// Load configuration to get backup settings
-	cfg, err := config.LoadYAMLConfig(plonkDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("config file not found. Please run 'plonk setup' first")
-		}
+	if _, err := config.LoadYAMLConfig(plonkDir); err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 	
-	// Get backup directory
-	backupDir := getBackupDirectory(cfg)
+	// Get backup directory using new directory structure
+	backupDir := getBackupsDir()
 	
 	// Check if backup directory exists
 	if !utils.FileExists(backupDir) {
@@ -96,19 +91,8 @@ func runRestoreList() error {
 }
 
 func runRestoreAll() error {
-	plonkDir := getPlonkDir()
-	
-	// Load configuration to get backup settings
-	cfg, err := config.LoadYAMLConfig(plonkDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("config file not found. Please run 'plonk setup' first")
-		}
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-	
-	// Get backup directory
-	backupDir := getBackupDirectory(cfg)
+	// Get backup directory using new directory structure
+	backupDir := getBackupsDir()
 	
 	// Check if backup directory exists
 	if !utils.FileExists(backupDir) {
@@ -168,19 +152,8 @@ func runRestoreAll() error {
 }
 
 func runRestoreFile(filePath, timestamp string) error {
-	plonkDir := getPlonkDir()
-	
-	// Load configuration to get backup settings
-	cfg, err := config.LoadYAMLConfig(plonkDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("config file not found. Please run 'plonk setup' first")
-		}
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-	
-	// Get backup directory
-	backupDir := getBackupDirectory(cfg)
+	// Get backup directory using new directory structure
+	backupDir := getBackupsDir()
 	
 	// Check if backup directory exists
 	if !utils.FileExists(backupDir) {

@@ -149,11 +149,16 @@ func runCloneWithBranch(args []string, flagBranch string) error {
 		return fmt.Errorf("repository URL is required")
 	}
 	
-	plonkDir := getPlonkDir()
+	// Ensure directory structure exists
+	if err := ensureDirectoryStructure(); err != nil {
+		return fmt.Errorf("failed to setup directory structure: %w", err)
+	}
 	
-	// Check if target directory already exists
-	if _, err := os.Stat(plonkDir); err == nil {
-		return fmt.Errorf("target directory %s already exists, use 'plonk pull' to update", plonkDir)
+	repoDir := getRepoDir()
+	
+	// Check if target directory already exists and has content
+	if entries, err := os.ReadDir(repoDir); err == nil && len(entries) > 0 {
+		return fmt.Errorf("target directory %s already contains files, use 'plonk pull' to update", repoDir)
 	}
 	
 	// Parse URL for branch information
@@ -168,9 +173,9 @@ func runCloneWithBranch(args []string, flagBranch string) error {
 	// Use appropriate clone method
 	var err error
 	if branch != "" {
-		err = gitClient.CloneBranch(repoURL, plonkDir, branch)
+		err = gitClient.CloneBranch(repoURL, repoDir, branch)
 	} else {
-		err = gitClient.Clone(repoURL, plonkDir)
+		err = gitClient.Clone(repoURL, repoDir)
 	}
 	
 	if err != nil {
@@ -178,9 +183,9 @@ func runCloneWithBranch(args []string, flagBranch string) error {
 	}
 	
 	if branch != "" {
-		fmt.Printf("Successfully cloned %s (branch: %s) to %s\n", repoURL, branch, plonkDir)
+		fmt.Printf("Successfully cloned %s (branch: %s) to %s\n", repoURL, branch, repoDir)
 	} else {
-		fmt.Printf("Successfully cloned %s to %s\n", repoURL, plonkDir)
+		fmt.Printf("Successfully cloned %s to %s\n", repoURL, repoDir)
 	}
 	return nil
 }

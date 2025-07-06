@@ -118,13 +118,23 @@ func LoadYAMLConfig(configDir string) (*YAMLConfig, error) {
 		},
 	}
 
-	// Load main config file
+	// Load main config file - check both main directory and repo subdirectory
 	mainConfigPath := filepath.Join(configDir, "plonk.yaml")
+	repoConfigPath := filepath.Join(configDir, "repo", "plonk.yaml")
+	
+	// Try main directory first
 	if err := loadYAMLConfigFile(mainConfigPath, config); err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("config file not found: %s", mainConfigPath)
+			// Try repo subdirectory
+			if err := loadYAMLConfigFile(repoConfigPath, config); err != nil {
+				if os.IsNotExist(err) {
+					return nil, fmt.Errorf("config file not found in %s or %s", mainConfigPath, repoConfigPath)
+				}
+				return nil, fmt.Errorf("failed to load config from repo directory: %w", err)
+			}
+		} else {
+			return nil, fmt.Errorf("failed to load config: %w", err)
 		}
-		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
 	// Load local config file if it exists
@@ -173,6 +183,14 @@ func loadYAMLConfigFile(path string, config *YAMLConfig) error {
 
 	// Merge NPM packages
 	config.NPM = append(config.NPM, tempConfig.NPM...)
+
+	// Merge backup configuration
+	if tempConfig.Backup.Location != "" {
+		config.Backup.Location = tempConfig.Backup.Location
+	}
+	if tempConfig.Backup.KeepCount > 0 {
+		config.Backup.KeepCount = tempConfig.Backup.KeepCount
+	}
 
 	// Merge ZSH configuration
 	mergeZSHConfig(&config.ZSH, &tempConfig.ZSH)

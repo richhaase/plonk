@@ -33,18 +33,23 @@ func runPull(args []string) error {
 		return fmt.Errorf("pull command takes no arguments")
 	}
 	
-	plonkDir := getPlonkDir()
-	
-	// Check if plonk directory exists and is a git repo
-	if !gitClient.IsRepo(plonkDir) {
-		return fmt.Errorf("no repository found in %s, use 'plonk clone <repo>' first", plonkDir)
+	// Ensure directory structure exists and handle migration if needed
+	if err := ensureDirectoryStructure(); err != nil {
+		return fmt.Errorf("failed to setup directory structure: %w", err)
 	}
 	
-	err := gitClient.Pull(plonkDir)
+	repoDir := getRepoDir()
+	
+	// Check if repo directory exists and is a git repo
+	if !gitClient.IsRepo(repoDir) {
+		return fmt.Errorf("no repository found in %s, use 'plonk clone <repo>' first", repoDir)
+	}
+	
+	err := gitClient.Pull(repoDir)
 	if err != nil {
 		return err
 	}
 	
-	fmt.Printf("Successfully pulled updates in %s\n", plonkDir)
+	fmt.Printf("Successfully pulled updates in %s\n", repoDir)
 	return nil
 }
