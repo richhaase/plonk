@@ -320,35 +320,51 @@ npm:
     - Supports backup of dotfiles, ZSH configs, and package-specific configurations
     - Integrated with existing configurable backup location and cleanup system
 
-### 🔄 Current Pending Tasks
+29. **Add gitconfig management functionality with full TDD cycle** - ✅ Completed
+    - Created GitConfig struct supporting all standard Git configuration sections (user, core, aliases, etc.)
+    - Implemented GenerateGitconfig function for creating .gitconfig files from YAML configuration
+    - Added Git configuration generation to apply command workflow (follows ZSH pattern)
+    - Integrated Git configuration backup support for apply --backup flag
+    - Support for local config overrides (plonk.yaml + plonk.local.yaml merging)
+    - Comprehensive test coverage including unit tests and integration tests
+    - Enables users to manage .gitconfig declaratively through plonk.yaml
 
-**High Priority - Complete Backup System with Restore Functionality (Tasks 42a-42i):**
+### 🔄 Current Pending Tasks (Re-prioritized)
 
-42a. **Add restore command tests for listing available backups (Red phase)** - ✅ Completed
-42b. **Implement plonk restore --list functionality (Green phase)** - ✅ Completed  
-42c. **Add restore command tests for single file restoration (Red phase)** - ✅ Completed
-42d. **Implement plonk restore <file> functionality (Green phase)** - ✅ Completed
-42e. **Add restore command tests for timestamp-specific restoration (Red phase)** - ✅ Completed
-42f. **Implement plonk restore <file> --timestamp functionality (Green phase)** - ✅ Completed
-42g. **Add restore command tests for bulk restoration (Red phase)** - ✅ Completed
-42h. **Implement plonk restore --all functionality (Green phase)** - ✅ Completed
-42i. **Refactor restore command with improved error handling and user feedback (Refactor phase)** - ✅ Completed
+**Prioritization Rationale**: Foundation & daily value over new features. Prioritize what makes plonk safer and more reliable for daily use.
 
-**✅ Task Group 41 - Directory Restructure (COMPLETED)**
+**HIGH PRIORITY (Foundation & Daily Value):**
 
-41a. **Add directory restructure tests (Red phase)** - ✅ Completed
-41b. **Implement separate repo/ and backups/ subdirectories (Green phase)** - ✅ Completed
-41c. **Update all commands to use new directory structure (Refactor phase)** - ✅ Completed
+**1. Task Group 47 - Developer Experience Enhancements (Tasks 47a-47i):**
+- Config validation prevents broken deploys
+- Dry-run mode gives confidence before changes  
+- Diff mode shows drift (builds on existing drift detection)
+- These make plonk safer and more predictable daily
+- *Needs detailed specs*
 
-**Medium Priority - Import Command (Tasks 38a-38e):**
+47a. **Design config validation system with YAML syntax and content checks (Red phase)** - 🟡 Pending
+47b. **Implement config validation functionality (Green phase)** - 🟡 Pending
+47c. **Add dry-run mode tests for preview functionality (Red phase)** - 🟡 Pending
+47d. **Implement dry-run mode for apply command (Green phase)** - 🟡 Pending
+47e. **Add diff mode tests for showing configuration differences (Red phase)** - 🟡 Pending
+47f. **Implement diff mode functionality (Green phase)** - 🟡 Pending
+47g. **Add watch mode tests for auto-apply on config changes (Red phase)** - 🟡 Pending
+47h. **Implement watch mode functionality (Green phase)** - 🟡 Pending
+47i. **Refactor developer experience features with unified CLI (Refactor phase)** - 🟡 Pending
 
-38a. **Add shell config parsing tests for common formats (Red phase)** - 🟡 Pending
-38b. **Implement basic .zshrc/.bashrc parsing functionality (Green phase)** - 🟡 Pending
-38c. **Add tests for plonk.yaml generation from parsed configs (Red phase)** - 🟡 Pending
-38d. **Implement plonk import command with YAML suggestion (Green phase)** - 🟡 Pending
-38e. **Refactor import command with support for multiple shell types (Refactor phase)** - 🟡 Pending
+**2. Task Group 46 - Integration Tests (Tasks 46a-46c):**
+- Validates all existing functionality works together
+- Critical before adding more features
+- Prevents regressions as complexity grows
 
-**Medium Priority - Repository Infrastructure (Tasks 44a-44j):**
+46a. **Add integration tests for end-to-end workflows (Red phase)** - 🟡 Pending
+46b. **Implement comprehensive integration test suite (Green phase)** - 🟡 Pending
+46c. **Refactor integration tests with CI/CD support (Refactor phase)** - 🟡 Pending
+
+**3. Task Group 44 - Repository Infrastructure (Tasks 44a-44j):**
+- Code quality tools prevent bugs
+- Pre-commit hooks ensure consistency
+- Foundation for sustainable development
 
 44a. **Add pre-commit hook tests for Go formatting (Red phase)** - 🟡 Pending
 44b. **Implement pre-commit hooks for Go formatting (Green phase)** - 🟡 Pending
@@ -361,7 +377,58 @@ npm:
 44i. **Implement test coverage tooling (Green phase)** - 🟡 Pending
 44j. **Refactor development workflow with documentation and optimization (Refactor phase)** - 🟡 Pending
 
-**Low Priority - Full Environment Snapshots (Tasks 43a-43g):**
+**MEDIUM PRIORITY (Extend Core Value):**
+
+**4. Task Group 49 - Additional Shell Support (Tasks 49a-49e):**
+- Bash/Fish users can't fully use plonk without this
+- Natural extension of existing ZSH support
+- *Needs detailed specs*
+
+49a. **Add Bash shell config generation tests (Red phase)** - 🟡 Pending
+49b. **Implement Bash shell config generation functionality (Green phase)** - 🟡 Pending
+49c. **Add Fish shell config generation tests (Red phase)** - 🟡 Pending
+49d. **Implement Fish shell config generation functionality (Green phase)** - 🟡 Pending
+49e. **Refactor shell config generation with multi-shell support (Refactor phase)** - 🟡 Pending
+
+**5. Task Group 38 - Import Command (Tasks 38a-38e):**
+- Helps users migrate TO plonk
+- One-time use but high value for adoption
+
+38a. **Add shell config parsing tests for common formats (Red phase)** - 🟡 Pending
+38b. **Implement basic .zshrc/.bashrc parsing functionality (Green phase)** - 🟡 Pending
+38c. **Add tests for plonk.yaml generation from parsed configs (Red phase)** - 🟡 Pending
+38d. **Implement plonk import command with YAML suggestion (Green phase)** - 🟡 Pending
+38e. **Refactor import command with support for multiple shell types (Refactor phase)** - 🟡 Pending
+
+**6. Task Group 48 - Advanced Backup/Restore Features (Tasks 48a-48i):**
+- Nice-to-have enhancements over basic backup
+- Selective restore most valuable, encryption/compression less so
+- *Needs detailed specs*
+
+48a. **Add selective restore tests for granular file restoration (Red phase)** - 🟡 Pending
+48b. **Implement selective restore functionality (Green phase)** - 🟡 Pending
+48c. **Add backup compression tests for space optimization (Red phase)** - 🟡 Pending
+48d. **Implement backup compression functionality (Green phase)** - 🟡 Pending
+48e. **Add remote backup tests for cloud sync (Red phase)** - 🟡 Pending
+48f. **Implement remote backup sync functionality (Green phase)** - 🟡 Pending
+48g. **Add backup encryption tests for sensitive data protection (Red phase)** - 🟡 Pending
+48h. **Implement backup encryption functionality (Green phase)** - 🟡 Pending
+48i. **Refactor advanced backup features with unified management (Refactor phase)** - 🟡 Pending
+
+**LOW PRIORITY (Nice to Have):**
+
+**7. Task Group 50 - Package Manager Extensions (Tasks 50a-50c):**
+- mas is niche (App Store apps)
+- Current package managers cover most needs
+- *Needs detailed specs*
+
+50a. **Add mas command support tests for Mac App Store integration (Red phase)** - 🟡 Pending
+50b. **Implement mas command functionality for App Store apps (Green phase)** - 🟡 Pending
+50c. **Refactor package manager integration with mas support (Refactor phase)** - 🟡 Pending
+
+**8. Task Group 43 - Full Environment Snapshots (Tasks 43a-43g):**
+- Complex feature with unclear use cases
+- Current config management may be sufficient
 
 43a. **Add full environment snapshot tests (Red phase)** - 🟡 Pending
 43b. **Implement plonk snapshot create functionality (Green phase)** - 🟡 Pending
@@ -370,6 +437,17 @@ npm:
 43e. **Add snapshot management tests (list, delete) (Red phase)** - 🟡 Pending
 43f. **Implement plonk snapshot list/delete functionality (Green phase)** - 🟡 Pending
 43g. **Refactor snapshot system with metadata and cross-platform support (Refactor phase)** - 🟡 Pending
+
+**9. Task Group 51 - Cross-Platform Support (Tasks 51a-51e):**
+- macOS focus seems primary
+- Can add later if user base expands
+- *Needs detailed specs*
+
+51a. **Add Windows PowerShell profile tests for cross-platform support (Red phase)** - 🟡 Pending
+51b. **Implement Windows PowerShell profile generation (Green phase)** - 🟡 Pending
+51c. **Add Linux distribution package manager tests (Red phase)** - 🟡 Pending
+51d. **Implement Linux distribution package manager support (Green phase)** - 🟡 Pending
+51e. **Refactor cross-platform support with unified configuration (Refactor phase)** - 🟡 Pending
 
 ## Development Timeline
 
