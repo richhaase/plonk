@@ -10,10 +10,8 @@ import (
 
 func TestBackupCommand_SpecificFiles(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create existing files to backup
 	existingZshrc := filepath.Join(tempHome, ".zshrc")
@@ -100,10 +98,8 @@ backup:
 
 func TestBackupCommand_AllFiles(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create existing .zshrc that would be overwritten by apply
 	existingZshrc := filepath.Join(tempHome, ".zshrc")
@@ -176,10 +172,8 @@ zsh:
 
 func TestBackupCommand_NoExistingFiles(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config but no existing files
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")

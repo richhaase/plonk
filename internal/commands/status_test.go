@@ -35,10 +35,8 @@ func TestPackageManagerInterface(t *testing.T) {
 
 func TestStatusWithDrift(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
@@ -76,10 +74,8 @@ dotfiles:
 
 func TestStatusNoDrift(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")

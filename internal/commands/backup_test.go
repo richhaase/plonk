@@ -11,10 +11,8 @@ import (
 
 func TestBackupExistingFile_CreatesBackup(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create existing file to backup
 	existingFile := filepath.Join(tempHome, ".zshrc")
@@ -54,10 +52,8 @@ func TestBackupExistingFile_CreatesBackup(t *testing.T) {
 
 func TestBackupExistingFile_NonExistentFile(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Test backup of non-existent file
 	nonExistentFile := filepath.Join(tempHome, ".nonexistent")
@@ -75,10 +71,8 @@ func TestBackupExistingFile_NonExistentFile(t *testing.T) {
 
 func TestBackupConfigurationFiles_CreatesBackupsInConfigurableLocation(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create existing .zshrc
 	existingZshrc := filepath.Join(tempHome, ".zshrc")

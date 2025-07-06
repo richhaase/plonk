@@ -11,10 +11,8 @@ import (
 
 func TestCloneCommand_Success(t *testing.T) {
 	// Setup
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Mock git client
 	originalGitClient := gitClient
@@ -62,10 +60,8 @@ func TestCloneCommand_NoRepository(t *testing.T) {
 
 func TestCloneCommand_ExistingDirectory(t *testing.T) {
 	// Setup
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create existing directory
 	plonkDir := directories.Default.PlonkDir()
@@ -82,10 +78,8 @@ func TestCloneCommand_ExistingDirectory(t *testing.T) {
 
 func TestCloneCommand_CloneError(t *testing.T) {
 	// Setup
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Mock git client to fail
 	originalGitClient := gitClient
@@ -108,16 +102,9 @@ func TestCloneCommand_CloneError(t *testing.T) {
 func TestCloneCommand_CustomLocation(t *testing.T) {
 	// Setup
 	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
-	
-	// Set custom location
-	originalPlonkDir := os.Getenv("PLONK_DIR")
-	defer os.Setenv("PLONK_DIR", originalPlonkDir)
-	
 	customDir := filepath.Join(tempHome, "my-dotfiles")
-	os.Setenv("PLONK_DIR", customDir)
+	_, cleanup := setupTestEnvWithPlonkDir(t, customDir)
+	defer cleanup()
 	
 	// Mock git client
 	originalGitClient := gitClient
@@ -152,10 +139,8 @@ func TestCloneCommand_CustomLocation(t *testing.T) {
 
 func TestCloneCommand_WithBranchFlag(t *testing.T) {
 	// Setup
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Mock git client
 	originalGitClient := gitClient
@@ -195,10 +180,8 @@ func TestCloneCommand_WithBranchFlag(t *testing.T) {
 
 func TestCloneCommand_WithBranchInURL(t *testing.T) {
 	// Setup
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Mock git client
 	originalGitClient := gitClient
@@ -243,10 +226,8 @@ func TestCloneCommand_WithBranchInURL(t *testing.T) {
 
 func TestCloneCommand_BranchFlagOverridesURL(t *testing.T) {
 	// Setup
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Mock git client
 	originalGitClient := gitClient

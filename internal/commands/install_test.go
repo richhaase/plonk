@@ -10,10 +10,8 @@ import (
 
 func TestInstallCommand_NoConfig(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Test - should error when no config exists
 	err := runInstall([]string{})
@@ -32,10 +30,8 @@ func TestInstallCommand_WithArguments(t *testing.T) {
 
 func TestInstallCommand_Success(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
@@ -79,10 +75,8 @@ npm:
 
 func TestInstallCommand_AutoApplyPackageConfigs(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")

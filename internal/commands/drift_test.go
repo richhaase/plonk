@@ -8,10 +8,8 @@ import (
 
 func TestDriftDetection_NoConfig(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Test - should error when no config exists
 	drift, err := detectConfigDrift()
@@ -25,10 +23,8 @@ func TestDriftDetection_NoConfig(t *testing.T) {
 
 func TestDriftDetection_NoDrift(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
@@ -84,10 +80,8 @@ dotfiles:
 
 func TestDriftDetection_MissingFiles(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
@@ -149,10 +143,8 @@ dotfiles:
 
 func TestDriftDetection_ModifiedFiles(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
@@ -208,10 +200,8 @@ dotfiles:
 
 func TestDriftDetection_MissingPackages(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")

@@ -11,10 +11,8 @@ import (
 
 func TestRestoreCommand_ListBackups_WithExistingBackups(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
@@ -95,10 +93,8 @@ backup:
 
 func TestRestoreCommand_ListBackups_NoBackups(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
@@ -136,10 +132,8 @@ backup:
 
 func TestRestoreCommand_ListBackups_NoConfig(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Test restore --list command when no config exists
 	_, err := runRestoreCommand([]string{"--list"})
@@ -210,10 +204,8 @@ func runRestoreCommand(args []string) (string, error) {
 
 func TestRestoreCommand_RestoreLatestFile(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create existing .zshrc file (will be overwritten by restore)
 	existingZshrc := filepath.Join(tempHome, ".zshrc")
@@ -292,10 +284,8 @@ backup:
 
 func TestRestoreCommand_RestoreFile_NoBackups(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
@@ -332,10 +322,8 @@ backup:
 
 func TestRestoreCommand_RestoreFile_FileNotExist(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
@@ -386,10 +374,8 @@ backup:
 
 func TestRestoreCommand_RestoreSpecificTimestamp(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create existing .zshrc file (will be overwritten by restore)
 	existingZshrc := filepath.Join(tempHome, ".zshrc")
@@ -471,10 +457,8 @@ backup:
 
 func TestRestoreCommand_RestoreInvalidTimestamp(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
@@ -525,10 +509,8 @@ backup:
 
 func TestRestoreCommand_RestoreAll(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create existing files that will be overwritten by restore
 	existingZshrc := filepath.Join(tempHome, ".zshrc")
@@ -646,10 +628,8 @@ backup:
 
 func TestRestoreCommand_RestoreAll_NoBackups(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
@@ -687,10 +667,8 @@ backup:
 
 func TestRestoreCommand_RestoreAll_PartialBackups(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create existing .zshrc file 
 	existingZshrc := filepath.Join(tempHome, ".zshrc")

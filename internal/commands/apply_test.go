@@ -11,10 +11,8 @@ import (
 
 func TestApplyCommand_NoConfig(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Test - should error when no config exists
 	err := runApply([]string{})
@@ -25,10 +23,8 @@ func TestApplyCommand_NoConfig(t *testing.T) {
 
 func TestApplyCommand_AllDotfiles(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
@@ -102,10 +98,8 @@ homebrew:
 
 func TestApplyCommand_PackageSpecific(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
@@ -187,10 +181,8 @@ homebrew:
 
 func TestApplyCommand_InvalidPackage(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
@@ -224,10 +216,8 @@ homebrew:
 
 func TestApplyCommand_ZSHConfiguration(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
@@ -353,10 +343,8 @@ zsh:
 
 func TestApplyCommand_ZSHConfiguration_NoEnvVars(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
@@ -404,10 +392,8 @@ zsh:
 
 func TestApplyCommand_WithBackupFlag(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create existing .zshrc that should be backed up
 	existingZshrc := filepath.Join(tempHome, ".zshrc")
@@ -495,10 +481,8 @@ zsh:
 
 func TestApplyCommand_WithoutBackupFlag(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create existing .zshrc that should NOT be backed up
 	existingZshrc := filepath.Join(tempHome, ".zshrc")
@@ -556,10 +540,8 @@ zsh:
 
 func TestApplyCommand_GitConfiguration(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create plonk directory and config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
@@ -683,10 +665,8 @@ git:
 
 func TestApplyCommand_GitConfigurationWithBackup(t *testing.T) {
 	// Setup temporary directory
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create existing .gitconfig that should be backed up
 	existingGitconfig := filepath.Join(tempHome, ".gitconfig")

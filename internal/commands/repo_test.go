@@ -8,10 +8,8 @@ import (
 
 func TestRepoCommand_Success(t *testing.T) {
 	// Setup
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Mock git client
 	originalGitClient := gitClient
@@ -72,10 +70,8 @@ dotfiles:
 
 func TestRepoCommand_ExistingRepo(t *testing.T) {
 	// Setup
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Create existing plonk directory with config
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")

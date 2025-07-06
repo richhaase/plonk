@@ -1,5 +1,45 @@
 package commands
 
+import (
+	"os"
+	"testing"
+
+	"plonk/internal/directories"
+)
+
+// setupTestEnv sets up a temporary test environment with isolated HOME directory
+// and returns a cleanup function that should be called with defer
+func setupTestEnv(t *testing.T) (tempHome string, cleanup func()) {
+	tempHome = t.TempDir()
+	originalHome := os.Getenv("HOME")
+	
+	cleanup = func() {
+		os.Setenv("HOME", originalHome)
+		directories.Default.Reset()
+	}
+	
+	os.Setenv("HOME", tempHome)
+	return tempHome, cleanup
+}
+
+// setupTestEnvWithPlonkDir sets up a temporary test environment with both HOME and PLONK_DIR
+// and returns a cleanup function that should be called with defer
+func setupTestEnvWithPlonkDir(t *testing.T, plonkDir string) (tempHome string, cleanup func()) {
+	tempHome = t.TempDir()
+	originalHome := os.Getenv("HOME")
+	originalPlonkDir := os.Getenv("PLONK_DIR")
+	
+	cleanup = func() {
+		os.Setenv("HOME", originalHome)
+		os.Setenv("PLONK_DIR", originalPlonkDir)
+		directories.Default.Reset()
+	}
+	
+	os.Setenv("HOME", tempHome)
+	os.Setenv("PLONK_DIR", plonkDir)
+	return tempHome, cleanup
+}
+
 // MockGit implements GitInterface for testing
 type MockGit struct {
 	CloneFunc  func(repoURL, targetDir string) error

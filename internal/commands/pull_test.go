@@ -1,16 +1,13 @@
 package commands
 
 import (
-	"os"
 	"testing"
 )
 
 func TestPullCommand_Success(t *testing.T) {
 	// Setup
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Mock git client
 	originalGitClient := gitClient
@@ -42,10 +39,8 @@ func TestPullCommand_Success(t *testing.T) {
 
 func TestPullCommand_NoRepository(t *testing.T) {
 	// Setup
-	tempHome := t.TempDir()
-	originalHome := os.Getenv("HOME")
-	defer os.Setenv("HOME", originalHome)
-	os.Setenv("HOME", tempHome)
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
 	
 	// Mock git client
 	originalGitClient := gitClient
