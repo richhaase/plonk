@@ -13,7 +13,8 @@ Active work items for current development session. Maintained by AI agents.
 - 🔴 **RED: ASDF package discovery** - Implement AsdfDiscoverer using new ListGlobalTools() method
 - ✅ **RED-GREEN-REFACTOR: NPM package discovery** - NpmDiscoverer reusing existing NpmManager complete
 - ✅ **RED-GREEN-REFACTOR: Dotfile detection** - DotfileDiscoverer for managed dotfiles complete
-- 🔴 **RED: YAML config generation** - Write failing test for converting discovered packages to plonk.yaml format
+- 🔴 **RED: GenerateConfig() function** - Convert discovery results to Config struct  
+- 🔴 **RED: SaveConfig() function** - Marshal Config struct to YAML file
 - 🔴 **RED: Integration test** - Write failing test for complete import workflow
 
 ## Completed (This Session)
