@@ -24,6 +24,31 @@ Follow the Test-Driven Development workflow described in [CONTRIBUTING.md](CONTR
 - Use CODEBASE_MAP.md for navigation
 - Follow established patterns found in existing code
 
+## Session Management
+
+### Session Initialization
+1. **Read TODO.md** - Check for active work items and session context
+2. **If no active todos** - Check ROADMAP.md for possible work items to suggest
+3. **Sync internal todo list** - Match TODO.md content with internal state
+4. **Review session notes** - Check TODO.md Notes section for context
+5. **Understand current phase** - Documentation refactor, feature development, etc.
+
+### During Session
+- **Update TODO.md** when changing task status (pending → in_progress → completed)
+- **Commit frequently** with descriptive messages following project patterns
+- **Run pre-commit hooks normally** - only use --no-verify when specifically needed
+- **Ask questions** when user requests are unclear or conflict with established patterns
+
+### Session End
+- **Update TODO.md** to reflect current state for next session
+- **Commit any pending work** with clear status in commit message
+- **Update related documentation** as needed:
+  - Update CHANGELOG.md for user-facing changes
+  - Update ARCHITECTURE.md for design changes
+  - Update README.md for user workflow changes
+  - Update CONTRIBUTING.md for development process changes
+- **Leave clear notes** in TODO.md for session continuity
+
 ### Testing Patterns
 - **MockCommandExecutor** for unit tests (avoid actual command execution)
 - **setupTestEnv(t)** helper for test isolation
