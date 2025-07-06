@@ -1,6 +1,9 @@
 package managers
 
 import (
+	"bufio"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -55,6 +58,51 @@ func (a *AsdfManager) ListInstalled() ([]string, error) {
 		if trimmed := strings.TrimSpace(plugin); trimmed != "" {
 			result = append(result, trimmed)
 		}
+	}
+
+	return result, nil
+}
+
+// ListGlobalTools returns a list of globally configured ASDF tools and versions.
+// Reads from ~/.tool-versions file and returns tools in "tool version" format.
+func (a *AsdfManager) ListGlobalTools() ([]string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+
+	toolVersionsPath := filepath.Join(homeDir, ".tool-versions")
+	file, err := os.Open(toolVersionsPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// No .tool-versions file means no global tools
+			return []string{}, nil
+		}
+		return nil, err
+	}
+	defer file.Close()
+
+	var result []string
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Each line should be "tool version"
+		parts := strings.Fields(line)
+		if len(parts) >= 2 {
+			toolAndVersion := parts[0] + " " + parts[1]
+			result = append(result, toolAndVersion)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
 	}
 
 	return result, nil

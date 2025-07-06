@@ -1,7 +1,9 @@
 package managers
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 )
 
@@ -608,5 +610,106 @@ func TestNpmManager_Update_ReturnsErrorOnFailure(t *testing.T) {
 
 	if err == nil {
 		t.Error("Expected error when update fails")
+	}
+}
+
+func TestAsdfManager_ListGlobalTools(t *testing.T) {
+	tests := []struct {
+		name          string
+		toolVersions  string
+		expectedTools []string
+		expectError   bool
+	}{
+		{
+			name: "successful parsing of .tool-versions",
+			toolVersions: `nodejs 20.0.0
+python 3.11.3
+ruby 3.0.0
+`,
+			expectedTools: []string{
+				"nodejs 20.0.0",
+				"python 3.11.3",
+				"ruby 3.0.0",
+			},
+			expectError: false,
+		},
+		{
+			name:          "empty .tool-versions file",
+			toolVersions:  "",
+			expectedTools: []string{},
+			expectError:   false,
+		},
+		{
+			name: "single tool",
+			toolVersions: `nodejs 18.16.0
+`,
+			expectedTools: []string{"nodejs 18.16.0"},
+			expectError:   false,
+		},
+		{
+			name: "tools with comments and empty lines",
+			toolVersions: `# My tools
+nodejs 20.0.0
+
+python 3.11.3
+# Another comment
+ruby 3.0.0
+`,
+			expectedTools: []string{
+				"nodejs 20.0.0",
+				"python 3.11.3",
+				"ruby 3.0.0",
+			},
+			expectError: false,
+		},
+		{
+			name:          "no .tool-versions file - returns empty list",
+			toolVersions:  "",
+			expectedTools: []string{},
+			expectError:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create temporary home directory
+			tempHome := t.TempDir()
+			originalHome := os.Getenv("HOME")
+			os.Setenv("HOME", tempHome)
+			defer os.Setenv("HOME", originalHome)
+
+			// Create .tool-versions file if not testing error case
+			if !tt.expectError {
+				toolVersionsPath := filepath.Join(tempHome, ".tool-versions")
+				err := os.WriteFile(toolVersionsPath, []byte(tt.toolVersions), 0644)
+				if err != nil {
+					t.Fatalf("Failed to create test .tool-versions file: %v", err)
+				}
+			}
+
+			mockExec := NewMockCommandExecutor()
+			manager := NewAsdfManager(mockExec)
+
+			tools, err := manager.ListGlobalTools()
+
+			if tt.expectError && err == nil {
+				t.Error("Expected error but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+
+			if len(tools) != len(tt.expectedTools) {
+				t.Errorf("Expected %d tools, got %d", len(tt.expectedTools), len(tools))
+				t.Errorf("Expected: %v", tt.expectedTools)
+				t.Errorf("Got: %v", tools)
+			}
+
+			for i, tool := range tools {
+				if i < len(tt.expectedTools) && tool != tt.expectedTools[i] {
+					t.Errorf("Expected tool %s, got %s", tt.expectedTools[i], tool)
+				}
+			}
+		})
 	}
 }
