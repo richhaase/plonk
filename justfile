@@ -41,7 +41,7 @@ lint-fix:
 format:
     @echo "Formatting code..."
     goimports -local plonk -w .
-    gofmt -s -w .
+    go fmt ./...
 
 # Clean build artifacts
 clean:
