@@ -399,3 +399,155 @@ zsh:
 		t.Error("Expected ~/.zshenv NOT to be created when no env vars are present")
 	}
 }
+
+func TestApplyCommand_WithBackupFlag(t *testing.T) {
+	// Setup temporary directory
+	tempHome := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	defer os.Setenv("HOME", originalHome)
+	os.Setenv("HOME", tempHome)
+	
+	// Create existing .zshrc that should be backed up
+	existingZshrc := filepath.Join(tempHome, ".zshrc")
+	existingContent := "# My existing zshrc\nalias ls='ls -la'"
+	err := os.WriteFile(existingZshrc, []byte(existingContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create existing .zshrc: %v", err)
+	}
+	
+	// Create plonk directory and config
+	plonkDir := filepath.Join(tempHome, ".config", "plonk")
+	err = os.MkdirAll(plonkDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create plonk directory: %v", err)
+	}
+	
+	// Create config file with backup configuration
+	configContent := `settings:
+  default_manager: homebrew
+
+backup:
+  location: "~/.config/plonk/backups"
+  keep_count: 5
+
+zsh:
+  aliases:
+    ll: "eza -la"
+`
+	
+	configPath := filepath.Join(plonkDir, "plonk.yaml")
+	err = os.WriteFile(configPath, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write config file: %v", err)
+	}
+	
+	// Test applying with backup flag - this should backup .zshrc before applying
+	err = runApplyWithFlags([]string{}, true) // backup=true
+	if err != nil {
+		t.Fatalf("Apply command with backup failed: %v", err)
+	}
+	
+	// Verify backup was created
+	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
+	if !fileExists(backupDir) {
+		t.Fatal("Expected backup directory to be created")
+	}
+	
+	backupFiles, err := filepath.Glob(filepath.Join(backupDir, "zshrc.backup.*"))
+	if err != nil {
+		t.Fatalf("Failed to search for backup files: %v", err)
+	}
+	
+	if len(backupFiles) != 1 {
+		t.Errorf("Expected 1 backup file, found %d: %v", len(backupFiles), backupFiles)
+	}
+	
+	// Verify backup contains original content
+	if len(backupFiles) > 0 {
+		backupContent, err := os.ReadFile(backupFiles[0])
+		if err != nil {
+			t.Fatalf("Failed to read backup file: %v", err)
+		}
+		
+		if string(backupContent) != existingContent {
+			t.Errorf("Backup doesn't contain original content.\nExpected: %s\nGot: %s", 
+				existingContent, string(backupContent))
+		}
+	}
+	
+	// Verify new .zshrc was created with plonk content
+	newZshrcContent, err := os.ReadFile(existingZshrc)
+	if err != nil {
+		t.Fatalf("Failed to read new .zshrc: %v", err)
+	}
+	
+	newZshrcStr := string(newZshrcContent)
+	if !strings.Contains(newZshrcStr, "alias ll='eza -la'") {
+		t.Error("Expected new .zshrc to contain plonk-generated content")
+	}
+	
+	if strings.Contains(newZshrcStr, "alias ls='ls -la'") {
+		t.Error("Expected new .zshrc to not contain old content")
+	}
+}
+
+func TestApplyCommand_WithoutBackupFlag(t *testing.T) {
+	// Setup temporary directory
+	tempHome := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	defer os.Setenv("HOME", originalHome)
+	os.Setenv("HOME", tempHome)
+	
+	// Create existing .zshrc that should NOT be backed up
+	existingZshrc := filepath.Join(tempHome, ".zshrc")
+	existingContent := "# My existing zshrc\nalias ls='ls -la'"
+	err := os.WriteFile(existingZshrc, []byte(existingContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create existing .zshrc: %v", err)
+	}
+	
+	// Create plonk directory and config
+	plonkDir := filepath.Join(tempHome, ".config", "plonk")
+	err = os.MkdirAll(plonkDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create plonk directory: %v", err)
+	}
+	
+	// Create config file
+	configContent := `settings:
+  default_manager: homebrew
+
+zsh:
+  aliases:
+    ll: "eza -la"
+`
+	
+	configPath := filepath.Join(plonkDir, "plonk.yaml")
+	err = os.WriteFile(configPath, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write config file: %v", err)
+	}
+	
+	// Test applying without backup flag - should not backup
+	err = runApplyWithFlags([]string{}, false) // backup=false
+	if err != nil {
+		t.Fatalf("Apply command failed: %v", err)
+	}
+	
+	// Verify no backup directory was created
+	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
+	if fileExists(backupDir) {
+		t.Error("Expected backup directory NOT to be created when --backup flag is not used")
+	}
+	
+	// Verify new .zshrc was still created with plonk content
+	newZshrcContent, err := os.ReadFile(existingZshrc)
+	if err != nil {
+		t.Fatalf("Failed to read new .zshrc: %v", err)
+	}
+	
+	newZshrcStr := string(newZshrcContent)
+	if !strings.Contains(newZshrcStr, "alias ll='eza -la'") {
+		t.Error("Expected new .zshrc to contain plonk-generated content")
+	}
+}

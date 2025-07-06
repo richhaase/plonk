@@ -19,35 +19,49 @@ With a package name, applies only that package's configuration files.
 
 Examples:
   plonk apply                                     # Apply all configurations
-  plonk apply neovim                              # Apply only neovim configuration`,
+  plonk apply neovim                              # Apply only neovim configuration
+  plonk apply --backup                            # Apply all configurations with backup`,
 	RunE: applyCmdRun,
 	Args: cobra.MaximumNArgs(1),
 }
 
 func init() {
 	rootCmd.AddCommand(applyCmd)
+	applyCmd.Flags().Bool("backup", false, "Create backups of existing configuration files before applying")
 }
 
 func applyCmdRun(cmd *cobra.Command, args []string) error {
-	return runApply(args)
+	backup, _ := cmd.Flags().GetBool("backup")
+	return runApplyWithBackup(args, backup)
 }
 
 func runApply(args []string) error {
+	return runApplyWithBackup(args, false)
+}
+
+func runApplyWithBackup(args []string, backup bool) error {
 	plonkDir := getPlonkDir()
 	
 	// Load configuration
-	config, err := config.LoadYAMLConfig(plonkDir)
+	cfg, err := config.LoadYAMLConfig(plonkDir)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 	
+	// If backup is requested, create backups before applying
+	if backup {
+		if err := createBackupsBeforeApply(cfg, args); err != nil {
+			return fmt.Errorf("failed to create backups: %w", err)
+		}
+	}
+	
 	if len(args) == 0 {
 		// Apply all configurations
-		return applyAllConfigurations(plonkDir, config)
+		return applyAllConfigurations(plonkDir, cfg)
 	} else {
 		// Apply specific package configuration
 		packageName := args[0]
-		return applyPackageConfiguration(plonkDir, config, packageName)
+		return applyPackageConfiguration(plonkDir, cfg, packageName)
 	}
 }
 
@@ -280,4 +294,88 @@ func applyZSHConfiguration(cfg *config.YAMLConfig) error {
 	}
 	
 	return nil
+}
+
+// createBackupsBeforeApply determines which files will be overwritten and creates backups
+func createBackupsBeforeApply(cfg *config.YAMLConfig, args []string) error {
+	var filesToBackup []string
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home directory: %w", err)
+	}
+	
+	if len(args) == 0 {
+		// Backing up for full apply - check all files that will be written
+		
+		// Add dotfiles
+		dotfileTargets := cfg.GetDotfileTargets()
+		for _, target := range dotfileTargets {
+			targetPath := expandHomeDir(target)
+			filesToBackup = append(filesToBackup, targetPath)
+		}
+		
+		// Add ZSH configuration files if ZSH config exists
+		if len(cfg.ZSH.EnvVars) > 0 || len(cfg.ZSH.Aliases) > 0 || 
+		   len(cfg.ZSH.Inits) > 0 || len(cfg.ZSH.Completions) > 0 ||
+		   len(cfg.ZSH.Functions) > 0 || len(cfg.ZSH.ShellOptions) > 0 {
+			filesToBackup = append(filesToBackup, filepath.Join(homeDir, ".zshrc"))
+			
+			// Only backup .zshenv if there are environment variables
+			if len(cfg.ZSH.EnvVars) > 0 {
+				filesToBackup = append(filesToBackup, filepath.Join(homeDir, ".zshenv"))
+			}
+		}
+		
+		// Add package configuration files
+		filesToBackup = append(filesToBackup, getPackageConfigFilesToBackup(cfg)...)
+	} else {
+		// Backing up for specific package apply - only backup that package's config
+		packageName := args[0]
+		packageConfig := findPackageConfig(cfg, packageName)
+		if packageConfig != "" {
+			targetPath := expandHomeDir("~/."+packageConfig)
+			filesToBackup = append(filesToBackup, targetPath)
+		}
+	}
+	
+	// Create backups using existing backup functionality
+	return BackupConfigurationFiles(filesToBackup)
+}
+
+// getPackageConfigFilesToBackup returns all package configuration file paths
+func getPackageConfigFilesToBackup(cfg *config.YAMLConfig) []string {
+	var filesToBackup []string
+	
+	// Homebrew package configurations
+	for _, pkg := range cfg.Homebrew.Brews {
+		if pkg.Config != "" {
+			targetPath := expandHomeDir("~/."+pkg.Config)
+			filesToBackup = append(filesToBackup, targetPath)
+		}
+	}
+	
+	for _, pkg := range cfg.Homebrew.Casks {
+		if pkg.Config != "" {
+			targetPath := expandHomeDir("~/."+pkg.Config)
+			filesToBackup = append(filesToBackup, targetPath)
+		}
+	}
+	
+	// ASDF package configurations
+	for _, tool := range cfg.ASDF {
+		if tool.Config != "" {
+			targetPath := expandHomeDir("~/."+tool.Config)
+			filesToBackup = append(filesToBackup, targetPath)
+		}
+	}
+	
+	// NPM package configurations
+	for _, pkg := range cfg.NPM {
+		if pkg.Config != "" {
+			targetPath := expandHomeDir("~/."+pkg.Config)
+			filesToBackup = append(filesToBackup, targetPath)
+		}
+	}
+	
+	return filesToBackup
 }

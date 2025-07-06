@@ -64,3 +64,8 @@ func (m *MockGit) IsRepo(dir string) bool {
 	}
 	return false
 }
+
+// runApplyWithFlags runs the apply command with flag support for testing
+func runApplyWithFlags(args []string, backup bool) error {
+	return runApplyWithBackup(args, backup)
+}
