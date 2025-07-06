@@ -51,7 +51,7 @@ func restoreCmdRun(cmd *cobra.Command, args []string) error {
 func runRestoreList() error {
 	// Ensure plonk is properly set up
 	plonkDir := getPlonkDir()
-	if _, err := config.LoadYAMLConfig(plonkDir); err != nil {
+	if _, err := config.LoadConfig(plonkDir); err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 	

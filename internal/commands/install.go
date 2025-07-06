@@ -39,7 +39,7 @@ func runInstall(args []string) error {
 	plonkDir := getPlonkDir()
 	
 	// Load configuration
-	config, err := config.LoadYAMLConfig(plonkDir)
+	config, err := config.LoadConfig(plonkDir)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
@@ -89,7 +89,7 @@ func runInstall(args []string) error {
 	return nil
 }
 
-func installHomebrewPackages(mgr *managers.HomebrewManager, config *config.YAMLConfig) ([]string, error) {
+func installHomebrewPackages(mgr *managers.HomebrewManager, config *config.Config) ([]string, error) {
 	// Skip if no packages to install
 	if len(config.Homebrew.Brews) == 0 && len(config.Homebrew.Casks) == 0 {
 		return []string{}, nil
@@ -138,7 +138,7 @@ func installHomebrewPackages(mgr *managers.HomebrewManager, config *config.YAMLC
 	return installedWithConfigs, nil
 }
 
-func installASDFTools(mgr *managers.AsdfManager, config *config.YAMLConfig) ([]string, error) {
+func installASDFTools(mgr *managers.AsdfManager, config *config.Config) ([]string, error) {
 	// Skip if no tools to install
 	if len(config.ASDF) == 0 {
 		return []string{}, nil
@@ -168,7 +168,7 @@ func installASDFTools(mgr *managers.AsdfManager, config *config.YAMLConfig) ([]s
 	return installedWithConfigs, nil
 }
 
-func installNPMPackages(mgr *managers.NpmManager, config *config.YAMLConfig) ([]string, error) {
+func installNPMPackages(mgr *managers.NpmManager, config *config.Config) ([]string, error) {
 	// Skip if no packages to install
 	if len(config.NPM) == 0 {
 		return []string{}, nil

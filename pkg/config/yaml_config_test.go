@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestLoadYAMLConfig_BasicStructure(t *testing.T) {
+func TestLoadConfig_BasicStructure(t *testing.T) {
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "plonk.yaml")
 
@@ -45,10 +45,10 @@ npm:
 		t.Fatalf("Failed to write test config: %v", err)
 	}
 
-	// RED: This should fail because LoadYAMLConfig doesn't exist yet
-	config, err := LoadYAMLConfig(tempDir)
+	// Load configuration
+	config, err := LoadConfig(tempDir)
 	if err != nil {
-		t.Fatalf("LoadYAMLConfig failed: %v", err)
+		t.Fatalf("LoadConfig failed: %v", err)
 	}
 
 	// Verify settings
@@ -117,16 +117,16 @@ npm:
 	}
 }
 
-func TestLoadYAMLConfig_NonExistentFile(t *testing.T) {
+func TestLoadConfig_NonExistentFile(t *testing.T) {
 	tempDir := t.TempDir()
 	
-	_, err := LoadYAMLConfig(tempDir)
+	_, err := LoadConfig(tempDir)
 	if err == nil {
 		t.Error("Expected error for non-existent config file")
 	}
 }
 
-func TestYAMLConfigValidation(t *testing.T) {
+func TestConfigValidation(t *testing.T) {
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "plonk.yaml")
 
@@ -144,7 +144,7 @@ asdf:
 		t.Fatalf("Failed to write test config: %v", err)
 	}
 
-	_, err = LoadYAMLConfig(tempDir)
+	_, err = LoadConfig(tempDir)
 	if err == nil {
 		t.Error("Expected error for ASDF tool without version")
 	}
@@ -172,7 +172,7 @@ func TestSourceToTarget(t *testing.T) {
 }
 
 func TestGetDotfileTargets(t *testing.T) {
-	config := &YAMLConfig{
+	config := &Config{
 		Dotfiles: []string{"zshrc", "config/nvim/", "dot_gitconfig"},
 	}
 
@@ -244,7 +244,7 @@ zsh:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-	config, err := LoadYAMLConfig(tempDir)
+	config, err := LoadConfig(tempDir)
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
@@ -346,7 +346,7 @@ func TestZSHConfig_EmptyConfiguration(t *testing.T) {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-	config, err := LoadYAMLConfig(tempDir)
+	config, err := LoadConfig(tempDir)
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
@@ -384,7 +384,7 @@ zsh:
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-	config, err := LoadYAMLConfig(tempDir)
+	config, err := LoadConfig(tempDir)
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}

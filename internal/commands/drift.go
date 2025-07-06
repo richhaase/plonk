@@ -32,7 +32,7 @@ func detectConfigDrift() (*DriftReport, error) {
 	plonkDir := getPlonkDir()
 	
 	// Load configuration
-	config, err := config.LoadYAMLConfig(plonkDir)
+	config, err := config.LoadConfig(plonkDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
@@ -58,7 +58,7 @@ func detectConfigDrift() (*DriftReport, error) {
 }
 
 // checkDotfileDrift compares dotfiles between source and target locations
-func checkDotfileDrift(plonkDir string, config *config.YAMLConfig, drift *DriftReport) error {
+func checkDotfileDrift(plonkDir string, config *config.Config, drift *DriftReport) error {
 	dotfileTargets := config.GetDotfileTargets()
 	
 	for source, target := range dotfileTargets {
@@ -184,7 +184,7 @@ func checkDirectoryDrift(sourceDir, targetDir, basePath string, drift *DriftRepo
 }
 
 // checkPackageDrift compares installed packages with configuration
-func checkPackageDrift(config *config.YAMLConfig, drift *DriftReport) error {
+func checkPackageDrift(config *config.Config, drift *DriftReport) error {
 	executor := &managers.RealCommandExecutor{}
 	
 	// Check Homebrew packages
@@ -243,7 +243,7 @@ func checkPackageDrift(config *config.YAMLConfig, drift *DriftReport) error {
 }
 
 // checkHomebrewDrift compares Homebrew packages
-func checkHomebrewDrift(mgr *managers.HomebrewManager, config *config.YAMLConfig, drift *DriftReport) error {
+func checkHomebrewDrift(mgr *managers.HomebrewManager, config *config.Config, drift *DriftReport) error {
 	installedPackages, err := mgr.ListInstalled()
 	if err != nil {
 		return err
@@ -271,7 +271,7 @@ func checkHomebrewDrift(mgr *managers.HomebrewManager, config *config.YAMLConfig
 }
 
 // checkASDFDrift compares ASDF tools and versions
-func checkASDFDrift(mgr *managers.AsdfManager, config *config.YAMLConfig, drift *DriftReport) error {
+func checkASDFDrift(mgr *managers.AsdfManager, config *config.Config, drift *DriftReport) error {
 	for _, tool := range config.ASDF {
 		if !mgr.IsVersionInstalled(tool.Name, tool.Version) {
 			drift.MissingPackages = append(drift.MissingPackages, "asdf/"+tool.Name+"@"+tool.Version)
@@ -282,7 +282,7 @@ func checkASDFDrift(mgr *managers.AsdfManager, config *config.YAMLConfig, drift 
 }
 
 // checkNPMDrift compares NPM packages
-func checkNPMDrift(mgr *managers.NpmManager, config *config.YAMLConfig, drift *DriftReport) error {
+func checkNPMDrift(mgr *managers.NpmManager, config *config.Config, drift *DriftReport) error {
 	installedPackages, err := mgr.ListInstalled()
 	if err != nil {
 		return err

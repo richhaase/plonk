@@ -43,7 +43,7 @@ func BackupExistingFile(filePath string) (string, error) {
 func BackupConfigurationFiles(filePaths []string) error {
 	// Load configuration to get backup settings
 	plonkDir := getPlonkDir()
-	cfg, err := config.LoadYAMLConfig(plonkDir)
+	cfg, err := config.LoadConfig(plonkDir)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
@@ -68,7 +68,7 @@ func BackupConfigurationFiles(filePaths []string) error {
 }
 
 // getBackupDirectory returns the configured backup directory with default fallback
-func getBackupDirectory(cfg *config.YAMLConfig) string {
+func getBackupDirectory(cfg *config.Config) string {
 	if cfg.Backup.Location != "" {
 		return expandHomeDir(cfg.Backup.Location)
 	}
@@ -83,7 +83,7 @@ func getBackupDirectory(cfg *config.YAMLConfig) string {
 }
 
 // getKeepCount returns the configured keep count with default fallback
-func getKeepCount(cfg *config.YAMLConfig) int {
+func getKeepCount(cfg *config.Config) int {
 	if cfg.Backup.KeepCount > 0 {
 		return cfg.Backup.KeepCount
 	}

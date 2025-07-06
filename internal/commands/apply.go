@@ -43,7 +43,7 @@ func runApplyWithBackup(args []string, backup bool) error {
 	plonkDir := getPlonkDir()
 	
 	// Load configuration
-	cfg, err := config.LoadYAMLConfig(plonkDir)
+	cfg, err := config.LoadConfig(plonkDir)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
@@ -65,7 +65,7 @@ func runApplyWithBackup(args []string, backup bool) error {
 	}
 }
 
-func applyAllConfigurations(plonkDir string, config *config.YAMLConfig) error {
+func applyAllConfigurations(plonkDir string, config *config.Config) error {
 	// Apply global dotfiles
 	if err := applyDotfiles(plonkDir, config); err != nil {
 		return fmt.Errorf("failed to apply dotfiles: %w", err)
@@ -90,7 +90,7 @@ func applyAllConfigurations(plonkDir string, config *config.YAMLConfig) error {
 	return nil
 }
 
-func applyPackageConfiguration(plonkDir string, config *config.YAMLConfig, packageName string) error {
+func applyPackageConfiguration(plonkDir string, config *config.Config, packageName string) error {
 	// Find the package and apply its configuration
 	packageConfig := findPackageConfig(config, packageName)
 	if packageConfig == "" {
@@ -108,7 +108,7 @@ func applyPackageConfiguration(plonkDir string, config *config.YAMLConfig, packa
 	return nil
 }
 
-func applyDotfiles(plonkDir string, config *config.YAMLConfig) error {
+func applyDotfiles(plonkDir string, config *config.Config) error {
 	dotfileTargets := config.GetDotfileTargets()
 	
 	// Determine the correct source directory (check repo subdirectory first)
@@ -126,7 +126,7 @@ func applyDotfiles(plonkDir string, config *config.YAMLConfig) error {
 	return nil
 }
 
-func applyPackageConfigurations(plonkDir string, config *config.YAMLConfig) error {
+func applyPackageConfigurations(plonkDir string, config *config.Config) error {
 	// Determine the correct source directory
 	sourceDir := getSourceDirectory(plonkDir)
 	
@@ -182,7 +182,7 @@ func getSourceDirectory(plonkDir string) string {
 	return plonkDir
 }
 
-func findPackageConfig(config *config.YAMLConfig, packageName string) string {
+func findPackageConfig(config *config.Config, packageName string) string {
 	// Check Homebrew packages
 	for _, pkg := range config.Homebrew.Brews {
 		if pkg.Name == packageName && pkg.Config != "" {
@@ -292,7 +292,7 @@ func expandHomeDir(path string) string {
 	return path
 }
 
-func applyZSHConfiguration(cfg *config.YAMLConfig) error {
+func applyZSHConfiguration(cfg *config.Config) error {
 	// Skip if no ZSH configuration is defined
 	if len(cfg.ZSH.EnvVars) == 0 && len(cfg.ZSH.Aliases) == 0 && 
 	   len(cfg.ZSH.Inits) == 0 && len(cfg.ZSH.Completions) == 0 &&
@@ -324,7 +324,7 @@ func applyZSHConfiguration(cfg *config.YAMLConfig) error {
 	return nil
 }
 
-func applyGitConfiguration(cfg *config.YAMLConfig) error {
+func applyGitConfiguration(cfg *config.Config) error {
 	// Skip if no Git configuration is defined
 	if len(cfg.Git.User) == 0 && len(cfg.Git.Core) == 0 && len(cfg.Git.Aliases) == 0 && 
 	   len(cfg.Git.Color) == 0 && len(cfg.Git.Delta) == 0 && len(cfg.Git.Fetch) == 0 &&
@@ -351,7 +351,7 @@ func applyGitConfiguration(cfg *config.YAMLConfig) error {
 }
 
 // createBackupsBeforeApply determines which files will be overwritten and creates backups
-func createBackupsBeforeApply(cfg *config.YAMLConfig, args []string) error {
+func createBackupsBeforeApply(cfg *config.Config, args []string) error {
 	var filesToBackup []string
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -407,7 +407,7 @@ func createBackupsBeforeApply(cfg *config.YAMLConfig, args []string) error {
 }
 
 // getPackageConfigFilesToBackup returns all package configuration file paths
-func getPackageConfigFilesToBackup(cfg *config.YAMLConfig) []string {
+func getPackageConfigFilesToBackup(cfg *config.Config) []string {
 	var filesToBackup []string
 	
 	// Homebrew package configurations

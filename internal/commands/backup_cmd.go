@@ -40,7 +40,7 @@ func backupFilesForApply() error {
 	plonkDir := getPlonkDir()
 	
 	// Load configuration
-	cfg, err := config.LoadYAMLConfig(plonkDir)
+	cfg, err := config.LoadConfig(plonkDir)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}

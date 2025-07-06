@@ -8,9 +8,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// YAMLConfig represents the new YAML-based configuration
-type YAMLConfig struct {
-	Settings  YAMLSettings    `yaml:"settings"`
+// Config represents the configuration structure
+type Config struct {
+	Settings  Settings    `yaml:"settings"`
 	Backup    BackupConfig    `yaml:"backup,omitempty"`
 	Dotfiles  []string        `yaml:"dotfiles,omitempty"`
 	Homebrew  HomebrewConfig  `yaml:"homebrew,omitempty"`
@@ -20,8 +20,8 @@ type YAMLConfig struct {
 	Git       GitConfig       `yaml:"git,omitempty"`
 }
 
-// YAMLSettings contains global configuration settings
-type YAMLSettings struct {
+// Settings contains global configuration settings
+type Settings struct {
 	DefaultManager string `yaml:"default_manager"`
 }
 
@@ -127,10 +127,10 @@ func (n *NPMPackage) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
-// LoadYAMLConfig loads configuration from plonk.yaml and optionally plonk.local.yaml
-func LoadYAMLConfig(configDir string) (*YAMLConfig, error) {
-	config := &YAMLConfig{
-		Settings: YAMLSettings{
+// LoadConfig loads configuration from plonk.yaml and optionally plonk.local.yaml
+func LoadConfig(configDir string) (*Config, error) {
+	config := &Config{
+		Settings: Settings{
 			DefaultManager: "homebrew", // Default value
 		},
 		ZSH: ZSHConfig{
@@ -145,10 +145,10 @@ func LoadYAMLConfig(configDir string) (*YAMLConfig, error) {
 	repoConfigPath := filepath.Join(configDir, "repo", "plonk.yaml")
 	
 	// Try main directory first
-	if err := loadYAMLConfigFile(mainConfigPath, config); err != nil {
+	if err := loadConfigFile(mainConfigPath, config); err != nil {
 		if os.IsNotExist(err) {
 			// Try repo subdirectory
-			if err := loadYAMLConfigFile(repoConfigPath, config); err != nil {
+			if err := loadConfigFile(repoConfigPath, config); err != nil {
 				if os.IsNotExist(err) {
 					return nil, fmt.Errorf("config file not found in %s or %s", mainConfigPath, repoConfigPath)
 				}
@@ -162,7 +162,7 @@ func LoadYAMLConfig(configDir string) (*YAMLConfig, error) {
 	// Load local config file if it exists
 	localConfigPath := filepath.Join(configDir, "plonk.local.yaml")
 	if _, err := os.Stat(localConfigPath); err == nil {
-		if err := loadYAMLConfigFile(localConfigPath, config); err != nil {
+		if err := loadConfigFile(localConfigPath, config); err != nil {
 			return nil, fmt.Errorf("failed to load local config: %w", err)
 		}
 	}
@@ -175,15 +175,15 @@ func LoadYAMLConfig(configDir string) (*YAMLConfig, error) {
 	return config, nil
 }
 
-// loadYAMLConfigFile loads a single YAML config file and merges it into the config
-func loadYAMLConfigFile(path string, config *YAMLConfig) error {
+// loadConfigFile loads a single YAML config file and merges it into the config
+func loadConfigFile(path string, config *Config) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
 
 	// Create a temporary config to decode into
-	var tempConfig YAMLConfig
+	var tempConfig Config
 	if err := yaml.Unmarshal(data, &tempConfig); err != nil {
 		return fmt.Errorf("failed to parse YAML: %w", err)
 	}
@@ -316,7 +316,7 @@ func mergeGitConfig(target, source *GitConfig) {
 }
 
 // validate ensures the configuration is valid
-func (c *YAMLConfig) validate() error {
+func (c *Config) validate() error {
 	validManagers := map[string]bool{
 		"homebrew": true,
 		"asdf":     true,
@@ -339,7 +339,7 @@ func (c *YAMLConfig) validate() error {
 }
 
 // GetDotfileTargets returns dotfiles with their target paths
-func (c *YAMLConfig) GetDotfileTargets() map[string]string {
+func (c *Config) GetDotfileTargets() map[string]string {
 	result := make(map[string]string)
 	for _, dotfile := range c.Dotfiles {
 		result[dotfile] = sourceToTarget(dotfile)

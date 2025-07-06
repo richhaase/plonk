@@ -29,7 +29,7 @@ func getBackupsDir() string {
 	plonkDir := getPlonkDir()
 	
 	// Try to load config to check for custom backup location
-	cfg, err := config.LoadYAMLConfig(plonkDir)
+	cfg, err := config.LoadConfig(plonkDir)
 	if err == nil && cfg.Backup.Location != "" && cfg.Backup.Location != "default" {
 		// Use custom backup location from config (same as existing getBackupDirectory logic)
 		customPath := expandHomeDir(cfg.Backup.Location)
