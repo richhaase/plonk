@@ -7,6 +7,8 @@ This document is an ideation and planning tool for developers and AI agents work
 Features and concepts being considered:
 
 ### Core Features
+- **Test isolation mode** - Sandboxed testing environment using separate directories and mocked package managers
+- **Container testing support** - Docker/VM integration for bulletproof isolation during development
 - **Environment snapshots** - Create/restore complete environment snapshots
 - **Cross-platform Windows support** - PowerShell profiles, Windows package managers
 - **Package manager extensions** - Mac App Store (mas), additional Linux package managers
@@ -44,15 +46,10 @@ Features and concepts being considered:
 
 Features ready for implementation, roughly in priority order:
 
-### Code Quality & Maintenance
-- **Fix pre-commit hooks** - Ensure hooks work correctly and consistently
-- **Organize imports** consistently across all files
-- **Standardize function documentation** 
-- **Convert remaining tests** to table-driven format
-
 ### Core Features
+- **Import command** - Generate plonk.yaml from existing shell configs, including package discovery (brew list, asdf list, npm list) and dotfile copying (.zshrc, .gitconfig, .zshenv)
+- **Enhanced dry-run capabilities** - Show exactly what files would be modified and what package commands would run across all operations
 - **Diff command** - Show differences between config and reality
-- **Import command** - Generate plonk.yaml from existing shell configs
 - **Additional shell support** - Bash and Fish configuration generation
 - **Watch mode** - Auto-apply changes when config files change
 
