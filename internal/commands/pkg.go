@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"plonk/pkg/managers"
 	"github.com/spf13/cobra"
+	"plonk/pkg/managers"
 )
 
 var pkgCmd = &cobra.Command{
@@ -39,7 +39,7 @@ func init() {
 
 func runPkgList(cmd *cobra.Command, args []string) error {
 	executor := managers.NewRealCommandExecutor()
-	
+
 	// Initialize all package managers
 	allManagers := map[string]managers.PackageManagerInfo{
 		"brew": {
@@ -55,14 +55,14 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 			Manager: managers.NewNpmManager(executor),
 		},
 	}
-	
+
 	// Determine which managers to show
 	var managersToShow []managers.PackageManagerInfo
 	if len(args) == 0 {
 		// Show all managers
 		managersToShow = []managers.PackageManagerInfo{
 			allManagers["brew"],
-			allManagers["asdf"], 
+			allManagers["asdf"],
 			allManagers["npm"],
 		}
 	} else {
@@ -74,13 +74,13 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("unknown package manager '%s'. Available: brew, asdf, npm", args[0])
 		}
 	}
-	
+
 	// List packages for each manager
 	for i, mgr := range managersToShow {
 		if len(managersToShow) > 1 {
 			fmt.Printf("## %s\n", mgr.Name)
 		}
-		
+
 		if !mgr.Manager.IsAvailable() {
 			fmt.Printf("❌ %s is not available\n", mgr.Name)
 			if len(managersToShow) > 1 {
@@ -88,7 +88,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 			}
 			continue
 		}
-		
+
 		packages, err := mgr.Manager.ListInstalled()
 		if err != nil {
 			fmt.Printf("⚠️  Error listing %s packages: %v\n", mgr.Name, err)
@@ -97,7 +97,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 			}
 			continue
 		}
-		
+
 		if len(packages) == 0 {
 			fmt.Printf("No packages installed\n")
 		} else {
@@ -106,12 +106,12 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 				fmt.Printf("  %s\n", pkg)
 			}
 		}
-		
+
 		// Add spacing between managers (except for the last one)
 		if len(managersToShow) > 1 && i < len(managersToShow)-1 {
 			fmt.Println()
 		}
 	}
-	
+
 	return nil
 }

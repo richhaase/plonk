@@ -29,7 +29,7 @@ func (a *AsdfManager) Install(packageName string) error {
 	if len(parts) < 2 {
 		return a.runner.RunCommand("install", packageName)
 	}
-	
+
 	// asdf install <tool> <version>
 	args := append([]string{"install"}, parts...)
 	return a.runner.RunCommand(args...)
@@ -41,14 +41,14 @@ func (a *AsdfManager) ListInstalled() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	output = strings.TrimSpace(output)
 	if output == "" {
 		return []string{}, nil
 	}
-	
+
 	plugins := strings.Split(output, "\n")
-	
+
 	// Clean up any empty strings
 	result := make([]string, 0, len(plugins))
 	for _, plugin := range plugins {
@@ -56,7 +56,7 @@ func (a *AsdfManager) ListInstalled() ([]string, error) {
 			result = append(result, trimmed)
 		}
 	}
-	
+
 	return result, nil
 }
 
@@ -67,12 +67,12 @@ func (a *AsdfManager) Update(toolName string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	latestVersion := strings.TrimSpace(output)
 	if latestVersion == "" {
 		return nil // No version available
 	}
-	
+
 	// Install the latest version
 	return a.runner.RunCommand("install", toolName, latestVersion)
 }
@@ -89,14 +89,14 @@ func (a *AsdfManager) GetInstalledVersions(toolName string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	output = strings.TrimSpace(output)
 	if output == "" {
 		return []string{}, nil
 	}
-	
+
 	lines := strings.Split(output, "\n")
-	
+
 	// Parse ASDF output format: "  18.0.0\n* 20.0.0\n  21.0.0"
 	// The * indicates the current version
 	result := make([]string, 0, len(lines))
@@ -105,20 +105,20 @@ func (a *AsdfManager) GetInstalledVersions(toolName string) ([]string, error) {
 		if line == "" {
 			continue
 		}
-		
+
 		// Remove the * marker for current version (can be "* " or just "*")
 		if strings.HasPrefix(line, "* ") {
 			line = strings.TrimPrefix(line, "* ")
 		} else if strings.HasPrefix(line, "*") {
 			line = strings.TrimPrefix(line, "*")
 		}
-		
+
 		version := strings.TrimSpace(line)
 		if version != "" {
 			result = append(result, version)
 		}
 	}
-	
+
 	return result, nil
 }
 
@@ -128,7 +128,7 @@ func (a *AsdfManager) IsVersionInstalled(toolName, version string) bool {
 	if err != nil {
 		return false
 	}
-	
+
 	for _, installedVersion := range versions {
 		if installedVersion == version {
 			return true

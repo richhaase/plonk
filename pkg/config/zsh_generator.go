@@ -26,14 +26,14 @@ func GenerateZshrc(config *ZSHConfig) string {
 	// Add environment variables
 	if len(config.EnvVars) > 0 {
 		lines = append(lines, "# Environment Variables")
-		
+
 		// Sort env vars for consistent output
 		var envKeys []string
 		for key := range config.EnvVars {
 			envKeys = append(envKeys, key)
 		}
 		sort.Strings(envKeys)
-		
+
 		for _, key := range envKeys {
 			value := config.EnvVars[key]
 			lines = append(lines, fmt.Sprintf("export %s='%s'", key, value))
@@ -44,14 +44,14 @@ func GenerateZshrc(config *ZSHConfig) string {
 	// Add aliases
 	if len(config.Aliases) > 0 {
 		lines = append(lines, "# Aliases")
-		
+
 		// Sort aliases for consistent output
 		var aliasKeys []string
 		for key := range config.Aliases {
 			aliasKeys = append(aliasKeys, key)
 		}
 		sort.Strings(aliasKeys)
-		
+
 		for _, key := range aliasKeys {
 			value := config.Aliases[key]
 			lines = append(lines, fmt.Sprintf("alias %s='%s'", key, value))
@@ -71,14 +71,14 @@ func GenerateZshrc(config *ZSHConfig) string {
 	// Add functions
 	if len(config.Functions) > 0 {
 		lines = append(lines, "# Functions")
-		
+
 		// Sort function names for consistent output
 		var funcKeys []string
 		for key := range config.Functions {
 			funcKeys = append(funcKeys, key)
 		}
 		sort.Strings(funcKeys)
-		
+
 		for _, name := range funcKeys {
 			body := config.Functions[name]
 			lines = append(lines, fmt.Sprintf("function %s() {", name))
@@ -136,7 +136,7 @@ func GenerateZshenv(config *ZSHConfig) string {
 			envKeys = append(envKeys, key)
 		}
 		sort.Strings(envKeys)
-		
+
 		for _, key := range envKeys {
 			value := config.EnvVars[key]
 			lines = append(lines, fmt.Sprintf("export %s='%s'", key, value))

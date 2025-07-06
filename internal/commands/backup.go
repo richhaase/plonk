@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 	"time"
-	
+
 	"plonk/internal/directories"
 	"plonk/pkg/config"
 )
@@ -21,22 +21,22 @@ func BackupExistingFile(filePath string) (string, error) {
 	} else if err != nil {
 		return "", fmt.Errorf("failed to check file status: %w", err)
 	}
-	
+
 	// Generate backup path with timestamp
 	timestamp := time.Now().Format("20060102-150405")
 	backupPath := fmt.Sprintf("%s.backup.%s", filePath, timestamp)
-	
+
 	// Read original file
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read original file: %w", err)
 	}
-	
+
 	// Write backup file
 	if err := os.WriteFile(backupPath, data, 0644); err != nil {
 		return "", fmt.Errorf("failed to write backup file: %w", err)
 	}
-	
+
 	return backupPath, nil
 }
 
@@ -48,23 +48,23 @@ func BackupConfigurationFiles(filePaths []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
-	
+
 	// Get backup configuration with defaults
 	backupDir := getBackupDirectory(cfg)
 	keepCount := getKeepCount(cfg)
-	
+
 	// Ensure backup directory exists
 	if err := os.MkdirAll(backupDir, 0755); err != nil {
 		return fmt.Errorf("failed to create backup directory: %w", err)
 	}
-	
+
 	// Backup each file
 	for _, filePath := range filePaths {
 		if err := backupFileToDirectory(filePath, backupDir, keepCount); err != nil {
 			return fmt.Errorf("failed to backup %s: %w", filePath, err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -73,13 +73,13 @@ func getBackupDirectory(cfg *config.Config) string {
 	if cfg.Backup.Location != "" {
 		return directories.Default.ExpandHomeDir(cfg.Backup.Location)
 	}
-	
+
 	// Default to ~/.config/plonk/backups
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return ".plonk/backups" // fallback
 	}
-	
+
 	return filepath.Join(homeDir, ".config", "plonk", "backups")
 }
 
@@ -88,7 +88,7 @@ func getKeepCount(cfg *config.Config) int {
 	if cfg.Backup.KeepCount > 0 {
 		return cfg.Backup.KeepCount
 	}
-	
+
 	return 5 // default keep count
 }
 
@@ -100,35 +100,35 @@ func backupFileToDirectory(filePath, backupDir string, keepCount int) error {
 	} else if err != nil {
 		return fmt.Errorf("failed to check file status: %w", err)
 	}
-	
+
 	// Get base filename without path
 	baseFilename := filepath.Base(filePath)
-	
+
 	// Remove leading dot for backup filename (e.g., .zshrc -> zshrc)
 	if strings.HasPrefix(baseFilename, ".") {
 		baseFilename = baseFilename[1:]
 	}
-	
+
 	// Generate backup filename with timestamp
 	timestamp := time.Now().Format("20060102-150405")
 	backupFilename := fmt.Sprintf("%s.backup.%s", baseFilename, timestamp)
 	backupPath := filepath.Join(backupDir, backupFilename)
-	
+
 	// Read and write backup
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to read original file: %w", err)
 	}
-	
+
 	if err := os.WriteFile(backupPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write backup file: %w", err)
 	}
-	
+
 	// Clean up old backups
 	if err := cleanupOldBackups(backupDir, baseFilename, keepCount); err != nil {
 		return fmt.Errorf("failed to cleanup old backups: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -140,10 +140,10 @@ func cleanupOldBackups(backupDir, baseFilename string, keepCount int) error {
 	if err != nil {
 		return fmt.Errorf("failed to find backup files: %w", err)
 	}
-	
+
 	// Sort by filename (which includes timestamp) to get chronological order
 	sort.Strings(backupFiles)
-	
+
 	// Remove old backups if we exceed keep count
 	if len(backupFiles) > keepCount {
 		filesToRemove := backupFiles[:len(backupFiles)-keepCount]
@@ -153,6 +153,6 @@ func cleanupOldBackups(backupDir, baseFilename string, keepCount int) error {
 			}
 		}
 	}
-	
+
 	return nil
 }

@@ -11,14 +11,14 @@ import (
 
 // Config represents the configuration structure
 type Config struct {
-	Settings  Settings       `yaml:"settings" validate:"required"`
-	Backup    BackupConfig   `yaml:"backup,omitempty"`
-	Dotfiles  []string       `yaml:"dotfiles,omitempty" validate:"dive,file_path"`
-	Homebrew  HomebrewConfig `yaml:"homebrew,omitempty"`
-	ASDF      []ASDFTool     `yaml:"asdf,omitempty" validate:"dive"`
-	NPM       []NPMPackage   `yaml:"npm,omitempty" validate:"dive"`
-	ZSH       ZSHConfig      `yaml:"zsh,omitempty"`
-	Git       GitConfig      `yaml:"git,omitempty"`
+	Settings Settings       `yaml:"settings" validate:"required"`
+	Backup   BackupConfig   `yaml:"backup,omitempty"`
+	Dotfiles []string       `yaml:"dotfiles,omitempty" validate:"dive,file_path"`
+	Homebrew HomebrewConfig `yaml:"homebrew,omitempty"`
+	ASDF     []ASDFTool     `yaml:"asdf,omitempty" validate:"dive"`
+	NPM      []NPMPackage   `yaml:"npm,omitempty" validate:"dive"`
+	ZSH      ZSHConfig      `yaml:"zsh,omitempty"`
+	Git      GitConfig      `yaml:"git,omitempty"`
 }
 
 // Settings contains global configuration settings
@@ -60,15 +60,15 @@ type NPMPackage struct {
 
 // ZSHConfig represents ZSH shell configuration
 type ZSHConfig struct {
-	EnvVars         map[string]string `yaml:"env_vars,omitempty"`
-	ShellOptions    []string          `yaml:"shell_options,omitempty"`
-	Inits           []string          `yaml:"inits,omitempty"`
-	Completions     []string          `yaml:"completions,omitempty"`
-	Plugins         []string          `yaml:"plugins,omitempty"`
-	Aliases         map[string]string `yaml:"aliases,omitempty"`
-	Functions       map[string]string `yaml:"functions,omitempty"`
-	SourceBefore    []string          `yaml:"source_before,omitempty"`
-	SourceAfter     []string          `yaml:"source_after,omitempty"`
+	EnvVars      map[string]string `yaml:"env_vars,omitempty"`
+	ShellOptions []string          `yaml:"shell_options,omitempty"`
+	Inits        []string          `yaml:"inits,omitempty"`
+	Completions  []string          `yaml:"completions,omitempty"`
+	Plugins      []string          `yaml:"plugins,omitempty"`
+	Aliases      map[string]string `yaml:"aliases,omitempty"`
+	Functions    map[string]string `yaml:"functions,omitempty"`
+	SourceBefore []string          `yaml:"source_before,omitempty"`
+	SourceAfter  []string          `yaml:"source_after,omitempty"`
 }
 
 // GitConfig represents Git configuration
@@ -99,7 +99,7 @@ func (h *HomebrewPackage) UnmarshalYAML(node *yaml.Node) error {
 		h.Name = node.Value
 		return nil
 	}
-	
+
 	// Complex object case
 	type homebrewPackageAlias HomebrewPackage
 	var pkg homebrewPackageAlias
@@ -117,7 +117,7 @@ func (n *NPMPackage) UnmarshalYAML(node *yaml.Node) error {
 		n.Name = node.Value
 		return nil
 	}
-	
+
 	// Complex object case
 	type npmPackageAlias NPMPackage
 	var pkg npmPackageAlias
@@ -144,7 +144,7 @@ func LoadConfig(configDir string) (*Config, error) {
 	// Load main config file - check both main directory and repo subdirectory
 	mainConfigPath := filepath.Join(configDir, "plonk.yaml")
 	repoConfigPath := filepath.Join(configDir, "repo", "plonk.yaml")
-	
+
 	// Try main directory first
 	if err := loadConfigFile(mainConfigPath, config); err != nil {
 		if os.IsNotExist(err) {
@@ -318,7 +318,6 @@ func mergeGitConfig(target, source *GitConfig) {
 	}
 }
 
-
 // GetDotfileTargets returns dotfiles with their target paths
 func (c *Config) GetDotfileTargets() map[string]string {
 	result := make(map[string]string)
@@ -330,20 +329,21 @@ func (c *Config) GetDotfileTargets() map[string]string {
 
 // sourceToTarget converts a source path to target path using our convention
 // Examples:
-//   config/nvim/ -> ~/.config/nvim/
-//   zshrc -> ~/.zshrc
-//   dot_gitconfig -> ~/.gitconfig
+//
+//	config/nvim/ -> ~/.config/nvim/
+//	zshrc -> ~/.zshrc
+//	dot_gitconfig -> ~/.gitconfig
 func sourceToTarget(source string) string {
 	// Handle dot_ prefix convention
 	if len(source) > 4 && source[:4] == "dot_" {
 		return "~/." + source[4:]
 	}
-	
+
 	// Handle config/ directory
 	if len(source) > 7 && source[:7] == "config/" {
 		return "~/." + source
 	}
-	
+
 	// Default: add ~/. prefix
 	return "~/." + source
 }

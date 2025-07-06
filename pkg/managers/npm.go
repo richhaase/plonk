@@ -50,14 +50,14 @@ func (n *NpmManager) ListInstalled() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	output = strings.TrimSpace(output)
 	if output == "" {
 		return []string{}, nil
 	}
-	
+
 	lines := strings.Split(output, "\n")
-	
+
 	// Parse NPM output format: "/usr/local/lib/node_modules/package-name"
 	result := make([]string, 0, len(lines))
 	for _, line := range lines {
@@ -65,22 +65,22 @@ func (n *NpmManager) ListInstalled() ([]string, error) {
 		if line == "" {
 			continue
 		}
-		
+
 		// Extract package name from path
 		// Handle scoped packages like /usr/local/lib/node_modules/@vue/cli
 		packageName := filepath.Base(line)
-		
+
 		// Check if this is a scoped package (starts with @)
 		parentDir := filepath.Base(filepath.Dir(line))
 		if strings.HasPrefix(parentDir, "@") {
 			packageName = parentDir + "/" + packageName
 		}
-		
+
 		// Skip npm itself and empty names
 		if packageName != "npm" && packageName != "" && packageName != "." {
 			result = append(result, packageName)
 		}
 	}
-	
+
 	return result, nil
 }

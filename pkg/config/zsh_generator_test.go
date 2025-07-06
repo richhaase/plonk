@@ -153,7 +153,7 @@ func TestGenerateZshrc_WithSourceBeforeAfter(t *testing.T) {
 	// Should source before files at the beginning (after header)
 	lines := strings.Split(result, "\n")
 	var beforeIndex, aliasIndex, afterIndex int
-	
+
 	for i, line := range lines {
 		if strings.Contains(line, "source ~/.config/zsh/custom-before.zsh") {
 			beforeIndex = i
@@ -170,11 +170,11 @@ func TestGenerateZshrc_WithSourceBeforeAfter(t *testing.T) {
 	if beforeIndex == 0 || aliasIndex == 0 || afterIndex == 0 {
 		t.Error("Could not find expected source statements or alias")
 	}
-	
+
 	if beforeIndex >= aliasIndex {
 		t.Error("SourceBefore should come before main config")
 	}
-	
+
 	if afterIndex <= aliasIndex {
 		t.Error("SourceAfter should come after main config")
 	}

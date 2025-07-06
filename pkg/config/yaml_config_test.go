@@ -119,7 +119,7 @@ npm:
 
 func TestLoadConfig_NonExistentFile(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	_, err := LoadConfig(tempDir)
 	if err == nil {
 		t.Error("Expected error for non-existent config file")
@@ -177,11 +177,11 @@ func TestGetDotfileTargets(t *testing.T) {
 	}
 
 	targets := config.GetDotfileTargets()
-	
+
 	expected := map[string]string{
-		"zshrc":          "~/.zshrc",
-		"config/nvim/":   "~/.config/nvim/",
-		"dot_gitconfig":  "~/.gitconfig",
+		"zshrc":         "~/.zshrc",
+		"config/nvim/":  "~/.config/nvim/",
+		"dot_gitconfig": "~/.gitconfig",
 	}
 
 	for source, expectedTarget := range expected {
@@ -406,7 +406,7 @@ zsh:
 	if len(config.ZSH.Inits) != 0 {
 		t.Errorf("Expected no inits by default, got %d", len(config.ZSH.Inits))
 	}
-	
+
 	if len(config.ZSH.Completions) != 0 {
 		t.Errorf("Expected no completions by default, got %d", len(config.ZSH.Completions))
 	}

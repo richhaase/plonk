@@ -33,14 +33,14 @@ func (h *HomebrewManager) ListInstalled() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	output = strings.TrimSpace(output)
 	if output == "" {
 		return []string{}, nil
 	}
-	
+
 	packages := strings.Split(output, "\n")
-	
+
 	// Clean up any empty strings
 	result := make([]string, 0, len(packages))
 	for _, pkg := range packages {
@@ -48,7 +48,7 @@ func (h *HomebrewManager) ListInstalled() ([]string, error) {
 			result = append(result, trimmed)
 		}
 	}
-	
+
 	return result, nil
 }
 

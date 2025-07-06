@@ -52,13 +52,13 @@ func TestPlonkDir_CustomEnvironment(t *testing.T) {
 
 func TestPlonkDir_Caching(t *testing.T) {
 	manager := NewManager()
-	
+
 	// First call
 	plonkDir1 := manager.PlonkDir()
-	
+
 	// Second call should return the same cached value
 	plonkDir2 := manager.PlonkDir()
-	
+
 	if plonkDir1 != plonkDir2 {
 		t.Errorf("PlonkDir should return consistent cached values: %s != %s", plonkDir1, plonkDir2)
 	}
@@ -66,7 +66,7 @@ func TestPlonkDir_Caching(t *testing.T) {
 
 func TestRepoDir_CreatesDirectory(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	originalPlonkDir := os.Getenv("PLONK_DIR")
 	defer os.Setenv("PLONK_DIR", originalPlonkDir)
 	os.Setenv("PLONK_DIR", tempDir)
@@ -87,7 +87,7 @@ func TestRepoDir_CreatesDirectory(t *testing.T) {
 
 func TestBackupsDir_Default(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	originalPlonkDir := os.Getenv("PLONK_DIR")
 	defer os.Setenv("PLONK_DIR", originalPlonkDir)
 	os.Setenv("PLONK_DIR", tempDir)
@@ -109,7 +109,7 @@ func TestBackupsDir_Default(t *testing.T) {
 func TestBackupsDir_CustomConfigLocation(t *testing.T) {
 	tempDir := t.TempDir()
 	customBackupDir := filepath.Join(tempDir, "custom-backups")
-	
+
 	originalPlonkDir := os.Getenv("PLONK_DIR")
 	defer os.Setenv("PLONK_DIR", originalPlonkDir)
 	os.Setenv("PLONK_DIR", tempDir)
@@ -141,7 +141,7 @@ settings:
 
 func TestExpandHomeDir_NoTilde(t *testing.T) {
 	manager := NewManager()
-	
+
 	tests := []struct {
 		input    string
 		expected string
@@ -161,7 +161,7 @@ func TestExpandHomeDir_NoTilde(t *testing.T) {
 
 func TestExpandHomeDir_WithTilde(t *testing.T) {
 	manager := NewManager()
-	
+
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		t.Fatalf("Failed to get user home directory: %v", err)
@@ -187,42 +187,42 @@ func TestExpandHomeDir_WithTilde(t *testing.T) {
 
 func TestReset_ClearsCachedPaths(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	originalPlonkDir := os.Getenv("PLONK_DIR")
 	defer os.Setenv("PLONK_DIR", originalPlonkDir)
 	os.Setenv("PLONK_DIR", tempDir)
 
 	manager := NewManager()
-	
+
 	// Cache some paths
 	plonkDir1 := manager.PlonkDir()
 	repoDir1 := manager.RepoDir()
-	
+
 	// Change environment
 	newTempDir := t.TempDir()
 	os.Setenv("PLONK_DIR", newTempDir)
-	
+
 	// Without reset, should return cached values
 	plonkDir2 := manager.PlonkDir()
 	if plonkDir2 != plonkDir1 {
 		t.Errorf("Without reset, should return cached PlonkDir: %s != %s", plonkDir2, plonkDir1)
 	}
-	
+
 	// After reset, should respect new environment
 	manager.Reset()
 	plonkDir3 := manager.PlonkDir()
 	repoDir3 := manager.RepoDir()
-	
+
 	if plonkDir3 == plonkDir1 {
 		t.Errorf("After reset, PlonkDir should reflect new environment")
 	}
 	if repoDir3 == repoDir1 {
 		t.Errorf("After reset, RepoDir should reflect new environment")
 	}
-	
+
 	expectedPlonkDir := newTempDir
 	expectedRepoDir := filepath.Join(newTempDir, "repo")
-	
+
 	if plonkDir3 != expectedPlonkDir {
 		t.Errorf("Expected PlonkDir to be %s, got %s", expectedPlonkDir, plonkDir3)
 	}
@@ -233,7 +233,7 @@ func TestReset_ClearsCachedPaths(t *testing.T) {
 
 func TestEnsureStructure_NewInstallation(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	originalPlonkDir := os.Getenv("PLONK_DIR")
 	defer os.Setenv("PLONK_DIR", originalPlonkDir)
 	os.Setenv("PLONK_DIR", tempDir)
@@ -258,7 +258,7 @@ func TestEnsureStructure_NewInstallation(t *testing.T) {
 
 func TestEnsureStructure_MigrationNeeded(t *testing.T) {
 	tempDir := t.TempDir()
-	
+
 	originalPlonkDir := os.Getenv("PLONK_DIR")
 	defer os.Setenv("PLONK_DIR", originalPlonkDir)
 	os.Setenv("PLONK_DIR", tempDir)

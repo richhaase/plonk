@@ -39,11 +39,11 @@ func NewCommandRunner(executor CommandExecutor, commandName string) *CommandRunn
 // RunCommandWithOutput executes a command and returns output + error
 func (c *CommandRunner) RunCommandWithOutput(args ...string) (string, error) {
 	cmd := c.executor.Execute(c.commandName, args...)
-	
+
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &out
-	
+
 	err := cmd.Run()
 	return out.String(), err
 }

@@ -69,10 +69,10 @@ func TestErrorHandling_StandardErrorMessages(t *testing.T) {
 
 func TestErrorHandling_ArgumentValidation(t *testing.T) {
 	tests := []struct {
-		name         string
-		args         []string
-		validator    func([]string) error
-		expectedErr  string
+		name        string
+		args        []string
+		validator   func([]string) error
+		expectedErr string
 	}{
 		{
 			name: "no args command with args",
@@ -163,7 +163,7 @@ func TestErrorHandling_ArgumentValidationSuccess(t *testing.T) {
 
 func TestErrorHandling_ErrorWrappingConsistency(t *testing.T) {
 	originalErr := errors.New("original error")
-	
+
 	tests := []struct {
 		name        string
 		wrapFunc    func(error) error
@@ -188,13 +188,13 @@ func TestErrorHandling_ErrorWrappingConsistency(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			wrappedErr := tt.wrapFunc(originalErr)
-			
+
 			if tt.expectsWrap {
 				// Verify the error is properly wrapped
 				if !errors.Is(wrappedErr, originalErr) {
 					t.Error("Error should be properly wrapped with errors.Is compatibility")
 				}
-				
+
 				// Verify error chain can be unwrapped
 				if errors.Unwrap(wrappedErr) == nil {
 					t.Error("Error should be unwrappable")

@@ -41,16 +41,16 @@ func runRepo(args []string) error {
 	if err := ValidateExactArgs("repo", 1, args); err != nil {
 		return err
 	}
-	
+
 	repoURL := args[0]
-	
+
 	// Ensure directory structure exists and handle migration if needed
 	if err := directories.Default.EnsureStructure(); err != nil {
 		return fmt.Errorf("failed to setup directory structure: %w", err)
 	}
-	
+
 	repoDir := directories.Default.RepoDir()
-	
+
 	// Step 1: Clone or pull repository
 	fmt.Println("Step 1: Setting up repository...")
 	if gitClient.IsRepo(repoDir) {
@@ -68,19 +68,19 @@ func runRepo(args []string) error {
 		}
 		fmt.Printf("Successfully cloned %s to %s\n", repoURL, repoDir)
 	}
-	
+
 	// Step 2: Install packages
 	fmt.Println("\nStep 2: Installing packages...")
 	if err := runInstall([]string{}); err != nil {
 		return fmt.Errorf("failed to install packages: %w", err)
 	}
-	
+
 	// Step 3: Apply configurations (only global dotfiles, as install already applied package configs)
 	fmt.Println("\nStep 3: Applying remaining configurations...")
 	if err := runApply([]string{}); err != nil {
 		return fmt.Errorf("failed to apply configurations: %w", err)
 	}
-	
+
 	fmt.Printf("\n✅ Repository setup complete! Your environment is ready.\n")
 	return nil
 }

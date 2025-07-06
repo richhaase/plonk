@@ -33,24 +33,24 @@ func (g *RealGit) CloneBranch(repoURL, targetDir, branch string) error {
 	if err := os.MkdirAll(parentDir, 0755); err != nil {
 		return fmt.Errorf("failed to create parent directory: %w", err)
 	}
-	
+
 	// Setup clone options
 	cloneOptions := &git.CloneOptions{
 		URL: repoURL,
 	}
-	
+
 	// Add branch reference if specified
 	if branch != "" {
 		cloneOptions.ReferenceName = plumbing.ReferenceName("refs/heads/" + branch)
 		cloneOptions.SingleBranch = true
 	}
-	
+
 	// Clone the repository
 	_, err := git.PlainClone(targetDir, false, cloneOptions)
 	if err != nil {
 		return fmt.Errorf("failed to clone repository: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -60,19 +60,19 @@ func (g *RealGit) Pull(repoDir string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open repository: %w", err)
 	}
-	
+
 	// Get the working tree
 	worktree, err := repo.Worktree()
 	if err != nil {
 		return fmt.Errorf("failed to get worktree: %w", err)
 	}
-	
+
 	// Pull updates
 	err = worktree.Pull(&git.PullOptions{})
 	if err != nil && err != git.NoErrAlreadyUpToDate {
 		return fmt.Errorf("failed to pull updates: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -83,7 +83,6 @@ func (g *RealGit) IsRepo(dir string) bool {
 
 // Global git instance (can be mocked for testing)
 var gitClient GitInterface = &RealGit{}
-
 
 var cloneCmd = &cobra.Command{
 	Use:   "clone <repository>",
@@ -134,28 +133,28 @@ func runCloneWithBranch(args []string, flagBranch string) error {
 	if err := ValidateExactArgs("clone", 1, args); err != nil {
 		return err
 	}
-	
+
 	// Ensure directory structure exists
 	if err := directories.Default.EnsureStructure(); err != nil {
 		return fmt.Errorf("failed to setup directory structure: %w", err)
 	}
-	
+
 	repoDir := directories.Default.RepoDir()
-	
+
 	// Check if target directory already exists and has content
 	if entries, err := os.ReadDir(repoDir); err == nil && len(entries) > 0 {
 		return fmt.Errorf("target directory %s already contains files, use 'plonk pull' to update", repoDir)
 	}
-	
+
 	// Parse URL for branch information
 	repoURL, urlBranch := parseRepoURL(args[0])
-	
+
 	// Flag takes precedence over URL branch
 	branch := flagBranch
 	if branch == "" {
 		branch = urlBranch
 	}
-	
+
 	// Use appropriate clone method
 	var err error
 	if branch != "" {
@@ -163,11 +162,11 @@ func runCloneWithBranch(args []string, flagBranch string) error {
 	} else {
 		err = gitClient.Clone(repoURL, repoDir)
 	}
-	
+
 	if err != nil {
 		return err
 	}
-	
+
 	if branch != "" {
 		fmt.Printf("Successfully cloned %s (branch: %s) to %s\n", repoURL, branch, repoDir)
 	} else {

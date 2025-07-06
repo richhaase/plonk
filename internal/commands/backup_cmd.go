@@ -39,13 +39,13 @@ func backupCmdRun(cmd *cobra.Command, args []string) error {
 // backupFilesForApply backs up all files that would be overwritten by apply
 func backupFilesForApply() error {
 	plonkDir := directories.Default.PlonkDir()
-	
+
 	// Load configuration
 	cfg, err := config.LoadConfig(plonkDir)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
-	
+
 	// Use the same logic as apply --backup to determine which files to backup
 	return createBackupsBeforeApply(cfg, []string{})
 }

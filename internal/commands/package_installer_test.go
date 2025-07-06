@@ -2,7 +2,7 @@ package commands
 
 import (
 	"testing"
-	
+
 	"plonk/pkg/config"
 )
 
@@ -34,21 +34,21 @@ func TestPackageInstaller_ExtractInstalledPackages(t *testing.T) {
 			expected: []string{"git"},
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := extractInstalledPackages(tt.input)
-			
+
 			if len(result) != len(tt.expected) {
 				t.Errorf("Expected %d packages, got %d", len(tt.expected), len(result))
 			}
-			
+
 			// Check all expected packages are present
 			resultMap := make(map[string]bool)
 			for _, pkg := range result {
 				resultMap[pkg] = true
 			}
-			
+
 			for _, expected := range tt.expected {
 				if !resultMap[expected] {
 					t.Errorf("Expected package %q not found in result", expected)
@@ -60,10 +60,10 @@ func TestPackageInstaller_ExtractInstalledPackages(t *testing.T) {
 
 func TestPackageInstaller_ShouldInstallPackage(t *testing.T) {
 	tests := []struct {
-		name         string
-		packageName  string
-		isInstalled  bool
-		expected     bool
+		name        string
+		packageName string
+		isInstalled bool
+		expected    bool
 	}{
 		{
 			name:        "should install when not installed",
@@ -78,7 +78,7 @@ func TestPackageInstaller_ShouldInstallPackage(t *testing.T) {
 			expected:    false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := shouldInstallPackage(tt.packageName, tt.isInstalled)
@@ -91,9 +91,9 @@ func TestPackageInstaller_ShouldInstallPackage(t *testing.T) {
 
 func TestPackageInstaller_GetPackageDisplayName(t *testing.T) {
 	tests := []struct {
-		name            string
-		pkg             interface{}
-		expected        string
+		name     string
+		pkg      interface{}
+		expected string
 	}{
 		{
 			name:     "homebrew package",
@@ -116,7 +116,7 @@ func TestPackageInstaller_GetPackageDisplayName(t *testing.T) {
 			expected: "typescript",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := getPackageDisplayName(tt.pkg)
@@ -159,7 +159,7 @@ func TestPackageInstaller_GetPackageConfig(t *testing.T) {
 			expected: "",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := getPackageConfig(tt.pkg)
@@ -197,7 +197,7 @@ func TestPackageInstaller_GetPackageName(t *testing.T) {
 			expected: "",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := getPackageName(tt.pkg)

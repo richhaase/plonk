@@ -9,7 +9,7 @@ func TestSetupCommand_Success(t *testing.T) {
 	// 1. Homebrew gets installed if not present
 	// 2. ASDF gets installed via Homebrew if not present
 	// 3. NPM gets installed via Homebrew if not present
-	
+
 	// For now, we'll test the basic command structure
 	err := runSetup([]string{})
 	// In a real test environment, this would succeed

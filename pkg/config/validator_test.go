@@ -82,9 +82,9 @@ git:
 
 func TestValidateYAML_InvalidSyntax(t *testing.T) {
 	tests := []struct {
-		name        string
-		yaml        string
-		wantErr     string
+		name    string
+		yaml    string
+		wantErr string
 	}{
 		{
 			name: "invalid indentation",

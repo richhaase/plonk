@@ -14,10 +14,10 @@ import (
 
 // DriftReport represents configuration drift between expected and actual state
 type DriftReport struct {
-	MissingFiles     []string
-	ModifiedFiles    []string
-	MissingPackages  []string
-	ExtraPackages    []string
+	MissingFiles    []string
+	ModifiedFiles   []string
+	MissingPackages []string
+	ExtraPackages   []string
 }
 
 // HasDrift returns true if any drift is detected
@@ -31,47 +31,47 @@ func (d *DriftReport) HasDrift() bool {
 // detectConfigDrift compares current system state with plonk configuration
 func detectConfigDrift() (*DriftReport, error) {
 	plonkDir := directories.Default.PlonkDir()
-	
+
 	// Load configuration
 	config, err := config.LoadConfig(plonkDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
-	
+
 	drift := &DriftReport{
 		MissingFiles:    []string{},
 		ModifiedFiles:   []string{},
 		MissingPackages: []string{},
 		ExtraPackages:   []string{},
 	}
-	
+
 	// Check dotfile drift
 	if err := checkDotfileDrift(plonkDir, config, drift); err != nil {
 		return nil, fmt.Errorf("failed to check dotfile drift: %w", err)
 	}
-	
+
 	// Check package drift
 	if err := checkPackageDrift(config, drift); err != nil {
 		return nil, fmt.Errorf("failed to check package drift: %w", err)
 	}
-	
+
 	return drift, nil
 }
 
 // checkDotfileDrift compares dotfiles between source and target locations
 func checkDotfileDrift(plonkDir string, config *config.Config, drift *DriftReport) error {
 	dotfileTargets := config.GetDotfileTargets()
-	
+
 	for source, target := range dotfileTargets {
 		sourcePath := filepath.Join(plonkDir, source)
 		targetPath := directories.Default.ExpandHomeDir(target)
-		
+
 		// Check if target file exists
 		if _, err := os.Stat(targetPath); os.IsNotExist(err) {
 			drift.MissingFiles = append(drift.MissingFiles, target)
 			continue
 		}
-		
+
 		// Check if files are different
 		if different, err := filesAreDifferent(sourcePath, targetPath); err != nil {
 			return err
@@ -79,7 +79,7 @@ func checkDotfileDrift(plonkDir string, config *config.Config, drift *DriftRepor
 			drift.ModifiedFiles = append(drift.ModifiedFiles, target)
 		}
 	}
-	
+
 	// Check package configuration files
 	for _, pkg := range config.Homebrew.Brews {
 		if pkg.Config != "" {
@@ -88,7 +88,7 @@ func checkDotfileDrift(plonkDir string, config *config.Config, drift *DriftRepor
 			}
 		}
 	}
-	
+
 	for _, pkg := range config.Homebrew.Casks {
 		if pkg.Config != "" {
 			if err := checkPackageConfigDrift(plonkDir, pkg.Config, drift); err != nil {
@@ -96,7 +96,7 @@ func checkDotfileDrift(plonkDir string, config *config.Config, drift *DriftRepor
 			}
 		}
 	}
-	
+
 	for _, tool := range config.ASDF {
 		if tool.Config != "" {
 			if err := checkPackageConfigDrift(plonkDir, tool.Config, drift); err != nil {
@@ -104,7 +104,7 @@ func checkDotfileDrift(plonkDir string, config *config.Config, drift *DriftRepor
 			}
 		}
 	}
-	
+
 	for _, pkg := range config.NPM {
 		if pkg.Config != "" {
 			if err := checkPackageConfigDrift(plonkDir, pkg.Config, drift); err != nil {
@@ -112,7 +112,7 @@ func checkDotfileDrift(plonkDir string, config *config.Config, drift *DriftRepor
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -120,7 +120,7 @@ func checkDotfileDrift(plonkDir string, config *config.Config, drift *DriftRepor
 func checkPackageConfigDrift(plonkDir, configPath string, drift *DriftReport) error {
 	sourcePath := filepath.Join(plonkDir, configPath)
 	targetPath := directories.Default.ExpandHomeDir("~/." + configPath)
-	
+
 	// Check if source exists
 	sourceInfo, err := os.Stat(sourcePath)
 	if os.IsNotExist(err) {
@@ -129,13 +129,13 @@ func checkPackageConfigDrift(plonkDir, configPath string, drift *DriftReport) er
 	if err != nil {
 		return err
 	}
-	
+
 	// Check if target exists
 	if _, err := os.Stat(targetPath); os.IsNotExist(err) {
 		drift.MissingFiles = append(drift.MissingFiles, "~/."+configPath)
 		return nil
 	}
-	
+
 	// If source is a directory, check recursively
 	if sourceInfo.IsDir() {
 		return checkDirectoryDrift(sourcePath, targetPath, "~/."+configPath, drift)
@@ -147,7 +147,7 @@ func checkPackageConfigDrift(plonkDir, configPath string, drift *DriftReport) er
 			drift.ModifiedFiles = append(drift.ModifiedFiles, "~/."+configPath)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -157,17 +157,17 @@ func checkDirectoryDrift(sourceDir, targetDir, basePath string, drift *DriftRepo
 	if err != nil {
 		return err
 	}
-	
+
 	for _, entry := range entries {
 		sourceFile := filepath.Join(sourceDir, entry.Name())
 		targetFile := filepath.Join(targetDir, entry.Name())
 		relativePath := filepath.Join(basePath, entry.Name())
-		
+
 		if _, err := os.Stat(targetFile); os.IsNotExist(err) {
 			drift.MissingFiles = append(drift.MissingFiles, relativePath)
 			continue
 		}
-		
+
 		if entry.IsDir() {
 			if err := checkDirectoryDrift(sourceFile, targetFile, relativePath, drift); err != nil {
 				return err
@@ -180,14 +180,14 @@ func checkDirectoryDrift(sourceDir, targetDir, basePath string, drift *DriftRepo
 			}
 		}
 	}
-	
+
 	return nil
 }
 
 // checkPackageDrift compares installed packages with configuration
 func checkPackageDrift(config *config.Config, drift *DriftReport) error {
 	executor := &managers.RealCommandExecutor{}
-	
+
 	// Check Homebrew packages
 	if len(config.Homebrew.Brews) > 0 || len(config.Homebrew.Casks) > 0 {
 		homebrewMgr := managers.NewHomebrewManager(executor)
@@ -205,7 +205,7 @@ func checkPackageDrift(config *config.Config, drift *DriftReport) error {
 			}
 		}
 	}
-	
+
 	// Check ASDF tools
 	if len(config.ASDF) > 0 {
 		asdfMgr := managers.NewAsdfManager(executor)
@@ -220,7 +220,7 @@ func checkPackageDrift(config *config.Config, drift *DriftReport) error {
 			}
 		}
 	}
-	
+
 	// Check NPM packages
 	if len(config.NPM) > 0 {
 		npmMgr := managers.NewNpmManager(executor)
@@ -239,7 +239,7 @@ func checkPackageDrift(config *config.Config, drift *DriftReport) error {
 			}
 		}
 	}
-	
+
 	return nil
 }
 
@@ -249,25 +249,25 @@ func checkHomebrewDrift(mgr *managers.HomebrewManager, config *config.Config, dr
 	if err != nil {
 		return err
 	}
-	
+
 	installedMap := make(map[string]bool)
 	for _, pkg := range installedPackages {
 		installedMap[pkg] = true
 	}
-	
+
 	// Check for missing packages
 	for _, pkg := range config.Homebrew.Brews {
 		if !installedMap[pkg.Name] {
 			drift.MissingPackages = append(drift.MissingPackages, "homebrew/"+pkg.Name)
 		}
 	}
-	
+
 	for _, pkg := range config.Homebrew.Casks {
 		if !installedMap[pkg.Name] {
 			drift.MissingPackages = append(drift.MissingPackages, "homebrew-cask/"+pkg.Name)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -278,7 +278,7 @@ func checkASDFDrift(mgr *managers.AsdfManager, config *config.Config, drift *Dri
 			drift.MissingPackages = append(drift.MissingPackages, "asdf/"+tool.Name+"@"+tool.Version)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -288,24 +288,24 @@ func checkNPMDrift(mgr *managers.NpmManager, config *config.Config, drift *Drift
 	if err != nil {
 		return err
 	}
-	
+
 	installedMap := make(map[string]bool)
 	for _, pkg := range installedPackages {
 		installedMap[pkg] = true
 	}
-	
+
 	// Check for missing packages
 	for _, pkg := range config.NPM {
 		packageName := pkg.Name
 		if pkg.Package != "" {
 			packageName = pkg.Package
 		}
-		
+
 		if !installedMap[packageName] {
 			drift.MissingPackages = append(drift.MissingPackages, "npm/"+packageName)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -315,12 +315,12 @@ func filesAreDifferent(file1, file2 string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	
+
 	hash2, err := getFileHash(file2)
 	if err != nil {
 		return false, err
 	}
-	
+
 	return hash1 != hash2, nil
 }
 
@@ -331,12 +331,11 @@ func getFileHash(filePath string) (string, error) {
 		return "", err
 	}
 	defer file.Close()
-	
+
 	hasher := sha256.New()
 	if _, err := io.Copy(hasher, file); err != nil {
 		return "", err
 	}
-	
+
 	return fmt.Sprintf("%x", hasher.Sum(nil)), nil
 }
-

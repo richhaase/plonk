@@ -13,7 +13,7 @@ func TestGenerateGitconfig_BasicUserConfig(t *testing.T) {
 			"username": "richhaase",
 		},
 		Core: map[string]string{
-			"pager":       "delta",
+			"pager":        "delta",
 			"excludesfile": "~/.gitignore_global",
 		},
 	}
@@ -161,13 +161,13 @@ func TestGenerateGitconfig_WithAdvancedSettings(t *testing.T) {
 			"recurseSubmodules": "on-demand",
 		},
 		Status: map[string]string{
-			"submoduleSummary":  "true",
+			"submoduleSummary":   "true",
 			"showUntrackedFiles": "all",
-			"short":             "false",
+			"short":              "false",
 		},
 		Diff: map[string]string{
-			"submodule":   "log",
-			"colorMoved":  "zebra",
+			"submodule":  "log",
+			"colorMoved": "zebra",
 		},
 		Log: map[string]string{
 			"abbrevCommit": "true",
@@ -335,7 +335,7 @@ func TestGenerateGitconfig_SectionOrder(t *testing.T) {
 	if userIndex >= coreIndex {
 		t.Error("User section should come before core section")
 	}
-	
+
 	// Core should come before aliases
 	if coreIndex >= aliasIndex {
 		t.Error("Core section should come before alias section")

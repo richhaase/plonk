@@ -41,14 +41,14 @@ func GenerateGitconfig(config *GitConfig) string {
 	for _, section := range sections {
 		if len(section.values) > 0 {
 			lines = append(lines, fmt.Sprintf("[%s]", section.name))
-			
+
 			// Sort keys for consistent output
 			var keys []string
 			for key := range section.values {
 				keys = append(keys, key)
 			}
 			sort.Strings(keys)
-			
+
 			for _, key := range keys {
 				value := section.values[key]
 				lines = append(lines, fmt.Sprintf("\t%s = \"%s\"", key, value))
@@ -70,14 +70,14 @@ func GenerateGitconfig(config *GitConfig) string {
 			filterConfig := config.Filter[filterName]
 			if len(filterConfig) > 0 {
 				lines = append(lines, fmt.Sprintf("[filter \"%s\"]", filterName))
-				
+
 				// Sort filter keys for consistent output
 				var filterKeys []string
 				for key := range filterConfig {
 					filterKeys = append(filterKeys, key)
 				}
 				sort.Strings(filterKeys)
-				
+
 				for _, key := range filterKeys {
 					value := filterConfig[key]
 					lines = append(lines, fmt.Sprintf("\t%s = \"%s\"", key, value))

@@ -29,7 +29,7 @@ func rootCmdRun(cmd *cobra.Command, args []string) error {
 		// No arguments, show help
 		return cmd.Help()
 	}
-	
+
 	// Single argument should be a repository URL for convenience setup
 	return runRepo(args)
 }

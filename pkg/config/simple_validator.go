@@ -23,11 +23,11 @@ type ValidationResult struct {
 // NewSimpleValidator creates a new validator with custom validation functions
 func NewSimpleValidator() *SimpleValidator {
 	v := validator.New()
-	
+
 	// Register custom validators
 	v.RegisterValidation("package_name", validatePackageName)
 	v.RegisterValidation("file_path", validateFilePath)
-	
+
 	return &SimpleValidator{validator: v}
 }
 
@@ -38,23 +38,23 @@ func (v *SimpleValidator) ValidateConfig(config *Config) *ValidationResult {
 		Errors:   []string{},
 		Warnings: []string{},
 	}
-	
+
 	// Validate the struct
 	if err := v.validator.Struct(config); err != nil {
 		result.Valid = false
-		
+
 		// Convert validator errors to friendly messages
 		for _, err := range err.(validator.ValidationErrors) {
 			result.Errors = append(result.Errors, v.formatValidationError(err))
 		}
 	}
-	
+
 	// Add warnings for best practices
 	if config.Settings.DefaultManager == "npm" {
-		result.Warnings = append(result.Warnings, 
+		result.Warnings = append(result.Warnings,
 			"Using npm as default manager may be slower than homebrew for most packages")
 	}
-	
+
 	return result
 }
 
@@ -65,14 +65,14 @@ func (v *SimpleValidator) ValidateConfigFromYAML(content []byte) *ValidationResu
 		Errors:   []string{},
 		Warnings: []string{},
 	}
-	
+
 	// Step 1: Validate YAML syntax
 	if err := ValidateYAML(content); err != nil {
 		result.Valid = false
 		result.Errors = append(result.Errors, fmt.Sprintf("YAML syntax error: %s", err.Error()))
 		return result
 	}
-	
+
 	// Step 2: Parse into config struct
 	var config Config
 	if err := yaml.Unmarshal(content, &config); err != nil {
@@ -80,13 +80,13 @@ func (v *SimpleValidator) ValidateConfigFromYAML(content []byte) *ValidationResu
 		result.Errors = append(result.Errors, fmt.Sprintf("Failed to parse config: %s", err.Error()))
 		return result
 	}
-	
+
 	// Step 3: Validate the struct
 	structResult := v.ValidateConfig(&config)
 	result.Valid = structResult.Valid
 	result.Errors = append(result.Errors, structResult.Errors...)
 	result.Warnings = append(result.Warnings, structResult.Warnings...)
-	
+
 	return result
 }
 
@@ -95,7 +95,7 @@ func (v *SimpleValidator) formatValidationError(err validator.FieldError) string
 	field := err.Field()
 	tag := err.Tag()
 	value := err.Value()
-	
+
 	switch tag {
 	case "required":
 		return fmt.Sprintf("%s is required", field)
@@ -136,7 +136,7 @@ func (r *ValidationResult) GetSummary() string {
 	if r.Valid {
 		return "Configuration is valid"
 	}
-	
+
 	var parts []string
 	if len(r.Errors) > 0 {
 		parts = append(parts, fmt.Sprintf("%d errors", len(r.Errors)))
@@ -144,21 +144,21 @@ func (r *ValidationResult) GetSummary() string {
 	if len(r.Warnings) > 0 {
 		parts = append(parts, fmt.Sprintf("%d warnings", len(r.Warnings)))
 	}
-	
+
 	return fmt.Sprintf("Configuration has %s", strings.Join(parts, ", "))
 }
 
 // GetMessages returns all validation messages
 func (r *ValidationResult) GetMessages() []string {
 	var messages []string
-	
+
 	for _, err := range r.Errors {
 		messages = append(messages, fmt.Sprintf("ERROR: %s", err))
 	}
-	
+
 	for _, warning := range r.Warnings {
 		messages = append(messages, fmt.Sprintf("WARNING: %s", warning))
 	}
-	
+
 	return messages
 }

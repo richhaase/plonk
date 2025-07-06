@@ -45,7 +45,7 @@ func TestSimpleValidator_ValidateConfig_ValidConfigs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			validator := NewSimpleValidator()
 			result := validator.ValidateConfig(tt.config)
-			
+
 			if !result.IsValid() {
 				t.Errorf("Expected valid config, got errors: %v", result.Errors)
 			}
@@ -111,11 +111,11 @@ func TestSimpleValidator_ValidateConfig_InvalidConfigs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			validator := NewSimpleValidator()
 			result := validator.ValidateConfig(tt.config)
-			
+
 			if result.IsValid() {
 				t.Errorf("Expected validation error, but config was valid")
 			}
-			
+
 			found := false
 			for _, err := range result.Errors {
 				if strings.Contains(strings.ToLower(err), strings.ToLower(tt.expectError)) {
@@ -168,7 +168,7 @@ npm:
 		t.Run(tt.name, func(t *testing.T) {
 			validator := NewSimpleValidator()
 			result := validator.ValidateConfigFromYAML([]byte(tt.yaml))
-			
+
 			if !result.IsValid() {
 				t.Errorf("Expected valid YAML, got errors: %v", result.Errors)
 			}
@@ -210,11 +210,11 @@ homebrew:
 		t.Run(tt.name, func(t *testing.T) {
 			validator := NewSimpleValidator()
 			result := validator.ValidateConfigFromYAML([]byte(tt.yaml))
-			
+
 			if result.IsValid() {
 				t.Errorf("Expected validation error, but YAML was valid")
 			}
-			
+
 			found := false
 			for _, err := range result.Errors {
 				if strings.Contains(strings.ToLower(err), strings.ToLower(tt.expectError)) {
@@ -235,14 +235,14 @@ func TestSimpleValidator_Warnings(t *testing.T) {
 			DefaultManager: "npm", // Should trigger warning
 		},
 	}
-	
+
 	validator := NewSimpleValidator()
 	result := validator.ValidateConfig(config)
-	
+
 	if len(result.Warnings) == 0 {
 		t.Error("Expected warning about npm default manager")
 	}
-	
+
 	if !strings.Contains(result.Warnings[0], "npm as default manager may be slower") {
 		t.Errorf("Expected npm warning, got: %s", result.Warnings[0])
 	}
