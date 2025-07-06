@@ -430,6 +430,22 @@ npm:
     - Reduced code duplication while maintaining same functionality
     - All tests passing with comprehensive test coverage for new helpers
 
+39. **Standardize error handling patterns across commands (Task 52g)** - ✅ Completed
+    - Followed strict TDD workflow: Red-Green-Refactor-Commit-Update Memory
+    - **Standardized Error Wrapping Functions:**
+      - `WrapConfigError()` - consistent configuration loading error messages
+      - `WrapPackageManagerError()` - standardized package manager availability errors
+      - `WrapInstallError()` - uniform package installation error handling
+      - `WrapFileError()` - consistent file operation error messages
+    - **Standardized Argument Validation:**
+      - `ValidateNoArgs()` - commands that take no arguments
+      - `ValidateExactArgs()` - commands requiring specific argument count
+      - `ValidateMaxArgs()` - commands with maximum argument limits
+      - Proper singular/plural grammar handling in error messages
+    - **Refactored All Commands:** install, apply, setup, pull, repo, clone
+    - **Benefits:** Consistent error format, proper error chaining, improved debugging
+    - All tests passing with comprehensive error handling test coverage
+
 ### 🔄 Current Pending Tasks (Reconsidered by Value, Complexity, Dependencies)
 
 **Prioritization Strategy**: Balanced approach considering implementation simplicity, user value, dependencies, and project impact. Focus on quick wins that improve codebase quality and provide immediate user benefits.
@@ -442,8 +458,7 @@ npm:
 ### **Group A: Code Quality & Cleanup (Simple Infrastructure)**
 **Value**: 🟢 **High** | **Complexity**: 🟢 **Low** | **Dependencies**: 🟢 **None**
 
-52g. **Standardize error handling patterns across commands** - 🎯 **NEXT PRIORITY**
-52h. **Organize imports consistently across all files**
+52h. **Organize imports consistently across all files** - 🎯 **NEXT PRIORITY**
 52i. **Standardize function documentation**
 52j. **Convert remaining tests to table-driven format**
 
