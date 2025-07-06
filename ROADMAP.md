@@ -6,6 +6,7 @@ This document is an ideation and planning tool for developers and AI agents work
 
 Features and concepts being considered:
 
+### Core Features
 - **Environment snapshots** - Create/restore complete environment snapshots
 - **Cross-platform Windows support** - PowerShell profiles, Windows package managers
 - **Package manager extensions** - Mac App Store (mas), additional Linux package managers
@@ -13,6 +14,22 @@ Features and concepts being considered:
 - **Configuration templates** - Predefined setups for common development environments
 - **Multi-machine sync** - Synchronize configurations across multiple machines
 - **Plugin system** - Custom package manager support
+
+### Documentation Improvements
+- **CONFIG.md** - Comprehensive configuration reference with validation rules
+- **QUICKSTART.md** - 5-minute getting started guide
+- **TROUBLESHOOTING.md** - Common issues and solutions
+- **EXAMPLES.md** - Real-world configuration examples
+- **API.md** - If plonk becomes a library
+- **SECURITY.md** - Security policies and vulnerability reporting
+
+### Process Improvements
+- **Documentation testing** - Ensure examples actually work
+- **Auto-generated docs** - CLI help → markdown generation
+- **Documentation versioning** - Keep docs in sync with releases
+- **README enhancements** - Prerequisites, "Why Plonk?" section
+- **CONTRIBUTING.md updates** - Real repository URL, license details
+- **CLAUDE.md enhancements** - User interaction patterns, AI troubleshooting
 
 ## Planned
 
