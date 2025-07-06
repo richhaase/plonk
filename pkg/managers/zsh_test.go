@@ -7,25 +7,36 @@ import (
 	"testing"
 )
 
-func TestZSHManager_IsAvailable_Success(t *testing.T) {
-	mockExec := NewMockCommandExecutor()
-	successCmd := exec.Command("echo", "zsh 5.8 (x86_64-apple-darwin20.0)")
-	mockExec.SetCommand("zsh --version", successCmd)
-
-	zshMgr := NewZSHManager(mockExec)
-	if !zshMgr.IsAvailable() {
-		t.Error("Expected ZSH to be available")
+func TestZSHManager_IsAvailable(t *testing.T) {
+	tests := []struct {
+		name     string
+		command  *exec.Cmd
+		expected bool
+	}{
+		{
+			name:     "success when command succeeds",
+			command:  exec.Command("echo", "zsh 5.8 (x86_64-apple-darwin20.0)"),
+			expected: true,
+		},
+		{
+			name:     "failure when command fails",
+			command:  exec.Command("false"),
+			expected: false,
+		},
 	}
-}
 
-func TestZSHManager_IsAvailable_Failure(t *testing.T) {
-	mockExec := NewMockCommandExecutor()
-	failCmd := exec.Command("false")
-	mockExec.SetCommand("zsh --version", failCmd)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockExec := NewMockCommandExecutor()
+			mockExec.SetCommand("zsh --version", tt.command)
 
-	zshMgr := NewZSHManager(mockExec)
-	if zshMgr.IsAvailable() {
-		t.Error("Expected ZSH to be unavailable")
+			zshMgr := NewZSHManager(mockExec)
+			available := zshMgr.IsAvailable()
+
+			if available != tt.expected {
+				t.Errorf("IsAvailable() = %v, expected %v", available, tt.expected)
+			}
+		})
 	}
 }
 
@@ -221,42 +232,53 @@ func TestZSHManager_Update_AllPlugins(t *testing.T) {
 	}
 }
 
-func TestZSHManager_IsInstalled_True(t *testing.T) {
-	tempDir := t.TempDir()
-
-	// Create plugin directory
-	pluginDir := filepath.Join(tempDir, "zsh-syntax-highlighting")
-	err := os.MkdirAll(pluginDir, 0755)
-	if err != nil {
-		t.Fatalf("Failed to create plugin dir: %v", err)
+func TestZSHManager_IsInstalled(t *testing.T) {
+	tests := []struct {
+		name        string
+		pluginName  string
+		setupPlugin bool
+		expected    bool
+	}{
+		{
+			name:        "returns true when plugin directory exists",
+			pluginName:  "zsh-users/zsh-syntax-highlighting",
+			setupPlugin: true,
+			expected:    true,
+		},
+		{
+			name:        "returns false when plugin directory does not exist",
+			pluginName:  "zsh-users/zsh-syntax-highlighting",
+			setupPlugin: false,
+			expected:    false,
+		},
 	}
 
-	// Set custom plugin directory
-	originalZPluginDir := os.Getenv("ZPLUGINDIR")
-	defer os.Setenv("ZPLUGINDIR", originalZPluginDir)
-	os.Setenv("ZPLUGINDIR", tempDir)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tempDir := t.TempDir()
 
-	mockExec := NewMockCommandExecutor()
-	zshMgr := NewZSHManager(mockExec)
+			if tt.setupPlugin {
+				// Create plugin directory
+				pluginDir := filepath.Join(tempDir, "zsh-syntax-highlighting")
+				err := os.MkdirAll(pluginDir, 0755)
+				if err != nil {
+					t.Fatalf("Failed to create plugin dir: %v", err)
+				}
+			}
 
-	if !zshMgr.IsInstalled("zsh-users/zsh-syntax-highlighting") {
-		t.Error("Expected plugin to be installed")
-	}
-}
+			// Set custom plugin directory
+			originalZPluginDir := os.Getenv("ZPLUGINDIR")
+			defer os.Setenv("ZPLUGINDIR", originalZPluginDir)
+			os.Setenv("ZPLUGINDIR", tempDir)
 
-func TestZSHManager_IsInstalled_False(t *testing.T) {
-	tempDir := t.TempDir()
+			mockExec := NewMockCommandExecutor()
+			zshMgr := NewZSHManager(mockExec)
 
-	// Set custom plugin directory
-	originalZPluginDir := os.Getenv("ZPLUGINDIR")
-	defer os.Setenv("ZPLUGINDIR", originalZPluginDir)
-	os.Setenv("ZPLUGINDIR", tempDir)
-
-	mockExec := NewMockCommandExecutor()
-	zshMgr := NewZSHManager(mockExec)
-
-	if zshMgr.IsInstalled("zsh-users/zsh-syntax-highlighting") {
-		t.Error("Expected plugin to not be installed")
+			installed := zshMgr.IsInstalled(tt.pluginName)
+			if installed != tt.expected {
+				t.Errorf("IsInstalled(%s) = %v, expected %v", tt.pluginName, installed, tt.expected)
+			}
+		})
 	}
 }
 

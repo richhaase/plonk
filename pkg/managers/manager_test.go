@@ -334,36 +334,44 @@ func TestAsdfManager_Update_WithToolAndVersion(t *testing.T) {
 	}
 }
 
-func TestAsdfManager_IsInstalled_True(t *testing.T) {
-	mockExec := NewMockCommandExecutor()
-	// asdf list <tool> succeeds when tool has versions installed
-	successCmd := exec.Command("echo", "  18.0.0\n* 20.0.0")
-	mockExec.SetCommand("asdf list", successCmd)
-
-	manager := NewAsdfManager(mockExec)
-	installed := manager.IsInstalled("nodejs")
-
-	if !installed {
-		t.Error("Expected tool to be installed when command succeeds")
+func TestAsdfManager_IsInstalled(t *testing.T) {
+	tests := []struct {
+		name     string
+		toolName string
+		command  *exec.Cmd
+		expected bool
+	}{
+		{
+			name:     "returns true when tool has versions installed",
+			toolName: "nodejs",
+			command:  exec.Command("echo", "  18.0.0\n* 20.0.0"),
+			expected: true,
+		},
+		{
+			name:     "returns false when tool is not installed",
+			toolName: "nonexistent",
+			command:  exec.Command("false"),
+			expected: false,
+		},
 	}
 
-	expectedCall := "asdf list"
-	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
-		t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
-	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockExec := NewMockCommandExecutor()
+			mockExec.SetCommand("asdf list", tt.command)
 
-func TestAsdfManager_IsInstalled_False(t *testing.T) {
-	mockExec := NewMockCommandExecutor()
-	// asdf list <tool> fails when tool is not installed
-	failCmd := exec.Command("false")
-	mockExec.SetCommand("asdf list", failCmd)
+			manager := NewAsdfManager(mockExec)
+			installed := manager.IsInstalled(tt.toolName)
 
-	manager := NewAsdfManager(mockExec)
-	installed := manager.IsInstalled("nonexistent")
+			if installed != tt.expected {
+				t.Errorf("IsInstalled(%s) = %v, expected %v", tt.toolName, installed, tt.expected)
+			}
 
-	if installed {
-		t.Error("Expected tool to not be installed when command fails")
+			expectedCall := "asdf list"
+			if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
+				t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
+			}
+		})
 	}
 }
 
@@ -425,34 +433,41 @@ func TestAsdfManager_GetInstalledVersions_ReturnsErrorOnFailure(t *testing.T) {
 }
 
 // NPM Manager Tests
-func TestNpmManager_IsAvailable_Success(t *testing.T) {
-	mockExec := NewMockCommandExecutor()
-	successCmd := exec.Command("echo", "8.19.2")
-	mockExec.SetCommand("npm --version", successCmd)
-
-	manager := NewNpmManager(mockExec)
-	available := manager.IsAvailable()
-
-	if !available {
-		t.Error("Expected NPM to be available when command succeeds")
+func TestNpmManager_IsAvailable(t *testing.T) {
+	tests := []struct {
+		name     string
+		command  *exec.Cmd
+		expected bool
+	}{
+		{
+			name:     "success when command succeeds",
+			command:  exec.Command("echo", "8.19.2"),
+			expected: true,
+		},
+		{
+			name:     "failure when command fails",
+			command:  exec.Command("false"),
+			expected: false,
+		},
 	}
 
-	expectedCall := "npm --version"
-	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
-		t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
-	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockExec := NewMockCommandExecutor()
+			mockExec.SetCommand("npm --version", tt.command)
 
-func TestNpmManager_IsAvailable_Failure(t *testing.T) {
-	mockExec := NewMockCommandExecutor()
-	failCmd := exec.Command("false")
-	mockExec.SetCommand("npm --version", failCmd)
+			manager := NewNpmManager(mockExec)
+			available := manager.IsAvailable()
 
-	manager := NewNpmManager(mockExec)
-	available := manager.IsAvailable()
+			if available != tt.expected {
+				t.Errorf("IsAvailable() = %v, expected %v", available, tt.expected)
+			}
 
-	if available {
-		t.Error("Expected NPM to be unavailable when command fails")
+			expectedCall := "npm --version"
+			if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
+				t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
+			}
+		})
 	}
 }
 
@@ -530,31 +545,39 @@ func TestNpmManager_ListInstalled_ParsesOutput(t *testing.T) {
 	}
 }
 
-func TestNpmManager_IsInstalled_True(t *testing.T) {
-	mockExec := NewMockCommandExecutor()
-	// npm list -g typescript succeeds when package is installed
-	successCmd := exec.Command("echo", "typescript@4.8.4")
-	mockExec.SetCommand("npm list", successCmd)
-
-	manager := NewNpmManager(mockExec)
-	installed := manager.IsInstalled("typescript")
-
-	if !installed {
-		t.Error("Expected package to be installed when command succeeds")
+func TestNpmManager_IsInstalled(t *testing.T) {
+	tests := []struct {
+		name        string
+		packageName string
+		command     *exec.Cmd
+		expected    bool
+	}{
+		{
+			name:        "returns true when package is installed",
+			packageName: "typescript",
+			command:     exec.Command("echo", "typescript@4.8.4"),
+			expected:    true,
+		},
+		{
+			name:        "returns false when package is not installed",
+			packageName: "nonexistent",
+			command:     exec.Command("false"),
+			expected:    false,
+		},
 	}
-}
 
-func TestNpmManager_IsInstalled_False(t *testing.T) {
-	mockExec := NewMockCommandExecutor()
-	// npm list -g nonexistent fails when package is not installed
-	failCmd := exec.Command("false")
-	mockExec.SetCommand("npm list", failCmd)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockExec := NewMockCommandExecutor()
+			mockExec.SetCommand("npm list", tt.command)
 
-	manager := NewNpmManager(mockExec)
-	installed := manager.IsInstalled("nonexistent")
+			manager := NewNpmManager(mockExec)
+			installed := manager.IsInstalled(tt.packageName)
 
-	if installed {
-		t.Error("Expected package to not be installed when command fails")
+			if installed != tt.expected {
+				t.Errorf("IsInstalled(%s) = %v, expected %v", tt.packageName, installed, tt.expected)
+			}
+		})
 	}
 }
 
