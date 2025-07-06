@@ -1,3 +1,14 @@
+// Package commands implements the CLI interface for Plonk using Cobra.
+// It provides commands for managing shell environments including install,
+// apply, status, clone, pull, restore, and backup operations.
+//
+// Each command handles specific aspects of shell environment management:
+// - install: Install packages from configuration
+// - apply: Deploy configuration files to target locations
+// - status: Show package manager availability and drift
+// - clone/pull: Git repository operations for configuration sharing
+// - restore: Restore files from timestamped backups
+// - backup: Create backups of configuration files
 package commands
 
 import (

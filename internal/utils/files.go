@@ -1,3 +1,5 @@
+// Package utils provides common utility functions used throughout Plonk.
+// Currently focused on file system operations and path checking utilities.
 package utils
 
 import "os"

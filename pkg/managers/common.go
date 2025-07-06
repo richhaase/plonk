@@ -1,3 +1,10 @@
+// Package managers provides unified interfaces for managing different package managers
+// including Homebrew, ASDF, NPM, and ZSH plugins. Each manager implements the
+// PackageManager interface to provide consistent operations for checking availability,
+// listing installed packages, and installing new packages.
+//
+// The package uses dependency injection through the CommandExecutor interface
+// to allow for testing with mocked command execution.
 package managers
 
 import (

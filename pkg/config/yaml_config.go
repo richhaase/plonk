@@ -1,3 +1,9 @@
+// Package config provides configuration management for Plonk, including YAML
+// configuration parsing, validation, and generation of shell configuration files.
+//
+// The package supports loading configuration from plonk.yaml and plonk.local.yaml,
+// validating package definitions and file paths, and generating shell-specific
+// configuration files like .zshrc, .zshenv, and .gitconfig.
 package config
 
 import (

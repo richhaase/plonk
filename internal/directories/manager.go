@@ -1,3 +1,9 @@
+// Package directories provides centralized directory management for Plonk.
+// It handles path resolution, home directory expansion, and ensures proper
+// directory structure for configuration files, backups, and repositories.
+//
+// The package supports environment variable overrides (PLONK_DIR) and
+// automatic migration from legacy directory structures.
 package directories
 
 import (
