@@ -49,6 +49,14 @@ Follow the Test-Driven Development workflow described in [CONTRIBUTING.md](CONTR
   - Update CONTRIBUTING.md for development process changes
 - **Leave clear notes** in TODO.md for session continuity
 
+## Tool Usage
+
+### Preferred CLI Tools (via Bash)
+- **ripgrep (rg)** instead of grep
+- **fd** instead of find  
+- **exa** instead of ls
+- **sd** instead of sed
+
 ### Testing Patterns
 - **MockCommandExecutor** for unit tests (avoid actual command execution)
 - **setupTestEnv(t)** helper for test isolation
