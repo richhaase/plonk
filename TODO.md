@@ -7,8 +7,8 @@ Active work items for current development session. Maintained by AI agents.
 ## Pending
 
 ### Import Command Implementation (TDD Breakdown)
-- 🔴 **RED: Basic import command structure** - Write failing test for CLI interface and command registration
-- 🔴 **RED: Homebrew package discovery** - Write failing test for `brew list` package detection
+- ✅ **RED-GREEN-REFACTOR: Basic import command structure** - CLI interface and command registration complete
+- ✅ **RED-GREEN-REFACTOR: Homebrew package discovery** - HomebrewDiscoverer with brew list parsing complete
 - 🔴 **RED: ASDF package discovery** - Write failing test for `asdf list` tool/version detection  
 - 🔴 **RED: NPM package discovery** - Write failing test for `npm list -g` global package detection
 - 🔴 **RED: Dotfile detection** - Write failing test for discovering .zshrc, .gitconfig, .zshenv files
