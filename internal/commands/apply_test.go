@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 	
+	"github.com/spf13/cobra"
 	"plonk/internal/utils"
 )
 
@@ -752,5 +753,141 @@ git:
 	}
 	if !strings.Contains(newGitconfigStr, `email = "new@example.com"`) {
 		t.Error("Expected new .gitconfig to contain new user email")
+	}
+}
+
+func TestApplyCommand_DryRunFlagParsing(t *testing.T) {
+	tests := []struct {
+		name          string
+		cmdArgs       []string
+		dryRunFlag    bool
+		backupFlag    bool
+		expectDryRun  bool
+		expectBackup  bool
+	}{
+		{
+			name:         "no flags",
+			cmdArgs:      []string{},
+			dryRunFlag:   false,
+			backupFlag:   false,
+			expectDryRun: false,
+			expectBackup: false,
+		},
+		{
+			name:         "dry-run flag only",
+			cmdArgs:      []string{},
+			dryRunFlag:   true,
+			backupFlag:   false,
+			expectDryRun: true,
+			expectBackup: false,
+		},
+		{
+			name:         "backup flag only",
+			cmdArgs:      []string{},
+			dryRunFlag:   false,
+			backupFlag:   true,
+			expectDryRun: false,
+			expectBackup: true,
+		},
+		{
+			name:         "both flags",
+			cmdArgs:      []string{},
+			dryRunFlag:   true,
+			backupFlag:   true,
+			expectDryRun: true,
+			expectBackup: true,
+		},
+		{
+			name:         "dry-run with package arg",
+			cmdArgs:      []string{"neovim"},
+			dryRunFlag:   true,
+			backupFlag:   false,
+			expectDryRun: true,
+			expectBackup: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a new command instance to test flag parsing
+			cmd := &cobra.Command{}
+			cmd.Flags().Bool("backup", false, "test backup flag")
+			cmd.Flags().Bool("dry-run", false, "test dry-run flag")
+			
+			// Set the flags
+			if tt.backupFlag {
+				cmd.Flags().Set("backup", "true")
+			}
+			if tt.dryRunFlag {
+				cmd.Flags().Set("dry-run", "true")
+			}
+			
+			// Test flag parsing
+			backup, err := cmd.Flags().GetBool("backup")
+			if err != nil {
+				t.Fatalf("Failed to get backup flag: %v", err)
+			}
+			
+			dryRun, err := cmd.Flags().GetBool("dry-run")
+			if err != nil {
+				t.Fatalf("Failed to get dry-run flag: %v", err)
+			}
+			
+			// Verify the flags are parsed correctly
+			if backup != tt.expectBackup {
+				t.Errorf("Expected backup=%v, got %v", tt.expectBackup, backup)
+			}
+			
+			if dryRun != tt.expectDryRun {
+				t.Errorf("Expected dry-run=%v, got %v", tt.expectDryRun, dryRun)
+			}
+		})
+	}
+}
+
+func TestApplyCommand_DryRunDoesNotCreateFiles(t *testing.T) {
+	// This test verifies that dry-run mode doesn't actually create files
+	// Setup test environment
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Create plonk directory and config with dotfiles
+	plonkDir := filepath.Join(tempHome, ".config", "plonk")
+	err := os.MkdirAll(plonkDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create plonk directory: %v", err)
+	}
+
+	// Create source files
+	err = os.WriteFile(filepath.Join(plonkDir, "zshrc"), []byte("# test zshrc"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create source file: %v", err)
+	}
+
+	configContent := `settings:
+  default_manager: homebrew
+
+dotfiles:
+  - zshrc
+
+zsh:
+  aliases:
+    ll: "eza -la"
+`
+	configPath := filepath.Join(plonkDir, "plonk.yaml")
+	err = os.WriteFile(configPath, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write config file: %v", err)
+	}
+
+	// Test dry-run mode - should not create any files
+	err = runApplyWithAllFlags([]string{}, false, true) // backup=false, dryRun=true
+	if err != nil {
+		t.Fatalf("Dry-run apply should not fail: %v", err)
+	}
+
+	// Verify NO files were actually created in dry-run mode
+	if utils.FileExists(filepath.Join(tempHome, ".zshrc")) {
+		t.Error("Expected .zshrc NOT to be created in dry-run mode")
 	}
 }

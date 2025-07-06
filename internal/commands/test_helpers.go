@@ -109,3 +109,9 @@ func (m *MockGit) IsRepo(dir string) bool {
 func runApplyWithFlags(args []string, backup bool) error {
 	return runApplyWithBackup(args, backup)
 }
+
+// runApplyWithAllFlags runs the apply command with both backup and dry-run flag support for testing
+func runApplyWithAllFlags(args []string, backup bool, dryRun bool) error {
+	// This will call a function that doesn't exist yet - that's fine for Red phase TDD
+	return runApplyWithAllOptions(args, backup, dryRun)
+}
