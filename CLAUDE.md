@@ -334,11 +334,11 @@ npm:
 42h. **Implement plonk restore --all functionality (Green phase)** - ✅ Completed
 42i. **Refactor restore command with improved error handling and user feedback (Refactor phase)** - ✅ Completed
 
-**Medium Priority - Directory Restructure (Tasks 41a-41c):**
+**✅ Task Group 41 - Directory Restructure (COMPLETED)**
 
-41a. **Add directory restructure tests (Red phase)** - 🟡 Pending
-41b. **Implement separate repo/ and backups/ subdirectories (Green phase)** - 🟡 Pending
-41c. **Update all commands to use new directory structure (Refactor phase)** - 🟡 Pending
+41a. **Add directory restructure tests (Red phase)** - ✅ Completed
+41b. **Implement separate repo/ and backups/ subdirectories (Green phase)** - ✅ Completed
+41c. **Update all commands to use new directory structure (Refactor phase)** - ✅ Completed
 
 **Medium Priority - Import Command (Tasks 38a-38e):**
 
