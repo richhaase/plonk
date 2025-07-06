@@ -37,6 +37,7 @@ Features and concepts being considered:
 - **Dependency validation** - Clean go.sum, license compliance checking
 - **Pre-commit safety** - Remove dangerous `git add .`, improve hook reliability
 - **License headers** - Consistent licensing across codebase
+- **Documentation testing** - Ensure examples in README and docs actually work
 - **CI/CD foundations** - GitHub Actions for automated testing and builds
 
 ## Planned
