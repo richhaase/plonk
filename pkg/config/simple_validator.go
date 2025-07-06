@@ -8,7 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// SimpleValidator uses the go-playground/validator library with custom validators
+// SimpleValidator uses the go-playground/validator library with custom validators.
 type SimpleValidator struct {
 	validator *validator.Validate
 }

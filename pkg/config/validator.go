@@ -8,7 +8,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// ValidateYAML checks if the provided YAML content has valid syntax
+// ValidateYAML checks if the provided YAML content has valid syntax.
 func ValidateYAML(content []byte) error {
 	// Handle empty content
 	trimmed := strings.TrimSpace(string(content))
@@ -67,7 +67,7 @@ func isOnlyComments(content string) bool {
 	return true
 }
 
-// ValidatePackageName checks if a package name is valid
+// ValidatePackageName checks if a package name is valid.
 func ValidatePackageName(name string) error {
 	// Trim and check for empty
 	trimmed := strings.TrimSpace(name)
@@ -97,7 +97,7 @@ func ValidatePackageName(name string) error {
 	return nil
 }
 
-// ValidateFilePath checks if a file path is valid for plonk configuration
+// ValidateFilePath checks if a file path is valid for plonk configuration.
 func ValidateFilePath(path string) error {
 	// Trim and check for empty
 	trimmed := strings.TrimSpace(path)
@@ -128,7 +128,7 @@ func ValidateFilePath(path string) error {
 	return nil
 }
 
-// ValidateConfigContent validates the content of a plonk configuration
+// ValidateConfigContent validates the content of a plonk configuration.
 func ValidateConfigContent(content []byte) error {
 	// First validate YAML syntax
 	if err := ValidateYAML(content); err != nil {

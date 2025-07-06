@@ -5,12 +5,12 @@ import (
 	"os/exec"
 )
 
-// CommandExecutor interface for dependency injection.
+// CommandExecutor defines an interface for executing system commands with dependency injection.
 type CommandExecutor interface {
 	Execute(name string, args ...string) *exec.Cmd
 }
 
-// PackageManager interface defines the common operations for all package managers.
+// PackageManager defines the common operations for all package managers.
 type PackageManager interface {
 	IsAvailable() bool
 	ListInstalled() ([]string, error)

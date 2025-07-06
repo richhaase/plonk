@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// GenerateZshrc generates a complete .zshrc file from ZSH configuration
+// GenerateZshrc generates a complete .zshrc file from ZSH configuration.
 func GenerateZshrc(config *ZSHConfig) string {
 	var lines []string
 
@@ -119,7 +119,7 @@ func GenerateZshrc(config *ZSHConfig) string {
 }
 
 // GenerateZshenv generates a complete .zshenv file from ZSH configuration
-// .zshenv should only contain environment variables, not interactive shell settings
+// GenerateZshenv generates a .zshenv file containing only environment variables, not interactive shell settings.
 func GenerateZshenv(config *ZSHConfig) string {
 	var lines []string
 

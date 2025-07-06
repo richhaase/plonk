@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// GenerateGitconfig generates a complete .gitconfig file from Git configuration
+// GenerateGitconfig generates a complete .gitconfig file from Git configuration.
 func GenerateGitconfig(config *GitConfig) string {
 	var lines []string
 
