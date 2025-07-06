@@ -32,7 +32,7 @@ This project was developed using **Test-Driven Development (TDD)** with Red-Gree
 - **Pkg Command** - Modular package listing with `plonk pkg list [manager]` structure
 - **Git Operations** - Clone and pull commands with configurable locations
 - **Package Management** - Install command with automatic config application
-- **Configuration Deployment** - Apply command for dotfiles and package configs
+- **Configuration Deployment** - Apply command for dotfiles and package configs with --backup and --dry-run support
 - **Foundational Setup** - Setup command for installing core tools (Homebrew/ASDF/NPM)
 - **Convenience Commands** - Repository-based workflow and direct repo syntax
 
@@ -113,6 +113,8 @@ go build ./cmd/plonk
 ./plonk apply                    # Apply all configuration files
 ./plonk apply <package>          # Apply configuration for specific package
 ./plonk apply --backup           # Apply all configurations with backup
+./plonk apply --dry-run          # Show what would be applied without making changes
+./plonk apply --backup --dry-run # Preview what would be applied with backup
 
 # Backup operations
 ./plonk backup                   # Backup all files that apply would overwrite
@@ -383,125 +385,209 @@ npm:
     - Improved maintainability while preserving test isolation and functionality
     - All tests continue to pass with cleaner, more consistent code organization
 
-### 🔄 Current Pending Tasks (Re-prioritized)
+36. **Refactor validation system with unified error reporting (Task 47a7)** - ✅ Completed
+    - Replaced complex custom validation system with go-playground/validator library
+    - Added struct validation tags to all Config types for declarative validation
+    - Created SimpleValidator with custom validators for package_name and file_path
+    - Simplified ValidationResult to just Errors and Warnings (removed complex types)
+    - Integrated validation seamlessly into LoadConfig function
+    - Reduced codebase from 280+ lines of complex code to ~160 lines using standard library
+    - All tests passing with improved maintainability and industry-standard patterns
 
-**Prioritization Rationale**: Foundation & daily value over new features. Prioritize what makes plonk safer and more reliable for daily use.
+37. **Add dry-run flag support to apply command (Tasks 47c1-47c2)** - ✅ Completed
+    - **Task 47c1**: Created focused unit tests for --dry-run flag parsing (Red phase)
+    - **Task 47c2**: Implemented comprehensive dry-run functionality (Green phase)
+    - Added --dry-run flag to apply command alongside existing --backup flag
+    - Implemented preview functions for all configuration types:
+      - previewAllConfigurations for full config preview
+      - previewPackageConfiguration for package-specific preview
+      - previewDotfiles, previewZSHConfiguration, previewGitConfiguration
+      - previewPackageConfigurations for all package configs
+    - Used clear visual indicators: ✨ (new files), 📝 (overwrites), 📁 (directories), ⚠️ (warnings)
+    - Dry-run mode prevents actual file modifications while showing what would happen
+    - Supports both full config apply and package-specific preview
+    - All tests passing with proper unit and integration test coverage
 
-**HIGH PRIORITY (Foundation & Daily Value):**
+### 🔄 Current Pending Tasks (Reconsidered by Value, Complexity, Dependencies)
 
-**1. Task Group 47 - Developer Experience Enhancements (Tasks 47a-47i):**
-- Config validation prevents broken deploys
-- Dry-run mode gives confidence before changes  
-- Diff mode shows drift (builds on existing drift detection)
-- These make plonk safer and more predictable daily
-- *Needs detailed specs*
+**Prioritization Strategy**: Balanced approach considering implementation simplicity, user value, dependencies, and project impact. Focus on quick wins that improve codebase quality and provide immediate user benefits.
 
-47a. **Design config validation system with YAML syntax and content checks (Red phase)** - 🟡 Pending
-47b. **Implement config validation functionality (Green phase)** - 🟡 Pending
-47c. **Add dry-run mode tests for preview functionality (Red phase)** - 🟡 Pending
-47d. **Implement dry-run mode for apply command (Green phase)** - 🟡 Pending
-47e. **Add diff mode tests for showing configuration differences (Red phase)** - 🟡 Pending
-47f. **Implement diff mode functionality (Green phase)** - 🟡 Pending
-47g. **Add watch mode tests for auto-apply on config changes (Red phase)** - 🟡 Pending
-47h. **Implement watch mode functionality (Green phase)** - 🟡 Pending
-47i. **Refactor developer experience features with unified CLI (Refactor phase)** - 🟡 Pending
+---
 
-**2. Task Group 46 - Integration Tests (Tasks 46a-46c):**
-- Validates all existing functionality works together
-- Critical before adding more features
-- Prevents regressions as complexity grows
+## 🎯 **TIER 1: HIGH VALUE + LOW COMPLEXITY + NO DEPENDENCIES** 
+*Quick wins that immediately improve user experience*
 
-46a. **Add integration tests for end-to-end workflows (Red phase)** - 🟡 Pending
-46b. **Implement comprehensive integration test suite (Green phase)** - 🟡 Pending
-46c. **Refactor integration tests with CI/CD support (Refactor phase)** - 🟡 Pending
+### **Group A: Code Quality & Cleanup (Simple Infrastructure)**
+**Value**: 🟢 **High** | **Complexity**: 🟢 **Low** | **Dependencies**: 🟢 **None**
 
-**3. Task Group 44 - Repository Infrastructure (Tasks 44a-44j):**
-- Code quality tools prevent bugs
-- Pre-commit hooks ensure consistency
-- Foundation for sustainable development
+52e. **Refactor package installation logic to eliminate duplication** - 🎯 **NEXT PRIORITY**
+52g. **Standardize error handling patterns across commands** 
+52h. **Organize imports consistently across all files**
+52i. **Standardize function documentation**
+52j. **Convert remaining tests to table-driven format**
 
-44a. **Add pre-commit hook tests for Go formatting (Red phase)** - 🟡 Pending
-44b. **Implement pre-commit hooks for Go formatting (Green phase)** - 🟡 Pending
-44c. **Add linting tests with golangci-lint (Red phase)** - 🟡 Pending
-44d. **Implement golangci-lint configuration and hooks (Green phase)** - 🟡 Pending
-44e. **Refactor code quality setup with development workflow integration (Refactor phase)** - 🟡 Pending
-44f. **Add development workflow tests (Red phase)** - 🟡 Pending
-44g. **Implement development workflow tool (Green phase)** - 🟡 Pending
-44h. **Add test coverage enforcement tests (Red phase)** - 🟡 Pending
-44i. **Implement test coverage tooling (Green phase)** - 🟡 Pending
-44j. **Refactor development workflow with documentation and optimization (Refactor phase)** - 🟡 Pending
+**Why Tier 1**: Simple refactoring tasks that improve maintainability with minimal risk. Can be done independently and make future development easier.
 
-**MEDIUM PRIORITY (Extend Core Value):**
+### **Group B: Diff Command (Builds on Existing Infrastructure)**
+**Value**: 🟢 **High** | **Complexity**: 🟡 **Medium** | **Dependencies**: 🟢 **None**
 
-**4. Task Group 49 - Additional Shell Support (Tasks 49a-49e):**
-- Bash/Fish users can't fully use plonk without this
-- Natural extension of existing ZSH support
-- *Needs detailed specs*
+47e1. **Add tests for diff command structure (Red phase)**
+47e2. **Implement basic diff command (Green phase)**
+47e3. **Add tests for file content comparison (Red phase)**
+47e4. **Implement file diff logic (Green phase)**
+47e5. **Add tests for config state comparison (Red phase)**
+47e6. **Implement config vs reality diff (Green phase)**
+47e7. **Refactor with colored diff output (Refactor phase)**
 
-49a. **Add Bash shell config generation tests (Red phase)** - 🟡 Pending
-49b. **Implement Bash shell config generation functionality (Green phase)** - 🟡 Pending
-49c. **Add Fish shell config generation tests (Red phase)** - 🟡 Pending
-49d. **Implement Fish shell config generation functionality (Green phase)** - 🟡 Pending
-49e. **Refactor shell config generation with multi-shell support (Refactor phase)** - 🟡 Pending
+**Why Tier 1**: Builds directly on existing drift detection and dry-run work. High user value for seeing configuration differences. Well-defined scope.
 
-**5. Task Group 38 - Import Command (Tasks 38a-38e):**
-- Helps users migrate TO plonk
-- One-time use but high value for adoption
+---
 
-38a. **Add shell config parsing tests for common formats (Red phase)** - 🟡 Pending
-38b. **Implement basic .zshrc/.bashrc parsing functionality (Green phase)** - 🟡 Pending
-38c. **Add tests for plonk.yaml generation from parsed configs (Red phase)** - 🟡 Pending
-38d. **Implement plonk import command with YAML suggestion (Green phase)** - 🟡 Pending
-38e. **Refactor import command with support for multiple shell types (Refactor phase)** - 🟡 Pending
+## 🚀 **TIER 2: HIGH VALUE + MEDIUM COMPLEXITY + SOME DEPENDENCIES**
+*Significant user value with manageable implementation*
 
-**6. Task Group 48 - Advanced Backup/Restore Features (Tasks 48a-48i):**
-- Nice-to-have enhancements over basic backup
-- Selective restore most valuable, encryption/compression less so
-- *Needs detailed specs*
+### **Group C: Integration Testing (Foundation)**
+**Value**: 🟢 **High** | **Complexity**: 🟡 **Medium** | **Dependencies**: 🟡 **Should complete Tier 1 first**
 
-48a. **Add selective restore tests for granular file restoration (Red phase)** - 🟡 Pending
-48b. **Implement selective restore functionality (Green phase)** - 🟡 Pending
-48c. **Add backup compression tests for space optimization (Red phase)** - 🟡 Pending
-48d. **Implement backup compression functionality (Green phase)** - 🟡 Pending
-48e. **Add remote backup tests for cloud sync (Red phase)** - 🟡 Pending
-48f. **Implement remote backup sync functionality (Green phase)** - 🟡 Pending
-48g. **Add backup encryption tests for sensitive data protection (Red phase)** - 🟡 Pending
-48h. **Implement backup encryption functionality (Green phase)** - 🟡 Pending
-48i. **Refactor advanced backup features with unified management (Refactor phase)** - 🟡 Pending
+46a. **Add integration tests for end-to-end workflows (Red phase)**
+46b. **Implement comprehensive integration test suite (Green phase)**
+46c. **Refactor integration tests with CI/CD support (Refactor phase)**
 
-**LOW PRIORITY (Nice to Have):**
+**Why Tier 2**: Critical for stability but needs existing codebase to be clean first. High value for preventing regressions.
 
-**7. Task Group 50 - Package Manager Extensions (Tasks 50a-50c):**
-- mas is niche (App Store apps)
-- Current package managers cover most needs
-- *Needs detailed specs*
+### **Group D: Additional Shell Support (Natural Extension)**
+**Value**: 🟡 **Medium-High** | **Complexity**: 🟡 **Medium** | **Dependencies**: 🟢 **None**
 
-50a. **Add mas command support tests for Mac App Store integration (Red phase)** - 🟡 Pending
-50b. **Implement mas command functionality for App Store apps (Green phase)** - 🟡 Pending
-50c. **Refactor package manager integration with mas support (Refactor phase)** - 🟡 Pending
+49a. **Add Bash shell config generation tests (Red phase)**
+49b. **Implement Bash shell config generation functionality (Green phase)**
+49c. **Add Fish shell config generation tests (Red phase)**
+49d. **Implement Fish shell config generation functionality (Green phase)**
+49e. **Refactor shell config generation with multi-shell support (Refactor phase)**
 
-**8. Task Group 43 - Full Environment Snapshots (Tasks 43a-43g):**
-- Complex feature with unclear use cases
-- Current config management may be sufficient
+**Why Tier 2**: Natural extension of existing ZSH work. Clear user value for non-ZSH users. Well-defined patterns to follow.
 
-43a. **Add full environment snapshot tests (Red phase)** - 🟡 Pending
-43b. **Implement plonk snapshot create functionality (Green phase)** - 🟡 Pending
-43c. **Add snapshot restoration tests (Red phase)** - 🟡 Pending
-43d. **Implement plonk snapshot restore functionality (Green phase)** - 🟡 Pending
-43e. **Add snapshot management tests (list, delete) (Red phase)** - 🟡 Pending
-43f. **Implement plonk snapshot list/delete functionality (Green phase)** - 🟡 Pending
-43g. **Refactor snapshot system with metadata and cross-platform support (Refactor phase)** - 🟡 Pending
+### **Group E: Import Command (User Onboarding)**
+**Value**: 🟡 **Medium-High** | **Complexity**: 🟡 **Medium** | **Dependencies**: 🟢 **None**
 
-**9. Task Group 51 - Cross-Platform Support (Tasks 51a-51e):**
-- macOS focus seems primary
-- Can add later if user base expands
-- *Needs detailed specs*
+38a. **Add shell config parsing tests for common formats (Red phase)**
+38b. **Implement basic .zshrc/.bashrc parsing functionality (Green phase)**
+38c. **Add tests for plonk.yaml generation from parsed configs (Red phase)**
+38d. **Implement plonk import command with YAML suggestion (Green phase)**
+38e. **Refactor import command with support for multiple shell types (Refactor phase)**
 
-51a. **Add Windows PowerShell profile tests for cross-platform support (Red phase)** - 🟡 Pending
-51b. **Implement Windows PowerShell profile generation (Green phase)** - 🟡 Pending
-51c. **Add Linux distribution package manager tests (Red phase)** - 🟡 Pending
-51d. **Implement Linux distribution package manager support (Green phase)** - 🟡 Pending
-51e. **Refactor cross-platform support with unified configuration (Refactor phase)** - 🟡 Pending
+**Why Tier 2**: High value for user adoption. One-time use but critical for migration to plonk.
+
+---
+
+## ⚡ **TIER 3: COMPLEX BUT HIGH IMPACT**
+*Advanced features requiring significant implementation*
+
+### **Group F: Watch Mode (Complex File Operations)**
+**Value**: 🟡 **Medium** | **Complexity**: 🔴 **High** | **Dependencies**: 🟡 **Should have stable foundation**
+
+47g1. **Add tests for watch command structure (Red phase)**
+47g2. **Implement basic watch command (Green phase)**
+47g3. **Add tests for file change detection (Red phase)**
+47g4. **Implement file watcher (Green phase)**
+47g5. **Add tests for auto-apply on change (Red phase)**
+47g6. **Implement auto-apply logic (Green phase)**
+47g7. **Refactor with debouncing and error handling (Refactor phase)**
+
+**Why Tier 3**: Complex file watching, debouncing, error handling. High complexity with moderate value. Needs stable base.
+
+### **Group G: Repository Infrastructure (DevOps Setup)**
+**Value**: 🟡 **Medium** | **Complexity**: 🔴 **High** | **Dependencies**: 🔴 **Needs stable codebase**
+
+44a. **Add pre-commit hook tests for Go formatting (Red phase)**
+44b. **Implement pre-commit hooks for Go formatting (Green phase)**
+44c. **Add linting tests with golangci-lint (Red phase)**
+44d. **Implement golangci-lint configuration and hooks (Green phase)**
+44e. **Refactor code quality setup with development workflow integration (Refactor phase)**
+44f. **Add development workflow tests (Red phase)**
+44g. **Implement development workflow tool (Green phase)**
+44h. **Add test coverage enforcement tests (Red phase)**
+44i. **Implement test coverage tooling (Green phase)**
+44j. **Refactor development workflow with documentation and optimization (Refactor phase)**
+
+**Why Tier 3**: Important for project health but complex setup. Should wait until core functionality is stable.
+
+---
+
+## 🎁 **TIER 4: NICE-TO-HAVE ENHANCEMENTS**
+*Lower priority features with specific use cases*
+
+### **Group H: Advanced Backup Features**
+**Value**: 🟡 **Low-Medium** | **Complexity**: 🟡 **Medium** | **Dependencies**: 🟢 **None**
+
+48a. **Add selective restore tests for granular file restoration (Red phase)**
+48b. **Implement selective restore functionality (Green phase)**
+48c. **Add backup compression tests for space optimization (Red phase)**
+48d. **Implement backup compression functionality (Green phase)**
+48e. **Add remote backup tests for cloud sync (Red phase)**
+48f. **Implement remote backup sync functionality (Green phase)**
+48g. **Add backup encryption tests for sensitive data protection (Red phase)**
+48h. **Implement backup encryption functionality (Green phase)**
+48i. **Refactor advanced backup features with unified management (Refactor phase)**
+
+### **Group I: Cross-Platform Support**  
+**Value**: 🟡 **Low** | **Complexity**: 🔴 **High** | **Dependencies**: 🟢 **None**
+
+51a. **Add Windows PowerShell profile tests for cross-platform support (Red phase)**
+51b. **Implement Windows PowerShell profile generation (Green phase)**
+51c. **Add Linux distribution package manager tests (Red phase)**
+51d. **Implement Linux distribution package manager support (Green phase)**
+51e. **Refactor cross-platform support with unified configuration (Refactor phase)**
+
+### **Group J: Package Manager Extensions**
+**Value**: 🔴 **Low** | **Complexity**: 🟡 **Medium** | **Dependencies**: 🟢 **None**
+
+50a. **Add mas command support tests for Mac App Store integration (Red phase)**
+50b. **Implement mas command functionality for App Store apps (Green phase)**
+50c. **Refactor package manager integration with mas support (Refactor phase)**
+
+### **Group K: Environment Snapshots**
+**Value**: 🔴 **Low** | **Complexity**: 🔴 **High** | **Dependencies**: 🟢 **None**
+
+43a. **Add full environment snapshot tests (Red phase)**
+43b. **Implement plonk snapshot create functionality (Green phase)**
+43c. **Add snapshot restoration tests (Red phase)**
+43d. **Implement plonk snapshot restore functionality (Green phase)**
+43e. **Add snapshot management tests (list, delete) (Red phase)**
+43f. **Implement plonk snapshot list/delete functionality (Green phase)**
+43g. **Refactor snapshot system with metadata and cross-platform support (Refactor phase)**
+
+### **Group L: Optional Enhancements (Lower Priority)**
+47c3. **Add tests for dry-run preview output formatting (Red phase)** - 🟡 Optional (core functionality complete)
+47c4. **Implement enhanced dry-run preview logic (Green phase)** - 🟡 Optional (core functionality complete)
+47c5. **Refactor with improved preview formatting (Refactor phase)** - 🟡 Optional (core functionality complete)
+47i1. **Refactor all developer experience features with unified CLI patterns** - 🟡 Pending
+
+---
+
+## 🎯 **RECOMMENDED EXECUTION ORDER**
+
+### **Phase 1: Foundation (Tier 1) - 3-5 weeks**
+1. **Group A**: Code Quality & Cleanup (5 tasks) - 1-2 weeks
+2. **Group B**: Diff Command (7 tasks) - 2-3 weeks
+
+**Rationale**: Quick wins that improve codebase quality and provide immediate user value.
+
+### **Phase 2: Core Extensions (Tier 2) - 6-8 weeks** 
+3. **Group C**: Integration Testing (3 tasks) - 2 weeks
+4. **Group D**: Additional Shell Support (5 tasks) - 2-3 weeks  
+5. **Group E**: Import Command (5 tasks) - 2-3 weeks
+
+**Rationale**: Builds on stable foundation to extend core value proposition.
+
+### **Phase 3+: Advanced Features (Tier 3+)**
+6. **Group F**: Watch Mode - if user demand exists
+7. **Group G**: Repository Infrastructure - when codebase is mature
+8. **Groups H-K**: Nice-to-have features based on user feedback
+
+## 🎯 **IMMEDIATE NEXT STEP**
+**Task 52e**: Refactor package installation logic to eliminate duplication
+
+**Why**: Simple, low-risk improvement that makes the codebase cleaner before tackling more complex features. Builds momentum with a quick win.
 
 ## Development Timeline
 
