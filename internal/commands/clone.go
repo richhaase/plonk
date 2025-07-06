@@ -6,10 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"plonk/internal/directories"
+
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/spf13/cobra"
-	"plonk/internal/directories"
 )
 
 // GitInterface defines git operations for dependency injection

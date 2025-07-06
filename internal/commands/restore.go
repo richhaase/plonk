@@ -7,10 +7,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"plonk/internal/directories"
 	"plonk/internal/utils"
 	"plonk/pkg/config"
+
+	"github.com/spf13/cobra"
 )
 
 var restoreCmd = &cobra.Command{

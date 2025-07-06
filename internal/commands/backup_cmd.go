@@ -3,9 +3,10 @@ package commands
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"plonk/internal/directories"
 	"plonk/pkg/config"
+
+	"github.com/spf13/cobra"
 )
 
 var backupCmd = &cobra.Command{

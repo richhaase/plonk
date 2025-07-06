@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/spf13/cobra"
 	"plonk/internal/directories"
 	"plonk/pkg/config"
 	"plonk/pkg/managers"
+
+	"github.com/spf13/cobra"
 )
 
 var installCmd = &cobra.Command{

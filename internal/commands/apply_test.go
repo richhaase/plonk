@@ -6,8 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/spf13/cobra"
 	"plonk/internal/utils"
+
+	"github.com/spf13/cobra"
 )
 
 func TestApplyCommand_NoConfig(t *testing.T) {

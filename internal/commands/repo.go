@@ -3,8 +3,9 @@ package commands
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"plonk/internal/directories"
+
+	"github.com/spf13/cobra"
 )
 
 // repoCmd represents the repo command (convenience command)
