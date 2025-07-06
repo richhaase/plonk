@@ -30,8 +30,8 @@ func pullCmdRun(cmd *cobra.Command, args []string) error {
 }
 
 func runPull(args []string) error {
-	if len(args) > 0 {
-		return fmt.Errorf("pull command takes no arguments")
+	if err := ValidateNoArgs("pull", args); err != nil {
+		return err
 	}
 	
 	// Ensure directory structure exists and handle migration if needed

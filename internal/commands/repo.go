@@ -38,8 +38,8 @@ func repoCmdRun(cmd *cobra.Command, args []string) error {
 }
 
 func runRepo(args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("repo requires exactly one repository URL")
+	if err := ValidateExactArgs("repo", 1, args); err != nil {
+		return err
 	}
 	
 	repoURL := args[0]

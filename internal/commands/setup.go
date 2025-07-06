@@ -35,8 +35,8 @@ func setupCmdRun(cmd *cobra.Command, args []string) error {
 }
 
 func runSetup(args []string) error {
-	if len(args) > 0 {
-		return fmt.Errorf("setup command takes no arguments")
+	if err := ValidateNoArgs("setup", args); err != nil {
+		return err
 	}
 	
 	fmt.Println("🚀 Setting up foundational tools for plonk...")

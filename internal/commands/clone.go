@@ -131,8 +131,8 @@ func runClone(args []string) error {
 }
 
 func runCloneWithBranch(args []string, flagBranch string) error {
-	if len(args) == 0 {
-		return fmt.Errorf("repository URL is required")
+	if err := ValidateExactArgs("clone", 1, args); err != nil {
+		return err
 	}
 	
 	// Ensure directory structure exists

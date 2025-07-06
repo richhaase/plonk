@@ -52,7 +52,7 @@ func runApplyWithAllOptions(args []string, backup bool, dryRun bool) error {
 	// Load configuration
 	cfg, err := config.LoadConfig(plonkDir)
 	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+		return WrapConfigError(err)
 	}
 	
 	// In dry-run mode, show what would be applied

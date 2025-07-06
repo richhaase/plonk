@@ -33,8 +33,8 @@ func installCmdRun(cmd *cobra.Command, args []string) error {
 }
 
 func runInstall(args []string) error {
-	if len(args) > 0 {
-		return fmt.Errorf("install command takes no arguments")
+	if err := ValidateNoArgs("install", args); err != nil {
+		return err
 	}
 	
 	plonkDir := directories.Default.PlonkDir()
@@ -42,7 +42,7 @@ func runInstall(args []string) error {
 	// Load configuration
 	config, err := config.LoadConfig(plonkDir)
 	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+		return WrapConfigError(err)
 	}
 	
 	// Create package managers
@@ -100,7 +100,7 @@ func installHomebrewPackages(mgr *managers.HomebrewManager, config *config.Confi
 	}
 	
 	if !mgr.IsAvailable() {
-		return nil, fmt.Errorf("Homebrew is not available")
+		return nil, WrapPackageManagerError("homebrew", fmt.Errorf("command not found"))
 	}
 	
 	var installedWithConfigs []string
@@ -110,7 +110,7 @@ func installHomebrewPackages(mgr *managers.HomebrewManager, config *config.Confi
 		if shouldInstallPackage(pkg.Name, mgr.IsInstalled(pkg.Name)) {
 			fmt.Printf("Installing Homebrew package: %s\n", pkg.Name)
 			if err := mgr.Install(pkg.Name); err != nil {
-				return nil, fmt.Errorf("failed to install %s: %w", pkg.Name, err)
+				return nil, WrapInstallError(pkg.Name, err)
 			}
 			// If package has config and was installed, add to list
 			if getPackageConfig(pkg) != "" {
@@ -126,7 +126,7 @@ func installHomebrewPackages(mgr *managers.HomebrewManager, config *config.Confi
 		if shouldInstallPackage(pkg.Name, mgr.IsInstalled(pkg.Name)) {
 			fmt.Printf("Installing Homebrew cask: %s\n", pkg.Name)
 			if err := mgr.InstallCask(pkg.Name); err != nil {
-				return nil, fmt.Errorf("failed to install cask %s: %w", pkg.Name, err)
+				return nil, WrapInstallError(pkg.Name, err)
 			}
 			// If package has config and was installed, add to list
 			if getPackageConfig(pkg) != "" {
@@ -147,7 +147,7 @@ func installASDFTools(mgr *managers.AsdfManager, config *config.Config) ([]strin
 	}
 	
 	if !mgr.IsAvailable() {
-		return nil, fmt.Errorf("ASDF is not available")
+		return nil, WrapPackageManagerError("asdf", fmt.Errorf("command not found"))
 	}
 	
 	var installedWithConfigs []string
@@ -157,11 +157,11 @@ func installASDFTools(mgr *managers.AsdfManager, config *config.Config) ([]strin
 			displayName := getPackageDisplayName(tool)
 			fmt.Printf("Installing ASDF tool: %s\n", displayName)
 			if err := mgr.InstallVersion(tool.Name, tool.Version); err != nil {
-				return nil, fmt.Errorf("failed to install %s: %w", displayName, err)
+				return nil, WrapInstallError(displayName, err)
 			}
 			// If tool has config and was installed, add to list
-			if tool.Config != "" {
-				installedWithConfigs = append(installedWithConfigs, tool.Name)
+			if getPackageConfig(tool) != "" {
+				installedWithConfigs = append(installedWithConfigs, getPackageName(tool))
 			}
 		} else {
 			fmt.Printf("ASDF tool %s already installed\n", getPackageDisplayName(tool))
@@ -178,7 +178,7 @@ func installNPMPackages(mgr *managers.NpmManager, config *config.Config) ([]stri
 	}
 	
 	if !mgr.IsAvailable() {
-		return nil, fmt.Errorf("NPM is not available")
+		return nil, WrapPackageManagerError("npm", fmt.Errorf("command not found"))
 	}
 	
 	var installedWithConfigs []string
@@ -190,7 +190,7 @@ func installNPMPackages(mgr *managers.NpmManager, config *config.Config) ([]stri
 		if shouldInstallPackage(packageName, mgr.IsInstalled(packageName)) {
 			fmt.Printf("Installing NPM package: %s\n", packageName)
 			if err := mgr.Install(packageName); err != nil {
-				return nil, fmt.Errorf("failed to install %s: %w", packageName, err)
+				return nil, WrapInstallError(packageName, err)
 			}
 			// If package has config and was installed, add to list
 			if getPackageConfig(pkg) != "" {
