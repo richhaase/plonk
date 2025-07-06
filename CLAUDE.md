@@ -330,9 +330,9 @@ npm:
 42d. **Implement plonk restore <file> functionality (Green phase)** - ✅ Completed
 42e. **Add restore command tests for timestamp-specific restoration (Red phase)** - ✅ Completed
 42f. **Implement plonk restore <file> --timestamp functionality (Green phase)** - ✅ Completed
-42g. **Add restore command tests for bulk restoration (Red phase)** - 🟡 Pending
-42h. **Implement plonk restore --all functionality (Green phase)** - 🟡 Pending
-42i. **Refactor restore command with improved error handling and user feedback (Refactor phase)** - 🟡 Pending
+42g. **Add restore command tests for bulk restoration (Red phase)** - ✅ Completed
+42h. **Implement plonk restore --all functionality (Green phase)** - ✅ Completed
+42i. **Refactor restore command with improved error handling and user feedback (Refactor phase)** - ✅ Completed
 
 **Medium Priority - Directory Restructure (Tasks 41a-41c):**
 
