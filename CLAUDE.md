@@ -10,33 +10,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and workflow commands.
 
-## Architecture
+## Architecture Overview
 
-### Core Interfaces
-```go
-// pkg/managers/common.go
-type CommandExecutor interface {
-    Execute(name string, args ...string) *exec.Cmd
-}
-
-type PackageManager interface {
-    IsAvailable() bool
-    ListInstalled() ([]string, error)
-}
-```
-
-### Package Structure
-- **`cmd/plonk/`** - CLI entry point
-- **`internal/commands/`** - CLI command implementations (status, install, apply, etc.)
-- **`internal/directories/`** - Centralized path management
-- **`pkg/managers/`** - Package manager abstractions (Homebrew, ASDF, NPM)
-- **`pkg/config/`** - YAML configuration system with validation
-
-### Configuration System
-- **YAML-based** with validation using `go-playground/validator`
-- **Source→Target convention**: `config/nvim/` → `~/.config/nvim/`
-- **Local overrides** via `plonk.local.yaml`
-- **Generators** for ZSH and Git configurations
+See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed system design and [CODEBASE_MAP.md](CODEBASE_MAP.md) for navigation.
 
 ## Required TDD Workflow
 
