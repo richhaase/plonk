@@ -322,41 +322,41 @@ npm:
 
 ### 🔄 Current Pending Tasks
 
-**High Priority - Complete Backup System with Restore Functionality (Tasks 29a-29i):**
+**High Priority - Complete Backup System with Restore Functionality (Tasks 42a-42i):**
 
-29a. **Add restore command tests for listing available backups (Red phase)** - ✅ Completed
-29b. **Implement plonk restore --list functionality (Green phase)** - ✅ Completed  
-29c. **Add restore command tests for single file restoration (Red phase)** - ✅ Completed
-29d. **Implement plonk restore <file> functionality (Green phase)** - ✅ Completed
-29e. **Add restore command tests for timestamp-specific restoration (Red phase)** - 🟡 Pending
-29f. **Implement plonk restore <file> --timestamp functionality (Green phase)** - 🟡 Pending
-29g. **Add restore command tests for bulk restoration (Red phase)** - 🟡 Pending
-29h. **Implement plonk restore --all functionality (Green phase)** - 🟡 Pending
-29i. **Refactor restore command with improved error handling and user feedback (Refactor phase)** - 🟡 Pending
+42a. **Add restore command tests for listing available backups (Red phase)** - ✅ Completed
+42b. **Implement plonk restore --list functionality (Green phase)** - ✅ Completed  
+42c. **Add restore command tests for single file restoration (Red phase)** - ✅ Completed
+42d. **Implement plonk restore <file> functionality (Green phase)** - ✅ Completed
+42e. **Add restore command tests for timestamp-specific restoration (Red phase)** - 🟡 Pending
+42f. **Implement plonk restore <file> --timestamp functionality (Green phase)** - 🟡 Pending
+42g. **Add restore command tests for bulk restoration (Red phase)** - 🟡 Pending
+42h. **Implement plonk restore --all functionality (Green phase)** - 🟡 Pending
+42i. **Refactor restore command with improved error handling and user feedback (Refactor phase)** - 🟡 Pending
 
-**Medium Priority - Directory Restructure (Tasks 30a-30c):**
+**Medium Priority - Directory Restructure (Tasks 41a-41c):**
 
-30a. **Add directory restructure tests (Red phase)** - 🟡 Pending
-30b. **Implement separate repo/ and backups/ subdirectories (Green phase)** - 🟡 Pending
-30c. **Update all commands to use new directory structure (Refactor phase)** - 🟡 Pending
+41a. **Add directory restructure tests (Red phase)** - 🟡 Pending
+41b. **Implement separate repo/ and backups/ subdirectories (Green phase)** - 🟡 Pending
+41c. **Update all commands to use new directory structure (Refactor phase)** - 🟡 Pending
 
-**Medium Priority - Import Command (Tasks 31a-31e):**
+**Medium Priority - Import Command (Tasks 38a-38e):**
 
-31a. **Add shell config parsing tests for common formats (Red phase)** - 🟡 Pending
-31b. **Implement basic .zshrc/.bashrc parsing functionality (Green phase)** - 🟡 Pending
-31c. **Add tests for plonk.yaml generation from parsed configs (Red phase)** - 🟡 Pending
-31d. **Implement plonk import command with YAML suggestion (Green phase)** - 🟡 Pending
-31e. **Refactor import command with support for multiple shell types (Refactor phase)** - 🟡 Pending
+38a. **Add shell config parsing tests for common formats (Red phase)** - 🟡 Pending
+38b. **Implement basic .zshrc/.bashrc parsing functionality (Green phase)** - 🟡 Pending
+38c. **Add tests for plonk.yaml generation from parsed configs (Red phase)** - 🟡 Pending
+38d. **Implement plonk import command with YAML suggestion (Green phase)** - 🟡 Pending
+38e. **Refactor import command with support for multiple shell types (Refactor phase)** - 🟡 Pending
 
-**Low Priority - Full Environment Snapshots (Tasks 32a-32g):**
+**Low Priority - Full Environment Snapshots (Tasks 43a-43g):**
 
-32a. **Add full environment snapshot tests (Red phase)** - 🟡 Pending
-32b. **Implement plonk snapshot create functionality (Green phase)** - 🟡 Pending
-32c. **Add snapshot restoration tests (Red phase)** - 🟡 Pending
-32d. **Implement plonk snapshot restore functionality (Green phase)** - 🟡 Pending
-32e. **Add snapshot management tests (list, delete) (Red phase)** - 🟡 Pending
-32f. **Implement plonk snapshot list/delete functionality (Green phase)** - 🟡 Pending
-32g. **Refactor snapshot system with metadata and cross-platform support (Refactor phase)** - 🟡 Pending
+43a. **Add full environment snapshot tests (Red phase)** - 🟡 Pending
+43b. **Implement plonk snapshot create functionality (Green phase)** - 🟡 Pending
+43c. **Add snapshot restoration tests (Red phase)** - 🟡 Pending
+43d. **Implement plonk snapshot restore functionality (Green phase)** - 🟡 Pending
+43e. **Add snapshot management tests (list, delete) (Red phase)** - 🟡 Pending
+43f. **Implement plonk snapshot list/delete functionality (Green phase)** - 🟡 Pending
+43g. **Refactor snapshot system with metadata and cross-platform support (Refactor phase)** - 🟡 Pending
 
 ## Development Timeline
 
