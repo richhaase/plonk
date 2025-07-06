@@ -37,40 +37,42 @@ func (m *MockCommandExecutor) SetCommand(key string, cmd *exec.Cmd) {
 	m.Commands[key] = cmd
 }
 
-// Test that we can check if Homebrew is available
-func TestHomebrewManager_IsAvailable_Success(t *testing.T) {
-	// Create a mock executor that returns success for "brew --version"
-	mockExec := NewMockCommandExecutor()
-	successCmd := exec.Command("echo", "Homebrew 4.0.0")
-	mockExec.SetCommand("brew --version", successCmd)
-
-	manager := NewHomebrewManager(mockExec)
-
-	available := manager.IsAvailable()
-
-	if !available {
-		t.Error("Expected Homebrew to be available when command succeeds")
+func TestHomebrewManager_IsAvailable(t *testing.T) {
+	tests := []struct {
+		name     string
+		command  *exec.Cmd
+		expected bool
+	}{
+		{
+			name:     "success when command succeeds",
+			command:  exec.Command("echo", "Homebrew 4.0.0"),
+			expected: true,
+		},
+		{
+			name:     "failure when command fails",
+			command:  exec.Command("false"), // 'false' command always exits with code 1
+			expected: false,
+		},
 	}
 
-	// Verify the right command was called
-	expectedCall := "brew --version"
-	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
-		t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
-	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockExec := NewMockCommandExecutor()
+			mockExec.SetCommand("brew --version", tt.command)
 
-func TestHomebrewManager_IsAvailable_Failure(t *testing.T) {
-	mockExec := NewMockCommandExecutor()
-	// Set up a command that will fail
-	failCmd := exec.Command("false") // 'false' command always exits with code 1
-	mockExec.SetCommand("brew --version", failCmd)
+			manager := NewHomebrewManager(mockExec)
+			available := manager.IsAvailable()
 
-	manager := NewHomebrewManager(mockExec)
+			if available != tt.expected {
+				t.Errorf("IsAvailable() = %v, expected %v", available, tt.expected)
+			}
 
-	available := manager.IsAvailable()
-
-	if available {
-		t.Error("Expected Homebrew to be unavailable when command fails")
+			// Verify the right command was called
+			expectedCall := "brew --version"
+			if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
+				t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
+			}
+		})
 	}
 }
 
@@ -182,69 +184,84 @@ func TestHomebrewManager_Update_AllPackages(t *testing.T) {
 	}
 }
 
-func TestHomebrewManager_IsInstalled_True(t *testing.T) {
-	mockExec := NewMockCommandExecutor()
-	// brew list <package> succeeds when package is installed
-	successCmd := exec.Command("echo", "git installed")
-	mockExec.SetCommand("brew list", successCmd)
-
-	manager := NewHomebrewManager(mockExec)
-	installed := manager.IsInstalled("git")
-
-	if !installed {
-		t.Error("Expected package to be installed when command succeeds")
+func TestHomebrewManager_IsInstalled(t *testing.T) {
+	tests := []struct {
+		name        string
+		packageName string
+		command     *exec.Cmd
+		expected    bool
+	}{
+		{
+			name:        "returns true when package is installed",
+			packageName: "git",
+			command:     exec.Command("echo", "git installed"),
+			expected:    true,
+		},
+		{
+			name:        "returns false when package is not installed",
+			packageName: "nonexistent",
+			command:     exec.Command("false"),
+			expected:    false,
+		},
 	}
 
-	// Verify the right command was called
-	expectedCall := "brew list"
-	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
-		t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
-	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockExec := NewMockCommandExecutor()
+			mockExec.SetCommand("brew list", tt.command)
 
-func TestHomebrewManager_IsInstalled_False(t *testing.T) {
-	mockExec := NewMockCommandExecutor()
-	// brew list <package> fails when package is not installed
-	failCmd := exec.Command("false")
-	mockExec.SetCommand("brew list", failCmd)
+			manager := NewHomebrewManager(mockExec)
+			installed := manager.IsInstalled(tt.packageName)
 
-	manager := NewHomebrewManager(mockExec)
-	installed := manager.IsInstalled("nonexistent")
+			if installed != tt.expected {
+				t.Errorf("IsInstalled(%s) = %v, expected %v", tt.packageName, installed, tt.expected)
+			}
 
-	if installed {
-		t.Error("Expected package to not be installed when command fails")
+			// Verify the right command was called
+			expectedCall := "brew list"
+			if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
+				t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
+			}
+		})
 	}
 }
 
 // ASDF Manager Tests
-func TestAsdfManager_IsAvailable_Success(t *testing.T) {
-	mockExec := NewMockCommandExecutor()
-	successCmd := exec.Command("echo", "v0.11.3")
-	mockExec.SetCommand("asdf version", successCmd)
-
-	manager := NewAsdfManager(mockExec)
-	available := manager.IsAvailable()
-
-	if !available {
-		t.Error("Expected ASDF to be available when command succeeds")
+func TestAsdfManager_IsAvailable(t *testing.T) {
+	tests := []struct {
+		name     string
+		command  *exec.Cmd
+		expected bool
+	}{
+		{
+			name:     "success when command succeeds",
+			command:  exec.Command("echo", "v0.11.3"),
+			expected: true,
+		},
+		{
+			name:     "failure when command fails",
+			command:  exec.Command("false"),
+			expected: false,
+		},
 	}
 
-	expectedCall := "asdf version"
-	if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
-		t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
-	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockExec := NewMockCommandExecutor()
+			mockExec.SetCommand("asdf version", tt.command)
 
-func TestAsdfManager_IsAvailable_Failure(t *testing.T) {
-	mockExec := NewMockCommandExecutor()
-	failCmd := exec.Command("false")
-	mockExec.SetCommand("asdf version", failCmd)
+			manager := NewAsdfManager(mockExec)
+			available := manager.IsAvailable()
 
-	manager := NewAsdfManager(mockExec)
-	available := manager.IsAvailable()
+			if available != tt.expected {
+				t.Errorf("IsAvailable() = %v, expected %v", available, tt.expected)
+			}
 
-	if available {
-		t.Error("Expected ASDF to be unavailable when command fails")
+			expectedCall := "asdf version"
+			if len(mockExec.Calls) != 1 || mockExec.Calls[0] != expectedCall {
+				t.Errorf("Expected call to '%s', got %v", expectedCall, mockExec.Calls)
+			}
+		})
 	}
 }
 
