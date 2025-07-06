@@ -29,18 +29,18 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	executor := managers.NewRealCommandExecutor()
 	
 	// Initialize package managers for shell environment management
-	packageManagers := []PackageManagerInfo{
+	packageManagers := []managers.PackageManagerInfo{
 		{
-			name:    "Homebrew",
-			manager: managers.NewHomebrewManager(executor),
+			Name:    "Homebrew",
+			Manager: managers.NewHomebrewManager(executor),
 		},
 		{
-			name:    "ASDF",
-			manager: managers.NewAsdfManager(executor),
+			Name:    "ASDF",
+			Manager: managers.NewAsdfManager(executor),
 		},
 		{
-			name:    "NPM",
-			manager: managers.NewNpmManager(executor),
+			Name:    "NPM",
+			Manager: managers.NewNpmManager(executor),
 		},
 	}
 	
@@ -49,16 +49,16 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	fmt.Println()
 	
 	for _, mgr := range packageManagers {
-		fmt.Printf("## %s\n", mgr.name)
+		fmt.Printf("## %s\n", mgr.Name)
 		
-		if !mgr.manager.IsAvailable() {
+		if !mgr.Manager.IsAvailable() {
 			fmt.Printf("❌ Not available\n\n")
 			continue
 		}
 		
 		fmt.Printf("✅ Available\n")
 		
-		packages, err := mgr.manager.ListInstalled()
+		packages, err := mgr.Manager.ListInstalled()
 		if err != nil {
 			fmt.Printf("⚠️  Error listing packages: %v\n\n", err)
 			continue
@@ -148,14 +148,3 @@ func showDriftStatus() error {
 	return nil
 }
 
-// PackageManagerInfo holds a package manager and its display name
-type PackageManagerInfo struct {
-	name    string
-	manager PackageManager
-}
-
-// PackageManager interface defines the common operations for all package managers
-type PackageManager interface {
-	IsAvailable() bool
-	ListInstalled() ([]string, error)
-}

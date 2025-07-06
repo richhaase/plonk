@@ -41,26 +41,26 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 	executor := managers.NewRealCommandExecutor()
 	
 	// Initialize all package managers
-	allManagers := map[string]PackageManagerInfo{
+	allManagers := map[string]managers.PackageManagerInfo{
 		"brew": {
-			name:    "Homebrew",
-			manager: managers.NewHomebrewManager(executor),
+			Name:    "Homebrew",
+			Manager: managers.NewHomebrewManager(executor),
 		},
 		"asdf": {
-			name:    "ASDF",
-			manager: managers.NewAsdfManager(executor),
+			Name:    "ASDF",
+			Manager: managers.NewAsdfManager(executor),
 		},
 		"npm": {
-			name:    "NPM",
-			manager: managers.NewNpmManager(executor),
+			Name:    "NPM",
+			Manager: managers.NewNpmManager(executor),
 		},
 	}
 	
 	// Determine which managers to show
-	var managersToShow []PackageManagerInfo
+	var managersToShow []managers.PackageManagerInfo
 	if len(args) == 0 {
 		// Show all managers
-		managersToShow = []PackageManagerInfo{
+		managersToShow = []managers.PackageManagerInfo{
 			allManagers["brew"],
 			allManagers["asdf"], 
 			allManagers["npm"],
@@ -69,7 +69,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 		// Show specific manager
 		managerKey := strings.ToLower(args[0])
 		if mgr, exists := allManagers[managerKey]; exists {
-			managersToShow = []PackageManagerInfo{mgr}
+			managersToShow = []managers.PackageManagerInfo{mgr}
 		} else {
 			return fmt.Errorf("unknown package manager '%s'. Available: brew, asdf, npm", args[0])
 		}
@@ -78,20 +78,20 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 	// List packages for each manager
 	for i, mgr := range managersToShow {
 		if len(managersToShow) > 1 {
-			fmt.Printf("## %s\n", mgr.name)
+			fmt.Printf("## %s\n", mgr.Name)
 		}
 		
-		if !mgr.manager.IsAvailable() {
-			fmt.Printf("❌ %s is not available\n", mgr.name)
+		if !mgr.Manager.IsAvailable() {
+			fmt.Printf("❌ %s is not available\n", mgr.Name)
 			if len(managersToShow) > 1 {
 				fmt.Println()
 			}
 			continue
 		}
 		
-		packages, err := mgr.manager.ListInstalled()
+		packages, err := mgr.Manager.ListInstalled()
 		if err != nil {
-			fmt.Printf("⚠️  Error listing %s packages: %v\n", mgr.name, err)
+			fmt.Printf("⚠️  Error listing %s packages: %v\n", mgr.Name, err)
 			if len(managersToShow) > 1 {
 				fmt.Println()
 			}

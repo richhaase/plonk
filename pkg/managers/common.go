@@ -10,6 +10,18 @@ type CommandExecutor interface {
 	Execute(name string, args ...string) *exec.Cmd
 }
 
+// PackageManager interface defines the common operations for all package managers
+type PackageManager interface {
+	IsAvailable() bool
+	ListInstalled() ([]string, error)
+}
+
+// PackageManagerInfo holds a package manager and its display name
+type PackageManagerInfo struct {
+	Name    string
+	Manager PackageManager
+}
+
 // CommandRunner provides common command execution functionality
 type CommandRunner struct {
 	executor    CommandExecutor

@@ -4,6 +4,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"plonk/pkg/managers"
 )
 
 func TestStatusCommandExists(t *testing.T) {
@@ -28,7 +30,7 @@ func TestStatusCommandExists(t *testing.T) {
 func TestPackageManagerInterface(t *testing.T) {
 	// Test that the PackageManager interface has the expected methods
 	// This is a compile-time check - if the interface changes, this won't compile
-	var _ PackageManager = &testPackageManager{}
+	var _ managers.PackageManager = &testPackageManager{}
 }
 
 func TestStatusWithDrift(t *testing.T) {
