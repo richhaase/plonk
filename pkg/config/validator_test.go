@@ -173,3 +173,198 @@ func TestValidateYAML_EmptyConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestValidatePackageNames_ValidNames(t *testing.T) {
+	tests := []struct {
+		name        string
+		packageName string
+	}{
+		{
+			name:        "simple package name",
+			packageName: "git",
+		},
+		{
+			name:        "package with hyphen",
+			packageName: "font-hack-nerd-font",
+		},
+		{
+			name:        "scoped npm package",
+			packageName: "@anthropic-ai/claude-code",
+		},
+		{
+			name:        "package with numbers",
+			packageName: "node16",
+		},
+		{
+			name:        "package with underscores",
+			packageName: "my_package",
+		},
+		{
+			name:        "package with dots",
+			packageName: "some.package",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidatePackageName(tt.packageName)
+			if err != nil {
+				t.Errorf("ValidatePackageName() error = %v, expected no error for valid package name", err)
+			}
+		})
+	}
+}
+
+func TestValidatePackageNames_InvalidNames(t *testing.T) {
+	tests := []struct {
+		name        string
+		packageName string
+		wantErr     string
+	}{
+		{
+			name:        "empty package name",
+			packageName: "",
+			wantErr:     "empty",
+		},
+		{
+			name:        "package with spaces",
+			packageName: "my package",
+			wantErr:     "invalid",
+		},
+		{
+			name:        "package with special chars",
+			packageName: "package!@#$",
+			wantErr:     "invalid",
+		},
+		{
+			name:        "package starting with dash",
+			packageName: "-invalid",
+			wantErr:     "invalid",
+		},
+		{
+			name:        "package ending with dash",
+			packageName: "invalid-",
+			wantErr:     "invalid",
+		},
+		{
+			name:        "only whitespace",
+			packageName: "   ",
+			wantErr:     "empty",
+		},
+		{
+			name:        "package with newline",
+			packageName: "package\nname",
+			wantErr:     "invalid",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidatePackageName(tt.packageName)
+			if err == nil {
+				t.Errorf("ValidatePackageName() error = nil, expected error containing %q", tt.wantErr)
+			} else if !strings.Contains(strings.ToLower(err.Error()), tt.wantErr) {
+				t.Errorf("ValidatePackageName() error = %v, expected error containing %q", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateConfigContent_ValidPackageNames(t *testing.T) {
+	tests := []struct {
+		name string
+		yaml string
+	}{
+		{
+			name: "valid homebrew packages",
+			yaml: `homebrew:
+  brews:
+    - git
+    - neovim
+    - name: aider
+      config: config/aider/
+  casks:
+    - font-hack-nerd-font`,
+		},
+		{
+			name: "valid npm packages",
+			yaml: `npm:
+  - "@anthropic-ai/claude-code"
+  - name: some-tool
+    package: "@scope/different-name"`,
+		},
+		{
+			name: "valid asdf packages",
+			yaml: `asdf:
+  - name: nodejs
+    version: "24.2.0"
+  - name: python
+    version: "3.13.2"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateConfigContent([]byte(tt.yaml))
+			if err != nil {
+				t.Errorf("ValidateConfigContent() error = %v, expected no error for valid config", err)
+			}
+		})
+	}
+}
+
+func TestValidateConfigContent_InvalidPackageNames(t *testing.T) {
+	tests := []struct {
+		name    string
+		yaml    string
+		wantErr string
+	}{
+		{
+			name: "empty package name in homebrew",
+			yaml: `homebrew:
+  brews:
+    - ""
+    - git`,
+			wantErr: "package name",
+		},
+		{
+			name: "invalid package name with spaces",
+			yaml: `homebrew:
+  brews:
+    - "my package"`,
+			wantErr: "package name",
+		},
+		{
+			name: "invalid package name in npm",
+			yaml: `npm:
+  - "invalid!@#$"`,
+			wantErr: "package name",
+		},
+		{
+			name: "empty package name in complex structure",
+			yaml: `homebrew:
+  brews:
+    - name: ""
+      config: config/test/`,
+			wantErr: "package name",
+		},
+		{
+			name: "invalid package name in asdf",
+			yaml: `asdf:
+  - name: "node js"
+    version: "24.2.0"`,
+			wantErr: "package name",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateConfigContent([]byte(tt.yaml))
+			if err == nil {
+				t.Errorf("ValidateConfigContent() error = nil, expected error containing %q", tt.wantErr)
+			} else if !strings.Contains(strings.ToLower(err.Error()), tt.wantErr) {
+				t.Errorf("ValidateConfigContent() error = %v, expected error containing %q", err, tt.wantErr)
+			}
+		})
+	}
+}

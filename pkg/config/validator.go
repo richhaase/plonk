@@ -65,3 +65,142 @@ func isOnlyComments(content string) bool {
 	}
 	return true
 }
+
+// ValidatePackageName checks if a package name is valid
+func ValidatePackageName(name string) error {
+	// Trim and check for empty
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" {
+		return fmt.Errorf("package name cannot be empty")
+	}
+	
+	// Check for invalid characters
+	for _, char := range trimmed {
+		if char == ' ' || char == '\t' || char == '\n' || char == '\r' {
+			return fmt.Errorf("invalid package name - cannot contain whitespace: %q", name)
+		}
+		// Allow letters, numbers, hyphens, underscores, dots, @, and /
+		if !((char >= 'a' && char <= 'z') || 
+			 (char >= 'A' && char <= 'Z') || 
+			 (char >= '0' && char <= '9') || 
+			 char == '-' || char == '_' || char == '.' || char == '@' || char == '/') {
+			return fmt.Errorf("invalid package name - contains invalid character %q: %q", char, name)
+		}
+	}
+	
+	// Check for invalid patterns
+	if strings.HasPrefix(trimmed, "-") || strings.HasSuffix(trimmed, "-") {
+		return fmt.Errorf("package name cannot start or end with hyphen: %q", name)
+	}
+	
+	return nil
+}
+
+// ValidateConfigContent validates the content of a plonk configuration
+func ValidateConfigContent(content []byte) error {
+	// First validate YAML syntax
+	if err := ValidateYAML(content); err != nil {
+		return err
+	}
+	
+	// Parse the YAML into a generic structure
+	var config map[string]interface{}
+	if err := yaml.Unmarshal(content, &config); err != nil {
+		return fmt.Errorf("failed to parse YAML: %w", err)
+	}
+	
+	// Validate package names in homebrew section
+	if homebrew, ok := config["homebrew"]; ok {
+		if err := validateHomebrewPackages(homebrew); err != nil {
+			return err
+		}
+	}
+	
+	// Validate package names in npm section
+	if npm, ok := config["npm"]; ok {
+		if err := validateNPMPackages(npm); err != nil {
+			return err
+		}
+	}
+	
+	// Validate package names in asdf section
+	if asdf, ok := config["asdf"]; ok {
+		if err := validateASDF(asdf); err != nil {
+			return err
+		}
+	}
+	
+	return nil
+}
+
+// validateHomebrewPackages validates package names in homebrew section
+func validateHomebrewPackages(homebrew interface{}) error {
+	homebrewMap, ok := homebrew.(map[string]interface{})
+	if !ok {
+		return nil // Skip if not a map
+	}
+	
+	// Check brews
+	if brews, ok := homebrewMap["brews"]; ok {
+		if err := validatePackageList(brews, "homebrew brews"); err != nil {
+			return err
+		}
+	}
+	
+	// Check casks
+	if casks, ok := homebrewMap["casks"]; ok {
+		if err := validatePackageList(casks, "homebrew casks"); err != nil {
+			return err
+		}
+	}
+	
+	return nil
+}
+
+// validateNPMPackages validates package names in npm section
+func validateNPMPackages(npm interface{}) error {
+	return validatePackageList(npm, "npm")
+}
+
+// validateASDF validates package names in asdf section
+func validateASDF(asdf interface{}) error {
+	return validatePackageList(asdf, "asdf")
+}
+
+// validatePackageList validates a list of packages (can be strings or objects with name field)
+func validatePackageList(packages interface{}, section string) error {
+	packageList, ok := packages.([]interface{})
+	if !ok {
+		return nil // Skip if not a list
+	}
+	
+	for i, pkg := range packageList {
+		var packageName string
+		
+		// Handle string packages
+		if name, ok := pkg.(string); ok {
+			packageName = name
+		} else if pkgMap, ok := pkg.(map[string]interface{}); ok {
+			// Handle object packages with name field
+			if name, ok := pkgMap["name"]; ok {
+				if nameStr, ok := name.(string); ok {
+					packageName = nameStr
+				}
+			} else if section == "npm" {
+				// For npm, check if there's a "package" field instead
+				if pkgName, ok := pkgMap["package"]; ok {
+					if pkgStr, ok := pkgName.(string); ok {
+						packageName = pkgStr
+					}
+				}
+			}
+		}
+		
+		// Always validate package names, even if empty (to catch empty strings)
+		if err := ValidatePackageName(packageName); err != nil {
+			return fmt.Errorf("invalid package name in %s[%d]: %w", section, i, err)
+		}
+	}
+	
+	return nil
+}
