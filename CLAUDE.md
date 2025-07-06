@@ -418,6 +418,18 @@ npm:
     - Supports both full config apply and package-specific preview
     - All tests passing with proper unit and integration test coverage
 
+38. **Refactor package installation logic to eliminate duplication (Task 52e)** - ✅ Completed
+    - Followed strict TDD workflow: Red-Green-Refactor-Commit-Update Memory
+    - Created helper functions to reduce code duplication in package installation:
+      - `extractInstalledPackages()` - combines package lists from all managers
+      - `shouldInstallPackage()` - consistent install checks across managers
+      - `getPackageDisplayName()` - unified package name formatting (handles NPM scoped packages)
+      - `getPackageConfig()` - extracts config path from any package type
+      - `getPackageName()` - gets base package name for config tracking
+    - Updated all install functions (Homebrew, ASDF, NPM) to use helpers consistently
+    - Reduced code duplication while maintaining same functionality
+    - All tests passing with comprehensive test coverage for new helpers
+
 ### 🔄 Current Pending Tasks (Reconsidered by Value, Complexity, Dependencies)
 
 **Prioritization Strategy**: Balanced approach considering implementation simplicity, user value, dependencies, and project impact. Focus on quick wins that improve codebase quality and provide immediate user benefits.
@@ -430,8 +442,7 @@ npm:
 ### **Group A: Code Quality & Cleanup (Simple Infrastructure)**
 **Value**: 🟢 **High** | **Complexity**: 🟢 **Low** | **Dependencies**: 🟢 **None**
 
-52e. **Refactor package installation logic to eliminate duplication** - 🎯 **NEXT PRIORITY**
-52g. **Standardize error handling patterns across commands** 
+52g. **Standardize error handling patterns across commands** - 🎯 **NEXT PRIORITY**
 52h. **Organize imports consistently across all files**
 52i. **Standardize function documentation**
 52j. **Convert remaining tests to table-driven format**
