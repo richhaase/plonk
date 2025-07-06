@@ -54,37 +54,11 @@ All CLI commands follow consistent patterns:
 
 ## CLI Commands
 
-### Core Commands
-```bash
-./plonk status                     # Package manager availability and drift detection
-./plonk pkg list [manager]         # List installed packages
-./plonk install                    # Install packages from config
-./plonk apply [--backup] [--dry-run] # Apply configurations
-./plonk clone <repo>               # Clone dotfiles repository
-./plonk setup                      # Install foundational tools
-./plonk repo <repo>                # Complete setup workflow
-```
-
-## Current Status
-
-**Phase**: Maintenance & Code Quality
-- **Linter issues reduced**: 1245 → ~60 (95% improvement)
-- **Active task**: Configure errcheck filtering and fix 3 real validation issues
-- **Next priority**: Task 52h - Organize imports consistently across all files
-
-## Project History
-
-See **CHANGELOG.md** for complete development history, including:
-- 40+ completed features with TDD methodology
-- Version history from v0.1.0 (core features) to v0.8.0 (development infrastructure)
-- Technical evolution and architectural improvements
-
-## Key Dependencies
-
-- `github.com/spf13/cobra` - CLI framework
-- `github.com/go-git/go-git/v5` - Git operations
-- `gopkg.in/yaml.v3` - YAML parsing
-- `github.com/go-playground/validator/v10` - Configuration validation
+For complete command reference, see README.md. Key commands:
+- `status` - Package manager availability and drift detection
+- `install` - Install packages from config  
+- `apply` - Apply configurations (supports --backup, --dry-run)
+- `clone`/`pull` - Git repository operations
 
 ## Critical Files
 
