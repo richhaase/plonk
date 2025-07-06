@@ -14,6 +14,8 @@ type DiscoveryResults struct {
 	AsdfTools        []string
 	NpmPackages      []string
 	Dotfiles         []string
+	ZSHConfig        ZSHConfig
+	GitConfig        GitConfig
 }
 
 // GenerateConfig creates a Config struct from discovery results.
@@ -28,9 +30,11 @@ func GenerateConfig(results DiscoveryResults) Config {
 		},
 		ASDF: make([]ASDFTool, len(results.AsdfTools)),
 		NPM:  make([]NPMPackage, len(results.NpmPackages)),
+		ZSH:  results.ZSHConfig,
+		Git:  results.GitConfig,
 	}
 
-	// Copy dotfiles
+	// Copy dotfiles (for any remaining non-special dotfiles)
 	copy(config.Dotfiles, results.Dotfiles)
 
 	// Convert Homebrew packages
