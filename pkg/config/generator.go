@@ -1,7 +1,11 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 // DiscoveryResults contains the results from package and dotfile discovery.
@@ -51,4 +55,28 @@ func GenerateConfig(results DiscoveryResults) Config {
 	}
 
 	return config
+}
+
+// SaveConfig marshals a Config struct to YAML and writes it to the specified file.
+func SaveConfig(config Config, filePath string) error {
+	// Ensure the directory exists
+	dir := filepath.Dir(filePath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	// Create the file
+	file, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Create YAML encoder with proper settings
+	encoder := yaml.NewEncoder(file)
+	encoder.SetIndent(2) // Use 2-space indentation
+	defer encoder.Close()
+
+	// Encode the config
+	return encoder.Encode(&config)
 }

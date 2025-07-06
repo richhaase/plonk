@@ -98,6 +98,17 @@ type GitConfig struct {
 	Filter  map[string]map[string]string `yaml:"filter,omitempty"`
 }
 
+// MarshalYAML implements custom marshaling for HomebrewPackage.
+func (h HomebrewPackage) MarshalYAML() (interface{}, error) {
+	// If only Name is set, marshal as a simple string
+	if h.Config == "" {
+		return h.Name, nil
+	}
+	// Otherwise, marshal as a full object
+	type homebrewPackageAlias HomebrewPackage
+	return homebrewPackageAlias(h), nil
+}
+
 // UnmarshalYAML implements custom unmarshaling for HomebrewPackage.
 func (h *HomebrewPackage) UnmarshalYAML(node *yaml.Node) error {
 	if node.Kind == yaml.ScalarNode {
@@ -114,6 +125,17 @@ func (h *HomebrewPackage) UnmarshalYAML(node *yaml.Node) error {
 	}
 	*h = HomebrewPackage(pkg)
 	return nil
+}
+
+// MarshalYAML implements custom marshaling for NPMPackage.
+func (n NPMPackage) MarshalYAML() (interface{}, error) {
+	// If only Name is set (no Package or Config), marshal as a simple string
+	if n.Package == "" && n.Config == "" {
+		return n.Name, nil
+	}
+	// Otherwise, marshal as a full object
+	type npmPackageAlias NPMPackage
+	return npmPackageAlias(n), nil
 }
 
 // UnmarshalYAML implements custom unmarshaling for NPMPackage.

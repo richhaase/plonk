@@ -1,6 +1,8 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -129,6 +131,112 @@ func TestGenerateConfig(t *testing.T) {
 			for i, pkg := range config.NPM {
 				if i < len(tt.expected.NPM) && pkg.Name != tt.expected.NPM[i].Name {
 					t.Errorf("Expected NPM package %s, got %s", tt.expected.NPM[i].Name, pkg.Name)
+				}
+			}
+		})
+	}
+}
+
+func TestSaveConfig(t *testing.T) {
+	tests := []struct {
+		name         string
+		config       Config
+		expectedYAML string
+		expectError  bool
+	}{
+		{
+			name: "save complete config",
+			config: Config{
+				Settings: Settings{DefaultManager: "homebrew"},
+				Dotfiles: []string{".zshrc", ".gitconfig", ".zshenv"},
+				Homebrew: HomebrewConfig{
+					Brews: []HomebrewPackage{
+						{Name: "git"},
+						{Name: "jq"},
+					},
+				},
+				ASDF: []ASDFTool{
+					{Name: "nodejs", Version: "20.0.0"},
+					{Name: "python", Version: "3.11.3"},
+				},
+				NPM: []NPMPackage{
+					{Name: "claude-code"},
+					{Name: "@angular/cli"},
+				},
+			},
+			expectedYAML: `settings:
+  default_manager: homebrew
+dotfiles:
+  - .zshrc
+  - .gitconfig
+  - .zshenv
+homebrew:
+  brews:
+    - git
+    - jq
+asdf:
+  - name: nodejs
+    version: 20.0.0
+  - name: python
+    version: 3.11.3
+npm:
+  - claude-code
+  - '@angular/cli'
+`,
+			expectError: false,
+		},
+		{
+			name: "save minimal config",
+			config: Config{
+				Settings: Settings{DefaultManager: "homebrew"},
+				Dotfiles: []string{".zshrc"},
+			},
+			expectedYAML: `settings:
+  default_manager: homebrew
+dotfiles:
+  - .zshrc
+`,
+			expectError: false,
+		},
+		{
+			name: "save empty config",
+			config: Config{
+				Settings: Settings{DefaultManager: "homebrew"},
+			},
+			expectedYAML: `settings:
+  default_manager: homebrew
+`,
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create temporary directory
+			tempDir := t.TempDir()
+			configPath := filepath.Join(tempDir, "plonk.yaml")
+
+			// Save the config
+			err := SaveConfig(tt.config, configPath)
+
+			if tt.expectError && err == nil {
+				t.Error("Expected error but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+
+			if !tt.expectError {
+				// Read the saved file
+				savedContent, err := os.ReadFile(configPath)
+				if err != nil {
+					t.Fatalf("Failed to read saved config: %v", err)
+				}
+
+				// Compare with expected YAML
+				if string(savedContent) != tt.expectedYAML {
+					t.Errorf("YAML mismatch.\nExpected:\n%s\nGot:\n%s",
+						tt.expectedYAML, string(savedContent))
 				}
 			}
 		})
