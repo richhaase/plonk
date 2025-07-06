@@ -111,6 +111,11 @@ go build ./cmd/plonk
 ./plonk install                  # Install packages from config
 ./plonk apply                    # Apply all configuration files
 ./plonk apply <package>          # Apply configuration for specific package
+./plonk apply --backup           # Apply all configurations with backup
+
+# Backup operations
+./plonk backup                   # Backup all files that apply would overwrite
+./plonk backup ~/.zshrc ~/.vimrc # Backup specific files
 
 # Convenience commands
 ./plonk repo <repo>              # Complete setup: clone + install + apply
@@ -307,11 +312,20 @@ npm:
     - Defaults to ~/.config/plonk/backups/ with 5 backup retention
     - Comprehensive TDD implementation with edge case testing
 
+28. **Implement apply --backup flag and standalone backup command with TDD** - ✅ Completed
+    - Added --backup flag to apply command for automated backups before applying (Red-Green-Refactor)
+    - Created standalone `plonk backup` command for manual backup operations
+    - Implemented smart backup detection that only backs up files that will be overwritten
+    - Added comprehensive test coverage for both backup scenarios (apply --backup and standalone backup)
+    - Supports backup of dotfiles, ZSH configs, and package-specific configurations
+    - Integrated with existing configurable backup location and cleanup system
+
 ### 🔄 Current Pending Tasks
 
-28. **Add --backup flag to apply command that runs backup before apply** - 🟡 Pending
-    - Add --backup flag to apply command
-    - Implement apply --backup workflow that runs plonk backup before apply
+29. **Implement ability to fully backup and restore configurations and package installations** - 🟡 Pending
+    - Design system-wide backup that includes both config files and package state
+    - Create restore functionality that can reinstall packages and restore configurations
+    - Add backup metadata tracking (timestamp, package versions, system state)
 
 ## Development Timeline
 
@@ -344,3 +358,5 @@ npm:
 - **Intelligent Workflows** - Smart detection of existing repositories and installed packages
 - **ZSH Configuration Generation** - Complete .zshrc and .zshenv file generation from YAML config
 - **Shell Best Practices** - Proper separation of environment variables (.zshenv) and interactive config (.zshrc)
+- **Automated Backup System** - Smart backup detection with --backup flag and standalone backup command
+- **Configurable Backup Management** - Timestamped backups with automatic cleanup and retention policies
