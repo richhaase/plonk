@@ -620,10 +620,23 @@ npm:
 7. **Group G**: Repository Infrastructure - when codebase is mature
 8. **Groups H-K**: Nice-to-have features based on user feedback
 
-## 🎯 **IMMEDIATE NEXT STEP**
-**Task 52e**: Refactor package installation logic to eliminate duplication
+## 🔄 **CURRENT PHASE: MAINTENANCE & CODEBASE IMPROVEMENT**
 
-**Why**: Simple, low-risk improvement that makes the codebase cleaner before tackling more complex features. Builds momentum with a quick win.
+**Phase Objective**: Improve codebase maintainability, navigation, and developer experience before continuing with new features.
+
+**Maintenance Tasks (Following TDD: Red→Green→Refactor→Commit→Update Memory):**
+1. **Create CODEBASE_MAP.md** - Navigation aid for large codebase ✅ **COMPLETED**
+2. **Infrastructure-First Code Quality Bundle:**
+   - **Setup golangci-lint + goimports** (automates Task 52h) ⚡ **IN PROGRESS**
+   - **Add pre-commit hooks for Go formatting**
+   - **Task 52i**: Standardize function documentation  
+   - **Task 52j**: Convert remaining tests to table-driven format
+3. **Development utilities**: Create helper functions for codebase analysis
+4. **Key files reference**: Document critical files and their purposes
+
+**Rationale**: With 39 completed tasks and 2000+ lines of code across multiple packages, the codebase needs better organization and documentation to maintain development velocity.
+
+**Next Phase**: Return to feature development with improved maintainability.
 
 ## Development Timeline
 
