@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Code Quality
+- Fixed pre-commit hooks for reliable development workflow
+- Standardized import organization using goimports with local prefixes
+- Improved function documentation to follow Go idioms
+- Added comprehensive package-level documentation for all packages
+- Removed problematic errcheck and gocritic linters
+- Enhanced API documentation readiness with godoc improvements
+
+## [0.9.0] - 2025-01-06 - Documentation & Standards
+
 ### Documentation
 - Created comprehensive documentation structure
 - Added TODO.md for AI agent work tracking
