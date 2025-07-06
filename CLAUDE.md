@@ -346,6 +346,15 @@ npm:
     - Validates both simple string packages and complex objects with name fields
     - Clear error messages with section and index information for debugging
 
+32. **Implement file path validation with TDD cycle (Task 47a5-47a6)** - ✅ Completed
+    - Added comprehensive file path validation tests for config content (Red phase)
+    - Implemented ValidateFilePath function and integrated with ValidateConfigContent (Green phase)
+    - Validation of config paths in package objects across all package managers
+    - Validation of standalone dotfiles section file paths
+    - Prevents absolute paths, empty paths, and paths with problematic characters
+    - File path rules: relative paths only, no special characters, clear error messages
+    - Supports both package-specific config paths and standalone dotfile paths
+
 ### 🔄 Current Pending Tasks (Re-prioritized)
 
 **Prioritization Rationale**: Foundation & daily value over new features. Prioritize what makes plonk safer and more reliable for daily use.
