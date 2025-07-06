@@ -20,10 +20,11 @@ This project was developed using **Test-Driven Development (TDD)** with Red-Gree
 - **Individual Managers** - Homebrew, ASDF, NPM with consistent interfaces
 
 ### Configuration Management (`pkg/config/`)
-- **YAML-First Design** - Primary config format with TOML legacy support
+- **YAML Configuration** - Pure YAML config format (TOML support removed in cleanup)
 - **Package-Centric Structure** - Organized by package manager with dotfiles section
 - **Source-Target Convention** - Automatic path mapping (config/nvim/ → ~/.config/nvim/)
 - **Local Overrides** - Support for plonk.local.yaml for machine-specific settings
+- **Config Validation** - Comprehensive YAML syntax and content validation
 
 ### CLI (`internal/commands/`)
 - **Cobra Framework** - Professional CLI with help, autocompletion, and subcommands
@@ -354,6 +355,15 @@ npm:
     - Prevents absolute paths, empty paths, and paths with problematic characters
     - File path rules: relative paths only, no special characters, clear error messages
     - Supports both package-specific config paths and standalone dotfile paths
+
+33. **Complete Phase 1 codebase cleanup (Task 52a-52c)** - ✅ Completed
+    - **Task 52a**: Removed legacy TOML configuration system entirely (130+ lines of dead code)
+    - **Task 52b**: Consolidated package manager interfaces into single location (pkg/managers/common.go)
+    - **Task 52c**: Renamed YAML config types to be primary (YAMLConfig → Config, LoadYAMLConfig → LoadConfig)
+    - Eliminated duplicate PackageManager interface definitions between command files
+    - Updated all function signatures and references across codebase
+    - YAML is now the pure configuration format after TOML removal
+    - Improved code organization and eliminated architectural duplication
 
 ### 🔄 Current Pending Tasks (Re-prioritized)
 
