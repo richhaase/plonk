@@ -348,6 +348,19 @@ npm:
 38d. **Implement plonk import command with YAML suggestion (Green phase)** - 🟡 Pending
 38e. **Refactor import command with support for multiple shell types (Refactor phase)** - 🟡 Pending
 
+**Medium Priority - Repository Infrastructure (Tasks 44a-44j):**
+
+44a. **Add pre-commit hook tests for Go formatting (Red phase)** - 🟡 Pending
+44b. **Implement pre-commit hooks for Go formatting (Green phase)** - 🟡 Pending
+44c. **Add linting tests with golangci-lint (Red phase)** - 🟡 Pending
+44d. **Implement golangci-lint configuration and hooks (Green phase)** - 🟡 Pending
+44e. **Refactor code quality setup with development workflow integration (Refactor phase)** - 🟡 Pending
+44f. **Add development workflow tests (Red phase)** - 🟡 Pending
+44g. **Implement development workflow tool (Green phase)** - 🟡 Pending
+44h. **Add test coverage enforcement tests (Red phase)** - 🟡 Pending
+44i. **Implement test coverage tooling (Green phase)** - 🟡 Pending
+44j. **Refactor development workflow with documentation and optimization (Refactor phase)** - 🟡 Pending
+
 **Low Priority - Full Environment Snapshots (Tasks 43a-43g):**
 
 43a. **Add full environment snapshot tests (Red phase)** - 🟡 Pending
