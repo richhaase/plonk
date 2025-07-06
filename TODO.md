@@ -10,12 +10,12 @@ Active work items for current development session. Maintained by AI agents.
 - ✅ **RED-GREEN-REFACTOR: Basic import command structure** - CLI interface and command registration complete
 - ✅ **RED-GREEN-REFACTOR: Homebrew package discovery** - HomebrewDiscoverer with brew list parsing complete
 - ✅ **RED-GREEN-REFACTOR: AsdfManager.ListGlobalTools() enhancement** - Added ~/.tool-versions file reading capability
-- 🔴 **RED: ASDF package discovery** - Implement AsdfDiscoverer using new ListGlobalTools() method
+- ✅ **RED-GREEN-REFACTOR: ASDF package discovery** - AsdfDiscoverer using new ListGlobalTools() method complete
 - ✅ **RED-GREEN-REFACTOR: NPM package discovery** - NpmDiscoverer reusing existing NpmManager complete
 - ✅ **RED-GREEN-REFACTOR: Dotfile detection** - DotfileDiscoverer for managed dotfiles complete
-- 🔴 **RED: GenerateConfig() function** - Convert discovery results to Config struct  
-- 🔴 **RED: SaveConfig() function** - Marshal Config struct to YAML file
-- 🔴 **RED: Integration test** - Write failing test for complete import workflow
+- ✅ **RED-GREEN-REFACTOR: GenerateConfig() function** - Convert discovery results to Config struct complete
+- ✅ **RED-GREEN-REFACTOR: SaveConfig() function** - Marshal Config struct to YAML file with custom formatting complete
+- 🔴 **RED: Wire import command** - Integrate all components into CLI command with proper output
 
 ## Completed (This Session)
 - ✅ **Fix pre-commit hooks** - Removed errcheck/gocritic, updated to use goimports 
