@@ -47,7 +47,6 @@ Features and concepts being considered:
 Features ready for implementation, roughly in priority order:
 
 ### Core Features
-- **Import command** - Generate plonk.yaml from existing shell configs, including package discovery (brew list, asdf list, npm list) and dotfile copying (.zshrc, .gitconfig, .zshenv)
 - **Enhanced dry-run capabilities** - Show exactly what files would be modified and what package commands would run across all operations
 - **Diff command** - Show differences between config and reality
 - **Additional shell support** - Bash and Fish configuration generation
@@ -58,6 +57,9 @@ Features ready for implementation, roughly in priority order:
 - **CI/CD setup** - Automated testing and releases
 
 ## In Progress
+
+### Core Features
+- **Import command** - Generate plonk.yaml from existing shell configs, including package discovery (brew list, asdf list, npm list) and dotfile copying (.zshrc, .gitconfig, .zshenv) - *TDD implementation in progress*
 
 Active work items are tracked in [TODO.md](TODO.md).
 

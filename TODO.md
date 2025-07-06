@@ -6,6 +6,15 @@ Active work items for current development session. Maintained by AI agents.
 
 ## Pending
 
+### Import Command Implementation (TDD Breakdown)
+- 🔴 **RED: Basic import command structure** - Write failing test for CLI interface and command registration
+- 🔴 **RED: Homebrew package discovery** - Write failing test for `brew list` package detection
+- 🔴 **RED: ASDF package discovery** - Write failing test for `asdf list` tool/version detection  
+- 🔴 **RED: NPM package discovery** - Write failing test for `npm list -g` global package detection
+- 🔴 **RED: Dotfile detection** - Write failing test for discovering .zshrc, .gitconfig, .zshenv files
+- 🔴 **RED: YAML config generation** - Write failing test for converting discovered packages to plonk.yaml format
+- 🔴 **RED: Integration test** - Write failing test for complete import workflow
+
 ## Completed (This Session)
 - ✅ **Fix pre-commit hooks** - Removed errcheck/gocritic, updated to use goimports 
 - ✅ **Organize imports consistently** - Used goimports with local-prefixes: plonk
@@ -20,4 +29,11 @@ Active work items for current development session. Maintained by AI agents.
 - Pre-commit hooks working reliably with 0 linting errors
 - Documentation API-ready with proper Go conventions
 - All package manager tests follow table-driven patterns
-- **Next phase**: Core Features - Import command prioritized for immediate usability
+- **Current phase**: Core Features - Import command development using TDD
+
+### Import Command Design Notes
+- **Purpose**: Generate plonk.yaml from existing shell environment (ROADMAP.md)
+- **Components**: Package discovery (brew/asdf/npm list) + dotfile copying (.zshrc/.gitconfig/.zshenv)
+- **TDD Pattern**: Each component gets red-green-refactor cycle per CONTRIBUTING.md
+- **Test Patterns**: Use MockCommandExecutor, setupTestEnv(t), table-driven tests
+- **Command Structure**: Follow existing patterns in internal/commands/ (status.go as reference)
