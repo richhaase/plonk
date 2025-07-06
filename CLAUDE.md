@@ -322,10 +322,41 @@ npm:
 
 ### 🔄 Current Pending Tasks
 
-29. **Implement ability to fully backup and restore configurations and package installations** - 🟡 Pending
-    - Design system-wide backup that includes both config files and package state
-    - Create restore functionality that can reinstall packages and restore configurations
-    - Add backup metadata tracking (timestamp, package versions, system state)
+**High Priority - Complete Backup System with Restore Functionality (Tasks 29a-29i):**
+
+29a. **Add restore command tests for listing available backups (Red phase)** - 🟡 Pending
+29b. **Implement plonk restore --list functionality (Green phase)** - 🟡 Pending  
+29c. **Add restore command tests for single file restoration (Red phase)** - 🟡 Pending
+29d. **Implement plonk restore <file> functionality (Green phase)** - 🟡 Pending
+29e. **Add restore command tests for timestamp-specific restoration (Red phase)** - 🟡 Pending
+29f. **Implement plonk restore <file> --timestamp functionality (Green phase)** - 🟡 Pending
+29g. **Add restore command tests for bulk restoration (Red phase)** - 🟡 Pending
+29h. **Implement plonk restore --all functionality (Green phase)** - 🟡 Pending
+29i. **Refactor restore command with improved error handling and user feedback (Refactor phase)** - 🟡 Pending
+
+**Medium Priority - Directory Restructure (Tasks 30a-30c):**
+
+30a. **Add directory restructure tests (Red phase)** - 🟡 Pending
+30b. **Implement separate repo/ and backups/ subdirectories (Green phase)** - 🟡 Pending
+30c. **Update all commands to use new directory structure (Refactor phase)** - 🟡 Pending
+
+**Medium Priority - Import Command (Tasks 31a-31e):**
+
+31a. **Add shell config parsing tests for common formats (Red phase)** - 🟡 Pending
+31b. **Implement basic .zshrc/.bashrc parsing functionality (Green phase)** - 🟡 Pending
+31c. **Add tests for plonk.yaml generation from parsed configs (Red phase)** - 🟡 Pending
+31d. **Implement plonk import command with YAML suggestion (Green phase)** - 🟡 Pending
+31e. **Refactor import command with support for multiple shell types (Refactor phase)** - 🟡 Pending
+
+**Low Priority - Full Environment Snapshots (Tasks 32a-32g):**
+
+32a. **Add full environment snapshot tests (Red phase)** - 🟡 Pending
+32b. **Implement plonk snapshot create functionality (Green phase)** - 🟡 Pending
+32c. **Add snapshot restoration tests (Red phase)** - 🟡 Pending
+32d. **Implement plonk snapshot restore functionality (Green phase)** - 🟡 Pending
+32e. **Add snapshot management tests (list, delete) (Red phase)** - 🟡 Pending
+32f. **Implement plonk snapshot list/delete functionality (Green phase)** - 🟡 Pending
+32g. **Refactor snapshot system with metadata and cross-platform support (Refactor phase)** - 🟡 Pending
 
 ## Development Timeline
 
