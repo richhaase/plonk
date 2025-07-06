@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+	"plonk/internal/directories"
 	"plonk/pkg/config"
 	"plonk/pkg/managers"
 )
@@ -36,7 +37,7 @@ func runInstall(args []string) error {
 		return fmt.Errorf("install command takes no arguments")
 	}
 	
-	plonkDir := getPlonkDir()
+	plonkDir := directories.Default.PlonkDir()
 	
 	// Load configuration
 	config, err := config.LoadConfig(plonkDir)

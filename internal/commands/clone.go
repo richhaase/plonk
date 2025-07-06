@@ -9,6 +9,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/spf13/cobra"
+	"plonk/internal/directories"
 )
 
 // GitInterface defines git operations for dependency injection
@@ -83,21 +84,6 @@ func (g *RealGit) IsRepo(dir string) bool {
 // Global git instance (can be mocked for testing)
 var gitClient GitInterface = &RealGit{}
 
-// getPlonkDir returns the plonk directory location
-// Defaults to ~/.config/plonk but can be overridden with PLONK_DIR environment variable
-func getPlonkDir() string {
-	if dir := os.Getenv("PLONK_DIR"); dir != "" {
-		return dir
-	}
-	
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		// Fallback to current directory if we can't get home
-		return ".plonk"
-	}
-	
-	return filepath.Join(homeDir, ".config", "plonk")
-}
 
 var cloneCmd = &cobra.Command{
 	Use:   "clone <repository>",
@@ -150,11 +136,11 @@ func runCloneWithBranch(args []string, flagBranch string) error {
 	}
 	
 	// Ensure directory structure exists
-	if err := ensureDirectoryStructure(); err != nil {
+	if err := directories.Default.EnsureStructure(); err != nil {
 		return fmt.Errorf("failed to setup directory structure: %w", err)
 	}
 	
-	repoDir := getRepoDir()
+	repoDir := directories.Default.RepoDir()
 	
 	// Check if target directory already exists and has content
 	if entries, err := os.ReadDir(repoDir); err == nil && len(entries) > 0 {

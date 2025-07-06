@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"plonk/internal/directories"
 )
 
 var pullCmd = &cobra.Command{
@@ -34,11 +35,11 @@ func runPull(args []string) error {
 	}
 	
 	// Ensure directory structure exists and handle migration if needed
-	if err := ensureDirectoryStructure(); err != nil {
+	if err := directories.Default.EnsureStructure(); err != nil {
 		return fmt.Errorf("failed to setup directory structure: %w", err)
 	}
 	
-	repoDir := getRepoDir()
+	repoDir := directories.Default.RepoDir()
 	
 	// Check if repo directory exists and is a git repo
 	if !gitClient.IsRepo(repoDir) {

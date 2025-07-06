@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	
+	"plonk/internal/directories"
 )
 
 func TestCloneCommand_Success(t *testing.T) {
@@ -37,13 +39,13 @@ func TestCloneCommand_Success(t *testing.T) {
 	}
 	
 	// Verify the repo was cloned to the plonk directory
-	plonkDir := getPlonkDir()
+	plonkDir := directories.Default.PlonkDir()
 	if _, err := os.Stat(plonkDir); os.IsNotExist(err) {
 		t.Error("Expected plonk directory to be created")
 	}
 	
 	// Verify plonk.yaml exists in cloned repo (now in repo subdirectory)
-	repoDir := getRepoDir()
+	repoDir := directories.Default.RepoDir()
 	configPath := filepath.Join(repoDir, "plonk.yaml")
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		t.Error("Expected plonk.yaml to exist in cloned repo")
@@ -66,7 +68,7 @@ func TestCloneCommand_ExistingDirectory(t *testing.T) {
 	os.Setenv("HOME", tempHome)
 	
 	// Create existing directory
-	plonkDir := getPlonkDir()
+	plonkDir := directories.Default.PlonkDir()
 	if err := os.MkdirAll(plonkDir, 0755); err != nil {
 		t.Fatalf("Failed to create existing directory: %v", err)
 	}

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 	
+	"plonk/internal/directories"
 	"plonk/pkg/config"
 )
 
@@ -42,7 +43,7 @@ func BackupExistingFile(filePath string) (string, error) {
 // BackupConfigurationFiles creates backups of specified files using configuration settings
 func BackupConfigurationFiles(filePaths []string) error {
 	// Load configuration to get backup settings
-	plonkDir := getPlonkDir()
+	plonkDir := directories.Default.PlonkDir()
 	cfg, err := config.LoadConfig(plonkDir)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
@@ -70,7 +71,7 @@ func BackupConfigurationFiles(filePaths []string) error {
 // getBackupDirectory returns the configured backup directory with default fallback
 func getBackupDirectory(cfg *config.Config) string {
 	if cfg.Backup.Location != "" {
-		return expandHomeDir(cfg.Backup.Location)
+		return directories.Default.ExpandHomeDir(cfg.Backup.Location)
 	}
 	
 	// Default to ~/.config/plonk/backups

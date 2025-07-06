@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+	"plonk/internal/directories"
 	"plonk/pkg/config"
 )
 
@@ -40,7 +41,7 @@ func runApply(args []string) error {
 }
 
 func runApplyWithBackup(args []string, backup bool) error {
-	plonkDir := getPlonkDir()
+	plonkDir := directories.Default.PlonkDir()
 	
 	// Load configuration
 	cfg, err := config.LoadConfig(plonkDir)
@@ -116,7 +117,7 @@ func applyDotfiles(plonkDir string, config *config.Config) error {
 	
 	for source, target := range dotfileTargets {
 		sourcePath := filepath.Join(sourceDir, source)
-		targetPath := expandHomeDir(target)
+		targetPath := directories.Default.ExpandHomeDir(target)
 		
 		if err := copyFile(sourcePath, targetPath); err != nil {
 			return fmt.Errorf("failed to copy %s to %s: %w", source, target, err)
@@ -215,7 +216,7 @@ func findPackageConfig(config *config.Config, packageName string) string {
 
 func applyConfigPath(plonkDir, configPath string) error {
 	sourcePath := filepath.Join(plonkDir, configPath)
-	targetPath := expandHomeDir("~/." + configPath)
+	targetPath := directories.Default.ExpandHomeDir("~/." + configPath)
 	
 	return copyFileOrDir(sourcePath, targetPath)
 }
@@ -274,23 +275,6 @@ func copyDir(src, dst string) error {
 	return nil
 }
 
-func expandHomeDir(path string) string {
-	if len(path) == 0 || path[0] != '~' {
-		return path
-	}
-	
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return path // fallback to original path
-	}
-	
-	if len(path) == 1 || path[1] == '/' {
-		return filepath.Join(homeDir, path[1:])
-	}
-	
-	// Handle ~user syntax (though we don't use it in plonk)
-	return path
-}
 
 func applyZSHConfiguration(cfg *config.Config) error {
 	// Skip if no ZSH configuration is defined
@@ -364,7 +348,7 @@ func createBackupsBeforeApply(cfg *config.Config, args []string) error {
 		// Add dotfiles
 		dotfileTargets := cfg.GetDotfileTargets()
 		for _, target := range dotfileTargets {
-			targetPath := expandHomeDir(target)
+			targetPath := directories.Default.ExpandHomeDir(target)
 			filesToBackup = append(filesToBackup, targetPath)
 		}
 		
@@ -397,7 +381,7 @@ func createBackupsBeforeApply(cfg *config.Config, args []string) error {
 		packageName := args[0]
 		packageConfig := findPackageConfig(cfg, packageName)
 		if packageConfig != "" {
-			targetPath := expandHomeDir("~/."+packageConfig)
+			targetPath := directories.Default.ExpandHomeDir("~/."+packageConfig)
 			filesToBackup = append(filesToBackup, targetPath)
 		}
 	}
@@ -413,14 +397,14 @@ func getPackageConfigFilesToBackup(cfg *config.Config) []string {
 	// Homebrew package configurations
 	for _, pkg := range cfg.Homebrew.Brews {
 		if pkg.Config != "" {
-			targetPath := expandHomeDir("~/."+pkg.Config)
+			targetPath := directories.Default.ExpandHomeDir("~/."+pkg.Config)
 			filesToBackup = append(filesToBackup, targetPath)
 		}
 	}
 	
 	for _, pkg := range cfg.Homebrew.Casks {
 		if pkg.Config != "" {
-			targetPath := expandHomeDir("~/."+pkg.Config)
+			targetPath := directories.Default.ExpandHomeDir("~/."+pkg.Config)
 			filesToBackup = append(filesToBackup, targetPath)
 		}
 	}
@@ -428,7 +412,7 @@ func getPackageConfigFilesToBackup(cfg *config.Config) []string {
 	// ASDF package configurations
 	for _, tool := range cfg.ASDF {
 		if tool.Config != "" {
-			targetPath := expandHomeDir("~/."+tool.Config)
+			targetPath := directories.Default.ExpandHomeDir("~/."+tool.Config)
 			filesToBackup = append(filesToBackup, targetPath)
 		}
 	}
@@ -436,7 +420,7 @@ func getPackageConfigFilesToBackup(cfg *config.Config) []string {
 	// NPM package configurations
 	for _, pkg := range cfg.NPM {
 		if pkg.Config != "" {
-			targetPath := expandHomeDir("~/."+pkg.Config)
+			targetPath := directories.Default.ExpandHomeDir("~/."+pkg.Config)
 			filesToBackup = append(filesToBackup, targetPath)
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"plonk/internal/directories"
 	"plonk/pkg/config"
 )
 
@@ -37,7 +38,7 @@ func backupCmdRun(cmd *cobra.Command, args []string) error {
 
 // backupFilesForApply backs up all files that would be overwritten by apply
 func backupFilesForApply() error {
-	plonkDir := getPlonkDir()
+	plonkDir := directories.Default.PlonkDir()
 	
 	// Load configuration
 	cfg, err := config.LoadConfig(plonkDir)

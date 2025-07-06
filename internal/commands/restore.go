@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"plonk/internal/directories"
 	"plonk/internal/utils"
 	"plonk/pkg/config"
 )
@@ -50,13 +51,13 @@ func restoreCmdRun(cmd *cobra.Command, args []string) error {
 
 func runRestoreList() error {
 	// Ensure plonk is properly set up
-	plonkDir := getPlonkDir()
+	plonkDir := directories.Default.PlonkDir()
 	if _, err := config.LoadConfig(plonkDir); err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 	
 	// Get backup directory using new directory structure
-	backupDir := getBackupsDir()
+	backupDir := directories.Default.BackupsDir()
 	
 	// Check if backup directory exists
 	if !utils.FileExists(backupDir) {
@@ -92,7 +93,7 @@ func runRestoreList() error {
 
 func runRestoreAll() error {
 	// Get backup directory using new directory structure
-	backupDir := getBackupsDir()
+	backupDir := directories.Default.BackupsDir()
 	
 	// Check if backup directory exists
 	if !utils.FileExists(backupDir) {
@@ -153,7 +154,7 @@ func runRestoreAll() error {
 
 func runRestoreFile(filePath, timestamp string) error {
 	// Get backup directory using new directory structure
-	backupDir := getBackupsDir()
+	backupDir := directories.Default.BackupsDir()
 	
 	// Check if backup directory exists
 	if !utils.FileExists(backupDir) {
@@ -257,7 +258,7 @@ func extractTimestampFromBackup(backupPath string) string {
 // originalPathToBackupFilename converts original file path to backup filename
 func originalPathToBackupFilename(originalPath string) string {
 	// Expand ~ to full path first
-	expandedPath := expandHomeDir(originalPath)
+	expandedPath := directories.Default.ExpandHomeDir(originalPath)
 	
 	// Get just the filename without directory
 	filename := filepath.Base(expandedPath)
@@ -295,7 +296,7 @@ func restoreBackupToFile(backupPath, targetPath string) error {
 	}
 	
 	// Expand home directory if needed
-	expandedTargetPath := expandHomeDir(targetPath)
+	expandedTargetPath := directories.Default.ExpandHomeDir(targetPath)
 	
 	// Ensure directory exists for target file
 	targetDir := filepath.Dir(expandedTargetPath)

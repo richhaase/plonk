@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"plonk/internal/directories"
 )
 
 // repoCmd represents the repo command (convenience command)
@@ -44,11 +45,11 @@ func runRepo(args []string) error {
 	repoURL := args[0]
 	
 	// Ensure directory structure exists and handle migration if needed
-	if err := ensureDirectoryStructure(); err != nil {
+	if err := directories.Default.EnsureStructure(); err != nil {
 		return fmt.Errorf("failed to setup directory structure: %w", err)
 	}
 	
-	repoDir := getRepoDir()
+	repoDir := directories.Default.RepoDir()
 	
 	// Step 1: Clone or pull repository
 	fmt.Println("Step 1: Setting up repository...")

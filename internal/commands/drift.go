@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"plonk/internal/directories"
 	"plonk/pkg/config"
 	"plonk/pkg/managers"
 )
@@ -29,7 +30,7 @@ func (d *DriftReport) HasDrift() bool {
 
 // detectConfigDrift compares current system state with plonk configuration
 func detectConfigDrift() (*DriftReport, error) {
-	plonkDir := getPlonkDir()
+	plonkDir := directories.Default.PlonkDir()
 	
 	// Load configuration
 	config, err := config.LoadConfig(plonkDir)
@@ -63,7 +64,7 @@ func checkDotfileDrift(plonkDir string, config *config.Config, drift *DriftRepor
 	
 	for source, target := range dotfileTargets {
 		sourcePath := filepath.Join(plonkDir, source)
-		targetPath := expandHomeDir(target)
+		targetPath := directories.Default.ExpandHomeDir(target)
 		
 		// Check if target file exists
 		if _, err := os.Stat(targetPath); os.IsNotExist(err) {
@@ -118,7 +119,7 @@ func checkDotfileDrift(plonkDir string, config *config.Config, drift *DriftRepor
 // checkPackageConfigDrift checks drift for package-specific configuration directories
 func checkPackageConfigDrift(plonkDir, configPath string, drift *DriftReport) error {
 	sourcePath := filepath.Join(plonkDir, configPath)
-	targetPath := expandHomeDir("~/." + configPath)
+	targetPath := directories.Default.ExpandHomeDir("~/." + configPath)
 	
 	// Check if source exists
 	sourceInfo, err := os.Stat(sourcePath)
