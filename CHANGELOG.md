@@ -6,12 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-### In Progress
-- Configure errcheck filtering and fix 3 real validation issues (infra-8)
-
-### Planned
-- Organize imports consistently across all files (52h)
-- Convert remaining tests to table-driven format (52j)
+### Documentation
+- Created comprehensive documentation structure
+- Added TODO.md for AI agent work tracking
+- Added ROADMAP.md for future development plans
+- Added CONTRIBUTING.md with TDD workflow guidelines
+- Added ARCHITECTURE.md with system design details
+- Refactored README.md to focus on user-facing content
 
 ## [0.8.0] - 2025-01-06 - Development Infrastructure
 
