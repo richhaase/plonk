@@ -383,3 +383,142 @@ backup:
 		t.Errorf("Expected error about no backups found, got: %v", err)
 	}
 }
+
+func TestRestoreCommand_RestoreSpecificTimestamp(t *testing.T) {
+	// Setup temporary directory
+	tempHome := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	defer os.Setenv("HOME", originalHome)
+	os.Setenv("HOME", tempHome)
+	
+	// Create existing .zshrc file (will be overwritten by restore)
+	existingZshrc := filepath.Join(tempHome, ".zshrc")
+	currentContent := "# Current zshrc content\nalias current='echo current'"
+	err := os.WriteFile(existingZshrc, []byte(currentContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create existing .zshrc: %v", err)
+	}
+	
+	// Create plonk directory and config
+	plonkDir := filepath.Join(tempHome, ".config", "plonk")
+	err = os.MkdirAll(plonkDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create plonk directory: %v", err)
+	}
+	
+	// Create config file
+	configContent := `settings:
+  default_manager: homebrew
+
+backup:
+  location: "~/.config/plonk/backups"
+  keep_count: 5
+`
+	
+	configPath := filepath.Join(plonkDir, "plonk.yaml")
+	err = os.WriteFile(configPath, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write config file: %v", err)
+	}
+	
+	// Create backup directory with backup files
+	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
+	err = os.MkdirAll(backupDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create backup directory: %v", err)
+	}
+	
+	// Create backup files with different timestamps
+	olderBackup := filepath.Join(backupDir, "zshrc.backup.20241205-120000")
+	olderContent := "# Older zshrc backup\nalias old='echo old'"
+	err = os.WriteFile(olderBackup, []byte(olderContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create older backup: %v", err)
+	}
+	
+	newerBackup := filepath.Join(backupDir, "zshrc.backup.20241206-150330")
+	newerContent := "# Newer zshrc backup\nalias new='echo new'"
+	err = os.WriteFile(newerBackup, []byte(newerContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create newer backup: %v", err)
+	}
+	
+	// Test restore command with specific older timestamp
+	output, err := runRestoreCommand([]string{existingZshrc, "--timestamp", "20241205-120000"})
+	if err != nil {
+		t.Fatalf("Restore command with timestamp failed: %v", err)
+	}
+	
+	// Verify output indicates successful restore with correct timestamp
+	if !strings.Contains(output, "Restored") {
+		t.Error("Expected output to indicate successful restore")
+	}
+	if !strings.Contains(output, "20241205-120000") {
+		t.Error("Expected output to show the specific timestamp used")
+	}
+	
+	// Verify file was restored with older backup content (not the newer one)
+	restoredContent, err := os.ReadFile(existingZshrc)
+	if err != nil {
+		t.Fatalf("Failed to read restored file: %v", err)
+	}
+	
+	if string(restoredContent) != olderContent {
+		t.Errorf("File was not restored with specific timestamp backup content.\nExpected: %s\nGot: %s", 
+			olderContent, string(restoredContent))
+	}
+}
+
+func TestRestoreCommand_RestoreInvalidTimestamp(t *testing.T) {
+	// Setup temporary directory
+	tempHome := t.TempDir()
+	originalHome := os.Getenv("HOME")
+	defer os.Setenv("HOME", originalHome)
+	os.Setenv("HOME", tempHome)
+	
+	// Create plonk directory and config
+	plonkDir := filepath.Join(tempHome, ".config", "plonk")
+	err := os.MkdirAll(plonkDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create plonk directory: %v", err)
+	}
+	
+	// Create config file
+	configContent := `settings:
+  default_manager: homebrew
+
+backup:
+  location: "~/.config/plonk/backups"
+  keep_count: 5
+`
+	
+	configPath := filepath.Join(plonkDir, "plonk.yaml")
+	err = os.WriteFile(configPath, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write config file: %v", err)
+	}
+	
+	// Create backup directory with one backup
+	backupDir := filepath.Join(tempHome, ".config", "plonk", "backups")
+	err = os.MkdirAll(backupDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create backup directory: %v", err)
+	}
+	
+	// Create a backup file
+	backup := filepath.Join(backupDir, "zshrc.backup.20241206-150330")
+	err = os.WriteFile(backup, []byte("# backup content"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create backup: %v", err)
+	}
+	
+	// Test restore command with non-existent timestamp
+	_, err = runRestoreCommand([]string{filepath.Join(tempHome, ".zshrc"), "--timestamp", "20241201-000000"})
+	if err == nil {
+		t.Error("Expected error when trying to restore with non-existent timestamp")
+	}
+	
+	if !strings.Contains(err.Error(), "backup with timestamp") || !strings.Contains(err.Error(), "not found") {
+		t.Errorf("Expected error about timestamp not found, got: %v", err)
+	}
+}
