@@ -35,3 +35,17 @@ func TestImportCommandRegistered(t *testing.T) {
 		t.Error("Import command should be registered with root command")
 	}
 }
+
+func TestRunImportBasic(t *testing.T) {
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	err := runImport(nil, []string{})
+	if err != nil {
+		t.Errorf("Import command should not fail: %v", err)
+	}
+
+	// For now, just test it doesn't crash
+	// We'll add more comprehensive tests when we implement the functionality
+	_ = tempHome
+}
