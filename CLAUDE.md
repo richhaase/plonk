@@ -60,12 +60,13 @@ type PackageManager interface {
 
 ## Required TDD Workflow
 
-**CRITICAL**: All changes MUST follow this pattern:
-1. **RED**: Write failing tests first
-2. **GREEN**: Write minimal code to make tests pass
-3. **REFACTOR**: Improve code while keeping tests green
-4. **COMMIT**: Commit the changes
-5. **UPDATE MEMORY**: Update CLAUDE.md to reflect completed work
+Follow the Test-Driven Development workflow described in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+**AI Agent Specific Requirements**:
+- Sync with TODO.md at session start and maintain it throughout
+- Reference ARCHITECTURE.md for system design decisions
+- Use CODEBASE_MAP.md for navigation
+- Follow established patterns found in existing code
 
 ### Testing Patterns
 - **MockCommandExecutor** for unit tests (avoid actual command execution)
