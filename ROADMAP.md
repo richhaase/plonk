@@ -14,6 +14,7 @@ Features and concepts being considered:
 - **Configuration templates** - Predefined setups for common development environments
 - **Multi-machine sync** - Synchronize configurations across multiple machines
 - **Plugin system** - Custom package manager support
+- **Versioning support/integration** - Version command, release integration, and version-aware features
 
 ### Documentation Improvements
 - **CONFIG.md** - Comprehensive configuration reference with validation rules
@@ -31,11 +32,19 @@ Features and concepts being considered:
 - **CONTRIBUTING.md updates** - Real repository URL, license details
 - **CLAUDE.md enhancements** - User interaction patterns, AI troubleshooting
 
+### GitHub Preparation
+- **Security scanning** - Add govulncheck, gosec for vulnerability detection
+- **Dependency validation** - Clean go.sum, license compliance checking
+- **Pre-commit safety** - Remove dangerous `git add .`, improve hook reliability
+- **License headers** - Consistent licensing across codebase
+- **CI/CD foundations** - GitHub Actions for automated testing and builds
+
 ## Planned
 
 Features ready for implementation, roughly in priority order:
 
 ### Code Quality & Maintenance
+- **Fix pre-commit hooks** - Ensure hooks work correctly and consistently
 - **Organize imports** consistently across all files
 - **Standardize function documentation** 
 - **Convert remaining tests** to table-driven format
