@@ -8,25 +8,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 - **DotfilesManager interface** with comprehensive dotfiles state management (managed/untracked/missing/modified)
-- **Enhanced PackageManager interface** with PackageInfo objects and state-aware methods 
-- **PackageInfo struct** with rich metadata (name, version, status, manager, description, install date)
-- **State-aware package methods** (ListManagedPackages, ListUntrackedPackages, ListMissingPackages)
-- **Configurable ignore patterns** for dotfiles discovery with sensible defaults
-- **File size limits** for dotfiles management to avoid large files
-- **Comprehensive test coverage** for all new state-aware PackageManager methods with enhanced MockCommandExecutor
 - **New focused CLI structure** with concept-specific commands (`plonk pkg`, future `plonk dot`, `plonk config`)
-- **Basic package management commands** - `plonk pkg` command structure and initial `plonk pkg status`
+- **Basic package management commands** - `plonk pkg list` command for listing installed packages
 - **Justfile development workflow** replacing dev.go with just commands (build, test, lint, format, security, clean, install, precommit)
+- **Simplified package managers** - Drastically simplified with minimal interface (IsAvailable, ListInstalled)
 
 ### Changed
-- **PackageManager interface** now returns rich PackageInfo objects instead of simple strings
-- **Import command path** - now correctly saves to `.config/plonk/plonk.yaml` instead of `.config/plonk/repo/plonk.yaml`
 - **CLI architecture** - Replaced monolithic status command with focused concept-specific commands
 - **Development workflow** - Migrated from dev.go to justfile for simpler, standard development tasks
+- **Package managers** - Simplified from 2,224 lines to ~150 lines, removing all abstraction layers
+- **Dotfiles separation** - Moved dotfiles management to separate `pkg/dotfiles` package
 
 ### Fixed
 - **Import command configuration path** - Fixed incorrect subdirectory usage that was inconsistent with other commands
-- **Test compilation errors** - Updated testPackageManager mock to implement all new PackageManager interface methods
+- **Performance issues** - Removed slow state-aware methods that were causing hangs
 
 ### Removed
 - **ZSH plugin management** - Removed ZSH plugin management functionality and related tests  
@@ -34,6 +29,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Mixed-concern status command** - Removed original status command that tried to display packages + dotfiles + drift in one view
 - **Dev.go task runner** - Replaced with standard justfile for better tool ecosystem fit
 - **Unused internal packages** - Removed internal/directories, internal/utils, internal/tasks after command layer removal
+- **Over-engineered abstractions** - Removed CommandExecutor, CommandRunner, PackageInfo, state-aware methods
+- **Complex package manager interface** - Simplified to minimal interface with just 2 methods
 
 ## [v0.3.0] - 2025-07-07
 

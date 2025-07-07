@@ -45,14 +45,13 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 	}
 
 	// Initialize package managers
-	executor := managers.NewRealCommandExecutor()
 	packageManagers := []struct {
 		name    string
 		manager managers.PackageManager
 	}{
-		{"Homebrew", managers.NewHomebrewManager(executor)},
-		{"ASDF", managers.NewAsdfManager(executor)},
-		{"NPM", managers.NewNpmManager(executor)},
+		{"Homebrew", managers.NewHomebrewManager()},
+		{"ASDF", managers.NewAsdfManager()},
+		{"NPM", managers.NewNpmManager()},
 	}
 
 	hasAnyPackages := false
