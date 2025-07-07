@@ -52,9 +52,9 @@ clean:
 ci: format lint test build
     @echo "✅ Full CI pipeline completed successfully"
 
-# Install the binary to $GOPATH/bin
+# Install the binary to GOBIN (or GOPATH/bin if GOBIN unset)
 install: build
-    @echo "Installing plonk to $GOPATH/bin..."
+    @echo "Installing plonk to $(go env GOBIN)..."
     go install ./cmd/plonk
     @echo "✅ Plonk installed"
 
