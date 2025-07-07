@@ -7,8 +7,6 @@ Active work items for current development session. Maintained by AI agents.
 ## Pending
 
 ### CLI Interface Improvements (Medium Priority)  
-- **Implement command aliases** (ls→pkg list, sync→repo, check→status)
-- **Enhance pkg subcommands** with search/info/update functionality
 - **Add --verbose/--quiet global flags** for output control
 
 ### CLI Interface Improvements (Low Priority)
@@ -17,6 +15,8 @@ Active work items for current development session. Maintained by AI agents.
 
 ## Completed (This Session)
 - **Validate plonk installation** ✅ - Binary at `/Users/rdh/.asdf/installs/golang/1.24.4/bin/plonk`, all commands working
+- **Implement command aliases** ✅ - `ls` (pkg list), `sync` (repo), `check` (status) all working
+- **Enhance pkg subcommands** ✅ - `search`, `info`, `update` with full dry-run support
 - **Research plonk CLI interface design** ✅ - provided comprehensive suggestions
 - **Standardize argument patterns** ✅ - install and apply commands now accept optional [package] argument
 - **Add global --dry-run flag** ✅ - comprehensive implementation for all applicable commands (install, apply, setup, repo, restore, clone, pull, backup, import)
