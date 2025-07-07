@@ -19,13 +19,14 @@ plonk/
 ├── internal/                      # 🔒 Private Application Code
 │   ├── commands/                  # 🎯 CLI Command Implementations
 │   ├── directories/               # 📁 Directory Management
+│   ├── tasks/                     # ⚡ Development Task Functions
 │   └── utils/                     # 🛠️ Utility Functions
 ├── pkg/                          # 📦 Public Packages
 │   ├── config/                   # ⚙️ Configuration Management
 │   └── managers/                 # 📋 Package Manager Abstractions
-├── .tool-versions                # 🔧 ASDF development tools
+├── .tool-versions                # 🔧 ASDF development tools (optional)
 ├── .golangci.yml                 # 🔍 Linting configuration
-├── magefile.go                   # ⚡ Mage task runner (Go-native build tool)
+├── dev.go                        # ⚡ Pure Go task runner (zero dependencies)
 ├── go.mod                        # 🔧 Go Module Definition
 ├── go.sum                        # 🔒 Dependency Lock File
 ├── CLAUDE.md                     # 📖 Project Documentation
@@ -56,8 +57,9 @@ plonk/
 - `internal/commands/test_helpers.go` - Shared test utilities
 
 ### ⚡ **Development Infrastructure**
-- `magefile.go` - Mage task runner commands (build, test, lint, format, clean)
-- `.tool-versions` - ASDF development tools specification
+- `dev.go` - Pure Go task runner entry point (zero external dependencies)
+- `internal/tasks/` - Development task implementations (build, test, precommit, clean, install)
+- `.tool-versions` - ASDF development tools specification (optional convenience)
 - `.golangci.yml` - Linting and formatting configuration
 
 ### ⚙️ **Configuration System** (pkg/config/)
@@ -187,8 +189,8 @@ if shouldInstallPackage(name, isInstalled) {
 1. **Read**: `CLAUDE.md` for project overview
 2. **Understand**: This `CODEBASE_MAP.md` for navigation
 3. **Explore**: Start with `internal/commands/status.go` (simple command)
-4. **Run Tests**: `go test ./...` to verify environment
-5. **Build**: `go build ./cmd/plonk` to create binary
+4. **Run Tests**: `go run dev.go test` to verify environment
+5. **Build**: `go run dev.go build` to create binary
 
 ### For Adding Features
 1. **Plan**: Follow TDD pattern (Red-Green-Refactor-Commit-Update Memory)
@@ -205,30 +207,20 @@ if shouldInstallPackage(name, isInstalled) {
 
 ## 🔧 Development Tools
 
-### Mage Commands (Primary)
+### Pure Go dev.go Commands (Primary)
 ```bash
 # See all available commands
-mage -l
+go run dev.go help
 
 # Core development tasks
-mage build        # Build the plonk binary
-mage test         # Run all tests
-mage lint         # Run linter
-mage format       # Format code (gofmt)
-mage clean        # Clean build artifacts
+go run dev.go build      # Build the plonk binary
+go run dev.go test       # Run all tests
+go run dev.go precommit  # Run pre-commit checks (format, lint, test, security)
+go run dev.go clean      # Clean build artifacts
+go run dev.go install    # Install plonk globally
 
-# Release management
-mage preparerelease  # Analyze commits and suggest versions
-mage nextpatch       # Suggest next patch version
-mage nextminor       # Suggest next minor version
-mage nextmajor       # Suggest next major version
-mage release v1.0.0  # Create release with changelog and git tag
-
-# Licensing and compliance
-mage addlicenseheaders  # Add MIT license headers to all Go files
-
-# Development workflow (manual)
-mage format && mage lint && mage test
+# Development workflow (automated)
+go run dev.go precommit  # Comprehensive quality pipeline
 ```
 
 ### Traditional Go Commands
@@ -277,4 +269,4 @@ grep -r "func " --include="*.go" .
 
 ---
 
-*This map is maintained as the codebase evolves. Last updated: Maintenance Phase 2024*
+*This map is maintained as the codebase evolves. Last updated: Pure Go Development Phase 2025*

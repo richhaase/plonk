@@ -47,24 +47,29 @@ cd plonk
 go mod download
 
 # Build the project
-go run github.com/magefile/mage/mage build
+go run dev.go build
 
 # Run tests
-go run github.com/magefile/mage/mage test
+go run dev.go test
 
 # Run the unified pre-commit checks (format, lint, test, security)
-go run github.com/magefile/mage/mage precommit
+go run dev.go precommit
 
-# Individual development tasks
-go run github.com/magefile/mage/mage format   # Format code
-go run github.com/magefile/mage/mage lint     # Run linter
-go run github.com/magefile/mage/mage security # Security checks
+# Install globally for testing
+go run dev.go install
+
+# Clean build artifacts
+go run dev.go clean
+
+# Show all available commands
+go run dev.go help
 ```
 
 ### Tool Versioning
 **Pure Go project** - All tools managed via `go.mod`:
 - **Go runtime** - Minimum version 1.24.4+ (specified in go.mod)
-- **Development tools** - golangci-lint, gosec, govulncheck, goimports, mage
+- **Development tools** - golangci-lint, gosec, govulncheck, goimports
+- **Task runner** - Pure Go dev.go script (zero external dependencies)
 
 **Go Installation Options:**
 - Any Go installation method works (official installer, package managers, version managers)
@@ -159,8 +164,8 @@ This project uses the MIT License for maximum compatibility and adoption:
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Follow the TDD workflow for all changes
-4. Ensure all tests pass (`go run github.com/magefile/mage/mage test`)
-5. Run the full development pipeline locally (`go run github.com/magefile/mage/mage precommit`)
+4. Ensure all tests pass (`go run dev.go test`)
+5. Run the full development pipeline locally (`go run dev.go precommit`)
 6. Commit with clear messages (pre-commit hook will run automatically)
 7. Push to your fork
 8. Open a Pull Request with:

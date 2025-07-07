@@ -61,11 +61,11 @@ Major features completed (see [CHANGELOG.md](CHANGELOG.md) for details):
 - ✅ Backup system with automatic cleanup
 - ✅ Dry-run and preview capabilities
 - ✅ TDD development infrastructure
-- ✅ Mage migration - Go-native task runner with improved cross-platform support
+- ✅ Pure Go task runner - Migrated from Mage to dev.go + internal/tasks/ for zero external dependencies
 - ✅ Versioning support/integration - Professional version management with semantic versioning, automated changelog updates, and release workflow
 - ✅ License headers - MIT License with consistent headers across all Go files for legal compliance
 - ✅ All-Go development workflow - Unified tooling via go.mod, single quality gate, simplified git hooks, cross-platform Go-native development
-- ✅ Pre-commit safety - Removed dangerous `git add .`, improved hook reliability with mage integration
+- ✅ Pre-commit safety - Removed dangerous `git add .`, improved hook reliability with dev.go integration
 - ✅ Security scanning - Added govulncheck, gosec for vulnerability detection in development pipeline
 
 ## Parked

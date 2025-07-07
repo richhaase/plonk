@@ -3,11 +3,9 @@ module plonk
 go 1.24.4
 
 require (
-	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/go-git/go-git/v5 v5.16.2
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/golangci/golangci-lint v1.64.8
-	github.com/magefile/mage v1.15.0
 	github.com/securego/gosec/v2 v2.22.5
 	github.com/spf13/cobra v1.9.1
 	golang.org/x/tools v0.34.0
@@ -34,6 +32,7 @@ require (
 	github.com/Crocmagnon/fatcontext v0.7.1 // indirect
 	github.com/Djarvur/go-err113 v0.0.0-20210108212216-aea10b59be24 // indirect
 	github.com/GaijinEntertainment/go-exhaustruct/v3 v3.3.1 // indirect
+	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/OpenPeeDeeP/depguard/v2 v2.2.1 // indirect
 	github.com/ProtonMail/go-crypto v1.1.6 // indirect

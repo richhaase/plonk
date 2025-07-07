@@ -23,10 +23,11 @@ Active work items for current development session. Maintained by AI agents.
   - [x] Legal compliance for open source distribution
 - [x] All-Go development workflow implementation ✅
   - [x] Unified tooling via go.mod dependency management
-  - [x] Single quality gate with mage precommit command
-  - [x] Simplified git hooks calling mage for consistency
+  - [x] Single quality gate with pure Go dev.go script
+  - [x] Simplified git hooks calling dev.go for consistency
   - [x] Cross-platform Go-native development experience
   - [x] Pure Go project setup with optional ASDF convenience
+  - [x] Eliminated external task runner dependencies (Mage → dev.go)
 
 ### 🛡️ Critical Hardening (Next Session)
 - [ ] Create EXAMPLES.md with real plonk.yaml examples (1-2 hours)
@@ -56,6 +57,10 @@ Active work items for current development session. Maintained by AI agents.
 - [x] Remove ASDF dependency for Go development tools (15 min) ✅
 - [x] Update CONTRIBUTING.md for all-Go workflow (20 min) ✅
 - [x] Test complete workflow end-to-end (15 min) ✅
+- [x] Replace Mage with pure Go dev.go task runner (45 min) ✅
+  - [x] Created hybrid approach: dev.go + internal/tasks/
+  - [x] Eliminated external task runner dependencies
+  - [x] Added install command for global deployment
 
 ## Notes
 
@@ -74,10 +79,11 @@ Active work items for current development session. Maintained by AI agents.
 - Clear IP ownership for business flexibility and legal clarity
 - Automated license header management tooling
 
-**🔧 All-Go Development Workflow:**
+**🔧 Pure Go Development Workflow:**
 - Unified tooling via go.mod for consistent versions across environments
-- Single quality gate: `go run github.com/magefile/mage@latest precommit`
-- Simplified git hooks calling mage for development/CI consistency
+- Single quality gate: `go run dev.go precommit`
+- Pure Go task runner (dev.go + internal/tasks/) with zero external dependencies
+- Simplified git hooks calling dev.go for development/CI consistency
 - Cross-platform Go-native development experience
 - Eliminated tool fragmentation (ASDF only needed for Go runtime)
 - Added comprehensive security scanning (gosec, govulncheck)
