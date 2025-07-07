@@ -26,6 +26,7 @@ Active work items for current development session. Maintained by AI agents.
   - [x] Single quality gate with mage precommit command
   - [x] Simplified git hooks calling mage for consistency
   - [x] Cross-platform Go-native development experience
+  - [x] Pure Go project setup with optional ASDF convenience
 
 ### 🛡️ Critical Hardening (Next Session)
 - [ ] Create EXAMPLES.md with real plonk.yaml examples (1-2 hours)

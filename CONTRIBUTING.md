@@ -31,8 +31,11 @@ Update relevant documentation:
 ## Getting Started
 
 ### Prerequisites
-- Go 1.24.4 or later
-- Git for version control
+- **Go 1.24.4 or later** - Install via:
+  - [Official installer](https://golang.org/dl/) (recommended)
+  - Package managers: `brew install go`, `apt install golang-go`, etc.
+  - ASDF: `asdf install` (uses included .tool-versions)
+- **Git** for version control
 
 ### Development Setup
 ```bash
@@ -59,14 +62,13 @@ go run github.com/magefile/mage/mage security # Security checks
 ```
 
 ### Tool Versioning
-All development tools are managed via `go.mod` for consistent versions:
-- **golangci-lint** - Go linting
-- **gosec** - Security analysis
-- **govulncheck** - Vulnerability scanning
-- **goimports** - Import formatting
-- **mage** - Task runner
+**Pure Go project** - All tools managed via `go.mod`:
+- **Go runtime** - Minimum version 1.24.4+ (specified in go.mod)
+- **Development tools** - golangci-lint, gosec, govulncheck, goimports, mage
 
-ASDF is now optional and only manages the Go runtime version.
+**Go Installation Options:**
+- Any Go installation method works (official installer, package managers, version managers)
+- `.tool-versions` provided for ASDF users convenience (optional)
 
 ### Installing from Source
 

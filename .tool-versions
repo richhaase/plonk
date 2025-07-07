@@ -1,8 +1,10 @@
-# Development tools for Plonk project
-# Install with: asdf install
+# Optional ASDF configuration for Plonk project
+# Only needed if you use ASDF - install with: asdf install
+# 
+# Alternative: Install Go 1.24.4+ via official installer, brew, apt, etc.
 
-# Go programming language - core runtime requirement
+# Go programming language - minimum version 1.24.4
 golang 1.24.4
 
-# Note: Development tools (golangci-lint, gosec, govulncheck, goimports) 
-# are now managed via go.mod for consistent versioning across environments
+# Note: All development tools (golangci-lint, gosec, govulncheck, goimports, mage) 
+# are managed via go.mod for consistent versioning across all environments
