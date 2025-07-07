@@ -54,6 +54,32 @@ just test
 just dev
 ```
 
+### Installing from Source
+
+If you want to install plonk locally for development or testing:
+
+```bash
+# Option 1: Install to GOBIN (recommended for development)
+just install
+
+# Option 2: Install globally using go install
+go install ./cmd/plonk
+
+# Option 3: Manual installation
+just build
+cp build/plonk /usr/local/bin/plonk  # or any directory in your PATH
+
+# Verify installation
+plonk --help
+which plonk
+```
+
+**Notes:**
+- `just install` builds the binary to `build/plonk` then copies it to `$(go env GOBIN)`
+- Make sure `$(go env GOBIN)` is in your PATH (or `$(go env GOPATH)/bin` if GOBIN is unset)
+- For ASDF users, GOBIN should already be configured correctly
+- The binary will be named `plonk` and available globally after installation
+
 ## Making Changes
 
 ### Before Starting
