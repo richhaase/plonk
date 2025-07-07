@@ -9,24 +9,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - **DotfilesManager interface** with comprehensive dotfiles state management (managed/untracked/missing/modified)
 - **Enhanced PackageManager interface** with PackageInfo objects and state-aware methods 
-- **Dotfiles status display** in `plonk status` command showing detailed file management information
 - **PackageInfo struct** with rich metadata (name, version, status, manager, description, install date)
 - **State-aware package methods** (ListManagedPackages, ListUntrackedPackages, ListMissingPackages)
 - **Configurable ignore patterns** for dotfiles discovery with sensible defaults
 - **File size limits** for dotfiles management to avoid large files
 - **Comprehensive test coverage** for all new state-aware PackageManager methods with enhanced MockCommandExecutor
+- **New focused CLI structure** with concept-specific commands (`plonk pkg`, future `plonk dot`, `plonk config`)
+- **Basic package management commands** - `plonk pkg` command structure and initial `plonk pkg status`
+- **Justfile development workflow** replacing dev.go with just commands (build, test, lint, format, security, clean, install, precommit)
 
 ### Changed
 - **PackageManager interface** now returns rich PackageInfo objects instead of simple strings
-- **Status command architecture** to support both package and dotfiles management display
 - **Import command path** - now correctly saves to `.config/plonk/plonk.yaml` instead of `.config/plonk/repo/plonk.yaml`
+- **CLI architecture** - Replaced monolithic status command with focused concept-specific commands
+- **Development workflow** - Migrated from dev.go to justfile for simpler, standard development tasks
 
 ### Fixed
 - **Import command configuration path** - Fixed incorrect subdirectory usage that was inconsistent with other commands
 - **Test compilation errors** - Updated testPackageManager mock to implement all new PackageManager interface methods
 
 ### Removed
-- **ZSH plugin management** - Removed ZSH plugin management functionality and related tests
+- **ZSH plugin management** - Removed ZSH plugin management functionality and related tests  
+- **Monolithic command layer** - Removed entire internal/commands package (8400+ lines) for focused UI redesign
+- **Mixed-concern status command** - Removed original status command that tried to display packages + dotfiles + drift in one view
+- **Dev.go task runner** - Replaced with standard justfile for better tool ecosystem fit
+- **Unused internal packages** - Removed internal/directories, internal/utils, internal/tasks after command layer removal
 
 ## [v0.3.0] - 2025-07-07
 
