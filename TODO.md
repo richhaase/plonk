@@ -111,12 +111,6 @@ Session-level work items and progress tracking. Maintained by AI agents for tact
 - **Missing Files**: Files that exist in plonk.yaml config but are missing from filesystem (implement after untracked)
 - **Future Enhancement**: Compare ./config/plonk/repo vs filesystem for true drift detection
 
-**CLI Simplification Sidebar Action Plan:**
-1. **Collapse pkg subcommands** - Move `pkg info`, `pkg list`, `pkg search`, `pkg update` to top-level commands
-2. **Remove ls alias** - Eliminate redundant `ls` command in favor of `list`
-3. **Consider further unification** - Evaluate git operations, workflow commands, output standardization
-4. **Use TDD approach** - Check existing tests, write failing tests, implement changes
-
 ## Notes
 
 *For session history, see git log and CHANGELOG.md. For strategic planning, see ROADMAP.md.*
