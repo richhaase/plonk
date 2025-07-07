@@ -20,8 +20,8 @@ Session-level work items and progress tracking. Maintained by AI agents for tact
 
 #### 1. Fresh Installation Test
 - [ ] **Clean Environment Setup** - Create test scenario in isolated directory
-- [ ] **Installation Process** - Test `go install ./cmd/plonk` with proper version injection
-- [ ] **Version Verification** - Confirm `plonk version` shows v0.3.0 with correct git commit
+- [x] **Installation Process** - Test `go install ./cmd/plonk` with proper version injection ✅
+- [x] **Version Verification** - Confirm `plonk version` shows v0.3.0 with correct git commit ✅
 - [ ] **Help System Test** - Verify `plonk --help` and `plonk <command> --help` work correctly
 - [ ] **Global Flags Test** - Test `--dry-run` flag functionality across commands
 
@@ -97,6 +97,14 @@ Session-level work items and progress tracking. Maintained by AI agents for tact
 - **Ready for Stage 1** - Dogfooding plan established, documentation clean
 - **Key Decision** - Real-world validation before GitHub launch
 - **Security Note** - Dogfooding can proceed while security fixes are planned
+
+## Session Notes
+
+**Working Patterns for This Session:**
+1. **Focus Area**: Status command accuracy dogfooding - testing existing `plonk status` implementation against real environment
+2. **Documentation Updates**: Update *.md docs as we go to ensure accuracy (design decisions → ARCHITECTURE.md)
+3. **Code Changes**: Use TDD red→green→refactor cycles, small changes, frequent commits
+4. **Scope Boundaries**: Plonk does only two things - manage packages from multiple package managers, and manage configuration files (dotfiles)
 
 ## Notes
 
