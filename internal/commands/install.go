@@ -34,10 +34,15 @@ func init() {
 }
 
 func installCmdRun(cmd *cobra.Command, args []string) error {
-	return runInstall(args)
+	dryRun := IsDryRun(cmd)
+	return runInstallWithOptions(args, dryRun)
 }
 
 func runInstall(args []string) error {
+	return runInstallWithOptions(args, false)
+}
+
+func runInstallWithOptions(args []string, dryRun bool) error {
 	plonkDir := directories.Default.PlonkDir()
 
 	// Load configuration.
@@ -51,6 +56,17 @@ func runInstall(args []string) error {
 	homebrewMgr := managers.NewHomebrewManager(executor)
 	asdfMgr := managers.NewAsdfManager(executor)
 	npmMgr := managers.NewNpmManager(executor)
+
+	if dryRun {
+		if len(args) == 0 {
+			// Preview all packages that would be installed
+			return previewAllPackageInstallation(homebrewMgr, asdfMgr, npmMgr, config, plonkDir)
+		} else {
+			// Preview specific package installation
+			packageName := args[0]
+			return previewSpecificPackageInstallation(homebrewMgr, asdfMgr, npmMgr, config, plonkDir, packageName)
+		}
+	}
 
 	if len(args) == 0 {
 		// Install all packages
@@ -331,4 +347,220 @@ func installNPMPackages(mgr *managers.NpmManager, config *config.Config) ([]stri
 	}
 
 	return installedWithConfigs, nil
+}
+
+// previewAllPackageInstallation shows what packages would be installed without actually installing them
+func previewAllPackageInstallation(homebrewMgr *managers.HomebrewManager, asdfMgr *managers.AsdfManager, npmMgr *managers.NpmManager, config *config.Config, plonkDir string) error {
+	fmt.Printf("Dry-run mode: Showing what packages would be installed from %s\n\n", filepath.Join(plonkDir, "plonk.yaml"))
+
+	// Preview Homebrew packages
+	if err := previewHomebrewPackages(homebrewMgr, config); err != nil {
+		return err
+	}
+
+	// Preview ASDF tools
+	if err := previewASDFTools(asdfMgr, config); err != nil {
+		return err
+	}
+
+	// Preview NPM packages
+	if err := previewNPMPackages(npmMgr, config); err != nil {
+		return err
+	}
+
+	fmt.Printf("\nDry-run complete. No packages were installed.\n")
+	return nil
+}
+
+// previewSpecificPackageInstallation shows what would happen when installing a specific package
+func previewSpecificPackageInstallation(homebrewMgr *managers.HomebrewManager, asdfMgr *managers.AsdfManager, npmMgr *managers.NpmManager, config *config.Config, plonkDir string, packageName string) error {
+	fmt.Printf("Dry-run mode: Showing what would happen when installing package '%s'\n\n", packageName)
+
+	// Check if package exists in configuration and preview its installation
+	var packageFound bool
+
+	// Check Homebrew packages
+	for _, pkg := range config.Homebrew.Brews {
+		if pkg.Name == packageName {
+			packageFound = true
+			if !homebrewMgr.IsAvailable() {
+				fmt.Printf("❌ Homebrew not available - package %s cannot be installed\n", pkg.Name)
+			} else if homebrewMgr.IsInstalled(pkg.Name) {
+				fmt.Printf("✅ Homebrew package %s is already installed\n", pkg.Name)
+			} else {
+				fmt.Printf("📦 Would install Homebrew package: %s\n", pkg.Name)
+				if getPackageConfig(pkg) != "" {
+					fmt.Printf("⚙️  Would apply configuration from: %s\n", getPackageConfig(pkg))
+				}
+			}
+			break
+		}
+	}
+
+	// Check Homebrew casks if not found in brews
+	if !packageFound {
+		for _, pkg := range config.Homebrew.Casks {
+			if pkg.Name == packageName {
+				packageFound = true
+				if !homebrewMgr.IsAvailable() {
+					fmt.Printf("❌ Homebrew not available - cask %s cannot be installed\n", pkg.Name)
+				} else if homebrewMgr.IsInstalled(pkg.Name) {
+					fmt.Printf("✅ Homebrew cask %s is already installed\n", pkg.Name)
+				} else {
+					fmt.Printf("📦 Would install Homebrew cask: %s\n", pkg.Name)
+					if getPackageConfig(pkg) != "" {
+						fmt.Printf("⚙️  Would apply configuration from: %s\n", getPackageConfig(pkg))
+					}
+				}
+				break
+			}
+		}
+	}
+
+	// Check ASDF tools if not found in Homebrew
+	if !packageFound {
+		for _, tool := range config.ASDF {
+			if tool.Name == packageName {
+				packageFound = true
+				if !asdfMgr.IsAvailable() {
+					fmt.Printf("❌ ASDF not available - tool %s cannot be installed\n", tool.Name)
+				} else if asdfMgr.IsVersionInstalled(tool.Name, tool.Version) {
+					fmt.Printf("✅ ASDF tool %s is already installed\n", getPackageDisplayName(tool))
+				} else {
+					fmt.Printf("🔧 Would install ASDF tool: %s\n", getPackageDisplayName(tool))
+					if getPackageConfig(tool) != "" {
+						fmt.Printf("⚙️  Would apply configuration from: %s\n", getPackageConfig(tool))
+					}
+				}
+				break
+			}
+		}
+	}
+
+	// Check NPM packages if not found in other managers
+	if !packageFound {
+		for _, pkg := range config.NPM {
+			if pkg.Name == packageName {
+				packageFound = true
+				packageDisplayName := getPackageDisplayName(pkg)
+				if !npmMgr.IsAvailable() {
+					fmt.Printf("❌ NPM not available - package %s cannot be installed\n", packageDisplayName)
+				} else if npmMgr.IsInstalled(packageDisplayName) {
+					fmt.Printf("✅ NPM package %s is already installed\n", packageDisplayName)
+				} else {
+					fmt.Printf("📦 Would install NPM package: %s\n", packageDisplayName)
+					if getPackageConfig(pkg) != "" {
+						fmt.Printf("⚙️  Would apply configuration from: %s\n", getPackageConfig(pkg))
+					}
+				}
+				break
+			}
+		}
+	}
+
+	if !packageFound {
+		return fmt.Errorf("package '%s' not found in configuration", packageName)
+	}
+
+	fmt.Printf("\nDry-run complete. No packages were installed.\n")
+	return nil
+}
+
+// previewHomebrewPackages shows what Homebrew packages would be installed
+func previewHomebrewPackages(mgr *managers.HomebrewManager, config *config.Config) error {
+	if len(config.Homebrew.Brews) == 0 && len(config.Homebrew.Casks) == 0 {
+		return nil
+	}
+
+	fmt.Printf("Homebrew packages that would be installed:\n")
+
+	if !mgr.IsAvailable() {
+		fmt.Printf("❌ Homebrew not available - packages cannot be installed\n\n")
+		return nil
+	}
+
+	// Preview brews
+	for _, pkg := range config.Homebrew.Brews {
+		if mgr.IsInstalled(pkg.Name) {
+			fmt.Printf("✅ %s (already installed)\n", pkg.Name)
+		} else {
+			fmt.Printf("📦 %s (would install)\n", pkg.Name)
+			if getPackageConfig(pkg) != "" {
+				fmt.Printf("   ⚙️  Configuration: %s\n", getPackageConfig(pkg))
+			}
+		}
+	}
+
+	// Preview casks
+	for _, pkg := range config.Homebrew.Casks {
+		if mgr.IsInstalled(pkg.Name) {
+			fmt.Printf("✅ %s (cask, already installed)\n", pkg.Name)
+		} else {
+			fmt.Printf("📦 %s (cask, would install)\n", pkg.Name)
+			if getPackageConfig(pkg) != "" {
+				fmt.Printf("   ⚙️  Configuration: %s\n", getPackageConfig(pkg))
+			}
+		}
+	}
+
+	fmt.Println()
+	return nil
+}
+
+// previewASDFTools shows what ASDF tools would be installed
+func previewASDFTools(mgr *managers.AsdfManager, config *config.Config) error {
+	if len(config.ASDF) == 0 {
+		return nil
+	}
+
+	fmt.Printf("ASDF tools that would be installed:\n")
+
+	if !mgr.IsAvailable() {
+		fmt.Printf("❌ ASDF not available - tools cannot be installed\n\n")
+		return nil
+	}
+
+	for _, tool := range config.ASDF {
+		displayName := getPackageDisplayName(tool)
+		if mgr.IsVersionInstalled(tool.Name, tool.Version) {
+			fmt.Printf("✅ %s (already installed)\n", displayName)
+		} else {
+			fmt.Printf("🔧 %s (would install)\n", displayName)
+			if getPackageConfig(tool) != "" {
+				fmt.Printf("   ⚙️  Configuration: %s\n", getPackageConfig(tool))
+			}
+		}
+	}
+
+	fmt.Println()
+	return nil
+}
+
+// previewNPMPackages shows what NPM packages would be installed
+func previewNPMPackages(mgr *managers.NpmManager, config *config.Config) error {
+	if len(config.NPM) == 0 {
+		return nil
+	}
+
+	fmt.Printf("NPM packages that would be installed:\n")
+
+	if !mgr.IsAvailable() {
+		fmt.Printf("❌ NPM not available - packages cannot be installed\n\n")
+		return nil
+	}
+
+	for _, pkg := range config.NPM {
+		packageName := getPackageDisplayName(pkg)
+		if mgr.IsInstalled(packageName) {
+			fmt.Printf("✅ %s (already installed)\n", packageName)
+		} else {
+			fmt.Printf("📦 %s (would install)\n", packageName)
+			if getPackageConfig(pkg) != "" {
+				fmt.Printf("   ⚙️  Configuration: %s\n", getPackageConfig(pkg))
+			}
+		}
+	}
+
+	fmt.Println()
+	return nil
 }

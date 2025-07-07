@@ -45,7 +45,41 @@ func rootCmdRun(cmd *cobra.Command, args []string) error {
 	return runRepo(args)
 }
 
+// IsDryRun checks if dry-run mode is enabled (either global or local flag)
+func IsDryRun(cmd *cobra.Command) bool {
+	// Handle nil command (e.g., in tests)
+	if cmd == nil {
+		return false
+	}
+
+	// Check local flag first
+	if localFlag := cmd.Flags().Lookup("dry-run"); localFlag != nil {
+		if dryRun, err := cmd.Flags().GetBool("dry-run"); err == nil && dryRun {
+			return true
+		}
+	}
+
+	// Check global flag
+	if globalFlag := cmd.PersistentFlags().Lookup("dry-run"); globalFlag != nil {
+		if dryRun, err := cmd.PersistentFlags().GetBool("dry-run"); err == nil && dryRun {
+			return true
+		}
+	}
+
+	// Check parent command's persistent flags
+	if cmd.Parent() != nil {
+		if dryRun, err := cmd.Parent().PersistentFlags().GetBool("dry-run"); err == nil && dryRun {
+			return true
+		}
+	}
+
+	return false
+}
+
 func init() {
+	// Add global flags
+	rootCmd.PersistentFlags().Bool("dry-run", false, "Show what would be done without making any changes")
+
 	// Add subcommands here
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(pkgCmd)

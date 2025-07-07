@@ -113,7 +113,8 @@ func init() {
 }
 
 func cloneCmdRun(cmd *cobra.Command, args []string) error {
-	return runCloneWithBranch(args, branchFlag)
+	dryRun := IsDryRun(cmd)
+	return runCloneWithOptions(args, branchFlag, dryRun)
 }
 
 // parseRepoURL extracts the repository URL and branch from a URL that may contain #branch
@@ -131,20 +132,12 @@ func runClone(args []string) error {
 }
 
 func runCloneWithBranch(args []string, flagBranch string) error {
+	return runCloneWithOptions(args, flagBranch, false)
+}
+
+func runCloneWithOptions(args []string, flagBranch string, dryRun bool) error {
 	if err := ValidateExactArgs("clone", 1, args); err != nil {
 		return err
-	}
-
-	// Ensure directory structure exists
-	if err := directories.Default.EnsureStructure(); err != nil {
-		return fmt.Errorf("failed to setup directory structure: %w", err)
-	}
-
-	repoDir := directories.Default.RepoDir()
-
-	// Check if target directory already exists and has content
-	if entries, err := os.ReadDir(repoDir); err == nil && len(entries) > 0 {
-		return fmt.Errorf("target directory %s already contains files, use 'plonk pull' to update", repoDir)
 	}
 
 	// Parse URL for branch information
@@ -154,6 +147,40 @@ func runCloneWithBranch(args []string, flagBranch string) error {
 	branch := flagBranch
 	if branch == "" {
 		branch = urlBranch
+	}
+
+	repoDir := directories.Default.RepoDir()
+
+	if dryRun {
+		fmt.Printf("Dry-run mode: Showing what would happen when cloning repository\n\n")
+
+		// Check if target directory already exists and has content
+		if entries, err := os.ReadDir(repoDir); err == nil && len(entries) > 0 {
+			fmt.Printf("❌ Target directory %s already contains files\n", repoDir)
+			fmt.Printf("💡 Would need to use 'plonk pull' to update instead\n")
+			return nil
+		}
+
+		fmt.Printf("📁 Would clone repository: %s\n", repoURL)
+		fmt.Printf("📂 Target directory: %s\n", repoDir)
+		if branch != "" {
+			fmt.Printf("🌿 Branch: %s\n", branch)
+		} else {
+			fmt.Printf("🌿 Branch: default\n")
+		}
+
+		fmt.Printf("\nDry-run complete. No repository was cloned.\n")
+		return nil
+	}
+
+	// Ensure directory structure exists
+	if err := directories.Default.EnsureStructure(); err != nil {
+		return fmt.Errorf("failed to setup directory structure: %w", err)
+	}
+
+	// Check if target directory already exists and has content
+	if entries, err := os.ReadDir(repoDir); err == nil && len(entries) > 0 {
+		return fmt.Errorf("target directory %s already contains files, use 'plonk pull' to update", repoDir)
 	}
 
 	// Use appropriate clone method

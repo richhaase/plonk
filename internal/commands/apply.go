@@ -35,7 +35,7 @@ func init() {
 
 func applyCmdRun(cmd *cobra.Command, args []string) error {
 	backup, _ := cmd.Flags().GetBool("backup")
-	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	dryRun := IsDryRun(cmd)
 	return runApplyWithAllOptions(args, backup, dryRun)
 }
 

@@ -38,13 +38,14 @@ func restoreCmdRun(cmd *cobra.Command, args []string) error {
 	listFlag, _ := cmd.Flags().GetBool("list")
 	timestampFlag, _ := cmd.Flags().GetString("timestamp")
 	allFlag, _ := cmd.Flags().GetBool("all")
+	dryRun := IsDryRun(cmd)
 
 	if listFlag {
 		return runRestoreList()
 	} else if allFlag {
-		return runRestoreAll()
+		return runRestoreAllWithOptions(dryRun)
 	} else if len(args) == 1 {
-		return runRestoreFile(args[0], timestampFlag)
+		return runRestoreFileWithOptions(args[0], timestampFlag, dryRun)
 	} else {
 		return fmt.Errorf("please specify --list, --all, or a file to restore")
 	}
@@ -315,4 +316,124 @@ func restoreBackupToFile(backupPath, targetPath string) error {
 	fmt.Printf("Restored %s from backup %s\n", targetPath, usedTimestamp)
 
 	return nil
+}
+
+// runRestoreAllWithOptions provides dry-run support for restore all
+func runRestoreAllWithOptions(dryRun bool) error {
+	if dryRun {
+		fmt.Println("Dry-run mode: Showing what files would be restored")
+
+		// Get backup directory
+		backupDir := directories.Default.BackupsDir()
+
+		// Check if backup directory exists
+		if !utils.FileExists(backupDir) {
+			fmt.Println("❌ No backup directory found - no files to restore")
+			return nil
+		}
+
+		// List all backup files and group by original file
+		entries, err := os.ReadDir(backupDir)
+		if err != nil {
+			return fmt.Errorf("failed to read backup directory: %w", err)
+		}
+
+		if len(entries) == 0 {
+			fmt.Println("❌ No backup files found")
+			return nil
+		}
+
+		backupGroups := make(map[string][]string)
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+
+			// Extract original file path from backup filename
+			originalFile := backupFilenameToOriginalPath(entry.Name())
+			if originalFile != "" {
+				backupGroups[originalFile] = append(backupGroups[originalFile], entry.Name())
+			}
+		}
+
+		fmt.Printf("\nFiles that would be restored (%d files):\n", len(backupGroups))
+		for originalFile, backups := range backupGroups {
+			// Sort backups by timestamp (newest first)
+			sort.Sort(sort.Reverse(sort.StringSlice(backups)))
+			latestBackup := backups[0]
+			timestamp := extractTimestampFromBackup(latestBackup)
+
+			fmt.Printf("📁 %s (from backup: %s)\n", originalFile, timestamp)
+		}
+
+		fmt.Println("\nDry-run complete. No files were restored.")
+		return nil
+	}
+
+	return runRestoreAll()
+}
+
+// runRestoreFileWithOptions provides dry-run support for restore file
+func runRestoreFileWithOptions(filePath, timestamp string, dryRun bool) error {
+	if dryRun {
+		fmt.Printf("Dry-run mode: Showing what would happen when restoring %s\n\n", filePath)
+
+		// Get backup directory
+		backupDir := directories.Default.BackupsDir()
+
+		// Check if backup directory exists
+		if !utils.FileExists(backupDir) {
+			fmt.Println("❌ No backup directory found - cannot restore file")
+			return nil
+		}
+
+		// Find backup files for this path
+		backupFilename := originalPathToBackupFilename(filePath)
+		entries, err := os.ReadDir(backupDir)
+		if err != nil {
+			return fmt.Errorf("failed to read backup directory: %w", err)
+		}
+
+		var availableBackups []string
+		for _, entry := range entries {
+			if strings.Contains(entry.Name(), backupFilename) {
+				availableBackups = append(availableBackups, entry.Name())
+			}
+		}
+
+		if len(availableBackups) == 0 {
+			fmt.Printf("❌ No backups found for %s\n", filePath)
+			return nil
+		}
+
+		// Sort backups by timestamp (newest first)
+		sort.Sort(sort.Reverse(sort.StringSlice(availableBackups)))
+
+		var targetBackup string
+		if timestamp != "" {
+			// Find specific timestamp
+			for _, backup := range availableBackups {
+				if strings.Contains(backup, timestamp) {
+					targetBackup = backup
+					break
+				}
+			}
+			if targetBackup == "" {
+				fmt.Printf("❌ No backup found with timestamp %s for %s\n", timestamp, filePath)
+				return nil
+			}
+		} else {
+			// Use latest backup
+			targetBackup = availableBackups[0]
+		}
+
+		usedTimestamp := extractTimestampFromBackup(targetBackup)
+		fmt.Printf("📁 Would restore %s from backup %s\n", filePath, usedTimestamp)
+		fmt.Printf("💾 Backup file: %s\n", targetBackup)
+
+		fmt.Println("\nDry-run complete. No files were restored.")
+		return nil
+	}
+
+	return runRestoreFile(filePath, timestamp)
 }

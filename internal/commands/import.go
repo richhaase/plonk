@@ -25,12 +25,26 @@ Copies dotfiles:
 - .zshrc, .gitconfig, .zshenv
 
 Generates a complete plonk.yaml configuration file.`,
-	RunE: runImport,
+	RunE: importCmdRun,
+}
+
+func importCmdRun(cmd *cobra.Command, args []string) error {
+	dryRun := IsDryRun(cmd)
+	return runImportWithOptions(args, dryRun)
 }
 
 func runImport(cmd *cobra.Command, args []string) error {
-	fmt.Println("🔍 Discovering existing shell environment...")
-	fmt.Println()
+	return runImportWithOptions(args, false)
+}
+
+func runImportWithOptions(args []string, dryRun bool) error {
+	if dryRun {
+		fmt.Println("Dry-run mode: Showing what would be discovered and imported")
+		fmt.Println()
+	} else {
+		fmt.Println("🔍 Discovering existing shell environment...")
+		fmt.Println()
+	}
 
 	// Initialize command executor
 	executor := managers.NewRealCommandExecutor()
@@ -115,8 +129,25 @@ func runImport(cmd *cobra.Command, args []string) error {
 	// Generate config from results
 	generatedConfig := config.GenerateConfig(results)
 
-	// Save config to plonk.yaml
 	configPath := filepath.Join(directories.Default.RepoDir(), "plonk.yaml")
+
+	if dryRun {
+		fmt.Println()
+		fmt.Printf("📋 Summary of what would be imported:\n")
+		fmt.Printf("   • Homebrew packages: %d\n", len(results.HomebrewPackages))
+		fmt.Printf("   • ASDF tools: %d\n", len(results.AsdfTools))
+		fmt.Printf("   • NPM packages: %d\n", len(results.NpmPackages))
+		fmt.Printf("   • Dotfiles: %d\n", len(results.Dotfiles))
+		fmt.Println()
+		fmt.Printf("💾 Would save configuration to: %s\n", configPath)
+		fmt.Printf("📁 Would copy dotfiles to repo directory\n")
+		fmt.Printf("⚙️  Would generate ZSH and Git configurations\n")
+		fmt.Println()
+		fmt.Println("Dry-run complete. No files were created or modified.")
+		return nil
+	}
+
+	// Save config to plonk.yaml
 	fmt.Printf("💾 Saving configuration to %s... ", configPath)
 
 	if err := config.SaveConfig(generatedConfig, configPath); err != nil {

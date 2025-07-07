@@ -31,12 +31,53 @@ func init() {
 }
 
 func setupCmdRun(cmd *cobra.Command, args []string) error {
-	return runSetup(args)
+	dryRun := IsDryRun(cmd)
+	return runSetupWithOptions(args, dryRun)
 }
 
 func runSetup(args []string) error {
+	return runSetupWithOptions(args, false)
+}
+
+func runSetupWithOptions(args []string, dryRun bool) error {
 	if err := ValidateNoArgs("setup", args); err != nil {
 		return err
+	}
+
+	if dryRun {
+		fmt.Println("Dry-run mode: Showing what foundational tools would be installed")
+		fmt.Println()
+
+		// Preview Step 1: Homebrew
+		fmt.Println("Step 1: Homebrew installation preview:")
+		if isCommandAvailable("brew") {
+			fmt.Println("✅ Homebrew is already installed")
+		} else {
+			fmt.Println("📦 Would install Homebrew via official installation script")
+		}
+
+		// Preview Step 2: ASDF
+		fmt.Println("\nStep 2: ASDF installation preview:")
+		if isCommandAvailable("asdf") {
+			fmt.Println("✅ ASDF is already installed")
+		} else if !isCommandAvailable("brew") {
+			fmt.Println("❌ Cannot install ASDF - Homebrew would need to be installed first")
+		} else {
+			fmt.Println("🔧 Would install ASDF via Homebrew (brew install asdf)")
+		}
+
+		// Preview Step 3: Node.js/NPM
+		fmt.Println("\nStep 3: Node.js/NPM installation preview:")
+		if isCommandAvailable("node") && isCommandAvailable("npm") {
+			fmt.Println("✅ Node.js and NPM are already installed")
+		} else if !isCommandAvailable("brew") {
+			fmt.Println("❌ Cannot install Node.js/NPM - Homebrew would need to be installed first")
+		} else {
+			fmt.Println("📦 Would install Node.js via Homebrew (brew install node)")
+		}
+
+		fmt.Println("\nDry-run complete. No tools were installed.")
+		return nil
 	}
 
 	fmt.Println("🚀 Setting up foundational tools for plonk...")

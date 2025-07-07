@@ -35,15 +35,45 @@ func init() {
 }
 
 func repoCmdRun(cmd *cobra.Command, args []string) error {
-	return runRepo(args)
+	dryRun := IsDryRun(cmd)
+	return runRepoWithOptions(args, dryRun)
 }
 
 func runRepo(args []string) error {
+	return runRepoWithOptions(args, false)
+}
+
+func runRepoWithOptions(args []string, dryRun bool) error {
 	if err := ValidateExactArgs("repo", 1, args); err != nil {
 		return err
 	}
 
 	repoURL := args[0]
+
+	if dryRun {
+		fmt.Printf("Dry-run mode: Showing what would happen with repository setup for %s\n\n", repoURL)
+
+		repoDir := directories.Default.RepoDir()
+
+		// Preview Step 1: Repository operations
+		fmt.Println("Step 1: Repository setup that would be performed:")
+		if gitClient.IsRepo(repoDir) {
+			fmt.Printf("📥 Would pull updates from repository in %s\n", repoDir)
+		} else {
+			fmt.Printf("📁 Would clone repository %s to %s\n", repoURL, repoDir)
+		}
+
+		// Preview Step 2: Package installation
+		fmt.Println("\nStep 2: Package installation preview:")
+		fmt.Printf("🔄 Would run: plonk install --dry-run\n")
+
+		// Preview Step 3: Configuration application
+		fmt.Println("\nStep 3: Configuration application preview:")
+		fmt.Printf("🔄 Would run: plonk apply --dry-run\n")
+
+		fmt.Printf("\nDry-run complete. No changes were made.\n")
+		return nil
+	}
 
 	// Ensure directory structure exists and handle migration if needed
 	if err := directories.Default.EnsureStructure(); err != nil {
