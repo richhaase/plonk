@@ -59,10 +59,6 @@ type PackageManager interface {
 	IsAvailable() bool
 	ListInstalled() ([]string, error)
 	ListInstalledPackages() ([]PackageInfo, error) // Enhanced method returning rich objects
-	ListManagedPackages() ([]PackageInfo, error)   // Packages in plonk.yaml
-	ListUntrackedPackages() ([]PackageInfo, error) // Installed but not in plonk.yaml
-	ListMissingPackages() ([]PackageInfo, error)   // In plonk.yaml but not installed
-	SetConfigDir(plonkDir string)                  // Set plonk config directory for state-aware methods
 }
 
 // ExtendedPackageManager defines additional operations for package managers that support them.
