@@ -6,9 +6,6 @@ Active work items for current development session. Maintained by AI agents.
 
 ## Pending
 
-### Build Process (High Priority)
-- **Fix build creating binary in repo root** - Update justfile to build to a temp directory or build artifacts folder instead of root
-
 ### CLI Interface Improvements (Medium Priority)  
 - **Add --verbose/--quiet global flags** for output control
 
@@ -17,6 +14,7 @@ Active work items for current development session. Maintained by AI agents.
 - **Test dogfooding workflow**: plonk status, apply --dry-run, apply
 
 ## Completed (This Session)
+- **Fix build creating binary in repo root** ✅ - Updated justfile to build to bin/ directory, added .gitignore
 - **Validate plonk installation** ✅ - Binary at `/Users/rdh/.asdf/installs/golang/1.24.4/bin/plonk`, all commands working
 - **Implement command aliases** ✅ - `ls` (pkg list), `sync` (repo), `check` (status) all working
 - **Enhance pkg subcommands** ✅ - `search`, `info`, `update` with full dry-run support
