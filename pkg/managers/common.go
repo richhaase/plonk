@@ -1,3 +1,6 @@
+// Copyright (c) 2025 Plonk Contributors
+// Licensed under the MIT License. See LICENSE file in the project root for license information.
+
 // Package managers provides unified interfaces for managing different package managers
 // including Homebrew, ASDF, NPM, and ZSH plugins. Each manager implements the
 // PackageManager interface to provide consistent operations for checking availability,

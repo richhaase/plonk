@@ -342,3 +342,63 @@ func Clean() error {
 	fmt.Println("✅ Build artifacts cleaned")
 	return nil
 }
+
+// AddLicenseHeaders adds MIT license headers to all Go files
+func AddLicenseHeaders() error {
+	fmt.Println("Adding license headers to Go files...")
+
+	licenseHeader := `// Copyright (c) 2025 Plonk Contributors
+// Licensed under the MIT License. See LICENSE file in the project root for license information.
+
+`
+
+	// Get all Go files
+	goFiles, err := sh.Output("find", ".", "-name", "*.go", "-not", "-path", "./vendor/*")
+	if err != nil {
+		return fmt.Errorf("failed to find Go files: %w", err)
+	}
+
+	files := strings.Split(strings.TrimSpace(goFiles), "\n")
+	addedCount := 0
+	skippedCount := 0
+
+	for _, file := range files {
+		if file == "" {
+			continue
+		}
+
+		// Read file content
+		content, err := os.ReadFile(file)
+		if err != nil {
+			fmt.Printf("❌ Failed to read %s: %v\n", file, err)
+			continue
+		}
+
+		contentStr := string(content)
+
+		// Check if license header already exists
+		if strings.Contains(contentStr, "Copyright (c) 2025 Plonk Contributors") {
+			skippedCount++
+			continue
+		}
+
+		// Add license header at the top
+		newContent := licenseHeader + contentStr
+
+		// Write back to file
+		if err := os.WriteFile(file, []byte(newContent), 0644); err != nil {
+			fmt.Printf("❌ Failed to write %s: %v\n", file, err)
+			continue
+		}
+
+		addedCount++
+		fmt.Printf("✅ Added license header to %s\n", file)
+	}
+
+	fmt.Printf("\n📝 License header summary:\n")
+	fmt.Printf("  ✅ Added to %d files\n", addedCount)
+	fmt.Printf("  ⏭️  Skipped %d files (already have headers)\n", skippedCount)
+	fmt.Printf("  📄 Total Go files processed: %d\n", len(files))
+
+	return nil
+}

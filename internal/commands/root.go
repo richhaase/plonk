@@ -1,3 +1,6 @@
+// Copyright (c) 2025 Plonk Contributors
+// Licensed under the MIT License. See LICENSE file in the project root for license information.
+
 // Package commands implements the CLI interface for Plonk using Cobra.
 // It provides commands for managing shell environments including install,
 // apply, status, clone, pull, restore, and backup operations.

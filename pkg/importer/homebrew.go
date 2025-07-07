@@ -1,3 +1,6 @@
+// Copyright (c) 2025 Plonk Contributors
+// Licensed under the MIT License. See LICENSE file in the project root for license information.
+
 // Package importer provides functionality for discovering existing shell environment
 // configurations and generating plonk.yaml files. It supports package discovery
 // from Homebrew, ASDF, NPM, and dotfile detection for comprehensive environment

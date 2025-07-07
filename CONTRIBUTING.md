@@ -121,6 +121,19 @@ mage release v1.0.0
 - Use `mage preparerelease` to analyze commit history
 - Test releases with pre-release versions (e.g., `v1.0.0-beta.1`)
 - All releases automatically update changelog and create git tags
+
+## Legal and Licensing
+
+This project uses the MIT License for maximum compatibility and adoption:
+
+- **LICENSE file** contains the full MIT License text
+- **All Go files** include consistent license headers
+- **New files** should include the standard header:
+  ```go
+  // Copyright (c) 2025 Plonk Contributors
+  // Licensed under the MIT License. See LICENSE file in the project root for license information.
+  ```
+- **Use `mage addlicenseheaders`** to automatically add headers to new files
 - Include examples in function documentation
 - Keep CHANGELOG.md updated for significant changes
 

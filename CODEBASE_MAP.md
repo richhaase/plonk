@@ -224,6 +224,9 @@ mage nextminor       # Suggest next minor version
 mage nextmajor       # Suggest next major version
 mage release v1.0.0  # Create release with changelog and git tag
 
+# Licensing and compliance
+mage addlicenseheaders  # Add MIT license headers to all Go files
+
 # Development workflow (manual)
 mage format && mage lint && mage test
 ```

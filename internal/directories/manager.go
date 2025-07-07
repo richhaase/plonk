@@ -1,3 +1,6 @@
+// Copyright (c) 2025 Plonk Contributors
+// Licensed under the MIT License. See LICENSE file in the project root for license information.
+
 // Package directories provides centralized directory management for Plonk.
 // It handles path resolution, home directory expansion, and ensures proper
 // directory structure for configuration files, backups, and repositories.
