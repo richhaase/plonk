@@ -10,13 +10,13 @@ Active work items for current development session. Maintained by AI agents.
 - **Implement command aliases** (ls→pkg list, sync→repo, check→status)
 - **Enhance pkg subcommands** with search/info/update functionality
 - **Add --verbose/--quiet global flags** for output control
-- **Test dogfooding workflow**: plonk status, apply --dry-run, apply
 
 ### CLI Interface Improvements (Low Priority)
 - **Enhance status command** with --detailed, --drift-only, --json flags
+- **Test dogfooding workflow**: plonk status, apply --dry-run, apply
 
 ## Completed (This Session)
-- **Validate plonk installation** ✅ - check which plonk and plonk --help
+- **Validate plonk installation** ✅ - Binary at `/Users/rdh/.asdf/installs/golang/1.24.4/bin/plonk`, all commands working
 - **Research plonk CLI interface design** ✅ - provided comprehensive suggestions
 - **Standardize argument patterns** ✅ - install and apply commands now accept optional [package] argument
 - **Add global --dry-run flag** ✅ - comprehensive implementation for all applicable commands (install, apply, setup, repo, restore, clone, pull, backup, import)
@@ -31,7 +31,7 @@ Active work items for current development session. Maintained by AI agents.
 - **Installation completed** ✅ - `just install` ran successfully, installed to GOBIN
 
 ### After Shell Restart - Resume Here:
-1. **Validate plonk installation**: Run `which plonk` and `plonk --help`
+1. **Validate plonk installation**: Run `which plonk` and `plonk --help` ✅
 2. **Test dogfooding workflow**: 
    - `plonk status` - check current state
    - `plonk apply --dry-run` - see what would be applied  
