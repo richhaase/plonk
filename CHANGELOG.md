@@ -7,9 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
-- **DotfilesManager interface** with comprehensive dotfiles state management (managed/untracked/missing/modified)
+- **Complete Package Management UI** with `plonk pkg list [all|managed|missing|untracked]` and `plonk pkg status`
+- **State Reconciliation Architecture** - StateReconciler, ConfigLoader, and VersionChecker for comparing config vs installed packages
+- **Machine-friendly Output Formats** - Global `--output/-o` flag supporting table (default), JSON, and YAML formats
+- **Manager-specific Version Logic** - Homebrew ignores versions, ASDF/NPM require exact version matches
 - **New focused CLI structure** with concept-specific commands (`plonk pkg`, future `plonk dot`, `plonk config`)
-- **Basic package management commands** - `plonk pkg list` command for listing installed packages
 - **Justfile development workflow** replacing dev.go with just commands (build, test, lint, format, security, clean, install, precommit)
 - **Simplified package managers** - Drastically simplified with minimal interface (IsAvailable, ListInstalled)
 
@@ -17,11 +19,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **CLI architecture** - Replaced monolithic status command with focused concept-specific commands
 - **Development workflow** - Migrated from dev.go to justfile for simpler, standard development tasks
 - **Package managers** - Simplified from 2,224 lines to ~150 lines, removing all abstraction layers
-- **Dotfiles separation** - Moved dotfiles management to separate `pkg/dotfiles` package
+- **Dotfiles separation** - Moved dotfiles management to separate `internal/dotfiles` package
+- **Project structure** - Moved pkg/* to internal/* following Go CLI conventions
+- **State reconciliation** - Separated from package managers into dedicated reconciler service
 
 ### Fixed
 - **Import command configuration path** - Fixed incorrect subdirectory usage that was inconsistent with other commands
 - **Performance issues** - Removed slow state-aware methods that were causing hangs
+- **Key mapping bug** - Fixed display name vs config name mapping (Homebrew vs homebrew) in reconciler
+- **Test compilation** - Removed broken tests relying on deleted abstractions, added basic reconciler tests
 
 ### Removed
 - **ZSH plugin management** - Removed ZSH plugin management functionality and related tests  
@@ -29,8 +35,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Mixed-concern status command** - Removed original status command that tried to display packages + dotfiles + drift in one view
 - **Dev.go task runner** - Replaced with standard justfile for better tool ecosystem fit
 - **Unused internal packages** - Removed internal/directories, internal/utils, internal/tasks after command layer removal
-- **Over-engineered abstractions** - Removed CommandExecutor, CommandRunner, PackageInfo, state-aware methods
+- **Over-engineered abstractions** - Removed CommandExecutor, CommandRunner from package managers
 - **Complex package manager interface** - Simplified to minimal interface with just 2 methods
+- **Broken test files** - Removed manager_test.go that relied on deleted abstractions
 
 ## [v0.3.0] - 2025-07-07
 

@@ -14,25 +14,34 @@ Session-level work items and progress tracking. Maintained by AI agents for tact
 - [x] Phase 1: Removed existing interface code/tests (8400+ lines) ✅
 - [x] Created new focused CLI structure (`plonk pkg`) ✅
 - [x] Migrated from dev.go to justfile for development workflow ✅
-- [x] Separated dotfiles from package managers into pkg/dotfiles ✅
+- [x] Separated dotfiles from package managers into internal/dotfiles ✅
 - [x] Drastically simplified package managers (2,224 → ~150 lines) ✅
-- [x] Removed all abstraction layers (CommandExecutor, CommandRunner, PackageInfo) ✅
-- [x] Basic `plonk pkg list` working and fast ✅
+- [x] Removed all abstraction layers from package managers ✅
+- [x] Restructured to idiomatic Go CLI layout (pkg/* → internal/*) ✅
+- [x] Implemented state reconciliation with separated concerns ✅
+- [x] **Complete Package Management UI** - `plonk pkg list/status` with all filters ✅
+- [x] **Machine-friendly output** - JSON/YAML formats with `--output` flag ✅
+- [x] **Production-ready package management** - Real-world tested with 5 managed, 2 missing, 159 untracked packages ✅
 
 ### Phase 2 Tasks (Next Up)
 
 #### Immediate Next Steps
-- [ ] **Restructure to idiomatic Go layout** - Move pkg/* to internal/*
-- [ ] **Fix broken tests and imports** - Update after simplification
-- [ ] **Implement state-aware filters** - managed/untracked/missing at higher level
-- [ ] **Create pkg status command** - using simplified managers
-- [ ] **Design dotfiles UI** - plonk dot commands
-- [ ] **Design config UI** - plonk config commands
+- [ ] **Implement Dotfiles Management UI** - `plonk dot list/status/sync` commands using existing dotfiles package
+- [ ] **Design config UI** - `plonk config show/edit/validate` commands
+
+#### Current Focus: Dotfiles CLI Implementation
+**Goal**: Mirror successful package management pattern for dotfiles
+**Infrastructure**: Ready - `internal/dotfiles/` package with DotfileStatus/DotfileInfo exists
+**Commands to Build**:
+- `plonk dot list [all|managed|missing|untracked|modified]` - List dotfiles with state filtering
+- `plonk dot status` - Summary of dotfile management state  
+- `plonk dot sync` - Apply/update dotfiles from config
+- Support same `--output table|json|yaml` formats
 
 #### Future Phases
-- [ ] **Phase 3: Refactor and review interfaces**
-- [ ] **Phase 4: Add workflow-focused tests**
-- [ ] **Phase 5: Resume dogfooding with new UI**
+- [ ] **Import command** - Generate config from existing environment
+- [ ] **Add workflow-focused integration tests**
+- [ ] **Resume comprehensive dogfooding**
 
 ## UI Redesign Phase Overview
 
