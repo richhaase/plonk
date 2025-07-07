@@ -117,6 +117,56 @@ func (v *SimpleValidator) formatValidationError(err validator.FieldError) string
 
 // Custom validation functions
 
+// ValidateYAML checks if the provided YAML content has valid syntax.
+func ValidateYAML(content []byte) error {
+	trimmed := strings.TrimSpace(string(content))
+	if trimmed == "" {
+		return nil // Empty YAML is valid
+	}
+
+	var data interface{}
+	return yaml.Unmarshal(content, &data)
+}
+
+// ValidatePackageName checks if a package name is valid.
+func ValidatePackageName(name string) error {
+	trimmed := strings.TrimSpace(name)
+	if trimmed == "" {
+		return fmt.Errorf("package name cannot be empty")
+	}
+
+	// Check for invalid characters - allow letters, numbers, hyphens, underscores, dots, @, and /
+	for _, char := range trimmed {
+		if !((char >= 'a' && char <= 'z') ||
+			(char >= 'A' && char <= 'Z') ||
+			(char >= '0' && char <= '9') ||
+			char == '-' || char == '_' || char == '.' || char == '@' || char == '/') {
+			return fmt.Errorf("invalid package name contains invalid character %q: %q", char, name)
+		}
+	}
+
+	return nil
+}
+
+// ValidateFilePath checks if a file path is valid for plonk configuration.
+func ValidateFilePath(path string) error {
+	trimmed := strings.TrimSpace(path)
+	if trimmed == "" {
+		return fmt.Errorf("file path cannot be empty")
+	}
+
+	// For simplicity, just check it's not absolute and doesn't contain spaces
+	if strings.HasPrefix(trimmed, "/") {
+		return fmt.Errorf("file path cannot be absolute: %q", path)
+	}
+
+	if strings.Contains(trimmed, " ") {
+		return fmt.Errorf("file path cannot contain spaces: %q", path)
+	}
+
+	return nil
+}
+
 // validatePackageName validates package names
 func validatePackageName(fl validator.FieldLevel) bool {
 	name := fl.Field().String()

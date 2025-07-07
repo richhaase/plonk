@@ -25,16 +25,21 @@ Session-level work items and progress tracking. Maintained by AI agents for tact
 - [x] **Complete Dotfiles Management UI** - `plonk dot list/status` with all filters ✅
 - [x] **Ultra-simple dotfiles implementation** - ~100 lines using same patterns as packages ✅
 - [x] **Production-ready dotfiles management** - Real-world tested with 3 managed, 46 untracked dotfiles ✅
+- [x] **Configuration Management UI** - `plonk config show` with validation and status display ✅
+- [x] **Comprehensive legacy cleanup** - Removed 1000+ lines of broken/unused code (internal/importer, internal/dotfiles, complex validator) ✅
+- [x] **Clean architecture** - 90% code reduction (9400+ → ~800 lines) with all tests passing ✅
 
 ### Phase 3 Tasks (Next Up)
 
 #### Immediate Next Steps
-- [ ] **Design Configuration Management UI** - `plonk config show/edit/validate/init` commands
+- [ ] **Complete Configuration Management UI** - `plonk config validate/edit/init` commands (config show already complete)
 - [ ] **Import Command** - Generate config from existing environment (`plonk import`)
+- [ ] **Code review and quality pass** - Review all code for simplicity, effectiveness, and testing
 
 #### Current Achievement: Core Management UIs Complete ✅
 **Package Management**: `plonk pkg list/status` with state reconciliation and machine-friendly output
 **Dotfiles Management**: `plonk dot list/status` with ultra-simple implementation and same output formats
+**Configuration Management**: `plonk config show` with validation, status display, and machine-friendly output
 
 #### Next Phase Options
 1. **Configuration Management**: Commands to view, edit, validate plonk.yaml

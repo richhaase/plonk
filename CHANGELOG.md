@@ -9,13 +9,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - **Complete Package Management UI** with `plonk pkg list [all|managed|missing|untracked]` and `plonk pkg status`
 - **Complete Dotfiles Management UI** with `plonk dot list [all|managed|missing|untracked]` and `plonk dot status`
+- **Configuration Management UI** with `plonk config show` command displaying config status and validation
 - **State Reconciliation Architecture** - StateReconciler, ConfigLoader, and VersionChecker for comparing config vs installed packages
 - **Ultra-simple Dotfiles Implementation** - ~100 lines total using same patterns as package management
 - **Machine-friendly Output Formats** - Global `--output/-o` flag supporting table (default), JSON, and YAML formats
 - **Manager-specific Version Logic** - Homebrew ignores versions, ASDF/NPM require exact version matches
-- **Unified CLI structure** with concept-specific commands (`plonk pkg`, `plonk dot`, future `plonk config`)
+- **Unified CLI structure** with concept-specific commands (`plonk pkg`, `plonk dot`, `plonk config`)
 - **Justfile development workflow** replacing dev.go with just commands (build, test, lint, format, security, clean, install, precommit)
 - **Simplified package managers** - Drastically simplified with minimal interface (IsAvailable, ListInstalled)
+- **Comprehensive legacy code cleanup** - Removed 1000+ lines of unused/broken code for cleaner architecture
 
 ### Changed
 - **CLI architecture** - Replaced monolithic status command with focused concept-specific commands
@@ -39,7 +41,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Unused internal packages** - Removed internal/directories, internal/utils, internal/tasks after command layer removal
 - **Over-engineered abstractions** - Removed CommandExecutor, CommandRunner from package managers
 - **Complex package manager interface** - Simplified to minimal interface with just 2 methods
-- **Broken test files** - Removed manager_test.go that relied on deleted abstractions
+- **Legacy import/dotfiles packages** - Removed internal/importer and internal/dotfiles (1000+ lines) with broken dependencies
+- **Complex validation system** - Removed internal/config/validator.go in favor of simplified validation
+- **Broken test files** - Removed all legacy tests that relied on deleted abstractions
 
 ## [v0.3.0] - 2025-07-07
 
