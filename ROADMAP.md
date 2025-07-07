@@ -63,6 +63,7 @@ Major features completed (see [CHANGELOG.md](CHANGELOG.md) for details):
 - ✅ Backup system with automatic cleanup
 - ✅ Dry-run and preview capabilities
 - ✅ TDD development infrastructure
+- ✅ Mage migration - Go-native task runner with improved cross-platform support
 
 ## Parked
 

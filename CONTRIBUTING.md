@@ -45,13 +45,13 @@ cd plonk
 asdf install
 
 # Build the project
-just build
+mage build
 
 # Run tests
-just test
+mage test
 
 # Run the full development cycle
-just dev
+mage format && mage lint && mage test
 ```
 
 ### Installing from Source
@@ -59,14 +59,14 @@ just dev
 If you want to install plonk locally for development or testing:
 
 ```bash
-# Option 1: Install to GOBIN (recommended for development)
-just install
+# Option 1: Install globally using go install (recommended)
+go install ./cmd/plonk
 
 # Option 2: Install globally using go install
 go install ./cmd/plonk
 
 # Option 3: Manual installation
-just build
+mage build
 cp build/plonk /usr/local/bin/plonk  # or any directory in your PATH
 
 # Verify installation
@@ -75,7 +75,8 @@ which plonk
 ```
 
 **Notes:**
-- `just install` builds the binary to `build/plonk` then copies it to `$(go env GOBIN)`
+- `go install` builds and installs directly to `$(go env GOBIN)` or `$(go env GOPATH)/bin`
+- `mage build` creates the binary in `build/plonk` for manual installation
 - Make sure `$(go env GOBIN)` is in your PATH (or `$(go env GOPATH)/bin` if GOBIN is unset)
 - For ASDF users, GOBIN should already be configured correctly
 - The binary will be named `plonk` and available globally after installation
@@ -111,8 +112,8 @@ which plonk
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Follow the TDD workflow for all changes
-4. Ensure all tests pass (`just test`)
-5. Run the full CI pipeline locally (`just ci`)
+4. Ensure all tests pass (`mage test`)
+5. Run the full development pipeline locally (`mage format && mage lint && mage test`)
 6. Commit with clear messages
 7. Push to your fork
 8. Open a Pull Request with:

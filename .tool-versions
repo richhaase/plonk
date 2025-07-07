@@ -7,5 +7,5 @@ golang 1.24.4
 # Linting and formatting tools
 golangci-lint 2.2.1
 
-# Task runner
-just 1.41.0
+# Task runner (Go-native)
+# Note: mage is installed via go.mod dependency, no version pinning needed

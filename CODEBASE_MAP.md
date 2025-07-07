@@ -25,7 +25,7 @@ plonk/
 │   └── managers/                 # 📋 Package Manager Abstractions
 ├── .tool-versions                # 🔧 ASDF development tools
 ├── .golangci.yml                 # 🔍 Linting configuration
-├── justfile                      # ⚡ Task runner commands
+├── magefile.go                   # ⚡ Mage task runner (Go-native build tool)
 ├── go.mod                        # 🔧 Go Module Definition
 ├── go.sum                        # 🔒 Dependency Lock File
 ├── CLAUDE.md                     # 📖 Project Documentation
@@ -56,7 +56,7 @@ plonk/
 - `internal/commands/test_helpers.go` - Shared test utilities
 
 ### ⚡ **Development Infrastructure**
-- `justfile` - Task runner commands (build, test, lint, format, ci)
+- `magefile.go` - Mage task runner commands (build, test, lint, format, clean)
 - `.tool-versions` - ASDF development tools specification
 - `.golangci.yml` - Linting and formatting configuration
 
@@ -205,25 +205,20 @@ if shouldInstallPackage(name, isInstalled) {
 
 ## 🔧 Development Tools
 
-### Just Commands (Primary)
+### Mage Commands (Primary)
 ```bash
 # See all available commands
-just
-
-# Development workflow
-just dev          # format + lint + test
-just ci           # format + lint + test + build
+mage -l
 
 # Individual tasks
-just build        # Build the plonk binary
-just test         # Run all tests
-just test-coverage # Run tests with coverage
-just lint         # Run linter
-just lint-fix     # Fix linter issues automatically
-just format       # Format code (goimports + gofmt)
-just clean        # Clean build artifacts
-just install      # Install binary to $GOPATH/bin
-just status       # Show project status
+mage build        # Build the plonk binary
+mage test         # Run all tests
+mage lint         # Run linter
+mage format       # Format code (gofmt)
+mage clean        # Clean build artifacts
+
+# Development workflow (manual)
+mage format && mage lint && mage test
 ```
 
 ### Traditional Go Commands
