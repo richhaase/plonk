@@ -14,8 +14,9 @@ setup:
 # Build the plonk binary
 build:
     @echo "Building plonk..."
-    go build -o plonk ./cmd/plonk
-    @echo "✅ Built plonk binary"
+    @mkdir -p bin
+    go build -o bin/plonk ./cmd/plonk
+    @echo "✅ Built plonk binary to bin/"
 
 # Run all tests
 test:
@@ -45,7 +46,7 @@ format:
 # Clean build artifacts
 clean:
     @echo "Cleaning build artifacts..."
-    rm -f plonk
+    rm -rf bin
     go clean
 
 # Run full CI pipeline (format, lint, test, build)
