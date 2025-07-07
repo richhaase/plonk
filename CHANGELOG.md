@@ -12,6 +12,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+## [v0.3.0] - 2025-07-07
+
+### Added
+- **MIT License** with clear IP ownership documentation
+- **Pure Go development workflow** with optional ASDF convenience
+- **dev.go task runner** replacing Mage for simplified Go-native development
+
+### Changed
+- **Replaced Mage with pure Go dev.go task runner** for improved simplicity and maintainability
+- **Comprehensive documentation reorganization** with clearer file purposes and reduced duplication
+- **Updated copyright to Rich Haase** for clear intellectual property ownership
+- **Streamlined development approach** focusing on Go toolchain without external dependencies
+
+### Removed
+- **ZSH and Git configuration generation** - Simplified dotfiles approach by removing automatic shell config generation
+- **Mage task runner** - Replaced with lighter-weight Go-native solution
+- **Documentation references** to removed ZSH/Git generation functionality
+
+### Development
+- **Temporarily disabled pre-commit hooks** for dogfooding phase to allow smooth testing workflow
+- **Enhanced documentation structure** with clear role definitions for each documentation file
+- **Improved project focus** on core package management without shell configuration complexity
+
 ## [v0.2.0] - 2025-07-06
 
 ### Added
