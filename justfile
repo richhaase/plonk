@@ -14,9 +14,9 @@ setup:
 # Build the plonk binary
 build:
     @echo "Building plonk..."
-    @mkdir -p bin
-    go build -o bin/plonk ./cmd/plonk
-    @echo "✅ Built plonk binary to bin/"
+    @mkdir -p build
+    go build -o build/plonk ./cmd/plonk
+    @echo "✅ Built plonk binary to build/"
 
 # Run all tests
 test:
@@ -46,7 +46,7 @@ format:
 # Clean build artifacts
 clean:
     @echo "Cleaning build artifacts..."
-    rm -rf bin
+    rm -rf build
     go clean
 
 # Run full CI pipeline (format, lint, test, build)
@@ -56,7 +56,7 @@ ci: format lint test build
 # Install the binary to GOBIN (or GOPATH/bin if GOBIN unset)
 install: build
     @echo "Installing plonk to $(go env GOBIN)..."
-    go install ./cmd/plonk
+    cp build/plonk $(go env GOBIN)/plonk
     @echo "✅ Plonk installed"
 
 # Show project status
