@@ -15,6 +15,7 @@ Active work items for current development session. Maintained by AI agents.
 
 ## Completed (This Session)
 - **Fix build creating binary in repo root** ✅ - Updated justfile to build to bin/ directory, added .gitignore
+- **Remove verbose/quiet flags** ✅ - Removed incomplete verbose/quiet implementation as not needed yet
 - **Validate plonk installation** ✅ - Binary at `/Users/rdh/.asdf/installs/golang/1.24.4/bin/plonk`, all commands working
 - **Implement command aliases** ✅ - `ls` (pkg list), `sync` (repo), `check` (status) all working
 - **Enhance pkg subcommands** ✅ - `search`, `info`, `update` with full dry-run support
