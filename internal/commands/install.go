@@ -35,15 +35,19 @@ func init() {
 
 func installCmdRun(cmd *cobra.Command, args []string) error {
 	dryRun := IsDryRun(cmd)
-	return runInstallWithOptions(args, dryRun)
+	return runInstallWithOptions(cmd, args, dryRun)
 }
 
 func runInstall(args []string) error {
-	return runInstallWithOptions(args, false)
+	return runInstallWithOptions(nil, args, false)
 }
 
-func runInstallWithOptions(args []string, dryRun bool) error {
+func runInstallWithOptions(cmd *cobra.Command, args []string, dryRun bool) error {
 	plonkDir := directories.Default.PlonkDir()
+
+	if IsVerbose(cmd) {
+		fmt.Printf("[verbose] Loading configuration from %s\n", plonkDir)
+	}
 
 	// Load configuration.
 	config, err := config.LoadConfig(plonkDir)
@@ -60,44 +64,44 @@ func runInstallWithOptions(args []string, dryRun bool) error {
 	if dryRun {
 		if len(args) == 0 {
 			// Preview all packages that would be installed
-			return previewAllPackageInstallation(homebrewMgr, asdfMgr, npmMgr, config, plonkDir)
+			return previewAllPackageInstallation(cmd, homebrewMgr, asdfMgr, npmMgr, config, plonkDir)
 		} else {
 			// Preview specific package installation
 			packageName := args[0]
-			return previewSpecificPackageInstallation(homebrewMgr, asdfMgr, npmMgr, config, plonkDir, packageName)
+			return previewSpecificPackageInstallation(cmd, homebrewMgr, asdfMgr, npmMgr, config, plonkDir, packageName)
 		}
 	}
 
 	if len(args) == 0 {
 		// Install all packages
-		return installAllPackages(homebrewMgr, asdfMgr, npmMgr, config, plonkDir)
+		return installAllPackages(cmd, homebrewMgr, asdfMgr, npmMgr, config, plonkDir)
 	} else {
 		// Install specific package
 		packageName := args[0]
-		return installSpecificPackage(homebrewMgr, asdfMgr, npmMgr, config, plonkDir, packageName)
+		return installSpecificPackage(cmd, homebrewMgr, asdfMgr, npmMgr, config, plonkDir, packageName)
 	}
 }
 
-func installAllPackages(homebrewMgr *managers.HomebrewManager, asdfMgr *managers.AsdfManager, npmMgr *managers.NpmManager, config *config.Config, plonkDir string) error {
+func installAllPackages(cmd *cobra.Command, homebrewMgr *managers.HomebrewManager, asdfMgr *managers.AsdfManager, npmMgr *managers.NpmManager, config *config.Config, plonkDir string) error {
 	// Track packages that were installed and have configs.
 	installedPackages := make(map[string][]string)
 
 	// Install Homebrew packages.
-	installedHomebrewPackages, err := installHomebrewPackages(homebrewMgr, config)
+	installedHomebrewPackages, err := installHomebrewPackages(cmd, homebrewMgr, config)
 	if err != nil {
 		return fmt.Errorf("failed to install Homebrew packages: %w", err)
 	}
 	installedPackages["homebrew"] = installedHomebrewPackages
 
 	// Install ASDF tools.
-	installedASDFTools, err := installASDFTools(asdfMgr, config)
+	installedASDFTools, err := installASDFTools(cmd, asdfMgr, config)
 	if err != nil {
 		return fmt.Errorf("failed to install ASDF tools: %w", err)
 	}
 	installedPackages["asdf"] = installedASDFTools
 
 	// Install NPM packages.
-	installedNPMPackages, err := installNPMPackages(npmMgr, config)
+	installedNPMPackages, err := installNPMPackages(cmd, npmMgr, config)
 	if err != nil {
 		return fmt.Errorf("failed to install NPM packages: %w", err)
 	}
@@ -108,20 +112,27 @@ func installAllPackages(homebrewMgr *managers.HomebrewManager, asdfMgr *managers
 
 	// Apply configurations for newly installed packages.
 	if len(packagesWithConfigs) > 0 {
-		fmt.Println("Applying configurations for installed packages...")
+		if !IsQuiet(cmd) {
+			fmt.Println("Applying configurations for installed packages...")
+		}
 		for _, packageName := range packagesWithConfigs {
+			if IsVerbose(cmd) {
+				fmt.Printf("[verbose] Applying configuration for %s\n", packageName)
+			}
 			if err := applyPackageConfiguration(plonkDir, config, packageName); err != nil {
-				// Don't fail the entire install if config application fails.
+				// Always show warnings, even in quiet mode
 				fmt.Printf("Warning: failed to apply configuration for %s: %v\n", packageName, err)
 			}
 		}
 	}
 
-	fmt.Printf("Successfully installed packages from %s\n", filepath.Join(plonkDir, "plonk.yaml"))
+	if !IsQuiet(cmd) {
+		fmt.Printf("Successfully installed packages from %s\n", filepath.Join(plonkDir, "plonk.yaml"))
+	}
 	return nil
 }
 
-func installSpecificPackage(homebrewMgr *managers.HomebrewManager, asdfMgr *managers.AsdfManager, npmMgr *managers.NpmManager, config *config.Config, plonkDir string, packageName string) error {
+func installSpecificPackage(cmd *cobra.Command, homebrewMgr *managers.HomebrewManager, asdfMgr *managers.AsdfManager, npmMgr *managers.NpmManager, config *config.Config, plonkDir string, packageName string) error {
 	// Check if package exists in configuration
 	var packageFound bool
 	var installedWithConfig bool
@@ -238,9 +249,12 @@ func installSpecificPackage(homebrewMgr *managers.HomebrewManager, asdfMgr *mana
 	return nil
 }
 
-func installHomebrewPackages(mgr *managers.HomebrewManager, config *config.Config) ([]string, error) {
+func installHomebrewPackages(cmd *cobra.Command, mgr *managers.HomebrewManager, config *config.Config) ([]string, error) {
 	// Skip if no packages to install.
 	if len(config.Homebrew.Brews) == 0 && len(config.Homebrew.Casks) == 0 {
+		if IsVerbose(cmd) {
+			fmt.Println("[verbose] No Homebrew packages configured")
+		}
 		return []string{}, nil
 	}
 
@@ -252,8 +266,15 @@ func installHomebrewPackages(mgr *managers.HomebrewManager, config *config.Confi
 
 	// Install brews.
 	for _, pkg := range config.Homebrew.Brews {
-		if shouldInstallPackage(pkg.Name, mgr.IsInstalled(pkg.Name)) {
-			fmt.Printf("Installing Homebrew package: %s\n", pkg.Name)
+		isInstalled := mgr.IsInstalled(pkg.Name)
+		if IsVerbose(cmd) {
+			fmt.Printf("[verbose] Checking Homebrew package %s: installed=%v\n", pkg.Name, isInstalled)
+		}
+
+		if shouldInstallPackage(pkg.Name, isInstalled) {
+			if !IsQuiet(cmd) {
+				fmt.Printf("Installing Homebrew package: %s\n", pkg.Name)
+			}
 			if err := mgr.Install(pkg.Name); err != nil {
 				return nil, WrapInstallError(pkg.Name, err)
 			}
@@ -262,14 +283,23 @@ func installHomebrewPackages(mgr *managers.HomebrewManager, config *config.Confi
 				installedWithConfigs = append(installedWithConfigs, getPackageName(pkg))
 			}
 		} else {
-			fmt.Printf("Homebrew package %s already installed\n", pkg.Name)
+			if !IsQuiet(cmd) {
+				fmt.Printf("Homebrew package %s already installed\n", pkg.Name)
+			}
 		}
 	}
 
 	// Install casks.
 	for _, pkg := range config.Homebrew.Casks {
-		if shouldInstallPackage(pkg.Name, mgr.IsInstalled(pkg.Name)) {
-			fmt.Printf("Installing Homebrew cask: %s\n", pkg.Name)
+		isInstalled := mgr.IsInstalled(pkg.Name)
+		if IsVerbose(cmd) {
+			fmt.Printf("[verbose] Checking Homebrew cask %s: installed=%v\n", pkg.Name, isInstalled)
+		}
+
+		if shouldInstallPackage(pkg.Name, isInstalled) {
+			if !IsQuiet(cmd) {
+				fmt.Printf("Installing Homebrew cask: %s\n", pkg.Name)
+			}
 			if err := mgr.InstallCask(pkg.Name); err != nil {
 				return nil, WrapInstallError(pkg.Name, err)
 			}
@@ -278,14 +308,20 @@ func installHomebrewPackages(mgr *managers.HomebrewManager, config *config.Confi
 				installedWithConfigs = append(installedWithConfigs, getPackageName(pkg))
 			}
 		} else {
-			fmt.Printf("Homebrew cask %s already installed\n", pkg.Name)
+			if !IsQuiet(cmd) {
+				fmt.Printf("Homebrew cask %s already installed\n", pkg.Name)
+			}
 		}
+	}
+
+	if IsVerbose(cmd) && len(installedWithConfigs) > 0 {
+		fmt.Printf("[verbose] Packages with configs to apply: %v\n", installedWithConfigs)
 	}
 
 	return installedWithConfigs, nil
 }
 
-func installASDFTools(mgr *managers.AsdfManager, config *config.Config) ([]string, error) {
+func installASDFTools(cmd *cobra.Command, mgr *managers.AsdfManager, config *config.Config) ([]string, error) {
 	// Skip if no tools to install.
 	if len(config.ASDF) == 0 {
 		return []string{}, nil
@@ -316,7 +352,7 @@ func installASDFTools(mgr *managers.AsdfManager, config *config.Config) ([]strin
 	return installedWithConfigs, nil
 }
 
-func installNPMPackages(mgr *managers.NpmManager, config *config.Config) ([]string, error) {
+func installNPMPackages(cmd *cobra.Command, mgr *managers.NpmManager, config *config.Config) ([]string, error) {
 	// Skip if no packages to install.
 	if len(config.NPM) == 0 {
 		return []string{}, nil
@@ -350,7 +386,7 @@ func installNPMPackages(mgr *managers.NpmManager, config *config.Config) ([]stri
 }
 
 // previewAllPackageInstallation shows what packages would be installed without actually installing them
-func previewAllPackageInstallation(homebrewMgr *managers.HomebrewManager, asdfMgr *managers.AsdfManager, npmMgr *managers.NpmManager, config *config.Config, plonkDir string) error {
+func previewAllPackageInstallation(cmd *cobra.Command, homebrewMgr *managers.HomebrewManager, asdfMgr *managers.AsdfManager, npmMgr *managers.NpmManager, config *config.Config, plonkDir string) error {
 	fmt.Printf("Dry-run mode: Showing what packages would be installed from %s\n\n", filepath.Join(plonkDir, "plonk.yaml"))
 
 	// Preview Homebrew packages
@@ -373,7 +409,7 @@ func previewAllPackageInstallation(homebrewMgr *managers.HomebrewManager, asdfMg
 }
 
 // previewSpecificPackageInstallation shows what would happen when installing a specific package
-func previewSpecificPackageInstallation(homebrewMgr *managers.HomebrewManager, asdfMgr *managers.AsdfManager, npmMgr *managers.NpmManager, config *config.Config, plonkDir string, packageName string) error {
+func previewSpecificPackageInstallation(cmd *cobra.Command, homebrewMgr *managers.HomebrewManager, asdfMgr *managers.AsdfManager, npmMgr *managers.NpmManager, config *config.Config, plonkDir string, packageName string) error {
 	fmt.Printf("Dry-run mode: Showing what would happen when installing package '%s'\n\n", packageName)
 
 	// Check if package exists in configuration and preview its installation

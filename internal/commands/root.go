@@ -63,9 +63,71 @@ func IsDryRun(cmd *cobra.Command) bool {
 	return false
 }
 
+// IsVerbose checks if verbose mode is enabled
+func IsVerbose(cmd *cobra.Command) bool {
+	if cmd == nil {
+		return false
+	}
+
+	// Check local flag first
+	if localFlag := cmd.Flags().Lookup("verbose"); localFlag != nil {
+		if verbose, err := cmd.Flags().GetBool("verbose"); err == nil && verbose {
+			return true
+		}
+	}
+
+	// Check global flag
+	if globalFlag := cmd.PersistentFlags().Lookup("verbose"); globalFlag != nil {
+		if verbose, err := cmd.PersistentFlags().GetBool("verbose"); err == nil && verbose {
+			return true
+		}
+	}
+
+	// Check parent command's persistent flags
+	if cmd.Parent() != nil {
+		if verbose, err := cmd.Parent().PersistentFlags().GetBool("verbose"); err == nil && verbose {
+			return true
+		}
+	}
+
+	return false
+}
+
+// IsQuiet checks if quiet mode is enabled
+func IsQuiet(cmd *cobra.Command) bool {
+	if cmd == nil {
+		return false
+	}
+
+	// Check local flag first
+	if localFlag := cmd.Flags().Lookup("quiet"); localFlag != nil {
+		if quiet, err := cmd.Flags().GetBool("quiet"); err == nil && quiet {
+			return true
+		}
+	}
+
+	// Check global flag
+	if globalFlag := cmd.PersistentFlags().Lookup("quiet"); globalFlag != nil {
+		if quiet, err := cmd.PersistentFlags().GetBool("quiet"); err == nil && quiet {
+			return true
+		}
+	}
+
+	// Check parent command's persistent flags
+	if cmd.Parent() != nil {
+		if quiet, err := cmd.Parent().PersistentFlags().GetBool("quiet"); err == nil && quiet {
+			return true
+		}
+	}
+
+	return false
+}
+
 func init() {
 	// Add global flags
 	rootCmd.PersistentFlags().Bool("dry-run", false, "Show what would be done without making any changes")
+	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Enable verbose output")
+	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "Suppress normal output (errors still shown)")
 
 	// Add subcommands here
 	rootCmd.AddCommand(statusCmd)
