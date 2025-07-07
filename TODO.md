@@ -6,6 +6,9 @@ Active work items for current development session. Maintained by AI agents.
 
 ## Pending
 
+### Build Process (High Priority)
+- **Fix build creating binary in repo root** - Update justfile to build to a temp directory or build artifacts folder instead of root
+
 ### CLI Interface Improvements (Medium Priority)  
 - **Add --verbose/--quiet global flags** for output control
 
