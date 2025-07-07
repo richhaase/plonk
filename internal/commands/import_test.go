@@ -73,9 +73,9 @@ func TestRunImportIntegration(t *testing.T) {
 		t.Errorf("Import command should not fail: %v", err)
 	}
 
-	// Check that plonk.yaml was created in repo directory
+	// Check that plonk.yaml was created in plonk directory
 	plonkDir := filepath.Join(tempHome, ".config", "plonk")
-	plonkYamlPath := filepath.Join(plonkDir, "repo", "plonk.yaml")
+	plonkYamlPath := filepath.Join(plonkDir, "plonk.yaml")
 	if _, err := os.Stat(plonkYamlPath); os.IsNotExist(err) {
 		t.Error("Expected plonk.yaml to be created")
 	}

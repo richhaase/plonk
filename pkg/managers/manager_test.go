@@ -716,3 +716,45 @@ ruby 3.0.0
 		})
 	}
 }
+
+// Test PackageStatus string representation
+func TestPackageStatusString(t *testing.T) {
+	tests := []struct {
+		status   PackageStatus
+		expected string
+	}{
+		{PackageInstalled, "installed"},
+		{PackageAvailable, "available"},
+		{PackageUnknown, "unknown"},
+		{PackageStatus(999), "unknown"},
+	}
+
+	for _, test := range tests {
+		if got := test.status.String(); got != test.expected {
+			t.Errorf("PackageStatus(%d).String() = %s, want %s", test.status, got, test.expected)
+		}
+	}
+}
+
+// Test PackageInfo structure
+func TestPackageInfo(t *testing.T) {
+	info := PackageInfo{
+		Name:        "git",
+		Version:     "2.42.0",
+		Status:      PackageInstalled,
+		Manager:     "homebrew",
+		Description: "Distributed version control system",
+	}
+
+	if info.Name != "git" {
+		t.Errorf("Expected name to be 'git', got %s", info.Name)
+	}
+
+	if info.Status != PackageInstalled {
+		t.Errorf("Expected status to be PackageInstalled, got %v", info.Status)
+	}
+
+	if info.Status.String() != "installed" {
+		t.Errorf("Expected status string to be 'installed', got %s", info.Status.String())
+	}
+}

@@ -5,7 +5,9 @@ package commands
 
 import (
 	"fmt"
+	"os"
 
+	"plonk/internal/directories"
 	"plonk/pkg/managers"
 
 	"github.com/spf13/cobra"
@@ -76,6 +78,11 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		}
 
 		fmt.Println()
+	}
+
+	// Show dotfiles management status
+	if err := showDotfilesStatus(); err != nil {
+		fmt.Printf("⚠️  Error showing dotfiles status: %v\n", err)
 	}
 
 	// Always show drift detection.
@@ -150,5 +157,111 @@ func showDriftStatus() error {
 	fmt.Println("   plonk apply    # Apply missing configurations")
 	fmt.Println()
 
+	return nil
+}
+
+// showDotfilesStatus displays dotfiles management information.
+func showDotfilesStatus() error {
+	fmt.Println("Dotfiles Management Status")
+	fmt.Println("=========================")
+	fmt.Println()
+
+	// Get home directory
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home directory: %w", err)
+	}
+
+	// Get plonk directory
+	plonkDir := directories.Default.PlonkDir()
+
+	// Create dotfiles manager
+	dotfilesManager := managers.NewDotfilesManager(homeDir, plonkDir)
+
+	// Get dotfiles information
+	managed, err := dotfilesManager.ListManaged()
+	if err != nil {
+		return fmt.Errorf("failed to list managed dotfiles: %w", err)
+	}
+
+	untracked, err := dotfilesManager.ListUntracked()
+	if err != nil {
+		return fmt.Errorf("failed to list untracked dotfiles: %w", err)
+	}
+
+	missing, err := dotfilesManager.ListMissing()
+	if err != nil {
+		return fmt.Errorf("failed to list missing dotfiles: %w", err)
+	}
+
+	modified, err := dotfilesManager.ListModified()
+	if err != nil {
+		return fmt.Errorf("failed to list modified dotfiles: %w", err)
+	}
+
+	// Display summary
+	if len(managed) > 0 {
+		fmt.Printf("📄 %d dotfiles managed", len(managed))
+		if len(managed) <= 5 {
+			fmt.Print(" (")
+			for i, dotfile := range managed {
+				if i > 0 {
+					fmt.Print(", ")
+				}
+				fmt.Print(dotfile.Name)
+			}
+			fmt.Print(")")
+		}
+		fmt.Println()
+	} else {
+		fmt.Println("📄 No dotfiles currently managed")
+	}
+
+	if len(untracked) > 0 {
+		fmt.Printf("🔍 %d dotfiles untracked", len(untracked))
+		if len(untracked) <= 5 {
+			fmt.Print(" (")
+			for i, dotfile := range untracked {
+				if i > 0 {
+					fmt.Print(", ")
+				}
+				fmt.Print(dotfile.Name)
+			}
+			fmt.Print(")")
+		}
+		fmt.Println()
+	}
+
+	if len(missing) > 0 {
+		fmt.Printf("❌ %d dotfiles missing", len(missing))
+		if len(missing) <= 5 {
+			fmt.Print(" (")
+			for i, dotfile := range missing {
+				if i > 0 {
+					fmt.Print(", ")
+				}
+				fmt.Print(dotfile.Name)
+			}
+			fmt.Print(")")
+		}
+		fmt.Println()
+	}
+
+	if len(modified) > 0 {
+		fmt.Printf("📝 %d dotfiles modified", len(modified))
+		if len(modified) <= 5 {
+			fmt.Print(" (")
+			for i, dotfile := range modified {
+				if i > 0 {
+					fmt.Print(", ")
+				}
+				fmt.Print(dotfile.Name)
+			}
+			fmt.Print(")")
+		}
+		fmt.Println()
+	}
+
+	fmt.Println()
 	return nil
 }

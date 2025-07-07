@@ -13,6 +13,7 @@ package managers
 import (
 	"bytes"
 	"os/exec"
+	"time"
 )
 
 // CommandExecutor defines an interface for executing system commands with dependency injection.
@@ -20,10 +21,48 @@ type CommandExecutor interface {
 	Execute(name string, args ...string) *exec.Cmd
 }
 
+// PackageStatus represents the state of a package
+type PackageStatus int
+
+const (
+	PackageInstalled PackageStatus = iota // Package is installed
+	PackageAvailable                      // Package is available but not installed
+	PackageUnknown                        // Package status unknown
+)
+
+// String returns the string representation of PackageStatus
+func (s PackageStatus) String() string {
+	switch s {
+	case PackageInstalled:
+		return "installed"
+	case PackageAvailable:
+		return "available"
+	case PackageUnknown:
+		return "unknown"
+	default:
+		return "unknown"
+	}
+}
+
+// PackageInfo contains metadata about a package
+type PackageInfo struct {
+	Name        string        // Package name
+	Version     string        // Installed version (if available)
+	Status      PackageStatus // Current status
+	Manager     string        // Package manager name (homebrew, asdf, npm)
+	Description string        // Package description (if available)
+	InstallDate time.Time     // Installation date (if available)
+}
+
 // PackageManager defines the common operations for all package managers.
 type PackageManager interface {
 	IsAvailable() bool
 	ListInstalled() ([]string, error)
+	ListInstalledPackages() ([]PackageInfo, error) // Enhanced method returning rich objects
+	ListManagedPackages() ([]PackageInfo, error)   // Packages in plonk.yaml
+	ListUntrackedPackages() ([]PackageInfo, error) // Installed but not in plonk.yaml  
+	ListMissingPackages() ([]PackageInfo, error)   // In plonk.yaml but not installed
+	SetConfigDir(plonkDir string)                   // Set plonk config directory for state-aware methods
 }
 
 // ExtendedPackageManager defines additional operations for package managers that support them.

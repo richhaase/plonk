@@ -8,11 +8,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	
+	"plonk/pkg/config"
 )
 
 // AsdfManager manages ASDF tools and versions.
 type AsdfManager struct {
-	runner *CommandRunner
+	runner   *CommandRunner
+	plonkDir string
 }
 
 // NewAsdfManager creates a new ASDF manager.
@@ -188,6 +191,44 @@ func (a *AsdfManager) IsVersionInstalled(toolName, version string) bool {
 	return false
 }
 
+// ListInstalledPackages returns detailed information about installed packages.
+func (a *AsdfManager) ListInstalledPackages() ([]PackageInfo, error) {
+	// Get installed plugins (tools)
+	plugins, err := a.ListInstalled()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]PackageInfo, 0)
+	for _, plugin := range plugins {
+		// Get installed versions for this plugin
+		versions, err := a.GetInstalledVersions(plugin)
+		if err != nil {
+			// If we can't get versions, still include the plugin without version info
+			info := PackageInfo{
+				Name:    plugin,
+				Status:  PackageInstalled,
+				Manager: "asdf",
+			}
+			result = append(result, info)
+			continue
+		}
+
+		// Create a PackageInfo for each installed version
+		for _, version := range versions {
+			info := PackageInfo{
+				Name:    plugin + " " + version,
+				Version: version,
+				Status:  PackageInstalled,
+				Manager: "asdf",
+			}
+			result = append(result, info)
+		}
+	}
+
+	return result, nil
+}
+
 // InstallVersion installs a specific version of a tool.
 func (a *AsdfManager) InstallVersion(toolName, version string) error {
 	return a.runner.RunCommand("install", toolName, version)
@@ -239,4 +280,125 @@ func (a *AsdfManager) Info(pluginName string) (string, error) {
 // UpdateAll updates all ASDF plugins.
 func (a *AsdfManager) UpdateAll() error {
 	return a.runner.RunCommand("plugin", "update", "--all")
+}
+
+// SetConfigDir sets the plonk config directory
+func (a *AsdfManager) SetConfigDir(plonkDir string) {
+	a.plonkDir = plonkDir
+}
+
+// getManagedPackages returns ASDF tools listed in plonk.yaml
+func (a *AsdfManager) getManagedPackages() ([]string, error) {
+	if a.plonkDir == "" {
+		return []string{}, nil
+	}
+	
+	cfg, err := config.LoadConfig(a.plonkDir)
+	if err != nil {
+		// If no config exists, return empty list
+		return []string{}, nil
+	}
+	
+	var packages []string
+	// Extract tool and version from ASDF tools
+	for _, tool := range cfg.ASDF {
+		packages = append(packages, tool.Name+" "+tool.Version)
+	}
+	return packages, nil
+}
+
+// ListManagedPackages returns packages that are managed by plonk
+func (a *AsdfManager) ListManagedPackages() ([]PackageInfo, error) {
+	managedPackages, err := a.getManagedPackages()
+	if err != nil {
+		return nil, err
+	}
+	
+	var managed []PackageInfo
+	
+	for _, pkg := range managedPackages {
+		// Parse "tool version" format
+		parts := strings.Fields(pkg)
+		if len(parts) >= 2 {
+			toolName := parts[0]
+			version := parts[1]
+			
+			info := PackageInfo{
+				Name:    pkg,
+				Version: version,
+				Manager: "asdf",
+			}
+			
+			// Check if this version is actually installed
+			if a.IsVersionInstalled(toolName, version) {
+				info.Status = PackageInstalled
+			} else {
+				info.Status = PackageAvailable
+			}
+			
+			managed = append(managed, info)
+		}
+	}
+	
+	return managed, nil
+}
+
+// ListUntrackedPackages returns installed packages not managed by plonk
+func (a *AsdfManager) ListUntrackedPackages() ([]PackageInfo, error) {
+	allInstalled, err := a.ListInstalledPackages()
+	if err != nil {
+		return nil, err
+	}
+	
+	managedPackages, err := a.getManagedPackages()
+	if err != nil {
+		return nil, err
+	}
+	
+	// Create a map of managed packages for quick lookup
+	managedMap := make(map[string]bool)
+	for _, pkg := range managedPackages {
+		managedMap[pkg] = true
+	}
+	
+	var untracked []PackageInfo
+	for _, pkg := range allInstalled {
+		if !managedMap[pkg.Name] {
+			pkg.Status = PackageInstalled
+			untracked = append(untracked, pkg)
+		}
+	}
+	
+	return untracked, nil
+}
+
+// ListMissingPackages returns packages in plonk.yaml that aren't installed
+func (a *AsdfManager) ListMissingPackages() ([]PackageInfo, error) {
+	managedPackages, err := a.getManagedPackages()
+	if err != nil {
+		return nil, err
+	}
+	
+	var missing []PackageInfo
+	
+	for _, pkg := range managedPackages {
+		// Parse "tool version" format
+		parts := strings.Fields(pkg)
+		if len(parts) >= 2 {
+			toolName := parts[0]
+			version := parts[1]
+			
+			if !a.IsVersionInstalled(toolName, version) {
+				info := PackageInfo{
+					Name:    pkg,
+					Version: version,
+					Status:  PackageAvailable,
+					Manager: "asdf",
+				}
+				missing = append(missing, info)
+			}
+		}
+	}
+	
+	return missing, nil
 }

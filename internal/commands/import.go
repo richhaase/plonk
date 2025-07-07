@@ -106,7 +106,7 @@ func runImportWithOptions(args []string, dryRun bool) error {
 	// Generate config from results
 	generatedConfig := config.GenerateConfig(results)
 
-	configPath := filepath.Join(directories.Default.RepoDir(), "plonk.yaml")
+	configPath := filepath.Join(directories.Default.PlonkDir(), "plonk.yaml")
 
 	if dryRun {
 		fmt.Println()

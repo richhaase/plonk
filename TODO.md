@@ -100,16 +100,29 @@ Session-level work items and progress tracking. Maintained by AI agents for tact
 
 ## Session Notes
 
+**Current Session Progress:**
+1. **Major UI/UX Improvement**: Fixed import command path issue (import_cmd.go:109) - now saves to `.config/plonk/plonk.yaml` instead of `.config/plonk/repo/plonk.yaml`
+2. **Architecture Enhancement**: Created comprehensive DotfilesManager interface with rich DotfileInfo objects and state-aware methods (managed/untracked/missing/modified)
+3. **Status Command Enhancement**: Added full dotfiles status display to `plonk status` - now shows managed, untracked, missing, and modified dotfiles
+4. **Interface Standardization**: Enhanced PackageManager interface with PackageInfo objects and state-aware methods (ListManagedPackages, ListUntrackedPackages, ListMissingPackages) to match DotfilesManager patterns
+
 **Working Patterns for This Session:**
-1. **Focus Area**: Status command accuracy dogfooding - testing existing `plonk status` implementation against real environment
+1. **Focus Area**: Dogfooding Plonk with real environment to identify and fix UI/UX issues
 2. **Documentation Updates**: Update *.md docs as we go to ensure accuracy (design decisions → ARCHITECTURE.md)
 3. **Code Changes**: Use TDD red→green→refactor cycles, small changes, frequent commits
-4. **Scope Boundaries**: Plonk does only two things - manage packages from multiple package managers, and manage configuration files (dotfiles)
+4. **Interface Consistency**: Making DotfilesManager and PackageManager use similar patterns for state-aware functionality
 
-**Status Command Design Decisions:**
-- **Untracked Files**: Files that exist on filesystem but aren't in plonk.yaml (implement first)
-- **Missing Files**: Files that exist in plonk.yaml config but are missing from filesystem (implement after untracked)
-- **Future Enhancement**: Compare ./config/plonk/repo vs filesystem for true drift detection
+**Technical Progress:**
+- **DotfilesManager**: Complete implementation with ignore patterns, file size limits, status detection
+- **PackageManager Enhancement**: Added PackageInfo struct, state-aware methods, config integration
+- **Status Command**: Now displays both package and dotfiles management status with detailed information
+- **Testing**: All existing tests pass, new functionality needs test coverage
+
+**Next Steps:**
+1. Add comprehensive tests for new state-aware PackageManager methods
+2. Update status command to use enhanced PackageManager methods  
+3. Review interface consistency between DotfilesManager and PackageManager
+4. Continue dogfooding workflow
 
 ## Notes
 
