@@ -129,3 +129,30 @@ func (t *testPackageManager) IsAvailable() bool {
 func (t *testPackageManager) ListInstalled() ([]string, error) {
 	return []string{"test-package"}, nil
 }
+
+func (t *testPackageManager) ListInstalledPackages() ([]managers.PackageInfo, error) {
+	return []managers.PackageInfo{
+		{
+			Name:    "test-package",
+			Version: "1.0.0",
+			Status:  managers.PackageInstalled,
+			Manager: "test",
+		},
+	}, nil
+}
+
+func (t *testPackageManager) ListManagedPackages() ([]managers.PackageInfo, error) {
+	return []managers.PackageInfo{}, nil
+}
+
+func (t *testPackageManager) ListUntrackedPackages() ([]managers.PackageInfo, error) {
+	return []managers.PackageInfo{}, nil
+}
+
+func (t *testPackageManager) ListMissingPackages() ([]managers.PackageInfo, error) {
+	return []managers.PackageInfo{}, nil
+}
+
+func (t *testPackageManager) SetConfigDir(plonkDir string) {
+	// No-op for test
+}

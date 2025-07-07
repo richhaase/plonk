@@ -116,13 +116,14 @@ Session-level work items and progress tracking. Maintained by AI agents for tact
 - **DotfilesManager**: Complete implementation with ignore patterns, file size limits, status detection
 - **PackageManager Enhancement**: Added PackageInfo struct, state-aware methods, config integration
 - **Status Command**: Now displays both package and dotfiles management status with detailed information
-- **Testing**: All existing tests pass, new functionality needs test coverage
+- **Testing**: All tests pass with comprehensive coverage for new state-aware methods
+- **Cleanup**: Removed ZSH plugin management functionality
 
 **Next Steps:**
-1. Add comprehensive tests for new state-aware PackageManager methods
-2. Update status command to use enhanced PackageManager methods  
-3. Review interface consistency between DotfilesManager and PackageManager
-4. Continue dogfooding workflow
+1. Update status command to use enhanced PackageManager methods  
+2. Review interface consistency between DotfilesManager and PackageManager
+3. Continue dogfooding workflow
+4. Import existing setup into Plonk format
 
 ## Notes
 

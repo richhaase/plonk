@@ -24,9 +24,6 @@ Discovers installed packages from:
 - ASDF (asdf list)  
 - NPM (npm list -g)
 
-Copies dotfiles:
-- .zshrc, .gitconfig, .zshenv
-
 Generates a complete plonk.yaml configuration file.`,
 	RunE: importCmdRun,
 }
@@ -118,7 +115,6 @@ func runImportWithOptions(args []string, dryRun bool) error {
 		fmt.Println()
 		fmt.Printf("💾 Would save configuration to: %s\n", configPath)
 		fmt.Printf("📁 Would copy dotfiles to repo directory\n")
-		fmt.Printf("⚙️  Would generate ZSH and Git configurations\n")
 		fmt.Println()
 		fmt.Println("Dry-run complete. No files were created or modified.")
 		return nil

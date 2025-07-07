@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See LICENSE file in the project root for license information.
 
 // Package managers provides unified interfaces for managing different package managers
-// including Homebrew, ASDF, NPM, and ZSH plugins. Each manager implements the
+// including Homebrew, ASDF, and NPM plugins. Each manager implements the
 // PackageManager interface to provide consistent operations for checking availability,
 // listing installed packages, and installing new packages.
 //
