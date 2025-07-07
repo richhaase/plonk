@@ -6,11 +6,7 @@ Active work items for current development session. Maintained by AI agents.
 
 ## Pending
 
-### CLI Interface Improvements (Medium Priority)  
-- **Add --verbose/--quiet global flags** for output control
-
 ### CLI Interface Improvements (Low Priority)
-- **Enhance status command** with --detailed, --drift-only, --json flags
 - **Test dogfooding workflow**: plonk status, apply --dry-run, apply
 
 ## Completed (This Session)
