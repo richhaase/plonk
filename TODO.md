@@ -7,7 +7,6 @@ Active work items for current development session. Maintained by AI agents.
 ## Pending
 
 ### CLI Interface Improvements (High Priority)
-- **Standardize argument patterns** across commands (install [package], apply [package])
 - **Add global --dry-run flag** for all applicable commands
 
 ### CLI Interface Improvements (Medium Priority)  
@@ -22,6 +21,7 @@ Active work items for current development session. Maintained by AI agents.
 ## Completed (This Session)
 - **Validate plonk installation** ✅ - check which plonk and plonk --help
 - **Research plonk CLI interface design** ✅ - provided comprehensive suggestions
+- **Standardize argument patterns** ✅ - install and apply commands now accept optional [package] argument
 
 ## Notes
 
