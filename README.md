@@ -19,48 +19,54 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for system design and technical details.
 
 ## Usage
 
-### Build and Install
+### Installation from Source
 ```bash
-go build ./cmd/plonk
+# Clone and install
+git clone <repository-url>
+cd plonk
+go install ./cmd/plonk
+
+# Verify installation
+plonk --help
 ```
 
 ### Commands
 ```bash
-./plonk --help                   # Show main help
-./plonk status                   # Package manager availability and counts
-./plonk pkg list                 # List packages from all managers
-./plonk pkg list brew            # List only Homebrew packages
-./plonk pkg list asdf            # List only ASDF tools
-./plonk pkg list npm             # List only NPM packages
+plonk --help                     # Show main help
+plonk status                     # Package manager availability and counts
+plonk pkg list                   # List packages from all managers
+plonk pkg list brew              # List only Homebrew packages
+plonk pkg list asdf              # List only ASDF tools
+plonk pkg list npm               # List only NPM packages
 
 # Foundational setup
-./plonk setup                    # Install Homebrew, ASDF, and Node.js/NPM
+plonk setup                      # Install Homebrew, ASDF, and Node.js/NPM
 
 # Git operations
-./plonk clone <repo>             # Clone dotfiles repository
-./plonk pull                     # Pull updates to existing repository
+plonk clone <repo>               # Clone dotfiles repository
+plonk pull                       # Pull updates to existing repository
 
 # Import existing environment
-./plonk import                   # Generate plonk.yaml from current environment
+plonk import                     # Generate plonk.yaml from current environment
 
 # Package and configuration management
-./plonk install                  # Install packages from config
-./plonk apply                    # Apply all configuration files
-./plonk apply <package>          # Apply configuration for specific package
-./plonk apply --backup           # Apply all configurations with backup
-./plonk apply --dry-run          # Show what would be applied without making changes
-./plonk apply --backup --dry-run # Preview what would be applied with backup
+plonk install                    # Install packages from config
+plonk apply                      # Apply all configuration files
+plonk apply <package>            # Apply configuration for specific package
+plonk apply --backup             # Apply all configurations with backup
+plonk apply --dry-run            # Show what would be applied without making changes
+plonk apply --backup --dry-run   # Preview what would be applied with backup
 
 # Backup operations
-./plonk backup                   # Backup all files that apply would overwrite
-./plonk backup ~/.zshrc ~/.vimrc # Backup specific files
+plonk backup                     # Backup all files that apply would overwrite
+plonk backup ~/.zshrc ~/.vimrc   # Backup specific files
 
 # Convenience commands
-./plonk repo <repo>              # Complete setup: clone + install + apply
-./plonk <repo>                   # Same as above (convenience syntax)
+plonk repo <repo>                # Complete setup: clone + install + apply
+plonk <repo>                     # Same as above (convenience syntax)
 
 # Environment variable
-PLONK_DIR=~/my-dotfiles ./plonk clone <repo>  # Clone to custom location
+PLONK_DIR=~/my-dotfiles plonk clone <repo>    # Clone to custom location
 ```
 
 ### Example Output

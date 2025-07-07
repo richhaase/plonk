@@ -56,18 +56,11 @@ mage format && mage lint && mage test
 
 ### Installing from Source
 
-If you want to install plonk locally for development or testing:
+Install plonk globally for development or testing:
 
 ```bash
-# Option 1: Install globally using go install (recommended)
+# Standard installation from repository
 go install ./cmd/plonk
-
-# Option 2: Install globally using go install
-go install ./cmd/plonk
-
-# Option 3: Manual installation
-mage build
-cp build/plonk /usr/local/bin/plonk  # or any directory in your PATH
 
 # Verify installation
 plonk --help
@@ -75,10 +68,11 @@ which plonk
 ```
 
 **Notes:**
-- `go install` builds and installs directly to `$(go env GOBIN)` or `$(go env GOPATH)/bin`
-- `mage build` creates the binary in `build/plonk` for manual installation
-- Make sure `$(go env GOBIN)` is in your PATH (or `$(go env GOPATH)/bin` if GOBIN is unset)
-- For ASDF users, GOBIN should already be configured correctly
+- `go install` automatically installs to the correct location based on your Go setup:
+  - If `GOBIN` is set: installs to `$GOBIN/plonk`
+  - Otherwise: installs to `$GOPATH/bin/plonk` (typically `~/go/bin/plonk`)
+- ASDF users: GOBIN points to the current Go version's bin directory (already in PATH)
+- Standard Go users: Ensure `~/go/bin` is in your PATH
 - The binary will be named `plonk` and available globally after installation
 
 ## Making Changes
