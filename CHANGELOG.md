@@ -8,10 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 - **Complete Package Management UI** with `plonk pkg list [all|managed|missing|untracked]` and `plonk pkg status`
+- **Complete Dotfiles Management UI** with `plonk dot list [all|managed|missing|untracked]` and `plonk dot status`
 - **State Reconciliation Architecture** - StateReconciler, ConfigLoader, and VersionChecker for comparing config vs installed packages
+- **Ultra-simple Dotfiles Implementation** - ~100 lines total using same patterns as package management
 - **Machine-friendly Output Formats** - Global `--output/-o` flag supporting table (default), JSON, and YAML formats
 - **Manager-specific Version Logic** - Homebrew ignores versions, ASDF/NPM require exact version matches
-- **New focused CLI structure** with concept-specific commands (`plonk pkg`, future `plonk dot`, `plonk config`)
+- **Unified CLI structure** with concept-specific commands (`plonk pkg`, `plonk dot`, future `plonk config`)
 - **Justfile development workflow** replacing dev.go with just commands (build, test, lint, format, security, clean, install, precommit)
 - **Simplified package managers** - Drastically simplified with minimal interface (IsAvailable, ListInstalled)
 
@@ -19,7 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **CLI architecture** - Replaced monolithic status command with focused concept-specific commands
 - **Development workflow** - Migrated from dev.go to justfile for simpler, standard development tasks
 - **Package managers** - Simplified from 2,224 lines to ~150 lines, removing all abstraction layers
-- **Dotfiles separation** - Moved dotfiles management to separate `internal/dotfiles` package
+- **Dotfiles implementation** - Ultra-simplified to ~100 lines using same reconciliation patterns as packages
 - **Project structure** - Moved pkg/* to internal/* following Go CLI conventions
 - **State reconciliation** - Separated from package managers into dedicated reconciler service
 
