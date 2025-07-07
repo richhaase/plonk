@@ -1,106 +1,145 @@
 # Plonk Architecture
 
-This document describes the system architecture, design decisions, and technical implementation details of Plonk.
+This document describes the system architecture, design philosophy, and critical design decisions of Plonk.
 
-## System Overview
+## Design Philosophy
 
-Plonk is a CLI tool for managing shell environments across multiple machines. It provides a unified interface for package management and configuration deployment using Homebrew, ASDF, and NPM.
+### Core Principles
+- **Simplicity Over Complexity** - Focused on essential package managers rather than trying to support everything
+- **Reliability Through Testing** - Test-driven development ensures stability across all components
+- **Interface-Based Design** - Clean abstractions enable testing and extensibility
+- **Single Responsibility** - Each component has a clear, focused purpose
 
-## Architecture Components
+### Design Goals
+- **Cross-Machine Consistency** - Same environment setup across multiple machines
+- **Zero-Configuration Workflow** - Sensible defaults with optional customization
+- **Graceful Degradation** - Works even when some package managers are unavailable
+- **Developer Experience** - Clear error messages and intuitive command structure
 
-### Package Managers (`pkg/managers/`)
-- **CommandExecutor Interface** - Abstraction for command execution (supports dependency injection)
-- **CommandRunner** - Shared command execution logic to eliminate code duplication
-- **Individual Managers** - Homebrew, ASDF, NPM with consistent interfaces
+## System Architecture
 
-### Configuration Management (`pkg/config/`)
-- **YAML Configuration** - Pure YAML config format (TOML support removed in cleanup)
-- **Package-Centric Structure** - Organized by package manager with dotfiles section
-- **Source-Target Convention** - Automatic path mapping (config/nvim/ → ~/.config/nvim/)
-- **Local Overrides** - Support for plonk.local.yaml for machine-specific settings
-- **Config Validation** - Comprehensive YAML syntax and content validation
+### High-Level Design
 
-### CLI (`internal/commands/`)
-- **Cobra Framework** - Professional CLI with help, autocompletion, and subcommands
-- **Status Command** - Shows availability and package counts for all managers
-- **Pkg Command** - Modular package listing with `plonk pkg list [manager]` structure
-- **Git Operations** - Clone and pull commands with configurable locations
-- **Package Management** - Install command with automatic config application
-- **Configuration Deployment** - Apply command for dotfiles and package configs with --backup and --dry-run support
-- **Foundational Setup** - Setup command for installing core tools (Homebrew/ASDF/NPM)
-- **Convenience Commands** - Repository-based workflow and direct repo syntax
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   CLI Layer     │    │  Config Layer   │    │ Managers Layer  │
+│  (commands/)    │◄──►│   (config/)     │◄──►│  (managers/)    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │
+                                ▼
+                        ┌─────────────────┐
+                        │ Execution Layer │
+                        │  (executor.go)  │
+                        └─────────────────┘
+```
 
-### Testing Architecture
-- **Comprehensive Test Coverage** - All components tested with TDD approach
-- **Mock Command Executor** - Enables testing without actual command execution
-- **Interface Compliance Tests** - Ensures consistent behavior across managers
-- **Config Validation Tests** - YAML/TOML parsing and validation coverage
+### Core Components
 
-## Key Design Decisions
+#### Package Manager Abstraction
+**Design Decision:** Interface-based design with shared execution layer
+- **CommandExecutor Interface** - Enables dependency injection and testing
+- **Common Interface** - All package managers implement identical operations
+- **Shared CommandRunner** - Eliminates code duplication across managers
 
-### 1. Go Over Rust/Python
-Better balance of simplicity and power for CLI tools. Go provides excellent CLI tooling, simple deployment (single binary), and good performance.
+#### Configuration Management
+**Design Decision:** Pure YAML with convention-based path mapping
+- **Source-Target Convention** - `config/nvim/` → `~/.config/nvim/` automatically
+- **Local Override Support** - `plonk.local.yaml` for machine-specific settings
+- **Package-Centric Structure** - Organized by package manager for clarity
 
-### 2. Test-Driven Development
-Ensures reliability and maintainability. Every feature is developed following the Red-Green-Refactor cycle.
+#### CLI Architecture
+**Design Decision:** Cobra framework with hierarchical command structure
+- **Subcommand Organization** - `plonk pkg list [manager]` pattern
+- **Consistent Flag Patterns** - `--backup`, `--dry-run` across commands
+- **Progressive Disclosure** - Simple commands for common tasks, detailed options available
 
-### 3. CommandRunner Abstraction
-Eliminates code duplication across package managers by providing a shared execution layer.
+## Critical Design Decisions
 
-### 4. Interface-Based Design
-Makes it easy to add new package managers or mock components for testing. All package managers implement the same interface.
+### 1. Go Language Choice
+**Why:** Balance of simplicity, performance, and deployment ease
+- Single binary distribution
+- Excellent CLI tooling ecosystem (Cobra)
+- Strong testing support
+- Cross-platform compatibility
 
-### 5. Focused Package Managers
-Homebrew + ASDF + NPM covers most shell environment needs without overwhelming complexity.
+### 2. Limited Package Manager Scope
+**Why:** Focus over feature creep
+- **Homebrew** - Primary package management (macOS focus)
+- **ASDF** - Version management for development tools
+- **NPM** - JavaScript ecosystem packages not in Homebrew
+- **Excluded:** apt, yum, pacman, etc. (complexity vs. value trade-off)
 
-### 6. Cobra CLI Framework
-Professional CLI with built-in help, completion, and extensibility. Industry-standard for Go CLIs.
+### 3. Test-Driven Development Mandate
+**Why:** Reliability is critical for environment management
+- MockCommandExecutor prevents side effects during testing
+- Interface compliance tests ensure consistent behavior
+- Red-Green-Refactor cycle enforced
 
-## Technical Implementation Details
+### 4. Configuration Generation Removal
+**Why:** Simplicity over convenience
+- Originally generated `.zshrc`, `.zshenv`, `.gitconfig` from YAML
+- **Decision:** Treat as regular dotfiles for simplicity
+- Reduces complexity by 2,262 lines of code
+- Easier to understand and debug
 
-### Dependency Injection
-CommandExecutor interface enables testing without side effects. Tests can use MockCommandExecutor while production uses RealCommandExecutor.
+### 5. Pure Go Implementation
+**Why:** Minimize external dependencies
+- No shell script dependencies
+- Git operations via Go libraries (not git CLI)
+- Task runner implemented in Go (dev.go)
+- Consistent tooling across platforms
 
-### Output Parsing
-Each package manager has custom parsing logic to handle different output formats correctly.
+## Error Handling Strategy
 
-### Error Handling
-- Graceful degradation when package managers are unavailable
-- Standardized error wrapping functions for consistent user experience
-- Detailed error messages with context
+### Design Principles
+- **Graceful Degradation** - Continue operation when individual managers fail
+- **Context-Rich Messages** - Include actionable information in errors
+- **Standardized Wrapping** - Consistent error patterns across components
 
-### Package Management Features
-- **Scoped Package Support** - Correctly handles NPM scoped packages (@vue/cli)
-- **Version Management** - ASDF integration for language tool versioning
-- **Global Package Focus** - Avoids local/project-specific package management complexity
+### Error Categories
+- **Configuration Errors** - YAML parsing, validation failures
+- **Installation Errors** - Package manager operation failures  
+- **File System Errors** - Backup, apply, and restore operations
+- **Network Errors** - Git operations, package downloads
 
-### Git Integration
-Pure Go git operations with mockable interface for testing. No dependency on git CLI.
+## Testing Architecture
 
-### Configuration Features
-- **Automatic Application** - Package-specific configurations applied after installation
-- **Foundational Setup** - Automated installation of prerequisite tools
-- **Intelligent Workflows** - Smart detection of existing repositories and installed packages
+### Mock Strategy
+**Design Decision:** Interface-based mocking at the command execution level
+- **MockCommandExecutor** - Intercepts all external commands
+- **Predictable Test Scenarios** - No network or file system dependencies
+- **Interface Compliance** - All managers tested against same interface
 
+### Test Categories
+- **Unit Tests** - Individual component behavior
+- **Integration Tests** - Cross-component workflows  
+- **Interface Compliance** - Consistent manager behavior
+- **Configuration Validation** - YAML parsing and validation
 
-### Backup System
-- **Smart Backup Detection** - Only backs up files that will be overwritten
-- **Automated Backup** - --backup flag for apply command
-- **Configurable Management** - Timestamped backups with automatic cleanup and retention policies
+## Security Considerations
 
-## Development Timeline
+### File System Safety
+- **Backup Before Overwrite** - Always preserve existing configurations
+- **Path Validation** - Prevent directory traversal attacks
+- **Permission Preservation** - Maintain file permissions during operations
 
-- **Language Evolution** - Started with Rust → Python → Go (perfect for CLI tools)
-- **TDD Approach** - Consistent Red-Green-Refactor cycles throughout
-- **Package Manager Abstraction** - Built reusable patterns for easy extension
-- **CLI Implementation** - Professional-grade command interface with Cobra
-- **Build Tool Evolution** - Migrated from Just to Mage for Go-native task running
-- **Focused Scope** - Refined to essential package managers for shell environment management
+### Command Execution
+- **Input Sanitization** - Validate all external command inputs
+- **Privilege Minimization** - No unnecessary elevated permissions
+- **Audit Trail** - Clear logging of all system modifications
 
-## Directory Structure
+## Extension Points
 
-See [CODEBASE_MAP.md](CODEBASE_MAP.md) for detailed file structure and navigation guide.
+### Adding Package Managers
+1. Implement `Manager` interface in `pkg/managers/`
+2. Add configuration structure to `pkg/config/yaml_config.go`
+3. Register in CLI commands
+4. Add comprehensive test coverage
 
-## Future Architecture Considerations
+### Adding Commands
+1. Create command file in `internal/commands/`
+2. Implement Cobra command structure
+3. Add to root command registration
+4. Follow existing error handling patterns
 
-See [ROADMAP.md](ROADMAP.md) for planned architectural enhancements and new features.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow and [CODEBASE_MAP.md](CODEBASE_MAP.md) for implementation details.

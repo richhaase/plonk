@@ -19,16 +19,14 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for system design and technical details.
 
 ## Usage
 
-### Installation from Source
+### Quick Installation
 ```bash
-# Clone and install
 git clone <repository-url>
 cd plonk
 go install ./cmd/plonk
-
-# Verify installation
-plonk --help
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development setup.
 
 ### Commands
 ```bash

@@ -1,6 +1,6 @@
 # Plonk Roadmap
 
-This document is an ideation and planning tool for developers and AI agents working on Plonk.
+Strategic planning document for Plonk development. See [TODO.md](TODO.md) for tactical session management.
 
 ## Ideas & Discussion
 
@@ -24,41 +24,77 @@ Features and concepts being considered:
 - **CONFIG.md** - Comprehensive configuration reference with validation rules
 - **Documentation testing** - Ensure examples actually work
 - **Documentation versioning** - Keep docs in sync with releases
-- **EXAMPLES.md** - Real-world configuration examples
 - **QUICKSTART.md** - 5-minute getting started guide
-- **README enhancements** - Prerequisites, "Why Plonk?" section
-- **SECURITY.md** - Security policies and vulnerability reporting
-- **TROUBLESHOOTING.md** - Common issues and solutions
 
 ### Infrastructure & Process
-- **CI/CD setup** - GitHub Actions for automated testing and releases
 - **Dependency validation** - Clean go.sum, license compliance checking
-- **Integration testing** - End-to-end workflow tests
-- **Security remediation** - Address gosec findings, configure suppressions for false positives
-- **Public GitHub repository** - Create public repository and initial release
 
-## In Progress
+## Current Phase: Pre-Launch Validation
 
-Active work items are tracked in [TODO.md](TODO.md).
+**🐕 Dogfooding Phase (6-8 hours estimated)**
 
-## Completed
+Real-world validation using Rich's complete development environment before public release.
 
-Major features completed (see [CHANGELOG.md](CHANGELOG.md) for details):
+### Stage 1: End-to-End Workflow Validation (~2 hours)
+Validate complete install → import → status workflow with fresh installation.
+- Fresh plonk installation test
+- Complete setup workflow validation
+- Import functionality testing
+- Status and listing command accuracy
 
-- ✅ Core CLI with 9 commands (status, install, apply, import, etc.)
-- ✅ Import command - Generate plonk.yaml from existing environment
-- ✅ Package manager support (Homebrew, ASDF, NPM)
-- ✅ YAML configuration system with validation
-- ✅ Configuration drift detection
-- ✅ Backup system with automatic cleanup
-- ✅ Dry-run and preview capabilities
-- ✅ TDD development infrastructure
-- ✅ Pure Go task runner - Migrated from Mage to dev.go + internal/tasks/ for zero external dependencies
-- ✅ Versioning support/integration - Professional version management with semantic versioning, automated changelog updates, and release workflow
-- ✅ License headers - MIT License with consistent headers across all Go files for legal compliance
-- ✅ All-Go development workflow - Unified tooling via go.mod, single quality gate, simplified git hooks, cross-platform Go-native development
-- ✅ Pre-commit safety - Removed dangerous `git add .`, improved hook reliability with dev.go integration
-- ✅ Security scanning - Added govulncheck, gosec for vulnerability detection in development pipeline
+### Stage 2: Real Environment Migration (~2-3 hours)  
+Migrate Rich's complete development environment under plonk management.
+- Comprehensive plonk.yaml creation
+- Dotfiles management testing
+- Package manager migration (Homebrew, ASDF, NPM)
+- Backup and restore functionality validation
+
+### Stage 3: Integration Testing & Documentation (~1-2 hours)
+Create integration tests and document edge cases discovered during dogfooding.
+- Integration test creation from real scenarios
+- Edge case documentation
+- Multi-machine testing
+- Error condition validation
+
+### Stage 4: UX Refinement & Polish (~1-2 hours)
+Improve user experience based on real usage pain points.
+- Error message improvements
+- Command help text enhancement
+- Workflow optimization
+- User feedback improvements
+
+**🎯 GitHub Launch Phases (8-10 hours estimated)**
+
+Post-dogfooding activities to prepare for public release.
+
+### Phase 1: Security & Quality (~2 hours)
+Address security findings and establish CI/CD pipeline.
+- Security findings resolution
+- CI/CD pipeline setup
+- Quality gate establishment
+
+### Phase 2: User Experience (~5-6 hours)
+Create essential user documentation and improve error handling.
+- Essential documentation creation
+- Error handling improvements
+- User onboarding optimization
+
+### Phase 3: Robustness (~5-6 hours)
+Enhanced validation, testing, and documentation improvements.
+- Validation enhancements
+- Testing coverage expansion
+- Create DEVELOPER.md with detailed technical patterns and conventions
+- Documentation improvements
+
+### Phase 4: Launch (~2 hours)
+GitHub-specific setup and repository creation.
+- GitHub project setup
+- Release automation
+- Repository creation and first release
+
+## Historical Context
+
+For completed features and development history, see [CHANGELOG.md](CHANGELOG.md).
 
 ## Parked
 

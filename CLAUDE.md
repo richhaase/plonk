@@ -6,6 +6,60 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Plonk** is a CLI tool for managing shell environments across multiple machines using Homebrew, ASDF, and NPM package managers. Written in Go with strict Test-Driven Development (TDD) practices.
 
+## Documentation File Organization
+
+Each documentation file serves a specific purpose. Understanding these roles prevents duplication and ensures information is found where expected:
+
+### 📋 **README.md** - User Quick Start
+**Purpose:** First impression for new users and contributors
+**Contains:** Project overview, quick installation, basic usage examples, configuration format
+**Audience:** End users, potential contributors
+**Avoid:** Detailed development workflows, architectural deep-dives, session management
+
+### 🏗️ **ARCHITECTURE.md** - Design & Decisions  
+**Purpose:** System architecture, design philosophy, critical design decisions
+**Contains:** Component relationships, design rationale, extension points, security considerations
+**Audience:** Contributors, maintainers, system designers
+**Avoid:** Feature lists, installation steps, development workflows
+
+### 🤝 **CONTRIBUTING.md** - Developer Workflow
+**Purpose:** How to contribute code and follow development practices
+**Contains:** TDD workflow, development setup, coding standards, commit guidelines
+**Audience:** Contributors (human and AI)
+**Avoid:** Architecture details, user instructions, project roadmap
+
+### 🗺️ **CODEBASE_MAP.md** - Navigation Guide
+**Purpose:** Find specific code, understand file organization, locate implementation details
+**Contains:** Directory structure, file purposes, common patterns, navigation tips
+**Audience:** Contributors working with the code
+**Avoid:** Design rationale, user documentation, development process
+
+### 📈 **ROADMAP.md** - Strategic Planning
+**Purpose:** Strategic direction, upcoming phases, feature planning
+**Contains:** Current phases, time estimates, ideas for future consideration
+**Audience:** Project stakeholders, potential contributors
+**Avoid:** Tactical session details, completed features (see CHANGELOG)
+
+### ✅ **TODO.md** - Session Management
+**Purpose:** Tactical session-level work tracking for AI agents
+**Contains:** Current session focus, active work items, session notes, context for next session
+**Audience:** AI agents, session continuity
+**Avoid:** Strategic planning, completed work history, architecture details
+
+### 📖 **CHANGELOG.md** - Historical Record
+**Purpose:** Canonical record of what was accomplished when
+**Contains:** Version history, feature additions, changes, fixes
+**Audience:** Users tracking changes, maintainers
+**Avoid:** Future plans, development process, architecture
+
+### 🤖 **CLAUDE.md** - AI Agent Instructions
+**Purpose:** Guidance for AI agents working on the codebase
+**Contains:** Workflow requirements, session management, coding guidelines, tool usage
+**Audience:** AI coding agents
+**Avoid:** User-facing documentation, general contribution guidelines
+
+**Cross-Reference Rule:** When information exists in multiple files, one file should be canonical and others should reference it. Example: CONTRIBUTING.md contains the detailed TDD workflow, other files reference it.
+
 ## Development Environment
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and workflow commands.
