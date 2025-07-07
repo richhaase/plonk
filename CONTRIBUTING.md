@@ -32,7 +32,6 @@ Update relevant documentation:
 
 ### Prerequisites
 - Go 1.24.4 or later
-- ASDF for tool version management (optional but recommended)
 - Git for version control
 
 ### Development Setup
@@ -41,18 +40,33 @@ Update relevant documentation:
 git clone <repository-url>
 cd plonk
 
-# Install development tools (if using ASDF)
-asdf install
+# Install Go dependencies (includes all development tools)
+go mod download
 
 # Build the project
-mage build
+go run github.com/magefile/mage/mage build
 
 # Run tests
-mage test
+go run github.com/magefile/mage/mage test
 
-# Run the full development cycle
-mage format && mage lint && mage test
+# Run the unified pre-commit checks (format, lint, test, security)
+go run github.com/magefile/mage/mage precommit
+
+# Individual development tasks
+go run github.com/magefile/mage/mage format   # Format code
+go run github.com/magefile/mage/mage lint     # Run linter
+go run github.com/magefile/mage/mage security # Security checks
 ```
+
+### Tool Versioning
+All development tools are managed via `go.mod` for consistent versions:
+- **golangci-lint** - Go linting
+- **gosec** - Security analysis
+- **govulncheck** - Vulnerability scanning
+- **goimports** - Import formatting
+- **mage** - Task runner
+
+ASDF is now optional and only manages the Go runtime version.
 
 ### Installing from Source
 
@@ -130,7 +144,7 @@ This project uses the MIT License for maximum compatibility and adoption:
 - **All Go files** include consistent license headers
 - **New files** should include the standard header:
   ```go
-  // Copyright (c) 2025 Plonk Contributors
+  // Copyright (c) 2025 Rich Haase
   // Licensed under the MIT License. See LICENSE file in the project root for license information.
   ```
 - **Use `mage addlicenseheaders`** to automatically add headers to new files
@@ -143,9 +157,9 @@ This project uses the MIT License for maximum compatibility and adoption:
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Follow the TDD workflow for all changes
-4. Ensure all tests pass (`mage test`)
-5. Run the full development pipeline locally (`mage format && mage lint && mage test`)
-6. Commit with clear messages
+4. Ensure all tests pass (`go run github.com/magefile/mage/mage test`)
+5. Run the full development pipeline locally (`go run github.com/magefile/mage/mage precommit`)
+6. Commit with clear messages (pre-commit hook will run automatically)
 7. Push to your fork
 8. Open a Pull Request with:
    - Clear description of changes

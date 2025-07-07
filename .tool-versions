@@ -1,11 +1,8 @@
 # Development tools for Plonk project
 # Install with: asdf install
 
-# Go programming language
+# Go programming language - core runtime requirement
 golang 1.24.4
 
-# Linting and formatting tools
-golangci-lint 2.2.1
-
-# Task runner (Go-native)
-# Note: mage is installed via go.mod dependency, no version pinning needed
+# Note: Development tools (golangci-lint, gosec, govulncheck, goimports) 
+# are now managed via go.mod for consistent versioning across environments

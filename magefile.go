@@ -321,13 +321,64 @@ func Test() error {
 // Run linter
 func Lint() error {
 	fmt.Println("Running linter...")
-	return sh.Run("golangci-lint", "run", "--timeout=10m")
+	return sh.Run("go", "run", "github.com/golangci/golangci-lint/cmd/golangci-lint", "run", "--timeout=10m")
 }
 
 // Format code (gofmt)
 func Format() error {
 	fmt.Println("Formatting code...")
 	return sh.Run("go", "fmt", "./...")
+}
+
+// Security runs vulnerability and security checks
+func Security() error {
+	fmt.Println("Running security checks...")
+
+	fmt.Println("🔍 Running govulncheck...")
+	if err := sh.Run("go", "run", "golang.org/x/vuln/cmd/govulncheck", "./..."); err != nil {
+		return fmt.Errorf("govulncheck failed: %w", err)
+	}
+
+	fmt.Println("🔐 Running gosec...")
+	if err := sh.Run("go", "run", "github.com/securego/gosec/v2/cmd/gosec", "./..."); err != nil {
+		return fmt.Errorf("gosec failed: %w", err)
+	}
+
+	fmt.Println("✅ Security checks passed!")
+	return nil
+}
+
+// PreCommit runs the same checks as the git pre-commit hook
+func PreCommit() error {
+	fmt.Println("Running pre-commit checks...")
+
+	fmt.Println("🔧 Formatting Go code and organizing imports...")
+	if err := sh.Run("go", "run", "golang.org/x/tools/cmd/goimports", "-w", "."); err != nil {
+		return fmt.Errorf("goimports failed: %w", err)
+	}
+
+	fmt.Println("🔍 Running linter...")
+	if err := sh.Run("go", "run", "github.com/golangci/golangci-lint/cmd/golangci-lint", "run", "--timeout=10m"); err != nil {
+		return fmt.Errorf("lint failed: %w", err)
+	}
+
+	fmt.Println("🧪 Running tests...")
+	if err := sh.Run("go", "test", "./..."); err != nil {
+		return fmt.Errorf("tests failed: %w", err)
+	}
+
+	fmt.Println("🔍 Running govulncheck...")
+	if err := sh.Run("go", "run", "golang.org/x/vuln/cmd/govulncheck", "./..."); err != nil {
+		return fmt.Errorf("govulncheck failed: %w", err)
+	}
+
+	fmt.Println("🔐 Running gosec...")
+	if err := sh.Run("go", "run", "github.com/securego/gosec/v2/cmd/gosec", "./..."); err != nil {
+		return fmt.Errorf("gosec failed: %w", err)
+	}
+
+	fmt.Println("✅ Pre-commit checks passed!")
+	return nil
 }
 
 // Clean build artifacts
@@ -347,7 +398,7 @@ func Clean() error {
 func AddLicenseHeaders() error {
 	fmt.Println("Adding license headers to Go files...")
 
-	licenseHeader := `// Copyright (c) 2025 Plonk Contributors
+	licenseHeader := `// Copyright (c) 2025 Rich Haase
 // Licensed under the MIT License. See LICENSE file in the project root for license information.
 
 `
@@ -377,7 +428,7 @@ func AddLicenseHeaders() error {
 		contentStr := string(content)
 
 		// Check if license header already exists
-		if strings.Contains(contentStr, "Copyright (c) 2025 Plonk Contributors") {
+		if strings.Contains(contentStr, "Copyright (c) 2025 Rich Haase") || strings.Contains(contentStr, "Copyright (c) 2025 Rich Haase") {
 			skippedCount++
 			continue
 		}
