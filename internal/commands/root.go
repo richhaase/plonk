@@ -10,11 +10,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	outputFormat string
+)
+
 var rootCmd = &cobra.Command{
 	Use:   "plonk",
 	Short: "Package and dotfiles management across machines",
 	Long: `Plonk manages packages and dotfiles consistently across multiple machines
 using Homebrew, ASDF, and NPM package managers.`,
+}
+
+func init() {
+	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "table", "Output format (table|json|yaml)")
 }
 
 // Execute runs the root command

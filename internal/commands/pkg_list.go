@@ -44,6 +44,12 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Parse output format
+	format, err := ParseOutputFormat(outputFormat)
+	if err != nil {
+		return err
+	}
+
 	// Initialize package managers
 	packageManagers := []struct {
 		name    string
@@ -54,7 +60,9 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 		{"NPM", managers.NewNpmManager()},
 	}
 
-	hasAnyPackages := false
+	// Prepare output structure
+	var outputData PackageListOutput
+	outputData.Filter = filter
 
 
 	for _, mgr := range packageManagers {
@@ -63,6 +71,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 		}
 
 		var packages []string
+		var statePackages []managers.Package
 		var err error
 
 		// Handle different filters
@@ -70,14 +79,18 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 		case "all":
 			packages, err = mgr.manager.ListInstalled()
 			if err != nil {
-				fmt.Printf("# %s: Error listing packages: %v\n", mgr.name, err)
+				if format == OutputTable {
+					fmt.Printf("# %s: Error listing packages: %v\n", mgr.name, err)
+				}
 				continue
 			}
 		case "managed", "untracked", "missing":
 			// Use state reconciliation for these filters
 			configDir, configErr := managers.DefaultConfigDir()
 			if configErr != nil {
-				fmt.Printf("# %s: Error getting config directory: %v\n", mgr.name, configErr)
+				if format == OutputTable {
+					fmt.Printf("# %s: Error getting config directory: %v\n", mgr.name, configErr)
+				}
 				continue
 			}
 			
@@ -105,12 +118,13 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 			reconciler := managers.NewStateReconciler(loader, managerMap, checkers)
 			result, reconcileErr := reconciler.ReconcileManager(managerKey)
 			if reconcileErr != nil {
-				fmt.Printf("# %s: Error reconciling state: %v\n", mgr.name, reconcileErr)
+				if format == OutputTable {
+					fmt.Printf("# %s: Error reconciling state: %v\n", mgr.name, reconcileErr)
+				}
 				continue
 			}
 			
 			// Extract packages based on filter
-			var statePackages []managers.Package
 			switch filter {
 			case "managed":
 				statePackages = result.Managed
@@ -120,7 +134,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 				statePackages = result.Missing
 			}
 			
-			// Convert to string slice for display
+			// Convert to string slice for backwards compatibility
 			packages = make([]string, len(statePackages))
 			for i, pkg := range statePackages {
 				packages[i] = pkg.Name
@@ -128,29 +142,55 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 		}
 
 		if err != nil {
-			fmt.Printf("# %s: Error listing packages: %v\n", mgr.name, err)
+			if format == OutputTable {
+				fmt.Printf("# %s: Error listing packages: %v\n", mgr.name, err)
+			}
 			continue
 		}
 
-		if len(packages) == 0 {
-			continue
+		// Create manager output
+		managerOutput := ManagerOutput{
+			Name:     mgr.name,
+			Count:    len(packages),
+			Packages: make([]PackageOutput, len(packages)),
 		}
 
-		// Display packages for this manager
-		if !hasAnyPackages {
-			hasAnyPackages = true
+		// Convert packages to output format
+		if len(statePackages) > 0 {
+			// Use rich package data for state-based filters
+			for i, pkg := range statePackages {
+				managerOutput.Packages[i] = PackageOutput{
+					Name:            pkg.Name,
+					Version:         pkg.Version,
+					State:           stateToString(pkg.State),
+					ExpectedVersion: pkg.ExpectedVersion,
+				}
+			}
+		} else {
+			// Use simple package names for "all" filter
+			for i, pkg := range packages {
+				managerOutput.Packages[i] = PackageOutput{
+					Name: pkg,
+				}
+			}
 		}
 
-		fmt.Printf("# %s (%d packages)\n", mgr.name, len(packages))
-		for _, pkg := range packages {
-			fmt.Printf("%s\n", pkg)
-		}
-		fmt.Println()
+		outputData.Managers = append(outputData.Managers, managerOutput)
 	}
 
-	if !hasAnyPackages {
-		fmt.Println("No packages found")
-	}
+	return RenderOutput(outputData, format)
+}
 
-	return nil
+// stateToString converts PackageState to string
+func stateToString(state managers.PackageState) string {
+	switch state {
+	case managers.StateManaged:
+		return "managed"
+	case managers.StateMissing:
+		return "missing"
+	case managers.StateUntracked:
+		return "untracked"
+	default:
+		return "unknown"
+	}
 }
