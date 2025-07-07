@@ -6,6 +6,22 @@ Active work items for current development session. Maintained by AI agents.
 
 ## Pending
 
+### 🔥 High Impact Quick Wins (This Session)
+- [x] Add --version flag with embedded version via build flags (30 min)
+- [ ] Add consistent license headers to all Go files (15 min)  
+- [ ] Add govulncheck and gosec to mage tasks (20 min)
+
+### 🛡️ Critical Hardening (Next Session)
+- [ ] Create EXAMPLES.md with real plonk.yaml examples (1-2 hours)
+- [ ] Create TROUBLESHOOTING.md for common issues (1-2 hours)
+- [ ] Audit and improve error messages for user-friendliness (2-3 hours)
+- [ ] Add validation for repository URLs and file paths (1-2 hours)
+- [ ] Add end-to-end workflow tests with temp directories (3-4 hours)
+
+### 📋 Process & Infrastructure (Before Public Launch)
+- [ ] Setup GitHub Actions for automated testing (1-2 hours)
+- [ ] Remove dangerous git add . and add security checks to pre-commit (30 min)
+
 ## Completed (This Session)
 
 ## Notes

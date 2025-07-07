@@ -12,7 +12,16 @@
 package commands
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
+)
+
+// Version information set via build flags
+var (
+	Version   = "dev"
+	GitCommit = "unknown"
+	BuildDate = "unknown"
 )
 
 var rootCmd = &cobra.Command{
@@ -25,6 +34,13 @@ It helps you manage package installations and environment switching using:
 - NPM for packages not available via Homebrew
 
 Use the 'repo' command for complete setup from a repository.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		if version, _ := cmd.Flags().GetBool("version"); version {
+			fmt.Printf("plonk version %s\n", Version)
+			return
+		}
+		cmd.Help()
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -66,6 +82,21 @@ func IsDryRun(cmd *cobra.Command) bool {
 func init() {
 	// Add global flags
 	rootCmd.PersistentFlags().Bool("dry-run", false, "Show what would be done without making any changes")
+
+	// Add version command
+	var versionCmd = &cobra.Command{
+		Use:   "version",
+		Short: "Show version information",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("plonk version %s\n", Version)
+			fmt.Printf("Git commit: %s\n", GitCommit)
+			fmt.Printf("Build date: %s\n", BuildDate)
+		},
+	}
+	rootCmd.AddCommand(versionCmd)
+
+	// Add --version flag to root command
+	rootCmd.Flags().BoolP("version", "v", false, "Show version information")
 
 	// Add subcommands here
 	rootCmd.AddCommand(statusCmd)
