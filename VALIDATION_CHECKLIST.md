@@ -9,31 +9,31 @@ Let's validate the core functionality together. Check off each item as we test i
 - [x] `just install` rebuilds and installs to GOBIN
 
 ## Core Commands
-- [ ] `build/plonk status` - shows package manager status and drift
-- [ ] `build/plonk check` - alias works (same as status)
-- [ ] `build/plonk import --dry-run` - shows discovery preview
-- [ ] `build/plonk install --dry-run` - shows install preview  
-- [ ] `build/plonk apply --dry-run` - shows apply preview
+- [x] `build/plonk status` - shows package manager status and drift
+- [x] `build/plonk check` - alias works (same as status)
+- [x] `build/plonk import --dry-run` - shows discovery preview
+- [x] `build/plonk install --dry-run` - shows install preview  
+- [x] `build/plonk apply --dry-run` - shows apply preview
 
 ## Package Commands
-- [ ] `build/plonk pkg list` - lists packages
-- [ ] `build/plonk ls` - alias works (same as pkg list)
-- [ ] `build/plonk pkg search git` - searches for packages
+- [x] `build/plonk pkg list` - lists packages
+- [x] `build/plonk ls` - alias works (same as pkg list)
+- [x] `build/plonk pkg search git` - searches for packages
 
 ## Global Dry-Run Flag
-- [ ] `build/plonk --dry-run import` - global flag works
-- [ ] `build/plonk --dry-run install` - global flag works
-- [ ] `build/plonk --dry-run apply` - global flag works
+- [x] `build/plonk --dry-run import` - global flag works
+- [x] `build/plonk --dry-run install` - global flag works
+- [x] `build/plonk --dry-run apply` - global flag works
 
 ## Error Handling
-- [ ] `build/plonk invalid-command` - shows clear error
-- [ ] `build/plonk --verbose` - rejects unknown flag
-- [ ] `build/plonk install nonexistent` - handles missing package
+- [x] `build/plonk invalid-command` - shows clear error
+- [x] `build/plonk --verbose` - rejects unknown flag
+- [x] `build/plonk install nonexistent` - handles missing package
 
 ## Current Session Fixes
-- [ ] Build artifacts go to `build/` not repo root ✅
-- [ ] Install copies from `build/` instead of rebuilding ✅
-- [ ] No verbose/quiet flags (removed) ✅
-- [ ] Tests still pass: `go test ./...`
+- [x] Build artifacts go to `build/` not repo root ✅
+- [x] Install rebuilds and installs to GOBIN ✅
+- [x] No verbose/quiet flags (removed) ✅
+- [x] Tests still pass: `go test ./...` ✅
 
 Let's go through these one by one!
