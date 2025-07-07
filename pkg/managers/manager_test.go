@@ -88,7 +88,7 @@ func TestHomebrewManager_IsAvailable(t *testing.T) {
 
 func TestHomebrewManager_Install_CallsCorrectCommand(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-	
+
 	// Mock the install command to succeed
 	installCmd := exec.Command("echo", "installed")
 	mockExec.SetCommand("brew install git", installCmd)
@@ -166,7 +166,7 @@ func TestHomebrewManager_ListInstalled_ReturnsErrorOnFailure(t *testing.T) {
 
 func TestHomebrewManager_Update_SinglePackage(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-	
+
 	// Mock the upgrade command to succeed
 	upgradeCmd := exec.Command("echo", "upgraded")
 	mockExec.SetCommand("brew upgrade git", upgradeCmd)
@@ -187,7 +187,7 @@ func TestHomebrewManager_Update_SinglePackage(t *testing.T) {
 
 func TestHomebrewManager_Update_AllPackages(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-	
+
 	// Mock the upgrade command to succeed
 	upgradeCmd := exec.Command("echo", "upgraded")
 	mockExec.SetCommand("brew upgrade", upgradeCmd)
@@ -289,7 +289,7 @@ func TestAsdfManager_IsAvailable(t *testing.T) {
 
 func TestAsdfManager_Install_CallsCorrectCommand(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-	
+
 	// Mock the install command to succeed
 	installCmd := exec.Command("echo", "installed")
 	mockExec.SetCommand("asdf install nodejs 20.0.0", installCmd)
@@ -499,7 +499,7 @@ func TestNpmManager_IsAvailable(t *testing.T) {
 
 func TestNpmManager_Install_CallsCorrectCommand(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-	
+
 	// Mock the install command to succeed
 	installCmd := exec.Command("echo", "installed")
 	mockExec.SetCommand("npm install -g typescript", installCmd)
@@ -519,7 +519,7 @@ func TestNpmManager_Install_CallsCorrectCommand(t *testing.T) {
 
 func TestNpmManager_Update_SinglePackage(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-	
+
 	// Mock the update command to succeed
 	updateCmd := exec.Command("echo", "updated")
 	mockExec.SetCommand("npm update -g typescript", updateCmd)
@@ -539,7 +539,7 @@ func TestNpmManager_Update_SinglePackage(t *testing.T) {
 
 func TestNpmManager_UpdateAll_CallsCorrectCommand(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-	
+
 	// Mock the update all command to succeed
 	updateAllCmd := exec.Command("echo", "updated all")
 	mockExec.SetCommand("npm update -g", updateAllCmd)
@@ -796,13 +796,13 @@ func TestPackageInfo(t *testing.T) {
 func TestHomebrewManager_StateAwareMethods(t *testing.T) {
 	tempDir := t.TempDir()
 	plonkDir := filepath.Join(tempDir, ".config", "plonk")
-	
+
 	// Create config directory and plonk.yaml
 	err := os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
-	
+
 	configContent := `settings:
   default_manager: homebrew
 homebrew:
@@ -817,50 +817,50 @@ homebrew:
 	if err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
-	
+
 	mockExec := NewMockCommandExecutor()
-	
+
 	// Mock specific IsInstalled calls - git is installed, curl and docker are not
 	mockExec.SetCommandFunc("brew list git", func() *exec.Cmd {
 		return exec.Command("echo", "git installed")
 	})
-	
+
 	mockExec.SetCommandFunc("brew list curl", func() *exec.Cmd {
 		return exec.Command("false")
 	})
-	
+
 	mockExec.SetCommandFunc("brew list docker", func() *exec.Cmd {
 		return exec.Command("false")
 	})
-	
+
 	// Mock version info for git
 	gitVersionCmd := exec.Command("echo", "git 2.42.0")
 	mockExec.SetCommand("brew list --versions git", gitVersionCmd)
-	
+
 	manager := NewHomebrewManager(mockExec)
 	manager.SetConfigDir(plonkDir)
-	
+
 	// Test ListManagedPackages
 	managed, err := manager.ListManagedPackages()
 	if err != nil {
 		t.Errorf("ListManagedPackages failed: %v", err)
 	}
-	
+
 	expectedManaged := 3 // git, curl, docker
 	if len(managed) != expectedManaged {
 		t.Errorf("Expected %d managed packages, got %d", expectedManaged, len(managed))
 	}
-	
+
 	// Verify packages have correct manager and status
 	gitFound := false
 	curlFound := false
 	dockerFound := false
-	
+
 	for _, pkg := range managed {
 		if pkg.Manager != "homebrew" {
 			t.Errorf("Expected manager to be 'homebrew', got %s", pkg.Manager)
 		}
-		
+
 		switch pkg.Name {
 		case "git":
 			gitFound = true
@@ -882,23 +882,22 @@ homebrew:
 			}
 		}
 	}
-	
+
 	if !gitFound || !curlFound || !dockerFound {
 		t.Error("Expected to find git, curl, and docker in managed packages")
 	}
-	
+
 	// Test ListMissingPackages - should be curl and docker (not installed)
 	missing, err := manager.ListMissingPackages()
 	if err != nil {
 		t.Errorf("ListMissingPackages failed: %v", err)
 	}
-	
-	
+
 	expectedMissing := 2 // curl and docker are missing
 	if len(missing) != expectedMissing {
 		t.Errorf("Expected %d missing packages, got %d", expectedMissing, len(missing))
 	}
-	
+
 	// Verify missing packages
 	for _, pkg := range missing {
 		if pkg.Name != "curl" && pkg.Name != "docker" {
@@ -914,13 +913,13 @@ homebrew:
 func TestAsdfManager_StateAwareMethods(t *testing.T) {
 	tempDir := t.TempDir()
 	plonkDir := filepath.Join(tempDir, ".config", "plonk")
-	
+
 	// Create config directory and plonk.yaml
 	err := os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
-	
+
 	configContent := `settings:
   default_manager: asdf
 asdf:
@@ -934,31 +933,31 @@ asdf:
 	if err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
-	
+
 	mockExec := NewMockCommandExecutor()
-	
+
 	// Mock asdf plugin list to return nodejs and ruby
 	pluginCmd := exec.Command("echo", "nodejs\nruby")
 	mockExec.SetCommand("asdf plugin", pluginCmd)
-	
+
 	// Mock asdf list nodejs to return versions
 	nodejsVersionsCmd := exec.Command("echo", "  18.0.0\n* 20.0.0")
 	mockExec.SetCommand("asdf list", nodejsVersionsCmd)
-	
+
 	manager := NewAsdfManager(mockExec)
 	manager.SetConfigDir(plonkDir)
-	
+
 	// Test ListManagedPackages
 	managed, err := manager.ListManagedPackages()
 	if err != nil {
 		t.Errorf("ListManagedPackages failed: %v", err)
 	}
-	
+
 	expectedManaged := 2 // nodejs 20.0.0, python 3.11.3
 	if len(managed) != expectedManaged {
 		t.Errorf("Expected %d managed packages, got %d", expectedManaged, len(managed))
 	}
-	
+
 	// Verify nodejs 20.0.0 is found
 	foundNodejs := false
 	for _, pkg := range managed {
@@ -981,13 +980,13 @@ asdf:
 func TestNpmManager_StateAwareMethods(t *testing.T) {
 	tempDir := t.TempDir()
 	plonkDir := filepath.Join(tempDir, ".config", "plonk")
-	
+
 	// Create config directory and plonk.yaml
 	err := os.MkdirAll(plonkDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
-	
+
 	configContent := `settings:
   default_manager: npm
 npm:
@@ -1000,32 +999,32 @@ npm:
 	if err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
-	
+
 	mockExec := NewMockCommandExecutor()
-	
+
 	// Mock specific IsInstalled calls - typescript is installed, @vue/cli is not
 	mockExec.SetCommandFunc("npm list -g --depth=0 typescript", func() *exec.Cmd {
 		return exec.Command("echo", "typescript@4.8.4")
 	})
-	
+
 	mockExec.SetCommandFunc("npm list -g --depth=0 @vue/cli", func() *exec.Cmd {
 		return exec.Command("false")
 	})
-	
+
 	manager := NewNpmManager(mockExec)
 	manager.SetConfigDir(plonkDir)
-	
+
 	// Test ListManagedPackages
 	managed, err := manager.ListManagedPackages()
 	if err != nil {
 		t.Errorf("ListManagedPackages failed: %v", err)
 	}
-	
+
 	expectedManaged := 2 // typescript, @vue/cli
 	if len(managed) != expectedManaged {
 		t.Errorf("Expected %d managed packages, got %d", expectedManaged, len(managed))
 	}
-	
+
 	// Verify packages are found with correct manager
 	foundTypescript := false
 	foundVueCli := false
@@ -1055,18 +1054,18 @@ npm:
 	if !foundVueCli {
 		t.Error("Expected to find @vue/cli in managed packages")
 	}
-	
+
 	// Test ListMissingPackages - should be only @vue/cli since typescript is installed
 	missing, err := manager.ListMissingPackages()
 	if err != nil {
 		t.Errorf("ListMissingPackages failed: %v", err)
 	}
-	
+
 	expectedMissing := 1 // @vue/cli (typescript is installed)
 	if len(missing) != expectedMissing {
 		t.Errorf("Expected %d missing packages, got %d", expectedMissing, len(missing))
 	}
-	
+
 	// Verify @vue/cli is the missing package
 	if len(missing) > 0 && missing[0].Name != "@vue/cli" {
 		t.Errorf("Expected missing package to be '@vue/cli', got %s", missing[0].Name)
@@ -1076,21 +1075,21 @@ npm:
 // Test SetConfigDir method
 func TestPackageManager_SetConfigDir(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-	
+
 	// Test HomebrewManager
 	homebrewMgr := NewHomebrewManager(mockExec)
 	homebrewMgr.SetConfigDir("/test/path")
 	if homebrewMgr.plonkDir != "/test/path" {
 		t.Errorf("Expected plonkDir to be '/test/path', got %s", homebrewMgr.plonkDir)
 	}
-	
+
 	// Test AsdfManager
 	asdfMgr := NewAsdfManager(mockExec)
 	asdfMgr.SetConfigDir("/test/path")
 	if asdfMgr.plonkDir != "/test/path" {
 		t.Errorf("Expected plonkDir to be '/test/path', got %s", asdfMgr.plonkDir)
 	}
-	
+
 	// Test NpmManager
 	npmMgr := NewNpmManager(mockExec)
 	npmMgr.SetConfigDir("/test/path")
@@ -1102,10 +1101,10 @@ func TestPackageManager_SetConfigDir(t *testing.T) {
 // Test state-aware methods with no config
 func TestPackageManager_StateAwareMethodsNoConfig(t *testing.T) {
 	mockExec := NewMockCommandExecutor()
-	
+
 	manager := NewHomebrewManager(mockExec)
 	// Don't set config dir - should handle gracefully
-	
+
 	managed, err := manager.ListManagedPackages()
 	if err != nil {
 		t.Errorf("ListManagedPackages should not fail without config: %v", err)
@@ -1113,7 +1112,7 @@ func TestPackageManager_StateAwareMethodsNoConfig(t *testing.T) {
 	if len(managed) != 0 {
 		t.Errorf("Expected 0 managed packages without config, got %d", len(managed))
 	}
-	
+
 	missing, err := manager.ListMissingPackages()
 	if err != nil {
 		t.Errorf("ListMissingPackages should not fail without config: %v", err)

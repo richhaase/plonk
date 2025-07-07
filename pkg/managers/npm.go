@@ -6,7 +6,7 @@ package managers
 import (
 	"path/filepath"
 	"strings"
-	
+
 	"plonk/pkg/config"
 )
 
@@ -191,13 +191,13 @@ func (n *NpmManager) getManagedPackages() ([]string, error) {
 	if n.plonkDir == "" {
 		return []string{}, nil
 	}
-	
+
 	cfg, err := config.LoadConfig(n.plonkDir)
 	if err != nil {
 		// If no config exists, return empty list
 		return []string{}, nil
 	}
-	
+
 	var packages []string
 	// Extract package names from NPM packages
 	for _, pkg := range cfg.NPM {
@@ -216,15 +216,15 @@ func (n *NpmManager) ListManagedPackages() ([]PackageInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var managed []PackageInfo
-	
+
 	for _, name := range managedNames {
 		info := PackageInfo{
 			Name:    name,
 			Manager: "npm",
 		}
-		
+
 		// Check if package is actually installed
 		if n.IsInstalled(name) {
 			info.Status = PackageInstalled
@@ -235,10 +235,10 @@ func (n *NpmManager) ListManagedPackages() ([]PackageInfo, error) {
 		} else {
 			info.Status = PackageAvailable
 		}
-		
+
 		managed = append(managed, info)
 	}
-	
+
 	return managed, nil
 }
 
@@ -248,18 +248,18 @@ func (n *NpmManager) ListUntrackedPackages() ([]PackageInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	managedNames, err := n.getManagedPackages()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Create a map of managed names for quick lookup
 	managedMap := make(map[string]bool)
 	for _, name := range managedNames {
 		managedMap[name] = true
 	}
-	
+
 	var untracked []PackageInfo
 	for _, pkg := range allInstalled {
 		if !managedMap[pkg.Name] {
@@ -267,7 +267,7 @@ func (n *NpmManager) ListUntrackedPackages() ([]PackageInfo, error) {
 			untracked = append(untracked, pkg)
 		}
 	}
-	
+
 	return untracked, nil
 }
 
@@ -277,9 +277,9 @@ func (n *NpmManager) ListMissingPackages() ([]PackageInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var missing []PackageInfo
-	
+
 	for _, name := range managedNames {
 		if !n.IsInstalled(name) {
 			info := PackageInfo{
@@ -290,6 +290,6 @@ func (n *NpmManager) ListMissingPackages() ([]PackageInfo, error) {
 			missing = append(missing, info)
 		}
 	}
-	
+
 	return missing, nil
 }

@@ -132,21 +132,21 @@ func TestDotfilesManagerInterface(t *testing.T) {
 func TestNewDotfilesManager(t *testing.T) {
 	homeDir := "/tmp/test"
 	plonkDir := "/tmp/test/.config/plonk"
-	
+
 	manager := NewDotfilesManager(homeDir, plonkDir)
-	
+
 	if manager == nil {
 		t.Error("NewDotfilesManager should not return nil")
 	}
-	
+
 	if manager.homeDir != homeDir {
 		t.Errorf("Expected homeDir to be %s, got %s", homeDir, manager.homeDir)
 	}
-	
+
 	if manager.plonkDir != plonkDir {
 		t.Errorf("Expected plonkDir to be %s, got %s", plonkDir, manager.plonkDir)
 	}
-	
+
 	// Test that it implements the interface
 	var _ DotfilesManager = manager
 }
@@ -159,7 +159,7 @@ func TestDotfilesManagerIntegration(t *testing.T) {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
 	defer os.RemoveAll(tempDir)
-	
+
 	// Create some test dotfiles
 	testFiles := []string{".zshrc", ".gitconfig", ".tmux.conf"}
 	for _, file := range testFiles {
@@ -169,7 +169,7 @@ func TestDotfilesManagerIntegration(t *testing.T) {
 			t.Fatalf("Failed to create test file %s: %v", file, err)
 		}
 	}
-	
+
 	// Create some files that should be ignored
 	ignoredFiles := []string{".DS_Store", ".git"}
 	for _, file := range ignoredFiles {
@@ -184,22 +184,22 @@ func TestDotfilesManagerIntegration(t *testing.T) {
 			t.Fatalf("Failed to create ignored file %s: %v", file, err)
 		}
 	}
-	
+
 	// Create dotfiles manager
 	plonkDir := filepath.Join(tempDir, ".config", "plonk")
 	manager := NewDotfilesManager(tempDir, plonkDir)
-	
+
 	// Test ListUntracked (since we have no config, all should be untracked)
 	untracked, err := manager.ListUntracked()
 	if err != nil {
 		t.Errorf("ListUntracked failed: %v", err)
 	}
-	
+
 	// Should find our test files but not ignored ones
 	if len(untracked) != len(testFiles) {
 		t.Errorf("Expected %d untracked files, got %d", len(testFiles), len(untracked))
 	}
-	
+
 	// Check that ignored files are not in the results
 	for _, dotfile := range untracked {
 		for _, ignored := range ignoredFiles {

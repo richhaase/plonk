@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	
+
 	"plonk/pkg/config"
 )
 
@@ -292,13 +292,13 @@ func (a *AsdfManager) getManagedPackages() ([]string, error) {
 	if a.plonkDir == "" {
 		return []string{}, nil
 	}
-	
+
 	cfg, err := config.LoadConfig(a.plonkDir)
 	if err != nil {
 		// If no config exists, return empty list
 		return []string{}, nil
 	}
-	
+
 	var packages []string
 	// Extract tool and version from ASDF tools
 	for _, tool := range cfg.ASDF {
@@ -313,33 +313,33 @@ func (a *AsdfManager) ListManagedPackages() ([]PackageInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var managed []PackageInfo
-	
+
 	for _, pkg := range managedPackages {
 		// Parse "tool version" format
 		parts := strings.Fields(pkg)
 		if len(parts) >= 2 {
 			toolName := parts[0]
 			version := parts[1]
-			
+
 			info := PackageInfo{
 				Name:    pkg,
 				Version: version,
 				Manager: "asdf",
 			}
-			
+
 			// Check if this version is actually installed
 			if a.IsVersionInstalled(toolName, version) {
 				info.Status = PackageInstalled
 			} else {
 				info.Status = PackageAvailable
 			}
-			
+
 			managed = append(managed, info)
 		}
 	}
-	
+
 	return managed, nil
 }
 
@@ -349,18 +349,18 @@ func (a *AsdfManager) ListUntrackedPackages() ([]PackageInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	managedPackages, err := a.getManagedPackages()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Create a map of managed packages for quick lookup
 	managedMap := make(map[string]bool)
 	for _, pkg := range managedPackages {
 		managedMap[pkg] = true
 	}
-	
+
 	var untracked []PackageInfo
 	for _, pkg := range allInstalled {
 		if !managedMap[pkg.Name] {
@@ -368,7 +368,7 @@ func (a *AsdfManager) ListUntrackedPackages() ([]PackageInfo, error) {
 			untracked = append(untracked, pkg)
 		}
 	}
-	
+
 	return untracked, nil
 }
 
@@ -378,16 +378,16 @@ func (a *AsdfManager) ListMissingPackages() ([]PackageInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var missing []PackageInfo
-	
+
 	for _, pkg := range managedPackages {
 		// Parse "tool version" format
 		parts := strings.Fields(pkg)
 		if len(parts) >= 2 {
 			toolName := parts[0]
 			version := parts[1]
-			
+
 			if !a.IsVersionInstalled(toolName, version) {
 				info := PackageInfo{
 					Name:    pkg,
@@ -399,6 +399,6 @@ func (a *AsdfManager) ListMissingPackages() ([]PackageInfo, error) {
 			}
 		}
 	}
-	
+
 	return missing, nil
 }

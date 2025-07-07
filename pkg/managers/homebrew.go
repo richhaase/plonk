@@ -5,14 +5,14 @@ package managers
 
 import (
 	"strings"
-	
+
 	"plonk/pkg/config"
 )
 
 // HomebrewManager manages Homebrew packages.
 type HomebrewManager struct {
-	runner    *CommandRunner
-	plonkDir  string
+	runner   *CommandRunner
+	plonkDir string
 }
 
 // NewHomebrewManager creates a new Homebrew manager.
@@ -170,13 +170,13 @@ func (h *HomebrewManager) getManagedPackages() ([]string, error) {
 	if h.plonkDir == "" {
 		return []string{}, nil
 	}
-	
+
 	cfg, err := config.LoadConfig(h.plonkDir)
 	if err != nil {
 		// If no config exists, return empty list
 		return []string{}, nil
 	}
-	
+
 	var packages []string
 	// Extract package names from both brews and casks
 	for _, brew := range cfg.Homebrew.Brews {
@@ -194,15 +194,15 @@ func (h *HomebrewManager) ListManagedPackages() ([]PackageInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var managed []PackageInfo
-	
+
 	for _, name := range managedNames {
 		info := PackageInfo{
 			Name:    name,
 			Manager: "homebrew",
 		}
-		
+
 		// Check if package is actually installed
 		if h.IsInstalled(name) {
 			info.Status = PackageInstalled
@@ -213,10 +213,10 @@ func (h *HomebrewManager) ListManagedPackages() ([]PackageInfo, error) {
 		} else {
 			info.Status = PackageAvailable
 		}
-		
+
 		managed = append(managed, info)
 	}
-	
+
 	return managed, nil
 }
 
@@ -226,18 +226,18 @@ func (h *HomebrewManager) ListUntrackedPackages() ([]PackageInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	managedNames, err := h.getManagedPackages()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Create a map of managed names for quick lookup
 	managedMap := make(map[string]bool)
 	for _, name := range managedNames {
 		managedMap[name] = true
 	}
-	
+
 	var untracked []PackageInfo
 	for _, pkg := range allInstalled {
 		if !managedMap[pkg.Name] {
@@ -245,7 +245,7 @@ func (h *HomebrewManager) ListUntrackedPackages() ([]PackageInfo, error) {
 			untracked = append(untracked, pkg)
 		}
 	}
-	
+
 	return untracked, nil
 }
 
@@ -255,9 +255,9 @@ func (h *HomebrewManager) ListMissingPackages() ([]PackageInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var missing []PackageInfo
-	
+
 	for _, name := range managedNames {
 		if !h.IsInstalled(name) {
 			info := PackageInfo{
@@ -268,6 +268,6 @@ func (h *HomebrewManager) ListMissingPackages() ([]PackageInfo, error) {
 			missing = append(missing, info)
 		}
 	}
-	
+
 	return missing, nil
 }

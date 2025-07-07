@@ -16,10 +16,10 @@ import (
 type DotfileStatus int
 
 const (
-	DotfileManaged DotfileStatus = iota // In plonk.yaml and exists in $HOME
-	DotfileUntracked                    // Exists in $HOME but not in plonk.yaml
-	DotfileMissing                      // In plonk.yaml but not in $HOME
-	DotfileModified                     // Managed but differs from plonk version
+	DotfileManaged   DotfileStatus = iota // In plonk.yaml and exists in $HOME
+	DotfileUntracked                      // Exists in $HOME but not in plonk.yaml
+	DotfileMissing                        // In plonk.yaml but not in $HOME
+	DotfileModified                       // Managed but differs from plonk version
 )
 
 // String returns the string representation of DotfileStatus
@@ -110,12 +110,12 @@ func (m *DotfilesManagerImpl) SetMaxFileSize(size int64) {
 // shouldIgnore checks if a file should be ignored based on patterns
 func (m *DotfilesManagerImpl) shouldIgnore(path string, info os.FileInfo) bool {
 	name := filepath.Base(path)
-	
+
 	// Check file size limit
 	if !info.IsDir() && info.Size() > m.maxFileSize {
 		return true
 	}
-	
+
 	// Check ignore patterns
 	for _, pattern := range m.ignorePatterns {
 		if matched, _ := filepath.Match(pattern, name); matched {
@@ -128,40 +128,40 @@ func (m *DotfilesManagerImpl) shouldIgnore(path string, info os.FileInfo) bool {
 			}
 		}
 	}
-	
+
 	return false
 }
 
 // discoverHomeDotfiles scans $HOME for dotfiles
 func (m *DotfilesManagerImpl) discoverHomeDotfiles() ([]DotfileInfo, error) {
 	var dotfiles []DotfileInfo
-	
+
 	entries, err := os.ReadDir(m.homeDir)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	for _, entry := range entries {
 		name := entry.Name()
-		
+
 		// Only consider files/directories starting with '.'
 		if !strings.HasPrefix(name, ".") {
 			continue
 		}
-		
+
 		path := filepath.Join(m.homeDir, name)
-		
+
 		// Get file info
 		info, err := entry.Info()
 		if err != nil {
 			continue // Skip files we can't stat
 		}
-		
+
 		// Check if should ignore
 		if m.shouldIgnore(path, info) {
 			continue
 		}
-		
+
 		dotfile := DotfileInfo{
 			Path:         path,
 			Name:         name,
@@ -169,10 +169,10 @@ func (m *DotfilesManagerImpl) discoverHomeDotfiles() ([]DotfileInfo, error) {
 			Size:         info.Size(),
 			IsDir:        info.IsDir(),
 		}
-		
+
 		dotfiles = append(dotfiles, dotfile)
 	}
-	
+
 	return dotfiles, nil
 }
 
@@ -183,7 +183,7 @@ func (m *DotfilesManagerImpl) getManagedDotfiles() ([]string, error) {
 		// If no config exists, return empty list
 		return []string{}, nil
 	}
-	
+
 	return cfg.Dotfiles, nil
 }
 
@@ -193,18 +193,18 @@ func (m *DotfilesManagerImpl) ListManaged() ([]DotfileInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var managed []DotfileInfo
-	
+
 	for _, name := range managedNames {
 		path := filepath.Join(m.homeDir, name)
-		
+
 		// Check if file exists
 		info, err := os.Stat(path)
 		if err != nil {
 			continue // Skip missing files (they'll show up in ListMissing)
 		}
-		
+
 		dotfile := DotfileInfo{
 			Path:         path,
 			Name:         name,
@@ -214,10 +214,10 @@ func (m *DotfilesManagerImpl) ListManaged() ([]DotfileInfo, error) {
 			Size:         info.Size(),
 			IsDir:        info.IsDir(),
 		}
-		
+
 		managed = append(managed, dotfile)
 	}
-	
+
 	return managed, nil
 }
 
@@ -227,18 +227,18 @@ func (m *DotfilesManagerImpl) ListUntracked() ([]DotfileInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	managedNames, err := m.getManagedDotfiles()
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Create a map of managed names for quick lookup
 	managedMap := make(map[string]bool)
 	for _, name := range managedNames {
 		managedMap[name] = true
 	}
-	
+
 	var untracked []DotfileInfo
 	for _, dotfile := range allDotfiles {
 		if !managedMap[dotfile.Name] {
@@ -246,7 +246,7 @@ func (m *DotfilesManagerImpl) ListUntracked() ([]DotfileInfo, error) {
 			untracked = append(untracked, dotfile)
 		}
 	}
-	
+
 	return untracked, nil
 }
 
@@ -256,12 +256,12 @@ func (m *DotfilesManagerImpl) ListMissing() ([]DotfileInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var missing []DotfileInfo
-	
+
 	for _, name := range managedNames {
 		path := filepath.Join(m.homeDir, name)
-		
+
 		// Check if file exists
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			dotfile := DotfileInfo{
@@ -273,7 +273,7 @@ func (m *DotfilesManagerImpl) ListMissing() ([]DotfileInfo, error) {
 			missing = append(missing, dotfile)
 		}
 	}
-	
+
 	return missing, nil
 }
 
@@ -287,30 +287,30 @@ func (m *DotfilesManagerImpl) ListModified() ([]DotfileInfo, error) {
 // ListAll returns all dotfiles with their statuses
 func (m *DotfilesManagerImpl) ListAll() ([]DotfileInfo, error) {
 	var all []DotfileInfo
-	
+
 	managed, err := m.ListManaged()
 	if err != nil {
 		return nil, err
 	}
 	all = append(all, managed...)
-	
+
 	untracked, err := m.ListUntracked()
 	if err != nil {
 		return nil, err
 	}
 	all = append(all, untracked...)
-	
+
 	missing, err := m.ListMissing()
 	if err != nil {
 		return nil, err
 	}
 	all = append(all, missing...)
-	
+
 	modified, err := m.ListModified()
 	if err != nil {
 		return nil, err
 	}
 	all = append(all, modified...)
-	
+
 	return all, nil
 }
