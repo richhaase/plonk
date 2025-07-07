@@ -19,7 +19,7 @@ func main() {
 	}
 
 	command := os.Args[1]
-	
+
 	var err error
 	switch command {
 	case "build":
@@ -55,7 +55,7 @@ func printUsage() {
 	fmt.Println("")
 	fmt.Println("Commands:")
 	fmt.Println("  build     Build the plonk binary")
-	fmt.Println("  test      Run all tests") 
+	fmt.Println("  test      Run all tests")
 	fmt.Println("  precommit Run pre-commit checks (format, lint, test, security)")
 	fmt.Println("  clean     Clean build artifacts")
 	fmt.Println("  install   Install plonk globally (go install)")

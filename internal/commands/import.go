@@ -57,8 +57,6 @@ func runImportWithOptions(args []string, dryRun bool) error {
 	asdfDiscoverer := importer.NewAsdfDiscoverer(executor)
 	npmDiscoverer := importer.NewNpmDiscoverer(executor)
 	dotfileDiscoverer := importer.NewDotfileDiscoverer()
-	zshDiscoverer := importer.NewZSHDiscoverer()
-	gitDiscoverer := importer.NewGitDiscoverer()
 
 	// Collect discovery results
 	results := config.DiscoveryResults{}
@@ -102,30 +100,6 @@ func runImportWithOptions(args []string, dryRun bool) error {
 	}
 	results.Dotfiles = dotfiles
 	fmt.Printf("✅ Found %d dotfiles\n", len(dotfiles))
-
-	// Discover ZSH configuration
-	fmt.Print("🐚 Discovering ZSH configuration... ")
-	zshConfig, err := zshDiscoverer.DiscoverZSHConfig()
-	if err != nil {
-		fmt.Println("❌ Error:", err)
-	} else {
-		results.ZSHConfig = zshConfig
-		envCount := len(zshConfig.EnvVars)
-		aliasCount := len(zshConfig.Aliases)
-		fmt.Printf("✅ Found %d env vars, %d aliases\n", envCount, aliasCount)
-	}
-
-	// Discover Git configuration
-	fmt.Print("📝 Discovering Git configuration... ")
-	gitConfig, err := gitDiscoverer.DiscoverGitConfig()
-	if err != nil {
-		fmt.Println("❌ Error:", err)
-	} else {
-		results.GitConfig = gitConfig
-		userCount := len(gitConfig.User)
-		aliasCount := len(gitConfig.Aliases)
-		fmt.Printf("✅ Found %d user settings, %d aliases\n", userCount, aliasCount)
-	}
 
 	fmt.Println()
 

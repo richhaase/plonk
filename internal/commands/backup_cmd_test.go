@@ -119,7 +119,14 @@ func TestBackupCommand_AllFiles(t *testing.T) {
 		t.Fatalf("Failed to create plonk directory: %v", err)
 	}
 
-	// Create config file with ZSH configuration (so apply would overwrite .zshrc)
+	// Create source zshrc file that would overwrite existing one
+	sourceZshrc := filepath.Join(plonkDir, "zshrc")
+	err = os.WriteFile(sourceZshrc, []byte("# New zshrc from plonk\nalias ll='eza -la'"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create source zshrc: %v", err)
+	}
+
+	// Create config file with dotfiles (so apply would overwrite .zshrc)
 	configContent := `settings:
   default_manager: homebrew
 
@@ -127,9 +134,8 @@ backup:
   location: "~/.config/plonk/backups"
   keep_count: 5
 
-zsh:
-  aliases:
-    ll: "eza -la"
+dotfiles:
+  - zshrc
 `
 
 	configPath := filepath.Join(plonkDir, "plonk.yaml")

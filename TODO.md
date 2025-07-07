@@ -28,8 +28,17 @@ Active work items for current development session. Maintained by AI agents.
   - [x] Cross-platform Go-native development experience
   - [x] Pure Go project setup with optional ASDF convenience
   - [x] Eliminated external task runner dependencies (Mage → dev.go)
+- [x] Remove ZSH/Git configuration generation complexity (1 hour) ✅
+  - [x] Removed zsh_generator.go, git_generator.go and their tests
+  - [x] Removed zsh.go, git.go importers and their tests
+  - [x] Removed ZSHConfig and GitConfig from yaml_config.go
+  - [x] Removed applyZSHConfiguration and applyGitConfiguration functions
+  - [x] Updated all tests to work with dotfiles-only approach
+  - [x] Simplified backup and preview logic
+  - [x] Now treats .zshrc, .zshenv, .gitconfig as regular dotfiles
 
 ### 🛡️ Critical Hardening (Next Session)
+- [ ] Update documentation to remove ZSH/Git generation references (30 min)
 - [ ] Create EXAMPLES.md with real plonk.yaml examples (1-2 hours)
 - [ ] Create TROUBLESHOOTING.md for common issues (1-2 hours)
 - [ ] Audit and improve error messages for user-friendliness (2-3 hours)

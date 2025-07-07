@@ -12,7 +12,7 @@ import (
 
 func Build() error {
 	fmt.Println("Building plonk...")
-	
+
 	if err := os.MkdirAll("build", 0755); err != nil {
 		return fmt.Errorf("failed to create build directory: %w", err)
 	}
@@ -27,7 +27,7 @@ func Build() error {
 	if err := Run("go", "build", "-ldflags", ldflags, "-o", "build/plonk", "./cmd/plonk"); err != nil {
 		return fmt.Errorf("build failed: %w", err)
 	}
-	
+
 	fmt.Println("✅ Built plonk binary to build/")
 	return nil
 }

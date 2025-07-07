@@ -10,15 +10,15 @@ import (
 
 func Clean() error {
 	fmt.Println("Cleaning build artifacts...")
-	
+
 	if err := os.RemoveAll("build"); err != nil {
 		return fmt.Errorf("failed to remove build directory: %w", err)
 	}
-	
+
 	if err := Run("go", "clean"); err != nil {
 		return fmt.Errorf("go clean failed: %w", err)
 	}
-	
+
 	fmt.Println("✅ Build artifacts cleaned")
 	return nil
 }

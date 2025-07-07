@@ -26,8 +26,6 @@ type Config struct {
 	Homebrew HomebrewConfig `yaml:"homebrew,omitempty"`
 	ASDF     []ASDFTool     `yaml:"asdf,omitempty" validate:"dive"`
 	NPM      []NPMPackage   `yaml:"npm,omitempty" validate:"dive"`
-	ZSH      ZSHConfig      `yaml:"zsh,omitempty"`
-	Git      GitConfig      `yaml:"git,omitempty"`
 }
 
 // Settings contains global configuration settings.
@@ -65,40 +63,6 @@ type NPMPackage struct {
 	Name    string `yaml:"name,omitempty" validate:"omitempty,package_name"`
 	Package string `yaml:"package,omitempty" validate:"omitempty,package_name"` // If different from name.
 	Config  string `yaml:"config,omitempty" validate:"omitempty,file_path"`
-}
-
-// ZSHConfig represents ZSH shell configuration.
-type ZSHConfig struct {
-	EnvVars      map[string]string `yaml:"env_vars,omitempty"`
-	ShellOptions []string          `yaml:"shell_options,omitempty"`
-	Inits        []string          `yaml:"inits,omitempty"`
-	Completions  []string          `yaml:"completions,omitempty"`
-	Plugins      []string          `yaml:"plugins,omitempty"`
-	Aliases      map[string]string `yaml:"aliases,omitempty"`
-	Functions    map[string]string `yaml:"functions,omitempty"`
-	SourceBefore []string          `yaml:"source_before,omitempty"`
-	SourceAfter  []string          `yaml:"source_after,omitempty"`
-}
-
-// GitConfig represents Git configuration.
-type GitConfig struct {
-	User    map[string]string            `yaml:"user,omitempty"`
-	Core    map[string]string            `yaml:"core,omitempty"`
-	Delta   map[string]string            `yaml:"delta,omitempty"`
-	Aliases map[string]string            `yaml:"aliases,omitempty"`
-	Color   map[string]string            `yaml:"color,omitempty"`
-	Fetch   map[string]string            `yaml:"fetch,omitempty"`
-	Pull    map[string]string            `yaml:"pull,omitempty"`
-	Push    map[string]string            `yaml:"push,omitempty"`
-	Status  map[string]string            `yaml:"status,omitempty"`
-	Diff    map[string]string            `yaml:"diff,omitempty"`
-	Log     map[string]string            `yaml:"log,omitempty"`
-	Init    map[string]string            `yaml:"init,omitempty"`
-	Rerere  map[string]string            `yaml:"rerere,omitempty"`
-	Branch  map[string]string            `yaml:"branch,omitempty"`
-	Rebase  map[string]string            `yaml:"rebase,omitempty"`
-	Merge   map[string]string            `yaml:"merge,omitempty"`
-	Filter  map[string]map[string]string `yaml:"filter,omitempty"`
 }
 
 // MarshalYAML implements custom marshaling for HomebrewPackage.
@@ -164,11 +128,6 @@ func LoadConfig(configDir string) (*Config, error) {
 	config := &Config{
 		Settings: Settings{
 			DefaultManager: "homebrew", // Default value.
-		},
-		ZSH: ZSHConfig{
-			EnvVars:   make(map[string]string),
-			Aliases:   make(map[string]string),
-			Functions: make(map[string]string),
 		},
 	}
 
@@ -248,105 +207,7 @@ func loadConfigFile(path string, config *Config) error {
 		config.Backup.KeepCount = tempConfig.Backup.KeepCount
 	}
 
-	// Merge ZSH configuration.
-	mergeZSHConfig(&config.ZSH, &tempConfig.ZSH)
-
-	// Merge Git configuration.
-	mergeGitConfig(&config.Git, &tempConfig.Git)
-
 	return nil
-}
-
-// mergeZSHConfig merges ZSH configuration from source into target.
-func mergeZSHConfig(target, source *ZSHConfig) {
-	// Merge environment variables.
-	if source.EnvVars != nil {
-		if target.EnvVars == nil {
-			target.EnvVars = make(map[string]string)
-		}
-		for key, value := range source.EnvVars {
-			target.EnvVars[key] = value
-		}
-	}
-
-	// Merge shell options.
-	target.ShellOptions = append(target.ShellOptions, source.ShellOptions...)
-
-	// Merge inits and completions.
-	target.Inits = append(target.Inits, source.Inits...)
-	target.Completions = append(target.Completions, source.Completions...)
-
-	// Merge plugins.
-	target.Plugins = append(target.Plugins, source.Plugins...)
-
-	// Merge aliases.
-	if source.Aliases != nil {
-		if target.Aliases == nil {
-			target.Aliases = make(map[string]string)
-		}
-		for key, value := range source.Aliases {
-			target.Aliases[key] = value
-		}
-	}
-
-	// Merge functions.
-	if source.Functions != nil {
-		if target.Functions == nil {
-			target.Functions = make(map[string]string)
-		}
-		for key, value := range source.Functions {
-			target.Functions[key] = value
-		}
-	}
-
-	// Merge source before/after.
-	target.SourceBefore = append(target.SourceBefore, source.SourceBefore...)
-	target.SourceAfter = append(target.SourceAfter, source.SourceAfter...)
-}
-
-// mergeGitConfig merges Git configuration from source into target.
-func mergeGitConfig(target, source *GitConfig) {
-	// Helper function to merge string maps.
-	mergeStringMap := func(targetMap, sourceMap map[string]string) map[string]string {
-		if sourceMap == nil {
-			return targetMap
-		}
-		if targetMap == nil {
-			targetMap = make(map[string]string)
-		}
-		for key, value := range sourceMap {
-			targetMap[key] = value
-		}
-		return targetMap
-	}
-
-	// Merge all simple string map sections.
-	target.User = mergeStringMap(target.User, source.User)
-	target.Core = mergeStringMap(target.Core, source.Core)
-	target.Delta = mergeStringMap(target.Delta, source.Delta)
-	target.Aliases = mergeStringMap(target.Aliases, source.Aliases)
-	target.Color = mergeStringMap(target.Color, source.Color)
-	target.Fetch = mergeStringMap(target.Fetch, source.Fetch)
-	target.Pull = mergeStringMap(target.Pull, source.Pull)
-	target.Push = mergeStringMap(target.Push, source.Push)
-	target.Status = mergeStringMap(target.Status, source.Status)
-	target.Diff = mergeStringMap(target.Diff, source.Diff)
-	target.Log = mergeStringMap(target.Log, source.Log)
-	target.Init = mergeStringMap(target.Init, source.Init)
-	target.Rerere = mergeStringMap(target.Rerere, source.Rerere)
-	target.Branch = mergeStringMap(target.Branch, source.Branch)
-	target.Rebase = mergeStringMap(target.Rebase, source.Rebase)
-	target.Merge = mergeStringMap(target.Merge, source.Merge)
-
-	// Merge filter sections (nested maps).
-	if source.Filter != nil {
-		if target.Filter == nil {
-			target.Filter = make(map[string]map[string]string)
-		}
-		for filterName, filterConfig := range source.Filter {
-			target.Filter[filterName] = mergeStringMap(target.Filter[filterName], filterConfig)
-		}
-	}
 }
 
 // GetDotfileTargets returns dotfiles with their target paths.

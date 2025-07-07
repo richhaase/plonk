@@ -7,11 +7,11 @@ import "fmt"
 
 func Install() error {
 	fmt.Println("Installing plonk globally...")
-	
+
 	if err := Run("go", "install", "./cmd/plonk"); err != nil {
 		return fmt.Errorf("install failed: %w", err)
 	}
-	
+
 	fmt.Println("✅ Plonk installed globally!")
 	fmt.Println("Run 'plonk --help' to get started")
 	return nil

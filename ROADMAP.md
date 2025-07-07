@@ -7,28 +7,21 @@ This document is an ideation and planning tool for developers and AI agents work
 Features and concepts being considered:
 
 ### Core Features
-- **Additional shell support** - Bash and Fish configuration generation
 - **Advanced backup features** - Encryption, compression, remote sync capabilities
 - **Configuration templates** - Predefined setups for common development environments
 - **Container testing support** - Docker/VM integration for bulletproof isolation during development
 - **Cross-platform Windows support** - PowerShell profiles, Windows package managers
-- **Developer deployment** - Enable `go install` for plonk installation and dogfooding during development
 - **Diff command** - Show differences between config and reality
-- **Enhanced dry-run capabilities** - Show exactly what files would be modified and what package commands would run across all operations
 - **Environment snapshots** - Create/restore complete environment snapshots
-- **Homebrew formula** - Package plonk for homebrew installation (separate tap repository)
 - **Multi-machine sync** - Synchronize configurations across multiple machines
 - **Package manager extensions** - Mac App Store (mas), additional Linux package managers
 - **Plugin system** - Custom package manager support
 - **Test isolation mode** - Sandboxed testing environment using separate directories and mocked package managers
-- **Watch mode** - Auto-apply changes when config files change
 
 ### Documentation
 - **API.md** - If plonk becomes a library
 - **Auto-generated docs** - CLI help → markdown generation
-- **CLAUDE.md enhancements** - User interaction patterns, AI troubleshooting
 - **CONFIG.md** - Comprehensive configuration reference with validation rules
-- **CONTRIBUTING.md updates** - Real repository URL, license details
 - **Documentation testing** - Ensure examples actually work
 - **Documentation versioning** - Keep docs in sync with releases
 - **EXAMPLES.md** - Real-world configuration examples
@@ -71,7 +64,3 @@ Major features completed (see [CHANGELOG.md](CHANGELOG.md) for details):
 ## Parked
 
 Ideas deferred or decided against:
-
-- **Complex backup features** - Focus on core functionality first
-- **Windows support** - Not priority during development phase
-- **Package manager proliferation** - Keep focused on essential managers

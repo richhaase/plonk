@@ -6,7 +6,6 @@ package commands
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"plonk/internal/directories"
 	"plonk/pkg/config"
@@ -90,10 +89,6 @@ func backupConfigurationFilesWithOptions(filePaths []string, dryRun bool) error 
 // previewBackupsBeforeApply shows what files would be backed up before apply
 func previewBackupsBeforeApply(cfg *config.Config, args []string) error {
 	var filesToBackup []string
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("failed to get home directory: %w", err)
-	}
 
 	if len(args) == 0 {
 		// Preview backing up for full apply - check all files that will be written
@@ -103,28 +98,6 @@ func previewBackupsBeforeApply(cfg *config.Config, args []string) error {
 		for _, target := range dotfileTargets {
 			targetPath := directories.Default.ExpandHomeDir(target)
 			filesToBackup = append(filesToBackup, targetPath)
-		}
-
-		// Add ZSH configuration files if ZSH config exists
-		if len(cfg.ZSH.EnvVars) > 0 || len(cfg.ZSH.Aliases) > 0 ||
-			len(cfg.ZSH.Inits) > 0 || len(cfg.ZSH.Completions) > 0 ||
-			len(cfg.ZSH.Functions) > 0 || len(cfg.ZSH.ShellOptions) > 0 {
-			filesToBackup = append(filesToBackup, filepath.Join(homeDir, ".zshrc"))
-
-			// Only preview backup .zshenv if there are environment variables
-			if len(cfg.ZSH.EnvVars) > 0 {
-				filesToBackup = append(filesToBackup, filepath.Join(homeDir, ".zshenv"))
-			}
-		}
-
-		// Add Git configuration file if Git config exists
-		if len(cfg.Git.User) > 0 || len(cfg.Git.Core) > 0 || len(cfg.Git.Aliases) > 0 ||
-			len(cfg.Git.Color) > 0 || len(cfg.Git.Delta) > 0 || len(cfg.Git.Fetch) > 0 ||
-			len(cfg.Git.Pull) > 0 || len(cfg.Git.Push) > 0 || len(cfg.Git.Status) > 0 ||
-			len(cfg.Git.Diff) > 0 || len(cfg.Git.Log) > 0 || len(cfg.Git.Init) > 0 ||
-			len(cfg.Git.Rerere) > 0 || len(cfg.Git.Branch) > 0 || len(cfg.Git.Rebase) > 0 ||
-			len(cfg.Git.Merge) > 0 || len(cfg.Git.Filter) > 0 {
-			filesToBackup = append(filesToBackup, filepath.Join(homeDir, ".gitconfig"))
 		}
 
 		// Add package configuration files
