@@ -93,7 +93,6 @@ All CLI commands follow consistent patterns:
 ### File Operations
 - Use `internal/directories.Default` for all path operations
 - Backup functionality available via `internal/commands/backup.go`
-- Configuration generation via `pkg/config/*_generator.go`
 
 ## CLI Commands
 

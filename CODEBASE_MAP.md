@@ -65,8 +65,6 @@ plonk/
 ### ⚙️ **Configuration System** (pkg/config/)
 - `yaml_config.go` - Primary YAML configuration parsing
 - `validator.go` - Configuration validation
-- `zsh_generator.go` - ZSH configuration file generation
-- `git_generator.go` - Git configuration file generation
 
 ### 📋 **Package Managers** (pkg/managers/)
 - `common.go` - Shared interfaces and command runner
@@ -74,7 +72,6 @@ plonk/
 - `homebrew.go` - Homebrew package manager
 - `asdf.go` - ASDF version manager
 - `npm.go` - NPM package manager
-- `zsh.go` - ZSH shell management
 
 ### 🧪 **Testing**
 - `*_test.go` - Test files (following Go convention)
@@ -142,7 +139,6 @@ type Config struct {
 1. Start with `pkg/config/yaml_config.go` for structure
 2. Check `validator.go` for validation rules
 3. Look at `internal/commands/apply.go` for usage
-4. Review generators (`zsh_generator.go`, `git_generator.go`)
 
 ### 4. **Understanding Tests**
 1. Look for `*_test.go` files alongside implementation

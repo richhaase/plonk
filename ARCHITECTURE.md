@@ -82,9 +82,6 @@ Pure Go git operations with mockable interface for testing. No dependency on git
 - **Foundational Setup** - Automated installation of prerequisite tools
 - **Intelligent Workflows** - Smart detection of existing repositories and installed packages
 
-### Shell Configuration
-- **ZSH Configuration Generation** - Complete .zshrc and .zshenv file generation from YAML config
-- **Shell Best Practices** - Proper separation of environment variables (.zshenv) and interactive config (.zshrc)
 
 ### Backup System
 - **Smart Backup Detection** - Only backs up files that will be overwritten

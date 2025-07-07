@@ -50,7 +50,6 @@ Major features completed (see [CHANGELOG.md](CHANGELOG.md) for details):
 - ✅ Package manager support (Homebrew, ASDF, NPM)
 - ✅ YAML configuration system with validation
 - ✅ Configuration drift detection
-- ✅ ZSH and Git configuration generation
 - ✅ Backup system with automatic cleanup
 - ✅ Dry-run and preview capabilities
 - ✅ TDD development infrastructure
