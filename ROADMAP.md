@@ -69,7 +69,8 @@ Post-dogfooding activities to prepare for public release.
 
 ### Phase 1: Security & Quality (~2 hours)
 Address security findings and establish CI/CD pipeline.
-- Security findings resolution
+- Security findings resolution (34 gosec issues)
+- Re-enable pre-commit hooks (currently disabled for dogfooding)
 - CI/CD pipeline setup
 - Quality gate establishment
 
