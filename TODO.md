@@ -106,6 +106,17 @@ Session-level work items and progress tracking. Maintained by AI agents for tact
 3. **Code Changes**: Use TDD red→green→refactor cycles, small changes, frequent commits
 4. **Scope Boundaries**: Plonk does only two things - manage packages from multiple package managers, and manage configuration files (dotfiles)
 
+**Status Command Design Decisions:**
+- **Untracked Files**: Files that exist on filesystem but aren't in plonk.yaml (implement first)
+- **Missing Files**: Files that exist in plonk.yaml config but are missing from filesystem (implement after untracked)
+- **Future Enhancement**: Compare ./config/plonk/repo vs filesystem for true drift detection
+
+**CLI Simplification Sidebar Action Plan:**
+1. **Collapse pkg subcommands** - Move `pkg info`, `pkg list`, `pkg search`, `pkg update` to top-level commands
+2. **Remove ls alias** - Eliminate redundant `ls` command in favor of `list`
+3. **Consider further unification** - Evaluate git operations, workflow commands, output standardization
+4. **Use TDD approach** - Check existing tests, write failing tests, implement changes
+
 ## Notes
 
 *For session history, see git log and CHANGELOG.md. For strategic planning, see ROADMAP.md.*
