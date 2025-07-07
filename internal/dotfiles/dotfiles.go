@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"plonk/pkg/config"
+	"plonk/internal/config"
 )
 
 // DotfileStatus represents the state of a dotfile

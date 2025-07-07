@@ -4,7 +4,7 @@
 package importer
 
 import (
-	"plonk/pkg/managers"
+	"plonk/internal/managers"
 )
 
 // NpmDiscoverer discovers globally installed NPM packages.

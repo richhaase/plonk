@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"plonk/pkg/managers"
+	"plonk/internal/managers"
 )
 
 func TestDiscoverAsdfPackages(t *testing.T) {

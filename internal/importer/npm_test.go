@@ -4,34 +4,59 @@
 package importer
 
 import (
-	"os/exec"
 	"testing"
 
-	"plonk/pkg/managers"
+	"plonk/internal/managers"
 )
 
-func TestDiscoverHomebrewPackages(t *testing.T) {
+func TestDiscoverNpmPackages(t *testing.T) {
 	tests := []struct {
 		name         string
-		brewOutput   string
+		npmOutput    string
 		expectedPkgs []string
 		expectError  bool
 	}{
 		{
-			name:         "successful brew list",
-			brewOutput:   "git\njq\nnode\n",
-			expectedPkgs: []string{"git", "jq", "node"},
-			expectError:  false,
+			name: "successful npm list global packages",
+			npmOutput: `/usr/local/lib/node_modules/claude-code
+/usr/local/lib/node_modules/npm
+/usr/local/lib/node_modules/@angular/cli
+/usr/local/lib/node_modules/typescript
+`,
+			expectedPkgs: []string{
+				"claude-code",
+				"@angular/cli",
+				"typescript",
+			},
+			expectError: false,
 		},
 		{
-			name:         "empty brew list",
-			brewOutput:   "",
+			name:         "empty npm list",
+			npmOutput:    "",
 			expectedPkgs: []string{},
 			expectError:  false,
 		},
 		{
-			name:         "homebrew not available",
-			brewOutput:   "",
+			name: "single global package",
+			npmOutput: `/usr/local/lib/node_modules/claude-code
+`,
+			expectedPkgs: []string{"claude-code"},
+			expectError:  false,
+		},
+		{
+			name: "npm packages in home directory",
+			npmOutput: `/Users/user/.npm-global/lib/node_modules/claude-code
+/Users/user/.npm-global/lib/node_modules/typescript
+`,
+			expectedPkgs: []string{
+				"claude-code",
+				"typescript",
+			},
+			expectError: false,
+		},
+		{
+			name:         "npm not available",
+			npmOutput:    "",
 			expectedPkgs: []string{},
 			expectError:  true,
 		},
@@ -43,10 +68,10 @@ func TestDiscoverHomebrewPackages(t *testing.T) {
 			if tt.expectError {
 				mockExecutor.ShouldFail = true
 			} else {
-				mockExecutor.Output = tt.brewOutput
+				mockExecutor.Output = tt.npmOutput
 			}
 
-			discoverer := NewHomebrewDiscoverer(mockExecutor)
+			discoverer := NewNpmDiscoverer(mockExecutor)
 			packages, err := discoverer.DiscoverPackages()
 
 			if tt.expectError && err == nil {
@@ -58,6 +83,8 @@ func TestDiscoverHomebrewPackages(t *testing.T) {
 
 			if len(packages) != len(tt.expectedPkgs) {
 				t.Errorf("Expected %d packages, got %d", len(tt.expectedPkgs), len(packages))
+				t.Errorf("Expected: %v", tt.expectedPkgs)
+				t.Errorf("Got: %v", packages)
 			}
 
 			for i, pkg := range packages {
@@ -69,18 +96,5 @@ func TestDiscoverHomebrewPackages(t *testing.T) {
 	}
 }
 
-// MockCommandExecutor implements managers.CommandExecutor for testing
-type MockCommandExecutor struct {
-	Output     string
-	ShouldFail bool
-}
-
 // Verify interface compliance
 var _ managers.CommandExecutor = &MockCommandExecutor{}
-
-func (m *MockCommandExecutor) Execute(name string, args ...string) *exec.Cmd {
-	if m.ShouldFail {
-		return exec.Command("false") // Command that always fails
-	}
-	return exec.Command("echo", m.Output)
-}

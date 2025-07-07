@@ -6,7 +6,7 @@ package commands
 import (
 	"fmt"
 
-	"plonk/pkg/managers"
+	"plonk/internal/managers"
 
 	"github.com/spf13/cobra"
 )

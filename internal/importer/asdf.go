@@ -4,7 +4,7 @@
 package importer
 
 import (
-	"plonk/pkg/managers"
+	"plonk/internal/managers"
 )
 
 // AsdfDiscoverer discovers globally configured ASDF tools and versions.

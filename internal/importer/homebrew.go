@@ -10,7 +10,7 @@ package importer
 import (
 	"strings"
 
-	"plonk/pkg/managers"
+	"plonk/internal/managers"
 )
 
 // HomebrewDiscoverer discovers installed Homebrew packages.
