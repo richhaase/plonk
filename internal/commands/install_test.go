@@ -20,11 +20,85 @@ func TestInstallCommand_NoConfig(t *testing.T) {
 	}
 }
 
-func TestInstallCommand_WithArguments(t *testing.T) {
-	// Test - should error when arguments are provided
-	err := runInstall([]string{"some-arg"})
+func TestInstallCommand_WithPackageArgument(t *testing.T) {
+	// Setup temporary directory
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Create plonk directory and config
+	plonkDir := filepath.Join(tempHome, ".config", "plonk")
+	err := os.MkdirAll(plonkDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create plonk directory: %v", err)
+	}
+
+	// Create a config file with multiple packages
+	configContent := `settings:
+  default_manager: homebrew
+
+homebrew:
+  brews:
+    - name: git
+    - name: neovim
+      config: config/nvim/
+
+asdf:
+  - name: nodejs
+    version: "20.0.0"
+`
+
+	configPath := filepath.Join(plonkDir, "plonk.yaml")
+	err = os.WriteFile(configPath, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write config file: %v", err)
+	}
+
+	// Test - should accept a package argument (neovim)
+	err = runInstall([]string{"neovim"})
+	// We expect this to succeed (or fail for package manager reasons, not argument validation)
+	// The key is that it should not fail due to argument validation
+	if err != nil && err.Error() == "command 'install' takes no arguments" {
+		t.Error("Install command should accept optional package argument")
+	}
+}
+
+func TestInstallCommand_InvalidPackage(t *testing.T) {
+	// Setup temporary directory
+	tempHome, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	// Create plonk directory and config
+	plonkDir := filepath.Join(tempHome, ".config", "plonk")
+	err := os.MkdirAll(plonkDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create plonk directory: %v", err)
+	}
+
+	// Create a config file with multiple packages
+	configContent := `settings:
+  default_manager: homebrew
+
+homebrew:
+  brews:
+    - name: git
+    - name: neovim
+`
+
+	configPath := filepath.Join(plonkDir, "plonk.yaml")
+	err = os.WriteFile(configPath, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write config file: %v", err)
+	}
+
+	// Test - should error when package is not found in config
+	err = runInstall([]string{"nonexistent-package"})
 	if err == nil {
-		t.Error("Expected error when arguments are provided to install")
+		t.Error("Expected error when installing package not in configuration")
+	}
+
+	expectedError := "package 'nonexistent-package' not found in configuration"
+	if err != nil && err.Error() != expectedError {
+		t.Errorf("Expected error '%s', got '%s'", expectedError, err.Error())
 	}
 }
 

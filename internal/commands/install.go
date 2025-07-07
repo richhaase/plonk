@@ -12,17 +12,21 @@ import (
 )
 
 var installCmd = &cobra.Command{
-	Use:   "install",
+	Use:   "install [package]",
 	Short: "Install packages from configuration",
 	Long: `Install packages defined in the YAML configuration file.
 
 Reads plonk.yaml (and optionally plonk.local.yaml) from the plonk directory
 and installs all defined packages using their respective package managers.
 
+With no arguments, installs all packages from configuration.
+With a package name, installs only that specific package.
+
 Examples:
-  plonk install                                   # Install all packages from config`,
+  plonk install                                   # Install all packages from config
+  plonk install neovim                            # Install only neovim package`,
 	RunE: installCmdRun,
-	Args: cobra.NoArgs,
+	Args: cobra.MaximumNArgs(1),
 }
 
 func init() {
@@ -34,10 +38,6 @@ func installCmdRun(cmd *cobra.Command, args []string) error {
 }
 
 func runInstall(args []string) error {
-	if err := ValidateNoArgs("install", args); err != nil {
-		return err
-	}
-
 	plonkDir := directories.Default.PlonkDir()
 
 	// Load configuration.
@@ -52,6 +52,17 @@ func runInstall(args []string) error {
 	asdfMgr := managers.NewAsdfManager(executor)
 	npmMgr := managers.NewNpmManager(executor)
 
+	if len(args) == 0 {
+		// Install all packages
+		return installAllPackages(homebrewMgr, asdfMgr, npmMgr, config, plonkDir)
+	} else {
+		// Install specific package
+		packageName := args[0]
+		return installSpecificPackage(homebrewMgr, asdfMgr, npmMgr, config, plonkDir, packageName)
+	}
+}
+
+func installAllPackages(homebrewMgr *managers.HomebrewManager, asdfMgr *managers.AsdfManager, npmMgr *managers.NpmManager, config *config.Config, plonkDir string) error {
 	// Track packages that were installed and have configs.
 	installedPackages := make(map[string][]string)
 
@@ -91,6 +102,123 @@ func runInstall(args []string) error {
 	}
 
 	fmt.Printf("Successfully installed packages from %s\n", filepath.Join(plonkDir, "plonk.yaml"))
+	return nil
+}
+
+func installSpecificPackage(homebrewMgr *managers.HomebrewManager, asdfMgr *managers.AsdfManager, npmMgr *managers.NpmManager, config *config.Config, plonkDir string, packageName string) error {
+	// Check if package exists in configuration
+	var packageFound bool
+	var installedWithConfig bool
+
+	// Check Homebrew packages
+	for _, pkg := range config.Homebrew.Brews {
+		if pkg.Name == packageName {
+			packageFound = true
+			if !homebrewMgr.IsAvailable() {
+				return WrapPackageManagerError("homebrew", fmt.Errorf("command not found"))
+			}
+			if shouldInstallPackage(pkg.Name, homebrewMgr.IsInstalled(pkg.Name)) {
+				fmt.Printf("Installing Homebrew package: %s\n", pkg.Name)
+				if err := homebrewMgr.Install(pkg.Name); err != nil {
+					return WrapInstallError(pkg.Name, err)
+				}
+				if getPackageConfig(pkg) != "" {
+					installedWithConfig = true
+				}
+			} else {
+				fmt.Printf("Homebrew package %s already installed\n", pkg.Name)
+			}
+			break
+		}
+	}
+
+	// Check Homebrew casks if not found in brews
+	if !packageFound {
+		for _, pkg := range config.Homebrew.Casks {
+			if pkg.Name == packageName {
+				packageFound = true
+				if !homebrewMgr.IsAvailable() {
+					return WrapPackageManagerError("homebrew", fmt.Errorf("command not found"))
+				}
+				if shouldInstallPackage(pkg.Name, homebrewMgr.IsInstalled(pkg.Name)) {
+					fmt.Printf("Installing Homebrew cask: %s\n", pkg.Name)
+					if err := homebrewMgr.InstallCask(pkg.Name); err != nil {
+						return WrapInstallError(pkg.Name, err)
+					}
+					if getPackageConfig(pkg) != "" {
+						installedWithConfig = true
+					}
+				} else {
+					fmt.Printf("Homebrew cask %s already installed\n", pkg.Name)
+				}
+				break
+			}
+		}
+	}
+
+	// Check ASDF tools if not found in Homebrew
+	if !packageFound {
+		for _, tool := range config.ASDF {
+			if tool.Name == packageName {
+				packageFound = true
+				if !asdfMgr.IsAvailable() {
+					return WrapPackageManagerError("asdf", fmt.Errorf("command not found"))
+				}
+				if shouldInstallPackage(tool.Name, asdfMgr.IsVersionInstalled(tool.Name, tool.Version)) {
+					displayName := getPackageDisplayName(tool)
+					fmt.Printf("Installing ASDF tool: %s\n", displayName)
+					if err := asdfMgr.InstallVersion(tool.Name, tool.Version); err != nil {
+						return WrapInstallError(displayName, err)
+					}
+					if getPackageConfig(tool) != "" {
+						installedWithConfig = true
+					}
+				} else {
+					fmt.Printf("ASDF tool %s already installed\n", getPackageDisplayName(tool))
+				}
+				break
+			}
+		}
+	}
+
+	// Check NPM packages if not found in other managers
+	if !packageFound {
+		for _, pkg := range config.NPM {
+			if pkg.Name == packageName {
+				packageFound = true
+				if !npmMgr.IsAvailable() {
+					return WrapPackageManagerError("npm", fmt.Errorf("command not found"))
+				}
+				packageDisplayName := getPackageDisplayName(pkg)
+				if shouldInstallPackage(packageDisplayName, npmMgr.IsInstalled(packageDisplayName)) {
+					fmt.Printf("Installing NPM package: %s\n", packageDisplayName)
+					if err := npmMgr.Install(packageDisplayName); err != nil {
+						return WrapInstallError(packageDisplayName, err)
+					}
+					if getPackageConfig(pkg) != "" {
+						installedWithConfig = true
+					}
+				} else {
+					fmt.Printf("NPM package %s already installed\n", packageDisplayName)
+				}
+				break
+			}
+		}
+	}
+
+	if !packageFound {
+		return fmt.Errorf("package '%s' not found in configuration", packageName)
+	}
+
+	// Apply configuration if package has one and was newly installed
+	if installedWithConfig {
+		fmt.Printf("Applying configuration for %s...\n", packageName)
+		if err := applyPackageConfiguration(plonkDir, config, packageName); err != nil {
+			fmt.Printf("Warning: failed to apply configuration for %s: %v\n", packageName, err)
+		}
+	}
+
+	fmt.Printf("Successfully installed package: %s\n", packageName)
 	return nil
 }
 
