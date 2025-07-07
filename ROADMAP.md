@@ -21,7 +21,6 @@ Features and concepts being considered:
 - **Package manager extensions** - Mac App Store (mas), additional Linux package managers
 - **Plugin system** - Custom package manager support
 - **Test isolation mode** - Sandboxed testing environment using separate directories and mocked package managers
-- **Versioning support/integration** - Version command, release integration, and version-aware features
 - **Watch mode** - Auto-apply changes when config files change
 
 ### Documentation
@@ -64,6 +63,7 @@ Major features completed (see [CHANGELOG.md](CHANGELOG.md) for details):
 - ✅ Dry-run and preview capabilities
 - ✅ TDD development infrastructure
 - ✅ Mage migration - Go-native task runner with improved cross-platform support
+- ✅ Versioning support/integration - Professional version management with semantic versioning, automated changelog updates, and release workflow
 
 ## Parked
 

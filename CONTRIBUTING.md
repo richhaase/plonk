@@ -97,6 +97,30 @@ which plonk
 ### Documentation
 - Add inline comments for complex logic
 - Update relevant documentation files
+
+## Release Management
+
+The project uses semantic versioning with automated release workflows:
+
+```bash
+# Prepare for release (analyze commits and suggest versions)
+mage preparerelease
+
+# Quick version suggestions
+mage nextpatch    # Bug fixes (v1.0.1)
+mage nextminor    # New features (v1.1.0)  
+mage nextmajor    # Breaking changes (v2.0.0)
+
+# Create a release (updates changelog, tags, commits)
+mage release v1.0.0
+```
+
+**Release Guidelines:**
+- Follow [semantic versioning](https://semver.org/) (MAJOR.MINOR.PATCH)
+- Update CHANGELOG.md [Unreleased] section before release
+- Use `mage preparerelease` to analyze commit history
+- Test releases with pre-release versions (e.g., `v1.0.0-beta.1`)
+- All releases automatically update changelog and create git tags
 - Include examples in function documentation
 - Keep CHANGELOG.md updated for significant changes
 

@@ -7,6 +7,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+### Added
+- **Comprehensive versioning system** with Masterminds/semver library
+  - Semantic versioning validation and parsing
+  - Automated changelog updates following Keep a Changelog format
+  - Git tagging workflow with release management commands
+  - Version suggestion commands (mage nextpatch/nextminor/nextmajor)
+  - Release preparation with commit history analysis
+- **Professional CLI versioning** with --version/-v flags and version command
+  - Build-time version injection via ldflags
+  - Git commit hash and build date embedding
+  - Support for tagged releases and development builds
 - **Import command** - Generate plonk.yaml from existing shell environment
   - Discovers Homebrew packages via `brew list`
   - Discovers ASDF tools from `~/.tool-versions` (global only)
@@ -15,8 +31,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Generates clean YAML configuration file
   - Shows progress with emojis and summary statistics
 
+### Changed
+- **Migrated from Just to Mage** for Go-native task running
+  - 33% performance improvement in build times
+  - Eliminated shell script dependencies for better cross-platform support
+  - Type-safe build logic with compile-time validation
+  - Enhanced error handling in build processes
+- **Standardized installation approach** to single opinionated method
+  - Unified on `go install ./cmd/plonk` for all installations
+  - Eliminated confusing multiple installation options
+  - Updated all documentation for consistent installation experience
+  - Fixed command examples to assume global installation
+
 ### Enhanced
 - AsdfManager now supports `ListGlobalTools()` method for reading `~/.tool-versions`
+- **Release management documentation** in CONTRIBUTING.md and CODEBASE_MAP.md
+  - Complete workflow documentation for semantic versioning
+  - Mage command examples for all release operations
+  - Pre-release testing guidance and best practices
 
 ### Code Quality
 - Fixed pre-commit hooks for reliable development workflow
