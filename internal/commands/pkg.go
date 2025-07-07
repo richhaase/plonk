@@ -307,6 +307,7 @@ func runPkgInfo(cmd *cobra.Command, args []string) error {
 
 func runPkgUpdate(cmd *cobra.Command, args []string) error {
 	executor := managers.NewRealCommandExecutor()
+	dryRun := IsDryRun(cmd)
 
 	// Initialize all package managers
 	allManagers := map[string]managers.ExtendedPackageManager{
@@ -351,29 +352,53 @@ func runPkgUpdate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	if dryRun {
+		fmt.Printf("Dry-run mode: Showing what would be updated\n\n")
+	}
+
 	// Update packages for each manager
 	for _, entry := range managersToUpdate {
 		if !entry.manager.IsAvailable() {
-			fmt.Printf("❌ %s is not available\n", strings.Title(entry.name))
+			if dryRun {
+				fmt.Printf("❌ %s is not available (would skip)\n", strings.Title(entry.name))
+			} else {
+				fmt.Printf("❌ %s is not available\n", strings.Title(entry.name))
+			}
 			continue
 		}
 
 		var err error
 		if packageName != "" {
 			// Update specific package
-			fmt.Printf("🔄 Updating %s in %s...\n", packageName, strings.Title(entry.name))
-			err = entry.manager.Update(packageName)
+			if dryRun {
+				fmt.Printf("🔄 Would update %s in %s\n", packageName, strings.Title(entry.name))
+			} else {
+				fmt.Printf("🔄 Updating %s in %s...\n", packageName, strings.Title(entry.name))
+				err = entry.manager.Update(packageName)
+			}
 		} else {
 			// Update all packages
-			fmt.Printf("🔄 Updating all packages in %s...\n", strings.Title(entry.name))
-			err = entry.manager.UpdateAll()
+			if dryRun {
+				fmt.Printf("🔄 Would update all packages in %s\n", strings.Title(entry.name))
+			} else {
+				fmt.Printf("🔄 Updating all packages in %s...\n", strings.Title(entry.name))
+				err = entry.manager.UpdateAll()
+			}
 		}
 
-		if err != nil {
-			fmt.Printf("⚠️  Error updating %s: %v\n", strings.Title(entry.name), err)
+		if dryRun {
+			fmt.Printf("✅ %s update preview completed\n", strings.Title(entry.name))
 		} else {
-			fmt.Printf("✅ Successfully updated %s\n", strings.Title(entry.name))
+			if err != nil {
+				fmt.Printf("⚠️  Error updating %s: %v\n", strings.Title(entry.name), err)
+			} else {
+				fmt.Printf("✅ Successfully updated %s\n", strings.Title(entry.name))
+			}
 		}
+	}
+
+	if dryRun {
+		fmt.Printf("\nDry-run complete. No changes were made.\n")
 	}
 
 	return nil
