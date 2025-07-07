@@ -72,3 +72,36 @@ func (h *HomebrewManager) IsInstalled(packageName string) bool {
 func (h *HomebrewManager) InstallCask(caskName string) error {
 	return h.runner.RunCommand("install", "--cask", caskName)
 }
+
+// Search searches for packages via Homebrew.
+func (h *HomebrewManager) Search(query string) ([]string, error) {
+	output, err := h.runner.RunCommandWithOutput("search", query)
+	if err != nil {
+		return nil, err
+	}
+
+	output = strings.TrimSpace(output)
+	if output == "" {
+		return []string{}, nil
+	}
+
+	lines := strings.Split(output, "\n")
+	result := make([]string, 0, len(lines))
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" && !strings.HasPrefix(line, "==>") {
+			result = append(result, line)
+		}
+	}
+
+	return result, nil
+}
+
+// Info gets information about a package via Homebrew.
+func (h *HomebrewManager) Info(packageName string) (string, error) {
+	output, err := h.runner.RunCommandWithOutput("info", packageName)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(output), nil
+}

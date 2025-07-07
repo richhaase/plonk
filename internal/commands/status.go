@@ -9,8 +9,9 @@ import (
 )
 
 var statusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "Show status of all package managers and configuration drift",
+	Use:     "status",
+	Aliases: []string{"check"},
+	Short:   "Show status of all package managers and configuration drift",
 	Long: `Display the availability and installed packages for shell environment management:
 - Homebrew (primary package installation)
 - ASDF (programming language tools and versions)

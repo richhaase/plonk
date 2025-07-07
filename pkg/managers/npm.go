@@ -84,3 +84,40 @@ func (n *NpmManager) ListInstalled() ([]string, error) {
 
 	return result, nil
 }
+
+// Search searches for packages via NPM.
+func (n *NpmManager) Search(query string) ([]string, error) {
+	output, err := n.runner.RunCommandWithOutput("search", query, "--parseable")
+	if err != nil {
+		return nil, err
+	}
+
+	output = strings.TrimSpace(output)
+	if output == "" {
+		return []string{}, nil
+	}
+
+	lines := strings.Split(output, "\n")
+	result := make([]string, 0, len(lines))
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			// NPM search output format: "name\tdescription\tauthor\tdate\tversion\tkeywords"
+			parts := strings.Split(line, "\t")
+			if len(parts) > 0 {
+				result = append(result, parts[0])
+			}
+		}
+	}
+
+	return result, nil
+}
+
+// Info gets information about a package via NPM.
+func (n *NpmManager) Info(packageName string) (string, error) {
+	output, err := n.runner.RunCommandWithOutput("info", packageName)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(output), nil
+}

@@ -189,3 +189,51 @@ func (a *AsdfManager) IsVersionInstalled(toolName, version string) bool {
 func (a *AsdfManager) InstallVersion(toolName, version string) error {
 	return a.runner.RunCommand("install", toolName, version)
 }
+
+// Search searches for available ASDF plugins.
+func (a *AsdfManager) Search(query string) ([]string, error) {
+	output, err := a.runner.RunCommandWithOutput("plugin", "list", "all")
+	if err != nil {
+		return nil, err
+	}
+
+	output = strings.TrimSpace(output)
+	if output == "" {
+		return []string{}, nil
+	}
+
+	lines := strings.Split(output, "\n")
+	result := make([]string, 0)
+	queryLower := strings.ToLower(query)
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			// ASDF plugin list format: "plugin-name    repository-url"
+			parts := strings.Fields(line)
+			if len(parts) > 0 {
+				pluginName := parts[0]
+				if strings.Contains(strings.ToLower(pluginName), queryLower) {
+					result = append(result, pluginName)
+				}
+			}
+		}
+	}
+
+	return result, nil
+}
+
+// Info gets information about a plugin via ASDF.
+func (a *AsdfManager) Info(pluginName string) (string, error) {
+	// For ASDF, we can show available versions for a plugin
+	output, err := a.runner.RunCommandWithOutput("list", "all", pluginName)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(output), nil
+}
+
+// UpdateAll updates all ASDF plugins.
+func (a *AsdfManager) UpdateAll() error {
+	return a.runner.RunCommand("plugin", "update", "--all")
+}

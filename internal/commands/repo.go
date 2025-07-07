@@ -10,8 +10,9 @@ import (
 
 // repoCmd represents the repo command (convenience command)
 var repoCmd = &cobra.Command{
-	Use:   "repo <repository>",
-	Short: "Complete setup: clone/pull repository, install packages, and apply configurations",
+	Use:     "repo <repository>",
+	Aliases: []string{"sync"},
+	Short:   "Complete setup: clone/pull repository, install packages, and apply configurations",
 	Long: `Convenience command that performs the complete setup process:
 
 1. Clone repository (or pull if already exists)

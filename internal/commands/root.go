@@ -24,25 +24,12 @@ It helps you manage package installations and environment switching using:
 - ASDF for programming language tools and versions
 - NPM for packages not available via Homebrew
 
-Convenience usage:
-  plonk <repository>    # Complete setup from repository (clone + install + apply)`,
-	RunE: rootCmdRun,
-	Args: cobra.MaximumNArgs(1),
+Use the 'repo' command for complete setup from a repository.`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 func Execute() error {
 	return rootCmd.Execute()
-}
-
-func rootCmdRun(cmd *cobra.Command, args []string) error {
-	if len(args) == 0 {
-		// No arguments, show help
-		return cmd.Help()
-	}
-
-	// Single argument should be a repository URL for convenience setup
-	return runRepo(args)
 }
 
 // IsDryRun checks if dry-run mode is enabled (either global or local flag)

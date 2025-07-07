@@ -23,6 +23,16 @@ type PackageManager interface {
 	ListInstalled() ([]string, error)
 }
 
+// ExtendedPackageManager defines additional operations for package managers that support them.
+type ExtendedPackageManager interface {
+	PackageManager
+	Search(query string) ([]string, error)
+	Info(packageName string) (string, error)
+	Update(packageName string) error
+	UpdateAll() error
+	IsInstalled(packageName string) bool
+}
+
 // PackageManagerInfo holds a package manager and its display name.
 type PackageManagerInfo struct {
 	Name    string
