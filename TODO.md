@@ -6,9 +6,6 @@ Active work items for current development session. Maintained by AI agents.
 
 ## Pending
 
-### CLI Interface Improvements (High Priority)
-- **Add global --dry-run flag** for all applicable commands
-
 ### CLI Interface Improvements (Medium Priority)  
 - **Implement command aliases** (ls→pkg list, sync→repo, check→status)
 - **Enhance pkg subcommands** with search/info/update functionality
@@ -22,6 +19,7 @@ Active work items for current development session. Maintained by AI agents.
 - **Validate plonk installation** ✅ - check which plonk and plonk --help
 - **Research plonk CLI interface design** ✅ - provided comprehensive suggestions
 - **Standardize argument patterns** ✅ - install and apply commands now accept optional [package] argument
+- **Add global --dry-run flag** ✅ - comprehensive implementation for all applicable commands (install, apply, setup, repo, restore, clone, pull, backup, import)
 
 ## Notes
 
