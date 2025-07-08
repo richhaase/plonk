@@ -110,7 +110,7 @@ func runDotApply(cmd *cobra.Command, args []string) error {
 // processDotfile handles the deployment of a single dotfile
 func processDotfile(configDir, homeDir, source, destination string, dryRun, backup bool) (DotfileAction, error) {
 	// Resolve paths
-	sourcePath := filepath.Join(configDir, "dotfiles", source)
+	sourcePath := filepath.Join(configDir, source)
 	destPath := expandPath(destination, homeDir)
 
 	action := DotfileAction{

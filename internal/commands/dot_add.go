@@ -91,14 +91,8 @@ func runDotAdd(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Create dotfiles directory if it doesn't exist
-	dotfilesDir := filepath.Join(configDir, "dotfiles")
-	if err := os.MkdirAll(dotfilesDir, 0755); err != nil {
-		return fmt.Errorf("failed to create dotfiles directory: %w", err)
-	}
-
-	// Copy dotfile to plonk dotfiles directory
-	sourcePath := filepath.Join(dotfilesDir, source)
+	// Copy dotfile to plonk config directory
+	sourcePath := filepath.Join(configDir, source)
 	if err := copyDotfile(resolvedPath, sourcePath); err != nil {
 		return fmt.Errorf("failed to copy dotfile: %w", err)
 	}
@@ -177,13 +171,7 @@ func targetToSource(target string) string {
 		target = target[1:]
 	}
 	
-	// Handle .config/ directory
-	if len(target) > 7 && target[:7] == "config/" {
-		return target
-	}
-	
-	// Default: add dot_ prefix for dotfiles
-	return "dot_" + target
+	return target
 }
 
 // copyDotfile copies a dotfile (file or directory) to the destination
@@ -233,7 +221,7 @@ func (d DotfileAddOutput) TableOutput() string {
 	output += fmt.Sprintf("   Source: %s\n", d.Source)
 	output += fmt.Sprintf("   Destination: %s\n", d.Destination)
 	output += fmt.Sprintf("   Original: %s\n", d.Path)
-	output += "\nThe dotfile has been copied to your plonk dotfiles directory and added to plonk.yaml\n"
+	output += "\nThe dotfile has been copied to your plonk config directory and added to plonk.yaml\n"
 	return output
 }
 
