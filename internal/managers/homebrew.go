@@ -42,15 +42,33 @@ func (h *HomebrewManager) ListInstalled(ctx context.Context) ([]string, error) {
 	cmd := exec.CommandContext(ctx, "brew", "list")
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, err
+		// Check if this is a real error vs expected conditions
+		if _, ok := err.(*exec.ExitError); ok {
+			// For brew list, any non-zero exit usually indicates a real problem
+			// (brew list returns exit 0 even with no packages installed)
+			return nil, fmt.Errorf("failed to list homebrew packages: %w", err)
+		}
+		// Non-exit errors (e.g., command not found, context cancellation)
+		return nil, fmt.Errorf("failed to execute brew list: %w", err)
 	}
 
 	result := strings.TrimSpace(string(output))
 	if result == "" {
+		// No packages installed - this is normal, not an error
 		return []string{}, nil
 	}
 
-	return strings.Split(result, "\n"), nil
+	// Parse output into package list
+	packages := strings.Split(result, "\n")
+	// Filter out any empty strings that might result from parsing
+	var filteredPackages []string
+	for _, pkg := range packages {
+		if trimmed := strings.TrimSpace(pkg); trimmed != "" {
+			filteredPackages = append(filteredPackages, trimmed)
+		}
+	}
+
+	return filteredPackages, nil
 }
 
 // Install installs a Homebrew package.

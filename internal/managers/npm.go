@@ -42,14 +42,28 @@ func (n *NpmManager) ListInstalled(ctx context.Context) ([]string, error) {
 	cmd := exec.CommandContext(ctx, "npm", "list", "-g", "--depth=0", "--parseable")
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, err
+		// Check if this is a real error vs expected conditions
+		if exitError, ok := err.(*exec.ExitError); ok {
+			// npm list can return non-zero exit codes even when working correctly
+			// (e.g., when there are peer dependency warnings)
+			// Only treat it as an error if the exit code indicates a real failure
+			if exitError.ExitCode() > 1 {
+				return nil, fmt.Errorf("failed to list npm packages: %w", err)
+			}
+			// Exit code 1 might just be warnings - continue with parsing
+		} else {
+			// Non-exit errors (e.g., command not found, context cancellation)
+			return nil, fmt.Errorf("failed to execute npm list: %w", err)
+		}
 	}
 
 	result := strings.TrimSpace(string(output))
 	if result == "" {
+		// No packages installed - this is normal, not an error
 		return []string{}, nil
 	}
 
+	// Parse output to extract package names
 	var packages []string
 	lines := strings.Split(result, "\n")
 	for _, line := range lines {
