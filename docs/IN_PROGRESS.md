@@ -1,24 +1,94 @@
 # Plonk Code Review & Improvement Plan
 
-## **Strengths: Clean Architecture & Separation of Concerns**
+## **✅ Recent Achievements: Clean Architecture & Separation of Concerns**
 
-The code demonstrates excellent separation into the 4 core buckets:
+The codebase now demonstrates excellent separation into 5 core buckets:
 
 1. **Configuration** (`internal/config/`) - Clean YAML parsing with validation
 2. **Package Management** (`internal/managers/`) - Pluggable interface design
-3. **Dotfile Management** (`internal/state/dotfile_provider.go`) - Well-abstracted file operations
-4. **State Management** (`internal/state/`) - Unified reconciliation pattern
+3. **Dotfile Management** (`internal/dotfiles/`) - ✅ **NEW**: File operations and path management
+4. **State Management** (`internal/state/`) - Unified reconciliation pattern (focused on reconciliation only)
+5. **Commands** (`internal/commands/`) - CLI interface and orchestration
 
-## **Key Architectural Improvements Needed**
+## **✅ Recently Completed Improvements**
 
-### 1. **Configuration Loading - Interface Segregation**
-**Current Issue**: `yaml_config.go:241` - Config struct directly implements provider interfaces
+### 1. **✅ Dotfile Operations Extraction**
+- **COMPLETED**: Created separate `internal/dotfiles/` package
+- **COMPLETED**: Moved file operations from state to dedicated package
+- **COMPLETED**: Better separation between state reconciliation and file operations
+- **COMPLETED**: Comprehensive file operations with backup support
+
+### 2. **✅ Directory Expansion**
+- **COMPLETED**: Moved to `dotfiles.Manager.ExpandDirectory`
+- **COMPLETED**: Better error handling and path resolution
+- **COMPLETED**: Consistent path handling utilities
+
+### 3. **✅ Configuration Path Resolution**
+- **COMPLETED**: Exposed `config.TargetToSource` for public use
+- **COMPLETED**: More consistent path conversion logic
+
+---
+
+# **🎯 Prioritized Improvement List**
+
+## **🔥 High Priority - Critical for Production Readiness**
+
+### 1. **Add Tests for Dotfiles Package**
+- **Impact**: Critical for reliability
+- **Effort**: Medium
+- **Files**: `internal/dotfiles/operations_test.go`, `internal/dotfiles/fileops_test.go`
+- **Why**: New package has zero test coverage, high risk for regressions
+- **Details**: 
+  - Unit tests for `Manager` operations (path resolution, directory expansion)
+  - Unit tests for `FileOperations` (copying, backup, validation)
+  - Integration tests for dotfile workflows
+
+### 2. **Implement Proper Error Types**
+- **Impact**: High for debugging and user experience
+- **Effort**: Medium
+- **Files**: `internal/errors/types.go`, update all packages
+- **Why**: Currently mixed error handling makes debugging difficult
+- **Implementation**:
 ```go
-// GetDotfileTargets returns dotfiles with their target paths.
-func (c *Config) GetDotfileTargets() map[string]string {
+type PlonkError struct {
+    Op      string // Operation
+    Domain  string // package, dotfile, etc.
+    Item    string // specific item name
+    Err     error  // underlying error
+}
+
+func (e *PlonkError) Error() string {
+    return fmt.Sprintf("plonk %s %s [%s]: %v", e.Op, e.Domain, e.Item, e.Err)
+}
 ```
 
-**Improvement**: Create separate config reader/writer interfaces:
+### 3. **Add Context Support**
+- **Impact**: High for cancellation and timeouts
+- **Effort**: High
+- **Files**: All manager interfaces, file operations
+- **Why**: Long-running operations (package installs, file copying) need cancellation
+- **Implementation**:
+```go
+func (h *HomebrewManager) Install(ctx context.Context, name string) error {
+    cmd := exec.CommandContext(ctx, "brew", "install", name)
+    // ...
+}
+
+func (f *FileOperations) CopyFile(ctx context.Context, source, destination string, options CopyOptions) error {
+    // Support cancellation during long operations
+    // ...
+}
+```
+
+## **⚡ Medium Priority - Significant Quality Improvements**
+
+### 4. **Refactor Configuration Loading Interfaces**
+- **Impact**: Medium for maintainability
+- **Effort**: Medium
+- **Files**: `internal/config/interfaces.go`, update providers
+- **Why**: Current tight coupling between config struct and provider interfaces
+- **Current Issue**: `yaml_config.go:241` - Config struct directly implements provider interfaces
+- **Improvement**: Create separate config reader/writer interfaces:
 ```go
 type ConfigReader interface {
     LoadConfig(path string) (*Config, error)
@@ -33,34 +103,12 @@ type DotfileConfigReader interface {
 }
 ```
 
-### 2. **Package Manager Interface - Error Handling**
-**Current Issue**: `managers/homebrew.go:62` - Inconsistent error handling patterns
-```go
-func (h *HomebrewManager) IsInstalled(name string) bool {
-    cmd := exec.Command("brew", "list", name)
-    err := cmd.Run()
-    return err == nil  // Loses error context
-}
-```
-
-**Improvement**: Use proper error propagation:
-```go
-func (h *HomebrewManager) IsInstalled(name string) (bool, error) {
-    cmd := exec.Command("brew", "list", name)
-    if err := cmd.Run(); err != nil {
-        if exitError, ok := err.(*exec.ExitError); ok {
-            return false, nil // Package not installed
-        }
-        return false, fmt.Errorf("failed to check package %s: %w", name, err)
-    }
-    return true, nil
-}
-```
-
-### 3. **State Provider Pattern - Generic Implementation**
-**Current Issue**: Code duplication between `package_provider.go` and `dotfile_provider.go`
-
-**Improvement**: Extract common provider logic:
+### 5. **Extract Common Provider Logic (Generics)**
+- **Impact**: Medium for code reuse
+- **Effort**: High
+- **Files**: `internal/state/base_provider.go`, refactor existing providers
+- **Why**: Significant code duplication between package and dotfile providers
+- **Implementation**:
 ```go
 type BaseProvider[T ConfigItem, U ActualItem] struct {
     domain string
@@ -81,49 +129,64 @@ func (b *BaseProvider[T, U]) GetConfiguredItems() ([]ConfigItem, error) {
 }
 ```
 
-### 4. **Error Handling - Consistent Patterns**
-**Current Issue**: Mixed error handling approaches throughout codebase
-
-**Improvement**: Standardize error types:
+### 6. **Improve Package Manager Error Handling**
+- **Impact**: Medium for reliability
+- **Effort**: Low
+- **Files**: `internal/managers/homebrew.go`, `internal/managers/npm.go`
+- **Why**: Current `IsInstalled()` loses error context, makes debugging difficult
+- **Current Issue**: `managers/homebrew.go:62` - Inconsistent error handling patterns
 ```go
-type PlonkError struct {
-    Op      string // Operation
-    Domain  string // package, dotfile, etc.
-    Item    string // specific item name
-    Err     error  // underlying error
+func (h *HomebrewManager) IsInstalled(name string) bool {
+    cmd := exec.Command("brew", "list", name)
+    err := cmd.Run()
+    return err == nil  // Loses error context
 }
-
-func (e *PlonkError) Error() string {
-    return fmt.Sprintf("plonk %s %s [%s]: %v", e.Op, e.Domain, e.Item, e.Err)
+```
+- **Improvement**: Use proper error propagation:
+```go
+func (h *HomebrewManager) IsInstalled(name string) (bool, error) {
+    cmd := exec.Command("brew", "list", name)
+    if err := cmd.Run(); err != nil {
+        if exitError, ok := err.(*exec.ExitError); ok {
+            return false, nil // Package not installed
+        }
+        return false, fmt.Errorf("failed to check package %s: %w", name, err)
+    }
+    return true, nil
 }
 ```
 
-### 5. **Individual Item Focus - Command Structure**
-**Current Issue**: Commands handle multiple items but core abstractions are per-item
+### 7. **Enhance File Operations**
+- **Impact**: Medium for robustness
+- **Effort**: Medium
+- **Files**: `internal/dotfiles/fileops.go`
+- **Features**: Atomic operations, progress reporting, permission handling
+- **Current**: Implementation is solid but could benefit from:
+  - Progress reporting for large operations
+  - Atomic operations (temp file + rename)
+  - Better permission handling
+  - File integrity validation
 
-**Improvement**: Enforce single-item operations in core:
-```go
-type ItemManager interface {
-    Add(item string) error
-    Remove(item string) error
-    Apply(item string) error
-    Status(item string) (ItemState, error)
-}
-```
+## **🎯 Low Priority - Nice-to-Have Enhancements**
 
-## **Go Idioms & Best Practices**
+### 8. **Add Comprehensive Logging**
+- **Impact**: Low for debugging
+- **Effort**: Medium
+- **Files**: All packages
+- **Why**: Currently limited visibility into operations
 
-### 1. **Context Propagation**
-Add context support throughout:
-```go
-func (h *HomebrewManager) Install(ctx context.Context, name string) error {
-    cmd := exec.CommandContext(ctx, "brew", "install", name)
-    // ...
-}
-```
+### 9. **Implement Metrics Collection**
+- **Impact**: Low for observability
+- **Effort**: Medium
+- **Files**: New `internal/metrics/` package
+- **Why**: Would help with performance monitoring and usage analytics
 
-### 2. **Functional Options Pattern**
-For provider configuration:
+### 10. **Add Functional Options Pattern**
+- **Impact**: Low for API cleanliness
+- **Effort**: Medium
+- **Files**: Provider constructors
+- **Why**: Would make provider configuration more flexible
+- **Implementation**:
 ```go
 type ProviderOption func(*DotfileProvider)
 
@@ -142,8 +205,12 @@ func NewDotfileProvider(opts ...ProviderOption) *DotfileProvider {
 }
 ```
 
-### 3. **Proper Interface Definitions**
-Move interfaces to separate files:
+### 11. **Move Interfaces to Separate Files**
+- **Impact**: Low for code organization
+- **Effort**: Low
+- **Files**: `internal/interfaces/providers.go`, etc.
+- **Why**: Better organization, easier to find interface definitions
+- **Implementation**:
 ```go
 // internal/interfaces/providers.go
 type Provider interface {
@@ -154,12 +221,14 @@ type Provider interface {
 }
 ```
 
-## **Specific Improvements**
-
-### 1. **Config Path Resolution**
-**File**: `config/yaml_config.go:289`
+### 12. **Improve Config Path Resolution**
+- **Impact**: Low for code cleanliness
+- **Effort**: Low
+- **Files**: `internal/config/yaml_config.go`
+- **Why**: Use `strings.TrimPrefix` for clarity
+- **Current**: `config/yaml_config.go:289`
 ```go
-func targetToSource(target string) string {
+func TargetToSource(target string) string {
     // Remove ~/ prefix if present
     if len(target) > 2 && target[:2] == "~/" {
         target = target[2:]
@@ -171,27 +240,95 @@ func targetToSource(target string) string {
 }
 ```
 
-### 2. **Directory Expansion Logic**
-**File**: `state/dotfile_provider.go:177`
-The `expandConfigDirectory` function is solid but could benefit from:
-- Early returns for empty directories
-- Better error context
-- Consistent path handling utilities
+### 13. **Add Concurrent Provider Reconciliation**
+- **Impact**: Low for performance
+- **Effort**: High
+- **Files**: `internal/state/reconciler.go`
+- **Why**: Would speed up status operations with multiple providers
+- **Current**: `state/reconciler.go:96` - The reconciliation logic is excellent but could use:
+  - Concurrent provider reconciliation
+  - Better error aggregation
+  - Metrics collection
 
-### 3. **State Reconciliation**
-**File**: `state/reconciler.go:96`
-The reconciliation logic is excellent but could use:
-- Concurrent provider reconciliation
-- Better error aggregation
-- Metrics collection
+---
 
-## **Recommendations for Next Steps**
+## **📊 Effort vs Impact Matrix**
 
-1. **Refactor configuration loading** to use proper interfaces
-2. **Add context support** throughout the codebase
-3. **Implement proper error types** for better debugging
-4. **Extract common provider logic** into generic base types
-5. **Add comprehensive logging** with structured output
-6. **Implement metrics collection** for operations
+| Priority | Item | Impact | Effort | Ratio |
+|----------|------|--------|--------|-------|
+| **1** | Tests for dotfiles package | Critical | Medium | 🔥 |
+| **2** | Proper error types | High | Medium | ⚡ |
+| **3** | Context support | High | High | ⚡ |
+| **4** | Config interfaces | Medium | Medium | 🎯 |
+| **5** | Provider generics | Medium | High | 🎯 |
+| **6** | Package manager errors | Medium | Low | ⚡ |
+| **7** | File operations enhancement | Medium | Medium | 🎯 |
+| **8** | Logging | Low | Medium | 💤 |
+| **9** | Metrics | Low | Medium | 💤 |
+| **10** | Functional options | Low | Medium | 💤 |
+| **11** | Interface organization | Low | Low | 💤 |
+| **12** | Path resolution cleanup | Low | Low | 💤 |
+| **13** | Concurrent reconciliation | Low | High | 💤 |
 
-The core architecture is sound with excellent separation of concerns. The main improvements focus on Go idioms, error handling consistency, and reducing code duplication while maintaining the strong individual item focus.
+## **🎯 Recommended Implementation Order**
+
+### **Phase 1: Foundation (High Priority)**
+```bash
+# Week 1-2: Critical reliability improvements
+1. Add tests for dotfiles package
+2. Implement proper error types
+3. Add context support to core operations
+```
+
+### **Phase 2: Quality (Medium Priority)**
+```bash
+# Week 3-4: Architectural improvements
+4. Refactor configuration loading interfaces
+5. Improve package manager error handling
+6. Enhance file operations (atomic, progress)
+```
+
+### **Phase 3: Optimization (Selected Low Priority)**
+```bash
+# Week 5-6: Performance and maintainability
+7. Extract common provider logic (if time permits)
+8. Add comprehensive logging
+9. Improve config path resolution
+```
+
+### **Phase 4: Polish (Remaining Low Priority)**
+```bash
+# Future: Nice-to-have enhancements
+10. Implement metrics collection
+11. Add functional options pattern
+12. Move interfaces to separate files
+13. Add concurrent provider reconciliation
+```
+
+## **🚀 Quick Wins (Low Effort, Good Impact)**
+
+1. **Package manager error handling** - Easy fix, immediate debugging benefit
+2. **Config path resolution** - Simple refactor, cleaner code
+3. **Interface organization** - Minimal effort, better code structure
+
+## **💡 Implementation Strategy**
+
+- **Start with Phase 1** - These are blockers for production confidence
+- **Phase 2 items can be done in parallel** - Independent improvements
+- **Phase 3+ are ongoing** - Can be tackled as time permits
+- **Focus on quick wins** when time is limited between major features
+
+---
+
+## **🎯 Architecture Assessment**
+
+The core architecture is now **excellent** with true separation of concerns achieved. The recent dotfile package extraction was a significant improvement that:
+
+- ✅ Eliminated architectural debt
+- ✅ Improved testability
+- ✅ Enhanced maintainability
+- ✅ Enabled better code reuse
+
+**The main focus should now be on refinement rather than restructuring**, with emphasis on Go idioms, error handling consistency, and comprehensive testing.
+
+This prioritization ensures we address the most critical issues first while maintaining development momentum with achievable goals.
