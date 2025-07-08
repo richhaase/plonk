@@ -24,13 +24,12 @@ type Config struct {
 	Backup   BackupConfig   `yaml:"backup,omitempty"`
 	Dotfiles []string       `yaml:"dotfiles,omitempty" validate:"dive,file_path"`
 	Homebrew HomebrewConfig `yaml:"homebrew,omitempty"`
-	ASDF     []ASDFTool     `yaml:"asdf,omitempty" validate:"dive"`
 	NPM      []NPMPackage   `yaml:"npm,omitempty" validate:"dive"`
 }
 
 // Settings contains global configuration settings.
 type Settings struct {
-	DefaultManager string `yaml:"default_manager" validate:"required,oneof=homebrew asdf npm"`
+	DefaultManager string `yaml:"default_manager" validate:"required,oneof=homebrew npm"`
 }
 
 // BackupConfig contains backup configuration settings.
@@ -51,12 +50,6 @@ type HomebrewPackage struct {
 	Config string `yaml:"config,omitempty" validate:"omitempty,file_path"`
 }
 
-// ASDFTool represents an ASDF tool configuration.
-type ASDFTool struct {
-	Name    string `yaml:"name" validate:"required,package_name"`
-	Version string `yaml:"version" validate:"required"`
-	Config  string `yaml:"config,omitempty" validate:"omitempty,file_path"`
-}
 
 // NPMPackage represents an NPM package configuration.
 type NPMPackage struct {
@@ -193,8 +186,6 @@ func loadConfigFile(path string, config *Config) error {
 	config.Homebrew.Brews = append(config.Homebrew.Brews, tempConfig.Homebrew.Brews...)
 	config.Homebrew.Casks = append(config.Homebrew.Casks, tempConfig.Homebrew.Casks...)
 
-	// Merge ASDF tools.
-	config.ASDF = append(config.ASDF, tempConfig.ASDF...)
 
 	// Merge NPM packages.
 	config.NPM = append(config.NPM, tempConfig.NPM...)

@@ -40,8 +40,7 @@ func (h *HomebrewManager) ListInstalled() ([]string, error) {
 }
 
 // Install installs a Homebrew package.
-func (h *HomebrewManager) Install(name string, version string) error {
-	// For Homebrew, we ignore version as it manages latest versions
+func (h *HomebrewManager) Install(name string) error {
 	cmd := exec.Command("brew", "install", name)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -67,19 +66,3 @@ func (h *HomebrewManager) IsInstalled(name string) bool {
 	return err == nil
 }
 
-// GetVersion gets the version of an installed package.
-func (h *HomebrewManager) GetVersion(name string) (string, error) {
-	cmd := exec.Command("brew", "info", name, "--json")
-	output, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("failed to get version for %s: %w", name, err)
-	}
-	
-	// For simplicity, we'll just return "latest" for Homebrew packages
-	// In a more complete implementation, we'd parse the JSON output
-	if strings.TrimSpace(string(output)) != "" {
-		return "latest", nil
-	}
-	
-	return "", fmt.Errorf("package %s not found", name)
-}

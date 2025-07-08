@@ -59,15 +59,9 @@ func runPkgApply(cmd *cobra.Command, args []string) error {
 		"npm":      managers.NewNpmManager(),
 	}
 
-	// Initialize version checkers
-	checkers := map[string]managers.VersionChecker{
-		"homebrew": &managers.HomebrewVersionChecker{},
-		"npm":      &managers.NpmVersionChecker{},
-	}
-
 	// Initialize config loader and reconciler
 	loader := managers.NewPlonkConfigLoader(configDir)
-	reconciler := managers.NewStateReconciler(loader, packageManagers, checkers)
+	reconciler := managers.NewStateReconciler(loader, packageManagers)
 
 	// Prepare output structure
 	var outputData ApplyOutput
@@ -98,23 +92,18 @@ func runPkgApply(cmd *cobra.Command, args []string) error {
 
 		for _, pkg := range result.Missing {
 			packageResult := PackageApplyResult{
-				Name:            pkg.Name,
-				ExpectedVersion: pkg.ExpectedVersion,
-				Status:          "pending",
+				Name:   pkg.Name,
+				Status: "pending",
 			}
 
 			if dryRun {
 				packageResult.Status = "would-install"
 				if format == OutputTable {
-					versionStr := ""
-					if pkg.ExpectedVersion != "" {
-						versionStr = fmt.Sprintf("@%s", pkg.ExpectedVersion)
-					}
-					fmt.Printf("Would install: %s%s (%s)\n", pkg.Name, versionStr, managerName)
+					fmt.Printf("Would install: %s (%s)\n", pkg.Name, managerName)
 				}
 			} else {
 				// Actually install the package
-				err := manager.Install(pkg.Name, pkg.ExpectedVersion)
+				err := manager.Install(pkg.Name)
 				if err != nil {
 					packageResult.Status = "failed"
 					packageResult.Error = err.Error()
@@ -124,11 +113,7 @@ func runPkgApply(cmd *cobra.Command, args []string) error {
 				} else {
 					packageResult.Status = "installed"
 					if format == OutputTable {
-						versionStr := ""
-						if pkg.ExpectedVersion != "" {
-							versionStr = fmt.Sprintf("@%s", pkg.ExpectedVersion)
-						}
-						fmt.Printf("Installed: %s%s (%s)\n", pkg.Name, versionStr, managerName)
+						fmt.Printf("Installed: %s (%s)\n", pkg.Name, managerName)
 					}
 				}
 			}
@@ -192,10 +177,9 @@ type ManagerApplyResult struct {
 
 // PackageApplyResult represents the result for a single package installation
 type PackageApplyResult struct {
-	Name            string `json:"name" yaml:"name"`
-	ExpectedVersion string `json:"expected_version,omitempty" yaml:"expected_version,omitempty"`
-	Status          string `json:"status" yaml:"status"` // pending, installed, failed, would-install
-	Error           string `json:"error,omitempty" yaml:"error,omitempty"`
+	Name   string `json:"name" yaml:"name"`
+	Status string `json:"status" yaml:"status"` // pending, installed, failed, would-install
+	Error  string `json:"error,omitempty" yaml:"error,omitempty"`
 }
 
 // TableOutput generates human-friendly table output for apply command

@@ -18,17 +18,14 @@ const (
 
 // Package represents a package with its current state
 type Package struct {
-	Name            string
-	Version         string
-	State           PackageState
-	ExpectedVersion string // For missing packages, what version was expected
-	Manager         string // Which manager this package belongs to
+	Name    string
+	State   PackageState
+	Manager string // Which manager this package belongs to
 }
 
 // ConfigPackage represents a package defined in plonk.yaml
 type ConfigPackage struct {
-	Name    string
-	Version string // Empty string means "any version"
+	Name string
 }
 
 // StateResult contains the results of state reconciliation
@@ -43,24 +40,17 @@ type ConfigLoader interface {
 	GetPackagesForManager(managerName string) ([]ConfigPackage, error)
 }
 
-// VersionChecker defines manager-specific version checking logic
-type VersionChecker interface {
-	CheckVersion(configPkg ConfigPackage, installedVersion string) bool
-}
-
 // StateReconciler handles comparing configuration vs installed packages
 type StateReconciler struct {
 	configLoader ConfigLoader
 	managers     map[string]PackageManager
-	checkers     map[string]VersionChecker
 }
 
 // NewStateReconciler creates a new state reconciler
-func NewStateReconciler(configLoader ConfigLoader, managers map[string]PackageManager, checkers map[string]VersionChecker) *StateReconciler {
+func NewStateReconciler(configLoader ConfigLoader, managers map[string]PackageManager) *StateReconciler {
 	return &StateReconciler{
 		configLoader: configLoader,
 		managers:     managers,
-		checkers:     checkers,
 	}
 }
 
@@ -95,11 +85,6 @@ func (s *StateReconciler) ReconcileManager(managerName string) (StateResult, err
 		return StateResult{}, nil
 	}
 	
-	checker, hasChecker := s.checkers[managerName]
-	if !hasChecker {
-		return StateResult{}, fmt.Errorf("version checker for %s not found", managerName)
-	}
-	
 	// Get installed packages
 	installed, err := manager.ListInstalled()
 	if err != nil {
@@ -113,11 +98,11 @@ func (s *StateReconciler) ReconcileManager(managerName string) (StateResult, err
 	}
 	
 	// Perform reconciliation
-	return s.reconcilePackages(managerName, installed, configPackages, checker), nil
+	return s.reconcilePackages(managerName, installed, configPackages), nil
 }
 
 // reconcilePackages performs the actual reconciliation logic
-func (s *StateReconciler) reconcilePackages(managerName string, installed []string, configPackages []ConfigPackage, checker VersionChecker) StateResult {
+func (s *StateReconciler) reconcilePackages(managerName string, installed []string, configPackages []ConfigPackage) StateResult {
 	// Build lookup set for installed packages
 	installedSet := make(map[string]bool)
 	for _, pkg := range installed {
@@ -132,33 +117,18 @@ func (s *StateReconciler) reconcilePackages(managerName string, installed []stri
 		configSet[configPkg.Name] = true
 		
 		if installedSet[configPkg.Name] {
-			// Package is installed, check version
-			if checker.CheckVersion(configPkg, "") { // Pass empty version for now
-				// Package is managed (in config AND correctly installed)
-				result.Managed = append(result.Managed, Package{
-					Name:    configPkg.Name,
-					Version: "",
-					State:   StateManaged,
-					Manager: managerName,
-				})
-			} else {
-				// Package is missing (in config BUT wrong version)
-				result.Missing = append(result.Missing, Package{
-					Name:            configPkg.Name,
-					Version:         "",
-					State:           StateMissing,
-					ExpectedVersion: configPkg.Version,
-					Manager:         managerName,
-				})
-			}
+			// Package is managed (in config AND installed)
+			result.Managed = append(result.Managed, Package{
+				Name:    configPkg.Name,
+				State:   StateManaged,
+				Manager: managerName,
+			})
 		} else {
 			// Package is missing (in config BUT not installed)
 			result.Missing = append(result.Missing, Package{
-				Name:            configPkg.Name,
-				Version:         "",
-				State:           StateMissing,
-				ExpectedVersion: configPkg.Version,
-				Manager:         managerName,
+				Name:    configPkg.Name,
+				State:   StateMissing,
+				Manager: managerName,
 			})
 		}
 	}
@@ -169,7 +139,6 @@ func (s *StateReconciler) reconcilePackages(managerName string, installed []stri
 			// Package is untracked (installed BUT not in config)
 			result.Untracked = append(result.Untracked, Package{
 				Name:    pkg,
-				Version: "",
 				State:   StateUntracked,
 				Manager: managerName,
 			})
@@ -179,23 +148,3 @@ func (s *StateReconciler) reconcilePackages(managerName string, installed []stri
 	return result
 }
 
-// HomebrewVersionChecker implements version checking for Homebrew (version doesn't matter)
-type HomebrewVersionChecker struct{}
-
-func (h *HomebrewVersionChecker) CheckVersion(configPkg ConfigPackage, installedVersion string) bool {
-	// For Homebrew, any installed version is acceptable
-	return true
-}
-
-
-// NpmVersionChecker implements version checking for NPM (exact version required)
-type NpmVersionChecker struct{}
-
-func (n *NpmVersionChecker) CheckVersion(configPkg ConfigPackage, installedVersion string) bool {
-	if configPkg.Version == "" {
-		// Any version acceptable
-		return true
-	}
-	// For NPM, exact version match required
-	return configPkg.Version == installedVersion
-}

@@ -94,10 +94,6 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 			}
 			
 			loader := managers.NewPlonkConfigLoader(configDir)
-			checkers := map[string]managers.VersionChecker{
-				"homebrew": &managers.HomebrewVersionChecker{},
-				"npm":      &managers.NpmVersionChecker{},
-			}
 			// Convert manager display name to config name
 			managerKey := mgr.name
 			switch mgr.name {
@@ -111,7 +107,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 				managerKey: mgr.manager,
 			}
 			
-			reconciler := managers.NewStateReconciler(loader, managerMap, checkers)
+			reconciler := managers.NewStateReconciler(loader, managerMap)
 			result, reconcileErr := reconciler.ReconcileManager(managerKey)
 			if reconcileErr != nil {
 				if format == OutputTable {
@@ -156,10 +152,8 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 			// Use rich package data for state-based filters
 			for i, pkg := range statePackages {
 				managerOutput.Packages[i] = PackageOutput{
-					Name:            pkg.Name,
-					Version:         pkg.Version,
-					State:           stateToString(pkg.State),
-					ExpectedVersion: pkg.ExpectedVersion,
+					Name:  pkg.Name,
+					State: stateToString(pkg.State),
 				}
 			}
 		} else {

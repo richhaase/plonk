@@ -8,8 +8,7 @@ package managers
 type PackageManager interface {
 	IsAvailable() bool
 	ListInstalled() ([]string, error)
-	Install(name string, version string) error
+	Install(name string) error
 	Uninstall(name string) error
 	IsInstalled(name string) bool
-	GetVersion(name string) (string, error)
 }

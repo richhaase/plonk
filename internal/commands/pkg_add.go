@@ -20,7 +20,7 @@ var (
 )
 
 var pkgAddCmd = &cobra.Command{
-	Use:   "add <package> [version]",
+	Use:   "add <package>",
 	Short: "Add a package to plonk configuration and install it",
 	Long: `Add a package to your plonk.yaml configuration and install it immediately.
 
@@ -34,7 +34,7 @@ Examples:
   plonk pkg add htop              # Add htop using default manager
   plonk pkg add git --manager homebrew  # Add git specifically to homebrew
   plonk pkg add lodash --manager npm     # Add lodash to npm global packages`,
-	Args: cobra.RangeArgs(1, 2),
+	Args: cobra.ExactArgs(1),
 	RunE: runPkgAdd,
 }
 
@@ -45,10 +45,6 @@ func init() {
 
 func runPkgAdd(cmd *cobra.Command, args []string) error {
 	packageName := args[0]
-	var version string
-	if len(args) > 1 {
-		version = args[1]
-	}
 
 	// Parse output format
 	format, err := ParseOutputFormat(outputFormat)
@@ -88,7 +84,7 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Add package to configuration
-	err = addPackageToConfig(cfg, packageName, version, targetManager)
+	err = addPackageToConfig(cfg, packageName, targetManager)
 	if err != nil {
 		return fmt.Errorf("failed to add package to config: %w", err)
 	}
@@ -122,7 +118,7 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 			fmt.Printf("Installing %s using %s...\n", packageName, targetManager)
 		}
 		
-		err = mgr.Install(packageName, version)
+		err = mgr.Install(packageName)
 		if err != nil {
 			return fmt.Errorf("failed to install package: %w", err)
 		}
@@ -135,7 +131,6 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 	// Prepare structured output
 	result := AddOutput{
 		Package: packageName,
-		Version: version,
 		Manager: targetManager,
 		Action:  "added",
 	}
@@ -168,7 +163,7 @@ func isPackageInConfig(cfg *config.Config, packageName, targetManager string) bo
 }
 
 // addPackageToConfig adds a package to the appropriate section of the configuration
-func addPackageToConfig(cfg *config.Config, packageName, version, targetManager string) error {
+func addPackageToConfig(cfg *config.Config, packageName, targetManager string) error {
 	switch targetManager {
 	case "homebrew":
 		// Add to brews section (we could add logic to detect casks vs brews later)
@@ -215,7 +210,6 @@ func saveConfig(cfg *config.Config, configDir string) error {
 // AddOutput represents the output structure for pkg add command
 type AddOutput struct {
 	Package string `json:"package" yaml:"package"`
-	Version string `json:"version,omitempty" yaml:"version,omitempty"`
 	Manager string `json:"manager" yaml:"manager"`
 	Action  string `json:"action" yaml:"action"`
 }

@@ -22,7 +22,7 @@ func (m *MockPackageManager) ListInstalled() ([]string, error) {
 	return m.packages, nil
 }
 
-func (m *MockPackageManager) Install(name string, version string) error {
+func (m *MockPackageManager) Install(name string) error {
 	// Mock implementation - just add to packages list
 	m.packages = append(m.packages, name)
 	return nil
@@ -48,12 +48,6 @@ func (m *MockPackageManager) IsInstalled(name string) bool {
 	return false
 }
 
-func (m *MockPackageManager) GetVersion(name string) (string, error) {
-	if m.IsInstalled(name) {
-		return "1.0.0", nil
-	}
-	return "", fmt.Errorf("package %s not installed", name)
-}
 
 // MockConfigLoader for testing
 type MockConfigLoader struct {
@@ -77,24 +71,18 @@ func TestStateReconciler_ReconcileManager(t *testing.T) {
 	mockLoader := &MockConfigLoader{
 		packages: map[string][]ConfigPackage{
 			"test": {
-				{Name: "git", Version: ""},
-				{Name: "curl", Version: ""},
-				{Name: "missing-package", Version: ""},
+				{Name: "git"},
+				{Name: "curl"},
+				{Name: "missing-package"},
 			},
 		},
 	}
-	
-	mockChecker := &HomebrewVersionChecker{} // Always returns true
 	
 	managers := map[string]PackageManager{
 		"test": mockManager,
 	}
 	
-	checkers := map[string]VersionChecker{
-		"test": mockChecker,
-	}
-	
-	reconciler := NewStateReconciler(mockLoader, managers, checkers)
+	reconciler := NewStateReconciler(mockLoader, managers)
 	
 	// Test reconciliation
 	result, err := reconciler.ReconcileManager("test")
@@ -136,43 +124,3 @@ func TestStateReconciler_ReconcileManager(t *testing.T) {
 	}
 }
 
-func TestVersionCheckers(t *testing.T) {
-	testCases := []struct {
-		name     string
-		checker  VersionChecker
-		config   ConfigPackage
-		installed string
-		expected bool
-	}{
-		{
-			name:     "Homebrew ignores version",
-			checker:  &HomebrewVersionChecker{},
-			config:   ConfigPackage{Name: "git", Version: "2.30.0"},
-			installed: "2.45.0",
-			expected: true,
-		},
-		{
-			name:     "NPM exact version match",
-			checker:  &NpmVersionChecker{},
-			config:   ConfigPackage{Name: "typescript", Version: "5.0.0"},
-			installed: "5.0.0",
-			expected: true,
-		},
-		{
-			name:     "NPM version mismatch",
-			checker:  &NpmVersionChecker{},
-			config:   ConfigPackage{Name: "typescript", Version: "5.0.0"},
-			installed: "4.9.0",
-			expected: false,
-		},
-	}
-	
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			result := tc.checker.CheckVersion(tc.config, tc.installed)
-			if result != tc.expected {
-				t.Errorf("Expected %v, got %v", tc.expected, result)
-			}
-		})
-	}
-}

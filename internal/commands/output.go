@@ -74,10 +74,8 @@ type ManagerOutput struct {
 
 // PackageOutput represents a package in the output
 type PackageOutput struct {
-	Name            string `json:"name" yaml:"name"`
-	Version         string `json:"version,omitempty" yaml:"version,omitempty"`
-	State           string `json:"state,omitempty" yaml:"state,omitempty"`
-	ExpectedVersion string `json:"expected_version,omitempty" yaml:"expected_version,omitempty"`
+	Name  string `json:"name" yaml:"name"`
+	State string `json:"state,omitempty" yaml:"state,omitempty"`
 }
 
 // TableOutput generates human-friendly table output

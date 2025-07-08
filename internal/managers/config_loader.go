@@ -40,15 +40,13 @@ func (p *PlonkConfigLoader) GetPackagesForManager(managerName string) ([]ConfigP
 		// Add brews
 		for _, brew := range cfg.Homebrew.Brews {
 			packages = append(packages, ConfigPackage{
-				Name:    brew.Name,
-				Version: "", // Homebrew doesn't use versions in basic config
+				Name: brew.Name,
 			})
 		}
 		// Add casks
 		for _, cask := range cfg.Homebrew.Casks {
 			packages = append(packages, ConfigPackage{
-				Name:    cask.Name,
-				Version: "", // Casks don't use versions
+				Name: cask.Name,
 			})
 		}
 	case "npm":
@@ -59,8 +57,7 @@ func (p *PlonkConfigLoader) GetPackagesForManager(managerName string) ([]ConfigP
 			}
 			if name != "" {
 				packages = append(packages, ConfigPackage{
-					Name:    name,
-					Version: "", // NPM packages don't have versions in this config structure
+					Name: name,
 				})
 			}
 		}

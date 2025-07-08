@@ -106,10 +106,6 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		homebrewPackages = append(homebrewPackages, cask.Name)
 	}
 
-	var asdfTools []string
-	for _, tool := range cfg.ASDF {
-		asdfTools = append(asdfTools, fmt.Sprintf("%s@%s", tool.Name, tool.Version))
-	}
 
 	var npmPackages []string
 	for _, pkg := range cfg.NPM {
@@ -118,7 +114,6 @@ func runStatus(cmd *cobra.Command, args []string) error {
 
 	outputData.ManagedItems = ManagedItems{
 		HomebrewPackages: homebrewPackages,
-		ASDFTools:        asdfTools,
 		NPMPackages:      npmPackages,
 		Dotfiles:         cfg.Dotfiles,
 		DefaultManager:   cfg.Settings.DefaultManager,
@@ -141,10 +136,6 @@ func getPackageState(configDir string) (int, int, int) {
 		"npm":      managers.NewNpmManager(),
 	}
 
-	versionCheckers := map[string]managers.VersionChecker{
-		"homebrew": &managers.HomebrewVersionChecker{},
-		"npm":      &managers.NpmVersionChecker{},
-	}
 
 	// Reconcile each manager
 	for managerName, mgr := range packageManagers {
@@ -156,7 +147,7 @@ func getPackageState(configDir string) (int, int, int) {
 			managerName: mgr,
 		}
 		
-		reconciler := managers.NewStateReconciler(configLoader, managerMap, versionCheckers)
+		reconciler := managers.NewStateReconciler(configLoader, managerMap)
 		result, err := reconciler.ReconcileManager(managerName)
 		if err != nil {
 			continue // Skip this manager on error
@@ -205,7 +196,6 @@ type StateCount struct {
 // ManagedItems represents what is being managed by plonk configuration
 type ManagedItems struct {
 	HomebrewPackages []string `json:"homebrew_packages" yaml:"homebrew_packages"`
-	ASDFTools        []string `json:"asdf_tools" yaml:"asdf_tools"`
 	NPMPackages      []string `json:"npm_packages" yaml:"npm_packages"`
 	Dotfiles         []string `json:"dotfiles" yaml:"dotfiles"`
 	DefaultManager   string   `json:"default_manager" yaml:"default_manager"`
@@ -268,10 +258,6 @@ func (s StatusOutput) TableOutput() string {
 		hasManaged = true
 	}
 	
-	if len(s.ManagedItems.ASDFTools) > 0 {
-		output += fmt.Sprintf("  🔧 ASDF: %s\n", strings.Join(s.ManagedItems.ASDFTools, ", "))
-		hasManaged = true
-	}
 	
 	if len(s.ManagedItems.NPMPackages) > 0 {
 		output += fmt.Sprintf("  📦 NPM: %s\n", strings.Join(s.ManagedItems.NPMPackages, ", "))
