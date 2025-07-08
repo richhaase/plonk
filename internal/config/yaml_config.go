@@ -15,6 +15,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"plonk/internal/errors"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -170,12 +172,18 @@ func LoadConfig(configDir string) (*Config, error) {
 			// Try repo subdirectory.
 			if err := loadConfigFile(repoConfigPath, config); err != nil {
 				if os.IsNotExist(err) {
-					return nil, fmt.Errorf("config file not found in %s or %s", mainConfigPath, repoConfigPath)
+					return nil, errors.ConfigError(errors.ErrConfigNotFound, "load", 
+						fmt.Sprintf("config file not found in %s or %s", mainConfigPath, repoConfigPath)).
+						WithMetadata("main_path", mainConfigPath).
+						WithMetadata("repo_path", repoConfigPath)
 				}
-				return nil, fmt.Errorf("failed to load config from repo directory: %w", err)
+				return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load", 
+					"failed to load config from repo directory").
+					WithMetadata("path", repoConfigPath)
 			}
 		} else {
-			return nil, fmt.Errorf("failed to load config: %w", err)
+			return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load", 
+				"failed to load config").WithMetadata("path", mainConfigPath)
 		}
 	}
 
@@ -183,7 +191,8 @@ func LoadConfig(configDir string) (*Config, error) {
 	localConfigPath := filepath.Join(configDir, "plonk.local.yaml")
 	if _, err := os.Stat(localConfigPath); err == nil {
 		if err := loadConfigFile(localConfigPath, config); err != nil {
-			return nil, fmt.Errorf("failed to load local config: %w", err)
+			return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load", 
+				"failed to load local config").WithMetadata("path", localConfigPath)
 		}
 	}
 
@@ -191,7 +200,10 @@ func LoadConfig(configDir string) (*Config, error) {
 	validator := NewSimpleValidator()
 	result := validator.ValidateConfig(config)
 	if !result.IsValid() {
-		return nil, fmt.Errorf("config validation failed: %s", strings.Join(result.Errors, "; "))
+		return nil, errors.ConfigError(errors.ErrConfigValidation, "validate", 
+			fmt.Sprintf("config validation failed: %s", strings.Join(result.Errors, "; "))).
+			WithMetadata("errors", result.Errors).
+			WithMetadata("config_dir", configDir)
 	}
 
 	return config, nil

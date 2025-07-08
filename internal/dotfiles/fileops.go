@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"plonk/internal/errors"
 )
 
 // FileOperations handles file system operations for dotfiles
@@ -46,13 +48,19 @@ func (f *FileOperations) CopyFile(source, destination string, options CopyOption
 	
 	// Check if source exists
 	if !f.manager.FileExists(sourcePath) {
-		return fmt.Errorf("source file does not exist: %s", sourcePath)
+		return errors.DotfileError(errors.ErrFileNotFound, "copy", 
+			"source file does not exist").
+			WithItem(source).
+			WithMetadata("source_path", sourcePath)
 	}
 	
 	// Create destination directory if it doesn't exist
 	destDir := filepath.Dir(destPath)
 	if err := os.MkdirAll(destDir, 0755); err != nil {
-		return fmt.Errorf("failed to create destination directory: %w", err)
+		return errors.Wrap(err, errors.ErrDirectoryCreate, errors.DomainDotfiles, "copy", 
+			"failed to create destination directory").
+			WithItem(destination).
+			WithMetadata("dest_dir", destDir)
 	}
 	
 	// Handle backup if destination exists
@@ -60,12 +68,18 @@ func (f *FileOperations) CopyFile(source, destination string, options CopyOption
 		if options.CreateBackup {
 			backupPath := destPath + options.BackupSuffix
 			if err := f.createBackup(destPath, backupPath); err != nil {
-				return fmt.Errorf("failed to create backup: %w", err)
+				return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", 
+					"failed to create backup").
+					WithItem(destination).
+					WithMetadata("backup_path", backupPath)
 			}
 		}
 		
 		if !options.OverwriteExisting {
-			return fmt.Errorf("destination file exists and overwrite is disabled: %s", destPath)
+			return errors.DotfileError(errors.ErrFilePermission, "copy", 
+				"destination file exists and overwrite is disabled").
+				WithItem(destination).
+				WithMetadata("dest_path", destPath)
 		}
 	}
 	
@@ -186,7 +200,10 @@ func (f *FileOperations) FileNeedsUpdate(source, destination string) (bool, erro
 	
 	// Check if source exists first
 	if !f.manager.FileExists(sourcePath) {
-		return false, fmt.Errorf("source file does not exist: %s", sourcePath)
+		return false, errors.DotfileError(errors.ErrFileNotFound, "check", 
+			"source file does not exist").
+			WithItem(source).
+			WithMetadata("source_path", sourcePath)
 	}
 	
 	// If destination doesn't exist, it needs to be created

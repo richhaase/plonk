@@ -6,10 +6,11 @@
 package dotfiles
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"plonk/internal/errors"
 )
 
 // Manager handles dotfile operations and path management
@@ -163,12 +164,18 @@ func (m *Manager) ValidatePaths(source, destination string) error {
 	// Check if source exists in config directory
 	sourcePath := m.GetSourcePath(source)
 	if !m.FileExists(sourcePath) {
-		return fmt.Errorf("source file does not exist: %s", sourcePath)
+		return errors.DotfileError(errors.ErrFileNotFound, "validate", 
+			"source file does not exist").
+			WithItem(source).
+			WithMetadata("source_path", sourcePath)
 	}
 	
 	// Validate destination path format
 	if !strings.HasPrefix(destination, "~/") && !filepath.IsAbs(destination) {
-		return fmt.Errorf("destination must start with ~/ or be absolute: %s", destination)
+		return errors.DotfileError(errors.ErrPathValidation, "validate", 
+			"destination must start with ~/ or be absolute").
+			WithItem(destination).
+			WithMetadata("destination", destination)
 	}
 	
 	return nil
