@@ -68,7 +68,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	reconciler.RegisterProvider("package", packageProvider)
 
 	// Register dotfile provider
-	dotfileProvider := createDotfileProvider(homeDir, cfg)
+	dotfileProvider := createDotfileProvider(homeDir, configDir, cfg)
 	reconciler.RegisterProvider("dotfile", dotfileProvider)
 
 	// Reconcile all domains
@@ -112,9 +112,9 @@ func createPackageProvider(cfg *config.Config) *state.MultiManagerPackageProvide
 }
 
 // createDotfileProvider creates a dotfile provider
-func createDotfileProvider(homeDir string, cfg *config.Config) *state.DotfileProvider {
+func createDotfileProvider(homeDir string, configDir string, cfg *config.Config) *state.DotfileProvider {
 	configAdapter := &DotfileConfigAdapter{config: cfg}
-	return state.NewDotfileProvider(homeDir, configAdapter)
+	return state.NewDotfileProvider(homeDir, configDir, configAdapter)
 }
 
 // PackageConfigAdapter adapts config.Config to state.PackageConfigLoader

@@ -4,6 +4,7 @@
 package state
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,13 +18,15 @@ type DotfileConfigLoader interface {
 // DotfileProvider implements the Provider interface for dotfile management
 type DotfileProvider struct {
 	homeDir      string
+	configDir    string
 	configLoader DotfileConfigLoader
 }
 
 // NewDotfileProvider creates a new dotfile provider
-func NewDotfileProvider(homeDir string, configLoader DotfileConfigLoader) *DotfileProvider {
+func NewDotfileProvider(homeDir string, configDir string, configLoader DotfileConfigLoader) *DotfileProvider {
 	return &DotfileProvider{
 		homeDir:      homeDir,
+		configDir:    configDir,
 		configLoader: configLoader,
 	}
 }
@@ -37,18 +40,42 @@ func (d *DotfileProvider) Domain() string {
 func (d *DotfileProvider) GetConfiguredItems() ([]ConfigItem, error) {
 	targets := d.configLoader.GetDotfileTargets()
 	
-	items := make([]ConfigItem, 0, len(targets))
+	items := make([]ConfigItem, 0)
 	for source, destination := range targets {
-		// Convert destination to relative path for consistent naming
-		name := d.destinationToName(destination)
+		// Check if source is a directory
+		sourcePath := filepath.Join(d.configDir, source)
+		info, err := os.Stat(sourcePath)
+		if err != nil {
+			// Source doesn't exist yet, treat as single file
+			name := d.destinationToName(destination)
+			items = append(items, ConfigItem{
+				Name: name,
+				Metadata: map[string]interface{}{
+					"source":      source,
+					"destination": destination,
+				},
+			})
+			continue
+		}
 		
-		items = append(items, ConfigItem{
-			Name: name,
-			Metadata: map[string]interface{}{
-				"source":      source,
-				"destination": destination,
-			},
-		})
+		if info.IsDir() {
+			// Expand directory to individual files
+			dirItems, err := d.expandConfigDirectory(source, destination)
+			if err != nil {
+				return nil, fmt.Errorf("failed to expand directory %s: %w", source, err)
+			}
+			items = append(items, dirItems...)
+		} else {
+			// Single file
+			name := d.destinationToName(destination)
+			items = append(items, ConfigItem{
+				Name: name,
+				Metadata: map[string]interface{}{
+					"source":      source,
+					"destination": destination,
+				},
+			})
+		}
 	}
 	
 	return items, nil
@@ -145,4 +172,45 @@ func (d *DotfileProvider) expandPath(path string) string {
 		return filepath.Join(d.homeDir, path[2:])
 	}
 	return path
+}
+
+// expandConfigDirectory walks a directory and creates individual ConfigItems for each file
+func (d *DotfileProvider) expandConfigDirectory(sourceDir, destDir string) ([]ConfigItem, error) {
+	var items []ConfigItem
+	sourcePath := filepath.Join(d.configDir, sourceDir)
+	
+	err := filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		
+		// Skip directories
+		if info.IsDir() {
+			return nil
+		}
+		
+		// Calculate relative path from source directory
+		relPath, err := filepath.Rel(sourcePath, path)
+		if err != nil {
+			return err
+		}
+		
+		// Build source and destination paths
+		source := filepath.Join(sourceDir, relPath)
+		destination := filepath.Join(destDir, relPath)
+		name := d.destinationToName(destination)
+		
+		items = append(items, ConfigItem{
+			Name: name,
+			Metadata: map[string]interface{}{
+				"source":      source,
+				"destination": destination,
+				"parent_dir":  sourceDir,
+			},
+		})
+		
+		return nil
+	})
+	
+	return items, err
 }

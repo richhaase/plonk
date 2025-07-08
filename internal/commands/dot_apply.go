@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"plonk/internal/config"
+	"plonk/internal/state"
 
 	"github.com/spf13/cobra"
 )
@@ -64,24 +65,36 @@ func runDotApply(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// Get dotfile targets
-	targets := cfg.GetDotfileTargets()
-	if len(targets) == 0 {
-		outputData := DotfileApplyOutput{
-			DryRun:   dotApplyDryRun,
-			Deployed: 0,
-			Skipped:  0,
-			Actions:  []DotfileAction{},
-		}
-		return RenderOutput(outputData, format)
+	// Create unified state reconciler
+	reconciler := state.NewReconciler()
+	
+	// Register dotfile provider
+	dotfileProvider := createDotfileProvider(homeDir, configDir, cfg)
+	reconciler.RegisterProvider("dotfile", dotfileProvider)
+	
+	// Reconcile dotfile domain to get expanded file list
+	result, err := reconciler.ReconcileProvider("dotfile")
+	if err != nil {
+		return fmt.Errorf("failed to reconcile dotfile state: %w", err)
 	}
-
-	// Process each dotfile
+	
+	// Process each dotfile from the reconciled state
 	var actions []DotfileAction
 	deployedCount := 0
 	skippedCount := 0
-
-	for source, destination := range targets {
+	
+	// Process all items (managed, missing, and untracked)
+	allItems := append(result.Managed, result.Missing...)
+	
+	for _, item := range allItems {
+		// Get source and destination from metadata
+		source, _ := item.Metadata["source"].(string)
+		destination, _ := item.Metadata["destination"].(string)
+		
+		if source == "" || destination == "" {
+			continue
+		}
+		
 		action, err := processDotfile(configDir, homeDir, source, destination, dotApplyDryRun, dotApplyBackup)
 		if err != nil {
 			return fmt.Errorf("failed to process dotfile %s: %w", source, err)
@@ -89,7 +102,7 @@ func runDotApply(cmd *cobra.Command, args []string) error {
 		
 		actions = append(actions, action)
 		
-		if action.Status == "deployed" {
+		if action.Status == "deployed" || action.Status == "would-deploy" {
 			deployedCount++
 		} else {
 			skippedCount++
@@ -130,6 +143,13 @@ func processDotfile(configDir, homeDir, source, destination string, dryRun, back
 		}
 		return action, err
 	}
+	
+	// With directory expansion, we should only process files
+	if sourceInfo.IsDir() {
+		action.Status = "error"
+		action.Reason = "unexpected directory (should have been expanded)"
+		return action, nil
+	}
 
 	// Check if destination exists
 	destInfo, err := os.Stat(destPath)
@@ -139,30 +159,33 @@ func processDotfile(configDir, homeDir, source, destination string, dryRun, back
 
 	// Determine action needed
 	if err == nil {
-		// Destination exists - check if different
-		if sourceInfo.IsDir() != destInfo.IsDir() {
+		// Destination exists - check if it's a file
+		if destInfo.IsDir() {
 			action.Status = "error"
-			action.Reason = "source and destination have different types (file vs directory)"
+			action.Reason = "destination is a directory, expected file"
 			return action, nil
 		}
 
-		if !sourceInfo.IsDir() {
-			// Compare file contents
-			same, err := filesAreSame(sourcePath, destPath)
-			if err != nil {
-				return action, err
-			}
-			if same {
-				action.Status = "skipped"
-				action.Reason = "files are identical"
-				return action, nil
-			}
+		// Compare file contents
+		same, err := filesAreSame(sourcePath, destPath)
+		if err != nil {
+			return action, err
+		}
+		if same {
+			action.Status = "skipped"
+			action.Reason = "files are identical"
+			return action, nil
 		}
 	}
 
 	// Need to deploy
 	action.Status = "deployed"
 	action.Reason = "copying from source"
+	
+	// Add backup indication if backup is requested and file exists
+	if backup && err == nil {
+		action.Reason = "copying from source (with backup)"
+	}
 
 	if dryRun {
 		action.Status = "would-deploy"
@@ -182,14 +205,8 @@ func processDotfile(configDir, homeDir, source, destination string, dryRun, back
 		}
 	}
 
-	// Copy file or directory
-	if sourceInfo.IsDir() {
-		err = copyDir(sourcePath, destPath)
-	} else {
-		err = copyFile(sourcePath, destPath)
-	}
-
-	if err != nil {
+	// Copy file
+	if err := copyFile(sourcePath, destPath); err != nil {
 		return action, err
 	}
 
@@ -218,6 +235,7 @@ func filesAreSame(path1, path2 string) (bool, error) {
 
 	return string(content1) == string(content2), nil
 }
+
 
 // copyFile copies a file from src to dst
 func copyFile(src, dst string) error {
