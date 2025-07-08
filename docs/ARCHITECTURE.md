@@ -117,11 +117,11 @@ type Provider interface {
 **Unified Interface:**
 ```go
 type PackageManager interface {
-    IsAvailable(ctx context.Context) bool
+    IsAvailable(ctx context.Context) (bool, error)
     ListInstalled(ctx context.Context) ([]string, error)
     Install(ctx context.Context, name string) error
     Uninstall(ctx context.Context, name string) error
-    IsInstalled(ctx context.Context, name string) bool
+    IsInstalled(ctx context.Context, name string) (bool, error)
 }
 ```
 
@@ -130,9 +130,11 @@ type PackageManager interface {
 - `NpmManager` - Global NPM packages
 
 **Features:**
-- Context support for cancellation
+- Context support for cancellation and timeout
+- Comprehensive error handling with smart detection
+- Differentiation between expected conditions and real errors
+- Context-aware error messages with actionable suggestions
 - Graceful handling of unavailable managers
-- Clear error reporting with exit codes
 
 ### 4. Dotfile Management (`internal/dotfiles/`)
 
@@ -199,16 +201,20 @@ type PlonkError struct {
 
 3. **Context Throughout** - All long-running operations accept context for cancellation and timeout support.
 
-4. **Structured Errors** - PlonkError type provides user-friendly messages and debugging context.
+4. **Comprehensive Error Handling** - PackageManager methods return (result, error) following Go best practices with smart detection of expected conditions vs real errors.
 
-5. **Separate File Operations** - Dotfile operations extracted from state management for clarity and reusability.
+5. **Structured Errors** - PlonkError type provides user-friendly messages and debugging context.
+
+6. **Separate File Operations** - Dotfile operations extracted from state management for clarity and reusability.
 
 ## Extension Points
 
 ### Adding Package Managers
-1. Implement `PackageManager` interface with context support
-2. Register in command layer
-3. Add tests
+1. Implement `PackageManager` interface with context support and comprehensive error handling
+2. Follow error handling patterns: differentiate expected conditions vs real errors
+3. Include context-aware error messages with actionable suggestions
+4. Register in command layer
+5. Add tests including context cancellation coverage
 
 ### Adding New Domains  
 1. Create `Provider` implementation
