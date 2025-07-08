@@ -12,24 +12,21 @@ import (
 	"plonk/internal/config"
 
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 var configShowCmd = &cobra.Command{
 	Use:   "show",
-	Short: "Display current configuration",
-	Long: `Display the current plonk configuration with validation status.
+	Short: "Display configuration content",
+	Long: `Display the current plonk configuration file content.
 
-Shows:
-- Configuration file location
-- Validation status  
-- Package counts by manager
-- Dotfiles count
-- Settings summary
+Shows the actual YAML configuration with proper formatting.
+For validation status and summary, use 'plonk config status'.
 
 Examples:
-  plonk config show           # Show configuration summary
+  plonk config show           # Show configuration content
   plonk config show -o json   # Show as JSON
-  plonk config show -o yaml   # Show as YAML`,
+  plonk config show -o yaml   # Show as YAML (default)`,
 	RunE: runConfigShow,
 	Args: cobra.NoArgs,
 }
@@ -65,93 +62,66 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 			return RenderOutput(outputData, format)
 		}
 		
-		// Handle validation errors
-		if strings.Contains(err.Error(), "validation failed") {
-			outputData := ConfigShowOutput{
-				ConfigPath: getConfigPath(configDir),
-				Status:     "invalid",
-				Message:    err.Error(),
-			}
-			return RenderOutput(outputData, format)
+		// Handle validation errors - still show the config if possible
+		configPath := getConfigPath(configDir)
+		rawContent, readErr := os.ReadFile(configPath)
+		if readErr != nil {
+			return fmt.Errorf("failed to load configuration: %w", err)
 		}
 		
-		return fmt.Errorf("failed to load configuration: %w", err)
+		outputData := ConfigShowOutput{
+			ConfigPath: configPath,
+			Status:     "invalid",
+			Message:    err.Error(),
+			RawContent: string(rawContent),
+		}
+		return RenderOutput(outputData, format)
 	}
 
-	// Build output data
+	// Build output data with valid config
 	outputData := ConfigShowOutput{
 		ConfigPath: getConfigPath(configDir),
 		Status:     "valid",
 		Message:    "Configuration is valid",
 		Config:     cfg,
-		Summary: ConfigSummary{
-			HomebrewPackages: len(cfg.Homebrew.Brews) + len(cfg.Homebrew.Casks),
-			ASDFTools:        len(cfg.ASDF),
-			NPMPackages:      len(cfg.NPM),
-			Dotfiles:         len(cfg.Dotfiles),
-			DefaultManager:   cfg.Settings.DefaultManager,
-		},
 	}
 
 	return RenderOutput(outputData, format)
-}
-
-// getConfigPath finds the actual config file path
-func getConfigPath(configDir string) string {
-	mainPath := filepath.Join(configDir, "plonk.yaml")
-	if _, err := os.Stat(mainPath); err == nil {
-		return mainPath
-	}
-	
-	repoPath := filepath.Join(configDir, "repo", "plonk.yaml")
-	if _, err := os.Stat(repoPath); err == nil {
-		return repoPath
-	}
-	
-	return mainPath // Default to main path
 }
 
 // ConfigShowOutput represents the output structure for config show command
 type ConfigShowOutput struct {
 	ConfigPath string         `json:"config_path" yaml:"config_path"`
 	Status     string         `json:"status" yaml:"status"`
-	Message    string         `json:"message" yaml:"message"`
+	Message    string         `json:"message,omitempty" yaml:"message,omitempty"`
 	Config     *config.Config `json:"config,omitempty" yaml:"config,omitempty"`
-	Summary    ConfigSummary  `json:"summary,omitempty" yaml:"summary,omitempty"`
-}
-
-// ConfigSummary represents configuration summary counts
-type ConfigSummary struct {
-	HomebrewPackages int    `json:"homebrew_packages" yaml:"homebrew_packages"`
-	ASDFTools        int    `json:"asdf_tools" yaml:"asdf_tools"`
-	NPMPackages      int    `json:"npm_packages" yaml:"npm_packages"`
-	Dotfiles         int    `json:"dotfiles" yaml:"dotfiles"`
-	DefaultManager   string `json:"default_manager" yaml:"default_manager"`
+	RawContent string         `json:"raw_content,omitempty" yaml:"raw_content,omitempty"`
 }
 
 // TableOutput generates human-friendly table output for config show
 func (c ConfigShowOutput) TableOutput() string {
-	output := "Configuration Status\n===================\n\n"
-	
-	output += fmt.Sprintf("📁 Config File: %s\n", c.ConfigPath)
-	
-	switch c.Status {
-	case "valid":
-		output += "✅ Status: Valid\n\n"
-		output += "Package Summary:\n"
-		output += fmt.Sprintf("  • Homebrew: %d packages\n", c.Summary.HomebrewPackages)
-		output += fmt.Sprintf("  • ASDF: %d tools\n", c.Summary.ASDFTools)
-		output += fmt.Sprintf("  • NPM: %d packages\n", c.Summary.NPMPackages)
-		output += fmt.Sprintf("  • Dotfiles: %d files\n", c.Summary.Dotfiles)
-		output += fmt.Sprintf("  • Default Manager: %s\n", c.Summary.DefaultManager)
-	case "invalid":
-		output += "❌ Status: Invalid\n"
-		output += fmt.Sprintf("💬 %s\n", c.Message)
-	case "missing":
-		output += "📋 Status: Missing\n"
-		output += fmt.Sprintf("💬 %s\n", c.Message)
+	if c.Status == "missing" {
+		return fmt.Sprintf("Configuration file not found: %s\n\n%s\n", c.ConfigPath, c.Message)
 	}
+
+	output := fmt.Sprintf("# Configuration: %s\n\n", c.ConfigPath)
 	
+	if c.Status == "invalid" && c.RawContent != "" {
+		output += "# WARNING: Configuration has validation errors\n"
+		output += fmt.Sprintf("# %s\n\n", c.Message)
+		output += c.RawContent
+		return output
+	}
+
+	if c.Config != nil {
+		// Convert config back to YAML for display
+		yamlBytes, err := yaml.Marshal(c.Config)
+		if err != nil {
+			return fmt.Sprintf("Error formatting configuration: %v\n", err)
+		}
+		output += string(yamlBytes)
+	}
+
 	return output
 }
 

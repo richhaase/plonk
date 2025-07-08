@@ -10,13 +10,10 @@ import (
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Manage plonk configuration",
-	Long: `Manage plonk configuration files and settings.
+	Long: `Manage plonk configuration files.
 
 Commands:
-  show      Display current configuration
-  validate  Validate configuration syntax
-  edit      Edit configuration file
-  init      Initialize new configuration`,
+  show      Display current configuration`,
 }
 
 func init() {

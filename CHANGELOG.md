@@ -7,9 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
-- **Complete Package Management UI** with `plonk pkg list [all|managed|missing|untracked]` and `plonk pkg status`
-- **Complete Dotfiles Management UI** with `plonk dot list [all|managed|missing|untracked]` and `plonk dot status`
-- **Configuration Management UI** with `plonk config show` command displaying config status and validation
+- **Complete Package Management UI** with `plonk pkg list [all|managed|missing|untracked]`
+- **Complete Dotfiles Management UI** with `plonk dot list [all|managed|missing|untracked]`
+- **Configuration Management UI** with `plonk config show` displaying actual config content
+- **Unified Status Command** - Single `plonk status` showing complete system state (replaces individual status commands)
 - **State Reconciliation Architecture** - StateReconciler, ConfigLoader, and VersionChecker for comparing config vs installed packages
 - **Ultra-simple Dotfiles Implementation** - ~100 lines total using same patterns as package management
 - **Machine-friendly Output Formats** - Global `--output/-o` flag supporting table (default), JSON, and YAML formats
@@ -44,6 +45,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Legacy import/dotfiles packages** - Removed internal/importer and internal/dotfiles (1000+ lines) with broken dependencies
 - **Complex validation system** - Removed internal/config/validator.go in favor of simplified validation
 - **Broken test files** - Removed all legacy tests that relied on deleted abstractions
+- **Individual status commands** - Removed `pkg status`, `dot status`, `config status` in favor of unified `plonk status`
+- **Documentation files** - Removed ROADMAP.md, ARCHITECTURE.md, CONTRIBUTING.md for simpler project structure
 
 ## [v0.3.0] - 2025-07-07
 
