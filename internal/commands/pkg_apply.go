@@ -13,6 +13,7 @@ import (
 
 var (
 	dryRun bool
+	prune  bool
 )
 
 var pkgApplyCmd = &cobra.Command{
