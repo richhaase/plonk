@@ -1,0 +1,9 @@
+" Test vimrc configuration
+set number
+set tabstop=4
+set shiftwidth=4
+set expandtab
+syntax on
+
+" Test comment for integration testing
+echo "Loading test vimrc configuration"

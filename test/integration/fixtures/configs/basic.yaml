@@ -1,0 +1,14 @@
+settings:
+  default_manager: homebrew
+homebrew:
+  brews:
+    - jq
+    - curl
+npm:
+  - lodash
+  - prettier
+dotfiles:
+  - source: dot_zshrc
+    destination: ~/.zshrc
+  - source: dot_vimrc
+    destination: ~/.vimrc

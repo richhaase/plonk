@@ -1,0 +1,6 @@
+settings:
+  default_manager: homebrew
+homebrew:
+  brews: []
+npm: []
+dotfiles: []
