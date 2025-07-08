@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"plonk/internal/config"
+	"plonk/internal/errors"
 	"plonk/internal/managers"
 	"plonk/internal/state"
 
@@ -48,13 +49,13 @@ func runPkgApply(cmd *cobra.Command, args []string) error {
 	// Parse output format
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return err
+		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "pkg-apply", "output-format", "invalid output format")
 	}
 
 	// Get directories
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("failed to get home directory: %w", err)
+		return errors.Wrap(err, errors.ErrFilePermission, errors.DomainCommands, "pkg-apply", "failed to get home directory")
 	}
 
 	configDir := filepath.Join(homeDir, ".config", "plonk")
@@ -62,7 +63,7 @@ func runPkgApply(cmd *cobra.Command, args []string) error {
 	// Load configuration
 	cfg, err := config.LoadConfig(configDir)
 	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+		return errors.Wrap(err, errors.ErrConfigNotFound, errors.DomainConfig, "load", "failed to load configuration")
 	}
 
 	// Create unified state reconciler
@@ -76,7 +77,7 @@ func runPkgApply(cmd *cobra.Command, args []string) error {
 	// Reconcile package domain to find missing packages
 	result, err := reconciler.ReconcileProvider(ctx, "package")
 	if err != nil {
-		return fmt.Errorf("failed to reconcile package state: %w", err)
+		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainPackages, "reconcile", "failed to reconcile package state")
 	}
 
 	// Group missing packages by manager
@@ -159,9 +160,11 @@ func runPkgApply(cmd *cobra.Command, args []string) error {
 				err := managerInstance.Install(ctx, item.Name)
 				if err != nil {
 					packageResult.Status = "failed"
-					packageResult.Error = err.Error()
+					// Use structured error for better user messages
+					plonkErr := errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "install", item.Name, "failed to install package")
+					packageResult.Error = plonkErr.UserMessage()
 					if format == OutputTable {
-						fmt.Printf("Failed to install %s: %v\n", item.Name, err)
+						fmt.Printf("Failed to install %s: %v\n", item.Name, plonkErr.UserMessage())
 					}
 					outputData.TotalFailed++
 				} else {

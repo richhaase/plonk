@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"plonk/internal/config"
+	"plonk/internal/errors"
 	"plonk/internal/managers"
 	"plonk/internal/state"
 
@@ -44,13 +45,13 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	// Parse output format
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return err
+		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "status", "output-format", "invalid output format")
 	}
 
 	// Get directories
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("failed to get home directory: %w", err)
+		return errors.Wrap(err, errors.ErrFilePermission, errors.DomainCommands, "status", "failed to get home directory")
 	}
 
 	configDir := filepath.Join(homeDir, ".config", "plonk")
@@ -58,7 +59,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	// Load configuration
 	cfg, err := config.LoadConfig(configDir)
 	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+		return errors.Wrap(err, errors.ErrConfigNotFound, errors.DomainConfig, "load", "failed to load configuration")
 	}
 
 	// Create unified state reconciler
@@ -76,7 +77,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	// Reconcile all domains
 	summary, err := reconciler.ReconcileAll(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to reconcile state: %w", err)
+		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainState, "reconcile", "failed to reconcile state")
 	}
 
 	// Prepare output

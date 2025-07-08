@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"plonk/internal/config"
+	"plonk/internal/errors"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -44,13 +45,13 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 	// Parse output format
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return err
+		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "config-show", "output-format", "invalid output format")
 	}
 
 	// Get config directory
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("failed to get home directory: %w", err)
+		return errors.Wrap(err, errors.ErrFilePermission, errors.DomainCommands, "config-show", "failed to get home directory")
 	}
 	configDir := filepath.Join(homeDir, ".config", "plonk")
 
@@ -71,7 +72,7 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 		configPath := getConfigPath(configDir)
 		rawContent, readErr := os.ReadFile(configPath)
 		if readErr != nil {
-			return fmt.Errorf("failed to load configuration: %w", err)
+			return errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load", "failed to load configuration")
 		}
 		
 		outputData := ConfigShowOutput{

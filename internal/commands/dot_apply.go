@@ -11,6 +11,7 @@ import (
 
 	"plonk/internal/config"
 	"plonk/internal/dotfiles"
+	"plonk/internal/errors"
 	"plonk/internal/state"
 
 	"github.com/spf13/cobra"
@@ -49,13 +50,13 @@ func runDotApply(cmd *cobra.Command, args []string) error {
 	// Parse output format
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return err
+		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "dot-apply", "output-format", "invalid output format")
 	}
 
 	// Get directories
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("failed to get home directory: %w", err)
+		return errors.Wrap(err, errors.ErrFilePermission, errors.DomainCommands, "dot-apply", "failed to get home directory")
 	}
 
 	configDir := filepath.Join(homeDir, ".config", "plonk")
@@ -63,7 +64,7 @@ func runDotApply(cmd *cobra.Command, args []string) error {
 	// Load configuration
 	cfg, err := config.LoadConfig(configDir)
 	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
+		return errors.Wrap(err, errors.ErrConfigNotFound, errors.DomainConfig, "load", "failed to load configuration")
 	}
 
 	// Create unified state reconciler
@@ -77,7 +78,7 @@ func runDotApply(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 	result, err := reconciler.ReconcileProvider(ctx, "dotfile")
 	if err != nil {
-		return fmt.Errorf("failed to reconcile dotfile state: %w", err)
+		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainDotfiles, "reconcile", "failed to reconcile dotfile state")
 	}
 	
 	// Process each dotfile from the reconciled state
@@ -99,7 +100,7 @@ func runDotApply(cmd *cobra.Command, args []string) error {
 		
 		action, err := processDotfile(ctx, configDir, homeDir, source, destination, dotApplyDryRun, dotApplyBackup)
 		if err != nil {
-			return fmt.Errorf("failed to process dotfile %s: %w", source, err)
+			return errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "deploy", source, "failed to process dotfile")
 		}
 		
 		actions = append(actions, action)
@@ -160,7 +161,7 @@ func processDotfile(ctx context.Context, configDir, homeDir, source, destination
 	// Check if file needs update
 	needsUpdate, err := fileOps.FileNeedsUpdate(ctx, source, destination)
 	if err != nil {
-		return action, err
+		return action, errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "check", source, "failed to check if file needs update")
 	}
 
 	if !needsUpdate {
@@ -192,7 +193,7 @@ func processDotfile(ctx context.Context, configDir, homeDir, source, destination
 
 	// Copy file using dotfiles operations
 	if err := fileOps.CopyFile(ctx, source, destination, options); err != nil {
-		return action, err
+		return action, errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", source, "failed to copy dotfile")
 	}
 
 	return action, nil

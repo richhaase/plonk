@@ -30,6 +30,12 @@ func Execute() error {
 	return rootCmd.Execute()
 }
 
+// ExecuteWithExitCode runs the root command and returns appropriate exit code
+func ExecuteWithExitCode() int {
+	err := rootCmd.Execute()
+	return HandleError(err)
+}
+
 func init() {
 	// Global flags can be added here if needed
 }
@@ -40,7 +46,7 @@ func checkPrerequisites() error {
 	return nil
 }
 
-// Helper for consistent error formatting
+// Helper for consistent error formatting (deprecated - use HandleError instead)
 func exitWithError(msg string, err error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s: %v\n", msg, err)
