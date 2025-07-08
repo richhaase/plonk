@@ -3,9 +3,13 @@
 
 package managers
 
-// PackageManager defines the minimal interface for package managers.
-// Package managers are only responsible for checking availability and listing installed packages.
+// PackageManager defines the interface for package managers.
+// Package managers handle availability checking, listing, installing, and uninstalling packages.
 type PackageManager interface {
 	IsAvailable() bool
 	ListInstalled() ([]string, error)
+	Install(name string, version string) error
+	Uninstall(name string) error
+	IsInstalled(name string) bool
+	GetVersion(name string) (string, error)
 }

@@ -4,6 +4,7 @@
 package managers
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -19,6 +20,39 @@ func (m *MockPackageManager) IsAvailable() bool {
 
 func (m *MockPackageManager) ListInstalled() ([]string, error) {
 	return m.packages, nil
+}
+
+func (m *MockPackageManager) Install(name string, version string) error {
+	// Mock implementation - just add to packages list
+	m.packages = append(m.packages, name)
+	return nil
+}
+
+func (m *MockPackageManager) Uninstall(name string) error {
+	// Mock implementation - remove from packages list
+	for i, pkg := range m.packages {
+		if pkg == name {
+			m.packages = append(m.packages[:i], m.packages[i+1:]...)
+			break
+		}
+	}
+	return nil
+}
+
+func (m *MockPackageManager) IsInstalled(name string) bool {
+	for _, pkg := range m.packages {
+		if pkg == name {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *MockPackageManager) GetVersion(name string) (string, error) {
+	if m.IsInstalled(name) {
+		return "1.0.0", nil
+	}
+	return "", fmt.Errorf("package %s not installed", name)
 }
 
 // MockConfigLoader for testing
@@ -118,20 +152,6 @@ func TestVersionCheckers(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "ASDF exact version match",
-			checker:  &AsdfVersionChecker{},
-			config:   ConfigPackage{Name: "nodejs", Version: "20.0.0"},
-			installed: "20.0.0",
-			expected: true,
-		},
-		{
-			name:     "ASDF version mismatch",
-			checker:  &AsdfVersionChecker{},
-			config:   ConfigPackage{Name: "nodejs", Version: "20.0.0"},
-			installed: "18.0.0",
-			expected: false,
-		},
-		{
 			name:     "NPM exact version match",
 			checker:  &NpmVersionChecker{},
 			config:   ConfigPackage{Name: "typescript", Version: "5.0.0"},
@@ -144,13 +164,6 @@ func TestVersionCheckers(t *testing.T) {
 			config:   ConfigPackage{Name: "typescript", Version: "5.0.0"},
 			installed: "4.9.0",
 			expected: false,
-		},
-		{
-			name:     "ASDF any version",
-			checker:  &AsdfVersionChecker{},
-			config:   ConfigPackage{Name: "nodejs", Version: ""},
-			installed: "18.0.0",
-			expected: true,
 		},
 	}
 	

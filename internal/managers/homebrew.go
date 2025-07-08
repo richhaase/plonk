@@ -4,6 +4,7 @@
 package managers
 
 import (
+	"fmt"
 	"os/exec"
 	"strings"
 )
@@ -36,4 +37,49 @@ func (h *HomebrewManager) ListInstalled() ([]string, error) {
 	}
 
 	return strings.Split(result, "\n"), nil
+}
+
+// Install installs a Homebrew package.
+func (h *HomebrewManager) Install(name string, version string) error {
+	// For Homebrew, we ignore version as it manages latest versions
+	cmd := exec.Command("brew", "install", name)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to install %s: %w\nOutput: %s", name, err, string(output))
+	}
+	return nil
+}
+
+// Uninstall removes a Homebrew package.
+func (h *HomebrewManager) Uninstall(name string) error {
+	cmd := exec.Command("brew", "uninstall", name)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to uninstall %s: %w\nOutput: %s", name, err, string(output))
+	}
+	return nil
+}
+
+// IsInstalled checks if a specific package is installed.
+func (h *HomebrewManager) IsInstalled(name string) bool {
+	cmd := exec.Command("brew", "list", name)
+	err := cmd.Run()
+	return err == nil
+}
+
+// GetVersion gets the version of an installed package.
+func (h *HomebrewManager) GetVersion(name string) (string, error) {
+	cmd := exec.Command("brew", "info", name, "--json")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get version for %s: %w", name, err)
+	}
+	
+	// For simplicity, we'll just return "latest" for Homebrew packages
+	// In a more complete implementation, we'd parse the JSON output
+	if strings.TrimSpace(string(output)) != "" {
+		return "latest", nil
+	}
+	
+	return "", fmt.Errorf("package %s not found", name)
 }

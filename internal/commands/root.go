@@ -18,7 +18,7 @@ var rootCmd = &cobra.Command{
 	Use:   "plonk",
 	Short: "Package and dotfiles management across machines",
 	Long: `Plonk manages packages and dotfiles consistently across multiple machines
-using Homebrew, ASDF, and NPM package managers.`,
+using Homebrew and NPM package managers.`,
 }
 
 func init() {

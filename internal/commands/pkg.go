@@ -10,7 +10,7 @@ import (
 var pkgCmd = &cobra.Command{
 	Use:   "pkg",
 	Short: "Package management commands",
-	Long: `Manage packages across Homebrew, ASDF, and NPM package managers.
+	Long: `Manage packages across Homebrew and NPM package managers.
 	
 View package status, install missing packages, and import existing packages
 into your plonk configuration.`,

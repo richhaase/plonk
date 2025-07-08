@@ -51,13 +51,6 @@ func (p *PlonkConfigLoader) GetPackagesForManager(managerName string) ([]ConfigP
 				Version: "", // Casks don't use versions
 			})
 		}
-	case "asdf":
-		for _, tool := range cfg.ASDF {
-			packages = append(packages, ConfigPackage{
-				Name:    tool.Name,
-				Version: tool.Version,
-			})
-		}
 	case "npm":
 		for _, pkg := range cfg.NPM {
 			name := pkg.Name

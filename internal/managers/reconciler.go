@@ -187,17 +187,6 @@ func (h *HomebrewVersionChecker) CheckVersion(configPkg ConfigPackage, installed
 	return true
 }
 
-// AsdfVersionChecker implements version checking for ASDF (exact version required)
-type AsdfVersionChecker struct{}
-
-func (a *AsdfVersionChecker) CheckVersion(configPkg ConfigPackage, installedVersion string) bool {
-	if configPkg.Version == "" {
-		// Any version acceptable
-		return true
-	}
-	// For ASDF, exact version match required
-	return configPkg.Version == installedVersion
-}
 
 // NpmVersionChecker implements version checking for NPM (exact version required)
 type NpmVersionChecker struct{}

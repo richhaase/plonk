@@ -138,13 +138,11 @@ func getPackageState(configDir string) (int, int, int) {
 	
 	packageManagers := map[string]managers.PackageManager{
 		"homebrew": managers.NewHomebrewManager(),
-		"asdf":     managers.NewAsdfManager(),
 		"npm":      managers.NewNpmManager(),
 	}
 
 	versionCheckers := map[string]managers.VersionChecker{
 		"homebrew": &managers.HomebrewVersionChecker{},
-		"asdf":     &managers.AsdfVersionChecker{},
 		"npm":      &managers.NpmVersionChecker{},
 	}
 

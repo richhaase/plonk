@@ -14,7 +14,7 @@ import (
 var pkgListCmd = &cobra.Command{
 	Use:   "list [filter]",
 	Short: "List packages across all managers",
-	Long: `List packages from Homebrew, ASDF, and NPM managers.
+	Long: `List packages from Homebrew and NPM managers.
 
 Available filters:
   (no filter)  List all installed packages
@@ -56,7 +56,6 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 		manager managers.PackageManager
 	}{
 		{"Homebrew", managers.NewHomebrewManager()},
-		{"ASDF", managers.NewAsdfManager()},
 		{"NPM", managers.NewNpmManager()},
 	}
 
@@ -97,7 +96,6 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 			loader := managers.NewPlonkConfigLoader(configDir)
 			checkers := map[string]managers.VersionChecker{
 				"homebrew": &managers.HomebrewVersionChecker{},
-				"asdf":     &managers.AsdfVersionChecker{},
 				"npm":      &managers.NpmVersionChecker{},
 			}
 			// Convert manager display name to config name
@@ -105,8 +103,6 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 			switch mgr.name {
 			case "Homebrew":
 				managerKey = "homebrew"
-			case "ASDF":
-				managerKey = "asdf"
 			case "NPM":
 				managerKey = "npm"
 			}

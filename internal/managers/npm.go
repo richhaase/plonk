@@ -4,6 +4,7 @@
 package managers
 
 import (
+	"fmt"
 	"os/exec"
 	"strings"
 )
@@ -51,4 +52,67 @@ func (n *NpmManager) ListInstalled() ([]string, error) {
 	}
 
 	return packages, nil
+}
+
+// Install installs a global NPM package.
+func (n *NpmManager) Install(name string, version string) error {
+	var packageSpec string
+	if version != "" {
+		packageSpec = fmt.Sprintf("%s@%s", name, version)
+	} else {
+		packageSpec = name
+	}
+	
+	cmd := exec.Command("npm", "install", "-g", packageSpec)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to install %s: %w\nOutput: %s", packageSpec, err, string(output))
+	}
+	
+	return nil
+}
+
+// Uninstall removes a global NPM package.
+func (n *NpmManager) Uninstall(name string) error {
+	cmd := exec.Command("npm", "uninstall", "-g", name)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to uninstall %s: %w\nOutput: %s", name, err, string(output))
+	}
+	
+	return nil
+}
+
+// IsInstalled checks if a specific package is installed globally.
+func (n *NpmManager) IsInstalled(name string) bool {
+	cmd := exec.Command("npm", "list", "-g", name)
+	err := cmd.Run()
+	return err == nil
+}
+
+// GetVersion gets the version of a globally installed package.
+func (n *NpmManager) GetVersion(name string) (string, error) {
+	cmd := exec.Command("npm", "list", "-g", name, "--depth=0")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get version for %s: %w", name, err)
+	}
+	
+	result := strings.TrimSpace(string(output))
+	if result == "" {
+		return "", fmt.Errorf("package %s not found", name)
+	}
+	
+	// Parse output format: "└── package@version"
+	lines := strings.Split(result, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, name+"@") {
+			parts := strings.Split(line, "@")
+			if len(parts) >= 2 {
+				return parts[len(parts)-1], nil
+			}
+		}
+	}
+	
+	return "", fmt.Errorf("could not parse version for %s", name)
 }
