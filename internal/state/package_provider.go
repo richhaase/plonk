@@ -14,7 +14,7 @@ type PackageManager interface {
 	ListInstalled(ctx context.Context) ([]string, error)
 	Install(ctx context.Context, name string) error
 	Uninstall(ctx context.Context, name string) error
-	IsInstalled(ctx context.Context, name string) bool
+	IsInstalled(ctx context.Context, name string) (bool, error)
 }
 
 // PackageConfigLoader defines how to load package configuration

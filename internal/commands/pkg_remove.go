@@ -93,25 +93,30 @@ func runPkgRemove(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
 		if !mgr.IsAvailable(ctx) {
 			uninstallError = fmt.Errorf("manager '%s' is not available", managerName)
-		} else if !mgr.IsInstalled(ctx, packageName) {
-			if format == OutputTable {
-				fmt.Printf("Package '%s' is not installed in %s\n", packageName, managerName)
-			}
-			action = "removed_from_config_only"
 		} else {
-			if format == OutputTable {
-				fmt.Printf("Uninstalling %s from %s...\n", packageName, managerName)
-			}
-			
-			err = mgr.Uninstall(ctx, packageName)
+			installed, err := mgr.IsInstalled(ctx, packageName)
 			if err != nil {
-				uninstallError = err
-				action = "removed_from_config_uninstall_failed"
+				uninstallError = fmt.Errorf("failed to check if package is installed: %w", err)
+			} else if !installed {
+				if format == OutputTable {
+					fmt.Printf("Package '%s' is not installed in %s\n", packageName, managerName)
+				}
+				action = "removed_from_config_only"
 			} else {
 				if format == OutputTable {
-					fmt.Printf("Successfully removed from configuration and uninstalled: %s\n", packageName)
+					fmt.Printf("Uninstalling %s from %s...\n", packageName, managerName)
 				}
-				action = "removed_and_uninstalled"
+				
+				err = mgr.Uninstall(ctx, packageName)
+				if err != nil {
+					uninstallError = err
+					action = "removed_from_config_uninstall_failed"
+				} else {
+					if format == OutputTable {
+						fmt.Printf("Successfully removed from configuration and uninstalled: %s\n", packageName)
+					}
+					action = "removed_and_uninstalled"
+				}
 			}
 		}
 	} else {

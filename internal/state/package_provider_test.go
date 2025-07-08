@@ -59,13 +59,13 @@ func (m *MockPackageManager) Uninstall(ctx context.Context, name string) error {
 	return nil
 }
 
-func (m *MockPackageManager) IsInstalled(ctx context.Context, name string) bool {
+func (m *MockPackageManager) IsInstalled(ctx context.Context, name string) (bool, error) {
 	for _, pkg := range m.installed {
 		if pkg == name {
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 func (m *MockPackageManager) SetAvailable(available bool) {

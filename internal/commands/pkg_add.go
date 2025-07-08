@@ -111,7 +111,11 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Check if already installed
-	if mgr.IsInstalled(ctx, packageName) {
+	installed, err := mgr.IsInstalled(ctx, packageName)
+	if err != nil {
+		return fmt.Errorf("failed to check if package is installed: %w", err)
+	}
+	if installed {
 		if format == OutputTable {
 			fmt.Printf("Package '%s' is already installed in %s\n", packageName, targetManager)
 			fmt.Printf("Added to configuration: %s\n", packageName)

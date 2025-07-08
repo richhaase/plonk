@@ -67,7 +67,7 @@ type ManagerInterface interface {
 	ListInstalled(ctx context.Context) ([]string, error)
 	Install(ctx context.Context, name string) error
 	Uninstall(ctx context.Context, name string) error
-	IsInstalled(ctx context.Context, name string) bool
+	IsInstalled(ctx context.Context, name string) (bool, error)
 }
 
 // NewManagerAdapter creates a new manager adapter
@@ -96,6 +96,6 @@ func (m *ManagerAdapter) Uninstall(ctx context.Context, name string) error {
 }
 
 // IsInstalled implements PackageManager
-func (m *ManagerAdapter) IsInstalled(ctx context.Context, name string) bool {
+func (m *ManagerAdapter) IsInstalled(ctx context.Context, name string) (bool, error) {
 	return m.manager.IsInstalled(ctx, name)
 }

@@ -61,9 +61,17 @@ func (h *HomebrewManager) Uninstall(ctx context.Context, name string) error {
 }
 
 // IsInstalled checks if a specific package is installed.
-func (h *HomebrewManager) IsInstalled(ctx context.Context, name string) bool {
+func (h *HomebrewManager) IsInstalled(ctx context.Context, name string) (bool, error) {
 	cmd := exec.CommandContext(ctx, "brew", "list", name)
 	err := cmd.Run()
-	return err == nil
+	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() == 1 {
+			// Package not found - this is not an error condition
+			return false, nil
+		}
+		// Real error (brew not found, permission issues, etc.)
+		return false, fmt.Errorf("failed to check package %s: %w", name, err)
+	}
+	return true, nil
 }
 

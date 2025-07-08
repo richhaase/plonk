@@ -101,10 +101,13 @@ func TestHomebrewManager_ContextCancellation(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // Cancel immediately
 		
-		// IsInstalled returns bool, but should respect context cancellation
-		// In a real scenario, this would return false when context is cancelled
-		result := manager.IsInstalled(ctx, "nonexistent-package")
-		_ = result // Context cancellation may not be detectable in boolean return
+		_, err := manager.IsInstalled(ctx, "nonexistent-package")
+		if err == nil {
+			t.Error("Expected error when context is cancelled")
+		}
+		if !containsContextError(err) {
+			t.Errorf("Expected context cancellation error, got %v", err)
+		}
 	})
 
 	t.Run("IsInstalled_ContextTimeout", func(t *testing.T) {
@@ -113,8 +116,13 @@ func TestHomebrewManager_ContextCancellation(t *testing.T) {
 		
 		time.Sleep(10 * time.Millisecond) // Ensure timeout
 		
-		result := manager.IsInstalled(ctx, "nonexistent-package")
-		_ = result // Context timeout may not be detectable in boolean return
+		_, err := manager.IsInstalled(ctx, "nonexistent-package")
+		if err == nil {
+			t.Error("Expected error when context times out")
+		}
+		if !containsContextError(err) {
+			t.Errorf("Expected context timeout error, got %v", err)
+		}
 	})
 }
 
