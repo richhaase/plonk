@@ -5,6 +5,8 @@ package commands
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"plonk/internal/config"
 	"plonk/internal/managers"
@@ -47,11 +49,13 @@ func runPkgRemove(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Get config directory
-	configDir, err := managers.DefaultConfigDir()
+	// Get directories
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("failed to get config directory: %w", err)
+		return fmt.Errorf("failed to get home directory: %w", err)
 	}
+
+	configDir := filepath.Join(homeDir, ".config", "plonk")
 
 	// Load existing configuration
 	cfg, err := config.LoadConfig(configDir)

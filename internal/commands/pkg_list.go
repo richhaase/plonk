@@ -5,8 +5,11 @@ package commands
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
-	"plonk/internal/managers"
+	"plonk/internal/config"
+	"plonk/internal/state"
 
 	"github.com/spf13/cobra"
 )
@@ -50,118 +53,84 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Initialize package managers
-	packageManagers := []struct {
-		name    string
-		manager managers.PackageManager
-	}{
-		{"Homebrew", managers.NewHomebrewManager()},
-		{"NPM", managers.NewNpmManager()},
+	// Get directories
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home directory: %w", err)
+	}
+
+	configDir := filepath.Join(homeDir, ".config", "plonk")
+
+	// Load configuration
+	cfg, err := config.LoadConfig(configDir)
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	// Create unified state reconciler
+	reconciler := state.NewReconciler()
+
+	// Register package provider (multi-manager)
+	packageProvider := createPackageProvider(cfg)
+	reconciler.RegisterProvider("package", packageProvider)
+
+	// Reconcile package domain
+	result, err := reconciler.ReconcileProvider("package")
+	if err != nil {
+		return fmt.Errorf("failed to reconcile package state: %w", err)
+	}
+
+	// Filter items based on the requested filter
+	var filteredItems []state.Item
+	switch filter {
+	case "all":
+		filteredItems = append(filteredItems, result.Managed...)
+		filteredItems = append(filteredItems, result.Untracked...)
+	case "managed":
+		filteredItems = result.Managed
+	case "untracked":
+		filteredItems = result.Untracked
+	case "missing":
+		filteredItems = result.Missing
+	}
+
+	// Group items by manager for output
+	managerGroups := make(map[string][]state.Item)
+	for _, item := range filteredItems {
+		manager := item.Manager
+		if manager == "" {
+			manager = "unknown"
+		}
+		managerGroups[manager] = append(managerGroups[manager], item)
 	}
 
 	// Prepare output structure
-	var outputData PackageListOutput
-	outputData.Filter = filter
+	outputData := PackageListOutput{
+		Filter:   filter,
+		Managers: make([]ManagerOutput, 0, len(managerGroups)),
+	}
 
-
-	for _, mgr := range packageManagers {
-		if !mgr.manager.IsAvailable() {
-			continue
+	// Convert to legacy output format for compatibility
+	for managerName, items := range managerGroups {
+		// Convert manager name for display
+		displayName := managerName
+		switch managerName {
+		case "homebrew":
+			displayName = "Homebrew"
+		case "npm":
+			displayName = "NPM"
 		}
 
-		var packages []string
-		var statePackages []managers.Package
-		var err error
-
-		// Handle different filters
-		switch filter {
-		case "all":
-			packages, err = mgr.manager.ListInstalled()
-			if err != nil {
-				if format == OutputTable {
-					fmt.Printf("# %s: Error listing packages: %v\n", mgr.name, err)
-				}
-				continue
-			}
-		case "managed", "untracked", "missing":
-			// Use state reconciliation for these filters
-			configDir, configErr := managers.DefaultConfigDir()
-			if configErr != nil {
-				if format == OutputTable {
-					fmt.Printf("# %s: Error getting config directory: %v\n", mgr.name, configErr)
-				}
-				continue
-			}
-			
-			loader := managers.NewPlonkConfigLoader(configDir)
-			// Convert manager display name to config name
-			managerKey := mgr.name
-			switch mgr.name {
-			case "Homebrew":
-				managerKey = "homebrew"
-			case "NPM":
-				managerKey = "npm"
-			}
-			
-			managerMap := map[string]managers.PackageManager{
-				managerKey: mgr.manager,
-			}
-			
-			reconciler := managers.NewStateReconciler(loader, managerMap)
-			result, reconcileErr := reconciler.ReconcileManager(managerKey)
-			if reconcileErr != nil {
-				if format == OutputTable {
-					fmt.Printf("# %s: Error reconciling state: %v\n", mgr.name, reconcileErr)
-				}
-				continue
-			}
-			
-			// Extract packages based on filter
-			switch filter {
-			case "managed":
-				statePackages = result.Managed
-			case "untracked":
-				statePackages = result.Untracked
-			case "missing":
-				statePackages = result.Missing
-			}
-			
-			// Convert to string slice for backwards compatibility
-			packages = make([]string, len(statePackages))
-			for i, pkg := range statePackages {
-				packages[i] = pkg.Name
-			}
-		}
-
-		if err != nil {
-			if format == OutputTable {
-				fmt.Printf("# %s: Error listing packages: %v\n", mgr.name, err)
-			}
-			continue
-		}
-
-		// Create manager output
 		managerOutput := ManagerOutput{
-			Name:     mgr.name,
-			Count:    len(packages),
-			Packages: make([]PackageOutput, len(packages)),
+			Name:     displayName,
+			Count:    len(items),
+			Packages: make([]PackageOutput, len(items)),
 		}
 
-		// Convert packages to output format
-		if len(statePackages) > 0 {
-			// Use rich package data for state-based filters
-			for i, pkg := range statePackages {
-				managerOutput.Packages[i] = PackageOutput{
-					Name:  pkg.Name,
-					State: stateToString(pkg.State),
-				}
-			}
-		} else {
-			// Use simple package names for "all" filter
-			for i, pkg := range packages {
-				managerOutput.Packages[i] = PackageOutput{
-					Name: pkg,
-				}
+		for i, item := range items {
+			managerOutput.Packages[i] = PackageOutput{
+				Name:  item.Name,
+				State: item.State.String(),
 			}
 		}
 
@@ -169,18 +138,4 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 	}
 
 	return RenderOutput(outputData, format)
-}
-
-// stateToString converts PackageState to string
-func stateToString(state managers.PackageState) string {
-	switch state {
-	case managers.StateManaged:
-		return "managed"
-	case managers.StateMissing:
-		return "missing"
-	case managers.StateUntracked:
-		return "untracked"
-	default:
-		return "unknown"
-	}
 }

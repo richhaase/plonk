@@ -17,25 +17,20 @@ func TestLoadConfig_BasicStructure(t *testing.T) {
   default_manager: homebrew
 
 dotfiles:
-  - zshrc
-  - zshenv
-  - plugins.zsh
+  - source: zshrc
+    destination: ~/.zshrc
+  - source: zshenv
+    destination: ~/.zshenv
+  - source: plugins.zsh
+    destination: ~/.config/plugins.zsh
 
 homebrew:
   brews:
     - aichat
     - aider
     - name: neovim
-      config: config/nvim/
   casks:
     - font-hack-nerd-font
-
-asdf:
-  - name: nodejs
-    version: "24.2.0"
-    config: config/npm/
-  - name: python
-    version: "3.13.2"
 
 npm:
   - "@anthropic-ai/claude-code"
@@ -60,13 +55,17 @@ npm:
 	}
 
 	// Verify dotfiles
-	expectedDotfiles := []string{"zshrc", "zshenv", "plugins.zsh"}
+	expectedDotfiles := []DotfileEntry{
+		{Source: "zshrc", Destination: "~/.zshrc"},
+		{Source: "zshenv", Destination: "~/.zshenv"},
+		{Source: "plugins.zsh", Destination: "~/.config/plugins.zsh"},
+	}
 	if len(config.Dotfiles) != len(expectedDotfiles) {
 		t.Errorf("Expected %d dotfiles, got %d", len(expectedDotfiles), len(config.Dotfiles))
 	}
 	for i, expected := range expectedDotfiles {
-		if i >= len(config.Dotfiles) || config.Dotfiles[i] != expected {
-			t.Errorf("Expected dotfile '%s', got '%s'", expected, config.Dotfiles[i])
+		if i >= len(config.Dotfiles) || config.Dotfiles[i].Source != expected.Source || config.Dotfiles[i].Destination != expected.Destination {
+			t.Errorf("Expected dotfile %+v, got %+v", expected, config.Dotfiles[i])
 		}
 	}
 
@@ -85,24 +84,8 @@ npm:
 	if neovim.Name != "neovim" {
 		t.Errorf("Expected neovim name 'neovim', got '%s'", neovim.Name)
 	}
-	if neovim.Config != "config/nvim/" {
-		t.Errorf("Expected neovim config 'config/nvim/', got '%s'", neovim.Config)
-	}
 
-	// Verify asdf tools
-	if len(config.ASDF) != 2 {
-		t.Errorf("Expected 2 asdf tools, got %d", len(config.ASDF))
-	}
-
-	nodejs := config.ASDF[0]
-	if nodejs.Name != "nodejs" || nodejs.Version != "24.2.0" || nodejs.Config != "config/npm/" {
-		t.Errorf("nodejs tool not parsed correctly: %+v", nodejs)
-	}
-
-	python := config.ASDF[1]
-	if python.Name != "python" || python.Version != "3.13.2" || python.Config != "" {
-		t.Errorf("python tool not parsed correctly: %+v", python)
-	}
+	// ASDF functionality has been removed
 
 	// Verify npm packages
 	if len(config.NPM) != 2 {
@@ -133,13 +116,13 @@ func TestConfigValidation(t *testing.T) {
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "plonk.yaml")
 
-	// Test ASDF tool without version should fail
+	// Test invalid default manager should fail
 	configContent := `settings:
-  default_manager: homebrew
+  default_manager: invalid_manager
 
-asdf:
-  - name: nodejs
-    # Missing version for ASDF tool
+dotfiles:
+  - source: test
+    destination: ~/.test
 `
 
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
@@ -149,7 +132,7 @@ asdf:
 
 	_, err = LoadConfig(tempDir)
 	if err == nil {
-		t.Error("Expected error for ASDF tool without version")
+		t.Error("Expected error for invalid default manager")
 	}
 }
 
@@ -176,7 +159,11 @@ func TestSourceToTarget(t *testing.T) {
 
 func TestGetDotfileTargets(t *testing.T) {
 	config := &Config{
-		Dotfiles: []string{"zshrc", "config/nvim/", "dot_gitconfig"},
+		Dotfiles: []DotfileEntry{
+			{Source: "zshrc", Destination: "~/.zshrc"},
+			{Source: "config/nvim/", Destination: "~/.config/nvim/"},
+			{Source: "dot_gitconfig", Destination: "~/.gitconfig"},
+		},
 	}
 
 	targets := config.GetDotfileTargets()

@@ -27,15 +27,15 @@ func TestSimpleValidator_ValidateConfig_ValidConfigs(t *testing.T) {
 				Settings: Settings{
 					DefaultManager: "homebrew",
 				},
-				Dotfiles: []string{"zshrc", "vimrc"},
+				Dotfiles: []DotfileEntry{
+					{Source: "zshrc", Destination: "~/.zshrc"},
+					{Source: "vimrc", Destination: "~/.vimrc"},
+				},
 				Homebrew: HomebrewConfig{
 					Brews: []HomebrewPackage{
 						{Name: "git"},
-						{Name: "neovim", Config: "config/nvim/"},
+						{Name: "neovim"},
 					},
-				},
-				ASDF: []ASDFTool{
-					{Name: "nodejs", Version: "20.0.0"},
 				},
 				NPM: []NPMPackage{
 					{Name: "@vue/cli"},
@@ -76,7 +76,7 @@ func TestSimpleValidator_ValidateConfig_InvalidConfigs(t *testing.T) {
 					DefaultManager: "invalid",
 				},
 			},
-			expectError: "must be one of: homebrew asdf npm",
+			expectError: "must be one of: homebrew npm",
 		},
 		{
 			name: "invalid package name",
@@ -94,19 +94,11 @@ func TestSimpleValidator_ValidateConfig_InvalidConfigs(t *testing.T) {
 			name: "invalid file path",
 			config: &Config{
 				Settings: Settings{DefaultManager: "homebrew"},
-				Dotfiles: []string{"/absolute/path"},
-			},
-			expectError: "invalid file path",
-		},
-		{
-			name: "missing ASDF version",
-			config: &Config{
-				Settings: Settings{DefaultManager: "asdf"},
-				ASDF: []ASDFTool{
-					{Name: "nodejs"}, // Missing version
+				Dotfiles: []DotfileEntry{
+					{Source: "/absolute/path", Destination: "~/.config"},
 				},
 			},
-			expectError: "Version is required",
+			expectError: "invalid file path",
 		},
 	}
 
@@ -149,18 +141,15 @@ func TestSimpleValidator_ValidateConfigFromYAML_ValidYAML(t *testing.T) {
   default_manager: homebrew
 
 dotfiles:
-  - zshrc
-  - vimrc
+  - source: zshrc
+    destination: ~/.zshrc
+  - source: vimrc
+    destination: ~/.vimrc
 
 homebrew:
   brews:
     - git
     - name: neovim
-      config: config/nvim/
-
-asdf:
-  - name: nodejs
-    version: "20.0.0"
 
 npm:
   - "@vue/cli"`,

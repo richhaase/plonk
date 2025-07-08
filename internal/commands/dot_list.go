@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"plonk/internal/config"
+	"plonk/internal/state"
 
 	"github.com/spf13/cobra"
 )
@@ -61,24 +61,43 @@ func runDotList(cmd *cobra.Command, args []string) error {
 
 	configDir := filepath.Join(homeDir, ".config", "plonk")
 
-	// Reconcile dotfiles
-	managed, missing, untracked, err := reconcileDotfiles(homeDir, configDir)
+	// Load configuration
+	cfg, err := config.LoadConfig(configDir)
 	if err != nil {
-		return fmt.Errorf("failed to reconcile dotfiles: %w", err)
+		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	// Select dotfiles based on filter
-	var dotfiles []string
+	// Create unified state reconciler
+	reconciler := state.NewReconciler()
+
+	// Register dotfile provider
+	dotfileProvider := createDotfileProvider(homeDir, cfg)
+	reconciler.RegisterProvider("dotfile", dotfileProvider)
+
+	// Reconcile dotfile domain
+	result, err := reconciler.ReconcileProvider("dotfile")
+	if err != nil {
+		return fmt.Errorf("failed to reconcile dotfile state: %w", err)
+	}
+
+	// Filter items based on the requested filter
+	var filteredItems []state.Item
 	switch filter {
 	case "all":
-		dotfiles = append(dotfiles, managed...)
-		dotfiles = append(dotfiles, untracked...)
+		filteredItems = append(filteredItems, result.Managed...)
+		filteredItems = append(filteredItems, result.Untracked...)
 	case "managed":
-		dotfiles = managed
+		filteredItems = result.Managed
 	case "untracked":
-		dotfiles = untracked
+		filteredItems = result.Untracked
 	case "missing":
-		dotfiles = missing
+		filteredItems = result.Missing
+	}
+
+	// Convert to string slice for output compatibility
+	dotfiles := make([]string, len(filteredItems))
+	for i, item := range filteredItems {
+		dotfiles[i] = item.Name
 	}
 
 	// Prepare output
@@ -89,97 +108,6 @@ func runDotList(cmd *cobra.Command, args []string) error {
 	}
 
 	return RenderOutput(outputData, format)
-}
-
-// listDotfiles finds all dotfiles in home directory
-func listDotfiles(homeDir string) ([]string, error) {
-	var dotfiles []string
-
-	entries, err := os.ReadDir(homeDir)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, entry := range entries {
-		if strings.HasPrefix(entry.Name(), ".") && entry.Name() != "." && entry.Name() != ".." {
-			dotfiles = append(dotfiles, entry.Name())
-		}
-	}
-
-	return dotfiles, nil
-}
-
-// getConfigDotfiles gets dotfiles from plonk.yaml
-func getConfigDotfiles(configDir string) ([]string, error) {
-	cfg, err := config.LoadConfig(configDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return []string{}, nil
-		}
-		return nil, err
-	}
-	
-	// Extract destination paths from dotfile entries
-	var dotfiles []string
-	for _, entry := range cfg.Dotfiles {
-		destination := entry.Destination
-		if destination == "" {
-			// Infer destination from source
-			destination = cfg.GetDotfileTargets()[entry.Source]
-		}
-		// Convert to relative path for comparison
-		if strings.HasPrefix(destination, "~/") {
-			destination = destination[2:]
-		}
-		dotfiles = append(dotfiles, destination)
-	}
-	
-	return dotfiles, nil
-}
-
-// reconcileDotfiles performs simple set operations like package reconciliation
-func reconcileDotfiles(homeDir, configDir string) ([]string, []string, []string, error) {
-	// Get actual dotfiles in home
-	actualDotfiles, err := listDotfiles(homeDir)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	// Get config dotfiles
-	configDotfiles, err := getConfigDotfiles(configDir)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	// Create lookup sets
-	actualSet := make(map[string]bool)
-	for _, dotfile := range actualDotfiles {
-		actualSet[dotfile] = true
-	}
-
-	configSet := make(map[string]bool)
-	for _, dotfile := range configDotfiles {
-		configSet[dotfile] = true
-	}
-
-	// Classify dotfiles
-	var managed, missing, untracked []string
-	
-	for _, dotfile := range configDotfiles {
-		if actualSet[dotfile] {
-			managed = append(managed, dotfile)
-		} else {
-			missing = append(missing, dotfile)
-		}
-	}
-
-	for _, dotfile := range actualDotfiles {
-		if !configSet[dotfile] {
-			untracked = append(untracked, dotfile)
-		}
-	}
-
-	return managed, missing, untracked, nil
 }
 
 // DotfileListOutput represents the output structure for dotfile list commands
