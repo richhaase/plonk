@@ -16,7 +16,16 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     build-essential \
     procps \
+    wget \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Go
+RUN wget https://go.dev/dl/go1.21.6.linux-arm64.tar.gz && \
+    tar -C /usr/local -xzf go1.21.6.linux-arm64.tar.gz && \
+    rm go1.21.6.linux-arm64.tar.gz
+
+# Add Go to PATH
+ENV PATH="/usr/local/go/bin:${PATH}"
 
 # Create test user with sudo access
 RUN useradd -m -s /bin/bash -G sudo testuser
