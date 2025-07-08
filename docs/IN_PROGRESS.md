@@ -36,12 +36,12 @@ The codebase now demonstrates excellent separation into 5 core buckets:
 ### 1. **✅ Add Tests for Dotfiles Package** - **COMPLETED**
 - **Impact**: Critical for reliability
 - **Effort**: Medium
-- **Files**: `internal/dotfiles/operations_test.go`, `internal/dotfiles/fileops_test.go`, `internal/dotfiles/integration_test.go`
+- **Files**: `internal/dotfiles/operations_test.go`, `internal/dotfiles/fileops_test.go`
 - **Why**: New package has zero test coverage, high risk for regressions
 - **Completion Details**: 
   - ✅ **30+ unit tests** for `Manager` operations (path resolution, directory expansion, validation)
   - ✅ **14 unit tests** for `FileOperations` (copying, backup, validation, error handling)
-  - ✅ **4 integration tests** for complete dotfile workflows
+  - ✅ **All tests isolated** - use only `t.TempDir()` and mock objects
   - ✅ **All tests passing** - package is now production-ready
   - ✅ **Comprehensive coverage** including edge cases and error scenarios
 
@@ -252,6 +252,19 @@ func TargetToSource(target string) string {
   - Better error aggregation
   - Metrics collection
 
+### 14. **Test Isolation Strategy & Review**
+- **Impact**: High for developer safety
+- **Effort**: Medium
+- **Files**: All test files
+- **Why**: Must ensure tests never interfere with developer's real dotfiles/packages
+- **Current Status**: 
+  - ✅ **All tests use proper isolation** - `t.TempDir()` and mock objects
+  - ✅ **No real package manager calls** - MockPackageManager used throughout
+  - ✅ **No real environment dependencies** - No `os.UserHomeDir()` or `$HOME` usage
+  - ✅ **Config loading isolated** - Only reads from specified test directories
+  - ❌ **Integration tests removed** - Too risky for real system interference
+- **Ongoing**: Regular review of new tests for proper isolation
+
 ---
 
 ## **📊 Effort vs Impact Matrix**
@@ -259,18 +272,19 @@ func TargetToSource(target string) string {
 | Priority | Item | Impact | Effort | Ratio |
 |----------|------|--------|--------|-------|
 | **1** | ✅ Tests for dotfiles package | Critical | Medium | ✅ **DONE** |
-| **2** | Proper error types | High | Medium | ⚡ |
-| **3** | Context support | High | High | ⚡ |
-| **4** | Config interfaces | Medium | Medium | 🎯 |
-| **5** | Provider generics | Medium | High | 🎯 |
-| **6** | Package manager errors | Medium | Low | ⚡ |
-| **7** | File operations enhancement | Medium | Medium | 🎯 |
-| **8** | Logging | Low | Medium | 💤 |
-| **9** | Metrics | Low | Medium | 💤 |
-| **10** | Functional options | Low | Medium | 💤 |
-| **11** | Interface organization | Low | Low | 💤 |
-| **12** | Path resolution cleanup | Low | Low | 💤 |
-| **13** | Concurrent reconciliation | Low | High | 💤 |
+| **2** | Test isolation strategy | High | Medium | ⚡ |
+| **3** | Proper error types | High | Medium | ⚡ |
+| **4** | Context support | High | High | ⚡ |
+| **5** | Config interfaces | Medium | Medium | 🎯 |
+| **6** | Provider generics | Medium | High | 🎯 |
+| **7** | Package manager errors | Medium | Low | ⚡ |
+| **8** | File operations enhancement | Medium | Medium | 🎯 |
+| **9** | Logging | Low | Medium | 💤 |
+| **10** | Metrics | Low | Medium | 💤 |
+| **11** | Functional options | Low | Medium | 💤 |
+| **12** | Interface organization | Low | Low | 💤 |
+| **13** | Path resolution cleanup | Low | Low | 💤 |
+| **14** | Concurrent reconciliation | Low | High | 💤 |
 
 ## **🎯 Recommended Implementation Order**
 
@@ -278,33 +292,34 @@ func TargetToSource(target string) string {
 ```bash
 # Week 1-2: Critical reliability improvements
 1. ✅ Add tests for dotfiles package - COMPLETED
-2. Implement proper error types
-3. Add context support to core operations
+2. ✅ Test isolation strategy - COMPLETED (ongoing review)
+3. Implement proper error types
+4. Add context support to core operations
 ```
 
 ### **Phase 2: Quality (Medium Priority)**
 ```bash
 # Week 3-4: Architectural improvements
-4. Refactor configuration loading interfaces
-5. Improve package manager error handling
-6. Enhance file operations (atomic, progress)
+5. Refactor configuration loading interfaces
+6. Improve package manager error handling
+7. Enhance file operations (atomic, progress)
 ```
 
 ### **Phase 3: Optimization (Selected Low Priority)**
 ```bash
 # Week 5-6: Performance and maintainability
-7. Extract common provider logic (if time permits)
-8. Add comprehensive logging
-9. Improve config path resolution
+8. Extract common provider logic (if time permits)
+9. Add comprehensive logging
+10. Improve config path resolution
 ```
 
 ### **Phase 4: Polish (Remaining Low Priority)**
 ```bash
 # Future: Nice-to-have enhancements
-10. Implement metrics collection
-11. Add functional options pattern
-12. Move interfaces to separate files
-13. Add concurrent provider reconciliation
+11. Implement metrics collection
+12. Add functional options pattern
+13. Move interfaces to separate files
+14. Add concurrent provider reconciliation
 ```
 
 ## **🚀 Quick Wins (Low Effort, Good Impact)**
@@ -315,8 +330,9 @@ func TargetToSource(target string) string {
 
 ## **💡 Implementation Strategy**
 
-- **✅ Phase 1 Progress**: Critical dotfiles testing completed - production confidence significantly improved
-- **Next Focus**: Proper error types (#2) and context support (#3) to complete Phase 1
+- **✅ Phase 1 Progress**: Critical dotfiles testing and test isolation completed - production confidence significantly improved
+- **Next Focus**: Proper error types (#3) and context support (#4) to complete Phase 1
+- **Test Safety**: All tests must use `t.TempDir()` and mocks - NO real system dependencies
 - **Phase 2 items can be done in parallel** - Independent improvements
 - **Phase 3+ are ongoing** - Can be tackled as time permits
 - **Focus on quick wins** when time is limited between major features
