@@ -30,9 +30,10 @@ func (m *MockDotfileConfigLoader) SetTargets(targets map[string]string) {
 
 func TestNewDotfileProvider(t *testing.T) {
 	homeDir := "/home/user"
+	configDir := "/home/user/.config/plonk"
 	configLoader := NewMockDotfileConfigLoader()
 	
-	provider := NewDotfileProvider(homeDir, configLoader)
+	provider := NewDotfileProvider(homeDir, configDir, configLoader)
 	
 	if provider == nil {
 		t.Fatal("NewDotfileProvider() returned nil")
@@ -48,7 +49,7 @@ func TestNewDotfileProvider(t *testing.T) {
 }
 
 func TestDotfileProvider_Domain(t *testing.T) {
-	provider := NewDotfileProvider("/home/user", NewMockDotfileConfigLoader())
+	provider := NewDotfileProvider("/home/user", "/home/user/.config/plonk", NewMockDotfileConfigLoader())
 	
 	domain := provider.Domain()
 	if domain != "dotfile" {
@@ -64,7 +65,7 @@ func TestDotfileProvider_GetConfiguredItems(t *testing.T) {
 		"config/nvim/":  "~/.config/nvim/",
 	})
 	
-	provider := NewDotfileProvider("/home/user", configLoader)
+	provider := NewDotfileProvider("/home/user", "/home/user/.config/plonk", configLoader)
 	
 	items, err := provider.GetConfiguredItems()
 	if err != nil {
@@ -156,7 +157,7 @@ func TestDotfileProvider_GetActualItems(t *testing.T) {
 		}
 	}
 	
-	provider := NewDotfileProvider(tempDir, NewMockDotfileConfigLoader())
+	provider := NewDotfileProvider(tempDir, tempDir+"/.config/plonk", NewMockDotfileConfigLoader())
 	
 	items, err := provider.GetActualItems()
 	if err != nil {
@@ -199,7 +200,7 @@ func TestDotfileProvider_GetActualItems(t *testing.T) {
 }
 
 func TestDotfileProvider_CreateItem(t *testing.T) {
-	provider := NewDotfileProvider("/home/user", NewMockDotfileConfigLoader())
+	provider := NewDotfileProvider("/home/user", "/home/user/.config/plonk", NewMockDotfileConfigLoader())
 	
 	tests := []struct {
 		name         string
@@ -276,7 +277,7 @@ func TestDotfileProvider_CreateItem(t *testing.T) {
 }
 
 func TestDotfileProvider_DestinationToName(t *testing.T) {
-	provider := NewDotfileProvider("/home/user", NewMockDotfileConfigLoader())
+	provider := NewDotfileProvider("/home/user", "/home/user/.config/plonk", NewMockDotfileConfigLoader())
 	
 	tests := []struct {
 		destination string
@@ -290,9 +291,9 @@ func TestDotfileProvider_DestinationToName(t *testing.T) {
 	}
 	
 	for _, test := range tests {
-		result := provider.destinationToName(test.destination)
+		result := provider.manager.DestinationToName(test.destination)
 		if result != test.expected {
-			t.Errorf("destinationToName(%s) = %s, expected %s", test.destination, result, test.expected)
+			t.Errorf("DestinationToName(%s) = %s, expected %s", test.destination, result, test.expected)
 		}
 	}
 }

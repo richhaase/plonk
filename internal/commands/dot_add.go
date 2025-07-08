@@ -161,21 +161,15 @@ func generatePaths(resolvedPath, homeDir string) (string, string) {
 
 // targetToSource converts a target path to source path using our convention
 func targetToSource(target string) string {
-	// Remove ~/ prefix if present
-	if len(target) > 2 && target[:2] == "~/" {
-		target = target[2:]
-	}
-	
-	// Remove . prefix if present
-	if len(target) > 1 && target[:1] == "." {
-		target = target[1:]
-	}
-	
-	return target
+	// Use the config package implementation
+	return config.TargetToSource(target)
 }
 
 // copyDotfile copies a dotfile (file or directory) to the destination
 func copyDotfile(src, dst string) error {
+	// For dot add, we need to copy from the actual file system location
+	// to the plonk config directory, so we use a simple file copy approach
+	
 	srcInfo, err := os.Stat(src)
 	if err != nil {
 		return err
@@ -187,9 +181,40 @@ func copyDotfile(src, dst string) error {
 	}
 
 	if srcInfo.IsDir() {
-		return copyDir(src, dst)
+		return copyDirectoryContents(src, dst)
 	}
-	return copyFile(src, dst)
+	return copyFileContents(src, dst)
+}
+
+// copyFileContents copies a file from src to dst
+func copyFileContents(src, dst string) error {
+	content, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dst, content, 0644)
+}
+
+// copyDirectoryContents copies a directory from src to dst
+func copyDirectoryContents(src, dst string) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		relPath, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+
+		destPath := filepath.Join(dst, relPath)
+
+		if info.IsDir() {
+			return os.MkdirAll(destPath, info.Mode())
+		}
+
+		return copyFileContents(path, destPath)
+	})
 }
 
 // saveDotfileConfig saves the configuration to plonk.yaml

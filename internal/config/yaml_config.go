@@ -246,7 +246,7 @@ func (c *Config) GetDotfileTargets() map[string]string {
 		
 		// If source is empty, infer from destination
 		if source == "" {
-			source = targetToSource(destination)
+			source = TargetToSource(destination)
 		}
 		
 		// If destination is empty, infer from source
@@ -280,13 +280,13 @@ func sourceToTarget(source string) string {
 	return "~/." + source
 }
 
-// targetToSource converts a target path to source path using our convention
+// TargetToSource converts a target path to source path using our convention
 // Examples:
 //
 //	~/.config/nvim/ -> config/nvim/
 //	~/.zshrc -> zshrc
 //	~/.gitconfig -> dot_gitconfig
-func targetToSource(target string) string {
+func TargetToSource(target string) string {
 	// Remove ~/ prefix if present
 	if len(target) > 2 && target[:2] == "~/" {
 		target = target[2:]

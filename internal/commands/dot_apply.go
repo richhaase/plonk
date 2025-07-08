@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"plonk/internal/config"
+	"plonk/internal/dotfiles"
 	"plonk/internal/state"
 
 	"github.com/spf13/cobra"
@@ -122,9 +122,9 @@ func runDotApply(cmd *cobra.Command, args []string) error {
 
 // processDotfile handles the deployment of a single dotfile
 func processDotfile(configDir, homeDir, source, destination string, dryRun, backup bool) (DotfileAction, error) {
-	// Resolve paths
-	sourcePath := filepath.Join(configDir, source)
-	destPath := expandPath(destination, homeDir)
+	// Create dotfiles manager and file operations
+	manager := dotfiles.NewManager(homeDir, configDir)
+	fileOps := dotfiles.NewFileOperations(manager)
 
 	action := DotfileAction{
 		Source:      source,
@@ -133,49 +133,38 @@ func processDotfile(configDir, homeDir, source, destination string, dryRun, back
 		Reason:      "",
 	}
 
-	// Check if source exists
-	sourceInfo, err := os.Stat(sourcePath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			action.Status = "error"
-			action.Reason = "source file not found"
-			return action, nil
-		}
-		return action, err
+	// Validate paths
+	if err := manager.ValidatePaths(source, destination); err != nil {
+		action.Status = "error"
+		action.Reason = err.Error()
+		return action, nil
 	}
-	
-	// With directory expansion, we should only process files
-	if sourceInfo.IsDir() {
+
+	// Check if source is a directory (should have been expanded)
+	if manager.IsDirectory(manager.GetSourcePath(source)) {
 		action.Status = "error"
 		action.Reason = "unexpected directory (should have been expanded)"
 		return action, nil
 	}
 
-	// Check if destination exists
-	destInfo, err := os.Stat(destPath)
-	if err != nil && !os.IsNotExist(err) {
+	// Check if destination exists and is a directory
+	destPath := manager.GetDestinationPath(destination)
+	if manager.FileExists(destPath) && manager.IsDirectory(destPath) {
+		action.Status = "error"
+		action.Reason = "destination is a directory, expected file"
+		return action, nil
+	}
+
+	// Check if file needs update
+	needsUpdate, err := fileOps.FileNeedsUpdate(source, destination)
+	if err != nil {
 		return action, err
 	}
 
-	// Determine action needed
-	if err == nil {
-		// Destination exists - check if it's a file
-		if destInfo.IsDir() {
-			action.Status = "error"
-			action.Reason = "destination is a directory, expected file"
-			return action, nil
-		}
-
-		// Compare file contents
-		same, err := filesAreSame(sourcePath, destPath)
-		if err != nil {
-			return action, err
-		}
-		if same {
-			action.Status = "skipped"
-			action.Reason = "files are identical"
-			return action, nil
-		}
+	if !needsUpdate {
+		action.Status = "skipped"
+		action.Reason = "files are identical"
+		return action, nil
 	}
 
 	// Need to deploy
@@ -183,7 +172,7 @@ func processDotfile(configDir, homeDir, source, destination string, dryRun, back
 	action.Reason = "copying from source"
 	
 	// Add backup indication if backup is requested and file exists
-	if backup && err == nil {
+	if backup && manager.FileExists(destPath) {
 		action.Reason = "copying from source (with backup)"
 	}
 
@@ -192,82 +181,21 @@ func processDotfile(configDir, homeDir, source, destination string, dryRun, back
 		return action, nil
 	}
 
-	// Create parent directories
-	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
-		return action, err
+	// Configure copy options
+	options := dotfiles.CopyOptions{
+		CreateBackup:      backup,
+		BackupSuffix:      ".backup",
+		OverwriteExisting: true,
 	}
 
-	// Backup existing file if requested
-	if backup && err == nil {
-		backupPath := destPath + ".backup"
-		if err := copyFile(destPath, backupPath); err != nil {
-			return action, fmt.Errorf("failed to create backup: %w", err)
-		}
-	}
-
-	// Copy file
-	if err := copyFile(sourcePath, destPath); err != nil {
+	// Copy file using dotfiles operations
+	if err := fileOps.CopyFile(source, destination, options); err != nil {
 		return action, err
 	}
 
 	return action, nil
 }
 
-// expandPath expands ~ to home directory
-func expandPath(path, homeDir string) string {
-	if strings.HasPrefix(path, "~/") {
-		return filepath.Join(homeDir, path[2:])
-	}
-	return path
-}
-
-// filesAreSame checks if two files have the same content
-func filesAreSame(path1, path2 string) (bool, error) {
-	content1, err := os.ReadFile(path1)
-	if err != nil {
-		return false, err
-	}
-
-	content2, err := os.ReadFile(path2)
-	if err != nil {
-		return false, err
-	}
-
-	return string(content1) == string(content2), nil
-}
-
-
-// copyFile copies a file from src to dst
-func copyFile(src, dst string) error {
-	content, err := os.ReadFile(src)
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(dst, content, 0644)
-}
-
-// copyDir copies a directory from src to dst
-func copyDir(src, dst string) error {
-	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		relPath, err := filepath.Rel(src, path)
-		if err != nil {
-			return err
-		}
-
-		destPath := filepath.Join(dst, relPath)
-
-		if info.IsDir() {
-			return os.MkdirAll(destPath, info.Mode())
-		}
-
-		return copyFile(path, destPath)
-	})
-}
 
 // DotfileApplyOutput represents the output structure for dotfile apply command
 type DotfileApplyOutput struct {

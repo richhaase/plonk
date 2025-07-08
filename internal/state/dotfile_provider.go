@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
+
+	"plonk/internal/dotfiles"
 )
 
 // DotfileConfigLoader defines how to load dotfile configuration
@@ -20,6 +21,7 @@ type DotfileProvider struct {
 	homeDir      string
 	configDir    string
 	configLoader DotfileConfigLoader
+	manager      *dotfiles.Manager
 }
 
 // NewDotfileProvider creates a new dotfile provider
@@ -28,6 +30,7 @@ func NewDotfileProvider(homeDir string, configDir string, configLoader DotfileCo
 		homeDir:      homeDir,
 		configDir:    configDir,
 		configLoader: configLoader,
+		manager:      dotfiles.NewManager(homeDir, configDir),
 	}
 }
 
@@ -43,11 +46,11 @@ func (d *DotfileProvider) GetConfiguredItems() ([]ConfigItem, error) {
 	items := make([]ConfigItem, 0)
 	for source, destination := range targets {
 		// Check if source is a directory
-		sourcePath := filepath.Join(d.configDir, source)
+		sourcePath := d.manager.GetSourcePath(source)
 		info, err := os.Stat(sourcePath)
 		if err != nil {
 			// Source doesn't exist yet, treat as single file
-			name := d.destinationToName(destination)
+			name := d.manager.DestinationToName(destination)
 			items = append(items, ConfigItem{
 				Name: name,
 				Metadata: map[string]interface{}{
@@ -67,7 +70,7 @@ func (d *DotfileProvider) GetConfiguredItems() ([]ConfigItem, error) {
 			items = append(items, dirItems...)
 		} else {
 			// Single file
-			name := d.destinationToName(destination)
+			name := d.manager.DestinationToName(destination)
 			items = append(items, ConfigItem{
 				Name: name,
 				Metadata: map[string]interface{}{
@@ -83,7 +86,7 @@ func (d *DotfileProvider) GetConfiguredItems() ([]ConfigItem, error) {
 
 // GetActualItems returns dotfiles currently present in the home directory
 func (d *DotfileProvider) GetActualItems() ([]ActualItem, error) {
-	dotfiles, err := d.listDotfiles(d.homeDir)
+	dotfiles, err := d.manager.ListDotfiles(d.homeDir)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +134,7 @@ func (d *DotfileProvider) CreateItem(name string, state ItemState, configured *C
 		// If no path set and we have destination, use that
 		if item.Path == "" {
 			if dest, ok := configured.Metadata["destination"].(string); ok {
-				item.Path = d.expandPath(dest)
+				item.Path = d.manager.ExpandPath(dest)
 			}
 		}
 	}
@@ -139,78 +142,21 @@ func (d *DotfileProvider) CreateItem(name string, state ItemState, configured *C
 	return item
 }
 
-// listDotfiles finds all dotfiles in the specified directory
-func (d *DotfileProvider) listDotfiles(dir string) ([]string, error) {
-	var dotfiles []string
-	
-	entries, err := os.ReadDir(dir)
+
+// expandConfigDirectory walks a directory and creates individual ConfigItems for each file
+func (d *DotfileProvider) expandConfigDirectory(sourceDir, destDir string) ([]ConfigItem, error) {
+	dotfileInfos, err := d.manager.ExpandDirectory(sourceDir, destDir)
 	if err != nil {
 		return nil, err
 	}
 	
-	for _, entry := range entries {
-		if strings.HasPrefix(entry.Name(), ".") && entry.Name() != "." && entry.Name() != ".." {
-			dotfiles = append(dotfiles, entry.Name())
+	items := make([]ConfigItem, len(dotfileInfos))
+	for i, info := range dotfileInfos {
+		items[i] = ConfigItem{
+			Name:     info.Name,
+			Metadata: info.Metadata,
 		}
 	}
 	
-	return dotfiles, nil
-}
-
-// destinationToName converts a destination path to a standardized name
-func (d *DotfileProvider) destinationToName(destination string) string {
-	// Remove ~/ prefix if present
-	if strings.HasPrefix(destination, "~/") {
-		return destination[2:]
-	}
-	return destination
-}
-
-// expandPath expands ~ to home directory
-func (d *DotfileProvider) expandPath(path string) string {
-	if strings.HasPrefix(path, "~/") {
-		return filepath.Join(d.homeDir, path[2:])
-	}
-	return path
-}
-
-// expandConfigDirectory walks a directory and creates individual ConfigItems for each file
-func (d *DotfileProvider) expandConfigDirectory(sourceDir, destDir string) ([]ConfigItem, error) {
-	var items []ConfigItem
-	sourcePath := filepath.Join(d.configDir, sourceDir)
-	
-	err := filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		
-		// Skip directories
-		if info.IsDir() {
-			return nil
-		}
-		
-		// Calculate relative path from source directory
-		relPath, err := filepath.Rel(sourcePath, path)
-		if err != nil {
-			return err
-		}
-		
-		// Build source and destination paths
-		source := filepath.Join(sourceDir, relPath)
-		destination := filepath.Join(destDir, relPath)
-		name := d.destinationToName(destination)
-		
-		items = append(items, ConfigItem{
-			Name: name,
-			Metadata: map[string]interface{}{
-				"source":      source,
-				"destination": destination,
-				"parent_dir":  sourceDir,
-			},
-		})
-		
-		return nil
-	})
-	
-	return items, err
+	return items, nil
 }
