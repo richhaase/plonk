@@ -2,478 +2,247 @@
 
 ## Overview
 
-Plonk is a package and dotfile management tool built with a unified state reconciliation architecture. The system uses a provider pattern to abstract different management domains (packages, dotfiles) and a reconciler to maintain consistency between configured state and actual system state.
+Plonk manages packages and dotfiles through unified state reconciliation. It compares desired state (configuration) with actual state (system) and reconciles differences.
 
 ## Core Principles
 
-1. **State Reconciliation**: All functionality is built around reconciling desired state (configuration) with actual state (system)
-2. **Provider Pattern**: Extensible architecture for different management domains
-3. **Individual Item Focus**: Core abstractions operate on single items to ensure correctness
-4. **Separation of Concerns**: Clear boundaries between configuration, state management, package managers, and commands
+1. **State Reconciliation** - All operations reconcile configured vs actual state
+2. **Provider Pattern** - Extensible architecture for different domains  
+3. **Interface-Based Design** - Loose coupling through well-defined interfaces
+4. **Context-Aware Operations** - Cancellable operations with configurable timeouts
+5. **Structured Error Handling** - User-friendly errors with actionable guidance
 
-## Directory Structure
+## Component Architecture
+
+### Directory Structure
 
 ```
-plonk/
-├── cmd/plonk/           # CLI entry point
-├── internal/
-│   ├── commands/        # CLI command implementations
-│   ├── config/          # Configuration loading and validation
-│   ├── dotfiles/        # Dotfile operations and management
-│   ├── managers/        # Package manager implementations
-│   └── state/           # State management and reconciliation
-├── docs/                # Architecture and development documentation
-└── justfile            # Build and development tasks
+internal/
+├── commands/    # CLI command implementations  
+├── config/      # Configuration with interfaces and validation
+├── dotfiles/    # File operations and path management
+├── errors/      # Structured error types and handling
+├── managers/    # Package manager implementations
+└── state/       # State reconciliation engine
 ```
 
-## Architecture Components
+### Component Relationships
 
-### 1. CLI Layer (`cmd/plonk/`, `internal/commands/`)
-
-**Purpose**: User interface and command orchestration
-
-**Key Components**:
-- `main.go`: Entry point, delegates to commands package
-- `root.go`: Cobra root command with global flags
-- Command files: `pkg_*.go`, `dot_*.go`, `config_*.go`, `status.go`
-
-**Responsibilities**:
-- Parse CLI arguments and flags
-- Coordinate between configuration, state, and output systems
-- Handle user interaction and error reporting
-- Format output in multiple formats (table, JSON, YAML)
-
-**Example Flow**:
-```go
-// status.go:42
-func runStatus(cmd *cobra.Command, args []string) error {
-    // 1. Load configuration
-    cfg, err := config.LoadConfig(configDir)
-    
-    // 2. Create reconciler and register providers
-    reconciler := state.NewReconciler()
-    reconciler.RegisterProvider("package", packageProvider)
-    reconciler.RegisterProvider("dotfile", dotfileProvider)
-    
-    // 3. Reconcile all domains
-    summary, err := reconciler.ReconcileAll()
-    
-    // 4. Render output
-    return RenderOutput(outputData, format)
-}
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Commands  │────▶│    State    │────▶│  Managers   │
+│     (CLI)   │     │ (Reconciler)│     │ (Homebrew,  │
+└─────────────┘     └─────────────┘     │    NPM)     │
+       │                    │            └─────────────┘
+       │                    │                     
+       ▼                    ▼                    
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Config    │     │  Providers  │────▶│  Dotfiles   │
+│ (Interfaces)│────▶│  (Package,  │     │   (File     │
+└─────────────┘     │  Dotfile)   │     │ Operations) │
+                    └─────────────┘     └─────────────┘
+                            │                     
+                            ▼                    
+                    ┌─────────────┐              
+                    │   Errors    │              
+                    │ (Structured │              
+                    │  Messages)  │              
+                    └─────────────┘              
 ```
 
-### 2. Configuration Layer (`internal/config/`)
+## Key Components
 
-**Purpose**: Configuration file management and validation
+### 1. Configuration Layer (`internal/config/`)
 
-**Key Components**:
-- `yaml_config.go`: YAML configuration parsing with custom marshaling
-- `simple_validator.go`: Configuration validation logic
+**Interfaces:**
+- `ConfigReader` - Load configuration from various sources
+- `ConfigWriter` - Save configuration back to storage
+- `ConfigValidator` - Validate configuration correctness
+- `DotfileConfigReader` - Domain-specific dotfile config access
+- `PackageConfigReader` - Domain-specific package config access
 
-**Configuration Structure**:
+**Implementation:**
+- `YAMLConfigService` - YAML file implementation of all interfaces
+- `ConfigAdapter` - Bridges Config struct to domain interfaces
+- State adapters for type conversion between packages
+
+**Features:**
+- Flexible YAML unmarshaling (simple strings or complex objects)
+- Validation with custom rules and timeout settings
+- Support for `plonk.yaml` and `plonk.local.yaml` overrides
+
+**Configuration Example:**
 ```yaml
 settings:
   default_manager: homebrew
+  operation_timeout: 600  # 10 minutes
 
 dotfiles:
-  - ~/.zshrc           # Simple form
-  - source: zshrc      # Explicit form
-    destination: ~/.zshrc
+  - zshrc                 # Simple form
+  - source: config/nvim/  # Directory form
+    destination: ~/.config/nvim/
 
 homebrew:
-  brews:
-    - git              # Simple form
-    - name: neovim     # Complex form
-      config: nvim.rb
-  casks:
-    - font-hack-nerd-font
-
-npm:
-  - "@anthropic-ai/claude-code"
+  brews: [git, neovim]
+  casks: [firefox]
 ```
 
-**Key Features**:
-- Flexible YAML unmarshaling (simple strings vs. complex objects)
-- Configuration validation with custom rules
-- Support for local configuration overrides (`plonk.local.yaml`)
-- Path normalization and expansion
+### 2. State Management (`internal/state/`)
 
-### 3. Dotfile Management Layer (`internal/dotfiles/`)
+**Core Concept:** The reconciler compares configured state with actual system state.
 
-**Purpose**: Core dotfile operations and file management
+**Item States:**
+- `Managed` - In configuration AND installed/present
+- `Missing` - In configuration BUT NOT installed/present  
+- `Untracked` - Installed/present BUT NOT in configuration
 
-**Key Components**:
-- `operations.go`: Path resolution, directory expansion, file discovery
-- `fileops.go`: File system operations, copying, backup management
-
-**Core Structure**:
-```go
-type Manager struct {
-    homeDir   string
-    configDir string
-}
-
-type FileOperations struct {
-    manager *Manager
-}
-```
-
-**Key Features**:
-- Path expansion and normalization (`~/` → home directory)
-- Directory traversal and expansion into individual files
-- File copying with backup options
-- Dotfile discovery in home directory
-- Validation of source and destination paths
-
-**Example Usage**:
-```go
-manager := dotfiles.NewManager(homeDir, configDir)
-fileOps := dotfiles.NewFileOperations(manager)
-
-// Copy a file with backup
-options := dotfiles.CopyOptions{
-    CreateBackup: true,
-    BackupSuffix: ".backup",
-}
-fileOps.CopyFile("zshrc", "~/.zshrc", options)
-```
-
-### 4. Package Managers Layer (`internal/managers/`)
-
-**Purpose**: Abstraction over different package management systems
-
-**Interface Definition**:
-```go
-type PackageManager interface {
-    IsAvailable() bool
-    ListInstalled() ([]string, error)
-    Install(name string) error
-    Uninstall(name string) error
-    IsInstalled(name string) bool
-}
-```
-
-**Current Implementations**:
-- `homebrew.go`: Homebrew package manager
-- `npm.go`: NPM global package manager
-
-**Design Principles**:
-- Each manager is completely independent
-- Managers handle their own command execution
-- Error handling includes both exit codes and output context
-- Availability checking prevents operations on unavailable managers
-
-### 5. State Management Layer (`internal/state/`)
-
-**Purpose**: Core state reconciliation and provider management
-
-#### State Types (`types.go`)
-
-**Item States**:
-```go
-type ItemState int
-const (
-    StateManaged   ItemState = iota  // In config AND present/installed
-    StateMissing                     // In config BUT not present/installed
-    StateUntracked                   // Present/installed BUT not in config
-)
-```
-
-**Core Types**:
-- `Item`: Represents any manageable item with state
-- `Result`: Contains reconciliation results for a domain
-- `Summary`: Aggregate counts across all domains
-
-#### Provider Interface (`reconciler.go`)
-
-**Universal Provider Interface**:
+**Provider Interface:**
 ```go
 type Provider interface {
     Domain() string
     GetConfiguredItems() ([]ConfigItem, error)
     GetActualItems() ([]ActualItem, error)
-    CreateItem(name string, state ItemState, configured *ConfigItem, actual *ActualItem) Item
+    CreateItem(name, state, configured, actual) Item
 }
 ```
 
-**Reconciliation Process**:
+**Reconciliation Process:**
 1. Load configured items from configuration
 2. Discover actual items from system
-3. Compare and categorize items by state
-4. Create unified `Item` objects with metadata
+3. Compare and categorize by state
+4. Return unified view for operations
 
-#### Package Provider (`package_provider.go`)
+### 3. Package Management (`internal/managers/`)
 
-**Single Manager Provider**:
+**Unified Interface:**
 ```go
-type PackageProvider struct {
-    managerName   string
-    manager       PackageManager
-    configLoader  PackageConfigLoader
+type PackageManager interface {
+    IsAvailable(ctx context.Context) bool
+    ListInstalled(ctx context.Context) ([]string, error)
+    Install(ctx context.Context, name string) error
+    Uninstall(ctx context.Context, name string) error
+    IsInstalled(ctx context.Context, name string) bool
 }
 ```
 
-**Multi-Manager Provider**:
-```go
-type MultiManagerPackageProvider struct {
-    providers map[string]*PackageProvider
-}
-```
+**Implementations:**
+- `HomebrewManager` - Homebrew packages and casks
+- `NpmManager` - Global NPM packages
 
-**Key Features**:
-- Supports multiple package managers simultaneously
-- Delegates to appropriate single-manager provider
-- Aggregates results across all managers
-- Gracefully handles unavailable managers
+**Features:**
+- Context support for cancellation
+- Graceful handling of unavailable managers
+- Clear error reporting with exit codes
 
-#### Dotfile Provider (`dotfile_provider.go`)
+### 4. Dotfile Management (`internal/dotfiles/`)
 
-**Core Structure**:
-```go
-type DotfileProvider struct {
-    homeDir      string
-    configDir    string
-    configLoader DotfileConfigLoader
-}
-```
+**Components:**
+- `Manager` - Path resolution and directory expansion
+- `FileOperations` - Copy, backup, and validate files
 
-**Directory Expansion**:
-- Automatically expands directory entries into individual files
-- Supports nested directory structures
-- Maintains parent directory metadata for operations
-
-**Path Conventions**:
+**Path Conventions:**
 - `zshrc` → `~/.zshrc`
-- `config/nvim/` → `~/.config/nvim/`
+- `config/nvim/` → `~/.config/nvim/`  
 - `dot_gitconfig` → `~/.gitconfig`
 
-#### Adapters (`adapters.go`)
+**Features:**
+- Smart directory expansion to individual files
+- Backup creation before modifications
+- Context-aware file operations
+- Path validation and normalization
 
-**Purpose**: Bridge between configuration types and state interfaces
+### 5. Error Handling (`internal/errors/`)
 
-**Config Adapter**:
+**Structured Error Type:**
 ```go
-type ConfigAdapter struct {
-    config ConfigInterface
+type PlonkError struct {
+    Code      ErrorCode    // Specific error type
+    Domain    Domain       // Where error occurred
+    Operation string       // What was being done
+    Message   string       // Technical details
+    Cause     error        // Original error
 }
 ```
 
-**Manager Adapter**:
-```go
-type ManagerAdapter struct {
-    manager ManagerInterface
-}
-```
+**Error Domains:**
+- Config, Dotfiles, Packages, State, Commands
 
-**Benefits**:
-- Decouples state management from specific configuration formats
-- Enables testing with mock implementations
-- Provides migration path for configuration changes
+**Features:**
+- User-friendly messages with solutions
+- Error wrapping with context preservation
+- Compatible with standard Go error handling
+- Metadata for debugging
 
 ## Data Flow
 
-### Status Command Flow
+### Reconciliation Process
 
-```mermaid
-graph TD
-    A[User runs 'plonk status'] --> B[Load Configuration]
-    B --> C[Create Reconciler]
-    C --> D[Register Package Provider]
-    C --> E[Register Dotfile Provider]
-    D --> F[Reconcile All Domains]
-    E --> F
-    F --> G[Generate Summary]
-    G --> H[Render Output]
-```
+1. **Load Configuration** - Via ConfigReader interface
+2. **Create Providers** - With appropriate adapters
+3. **Get Configured Items** - From configuration
+4. **Get Actual Items** - From system (packages installed, files present)
+5. **Compare States** - Categorize as Managed/Missing/Untracked
+6. **Execute Operations** - Install packages, copy files, etc.
+7. **Report Results** - With structured errors if needed
 
-### Package Management Flow
+### Command Examples
 
-```mermaid
-graph TD
-    A[User runs 'plonk pkg apply'] --> B[Load Configuration]
-    B --> C[Create Package Provider]
-    C --> D[Get Configured Packages]
-    C --> E[Get Installed Packages]
-    D --> F[Reconcile State]
-    E --> F
-    F --> G[Identify Missing Packages]
-    G --> H[Install Missing Packages]
-    H --> I[Report Results]
-```
-
-### Dotfile Management Flow
-
-```mermaid
-graph TD
-    A[User runs 'plonk dot apply'] --> B[Load Configuration]
-    B --> C[Create Dotfile Provider]
-    C --> D[Get Configured Dotfiles]
-    C --> E[Expand Directories via dotfiles.Manager]
-    D --> F[Check System State]
-    E --> F
-    F --> G[Identify Actions Needed]
-    G --> H[Copy Files via dotfiles.FileOperations]
-    H --> I[Report Results]
-```
+**Status:** Shows all items across all domains with their states
+**Apply:** Reconciles missing items (installs packages, copies dotfiles)
+**List:** Shows items filtered by state or domain
 
 ## Key Design Decisions
 
-### 1. Unified State Model
+1. **Unified State Model** - Single reconciliation pattern for all domains enables consistency and extensibility.
 
-**Decision**: Use a single state reconciliation pattern for all domains
+2. **Interface-Based Architecture** - Configuration and providers use interfaces to prevent tight coupling and improve testability.
 
-**Benefits**:
-- Consistent behavior across package and dotfile management
-- Easy to add new management domains
-- Clear separation between configuration and system state
+3. **Context Throughout** - All long-running operations accept context for cancellation and timeout support.
 
-**Trade-offs**:
-- Additional abstraction layer
-- More complex initial implementation
+4. **Structured Errors** - PlonkError type provides user-friendly messages and debugging context.
 
-### 2. Provider Pattern
-
-**Decision**: Abstract different management domains behind provider interfaces
-
-**Benefits**:
-- Extensible architecture for new domains
-- Testable with mock implementations
-- Clear separation of concerns
-
-**Trade-offs**:
-- More interfaces to maintain
-- Indirection for simple operations
-
-### 3. Separate Dotfile Operations Package
-
-**Decision**: Extract dotfile file operations into separate package from state management
-
-**Benefits**:
-- Clear separation between state reconciliation and file operations
-- Reusable file operations across different contexts
-- Better testability with focused responsibilities
-- Easier to extend with new file operation types
-
-**Trade-offs**:
-- Additional package to maintain
-- More interfaces between components
-
-### 4. Individual Item Focus
-
-**Decision**: Core operations work on single items, bulk operations in commands
-
-**Benefits**:
-- Predictable behavior for each item
-- Better error handling and reporting
-- Easier to test edge cases
-
-**Trade-offs**:
-- More complex command implementations
-- Potential performance impact for bulk operations
-
-### 5. Flat Configuration Directory
-
-**Decision**: Store dotfiles in flat structure (`~/.config/plonk/`)
-
-**Benefits**:
-- Simpler path management
-- Easier to backup and version control
-- Clear source of truth
-
-**Trade-offs**:
-- Name collision potential
-- Manual organization required
+5. **Separate File Operations** - Dotfile operations extracted from state management for clarity and reusability.
 
 ## Extension Points
 
-### Adding New Package Managers
+### Adding Package Managers
+1. Implement `PackageManager` interface with context support
+2. Register in command layer
+3. Add tests
 
-1. Implement `PackageManager` interface in `internal/managers/`
-2. Add manager creation logic in commands
-3. Update configuration schema if needed
-4. Add tests for new manager
+### Adding New Domains  
+1. Create `Provider` implementation
+2. Define configuration interface
+3. Create adapters if needed
+4. Register with reconciler
 
-### Adding New Management Domains
+### Adding Configuration Formats
+1. Implement config interfaces (Reader, Writer, Validator)
+2. Add format-specific validation
+3. Update command layer
 
-1. Create new provider implementing `Provider` interface
-2. Add domain-specific configuration loading
-3. If file operations are needed, extend `internal/dotfiles/` or create similar package
-4. Register provider in relevant commands
-5. Update output formatting for new domain
+## Testing & Quality
 
-### Adding New File Operations
+### Testing Strategy
+- **Unit tests** with mocks for all components
+- **Test isolation** using `t.TempDir()` - no system dependencies
+- **Table-driven tests** for comprehensive coverage
+- **Context cancellation tests** for timeout behavior
 
-1. Extend `internal/dotfiles/fileops.go` with new operation types
-2. Add corresponding methods to `FileOperations` struct
-3. Update `CopyOptions` or create new option types as needed
-4. Add tests for new operations
+### Security
+- Path validation prevents directory traversal
+- Backup creation before modifications
+- No arbitrary code execution
+- Home directory boundaries enforced
 
-### Adding New Configuration Formats
+### Performance
+- Lazy package manager initialization
+- Efficient directory traversal
+- Minimal command execution
+- Future: Concurrent reconciliation
 
-1. Create new config loader implementing required interfaces
-2. Add validation logic for new format
-3. Update configuration loading logic
-4. Provide migration utilities if needed
+## Development
 
-## Testing Strategy
-
-### Unit Tests
-- Each component has dedicated test files
-- Mock implementations for external dependencies
-- State reconciliation logic thoroughly tested
-
-### Integration Tests
-- Command-level tests with temporary file systems
-- End-to-end configuration loading and processing
-- Cross-domain state reconciliation
-
-### Test Structure
-- `*_test.go` files alongside implementation
-- Mock interfaces for package managers and file systems
-- Table-driven tests for complex scenarios
-
-## Performance Considerations
-
-### Current Optimizations
-- Lazy evaluation of package manager availability
-- Efficient directory traversal for dotfile expansion (via `dotfiles.Manager`)
-- Minimal system command execution
-- Separated file operations for better performance profiling
-
-### Future Optimizations
-- Concurrent provider reconciliation
-- Caching of package manager state
-- Incremental state updates
-- Batched file operations for bulk dotfile management
-
-## Security Considerations
-
-### Current Measures
-- No execution of arbitrary user code
-- Path validation for dotfile operations (via `dotfiles.Manager.ValidatePaths`)
-- Backup creation before modifications (via `dotfiles.FileOperations`)
-- Home directory boundary enforcement
-
-### Future Enhancements
-- Sandboxed package manager execution
-- Signature verification for package operations
-- Audit logging for all modifications
-- File permission preservation and validation
-
-## Development Workflow
-
-### Build System
-- `justfile` for common development tasks
-- Go modules for dependency management
-- Integrated testing and linting
-
-### Code Organization
-- `internal/` package for non-exported code
-- Clear separation by responsibility
-- Minimal external dependencies
-
-### Contributing
-- Clear interfaces for extension
-- Comprehensive test coverage required
-- Documentation for architectural decisions
+**Build:** `just` command runner with common tasks  
+**Dependencies:** Minimal - only essential Go packages  
+**Contributing:** Extend via interfaces, maintain test coverage
