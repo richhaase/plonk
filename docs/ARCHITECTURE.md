@@ -101,7 +101,7 @@ homebrew:
 type Provider interface {
     Domain() string
     GetConfiguredItems() ([]ConfigItem, error)
-    GetActualItems() ([]ActualItem, error)
+    GetActualItems(ctx context.Context) ([]ActualItem, error)
     CreateItem(name, state, configured, actual) Item
 }
 ```
@@ -227,7 +227,7 @@ type PlonkError struct {
 - **Unit tests** with mocks for all components
 - **Test isolation** using `t.TempDir()` - no system dependencies
 - **Table-driven tests** for comprehensive coverage
-- **Context cancellation tests** for timeout behavior
+- **Context cancellation tests** - Complete coverage for all long-running operations including package managers, file operations, and state reconciliation
 
 ### Security
 - Path validation prevents directory traversal

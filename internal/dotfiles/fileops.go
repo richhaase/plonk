@@ -203,6 +203,13 @@ func (f *FileOperations) RemoveFile(destination string) error {
 
 // FileNeedsUpdate checks if a file needs to be updated based on modification time
 func (f *FileOperations) FileNeedsUpdate(ctx context.Context, source, destination string) (bool, error) {
+	// Check for context cancellation
+	select {
+	case <-ctx.Done():
+		return false, ctx.Err()
+	default:
+	}
+	
 	sourcePath := f.manager.GetSourcePath(source)
 	destPath := f.manager.GetDestinationPath(destination)
 	
@@ -217,6 +224,13 @@ func (f *FileOperations) FileNeedsUpdate(ctx context.Context, source, destinatio
 	// If destination doesn't exist, it needs to be created
 	if !f.manager.FileExists(destPath) {
 		return true, nil
+	}
+	
+	// Check for context cancellation before file operations
+	select {
+	case <-ctx.Done():
+		return false, ctx.Err()
+	default:
 	}
 	
 	// Compare modification times

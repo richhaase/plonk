@@ -353,3 +353,24 @@ func TestPackageProvider_CreateItem(t *testing.T) {
 		})
 	}
 }
+
+func TestPackageProvider_ContextCancellation(t *testing.T) {
+	manager := NewMockPackageManager()
+	configLoader := NewMockPackageConfigLoader()
+	provider := NewPackageProvider("homebrew", manager, configLoader)
+	
+	manager.SetInstalled([]string{"git", "curl"})
+	
+	t.Run("GetActualItems_ContextCancellation", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // Cancel immediately
+		
+		_, err := provider.GetActualItems(ctx)
+		if err == nil {
+			t.Error("Expected error when context is cancelled")
+		}
+		if err != context.Canceled {
+			t.Errorf("Expected context.Canceled, got %v", err)
+		}
+	})
+}

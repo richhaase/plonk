@@ -362,3 +362,53 @@ func containsHelper(s, substr string) bool {
 	}
 	return false
 }
+
+func TestReconciler_ContextCancellation(t *testing.T) {
+	reconciler := NewReconciler()
+	
+	t.Run("ReconcileProvider_ContextCancellation", func(t *testing.T) {
+		provider := NewMockProvider("test")
+		provider.SetConfiguredItems([]ConfigItem{
+			{Name: "item1", Metadata: map[string]interface{}{"config": "data1"}},
+		})
+		provider.SetActualItems([]ActualItem{
+			{Name: "item1", Path: "/path/item1", Metadata: map[string]interface{}{"actual": "data1"}},
+		})
+		
+		reconciler.RegisterProvider("test", provider)
+		
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // Cancel immediately
+		
+		_, err := reconciler.ReconcileProvider(ctx, "test")
+		if err == nil {
+			t.Error("Expected error when context is cancelled")
+		}
+		if err != context.Canceled {
+			t.Errorf("Expected context.Canceled, got %v", err)
+		}
+	})
+	
+	t.Run("ReconcileAll_ContextCancellation", func(t *testing.T) {
+		provider := NewMockProvider("test")
+		provider.SetConfiguredItems([]ConfigItem{
+			{Name: "item1", Metadata: map[string]interface{}{"config": "data1"}},
+		})
+		provider.SetActualItems([]ActualItem{
+			{Name: "item1", Path: "/path/item1", Metadata: map[string]interface{}{"actual": "data1"}},
+		})
+		
+		reconciler.RegisterProvider("test", provider)
+		
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // Cancel immediately
+		
+		_, err := reconciler.ReconcileAll(ctx)
+		if err == nil {
+			t.Error("Expected error when context is cancelled")
+		}
+		if err != context.Canceled {
+			t.Errorf("Expected context.Canceled, got %v", err)
+		}
+	})
+}

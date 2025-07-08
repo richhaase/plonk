@@ -55,11 +55,25 @@ func (r *Reconciler) RegisterProvider(domain string, provider Provider) {
 
 // ReconcileAll reconciles state for all registered providers
 func (r *Reconciler) ReconcileAll(ctx context.Context) (Summary, error) {
+	// Check for context cancellation
+	select {
+	case <-ctx.Done():
+		return Summary{}, ctx.Err()
+	default:
+	}
+	
 	summary := Summary{
 		Results: make([]Result, 0),
 	}
 	
 	for domain := range r.providers {
+		// Check context before each provider
+		select {
+		case <-ctx.Done():
+			return Summary{}, ctx.Err()
+		default:
+		}
+		
 		result, err := r.ReconcileProvider(ctx, domain)
 		if err != nil {
 			return summary, fmt.Errorf("failed to reconcile %s: %w", domain, err)
@@ -73,6 +87,13 @@ func (r *Reconciler) ReconcileAll(ctx context.Context) (Summary, error) {
 
 // ReconcileProvider reconciles state for a specific provider/domain
 func (r *Reconciler) ReconcileProvider(ctx context.Context, domain string) (Result, error) {
+	// Check for context cancellation
+	select {
+	case <-ctx.Done():
+		return Result{}, ctx.Err()
+	default:
+	}
+	
 	provider, exists := r.providers[domain]
 	if !exists {
 		return Result{}, fmt.Errorf("provider for domain %s not found", domain)
@@ -82,6 +103,13 @@ func (r *Reconciler) ReconcileProvider(ctx context.Context, domain string) (Resu
 	configuredItems, err := provider.GetConfiguredItems()
 	if err != nil {
 		return Result{}, fmt.Errorf("failed to get configured items: %w", err)
+	}
+	
+	// Check context before getting actual items
+	select {
+	case <-ctx.Done():
+		return Result{}, ctx.Err()
+	default:
 	}
 	
 	// Get actual items

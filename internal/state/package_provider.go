@@ -70,6 +70,13 @@ func (p *PackageProvider) GetConfiguredItems() ([]ConfigItem, error) {
 
 // GetActualItems returns packages currently installed by this manager
 func (p *PackageProvider) GetActualItems(ctx context.Context) ([]ActualItem, error) {
+	// Check for context cancellation
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+	
 	if !p.manager.IsAvailable(ctx) {
 		return []ActualItem{}, nil
 	}

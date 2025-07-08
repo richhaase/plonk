@@ -609,3 +609,212 @@ func TestFileOperations_createBackup_WithTimestamp(t *testing.T) {
 		}
 	}
 }
+
+func TestFileOperations_ContextCancellation(t *testing.T) {
+	tempDir := t.TempDir()
+	configDir := filepath.Join(tempDir, ".config", "plonk")
+	homeDir := filepath.Join(tempDir, "home")
+	
+	manager := NewManager(homeDir, configDir)
+	fileOps := NewFileOperations(manager)
+	
+	// Create directories
+	err := os.MkdirAll(configDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create config directory: %v", err)
+	}
+	err = os.MkdirAll(homeDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create home directory: %v", err)
+	}
+	
+	// Create source file
+	sourceFile := filepath.Join(configDir, "zshrc")
+	err = os.WriteFile(sourceFile, []byte("test content"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create source file: %v", err)
+	}
+
+	t.Run("CopyFile_ContextCancellation", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // Cancel immediately
+		
+		err := fileOps.CopyFile(ctx, "zshrc", "~/.zshrc", DefaultCopyOptions())
+		if err == nil {
+			t.Error("Expected error when context is cancelled")
+		}
+		if err != context.Canceled {
+			t.Errorf("Expected context.Canceled, got %v", err)
+		}
+	})
+
+	t.Run("CopyFile_ContextTimeout", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+		defer cancel()
+		
+		time.Sleep(10 * time.Millisecond) // Ensure timeout
+		
+		err := fileOps.CopyFile(ctx, "zshrc", "~/.zshrc", DefaultCopyOptions())
+		if err == nil {
+			t.Error("Expected error when context times out")
+		}
+		// Error may be wrapped, check if it contains deadline exceeded
+		if !containsContextError(err) {
+			t.Errorf("Expected context timeout error, got %v", err)
+		}
+	})
+
+	t.Run("CopyDirectory_ContextCancellation", func(t *testing.T) {
+		// Create a directory structure
+		nvimDir := filepath.Join(configDir, "config", "nvim")
+		err := os.MkdirAll(nvimDir, 0755)
+		if err != nil {
+			t.Fatalf("Failed to create nvim directory: %v", err)
+		}
+		
+		err = os.WriteFile(filepath.Join(nvimDir, "init.vim"), []byte("test"), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create init.vim: %v", err)
+		}
+		
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // Cancel immediately
+		
+		err = fileOps.CopyDirectory(ctx, "config/nvim/", "~/.config/nvim/", DefaultCopyOptions())
+		if err == nil {
+			t.Error("Expected error when context is cancelled")
+		}
+		if err != context.Canceled {
+			t.Errorf("Expected context.Canceled, got %v", err)
+		}
+	})
+
+	t.Run("CopyDirectory_ContextTimeout", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+		defer cancel()
+		
+		time.Sleep(10 * time.Millisecond) // Ensure timeout
+		
+		err := fileOps.CopyDirectory(ctx, "config/nvim/", "~/.config/nvim/", DefaultCopyOptions())
+		if err == nil {
+			t.Error("Expected error when context times out")
+		}
+		// Error may be wrapped, check if it contains deadline exceeded
+		if !containsContextError(err) {
+			t.Errorf("Expected context timeout error, got %v", err)
+		}
+	})
+
+	t.Run("FileNeedsUpdate_ContextCancellation", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // Cancel immediately
+		
+		_, err := fileOps.FileNeedsUpdate(ctx, "zshrc", "~/.zshrc")
+		if err == nil {
+			t.Error("Expected error when context is cancelled")
+		}
+		if err != context.Canceled {
+			t.Errorf("Expected context.Canceled, got %v", err)
+		}
+	})
+
+	t.Run("FileNeedsUpdate_ContextTimeout", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+		defer cancel()
+		
+		time.Sleep(10 * time.Millisecond) // Ensure timeout
+		
+		_, err := fileOps.FileNeedsUpdate(ctx, "zshrc", "~/.zshrc")
+		if err == nil {
+			t.Error("Expected error when context times out")
+		}
+		if err != context.DeadlineExceeded {
+			t.Errorf("Expected context.DeadlineExceeded, got %v", err)
+		}
+	})
+
+	t.Run("copyFileContents_ContextCancellation", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // Cancel immediately
+		
+		destFile := filepath.Join(tempDir, "dest.txt")
+		err := fileOps.copyFileContents(ctx, sourceFile, destFile)
+		if err == nil {
+			t.Error("Expected error when context is cancelled")
+		}
+		if err != context.Canceled {
+			t.Errorf("Expected context.Canceled, got %v", err)
+		}
+	})
+
+	t.Run("copyFileContents_ContextTimeout", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+		defer cancel()
+		
+		time.Sleep(10 * time.Millisecond) // Ensure timeout
+		
+		destFile := filepath.Join(tempDir, "dest.txt")
+		err := fileOps.copyFileContents(ctx, sourceFile, destFile)
+		if err == nil {
+			t.Error("Expected error when context times out")
+		}
+		if err != context.DeadlineExceeded {
+			t.Errorf("Expected context.DeadlineExceeded, got %v", err)
+		}
+	})
+
+	t.Run("createBackup_ContextCancellation", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // Cancel immediately
+		
+		backupPath := filepath.Join(tempDir, "backup.txt")
+		err := fileOps.createBackup(ctx, sourceFile, backupPath)
+		if err == nil {
+			t.Error("Expected error when context is cancelled")
+		}
+		if err != context.Canceled {
+			t.Errorf("Expected context.Canceled, got %v", err)
+		}
+	})
+
+	t.Run("createBackup_ContextTimeout", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+		defer cancel()
+		
+		time.Sleep(10 * time.Millisecond) // Ensure timeout
+		
+		backupPath := filepath.Join(tempDir, "backup.txt")
+		err := fileOps.createBackup(ctx, sourceFile, backupPath)
+		if err == nil {
+			t.Error("Expected error when context times out")
+		}
+		if err != context.DeadlineExceeded {
+			t.Errorf("Expected context.DeadlineExceeded, got %v", err)
+		}
+	})
+}
+
+// containsContextError checks if the error contains context cancellation or timeout
+func containsContextError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return containsString(errStr, "context canceled") || 
+		   containsString(errStr, "context deadline exceeded") ||
+		   containsString(errStr, "signal: killed")
+}
+
+// containsString checks if a string contains a substring (case-insensitive)
+func containsString(s, substr string) bool {
+	return len(s) >= len(substr) && findSubstring(s, substr)
+}
+
+func findSubstring(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
