@@ -22,7 +22,7 @@ import (
 type Config struct {
 	Settings Settings       `yaml:"settings" validate:"required"`
 	Backup   BackupConfig   `yaml:"backup,omitempty"`
-	Dotfiles []string       `yaml:"dotfiles,omitempty" validate:"dive,file_path"`
+	Dotfiles []DotfileEntry `yaml:"dotfiles,omitempty" validate:"dive"`
 	Homebrew HomebrewConfig `yaml:"homebrew,omitempty"`
 	NPM      []NPMPackage   `yaml:"npm,omitempty" validate:"dive"`
 }
@@ -36,6 +36,12 @@ type Settings struct {
 type BackupConfig struct {
 	Location  string `yaml:"location,omitempty"`
 	KeepCount int    `yaml:"keep_count,omitempty"`
+}
+
+// DotfileEntry represents a dotfile configuration entry.
+type DotfileEntry struct {
+	Source      string `yaml:"source,omitempty" validate:"omitempty,file_path"`
+	Destination string `yaml:"destination,omitempty" validate:"omitempty,file_path"`
 }
 
 // HomebrewConfig contains homebrew package lists.
@@ -113,6 +119,36 @@ func (n *NPMPackage) UnmarshalYAML(node *yaml.Node) error {
 		return err
 	}
 	*n = NPMPackage(pkg)
+	return nil
+}
+
+// MarshalYAML implements custom marshaling for DotfileEntry.
+func (d DotfileEntry) MarshalYAML() (interface{}, error) {
+	// If only Destination is set (simple case), marshal as a simple string
+	if d.Source == "" && d.Destination != "" {
+		return d.Destination, nil
+	}
+	// Otherwise, marshal as a full object
+	type dotfileEntryAlias DotfileEntry
+	return dotfileEntryAlias(d), nil
+}
+
+// UnmarshalYAML implements custom unmarshaling for DotfileEntry.
+func (d *DotfileEntry) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind == yaml.ScalarNode {
+		// Simple string case - treat as destination
+		d.Destination = node.Value
+		d.Source = "" // Will be inferred later
+		return nil
+	}
+
+	// Complex object case.
+	type dotfileEntryAlias DotfileEntry
+	var entry dotfileEntryAlias
+	if err := node.Decode(&entry); err != nil {
+		return err
+	}
+	*d = DotfileEntry(entry)
 	return nil
 }
 
@@ -205,7 +241,20 @@ func loadConfigFile(path string, config *Config) error {
 func (c *Config) GetDotfileTargets() map[string]string {
 	result := make(map[string]string)
 	for _, dotfile := range c.Dotfiles {
-		result[dotfile] = sourceToTarget(dotfile)
+		source := dotfile.Source
+		destination := dotfile.Destination
+		
+		// If source is empty, infer from destination
+		if source == "" {
+			source = targetToSource(destination)
+		}
+		
+		// If destination is empty, infer from source
+		if destination == "" {
+			destination = sourceToTarget(source)
+		}
+		
+		result[source] = destination
 	}
 	return result
 }
@@ -229,4 +278,30 @@ func sourceToTarget(source string) string {
 
 	// Default: add ~/. prefix.
 	return "~/." + source
+}
+
+// targetToSource converts a target path to source path using our convention
+// Examples:
+//
+//	~/.config/nvim/ -> config/nvim/
+//	~/.zshrc -> zshrc
+//	~/.gitconfig -> dot_gitconfig
+func targetToSource(target string) string {
+	// Remove ~/ prefix if present
+	if len(target) > 2 && target[:2] == "~/" {
+		target = target[2:]
+	}
+	
+	// Remove . prefix if present
+	if len(target) > 1 && target[:1] == "." {
+		target = target[1:]
+	}
+	
+	// Handle .config/ directory
+	if len(target) > 7 && target[:7] == "config/" {
+		return target
+	}
+	
+	// Default: add dot_ prefix for dotfiles
+	return "dot_" + target
 }

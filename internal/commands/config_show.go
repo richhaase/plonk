@@ -15,6 +15,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// getConfigPath returns the path to the main configuration file
+func getConfigPath(configDir string) string {
+	return filepath.Join(configDir, "plonk.yaml")
+}
+
 var configShowCmd = &cobra.Command{
 	Use:   "show",
 	Short: "Display configuration content",

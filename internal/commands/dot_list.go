@@ -118,7 +118,23 @@ func getConfigDotfiles(configDir string) ([]string, error) {
 		}
 		return nil, err
 	}
-	return cfg.Dotfiles, nil
+	
+	// Extract destination paths from dotfile entries
+	var dotfiles []string
+	for _, entry := range cfg.Dotfiles {
+		destination := entry.Destination
+		if destination == "" {
+			// Infer destination from source
+			destination = cfg.GetDotfileTargets()[entry.Source]
+		}
+		// Convert to relative path for comparison
+		if strings.HasPrefix(destination, "~/") {
+			destination = destination[2:]
+		}
+		dotfiles = append(dotfiles, destination)
+	}
+	
+	return dotfiles, nil
 }
 
 // reconcileDotfiles performs simple set operations like package reconciliation
