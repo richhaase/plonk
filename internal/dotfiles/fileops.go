@@ -184,6 +184,11 @@ func (f *FileOperations) FileNeedsUpdate(source, destination string) (bool, erro
 	sourcePath := f.manager.GetSourcePath(source)
 	destPath := f.manager.GetDestinationPath(destination)
 	
+	// Check if source exists first
+	if !f.manager.FileExists(sourcePath) {
+		return false, fmt.Errorf("source file does not exist: %s", sourcePath)
+	}
+	
 	// If destination doesn't exist, it needs to be created
 	if !f.manager.FileExists(destPath) {
 		return true, nil
