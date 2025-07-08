@@ -4,6 +4,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -75,7 +76,8 @@ func runDotList(cmd *cobra.Command, args []string) error {
 	reconciler.RegisterProvider("dotfile", dotfileProvider)
 
 	// Reconcile dotfile domain
-	result, err := reconciler.ReconcileProvider("dotfile")
+	ctx := context.Background()
+	result, err := reconciler.ReconcileProvider(ctx, "dotfile")
 	if err != nil {
 		return fmt.Errorf("failed to reconcile dotfile state: %w", err)
 	}

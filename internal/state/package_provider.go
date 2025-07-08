@@ -4,16 +4,17 @@
 package state
 
 import (
+	"context"
 	"fmt"
 )
 
 // PackageManager defines the interface for package managers (from managers package)
 type PackageManager interface {
-	IsAvailable() bool
-	ListInstalled() ([]string, error)
-	Install(name string) error
-	Uninstall(name string) error
-	IsInstalled(name string) bool
+	IsAvailable(ctx context.Context) bool
+	ListInstalled(ctx context.Context) ([]string, error)
+	Install(ctx context.Context, name string) error
+	Uninstall(ctx context.Context, name string) error
+	IsInstalled(ctx context.Context, name string) bool
 }
 
 // PackageConfigLoader defines how to load package configuration
@@ -68,12 +69,12 @@ func (p *PackageProvider) GetConfiguredItems() ([]ConfigItem, error) {
 }
 
 // GetActualItems returns packages currently installed by this manager
-func (p *PackageProvider) GetActualItems() ([]ActualItem, error) {
-	if !p.manager.IsAvailable() {
+func (p *PackageProvider) GetActualItems(ctx context.Context) ([]ActualItem, error) {
+	if !p.manager.IsAvailable(ctx) {
 		return []ActualItem{}, nil
 	}
 	
-	installed, err := p.manager.ListInstalled()
+	installed, err := p.manager.ListInstalled(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -156,11 +157,11 @@ func (m *MultiManagerPackageProvider) GetConfiguredItems() ([]ConfigItem, error)
 }
 
 // GetActualItems returns installed packages from all managers
-func (m *MultiManagerPackageProvider) GetActualItems() ([]ActualItem, error) {
+func (m *MultiManagerPackageProvider) GetActualItems(ctx context.Context) ([]ActualItem, error) {
 	var allItems []ActualItem
 	
 	for _, provider := range m.providers {
-		items, err := provider.GetActualItems()
+		items, err := provider.GetActualItems(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get actual items from %s: %w", provider.managerName, err)
 		}

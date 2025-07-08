@@ -4,6 +4,7 @@
 package state
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -159,7 +160,7 @@ func TestDotfileProvider_GetActualItems(t *testing.T) {
 	
 	provider := NewDotfileProvider(tempDir, tempDir+"/.config/plonk", NewMockDotfileConfigLoader())
 	
-	items, err := provider.GetActualItems()
+	items, err := provider.GetActualItems(context.Background())
 	if err != nil {
 		t.Fatalf("GetActualItems() failed: %v", err)
 	}

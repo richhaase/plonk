@@ -3,12 +3,15 @@
 
 package managers
 
+import "context"
+
 // PackageManager defines the interface for package managers.
 // Package managers handle availability checking, listing, installing, and uninstalling packages.
+// All methods accept a context for cancellation and timeout support.
 type PackageManager interface {
-	IsAvailable() bool
-	ListInstalled() ([]string, error)
-	Install(name string) error
-	Uninstall(name string) error
-	IsInstalled(name string) bool
+	IsAvailable(ctx context.Context) bool
+	ListInstalled(ctx context.Context) ([]string, error)
+	Install(ctx context.Context, name string) error
+	Uninstall(ctx context.Context, name string) error
+	IsInstalled(ctx context.Context, name string) bool
 }

@@ -4,6 +4,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -71,11 +72,12 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 	reconciler := state.NewReconciler()
 
 	// Register package provider (multi-manager)
-	packageProvider := createPackageProvider(cfg)
+	ctx := context.Background()
+	packageProvider := createPackageProvider(ctx, cfg)
 	reconciler.RegisterProvider("package", packageProvider)
 
 	// Reconcile package domain
-	result, err := reconciler.ReconcileProvider("package")
+	result, err := reconciler.ReconcileProvider(ctx, "package")
 	if err != nil {
 		return fmt.Errorf("failed to reconcile package state: %w", err)
 	}

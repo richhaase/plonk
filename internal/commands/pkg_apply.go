@@ -4,6 +4,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -68,11 +69,12 @@ func runPkgApply(cmd *cobra.Command, args []string) error {
 	reconciler := state.NewReconciler()
 
 	// Register package provider (multi-manager)
-	packageProvider := createPackageProvider(cfg)
+	ctx := context.Background()
+	packageProvider := createPackageProvider(ctx, cfg)
 	reconciler.RegisterProvider("package", packageProvider)
 
 	// Reconcile package domain to find missing packages
-	result, err := reconciler.ReconcileProvider("package")
+	result, err := reconciler.ReconcileProvider(ctx, "package")
 	if err != nil {
 		return fmt.Errorf("failed to reconcile package state: %w", err)
 	}
@@ -117,7 +119,7 @@ func runPkgApply(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
-		if !managerInstance.IsAvailable() {
+		if !managerInstance.IsAvailable(ctx) {
 			if format == OutputTable {
 				fmt.Printf("# %s: Not available, skipping\n", managerName)
 			}
@@ -154,7 +156,7 @@ func runPkgApply(cmd *cobra.Command, args []string) error {
 				outputData.TotalWouldInstall++
 			} else {
 				// Actually install the package
-				err := managerInstance.Install(item.Name)
+				err := managerInstance.Install(ctx, item.Name)
 				if err != nil {
 					packageResult.Status = "failed"
 					packageResult.Error = err.Error()

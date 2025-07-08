@@ -4,6 +4,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -89,9 +90,10 @@ func runPkgRemove(cmd *cobra.Command, args []string) error {
 		}
 
 		mgr := packageManagers[managerName]
-		if !mgr.IsAvailable() {
+		ctx := context.Background()
+		if !mgr.IsAvailable(ctx) {
 			uninstallError = fmt.Errorf("manager '%s' is not available", managerName)
-		} else if !mgr.IsInstalled(packageName) {
+		} else if !mgr.IsInstalled(ctx, packageName) {
 			if format == OutputTable {
 				fmt.Printf("Package '%s' is not installed in %s\n", packageName, managerName)
 			}
@@ -101,7 +103,7 @@ func runPkgRemove(cmd *cobra.Command, args []string) error {
 				fmt.Printf("Uninstalling %s from %s...\n", packageName, managerName)
 			}
 			
-			err = mgr.Uninstall(packageName)
+			err = mgr.Uninstall(ctx, packageName)
 			if err != nil {
 				uninstallError = err
 				action = "removed_from_config_uninstall_failed"

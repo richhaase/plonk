@@ -4,6 +4,7 @@
 package dotfiles
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -42,7 +43,7 @@ func DefaultCopyOptions() CopyOptions {
 }
 
 // CopyFile copies a file from source to destination with options
-func (f *FileOperations) CopyFile(source, destination string, options CopyOptions) error {
+func (f *FileOperations) CopyFile(ctx context.Context, source, destination string, options CopyOptions) error {
 	sourcePath := f.manager.GetSourcePath(source)
 	destPath := f.manager.GetDestinationPath(destination)
 	
@@ -67,7 +68,7 @@ func (f *FileOperations) CopyFile(source, destination string, options CopyOption
 	if f.manager.FileExists(destPath) {
 		if options.CreateBackup {
 			backupPath := destPath + options.BackupSuffix
-			if err := f.createBackup(destPath, backupPath); err != nil {
+			if err := f.createBackup(ctx, destPath, backupPath); err != nil {
 				return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", 
 					"failed to create backup").
 					WithItem(destination).
@@ -84,11 +85,11 @@ func (f *FileOperations) CopyFile(source, destination string, options CopyOption
 	}
 	
 	// Copy the file
-	return f.copyFileContents(sourcePath, destPath)
+	return f.copyFileContents(ctx, sourcePath, destPath)
 }
 
 // CopyDirectory copies a directory recursively from source to destination
-func (f *FileOperations) CopyDirectory(source, destination string, options CopyOptions) error {
+func (f *FileOperations) CopyDirectory(ctx context.Context, source, destination string, options CopyOptions) error {
 	sourcePath := f.manager.GetSourcePath(source)
 	destPath := f.manager.GetDestinationPath(destination)
 	
@@ -126,7 +127,7 @@ func (f *FileOperations) CopyDirectory(source, destination string, options CopyO
 		if f.manager.FileExists(destFilePath) {
 			if options.CreateBackup {
 				backupPath := destFilePath + options.BackupSuffix
-				if err := f.createBackup(destFilePath, backupPath); err != nil {
+				if err := f.createBackup(ctx, destFilePath, backupPath); err != nil {
 					return fmt.Errorf("failed to create backup for %s: %w", destFilePath, err)
 				}
 			}
@@ -137,21 +138,21 @@ func (f *FileOperations) CopyDirectory(source, destination string, options CopyO
 		}
 		
 		// Copy the file
-		return f.copyFileContents(path, destFilePath)
+		return f.copyFileContents(ctx, path, destFilePath)
 	})
 }
 
 // createBackup creates a backup of the file with timestamp
-func (f *FileOperations) createBackup(source, backupPath string) error {
+func (f *FileOperations) createBackup(ctx context.Context, source, backupPath string) error {
 	// Add timestamp to backup path
 	timestamp := time.Now().Format("20060102-150405")
 	backupPath = backupPath + "." + timestamp
 	
-	return f.copyFileContents(source, backupPath)
+	return f.copyFileContents(ctx, source, backupPath)
 }
 
 // copyFileContents copies the contents of one file to another
-func (f *FileOperations) copyFileContents(source, destination string) error {
+func (f *FileOperations) copyFileContents(ctx context.Context, source, destination string) error {
 	sourceFile, err := os.Open(source)
 	if err != nil {
 		return fmt.Errorf("failed to open source file: %w", err)
@@ -164,9 +165,16 @@ func (f *FileOperations) copyFileContents(source, destination string) error {
 	}
 	defer destFile.Close()
 	
-	// Copy file contents
-	if _, err := io.Copy(destFile, sourceFile); err != nil {
-		return fmt.Errorf("failed to copy file contents: %w", err)
+	// Copy file contents with context cancellation support
+	// For large files, we could check ctx.Done() periodically
+	// For now, we'll add basic cancellation check
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		if _, err := io.Copy(destFile, sourceFile); err != nil {
+			return fmt.Errorf("failed to copy file contents: %w", err)
+		}
 	}
 	
 	// Copy file permissions
@@ -194,7 +202,7 @@ func (f *FileOperations) RemoveFile(destination string) error {
 }
 
 // FileNeedsUpdate checks if a file needs to be updated based on modification time
-func (f *FileOperations) FileNeedsUpdate(source, destination string) (bool, error) {
+func (f *FileOperations) FileNeedsUpdate(ctx context.Context, source, destination string) (bool, error) {
 	sourcePath := f.manager.GetSourcePath(source)
 	destPath := f.manager.GetDestinationPath(destination)
 	

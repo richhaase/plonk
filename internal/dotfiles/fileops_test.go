@@ -4,6 +4,7 @@
 package dotfiles
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
@@ -94,7 +95,7 @@ func TestFileOperations_CopyFile(t *testing.T) {
 	
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := fileOps.CopyFile(test.source, test.destination, test.options)
+			err := fileOps.CopyFile(context.Background(), test.source, test.destination, test.options)
 			
 			if test.expectError && err == nil {
 				t.Error("Expected error but got none")
@@ -158,7 +159,7 @@ func TestFileOperations_CopyFile_WithBackup(t *testing.T) {
 		OverwriteExisting: true,
 	}
 	
-	err = fileOps.CopyFile("zshrc", "~/.zshrc", options)
+	err = fileOps.CopyFile(context.Background(), "zshrc", "~/.zshrc", options)
 	if err != nil {
 		t.Fatalf("CopyFile() failed: %v", err)
 	}
@@ -227,7 +228,7 @@ func TestFileOperations_CopyFile_OverwriteDisabled(t *testing.T) {
 		OverwriteExisting: false,
 	}
 	
-	err = fileOps.CopyFile("zshrc", "~/.zshrc", options)
+	err = fileOps.CopyFile(context.Background(), "zshrc", "~/.zshrc", options)
 	if err == nil {
 		t.Error("Expected error when overwrite is disabled but destination exists")
 	}
@@ -278,7 +279,7 @@ func TestFileOperations_CopyDirectory(t *testing.T) {
 	
 	// Copy directory
 	options := DefaultCopyOptions()
-	err = fileOps.CopyDirectory("config/nvim/", "~/.config/nvim/", options)
+	err = fileOps.CopyDirectory(context.Background(), "config/nvim/", "~/.config/nvim/", options)
 	if err != nil {
 		t.Fatalf("CopyDirectory() failed: %v", err)
 	}
@@ -317,7 +318,7 @@ func TestFileOperations_CopyDirectory_NotADirectory(t *testing.T) {
 	
 	// Try to copy file as directory
 	options := DefaultCopyOptions()
-	err = fileOps.CopyDirectory("zshrc", "~/.zshrc", options)
+	err = fileOps.CopyDirectory(context.Background(), "zshrc", "~/.zshrc", options)
 	if err == nil {
 		t.Error("Expected error when source is not a directory")
 	}
@@ -446,7 +447,7 @@ func TestFileOperations_FileNeedsUpdate(t *testing.T) {
 				}
 			}
 			
-			needsUpdate, err := fileOps.FileNeedsUpdate("zshrc", "~/.zshrc")
+			needsUpdate, err := fileOps.FileNeedsUpdate(context.Background(), "zshrc", "~/.zshrc")
 			if err != nil {
 				t.Errorf("FileNeedsUpdate() failed: %v", err)
 			}
@@ -466,7 +467,7 @@ func TestFileOperations_FileNeedsUpdate_NonexistentSource(t *testing.T) {
 	manager := NewManager(homeDir, configDir)
 	fileOps := NewFileOperations(manager)
 	
-	_, err := fileOps.FileNeedsUpdate("nonexistent", "~/.zshrc")
+	_, err := fileOps.FileNeedsUpdate(context.Background(), "nonexistent", "~/.zshrc")
 	if err == nil {
 		t.Error("FileNeedsUpdate() should error for nonexistent source")
 	}
@@ -539,7 +540,7 @@ func TestFileOperations_copyFileContents_PreservesPermissions(t *testing.T) {
 	destFile := filepath.Join(tempDir, "dest.txt")
 	
 	// Copy file contents
-	err = fileOps.copyFileContents(sourceFile, destFile)
+	err = fileOps.copyFileContents(context.Background(), sourceFile, destFile)
 	if err != nil {
 		t.Fatalf("copyFileContents() failed: %v", err)
 	}
@@ -579,7 +580,7 @@ func TestFileOperations_createBackup_WithTimestamp(t *testing.T) {
 	backupPath := filepath.Join(tempDir, "backup.txt")
 	
 	// Create backup
-	err = fileOps.createBackup(sourceFile, backupPath)
+	err = fileOps.createBackup(context.Background(), sourceFile, backupPath)
 	if err != nil {
 		t.Fatalf("createBackup() failed: %v", err)
 	}

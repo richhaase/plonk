@@ -4,6 +4,7 @@
 package managers
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -18,14 +19,14 @@ func NewHomebrewManager() *HomebrewManager {
 }
 
 // IsAvailable checks if Homebrew is installed.
-func (h *HomebrewManager) IsAvailable() bool {
+func (h *HomebrewManager) IsAvailable(ctx context.Context) bool {
 	_, err := exec.LookPath("brew")
 	return err == nil
 }
 
 // ListInstalled lists all installed Homebrew packages.
-func (h *HomebrewManager) ListInstalled() ([]string, error) {
-	cmd := exec.Command("brew", "list")
+func (h *HomebrewManager) ListInstalled(ctx context.Context) ([]string, error) {
+	cmd := exec.CommandContext(ctx, "brew", "list")
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, err
@@ -40,8 +41,8 @@ func (h *HomebrewManager) ListInstalled() ([]string, error) {
 }
 
 // Install installs a Homebrew package.
-func (h *HomebrewManager) Install(name string) error {
-	cmd := exec.Command("brew", "install", name)
+func (h *HomebrewManager) Install(ctx context.Context, name string) error {
+	cmd := exec.CommandContext(ctx, "brew", "install", name)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to install %s: %w\nOutput: %s", name, err, string(output))
@@ -50,8 +51,8 @@ func (h *HomebrewManager) Install(name string) error {
 }
 
 // Uninstall removes a Homebrew package.
-func (h *HomebrewManager) Uninstall(name string) error {
-	cmd := exec.Command("brew", "uninstall", name)
+func (h *HomebrewManager) Uninstall(ctx context.Context, name string) error {
+	cmd := exec.CommandContext(ctx, "brew", "uninstall", name)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("failed to uninstall %s: %w\nOutput: %s", name, err, string(output))
@@ -60,8 +61,8 @@ func (h *HomebrewManager) Uninstall(name string) error {
 }
 
 // IsInstalled checks if a specific package is installed.
-func (h *HomebrewManager) IsInstalled(name string) bool {
-	cmd := exec.Command("brew", "list", name)
+func (h *HomebrewManager) IsInstalled(ctx context.Context, name string) bool {
+	cmd := exec.CommandContext(ctx, "brew", "list", name)
 	err := cmd.Run()
 	return err == nil
 }

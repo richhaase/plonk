@@ -4,6 +4,7 @@
 package state
 
 import (
+	"context"
 	"fmt"
 )
 
@@ -62,11 +63,11 @@ type ManagerAdapter struct {
 
 // ManagerInterface defines the methods needed from package managers
 type ManagerInterface interface {
-	IsAvailable() bool
-	ListInstalled() ([]string, error)
-	Install(name string) error
-	Uninstall(name string) error
-	IsInstalled(name string) bool
+	IsAvailable(ctx context.Context) bool
+	ListInstalled(ctx context.Context) ([]string, error)
+	Install(ctx context.Context, name string) error
+	Uninstall(ctx context.Context, name string) error
+	IsInstalled(ctx context.Context, name string) bool
 }
 
 // NewManagerAdapter creates a new manager adapter
@@ -75,26 +76,26 @@ func NewManagerAdapter(manager ManagerInterface) *ManagerAdapter {
 }
 
 // IsAvailable implements PackageManager
-func (m *ManagerAdapter) IsAvailable() bool {
-	return m.manager.IsAvailable()
+func (m *ManagerAdapter) IsAvailable(ctx context.Context) bool {
+	return m.manager.IsAvailable(ctx)
 }
 
 // ListInstalled implements PackageManager
-func (m *ManagerAdapter) ListInstalled() ([]string, error) {
-	return m.manager.ListInstalled()
+func (m *ManagerAdapter) ListInstalled(ctx context.Context) ([]string, error) {
+	return m.manager.ListInstalled(ctx)
 }
 
 // Install implements PackageManager
-func (m *ManagerAdapter) Install(name string) error {
-	return m.manager.Install(name)
+func (m *ManagerAdapter) Install(ctx context.Context, name string) error {
+	return m.manager.Install(ctx, name)
 }
 
 // Uninstall implements PackageManager
-func (m *ManagerAdapter) Uninstall(name string) error {
-	return m.manager.Uninstall(name)
+func (m *ManagerAdapter) Uninstall(ctx context.Context, name string) error {
+	return m.manager.Uninstall(ctx, name)
 }
 
 // IsInstalled implements PackageManager
-func (m *ManagerAdapter) IsInstalled(name string) bool {
-	return m.manager.IsInstalled(name)
+func (m *ManagerAdapter) IsInstalled(ctx context.Context, name string) bool {
+	return m.manager.IsInstalled(ctx, name)
 }

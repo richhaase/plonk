@@ -4,6 +4,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -64,7 +65,8 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	reconciler := state.NewReconciler()
 
 	// Register package provider (multi-manager)
-	packageProvider := createPackageProvider(cfg)
+	ctx := context.Background()
+	packageProvider := createPackageProvider(ctx, cfg)
 	reconciler.RegisterProvider("package", packageProvider)
 
 	// Register dotfile provider
@@ -72,7 +74,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	reconciler.RegisterProvider("dotfile", dotfileProvider)
 
 	// Reconcile all domains
-	summary, err := reconciler.ReconcileAll()
+	summary, err := reconciler.ReconcileAll(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to reconcile state: %w", err)
 	}
@@ -88,7 +90,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 }
 
 // createPackageProvider creates a multi-manager package provider
-func createPackageProvider(cfg *config.Config) *state.MultiManagerPackageProvider {
+func createPackageProvider(ctx context.Context, cfg *config.Config) *state.MultiManagerPackageProvider {
 	provider := state.NewMultiManagerPackageProvider()
 	
 	// Create config adapter
@@ -96,14 +98,14 @@ func createPackageProvider(cfg *config.Config) *state.MultiManagerPackageProvide
 	
 	// Add Homebrew manager
 	homebrewManager := managers.NewHomebrewManager()
-	if homebrewManager.IsAvailable() {
+	if homebrewManager.IsAvailable(ctx) {
 		managerAdapter := state.NewManagerAdapter(homebrewManager)
 		provider.AddManager("homebrew", managerAdapter, configAdapter)
 	}
 	
 	// Add NPM manager
 	npmManager := managers.NewNpmManager()
-	if npmManager.IsAvailable() {
+	if npmManager.IsAvailable(ctx) {
 		managerAdapter := state.NewManagerAdapter(npmManager)
 		provider.AddManager("npm", managerAdapter, configAdapter)
 	}

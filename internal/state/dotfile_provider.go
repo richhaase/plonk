@@ -4,6 +4,7 @@
 package state
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -85,7 +86,7 @@ func (d *DotfileProvider) GetConfiguredItems() ([]ConfigItem, error) {
 }
 
 // GetActualItems returns dotfiles currently present in the home directory
-func (d *DotfileProvider) GetActualItems() ([]ActualItem, error) {
+func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, error) {
 	dotfiles, err := d.manager.ListDotfiles(d.homeDir)
 	if err != nil {
 		return nil, err

@@ -4,6 +4,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -73,7 +74,8 @@ func runDotApply(cmd *cobra.Command, args []string) error {
 	reconciler.RegisterProvider("dotfile", dotfileProvider)
 	
 	// Reconcile dotfile domain to get expanded file list
-	result, err := reconciler.ReconcileProvider("dotfile")
+	ctx := context.Background()
+	result, err := reconciler.ReconcileProvider(ctx, "dotfile")
 	if err != nil {
 		return fmt.Errorf("failed to reconcile dotfile state: %w", err)
 	}
@@ -95,7 +97,7 @@ func runDotApply(cmd *cobra.Command, args []string) error {
 			continue
 		}
 		
-		action, err := processDotfile(configDir, homeDir, source, destination, dotApplyDryRun, dotApplyBackup)
+		action, err := processDotfile(ctx, configDir, homeDir, source, destination, dotApplyDryRun, dotApplyBackup)
 		if err != nil {
 			return fmt.Errorf("failed to process dotfile %s: %w", source, err)
 		}
@@ -121,7 +123,7 @@ func runDotApply(cmd *cobra.Command, args []string) error {
 }
 
 // processDotfile handles the deployment of a single dotfile
-func processDotfile(configDir, homeDir, source, destination string, dryRun, backup bool) (DotfileAction, error) {
+func processDotfile(ctx context.Context, configDir, homeDir, source, destination string, dryRun, backup bool) (DotfileAction, error) {
 	// Create dotfiles manager and file operations
 	manager := dotfiles.NewManager(homeDir, configDir)
 	fileOps := dotfiles.NewFileOperations(manager)
@@ -156,7 +158,7 @@ func processDotfile(configDir, homeDir, source, destination string, dryRun, back
 	}
 
 	// Check if file needs update
-	needsUpdate, err := fileOps.FileNeedsUpdate(source, destination)
+	needsUpdate, err := fileOps.FileNeedsUpdate(ctx, source, destination)
 	if err != nil {
 		return action, err
 	}
@@ -189,7 +191,7 @@ func processDotfile(configDir, homeDir, source, destination string, dryRun, back
 	}
 
 	// Copy file using dotfiles operations
-	if err := fileOps.CopyFile(source, destination, options); err != nil {
+	if err := fileOps.CopyFile(ctx, source, destination, options); err != nil {
 		return action, err
 	}
 

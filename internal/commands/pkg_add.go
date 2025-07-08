@@ -4,6 +4,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -104,12 +105,13 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	mgr := packageManagers[targetManager]
-	if !mgr.IsAvailable() {
+	ctx := context.Background()
+	if !mgr.IsAvailable(ctx) {
 		return fmt.Errorf("manager '%s' is not available", targetManager)
 	}
 
 	// Check if already installed
-	if mgr.IsInstalled(packageName) {
+	if mgr.IsInstalled(ctx, packageName) {
 		if format == OutputTable {
 			fmt.Printf("Package '%s' is already installed in %s\n", packageName, targetManager)
 			fmt.Printf("Added to configuration: %s\n", packageName)
@@ -120,7 +122,7 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 			fmt.Printf("Installing %s using %s...\n", packageName, targetManager)
 		}
 		
-		err = mgr.Install(packageName)
+		err = mgr.Install(ctx, packageName)
 		if err != nil {
 			return fmt.Errorf("failed to install package: %w", err)
 		}
