@@ -71,7 +71,24 @@ func runPkgApply(cmd *cobra.Command, args []string) error {
 
 	// Register package provider (multi-manager)
 	ctx := context.Background()
-	packageProvider := createPackageProvider(ctx, cfg)
+	packageProvider := state.NewMultiManagerPackageProvider()
+	configAdapter := config.NewConfigAdapter(cfg)
+	packageConfigAdapter := config.NewStatePackageConfigAdapter(configAdapter)
+	
+	// Add Homebrew manager
+	homebrewManager := managers.NewHomebrewManager()
+	if homebrewManager.IsAvailable(ctx) {
+		managerAdapter := state.NewManagerAdapter(homebrewManager)
+		packageProvider.AddManager("homebrew", managerAdapter, packageConfigAdapter)
+	}
+	
+	// Add NPM manager
+	npmManager := managers.NewNpmManager()
+	if npmManager.IsAvailable(ctx) {
+		managerAdapter := state.NewManagerAdapter(npmManager)
+		packageProvider.AddManager("npm", managerAdapter, packageConfigAdapter)
+	}
+	
 	reconciler.RegisterProvider("package", packageProvider)
 
 	// Reconcile package domain to find missing packages

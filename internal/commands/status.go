@@ -94,21 +94,22 @@ func runStatus(cmd *cobra.Command, args []string) error {
 func createPackageProvider(ctx context.Context, cfg *config.Config) *state.MultiManagerPackageProvider {
 	provider := state.NewMultiManagerPackageProvider()
 	
-	// Create config adapter
-	configAdapter := &PackageConfigAdapter{config: cfg}
+	// Create config adapter using new clean interface
+	configAdapter := config.NewConfigAdapter(cfg)
+	packageConfigAdapter := config.NewStatePackageConfigAdapter(configAdapter)
 	
 	// Add Homebrew manager
 	homebrewManager := managers.NewHomebrewManager()
 	if homebrewManager.IsAvailable(ctx) {
 		managerAdapter := state.NewManagerAdapter(homebrewManager)
-		provider.AddManager("homebrew", managerAdapter, configAdapter)
+		provider.AddManager("homebrew", managerAdapter, packageConfigAdapter)
 	}
 	
 	// Add NPM manager
 	npmManager := managers.NewNpmManager()
 	if npmManager.IsAvailable(ctx) {
 		managerAdapter := state.NewManagerAdapter(npmManager)
-		provider.AddManager("npm", managerAdapter, configAdapter)
+		provider.AddManager("npm", managerAdapter, packageConfigAdapter)
 	}
 	
 	return provider
@@ -116,53 +117,12 @@ func createPackageProvider(ctx context.Context, cfg *config.Config) *state.Multi
 
 // createDotfileProvider creates a dotfile provider
 func createDotfileProvider(homeDir string, configDir string, cfg *config.Config) *state.DotfileProvider {
-	configAdapter := &DotfileConfigAdapter{config: cfg}
-	return state.NewDotfileProvider(homeDir, configDir, configAdapter)
+	configAdapter := config.NewConfigAdapter(cfg)
+	dotfileConfigAdapter := config.NewStateDotfileConfigAdapter(configAdapter)
+	return state.NewDotfileProvider(homeDir, configDir, dotfileConfigAdapter)
 }
 
-// PackageConfigAdapter adapts config.Config to state.PackageConfigLoader
-type PackageConfigAdapter struct {
-	config *config.Config
-}
-
-func (p *PackageConfigAdapter) GetPackagesForManager(managerName string) ([]state.PackageConfigItem, error) {
-	var packageNames []string
-	
-	switch managerName {
-	case "homebrew":
-		// Get homebrew brews
-		for _, brew := range p.config.Homebrew.Brews {
-			packageNames = append(packageNames, brew.Name)
-		}
-		// Get homebrew casks
-		for _, cask := range p.config.Homebrew.Casks {
-			packageNames = append(packageNames, cask.Name)
-		}
-	case "npm":
-		// Get NPM packages
-		for _, pkg := range p.config.NPM {
-			packageNames = append(packageNames, pkg.Name)
-		}
-	default:
-		return nil, fmt.Errorf("unknown package manager: %s", managerName)
-	}
-	
-	items := make([]state.PackageConfigItem, len(packageNames))
-	for i, name := range packageNames {
-		items[i] = state.PackageConfigItem{Name: name}
-	}
-	
-	return items, nil
-}
-
-// DotfileConfigAdapter adapts config.Config to state.DotfileConfigLoader
-type DotfileConfigAdapter struct {
-	config *config.Config
-}
-
-func (d *DotfileConfigAdapter) GetDotfileTargets() map[string]string {
-	return d.config.GetDotfileTargets()
-}
+// Removed - using config.ConfigAdapter instead
 
 // StatusOutput represents the output structure for status command
 type StatusOutput struct {

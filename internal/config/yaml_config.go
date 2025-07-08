@@ -11,6 +11,7 @@ package config
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,7 +32,10 @@ type Config struct {
 
 // Settings contains global configuration settings.
 type Settings struct {
-	DefaultManager string `yaml:"default_manager" validate:"required,oneof=homebrew npm"`
+	DefaultManager     string `yaml:"default_manager" validate:"required,oneof=homebrew npm"`
+	OperationTimeout   int    `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"`        // Timeout in seconds for operations (0 for default, 1-3600 seconds)
+	PackageTimeout     int    `yaml:"package_timeout,omitempty" validate:"omitempty,min=0,max=1800"`          // Timeout in seconds for package operations (0 for default, 1-1800 seconds)
+	DotfileTimeout     int    `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`           // Timeout in seconds for dotfile operations (0 for default, 1-600 seconds)
 }
 
 // BackupConfig contains backup configuration settings.
@@ -316,4 +320,206 @@ func TargetToSource(target string) string {
 	
 	// Default: add dot_ prefix for dotfiles
 	return "dot_" + target
+}
+
+// GetOperationTimeout returns the operation timeout in seconds with a default of 300 seconds (5 minutes)
+func (s *Settings) GetOperationTimeout() int {
+	if s.OperationTimeout <= 0 {
+		return 300 // Default 5 minutes
+	}
+	return s.OperationTimeout
+}
+
+// GetPackageTimeout returns the package timeout in seconds with a default of 180 seconds (3 minutes)
+func (s *Settings) GetPackageTimeout() int {
+	if s.PackageTimeout <= 0 {
+		return 180 // Default 3 minutes
+	}
+	return s.PackageTimeout
+}
+
+// GetDotfileTimeout returns the dotfile timeout in seconds with a default of 60 seconds (1 minute)
+func (s *Settings) GetDotfileTimeout() int {
+	if s.DotfileTimeout <= 0 {
+		return 60 // Default 1 minute
+	}
+	return s.DotfileTimeout
+}
+
+// YAMLConfigService implements all configuration interfaces for YAML-based configuration
+type YAMLConfigService struct {
+	validator *SimpleValidator
+}
+
+// NewYAMLConfigService creates a new YAML configuration service
+func NewYAMLConfigService() *YAMLConfigService {
+	return &YAMLConfigService{
+		validator: NewSimpleValidator(),
+	}
+}
+
+// LoadConfig loads configuration from a directory containing plonk.yaml and plonk.local.yaml
+func (y *YAMLConfigService) LoadConfig(configDir string) (*Config, error) {
+	return LoadConfig(configDir)
+}
+
+// LoadConfigFromFile loads configuration from a specific file path
+func (y *YAMLConfigService) LoadConfigFromFile(filePath string) (*Config, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, errors.Wrap(err, errors.ErrConfigNotFound, errors.DomainConfig, "load", 
+			"failed to read config file").WithItem(filePath)
+	}
+	
+	return y.LoadConfigFromReader(strings.NewReader(string(data)))
+}
+
+// LoadConfigFromReader loads configuration from an io.Reader
+func (y *YAMLConfigService) LoadConfigFromReader(reader io.Reader) (*Config, error) {
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load", 
+			"failed to read config data")
+	}
+	
+	config := &Config{
+		Settings: Settings{
+			DefaultManager: "homebrew", // Default value
+		},
+	}
+	
+	if err := yaml.Unmarshal(data, config); err != nil {
+		return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load", 
+			"failed to parse YAML")
+	}
+	
+	// Validate configuration
+	result := y.validator.ValidateConfig(config)
+	if !result.IsValid() {
+		return nil, errors.ConfigError(errors.ErrConfigValidation, "validate", 
+			fmt.Sprintf("config validation failed: %s", strings.Join(result.Errors, "; "))).
+			WithMetadata("errors", result.Errors)
+	}
+	
+	return config, nil
+}
+
+// SaveConfig saves configuration to a directory as plonk.yaml
+func (y *YAMLConfigService) SaveConfig(configDir string, config *Config) error {
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return errors.Wrap(err, errors.ErrDirectoryCreate, errors.DomainConfig, "save", 
+			"failed to create config directory").WithItem(configDir)
+	}
+	
+	filePath := filepath.Join(configDir, "plonk.yaml")
+	return y.SaveConfigToFile(filePath, config)
+}
+
+// SaveConfigToFile saves configuration to a specific file path
+func (y *YAMLConfigService) SaveConfigToFile(filePath string, config *Config) error {
+	file, err := os.Create(filePath)
+	if err != nil {
+		return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "save", 
+			"failed to create config file").WithItem(filePath)
+	}
+	defer file.Close()
+	
+	return y.SaveConfigToWriter(file, config)
+}
+
+// SaveConfigToWriter saves configuration to an io.Writer
+func (y *YAMLConfigService) SaveConfigToWriter(writer io.Writer, config *Config) error {
+	data, err := yaml.Marshal(config)
+	if err != nil {
+		return errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "save", 
+			"failed to marshal config to YAML")
+	}
+	
+	if _, err := writer.Write(data); err != nil {
+		return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "save", 
+			"failed to write config data")
+	}
+	
+	return nil
+}
+
+// GetDotfileTargets returns a map of source -> destination paths for dotfiles
+func (y *YAMLConfigService) GetDotfileTargets() map[string]string {
+	// This method requires a Config instance, so we'll need to load it first
+	// This is a limitation of the current design - we'll address it in the implementation
+	panic("GetDotfileTargets requires a Config instance - use DotfileConfigAdapter instead")
+}
+
+// GetPackagesForManager returns package names for a specific package manager
+func (y *YAMLConfigService) GetPackagesForManager(managerName string) ([]PackageConfigItem, error) {
+	// This method requires a Config instance, so we'll need to load it first
+	// This is a limitation of the current design - we'll address it in the implementation
+	panic("GetPackagesForManager requires a Config instance - use PackageConfigAdapter instead")
+}
+
+// ValidateConfig validates a configuration object
+func (y *YAMLConfigService) ValidateConfig(config *Config) error {
+	result := y.validator.ValidateConfig(config)
+	if !result.IsValid() {
+		return errors.ConfigError(errors.ErrConfigValidation, "validate", 
+			fmt.Sprintf("config validation failed: %s", strings.Join(result.Errors, "; "))).
+			WithMetadata("errors", result.Errors)
+	}
+	return nil
+}
+
+// ValidateConfigFromReader validates configuration from an io.Reader
+func (y *YAMLConfigService) ValidateConfigFromReader(reader io.Reader) error {
+	config, err := y.LoadConfigFromReader(reader)
+	if err != nil {
+		return err
+	}
+	return y.ValidateConfig(config)
+}
+
+// ConfigAdapter adapts a loaded Config to provide domain-specific interfaces
+type ConfigAdapter struct {
+	config *Config
+}
+
+// NewConfigAdapter creates a new config adapter
+func NewConfigAdapter(config *Config) *ConfigAdapter {
+	return &ConfigAdapter{config: config}
+}
+
+// GetDotfileTargets returns a map of source -> destination paths for dotfiles
+func (c *ConfigAdapter) GetDotfileTargets() map[string]string {
+	return c.config.GetDotfileTargets()
+}
+
+// GetPackagesForManager returns package names for a specific package manager
+func (c *ConfigAdapter) GetPackagesForManager(managerName string) ([]PackageConfigItem, error) {
+	var packageNames []string
+	
+	switch managerName {
+	case "homebrew":
+		// Get homebrew brews
+		for _, brew := range c.config.Homebrew.Brews {
+			packageNames = append(packageNames, brew.Name)
+		}
+		// Get homebrew casks
+		for _, cask := range c.config.Homebrew.Casks {
+			packageNames = append(packageNames, cask.Name)
+		}
+	case "npm":
+		// Get NPM packages
+		for _, pkg := range c.config.NPM {
+			packageNames = append(packageNames, pkg.Name)
+		}
+	default:
+		return nil, errors.NewError(errors.ErrInvalidInput, errors.DomainConfig, "get-packages", 
+			fmt.Sprintf("unknown package manager: %s", managerName)).WithItem(managerName)
+	}
+	
+	items := make([]PackageConfigItem, len(packageNames))
+	for i, name := range packageNames {
+		items[i] = PackageConfigItem{Name: name}
+	}
+	
+	return items, nil
 }

@@ -71,7 +71,9 @@ func runDotApply(cmd *cobra.Command, args []string) error {
 	reconciler := state.NewReconciler()
 	
 	// Register dotfile provider
-	dotfileProvider := createDotfileProvider(homeDir, configDir, cfg)
+	configAdapter := config.NewConfigAdapter(cfg)
+	dotfileConfigAdapter := config.NewStateDotfileConfigAdapter(configAdapter)
+	dotfileProvider := state.NewDotfileProvider(homeDir, configDir, dotfileConfigAdapter)
 	reconciler.RegisterProvider("dotfile", dotfileProvider)
 	
 	// Reconcile dotfile domain to get expanded file list
