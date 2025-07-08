@@ -91,7 +91,10 @@ func runPkgRemove(cmd *cobra.Command, args []string) error {
 
 		mgr := packageManagers[managerName]
 		ctx := context.Background()
-		if !mgr.IsAvailable(ctx) {
+		available, err := mgr.IsAvailable(ctx)
+		if err != nil {
+			uninstallError = fmt.Errorf("failed to check if manager '%s' is available: %w", managerName, err)
+		} else if !available {
 			uninstallError = fmt.Errorf("manager '%s' is not available", managerName)
 		} else {
 			installed, err := mgr.IsInstalled(ctx, packageName)

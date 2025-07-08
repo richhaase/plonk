@@ -63,7 +63,7 @@ type ManagerAdapter struct {
 
 // ManagerInterface defines the methods needed from package managers
 type ManagerInterface interface {
-	IsAvailable(ctx context.Context) bool
+	IsAvailable(ctx context.Context) (bool, error)
 	ListInstalled(ctx context.Context) ([]string, error)
 	Install(ctx context.Context, name string) error
 	Uninstall(ctx context.Context, name string) error
@@ -76,7 +76,7 @@ func NewManagerAdapter(manager ManagerInterface) *ManagerAdapter {
 }
 
 // IsAvailable implements PackageManager
-func (m *ManagerAdapter) IsAvailable(ctx context.Context) bool {
+func (m *ManagerAdapter) IsAvailable(ctx context.Context) (bool, error) {
 	return m.manager.IsAvailable(ctx)
 }
 

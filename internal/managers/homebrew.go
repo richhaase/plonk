@@ -18,10 +18,23 @@ func NewHomebrewManager() *HomebrewManager {
 	return &HomebrewManager{}
 }
 
-// IsAvailable checks if Homebrew is installed.
-func (h *HomebrewManager) IsAvailable(ctx context.Context) bool {
+// IsAvailable checks if Homebrew is installed and accessible.
+func (h *HomebrewManager) IsAvailable(ctx context.Context) (bool, error) {
 	_, err := exec.LookPath("brew")
-	return err == nil
+	if err != nil {
+		// Binary not found in PATH - this is not an error condition
+		return false, nil
+	}
+	
+	// Verify brew is actually functional by running a simple command
+	cmd := exec.CommandContext(ctx, "brew", "--version")
+	err = cmd.Run()
+	if err != nil {
+		// brew exists but is not functional - this is an error
+		return false, fmt.Errorf("brew binary found but not functional: %w", err)
+	}
+	
+	return true, nil
 }
 
 // ListInstalled lists all installed Homebrew packages.

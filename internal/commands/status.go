@@ -67,7 +67,10 @@ func runStatus(cmd *cobra.Command, args []string) error {
 
 	// Register package provider (multi-manager)
 	ctx := context.Background()
-	packageProvider := createPackageProvider(ctx, cfg)
+	packageProvider, err := createPackageProvider(ctx, cfg)
+	if err != nil {
+		return err
+	}
 	reconciler.RegisterProvider("package", packageProvider)
 
 	// Register dotfile provider
@@ -91,7 +94,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 }
 
 // createPackageProvider creates a multi-manager package provider
-func createPackageProvider(ctx context.Context, cfg *config.Config) *state.MultiManagerPackageProvider {
+func createPackageProvider(ctx context.Context, cfg *config.Config) (*state.MultiManagerPackageProvider, error) {
 	provider := state.NewMultiManagerPackageProvider()
 	
 	// Create config adapter using new clean interface
@@ -100,19 +103,27 @@ func createPackageProvider(ctx context.Context, cfg *config.Config) *state.Multi
 	
 	// Add Homebrew manager
 	homebrewManager := managers.NewHomebrewManager()
-	if homebrewManager.IsAvailable(ctx) {
+	available, err := homebrewManager.IsAvailable(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check homebrew availability: %w", err)
+	}
+	if available {
 		managerAdapter := state.NewManagerAdapter(homebrewManager)
 		provider.AddManager("homebrew", managerAdapter, packageConfigAdapter)
 	}
 	
 	// Add NPM manager
 	npmManager := managers.NewNpmManager()
-	if npmManager.IsAvailable(ctx) {
+	available, err = npmManager.IsAvailable(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check npm availability: %w", err)
+	}
+	if available {
 		managerAdapter := state.NewManagerAdapter(npmManager)
 		provider.AddManager("npm", managerAdapter, packageConfigAdapter)
 	}
 	
-	return provider
+	return provider, nil
 }
 
 // createDotfileProvider creates a dotfile provider

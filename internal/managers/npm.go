@@ -18,10 +18,23 @@ func NewNpmManager() *NpmManager {
 	return &NpmManager{}
 }
 
-// IsAvailable checks if NPM is installed.
-func (n *NpmManager) IsAvailable(ctx context.Context) bool {
+// IsAvailable checks if NPM is installed and accessible.
+func (n *NpmManager) IsAvailable(ctx context.Context) (bool, error) {
 	_, err := exec.LookPath("npm")
-	return err == nil
+	if err != nil {
+		// Binary not found in PATH - this is not an error condition
+		return false, nil
+	}
+	
+	// Verify npm is actually functional by running a simple command
+	cmd := exec.CommandContext(ctx, "npm", "--version")
+	err = cmd.Run()
+	if err != nil {
+		// npm exists but is not functional - this is an error
+		return false, fmt.Errorf("npm binary found but not functional: %w", err)
+	}
+	
+	return true, nil
 }
 
 // ListInstalled lists all globally installed NPM packages.

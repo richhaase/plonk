@@ -25,8 +25,8 @@ func NewMockPackageManager() *MockPackageManager {
 	}
 }
 
-func (m *MockPackageManager) IsAvailable(ctx context.Context) bool {
-	return m.available
+func (m *MockPackageManager) IsAvailable(ctx context.Context) (bool, error) {
+	return m.available, nil
 }
 
 func (m *MockPackageManager) ListInstalled(ctx context.Context) ([]string, error) {

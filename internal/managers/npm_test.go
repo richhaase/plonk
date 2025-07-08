@@ -124,5 +124,33 @@ func TestNpmManager_ContextCancellation(t *testing.T) {
 			t.Errorf("Expected context timeout error, got %v", err)
 		}
 	})
+
+	t.Run("IsAvailable_ContextCancellation", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // Cancel immediately
+		
+		_, err := manager.IsAvailable(ctx)
+		if err == nil {
+			t.Error("Expected error when context is cancelled")
+		}
+		if !containsContextError(err) {
+			t.Errorf("Expected context cancellation error, got %v", err)
+		}
+	})
+
+	t.Run("IsAvailable_ContextTimeout", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
+		defer cancel()
+		
+		time.Sleep(10 * time.Millisecond) // Ensure timeout
+		
+		_, err := manager.IsAvailable(ctx)
+		if err == nil {
+			t.Error("Expected error when context times out")
+		}
+		if !containsContextError(err) {
+			t.Errorf("Expected context timeout error, got %v", err)
+		}
+	})
 }
 

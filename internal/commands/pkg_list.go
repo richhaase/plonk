@@ -80,14 +80,22 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 	
 	// Add Homebrew manager
 	homebrewManager := managers.NewHomebrewManager()
-	if homebrewManager.IsAvailable(ctx) {
+	available, err := homebrewManager.IsAvailable(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to check homebrew availability: %w", err)
+	}
+	if available {
 		managerAdapter := state.NewManagerAdapter(homebrewManager)
 		packageProvider.AddManager("homebrew", managerAdapter, packageConfigAdapter)
 	}
 	
 	// Add NPM manager
 	npmManager := managers.NewNpmManager()
-	if npmManager.IsAvailable(ctx) {
+	available, err = npmManager.IsAvailable(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to check npm availability: %w", err)
+	}
+	if available {
 		managerAdapter := state.NewManagerAdapter(npmManager)
 		packageProvider.AddManager("npm", managerAdapter, packageConfigAdapter)
 	}

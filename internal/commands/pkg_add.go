@@ -106,7 +106,11 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 
 	mgr := packageManagers[targetManager]
 	ctx := context.Background()
-	if !mgr.IsAvailable(ctx) {
+	available, err := mgr.IsAvailable(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to check if manager '%s' is available: %w", targetManager, err)
+	}
+	if !available {
 		return fmt.Errorf("manager '%s' is not available", targetManager)
 	}
 

@@ -9,7 +9,7 @@ import "context"
 // Package managers handle availability checking, listing, installing, and uninstalling packages.
 // All methods accept a context for cancellation and timeout support.
 type PackageManager interface {
-	IsAvailable(ctx context.Context) bool
+	IsAvailable(ctx context.Context) (bool, error)
 	ListInstalled(ctx context.Context) ([]string, error)
 	Install(ctx context.Context, name string) error
 	Uninstall(ctx context.Context, name string) error

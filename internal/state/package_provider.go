@@ -10,7 +10,7 @@ import (
 
 // PackageManager defines the interface for package managers (from managers package)
 type PackageManager interface {
-	IsAvailable(ctx context.Context) bool
+	IsAvailable(ctx context.Context) (bool, error)
 	ListInstalled(ctx context.Context) ([]string, error)
 	Install(ctx context.Context, name string) error
 	Uninstall(ctx context.Context, name string) error
@@ -77,7 +77,11 @@ func (p *PackageProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 	default:
 	}
 	
-	if !p.manager.IsAvailable(ctx) {
+	available, err := p.manager.IsAvailable(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check manager availability: %w", err)
+	}
+	if !available {
 		return []ActualItem{}, nil
 	}
 	
