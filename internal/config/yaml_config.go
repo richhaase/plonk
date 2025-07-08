@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"plonk/internal/dotfiles"
 	"plonk/internal/errors"
 
 	"gopkg.in/yaml.v3"
@@ -348,13 +349,15 @@ func (s *Settings) GetDotfileTimeout() int {
 
 // YAMLConfigService implements all configuration interfaces for YAML-based configuration
 type YAMLConfigService struct {
-	validator *SimpleValidator
+	validator    *SimpleValidator
+	atomicWriter *dotfiles.AtomicFileWriter
 }
 
 // NewYAMLConfigService creates a new YAML configuration service
 func NewYAMLConfigService() *YAMLConfigService {
 	return &YAMLConfigService{
-		validator: NewSimpleValidator(),
+		validator:    NewSimpleValidator(),
+		atomicWriter: dotfiles.NewAtomicFileWriter(),
 	}
 }
 
@@ -415,16 +418,22 @@ func (y *YAMLConfigService) SaveConfig(configDir string, config *Config) error {
 	return y.SaveConfigToFile(filePath, config)
 }
 
-// SaveConfigToFile saves configuration to a specific file path
+// SaveConfigToFile saves configuration to a specific file path atomically
 func (y *YAMLConfigService) SaveConfigToFile(filePath string, config *Config) error {
-	file, err := os.Create(filePath)
+	// Marshal configuration to YAML
+	data, err := yaml.Marshal(config)
 	if err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "save", 
-			"failed to create config file").WithItem(filePath)
+		return errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "save", 
+			"failed to marshal config to YAML")
 	}
-	defer file.Close()
 	
-	return y.SaveConfigToWriter(file, config)
+	// Write atomically
+	if err := y.atomicWriter.WriteFile(filePath, data, 0644); err != nil {
+		return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "save", 
+			"failed to write config file").WithItem(filePath)
+	}
+	
+	return nil
 }
 
 // SaveConfigToWriter saves configuration to an io.Writer

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"plonk/internal/config"
+	"plonk/internal/dotfiles"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -217,7 +218,7 @@ func copyDirectoryContents(src, dst string) error {
 	})
 }
 
-// saveDotfileConfig saves the configuration to plonk.yaml
+// saveDotfileConfig saves the configuration to plonk.yaml atomically
 func saveDotfileConfig(cfg *config.Config, configDir string) error {
 	configPath := filepath.Join(configDir, "plonk.yaml")
 
@@ -227,8 +228,9 @@ func saveDotfileConfig(cfg *config.Config, configDir string) error {
 		return err
 	}
 
-	// Write to file
-	return os.WriteFile(configPath, data, 0644)
+	// Write to file atomically
+	atomicWriter := dotfiles.NewAtomicFileWriter()
+	return atomicWriter.WriteFile(configPath, data, 0644)
 }
 
 // DotfileAddOutput represents the output structure for dotfile add command

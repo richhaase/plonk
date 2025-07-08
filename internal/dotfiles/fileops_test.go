@@ -643,8 +643,8 @@ func TestFileOperations_ContextCancellation(t *testing.T) {
 		if err == nil {
 			t.Error("Expected error when context is cancelled")
 		}
-		if err != context.Canceled {
-			t.Errorf("Expected context.Canceled, got %v", err)
+		if !containsContextError(err) {
+			t.Errorf("Expected context cancellation error, got %v", err)
 		}
 	})
 
@@ -684,8 +684,8 @@ func TestFileOperations_ContextCancellation(t *testing.T) {
 		if err == nil {
 			t.Error("Expected error when context is cancelled")
 		}
-		if err != context.Canceled {
-			t.Errorf("Expected context.Canceled, got %v", err)
+		if !containsContextError(err) {
+			t.Errorf("Expected context cancellation error, got %v", err)
 		}
 	})
 
@@ -713,8 +713,8 @@ func TestFileOperations_ContextCancellation(t *testing.T) {
 		if err == nil {
 			t.Error("Expected error when context is cancelled")
 		}
-		if err != context.Canceled {
-			t.Errorf("Expected context.Canceled, got %v", err)
+		if !containsContextError(err) {
+			t.Errorf("Expected context cancellation error, got %v", err)
 		}
 	})
 
@@ -728,8 +728,8 @@ func TestFileOperations_ContextCancellation(t *testing.T) {
 		if err == nil {
 			t.Error("Expected error when context times out")
 		}
-		if err != context.DeadlineExceeded {
-			t.Errorf("Expected context.DeadlineExceeded, got %v", err)
+		if !containsContextError(err) {
+			t.Errorf("Expected context deadline exceeded error, got %v", err)
 		}
 	})
 
@@ -742,8 +742,8 @@ func TestFileOperations_ContextCancellation(t *testing.T) {
 		if err == nil {
 			t.Error("Expected error when context is cancelled")
 		}
-		if err != context.Canceled {
-			t.Errorf("Expected context.Canceled, got %v", err)
+		if !containsContextError(err) {
+			t.Errorf("Expected context cancellation error, got %v", err)
 		}
 	})
 
@@ -758,8 +758,8 @@ func TestFileOperations_ContextCancellation(t *testing.T) {
 		if err == nil {
 			t.Error("Expected error when context times out")
 		}
-		if err != context.DeadlineExceeded {
-			t.Errorf("Expected context.DeadlineExceeded, got %v", err)
+		if !containsContextError(err) {
+			t.Errorf("Expected context deadline exceeded error, got %v", err)
 		}
 	})
 
@@ -772,8 +772,8 @@ func TestFileOperations_ContextCancellation(t *testing.T) {
 		if err == nil {
 			t.Error("Expected error when context is cancelled")
 		}
-		if err != context.Canceled {
-			t.Errorf("Expected context.Canceled, got %v", err)
+		if !containsContextError(err) {
+			t.Errorf("Expected context cancellation error, got %v", err)
 		}
 	})
 
@@ -788,8 +788,8 @@ func TestFileOperations_ContextCancellation(t *testing.T) {
 		if err == nil {
 			t.Error("Expected error when context times out")
 		}
-		if err != context.DeadlineExceeded {
-			t.Errorf("Expected context.DeadlineExceeded, got %v", err)
+		if !containsContextError(err) {
+			t.Errorf("Expected context deadline exceeded error, got %v", err)
 		}
 	})
 }

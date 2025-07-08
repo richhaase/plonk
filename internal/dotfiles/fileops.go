@@ -6,7 +6,6 @@ package dotfiles
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"time"
@@ -16,13 +15,15 @@ import (
 
 // FileOperations handles file system operations for dotfiles
 type FileOperations struct {
-	manager *Manager
+	manager      *Manager
+	atomicWriter *AtomicFileWriter
 }
 
 // NewFileOperations creates a new file operations handler
 func NewFileOperations(manager *Manager) *FileOperations {
 	return &FileOperations{
-		manager: manager,
+		manager:      manager,
+		atomicWriter: NewAtomicFileWriter(),
 	}
 }
 
@@ -151,43 +152,10 @@ func (f *FileOperations) createBackup(ctx context.Context, source, backupPath st
 	return f.copyFileContents(ctx, source, backupPath)
 }
 
-// copyFileContents copies the contents of one file to another
+// copyFileContents copies the contents of one file to another atomically
 func (f *FileOperations) copyFileContents(ctx context.Context, source, destination string) error {
-	sourceFile, err := os.Open(source)
-	if err != nil {
-		return fmt.Errorf("failed to open source file: %w", err)
-	}
-	defer sourceFile.Close()
-	
-	destFile, err := os.Create(destination)
-	if err != nil {
-		return fmt.Errorf("failed to create destination file: %w", err)
-	}
-	defer destFile.Close()
-	
-	// Copy file contents with context cancellation support
-	// For large files, we could check ctx.Done() periodically
-	// For now, we'll add basic cancellation check
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-		if _, err := io.Copy(destFile, sourceFile); err != nil {
-			return fmt.Errorf("failed to copy file contents: %w", err)
-		}
-	}
-	
-	// Copy file permissions
-	sourceInfo, err := sourceFile.Stat()
-	if err != nil {
-		return fmt.Errorf("failed to get source file info: %w", err)
-	}
-	
-	if err := destFile.Chmod(sourceInfo.Mode()); err != nil {
-		return fmt.Errorf("failed to set file permissions: %w", err)
-	}
-	
-	return nil
+	// Use atomic file writer to copy file with proper permissions
+	return f.atomicWriter.CopyFile(ctx, source, destination, 0)
 }
 
 // RemoveFile removes a file from the destination

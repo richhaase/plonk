@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"plonk/internal/config"
+	"plonk/internal/dotfiles"
 	"plonk/internal/managers"
 
 	"github.com/spf13/cobra"
@@ -194,7 +195,7 @@ func addPackageToConfig(cfg *config.Config, packageName, targetManager string) e
 	return nil
 }
 
-// saveConfig saves the configuration back to plonk.yaml
+// saveConfig saves the configuration back to plonk.yaml atomically
 func saveConfig(cfg *config.Config, configDir string) error {
 	configPath := filepath.Join(configDir, "plonk.yaml")
 	
@@ -210,8 +211,9 @@ func saveConfig(cfg *config.Config, configDir string) error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	// Write to file
-	err = os.WriteFile(configPath, data, 0644)
+	// Write to file atomically
+	atomicWriter := dotfiles.NewAtomicFileWriter()
+	err = atomicWriter.WriteFile(configPath, data, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
