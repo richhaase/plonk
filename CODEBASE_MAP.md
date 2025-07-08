@@ -4,11 +4,11 @@ This document provides a comprehensive guide for navigating and understanding th
 
 ## 📊 Project Statistics
 
-- **Total Go Files**: ~30+ files
-- **Estimated Lines**: 2000+ lines
-- **Test Coverage**: High (all major components have tests)
-- **Packages**: 5 main packages
-- **Commands**: 8 CLI commands
+- **Total Go Files**: ~20+ files
+- **Estimated Lines**: 1500+ lines
+- **Test Coverage**: Growing (core components have tests)
+- **Packages**: 3 main packages
+- **Commands**: 4 CLI command groups
 
 ## 🏗️ Directory Structure
 
@@ -18,15 +18,12 @@ plonk/
 │   └── main.go                    # CLI application entry point
 ├── internal/                      # 🔒 Private Application Code
 │   ├── commands/                  # 🎯 CLI Command Implementations
-│   ├── directories/               # 📁 Directory Management
-│   ├── tasks/                     # ⚡ Development Task Functions
-│   └── utils/                     # 🛠️ Utility Functions
-├── pkg/                          # 📦 Public Packages
-│   ├── config/                   # ⚙️ Configuration Management
-│   └── managers/                 # 📋 Package Manager Abstractions
+│   ├── config/                    # ⚙️ Configuration Management
+│   └── managers/                  # 📋 Package Manager Abstractions
 ├── .tool-versions                # 🔧 ASDF development tools (optional)
 ├── .golangci.yml                 # 🔍 Linting configuration
-├── dev.go                        # ⚡ Pure Go task runner (zero dependencies)
+├── justfile                      # ⚡ Just task runner
+├── tools.go                      # 🔧 Go tools dependency management
 ├── go.mod                        # 🔧 Go Module Definition
 ├── go.sum                        # 🔒 Dependency Lock File
 ├── CLAUDE.md                     # 📖 Project Documentation
@@ -41,37 +38,36 @@ plonk/
 
 ### 🎮 **CLI Commands** (internal/commands/)
 - `status.go` - Show package manager availability and counts
-- `pkg.go` - List packages (`plonk pkg list`)
-- `clone.go` - Clone dotfiles repositories 
-- `pull.go` - Pull repository updates
-- `install.go` - Install packages from config
-- `apply.go` - Apply configuration files
-- `setup.go` - Install foundational tools
-- `repo.go` - Complete repository setup workflow
-- `backup.go` - Backup functionality
+- `pkg.go` - Package command group
+- `pkg_list.go` - Package list subcommand (`plonk pkg list`)
+- `config.go` - Config command group
+- `config_show.go` - Config show subcommand (`plonk config show`)
+- `dot.go` - Dotfile command group
+- `dot_list.go` - Dotfile list subcommand (`plonk dot list`)
+- `output.go` - Output formatting utilities
 
 ### 🔧 **Core Infrastructure**
-- `internal/commands/error_handling.go` - Standardized error patterns
-- `internal/commands/package_installer.go` - Installation helpers
-- `internal/directories/manager.go` - Centralized path management
-- `internal/commands/test_helpers.go` - Shared test utilities
+- `internal/commands/output.go` - Output formatting utilities
+- `internal/managers/reconciler.go` - State reconciliation logic
+- `internal/managers/config_loader.go` - Configuration loading helpers
 
 ### ⚡ **Development Infrastructure**
-- `dev.go` - Pure Go task runner entry point (zero external dependencies)
-- `internal/tasks/` - Development task implementations (build, test, precommit, clean, install)
+- `justfile` - Just task runner (primary development tool)
+- `tools.go` - Go tools dependency management with build constraints
 - `.tool-versions` - ASDF development tools specification (optional convenience)
 - `.golangci.yml` - Linting and formatting configuration
 
-### ⚙️ **Configuration System** (pkg/config/)
+### ⚙️ **Configuration System** (internal/config/)
 - `yaml_config.go` - Primary YAML configuration parsing
-- `validator.go` - Configuration validation
+- `simple_validator.go` - Configuration validation
 
-### 📋 **Package Managers** (pkg/managers/)
+### 📋 **Package Managers** (internal/managers/)
 - `common.go` - Shared interfaces and command runner
-- `executor.go` - Real command execution
 - `homebrew.go` - Homebrew package manager
 - `asdf.go` - ASDF version manager
 - `npm.go` - NPM package manager
+- `config_loader.go` - Configuration loading logic
+- `reconciler.go` - State reconciliation functionality
 
 ### 🧪 **Testing**
 - `*_test.go` - Test files (following Go convention)
@@ -81,23 +77,23 @@ plonk/
 
 ### Looking for...
 - **CLI command logic**: `internal/commands/{command_name}.go`
-- **Package manager code**: `pkg/managers/{manager_name}.go`
-- **Configuration parsing**: `pkg/config/yaml_config.go`
-- **Error handling**: `internal/commands/error_handling.go`
-- **Test helpers**: `internal/commands/test_helpers.go`
-- **Installation logic**: `internal/commands/package_installer.go`
+- **Package manager code**: `internal/managers/{manager_name}.go`
+- **Configuration parsing**: `internal/config/yaml_config.go`
+- **Configuration validation**: `internal/config/simple_validator.go`
+- **Output formatting**: `internal/commands/output.go`
+- **State reconciliation**: `internal/managers/reconciler.go`
 
 ### Common Tasks
 - **Add new CLI command**: Create `internal/commands/new_command.go` + tests
-- **Add package manager**: Implement in `pkg/managers/` + update interfaces
-- **Modify config format**: Update `pkg/config/yaml_config.go` + validation
-- **Fix error messages**: Check `internal/commands/error_handling.go`
+- **Add package manager**: Implement in `internal/managers/` + update interfaces
+- **Modify config format**: Update `internal/config/yaml_config.go` + validation
+- **Update output formatting**: Check `internal/commands/output.go`
 
 ## 🔗 Key Interfaces & Types
 
 ### Core Interfaces
 ```go
-// pkg/managers/common.go
+// internal/managers/common.go
 type CommandExecutor interface {
     Execute(name string, args ...string) *exec.Cmd
 }
@@ -110,7 +106,7 @@ type PackageManager interface {
 
 ### Configuration Types
 ```go
-// pkg/config/yaml_config.go
+// internal/config/yaml_config.go
 type Config struct {
     Settings Settings `yaml:"settings"`
     Dotfiles []string `yaml:"dotfiles"`
@@ -130,53 +126,54 @@ type Config struct {
 4. See if it loads config (`pkg/config/`)
 
 ### 2. **Understanding Package Management**
-1. Start with `pkg/managers/common.go` for interfaces
+1. Start with `internal/managers/common.go` for interfaces
 2. Look at specific manager (e.g., `homebrew.go`)
-3. Check `internal/commands/install.go` for usage
-4. Review `internal/commands/package_installer.go` for helpers
+3. Check `internal/commands/status.go` for usage
+4. Review `internal/managers/reconciler.go` for state management
 
 ### 3. **Understanding Configuration**
-1. Start with `pkg/config/yaml_config.go` for structure
-2. Check `validator.go` for validation rules
-3. Look at `internal/commands/apply.go` for usage
+1. Start with `internal/config/yaml_config.go` for structure
+2. Check `simple_validator.go` for validation rules
+3. Look at `internal/commands/config_show.go` for usage
 
 ### 4. **Understanding Tests**
 1. Look for `*_test.go` files alongside implementation
-2. Check `internal/commands/test_helpers.go` for common patterns
-3. Review `pkg/managers/manager_test.go` for comprehensive examples
+2. Check existing test patterns in command files
+3. Review `internal/managers/*_test.go` for comprehensive examples
 
 ## 🎨 Common Patterns
 
 ### Error Handling
 ```go
-// Standardized error wrapping
-return WrapConfigError(err)
-return WrapInstallError(packageName, err)
-return WrapPackageManagerError("homebrew", err)
+// Standard Go error patterns
+return fmt.Errorf("config error: %w", err)
+return fmt.Errorf("install error for %s: %w", packageName, err)
+return fmt.Errorf("package manager error: %w", err)
 ```
 
-### Argument Validation
+### Command Structure
 ```go
-// Consistent validation patterns
-if err := ValidateNoArgs("command", args); err != nil {
-    return err
+// Cobra command patterns
+var cmd = &cobra.Command{
+    Use:   "command",
+    Short: "Description",
+    RunE:  runCommand,
 }
 ```
 
 ### Test Setup
 ```go
-// Consistent test environment
-tempHome, cleanup := setupTestEnv(t)
-defer cleanup()
+// Standard Go testing patterns
+func TestFunction(t *testing.T) {
+    // Test setup and execution
+}
 ```
 
-### Package Installation
+### Package Reconciliation
 ```go
-// Consistent package handling
-displayName := getPackageDisplayName(pkg)
-if shouldInstallPackage(name, isInstalled) {
-    // install logic
-}
+// State reconciliation patterns
+reconciler := managers.NewReconciler()
+status := reconciler.ReconcilePackages(config, current)
 ```
 
 ## 🚀 Getting Started Guide
@@ -203,20 +200,20 @@ if shouldInstallPackage(name, isInstalled) {
 
 ## 🔧 Development Tools
 
-### Pure Go dev.go Commands (Primary)
+### Just Task Runner Commands (Primary)
 ```bash
 # See all available commands
-go run dev.go help
+just --list
 
 # Core development tasks
-go run dev.go build      # Build the plonk binary
-go run dev.go test       # Run all tests
-go run dev.go precommit  # Run pre-commit checks (format, lint, test, security)
-go run dev.go clean      # Clean build artifacts
-go run dev.go install    # Install plonk globally
+just build      # Build the plonk binary
+just test       # Run all tests
+just precommit  # Run pre-commit checks (format, lint, test, security)
+just clean      # Clean build artifacts
+just install    # Install plonk globally
 
 # Development workflow (automated)
-go run dev.go precommit  # Comprehensive quality pipeline
+just precommit  # Comprehensive quality pipeline
 ```
 
 ### Traditional Go Commands
@@ -263,6 +260,24 @@ grep -r "func " --include="*.go" .
 - **Documentation**: Keep CLAUDE.md updated with completed tasks
 - **Code Quality**: Follow established patterns and conventions
 
+## 🚧 Development Status
+
+### Currently Implemented
+- **Core CLI structure** with Cobra framework
+- **Package manager detection** (Homebrew, ASDF, NPM)
+- **Configuration parsing** and validation
+- **Status reporting** for package managers
+- **Package/config/dotfile listing** commands
+- **Basic reconciliation** logic
+
+### Planned Features (Not Yet Implemented)
+- Package installation workflows
+- Configuration application
+- Repository cloning and management
+- Backup functionality
+- Advanced error handling patterns
+- Comprehensive test helpers
+
 ---
 
-*This map is maintained as the codebase evolves. Last updated: Pure Go Development Phase 2025*
+*This map is maintained as the codebase evolves. Last updated: Core Implementation Phase 2025*

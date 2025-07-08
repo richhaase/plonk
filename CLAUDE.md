@@ -62,104 +62,100 @@ Each documentation file serves a specific purpose. Understanding these roles pre
 
 ## Development Environment
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and workflow commands.
+Use `justfile` for development tasks. Run `just --list` to see available commands.
 
 ## Architecture Overview
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed system design and [CODEBASE_MAP.md](CODEBASE_MAP.md) for navigation.
+See [CODEBASE_MAP.md](CODEBASE_MAP.md) for navigation and current implementation status.
 
 ## Required TDD Workflow
 
-Follow the Test-Driven Development workflow described in [CONTRIBUTING.md](CONTRIBUTING.md).
+Follow Test-Driven Development practices:
+1. Write failing tests first
+2. Write minimal code to pass tests
+3. Refactor while keeping tests green
+4. Commit frequently with descriptive messages
 
-**AI Agent Specific Requirements**:
-- Sync with TODO.md at session start and maintain it throughout
-- Reference ARCHITECTURE.md for system design decisions
+**AI Agent Requirements**:
 - Use CODEBASE_MAP.md for navigation
 - Follow established patterns found in existing code
+- Focus on currently implemented features (see CODEBASE_MAP.md development status)
 
 ## Session Management
 
-### Session Initialization
-1. **Read TODO.md** - Check for active work items and session context
-2. **If no active todos** - Check ROADMAP.md for possible work items to suggest
-3. **Sync internal todo list** - Match TODO.md content with internal state
-4. **Review session notes** - Check TODO.md Notes section for context
-5. **Understand current phase** - Documentation refactor, feature development, etc.
+### Session Start
+1. **Read CODEBASE_MAP.md** - Understand current implementation status
+2. **Check existing code** - Review patterns and structure before making changes
+3. **Run tests** - Ensure existing functionality works (`just test`)
 
 ### During Session
-- **Update TODO.md** when changing task status (pending → in_progress → completed)
-- **Commit frequently** with descriptive messages following project patterns
-- **Run pre-commit hooks normally** - only use --no-verify when specifically needed
-- **Ask questions** when user requests are unclear or conflict with established patterns
+- **Follow TDD workflow** - Write tests first, then implement
+- **Commit frequently** with descriptive messages
+- **Run quality checks** - Use `just precommit` before committing
+- **Ask questions** when requirements are unclear
 
 ### Session End
-- **Update TODO.md** to reflect current state for next session
-- **Commit any pending work** with clear status in commit message
-- **Update related documentation** as needed:
-  - Update CHANGELOG.md for user-facing changes
-  - Update ARCHITECTURE.md for design changes
-  - Update README.md for user workflow changes
-  - Update CONTRIBUTING.md for development process changes
-- **Leave clear notes** in TODO.md for session continuity
+- **Run final tests** - Ensure all tests pass
+- **Update documentation** if needed (CODEBASE_MAP.md for structural changes)
+- **Commit final changes** with clear messages
 
-## Tool Usage
+## Development Tools
 
-### Preferred CLI Tools (via Bash)
-- **ripgrep (rg)** instead of grep
-- **fd** instead of find  
-- **exa** instead of ls
-- **sd** instead of sed
+### Just Task Runner
+- **`just --list`** - Show available tasks
+- **`just build`** - Build the binary
+- **`just test`** - Run tests
+- **`just precommit`** - Run quality checks
 
-## Code Generation Guidelines
+### Preferred CLI Tools
+- **ripgrep (rg)** for searching
+- **fd** for finding files
+
+## Code Guidelines
 
 ### AI-Specific Rules
 - **No comments** unless explicitly requested
 - **Follow existing patterns** found in the codebase
 - **Read before editing** - always use Read tool before Edit/Write
 - **Prefer editing** existing files over creating new ones
-- **Use established error handling** patterns from error_handling.go
-- **Mock external dependencies** in tests using MockCommandExecutor
+- **Use standard Go error handling** patterns
 
 ### Testing Patterns
-- **MockCommandExecutor** for unit tests (avoid actual command execution)
-- **setupTestEnv(t)** helper for test isolation
-- **Table-driven tests** for comprehensive coverage
+- **Standard Go testing** with table-driven tests
+- **Mock external dependencies** in tests
+- **Test coverage** for all major components
 - **Interface compliance** tests for new package managers
 
-## Standardized Patterns
+## Code Patterns
 
 ### Error Handling
 ```go
-// internal/commands/error_handling.go
-WrapConfigError(err)                    // Configuration loading errors
-WrapInstallError(packageName, err)      // Package installation errors
-WrapPackageManagerError("homebrew", err) // Package manager availability errors
+// Standard Go error patterns
+return fmt.Errorf("config error: %w", err)
+return fmt.Errorf("package manager error: %w", err)
 ```
 
 ### Command Structure
-All CLI commands follow consistent patterns:
-- Cobra command structure in `internal/commands/`
-- Argument validation using `ValidateNoArgs()`, `ValidateExactArgs()`
-- Error wrapping for consistent user experience
-- Comprehensive test coverage with mocks
+All CLI commands follow Cobra patterns:
+- Commands in `internal/commands/`
+- Subcommands organized by functionality
+- Consistent error handling
+- Comprehensive test coverage
 
-### File Operations
-- Use `internal/directories.Default` for all path operations
-- Backup functionality available via `internal/commands/backup.go`
+## Current CLI Commands
 
-## CLI Commands
+**Currently Implemented:**
+- `status` - Package manager availability and counts
+- `pkg list` - List packages by manager
+- `config show` - Show configuration
+- `dot list` - List dotfiles
 
-For complete command reference, see README.md. Key commands:
-- `status` - Package manager availability and drift detection
-- `install` - Install packages from config  
-- `apply` - Apply configurations (supports --backup, --dry-run)
-- `clone`/`pull` - Git repository operations
+**Planned:** Installation, configuration application, repository management
 
-## Critical Files
+## Key Files
 
 - **`internal/commands/root.go`** - CLI structure and command registration
-- **`pkg/managers/common.go`** - Core interfaces and patterns
-- **`pkg/config/yaml_config.go`** - Configuration structure and parsing
-- **`internal/commands/error_handling.go`** - Standardized error patterns
-- **`internal/commands/test_helpers.go`** - Test utilities and patterns
+- **`internal/managers/common.go`** - Core interfaces and patterns
+- **`internal/config/yaml_config.go`** - Configuration structure and parsing
+- **`internal/commands/output.go`** - Output formatting utilities
+- **`internal/managers/reconciler.go`** - State reconciliation logic
