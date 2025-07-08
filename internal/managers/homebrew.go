@@ -76,7 +76,27 @@ func (h *HomebrewManager) Install(ctx context.Context, name string) error {
 	cmd := exec.CommandContext(ctx, "brew", "install", name)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to install %s: %w\nOutput: %s", name, err, string(output))
+		outputStr := string(output)
+		
+		// Check for specific error conditions
+		if exitError, ok := err.(*exec.ExitError); ok {
+			// Check for "already installed" - this might be a warning, not an error
+			if strings.Contains(outputStr, "already installed") || strings.Contains(outputStr, "Warning:") {
+				// Package is already installed - this is typically fine
+				return nil
+			}
+			
+			// Check for package not found
+			if strings.Contains(outputStr, "No available formula") || strings.Contains(outputStr, "No formulae found") {
+				return fmt.Errorf("package '%s' not found in homebrew repositories", name)
+			}
+			
+			// Other exit errors with more context
+			return fmt.Errorf("failed to install %s (exit code %d): %w\nOutput: %s", name, exitError.ExitCode(), err, outputStr)
+		}
+		
+		// Non-exit errors (command not found, context cancellation, etc.)
+		return fmt.Errorf("failed to execute brew install for %s: %w\nOutput: %s", name, err, outputStr)
 	}
 	return nil
 }
@@ -86,7 +106,27 @@ func (h *HomebrewManager) Uninstall(ctx context.Context, name string) error {
 	cmd := exec.CommandContext(ctx, "brew", "uninstall", name)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to uninstall %s: %w\nOutput: %s", name, err, string(output))
+		outputStr := string(output)
+		
+		// Check for specific error conditions
+		if exitError, ok := err.(*exec.ExitError); ok {
+			// Check for "not installed" - this might be fine
+			if strings.Contains(outputStr, "No such keg") || strings.Contains(outputStr, "not installed") {
+				// Package is not installed - this is typically fine for uninstall
+				return nil
+			}
+			
+			// Check for dependency issues
+			if strings.Contains(outputStr, "because it is required by") || strings.Contains(outputStr, "still has dependents") {
+				return fmt.Errorf("cannot uninstall %s: package has dependents that require it\nOutput: %s", name, outputStr)
+			}
+			
+			// Other exit errors with more context
+			return fmt.Errorf("failed to uninstall %s (exit code %d): %w\nOutput: %s", name, exitError.ExitCode(), err, outputStr)
+		}
+		
+		// Non-exit errors (command not found, context cancellation, etc.)
+		return fmt.Errorf("failed to execute brew uninstall for %s: %w\nOutput: %s", name, err, outputStr)
 	}
 	return nil
 }

@@ -87,7 +87,35 @@ func (n *NpmManager) Install(ctx context.Context, name string) error {
 	cmd := exec.CommandContext(ctx, "npm", "install", "-g", name)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to install %s: %w\nOutput: %s", name, err, string(output))
+		outputStr := string(output)
+		
+		// Check for specific error conditions
+		if exitError, ok := err.(*exec.ExitError); ok {
+			// NPM often returns exit code 1 for warnings, check actual content
+			if exitError.ExitCode() == 1 {
+				// Check for "already installed" warnings
+				if strings.Contains(outputStr, "already installed") || strings.Contains(outputStr, "up to date") {
+					// Package is already installed - this is typically fine
+					return nil
+				}
+				
+				// Check for package not found
+				if strings.Contains(outputStr, "404") || strings.Contains(outputStr, "Not found") || strings.Contains(outputStr, "E404") {
+					return fmt.Errorf("package '%s' not found in npm registry", name)
+				}
+				
+				// Check for permission errors
+				if strings.Contains(outputStr, "EACCES") || strings.Contains(outputStr, "permission denied") {
+					return fmt.Errorf("permission denied installing %s: try running with sudo or fix npm permissions\nOutput: %s", name, outputStr)
+				}
+			}
+			
+			// Other exit errors with more context
+			return fmt.Errorf("failed to install %s (exit code %d): %w\nOutput: %s", name, exitError.ExitCode(), err, outputStr)
+		}
+		
+		// Non-exit errors (command not found, context cancellation, etc.)
+		return fmt.Errorf("failed to execute npm install for %s: %w\nOutput: %s", name, err, outputStr)
 	}
 	
 	return nil
@@ -98,7 +126,35 @@ func (n *NpmManager) Uninstall(ctx context.Context, name string) error {
 	cmd := exec.CommandContext(ctx, "npm", "uninstall", "-g", name)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("failed to uninstall %s: %w\nOutput: %s", name, err, string(output))
+		outputStr := string(output)
+		
+		// Check for specific error conditions
+		if exitError, ok := err.(*exec.ExitError); ok {
+			// NPM often returns exit code 1 for warnings, check actual content
+			if exitError.ExitCode() == 1 {
+				// Check for "not installed" warnings
+				if strings.Contains(outputStr, "not installed") || strings.Contains(outputStr, "up to date") {
+					// Package is not installed - this is typically fine for uninstall
+					return nil
+				}
+				
+				// Check for permission errors
+				if strings.Contains(outputStr, "EACCES") || strings.Contains(outputStr, "permission denied") {
+					return fmt.Errorf("permission denied uninstalling %s: try running with sudo or fix npm permissions\nOutput: %s", name, outputStr)
+				}
+				
+				// Check for dependency issues (less common in npm global packages)
+				if strings.Contains(outputStr, "ENOENT") || strings.Contains(outputStr, "cannot remove") {
+					return fmt.Errorf("cannot uninstall %s: package files may be corrupted or missing\nOutput: %s", name, outputStr)
+				}
+			}
+			
+			// Other exit errors with more context
+			return fmt.Errorf("failed to uninstall %s (exit code %d): %w\nOutput: %s", name, exitError.ExitCode(), err, outputStr)
+		}
+		
+		// Non-exit errors (command not found, context cancellation, etc.)
+		return fmt.Errorf("failed to execute npm uninstall for %s: %w\nOutput: %s", name, err, outputStr)
 	}
 	
 	return nil
