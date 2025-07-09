@@ -27,9 +27,6 @@ jobs:
     - name: Download dependencies
       run: go mod download
       
-    - name: Install mockgen
-      run: go install go.uber.org/mock/mockgen@latest
-      
     - name: Install Homebrew (Linux)
       if: runner.os == 'Linux'
       run: |
