@@ -277,6 +277,135 @@ func TestDotfileProvider_CreateItem(t *testing.T) {
 	}
 }
 
+func TestDotfileProvider_GetActualItems_WithConfiguredDirectories(t *testing.T) {
+	// Create temporary directory structure
+	tempDir := t.TempDir()
+	
+	// Create test dotfiles in home directory
+	testFiles := []string{
+		".zshrc",
+		".gitconfig",
+	}
+	
+	for _, file := range testFiles {
+		filePath := filepath.Join(tempDir, file)
+		err := os.WriteFile(filePath, []byte("test content"), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create test file %s: %v", file, err)
+		}
+	}
+	
+	// Create configured directory structure
+	nvimDir := filepath.Join(tempDir, ".config", "nvim", "lua", "config")
+	err := os.MkdirAll(nvimDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create nvim directory: %v", err)
+	}
+	
+	// Add files in the configured directory
+	nvimFiles := []string{
+		filepath.Join(tempDir, ".config", "nvim", "init.lua"),
+		filepath.Join(tempDir, ".config", "nvim", "lua", "config", "options.lua"),
+		filepath.Join(tempDir, ".config", "nvim", "lua", "config", "keymaps.lua"),
+	}
+	
+	for _, file := range nvimFiles {
+		err := os.WriteFile(file, []byte("-- nvim config"), 0644)
+		if err != nil {
+			t.Fatalf("Failed to create nvim file %s: %v", file, err)
+		}
+	}
+	
+	// Set up mock config loader with directory mapping
+	configLoader := NewMockDotfileConfigLoader()
+	configLoader.SetTargets(map[string]string{
+		"zshrc":        "~/.zshrc",
+		"gitconfig":    "~/.gitconfig",
+		"config/nvim":  "~/.config/nvim",
+	})
+	
+	provider := NewDotfileProvider(tempDir, tempDir+"/.config/plonk", configLoader)
+	
+	items, err := provider.GetActualItems(context.Background())
+	if err != nil {
+		t.Fatalf("GetActualItems() failed: %v", err)
+	}
+	
+	// Should find dotfiles plus nvim directory files
+	expectedItems := []string{
+		".zshrc",
+		".gitconfig",
+		".config", // This will be found as a dotfile directory
+		".config/nvim/init.lua",
+		".config/nvim/lua/config/options.lua",
+		".config/nvim/lua/config/keymaps.lua",
+	}
+	
+	if len(items) != len(expectedItems) {
+		t.Errorf("GetActualItems() returned %d items, expected %d", len(items), len(expectedItems))
+		for i, item := range items {
+			t.Logf("Item %d: %s", i, item.Name)
+		}
+	}
+	
+	// Verify all expected items are present
+	itemsByName := make(map[string]ActualItem)
+	for _, item := range items {
+		itemsByName[item.Name] = item
+	}
+	
+	for _, expected := range expectedItems {
+		item, exists := itemsByName[expected]
+		if !exists {
+			t.Errorf("Expected item %s not found in actual items", expected)
+			continue
+		}
+		
+		// Verify the item has correct path
+		expectedPath := filepath.Join(tempDir, expected)
+		if item.Path != expectedPath {
+			t.Errorf("Item %s path = %s, expected %s", expected, item.Path, expectedPath)
+		}
+	}
+}
+
+func TestDotfileProvider_GetActualItems_NoDuplicates(t *testing.T) {
+	// Create temporary directory structure
+	tempDir := t.TempDir()
+	
+	// Create .vimrc both as a dotfile and as a configured file
+	vimrcPath := filepath.Join(tempDir, ".vimrc")
+	err := os.WriteFile(vimrcPath, []byte("vimrc content"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create .vimrc: %v", err)
+	}
+	
+	// Set up mock config loader that includes .vimrc
+	configLoader := NewMockDotfileConfigLoader()
+	configLoader.SetTargets(map[string]string{
+		"vimrc": "~/.vimrc",
+	})
+	
+	provider := NewDotfileProvider(tempDir, tempDir+"/.config/plonk", configLoader)
+	
+	items, err := provider.GetActualItems(context.Background())
+	if err != nil {
+		t.Fatalf("GetActualItems() failed: %v", err)
+	}
+	
+	// Should only find .vimrc once, not duplicated
+	vimrcCount := 0
+	for _, item := range items {
+		if item.Name == ".vimrc" {
+			vimrcCount++
+		}
+	}
+	
+	if vimrcCount != 1 {
+		t.Errorf("Expected .vimrc to appear exactly once, found %d times", vimrcCount)
+	}
+}
+
 func TestDotfileProvider_DestinationToName(t *testing.T) {
 	provider := NewDotfileProvider("/home/user", "/home/user/.config/plonk", NewMockDotfileConfigLoader())
 	

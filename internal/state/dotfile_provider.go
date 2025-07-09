@@ -87,20 +87,104 @@ func (d *DotfileProvider) GetConfiguredItems() ([]ConfigItem, error) {
 
 // GetActualItems returns dotfiles currently present in the home directory
 func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, error) {
+	var items []ActualItem
+	
+	// Get dotfiles from home directory
 	dotfiles, err := d.manager.ListDotfiles(d.homeDir)
 	if err != nil {
 		return nil, err
 	}
 	
-	items := make([]ActualItem, len(dotfiles))
-	for i, dotfile := range dotfiles {
+	for _, dotfile := range dotfiles {
 		fullPath := filepath.Join(d.homeDir, dotfile)
-		items[i] = ActualItem{
+		items = append(items, ActualItem{
 			Name: dotfile,
 			Path: fullPath,
 			Metadata: map[string]interface{}{
 				"path": fullPath,
 			},
+		})
+	}
+	
+	// Also check configured destinations to find files in subdirectories
+	targets := d.configLoader.GetDotfileTargets()
+	for _, destination := range targets {
+		destPath := d.manager.ExpandPath(destination)
+		
+		// Check if destination exists
+		if !d.manager.FileExists(destPath) {
+			continue
+		}
+		
+		// If it's a directory, walk it to find individual files
+		if d.manager.IsDirectory(destPath) {
+			err := filepath.Walk(destPath, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				
+				// Skip directories
+				if info.IsDir() {
+					return nil
+				}
+				
+				// Calculate relative path to create a proper name
+				relPath, err := filepath.Rel(d.homeDir, path)
+				if err != nil {
+					return err
+				}
+				
+				// Only add if not already in items (avoid duplicates)
+				name := relPath
+				found := false
+				for _, item := range items {
+					if item.Name == name {
+						found = true
+						break
+					}
+				}
+				
+				if !found {
+					items = append(items, ActualItem{
+						Name: name,
+						Path: path,
+						Metadata: map[string]interface{}{
+							"path": path,
+						},
+					})
+				}
+				
+				return nil
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to walk directory %s: %w", destPath, err)
+			}
+		} else {
+			// Single file - calculate relative path
+			relPath, err := filepath.Rel(d.homeDir, destPath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get relative path for %s: %w", destPath, err)
+			}
+			
+			// Only add if not already in items (avoid duplicates)
+			name := relPath
+			found := false
+			for _, item := range items {
+				if item.Name == name {
+					found = true
+					break
+				}
+			}
+			
+			if !found {
+				items = append(items, ActualItem{
+					Name: name,
+					Path: destPath,
+					Metadata: map[string]interface{}{
+						"path": destPath,
+					},
+				})
+			}
 		}
 	}
 	
