@@ -40,10 +40,9 @@ settings:
 settings:
   default_manager: homebrew
 homebrew:
-  brews:
+  packages:
     - name: git
     - name: curl
-  casks:
     - name: firefox
 npm:
   - name: typescript
@@ -51,11 +50,8 @@ npm:
 `,
 			expectError: false,
 			validateFn: func(cfg *Config) error {
-				if len(cfg.Homebrew.Brews) != 2 {
-					t.Errorf("Expected 2 homebrew brews, got %d", len(cfg.Homebrew.Brews))
-				}
-				if len(cfg.Homebrew.Casks) != 1 {
-					t.Errorf("Expected 1 homebrew cask, got %d", len(cfg.Homebrew.Casks))
+				if len(cfg.Homebrew.Packages) != 3 {
+					t.Errorf("Expected 3 homebrew packages, got %d", len(cfg.Homebrew.Packages))
 				}
 				if len(cfg.NPM) != 2 {
 					t.Errorf("Expected 2 npm packages, got %d", len(cfg.NPM))
@@ -179,7 +175,7 @@ func TestYAMLConfigService_LoadConfigFromFile(t *testing.T) {
 settings:
   default_manager: homebrew
 homebrew:
-  brews:
+  packages:
     - name: git
 `
 	
@@ -198,8 +194,8 @@ homebrew:
 		t.Errorf("Expected default_manager to be 'homebrew', got %s", config.Settings.DefaultManager)
 	}
 	
-	if len(config.Homebrew.Brews) != 1 {
-		t.Errorf("Expected 1 homebrew brew, got %d", len(config.Homebrew.Brews))
+	if len(config.Homebrew.Packages) != 1 {
+		t.Errorf("Expected 1 homebrew package, got %d", len(config.Homebrew.Packages))
 	}
 }
 
@@ -220,7 +216,7 @@ func TestYAMLConfigService_SaveConfigToWriter(t *testing.T) {
 			DefaultManager: "homebrew",
 		},
 		Homebrew: HomebrewConfig{
-			Brews: []HomebrewPackage{
+			Packages: []HomebrewPackage{
 				{Name: "git"},
 				{Name: "curl"},
 			},
@@ -259,7 +255,7 @@ func TestYAMLConfigService_SaveConfigToFile(t *testing.T) {
 			DefaultManager: "homebrew",
 		},
 		Homebrew: HomebrewConfig{
-			Brews: []HomebrewPackage{
+			Packages: []HomebrewPackage{
 				{Name: "git"},
 			},
 		},
@@ -438,7 +434,7 @@ func TestYAMLConfigService_LoadConfig_Integration(t *testing.T) {
 settings:
   default_manager: homebrew
 homebrew:
-  brews:
+  packages:
     - name: git
 `
 	
@@ -457,8 +453,8 @@ homebrew:
 		t.Errorf("Expected default_manager to be 'homebrew', got %s", config.Settings.DefaultManager)
 	}
 	
-	if len(config.Homebrew.Brews) != 1 {
-		t.Errorf("Expected 1 homebrew brew, got %d", len(config.Homebrew.Brews))
+	if len(config.Homebrew.Packages) != 1 {
+		t.Errorf("Expected 1 homebrew package, got %d", len(config.Homebrew.Packages))
 	}
 }
 

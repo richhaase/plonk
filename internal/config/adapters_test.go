@@ -53,12 +53,10 @@ func TestConfigAdapter_GetPackagesForManager(t *testing.T) {
 			DefaultManager: "homebrew",
 		},
 		Homebrew: HomebrewConfig{
-			Brews: []HomebrewPackage{
+			Packages: []HomebrewPackage{
 				{Name: "git"},
 				{Name: "curl"},
 				{Name: "htop"},
-			},
-			Casks: []HomebrewPackage{
 				{Name: "firefox"},
 				{Name: "vscode"},
 			},
@@ -77,7 +75,7 @@ func TestConfigAdapter_GetPackagesForManager(t *testing.T) {
 			t.Fatalf("GetPackagesForManager(homebrew) failed: %v", err)
 		}
 		
-		// Should have 3 brews + 2 casks = 5 packages
+		// Should have 5 packages
 		if len(packages) != 5 {
 			t.Errorf("Expected 5 homebrew packages, got %d", len(packages))
 		}
@@ -146,7 +144,7 @@ func TestStatePackageConfigAdapter(t *testing.T) {
 			DefaultManager: "homebrew",
 		},
 		Homebrew: HomebrewConfig{
-			Brews: []HomebrewPackage{
+			Packages: []HomebrewPackage{
 				{Name: "git"},
 				{Name: "curl"},
 			},

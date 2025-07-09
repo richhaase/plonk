@@ -149,18 +149,10 @@ func runPkgRemove(cmd *cobra.Command, args []string) error {
 // findAndRemovePackageFromConfig finds and removes a package from the configuration
 // Returns the manager name and whether the package was found
 func findAndRemovePackageFromConfig(cfg *config.Config, packageName string) (string, bool) {
-	// Check homebrew brews
-	for i, brew := range cfg.Homebrew.Brews {
-		if brew.Name == packageName {
-			cfg.Homebrew.Brews = append(cfg.Homebrew.Brews[:i], cfg.Homebrew.Brews[i+1:]...)
-			return "homebrew", true
-		}
-	}
-
-	// Check homebrew casks
-	for i, cask := range cfg.Homebrew.Casks {
-		if cask.Name == packageName {
-			cfg.Homebrew.Casks = append(cfg.Homebrew.Casks[:i], cfg.Homebrew.Casks[i+1:]...)
+	// Check homebrew packages
+	for i, pkg := range cfg.Homebrew.Packages {
+		if pkg.Name == packageName {
+			cfg.Homebrew.Packages = append(cfg.Homebrew.Packages[:i], cfg.Homebrew.Packages[i+1:]...)
 			return "homebrew", true
 		}
 	}

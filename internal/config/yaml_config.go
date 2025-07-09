@@ -53,8 +53,7 @@ type DotfileEntry struct {
 
 // HomebrewConfig contains homebrew package lists.
 type HomebrewConfig struct {
-	Brews []HomebrewPackage `yaml:"brews,omitempty" validate:"dive"`
-	Casks []HomebrewPackage `yaml:"casks,omitempty" validate:"dive"`
+	Packages []HomebrewPackage `yaml:"packages,omitempty" validate:"dive"`
 }
 
 // HomebrewPackage can be a simple string or complex object.
@@ -62,6 +61,7 @@ type HomebrewPackage struct {
 	Name   string `yaml:"name,omitempty" validate:"required,package_name"`
 	Config string `yaml:"config,omitempty" validate:"omitempty,file_path"`
 }
+
 
 
 // NPMPackage represents an NPM package configuration.
@@ -225,8 +225,7 @@ func loadConfigFile(path string, config *Config) error {
 	config.Dotfiles = append(config.Dotfiles, tempConfig.Dotfiles...)
 
 	// Merge homebrew packages.
-	config.Homebrew.Brews = append(config.Homebrew.Brews, tempConfig.Homebrew.Brews...)
-	config.Homebrew.Casks = append(config.Homebrew.Casks, tempConfig.Homebrew.Casks...)
+	config.Homebrew.Packages = append(config.Homebrew.Packages, tempConfig.Homebrew.Packages...)
 
 
 	// Merge NPM packages.
@@ -496,13 +495,9 @@ func (c *ConfigAdapter) GetPackagesForManager(managerName string) ([]PackageConf
 	
 	switch managerName {
 	case "homebrew":
-		// Get homebrew brews
-		for _, brew := range c.config.Homebrew.Brews {
-			packageNames = append(packageNames, brew.Name)
-		}
-		// Get homebrew casks
-		for _, cask := range c.config.Homebrew.Casks {
-			packageNames = append(packageNames, cask.Name)
+		// Get homebrew packages (unified)
+		for _, pkg := range c.config.Homebrew.Packages {
+			packageNames = append(packageNames, pkg.Name)
 		}
 	case "npm":
 		// Get NPM packages

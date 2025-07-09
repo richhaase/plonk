@@ -25,11 +25,10 @@ dotfiles:
     destination: ~/.config/plugins.zsh
 
 homebrew:
-  brews:
+  packages:
     - aichat
     - aider
     - name: neovim
-  casks:
     - font-hack-nerd-font
 
 npm:
@@ -70,17 +69,17 @@ npm:
 	}
 
 	// Verify homebrew packages
-	if len(config.Homebrew.Brews) != 3 {
-		t.Errorf("Expected 3 homebrew brews, got %d", len(config.Homebrew.Brews))
+	if len(config.Homebrew.Packages) != 4 {
+		t.Errorf("Expected 4 homebrew packages, got %d", len(config.Homebrew.Packages))
 	}
 
-	// Check simple brew
-	if config.Homebrew.Brews[0].Name != "aichat" {
-		t.Errorf("Expected first brew 'aichat', got '%s'", config.Homebrew.Brews[0].Name)
+	// Check simple package
+	if config.Homebrew.Packages[0].Name != "aichat" {
+		t.Errorf("Expected first package 'aichat', got '%s'", config.Homebrew.Packages[0].Name)
 	}
 
-	// Check brew with config
-	neovim := config.Homebrew.Brews[2]
+	// Check package with config
+	neovim := config.Homebrew.Packages[2]
 	if neovim.Name != "neovim" {
 		t.Errorf("Expected neovim name 'neovim', got '%s'", neovim.Name)
 	}

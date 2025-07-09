@@ -328,7 +328,7 @@ func checkConfigurationValidity() HealthCheck {
 		check.Message = "Configuration has validation errors"
 	} else {
 		// Count configured items
-		packageCount := len(cfg.Homebrew.Brews) + len(cfg.Homebrew.Casks) + len(cfg.NPM)
+		packageCount := len(cfg.Homebrew.Packages) + len(cfg.NPM)
 		dotfileCount := len(cfg.Dotfiles)
 		
 		check.Details = append(check.Details,

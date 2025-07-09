@@ -162,13 +162,8 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 func isPackageInConfig(cfg *config.Config, packageName, targetManager string) bool {
 	switch targetManager {
 	case "homebrew":
-		for _, brew := range cfg.Homebrew.Brews {
-			if brew.Name == packageName {
-				return true
-			}
-		}
-		for _, cask := range cfg.Homebrew.Casks {
-			if cask.Name == packageName {
+		for _, pkg := range cfg.Homebrew.Packages {
+			if pkg.Name == packageName {
 				return true
 			}
 		}
@@ -186,11 +181,11 @@ func isPackageInConfig(cfg *config.Config, packageName, targetManager string) bo
 func addPackageToConfig(cfg *config.Config, packageName, targetManager string) error {
 	switch targetManager {
 	case "homebrew":
-		// Add to brews section (we could add logic to detect casks vs brews later)
+		// Add to packages section (unified homebrew packages)
 		newPackage := config.HomebrewPackage{
 			Name: packageName,
 		}
-		cfg.Homebrew.Brews = append(cfg.Homebrew.Brews, newPackage)
+		cfg.Homebrew.Packages = append(cfg.Homebrew.Packages, newPackage)
 	case "npm":
 		newPackage := config.NPMPackage{
 			Name: packageName,

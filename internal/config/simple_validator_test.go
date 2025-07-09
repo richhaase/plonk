@@ -32,7 +32,7 @@ func TestSimpleValidator_ValidateConfig_ValidConfigs(t *testing.T) {
 					{Source: "vimrc", Destination: "~/.vimrc"},
 				},
 				Homebrew: HomebrewConfig{
-					Brews: []HomebrewPackage{
+					Packages: []HomebrewPackage{
 						{Name: "git"},
 						{Name: "neovim"},
 					},
@@ -83,7 +83,7 @@ func TestSimpleValidator_ValidateConfig_InvalidConfigs(t *testing.T) {
 			config: &Config{
 				Settings: Settings{DefaultManager: "homebrew"},
 				Homebrew: HomebrewConfig{
-					Brews: []HomebrewPackage{
+					Packages: []HomebrewPackage{
 						{Name: "invalid package name"},
 					},
 				},
@@ -147,7 +147,7 @@ dotfiles:
     destination: ~/.vimrc
 
 homebrew:
-  brews:
+  packages:
     - git
     - name: neovim
 
@@ -192,7 +192,7 @@ func TestSimpleValidator_ValidateConfigFromYAML_InvalidYAML(t *testing.T) {
 			yaml: `settings:
   default_manager: homebrew
 homebrew:
-  brews:
+  packages:
     - "invalid package"`,
 			expectError: "invalid package name",
 		},
