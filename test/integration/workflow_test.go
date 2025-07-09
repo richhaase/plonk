@@ -202,7 +202,7 @@ EOF
 			
 			# 4. Apply configuration on target
 			echo "4. Applying configuration on target machine..."
-			/workspace/plonk dot apply || echo "Dotfile apply completed"
+			/workspace/plonk apply || echo "Apply completed"
 			
 			# 5. Verify dotfiles were applied
 			echo "5. Verifying dotfiles were applied:"

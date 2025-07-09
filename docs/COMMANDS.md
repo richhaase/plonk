@@ -20,14 +20,13 @@ Apply entire plonk configuration (packages and dotfiles) to your system.
 - `--dry-run` - Show what would be applied without making changes
 - `--backup` - Create backups before overwriting existing dotfiles
 
-Equivalent to running `plonk pkg apply` followed by `plonk dot apply`.
+Applies all configured packages and dotfiles in a single operation.
 
 ### Package Management (`plonk pkg`)
 
 - `plonk pkg list [filter]` - List packages across all managers
 - `plonk pkg add <package>` - Add a package to plonk configuration and install it
 - `plonk pkg remove <package>` - Remove a package from plonk configuration
-- `plonk pkg apply` - Install all packages defined in configuration
 
 **List filters:** `managed`, `untracked`, `missing`
 
@@ -36,7 +35,6 @@ Equivalent to running `plonk pkg apply` followed by `plonk dot apply`.
 - `plonk dot list [filter]` - List dotfiles across all locations
 - `plonk dot add <dotfile>` - Add a dotfile to plonk configuration
 - `plonk dot re-add <dotfile>` - Re-add a dotfile to plonk configuration
-- `plonk dot apply` - Apply dotfile configuration (link/copy dotfiles to home directory)
 
 **List filters:** `managed`, `untracked`, `missing`
 

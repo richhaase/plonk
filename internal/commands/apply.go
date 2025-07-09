@@ -33,7 +33,7 @@ This command will:
 2. Deploy all dotfiles from your configuration
 3. Report the results for both operations
 
-This is equivalent to running 'plonk pkg apply' followed by 'plonk dot apply'.
+This applies all configured packages and dotfiles in a single operation.
 
 Examples:
   plonk apply           # Apply all configuration
@@ -404,6 +404,132 @@ func processDotfileForApply(ctx context.Context, configDir, homeDir, source, des
 	}
 
 	return action, nil
+}
+
+// ApplyOutput represents the output structure for package apply operations
+type ApplyOutput struct {
+	DryRun             bool                 `json:"dry_run" yaml:"dry_run"`
+	TotalMissing       int                  `json:"total_missing" yaml:"total_missing"`
+	TotalInstalled     int                  `json:"total_installed" yaml:"total_installed"`
+	TotalFailed        int                  `json:"total_failed" yaml:"total_failed"`
+	TotalWouldInstall  int                  `json:"total_would_install" yaml:"total_would_install"`
+	Managers           []ManagerApplyResult `json:"managers" yaml:"managers"`
+}
+
+// ManagerApplyResult represents the result for a specific manager
+type ManagerApplyResult struct {
+	Name         string               `json:"name" yaml:"name"`
+	MissingCount int                  `json:"missing_count" yaml:"missing_count"`
+	Packages     []PackageApplyResult `json:"packages" yaml:"packages"`
+}
+
+// PackageApplyResult represents the result for a specific package
+type PackageApplyResult struct {
+	Name   string `json:"name" yaml:"name"`
+	Status string `json:"status" yaml:"status"`
+	Error  string `json:"error,omitempty" yaml:"error,omitempty"`
+}
+
+// TableOutput generates human-friendly table output for apply results
+func (a ApplyOutput) TableOutput() string {
+	// Table output is handled inline in the command
+	// This method is required by the OutputData interface
+	return ""
+}
+
+// StructuredData returns the structured data for serialization
+func (a ApplyOutput) StructuredData() any {
+	return a
+}
+
+// DotfileApplyOutput represents the output structure for dotfile apply operations
+type DotfileApplyOutput struct {
+	DryRun   bool             `json:"dry_run" yaml:"dry_run"`
+	Deployed int              `json:"deployed" yaml:"deployed"`
+	Skipped  int              `json:"skipped" yaml:"skipped"`
+	Actions  []DotfileAction  `json:"actions" yaml:"actions"`
+}
+
+// DotfileAction represents a single dotfile deployment action
+type DotfileAction struct {
+	Source      string `json:"source" yaml:"source"`
+	Destination string `json:"destination" yaml:"destination"`
+	Status      string `json:"status" yaml:"status"`
+	Reason      string `json:"reason,omitempty" yaml:"reason,omitempty"`
+}
+
+// TableOutput generates human-friendly table output for dotfile apply
+func (d DotfileApplyOutput) TableOutput() string {
+	if d.DryRun {
+		output := "Dotfile Apply (Dry Run)\n========================\n\n"
+		if d.Deployed == 0 && d.Skipped == 0 {
+			return output + "No dotfiles configured\n"
+		}
+		
+		output += fmt.Sprintf("Would deploy: %d\n", d.Deployed)
+		output += fmt.Sprintf("Would skip: %d\n", d.Skipped)
+		
+		if len(d.Actions) > 0 {
+			output += "\nActions:\n"
+			for _, action := range d.Actions {
+				status := "❓"
+				if action.Status == "would-deploy" {
+					status = "🚀"
+				} else if action.Status == "skipped" {
+					status = "⏭️"
+				} else if action.Status == "error" {
+					status = "❌"
+				}
+				
+				output += fmt.Sprintf("  %s %s -> %s", status, action.Source, action.Destination)
+				if action.Reason != "" {
+					output += fmt.Sprintf(" (%s)", action.Reason)
+				}
+				output += "\n"
+			}
+		}
+		
+		return output
+	}
+
+	output := "Dotfile Apply\n=============\n\n"
+	if d.Deployed == 0 && d.Skipped == 0 {
+		return output + "No dotfiles configured\n"
+	}
+
+	if d.Deployed > 0 {
+		output += fmt.Sprintf("✅ Deployed: %d dotfiles\n", d.Deployed)
+	}
+	if d.Skipped > 0 {
+		output += fmt.Sprintf("⏭️ Skipped: %d dotfiles\n", d.Skipped)
+	}
+
+	if len(d.Actions) > 0 {
+		output += "\nActions:\n"
+		for _, action := range d.Actions {
+			status := "❓"
+			if action.Status == "deployed" {
+				status = "✅"
+			} else if action.Status == "skipped" {
+				status = "⏭️"
+			} else if action.Status == "error" {
+				status = "❌"
+			}
+			
+			output += fmt.Sprintf("  %s %s -> %s", status, action.Source, action.Destination)
+			if action.Reason != "" {
+				output += fmt.Sprintf(" (%s)", action.Reason)
+			}
+			output += "\n"
+		}
+	}
+
+	return output
+}
+
+// StructuredData returns the structured data for serialization
+func (d DotfileApplyOutput) StructuredData() any {
+	return d
 }
 
 // CombinedApplyOutput represents the output structure for the combined apply command

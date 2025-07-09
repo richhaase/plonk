@@ -64,8 +64,7 @@ func TestApplyCommand_HelpText(t *testing.T) {
 		"Apply the complete plonk configuration",
 		"Install all missing packages",
 		"Deploy all dotfiles",
-		"plonk pkg apply",
-		"plonk dot apply",
+		"single operation",
 		"--dry-run",
 		"--backup",
 	}

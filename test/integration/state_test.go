@@ -145,7 +145,7 @@ EOF
 			
 			# 6. Apply configuration to restore managed state
 			echo "6. Applying configuration to restore managed state..."
-			/workspace/plonk dot apply || echo "Dotfile apply completed"
+			/workspace/plonk apply || echo "Apply completed"
 			
 			echo "=== Synchronization Complete ==="
 		`

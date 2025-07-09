@@ -102,7 +102,7 @@ packages: []
 dotfiles: []
 EOF
 			# Try to deploy (should show help or handle empty config gracefully)
-			/workspace/plonk dot apply || echo "Deploy command executed"
+			/workspace/plonk apply || echo "Apply command executed"
 		`
 		
 		output, err := runner.RunCommand(t, deployScript)
