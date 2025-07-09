@@ -87,6 +87,16 @@ go test -v -run TestSpecificFunction ./path/to/test/
 
 # Test with custom config directory
 PLONK_DIR=/tmp/test-config go test -v ./...
+
+# Run tests with race detection
+go test -race ./...
+
+# Run tests with coverage
+go test -cover ./...
+
+# Profile tests
+go test -cpuprofile=cpu.prof ./...
+go test -memprofile=mem.prof ./...
 ```
 
 ## CI/CD Integration

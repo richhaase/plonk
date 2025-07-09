@@ -144,6 +144,18 @@ release:
     echo "  2. Run release build: just goreleaser-release"
     echo "  3. Check GitHub releases"
 
+# Generate API documentation
+generate-docs:
+    @echo "Generating API documentation..."
+    @mkdir -p docs/api
+    @go doc -all ./internal/config > docs/api/config.md
+    @go doc -all ./internal/managers > docs/api/managers.md
+    @go doc -all ./internal/state > docs/api/state.md
+    @go doc -all ./internal/errors > docs/api/errors.md
+    @go doc -all ./internal/dotfiles > docs/api/dotfiles.md
+    @go doc -all ./internal/commands > docs/api/commands.md
+    @echo "✅ API documentation generated in docs/api/"
+
 # Run goreleaser for actual release (requires tag)
 goreleaser-release:
     @echo "Running goreleaser for release..."

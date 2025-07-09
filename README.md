@@ -1,0 +1,148 @@
+# Plonk
+
+A unified package and dotfile manager for developers that maintains consistency across multiple machines.
+
+## What is Plonk?
+
+Plonk manages your development environment by treating packages and dotfiles as unified configuration. It uses state reconciliation to compare your desired configuration with your actual system state and applies the necessary changes.
+
+**Key features:**
+- **Unified management**: Packages (Homebrew, NPM) and dotfiles in one configuration
+- **State reconciliation**: Automatically detects and applies missing configurations
+- **Auto-discovery**: Finds dotfiles automatically with configurable ignore patterns
+- **AI-friendly**: Structured output formats and clear command syntax
+- **Cross-platform**: Works on macOS, Linux, and Windows
+
+## Quick Start
+
+### Installation
+
+Currently, plonk must be built from source:
+
+```bash
+git clone https://github.com/your-username/plonk
+cd plonk
+just install
+```
+
+**Requirements:**
+- Go 1.24.4+
+- Just (command runner)
+- Git
+
+### Basic Usage
+
+1. **Initialize configuration:**
+```bash
+plonk config edit
+```
+
+2. **Add your first package:**
+```bash
+plonk pkg add git
+```
+
+3. **Apply configuration:**
+```bash
+plonk apply
+```
+
+4. **Check status:**
+```bash
+plonk status
+```
+
+## Configuration
+
+Plonk uses a single configuration file at `~/.config/plonk/plonk.yaml` (or `$PLONK_DIR/plonk.yaml`):
+
+```yaml
+settings:
+  default_manager: homebrew
+
+ignore_patterns:
+  - .DS_Store
+  - .git
+  - "*.backup"
+
+homebrew:
+  - git
+  - curl
+  - neovim
+
+npm:
+  - typescript
+  - prettier
+```
+
+**Dotfiles are auto-discovered** from your config directory:
+- `~/.config/plonk/zshrc` → `~/.zshrc`
+- `~/.config/plonk/config/nvim/` → `~/.config/nvim/`
+
+## Common Commands
+
+```bash
+# Show overall status
+plonk status
+
+# Apply all configuration
+plonk apply --dry-run  # Preview changes
+plonk apply           # Apply changes
+
+# Package management
+plonk pkg list        # List all packages
+plonk pkg add htop    # Add package to config
+plonk search git      # Search for packages
+
+# Dotfile management
+plonk dot list        # List dotfiles
+plonk dot add .vimrc  # Add dotfile to management
+
+# Configuration
+plonk config show     # Show current config
+plonk config validate # Validate config syntax
+plonk config edit     # Edit config file
+
+# Diagnostics
+plonk doctor          # Health check
+plonk env             # Environment info
+```
+
+## Output Formats
+
+All commands support structured output for AI agents:
+
+```bash
+plonk status --output json
+plonk status --output yaml
+plonk status --output table  # default
+```
+
+## Environment Variables
+
+- `PLONK_DIR` - Config directory (default: `~/.config/plonk`)
+- `EDITOR` - Editor for `plonk config edit`
+
+## Documentation
+
+- **[CLI Reference](docs/CLI.md)** - Complete command documentation
+- **[Configuration Guide](docs/CONFIGURATION.md)** - Configuration file format
+- **[Architecture](docs/ARCHITECTURE.md)** - Technical architecture
+- **[Development](docs/DEVELOPMENT.md)** - Contributing and development setup
+
+## System Requirements
+
+- **Go 1.24.4+** (for building)
+- **Just** (command runner)
+- **Git** (version management)
+- **Package managers**: Homebrew (macOS), NPM (optional)
+- **Platform support**: macOS, Linux, Windows
+- **Architecture support**: AMD64, ARM64
+
+## License
+
+[License information - check LICENSE file]
+
+## Contributing
+
+See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for development setup and contributing guidelines.

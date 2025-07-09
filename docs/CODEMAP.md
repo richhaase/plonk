@@ -80,19 +80,37 @@ A quick reference guide to navigate the Plonk codebase - a unified package and d
 - Auto-discovered dotfiles from config directory
 - Configurable ignore patterns for dotfile discovery
 
-### Quick Navigation
+### Quick Navigation for AI Agents
 
 #### Adding a Package Manager
-Start at: `internal/managers/` → implement `PackageManager` interface
+1. **Interface location:** `internal/managers/common.go:PackageManager`
+2. **Implementation template:** `internal/managers/homebrew.go`
+3. **Complete interface specification:** `docs/api/managers.md`
+4. **Registration:** Add to command layer in `internal/commands/`
 
 #### Adding a Command
-Start at: `internal/commands/` → create command file → register in `root.go`
+1. **Command template:** `internal/commands/status.go`
+2. **Registration:** `internal/commands/root.go:rootCmd.AddCommand()`
+3. **Output formatting:** Use `internal/commands/output.go`
+4. **Error handling:** Use `internal/errors/types.go:PlonkError`
+5. **Command API details:** `docs/api/commands.md`
 
 #### Understanding State Reconciliation
-Start at: `internal/state/reconciler.go` → follow to providers
+1. **Entry point:** `internal/state/reconciler.go:GetState()`
+2. **Provider interface:** `internal/state/reconciler.go:Provider`
+3. **State types:** `internal/state/types.go:ItemState`
+4. **Package provider:** `internal/state/package_provider.go`
+5. **Dotfile provider:** `internal/state/dotfile_provider.go`
+6. **Complete API specification:** `docs/api/state.md`
 
-#### Configuration Format
-Start at: `internal/config/yaml_config.go` → see example structures
+#### Configuration Management
+1. **Interface definitions:** `internal/config/interfaces.go`
+2. **YAML implementation:** `internal/config/yaml_config.go`
+3. **Validation:** `internal/config/simple_validator.go`
+4. **Complete API specification:** `docs/api/config.md`
 
-#### Error Handling
-Start at: `internal/errors/types.go` → see structured error approach
+#### Error Handling Patterns
+1. **Error types:** `internal/errors/types.go:PlonkError`
+2. **Error codes:** `internal/errors/types.go:ErrorCode`
+3. **Error domains:** `internal/errors/types.go:Domain`
+4. **Complete API specification:** `docs/api/errors.md`

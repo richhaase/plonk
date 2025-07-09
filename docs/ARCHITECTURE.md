@@ -101,14 +101,8 @@ npm: [typescript, prettier]
 - `Untracked` - Installed/present BUT NOT in configuration
 
 **Provider Interface:**
-```go
-type Provider interface {
-    Domain() string
-    GetConfiguredItems() ([]ConfigItem, error)
-    GetActualItems(ctx context.Context) ([]ActualItem, error)
-    CreateItem(name, state, configured, actual) Item
-}
-```
+- See `docs/api/state.md` for complete Provider interface specification
+- Key methods: `Domain()`, `GetConfiguredItems()`, `GetActualItems()`, `CreateItem()`
 
 **Reconciliation Process:**
 1. Load configured items from configuration
@@ -119,17 +113,9 @@ type Provider interface {
 ### 3. Package Management (`internal/managers/`)
 
 **Unified Interface:**
-```go
-type PackageManager interface {
-    IsAvailable(ctx context.Context) (bool, error)
-    ListInstalled(ctx context.Context) ([]string, error)
-    Install(ctx context.Context, name string) error
-    Uninstall(ctx context.Context, name string) error
-    IsInstalled(ctx context.Context, name string) (bool, error)
-    Search(ctx context.Context, query string) ([]string, error)
-    Info(ctx context.Context, name string) (*PackageInfo, error)
-}
-```
+- See `docs/api/managers.md` for complete PackageManager interface specification
+- Key methods: `IsAvailable()`, `ListInstalled()`, `Install()`, `Uninstall()`, `IsInstalled()`, `Search()`, `Info()`
+- All methods accept context for cancellation and timeout support
 
 **Implementations:**
 - `HomebrewManager` - Homebrew packages and casks
@@ -164,15 +150,9 @@ type PackageManager interface {
 ### 5. Error Handling (`internal/errors/`)
 
 **Structured Error Type:**
-```go
-type PlonkError struct {
-    Code      ErrorCode    // Specific error type
-    Domain    Domain       // Where error occurred
-    Operation string       // What was being done
-    Message   string       // Technical details
-    Cause     error        // Original error
-}
-```
+- See `docs/api/errors.md` for complete PlonkError specification
+- Key fields: `Code`, `Domain`, `Operation`, `Message`, `Cause`
+- Provides user-friendly messages with debugging context
 
 **Error Domains:**
 - Config, Dotfiles, Packages, State, Commands
@@ -208,21 +188,60 @@ type PlonkError struct {
 
 ## Key Design Decisions
 
-1. **Unified State Model** - Single reconciliation pattern for all domains enables consistency and extensibility.
+### 1. Unified State Model
+Single reconciliation pattern for all domains (packages, dotfiles) enables consistency and extensibility.
 
-2. **Interface-Based Architecture** - Configuration and providers use interfaces to prevent tight coupling and improve testability.
+**AI Agent Benefits:**
+- Consistent state representation across all domains
+- Predictable state transitions (Managed → Missing → Untracked)
+- Uniform error handling patterns
 
-3. **Context Throughout** - All long-running operations accept context for cancellation and timeout support.
+### 2. Interface-Based Architecture
+Configuration and providers use interfaces to prevent tight coupling and improve testability.
 
-4. **Comprehensive Error Handling** - PackageManager methods return (result, error) following Go best practices with smart detection of expected conditions vs real errors.
+**Key Interfaces:**
+- `ConfigReader`, `ConfigWriter`, `ConfigValidator`
+- `PackageManager`, `Provider`
+- `DotfileConfigReader`, `PackageConfigReader`
 
-5. **Structured Errors** - PlonkError type provides user-friendly messages and debugging context.
+### 3. Context Throughout
+All long-running operations accept context for cancellation and timeout support.
 
-6. **Separate File Operations** - Dotfile operations extracted from state management for clarity and reusability.
+**Implementation Pattern:**
+- All operations accept context for cancellation and timeout
+- Check `ctx.Done()` before and during long-running operations
+- Return `ctx.Err()` on cancellation
+- See `docs/api/` for specific implementation examples
 
-7. **Environment-Aware Configuration** - Uses `PLONK_DIR` environment variable for config directory and `EDITOR` for editing, providing flexibility without complexity.
+### 4. Comprehensive Error Handling
+PackageManager methods return (result, error) following Go best practices with smart detection of expected conditions vs real errors.
 
-8. **Convention Over Configuration** - Auto-discovery of dotfiles reduces configuration burden while maintaining customization through ignore patterns.
+**Error Categories:**
+- Expected conditions (package not found) - handled gracefully
+- Real errors (network failures) - propagated with context
+
+### 5. Structured Errors
+PlonkError type provides user-friendly messages and debugging context.
+
+**Error Structure:**
+- See `docs/api/errors.md` for complete error type definitions
+- Structured errors with codes, domains, and user-friendly messages
+- Compatible with standard Go error handling patterns
+
+### 6. Environment-Aware Configuration
+Uses `PLONK_DIR` environment variable for config directory and `EDITOR` for editing.
+
+**Configuration Resolution:**
+1. `$PLONK_DIR/plonk.yaml` (if PLONK_DIR set)
+2. `~/.config/plonk/plonk.yaml` (default)
+
+### 7. Convention Over Configuration
+Auto-discovery of dotfiles reduces configuration burden while maintaining customization through ignore patterns.
+
+**File Discovery Pattern:**
+- Scan config directory for files
+- Apply ignore patterns (gitignore-style)
+- Map to home directory paths
 
 ## Extension Points
 
