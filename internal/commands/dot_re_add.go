@@ -69,16 +69,10 @@ func runDotReAdd(cmd *cobra.Command, args []string) error {
 	// Generate source and destination paths
 	source, destination := generatePaths(resolvedPath, homeDir)
 
-	// Check if already managed
-	var found bool
-	for _, entry := range cfg.Dotfiles {
-		if entry == source {
-			found = true
-			break
-		}
-	}
-
-	if !found {
+	// Check if already managed using auto-discovery
+	adapter := config.NewConfigAdapter(cfg)
+	dotfileTargets := adapter.GetDotfileTargets()
+	if _, exists := dotfileTargets[source]; !exists {
 		return fmt.Errorf("dotfile is not currently managed by plonk: %s\nUse 'plonk dot add' to add new dotfiles", destination)
 	}
 

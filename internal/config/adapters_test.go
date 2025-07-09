@@ -12,38 +12,20 @@ func TestConfigAdapter_GetDotfileTargets(t *testing.T) {
 		Settings: Settings{
 			DefaultManager: "homebrew",
 		},
-		Dotfiles: []string{
-			"zshrc",
-			"gitconfig",
-			"config/nvim/",
-			"dot_vimrc",
-			"bashrc",
-		},
 	}
 	
 	adapter := NewConfigAdapter(config)
 	targets := adapter.GetDotfileTargets()
 	
-	// Should have 5 entries
-	if len(targets) != 5 {
-		t.Errorf("Expected 5 dotfile targets, got %d", len(targets))
+	// Should auto-discover files from ~/.config/plonk/
+	if len(targets) == 0 {
+		t.Errorf("Expected auto-discovered dotfile targets, got 0")
 	}
 	
-	// Test specific mappings
-	expectedTargets := map[string]string{
-		"zshrc":        "~/.zshrc",
-		"gitconfig":    "~/.gitconfig",
-		"config/nvim/": "~/.config/nvim/",
-		"dot_vimrc":    "~/.vimrc",
-		"bashrc":       "~/.bashrc",
-	}
-	
-	for source, expectedDest := range expectedTargets {
-		if actualDest, exists := targets[source]; !exists {
-			t.Errorf("Expected source %s to exist in targets", source)
-		} else if actualDest != expectedDest {
-			t.Errorf("Expected source %s to map to %s, got %s", source, expectedDest, actualDest)
-		}
+	// Log what was discovered for debugging
+	t.Logf("Auto-discovered %d dotfiles:", len(targets))
+	for source, target := range targets {
+		t.Logf("  %s -> %s", source, target)
 	}
 }
 
@@ -211,11 +193,6 @@ func TestStateDotfileConfigAdapter(t *testing.T) {
 		Settings: Settings{
 			DefaultManager: "homebrew",
 		},
-		Dotfiles: []string{
-			"zshrc",
-			"gitconfig",
-			"config/nvim/",
-		},
 	}
 	
 	configAdapter := NewConfigAdapter(config)
@@ -223,24 +200,9 @@ func TestStateDotfileConfigAdapter(t *testing.T) {
 	
 	targets := stateAdapter.GetDotfileTargets()
 	
-	// Should have 3 entries
-	if len(targets) != 3 {
-		t.Errorf("Expected 3 dotfile targets, got %d", len(targets))
-	}
-	
-	// Test specific mappings
-	expectedTargets := map[string]string{
-		"zshrc":        "~/.zshrc",
-		"gitconfig":    "~/.gitconfig",
-		"config/nvim/": "~/.config/nvim/",
-	}
-	
-	for source, expectedDest := range expectedTargets {
-		if actualDest, exists := targets[source]; !exists {
-			t.Errorf("Expected source %s to exist in targets", source)
-		} else if actualDest != expectedDest {
-			t.Errorf("Expected source %s to map to %s, got %s", source, expectedDest, actualDest)
-		}
+	// Should auto-discover files from ~/.config/plonk/
+	if len(targets) == 0 {
+		t.Errorf("Expected auto-discovered dotfile targets, got 0")
 	}
 }
 
@@ -253,10 +215,11 @@ func TestConfigAdapter_EmptyConfig(t *testing.T) {
 	
 	adapter := NewConfigAdapter(config)
 	
-	t.Run("empty dotfiles", func(t *testing.T) {
+	t.Run("auto-discovered dotfiles", func(t *testing.T) {
 		targets := adapter.GetDotfileTargets()
-		if len(targets) != 0 {
-			t.Errorf("Expected 0 dotfile targets for empty config, got %d", len(targets))
+		// Should auto-discover files even with empty config
+		if len(targets) == 0 {
+			t.Errorf("Expected auto-discovered dotfile targets, got 0")
 		}
 	})
 	

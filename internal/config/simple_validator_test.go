@@ -27,10 +27,6 @@ func TestSimpleValidator_ValidateConfig_ValidConfigs(t *testing.T) {
 				Settings: Settings{
 					DefaultManager: "homebrew",
 				},
-				Dotfiles: []string{
-					"zshrc",
-					"vimrc",
-				},
 				Homebrew: []HomebrewPackage{
 					{Name: "git"},
 					{Name: "neovim"},
@@ -85,16 +81,6 @@ func TestSimpleValidator_ValidateConfig_InvalidConfigs(t *testing.T) {
 				},
 			},
 			expectError: "invalid package name",
-		},
-		{
-			name: "invalid file path",
-			config: &Config{
-				Settings: Settings{DefaultManager: "homebrew"},
-				Dotfiles: []string{
-					"/absolute/path",
-				},
-			},
-			expectError: "invalid file path",
 		},
 	}
 

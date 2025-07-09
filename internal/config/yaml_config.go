@@ -4,7 +4,7 @@
 // Package config provides configuration management for Plonk, including YAML
 // configuration parsing, validation, and generation of shell configuration files.
 //
-// The package supports loading configuration from plonk.yaml and plonk.local.yaml,
+// The package supports loading configuration from plonk.yaml,
 // validating package definitions and file paths, and generating shell-specific
 // configuration files like .zshrc, .zshenv, and .gitconfig.
 package config
@@ -26,7 +26,6 @@ import (
 type Config struct {
 	Settings Settings       `yaml:"settings" validate:"required"`
 	Backup   BackupConfig   `yaml:"backup,omitempty"`
-	Dotfiles []string `yaml:"dotfiles,omitempty" validate:"dive,file_path"`
 	Homebrew []HomebrewPackage `yaml:"homebrew,omitempty" validate:"dive"`
 	NPM      []NPMPackage   `yaml:"npm,omitempty" validate:"dive"`
 }
@@ -45,12 +44,6 @@ type BackupConfig struct {
 	KeepCount int    `yaml:"keep_count,omitempty"`
 }
 
-// DotfileEntry represents a dotfile configuration entry (now just a string path).
-// The path is automatically mapped using conventions:
-// - "zshrc" -> "~/.zshrc"
-// - "config/nvim" -> "~/.config/nvim"
-// - "dot_gitconfig" -> "~/.gitconfig"
-type DotfileEntry = string
 
 
 // HomebrewPackage can be a simple string or complex object.
@@ -126,10 +119,7 @@ func (n *NPMPackage) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
-// Note: DotfileEntry is now a simple string type alias, so no custom marshaling is needed.
-// YAML will automatically handle []string serialization/deserialization.
-
-// LoadConfig loads configuration from plonk.yaml and optionally plonk.local.yaml.
+// LoadConfig loads configuration from plonk.yaml.
 func LoadConfig(configDir string) (*Config, error) {
 	config := &Config{
 		Settings: Settings{
@@ -137,26 +127,17 @@ func LoadConfig(configDir string) (*Config, error) {
 		},
 	}
 
-	// Load main config file.
-	mainConfigPath := filepath.Join(configDir, "plonk.yaml")
+	// Load config file.
+	configPath := filepath.Join(configDir, "plonk.yaml")
 
-	if err := loadConfigFile(mainConfigPath, config); err != nil {
+	if err := loadConfigFile(configPath, config); err != nil {
 		if os.IsNotExist(err) {
 			return nil, errors.ConfigError(errors.ErrConfigNotFound, "load", 
-				fmt.Sprintf("config file not found: %s", mainConfigPath)).
-				WithMetadata("config_path", mainConfigPath)
+				fmt.Sprintf("config file not found: %s", configPath)).
+				WithMetadata("config_path", configPath)
 		} else {
 			return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load", 
-				"failed to load config").WithMetadata("path", mainConfigPath)
-		}
-	}
-
-	// Load local config file if it exists.
-	localConfigPath := filepath.Join(configDir, "plonk.local.yaml")
-	if _, err := os.Stat(localConfigPath); err == nil {
-		if err := loadConfigFile(localConfigPath, config); err != nil {
-			return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load", 
-				"failed to load local config").WithMetadata("path", localConfigPath)
+				"failed to load config").WithMetadata("path", configPath)
 		}
 	}
 
@@ -173,102 +154,79 @@ func LoadConfig(configDir string) (*Config, error) {
 	return config, nil
 }
 
-// loadConfigFile loads a single YAML config file and merges it into the config.
+// loadConfigFile loads a single YAML config file.
 func loadConfigFile(path string, config *Config) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
 
-	// Create a temporary config to decode into.
-	var tempConfig Config
-	if err := yaml.Unmarshal(data, &tempConfig); err != nil {
+	if err := yaml.Unmarshal(data, config); err != nil {
 		return fmt.Errorf("failed to parse YAML: %w", err)
-	}
-
-	// Merge settings.
-	if tempConfig.Settings.DefaultManager != "" {
-		config.Settings.DefaultManager = tempConfig.Settings.DefaultManager
-	}
-
-	// Merge dotfiles.
-	config.Dotfiles = append(config.Dotfiles, tempConfig.Dotfiles...)
-
-	// Merge homebrew packages.
-	config.Homebrew = append(config.Homebrew, tempConfig.Homebrew...)
-
-
-	// Merge NPM packages.
-	config.NPM = append(config.NPM, tempConfig.NPM...)
-
-	// Merge backup configuration.
-	if tempConfig.Backup.Location != "" {
-		config.Backup.Location = tempConfig.Backup.Location
-	}
-	if tempConfig.Backup.KeepCount > 0 {
-		config.Backup.KeepCount = tempConfig.Backup.KeepCount
 	}
 
 	return nil
 }
 
-// GetDotfileTargets returns dotfiles with their target paths.
-func (c *Config) GetDotfileTargets() map[string]string {
-	result := make(map[string]string)
-	for _, dotfile := range c.Dotfiles {
-		// dotfile is now just a string representing the source path
-		source := dotfile
-		destination := sourceToTarget(source)
-		result[source] = destination
+
+// shouldSkipDotfile determines if a file/directory should be skipped during auto-discovery
+func shouldSkipDotfile(relPath string, info os.FileInfo) bool {
+	// Skip plonk config file
+	if relPath == "plonk.yaml" {
+		return true
 	}
-	return result
+	
+	// Skip backup files
+	if strings.HasSuffix(relPath, ".backup") {
+		return true
+	}
+	
+	// Skip .git directory
+	if relPath == ".git" || strings.HasPrefix(relPath, ".git/") {
+		return true
+	}
+	
+	// Skip .DS_Store files
+	if info.Name() == ".DS_Store" {
+		return true
+	}
+	
+	// Skip other hidden files/directories (starting with .)
+	if info.Name() != "." && strings.HasPrefix(info.Name(), ".") {
+		return true
+	}
+	
+	return false
 }
 
 // sourceToTarget converts a source path to target path using our convention
+// Prepends ~/. to make all files/directories hidden
 // Examples:
 //
 //	config/nvim/ -> ~/.config/nvim/
 //	zshrc -> ~/.zshrc
-//	dot_gitconfig -> ~/.gitconfig
+//	editorconfig -> ~/.editorconfig
 func sourceToTarget(source string) string {
-	// Handle dot_ prefix convention.
-	if len(source) > 4 && source[:4] == "dot_" {
-		return "~/." + source[4:]
-	}
-
-	// Handle config/ directory.
-	if len(source) > 7 && source[:7] == "config/" {
-		return "~/." + source
-	}
-
-	// Default: add ~/. prefix.
 	return "~/." + source
 }
 
 // TargetToSource converts a target path to source path using our convention
+// Removes the ~/. prefix
 // Examples:
 //
 //	~/.config/nvim/ -> config/nvim/
 //	~/.zshrc -> zshrc
-//	~/.gitconfig -> dot_gitconfig
+//	~/.editorconfig -> editorconfig
 func TargetToSource(target string) string {
-	// Remove ~/ prefix if present
+	// Remove ~/. prefix if present
+	if len(target) > 3 && target[:3] == "~/." {
+		return target[3:]
+	}
+	// Remove ~/ prefix if present (shouldn't happen with our convention)
 	if len(target) > 2 && target[:2] == "~/" {
-		target = target[2:]
+		return target[2:]
 	}
-	
-	// Remove . prefix if present
-	if len(target) > 1 && target[:1] == "." {
-		target = target[1:]
-	}
-	
-	// Handle .config/ directory
-	if len(target) > 7 && target[:7] == "config/" {
-		return target
-	}
-	
-	// Default: add dot_ prefix for dotfiles
-	return "dot_" + target
+	return target
 }
 
 // GetOperationTimeout returns the operation timeout in seconds with a default of 300 seconds (5 minutes)
@@ -309,7 +267,7 @@ func NewYAMLConfigService() *YAMLConfigService {
 	}
 }
 
-// LoadConfig loads configuration from a directory containing plonk.yaml and plonk.local.yaml
+// LoadConfig loads configuration from a directory containing plonk.yaml
 func (y *YAMLConfigService) LoadConfig(configDir string) (*Config, error) {
 	return LoadConfig(configDir)
 }
@@ -446,7 +404,45 @@ func NewConfigAdapter(config *Config) *ConfigAdapter {
 
 // GetDotfileTargets returns a map of source -> destination paths for dotfiles
 func (c *ConfigAdapter) GetDotfileTargets() map[string]string {
-	return c.config.GetDotfileTargets()
+	result := make(map[string]string)
+	
+	// Auto-discover dotfiles from ~/.config/plonk/
+	configDir := filepath.Join(os.Getenv("HOME"), ".config", "plonk")
+	
+	// Walk the directory to find all files
+	filepath.Walk(configDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Skip files we can't read
+		}
+		
+		// Get relative path from config dir
+		relPath, err := filepath.Rel(configDir, path)
+		if err != nil {
+			return nil
+		}
+		
+		// Skip certain files and directories
+		if shouldSkipDotfile(relPath, info) {
+			if info.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		
+		// Skip directories themselves (we'll get the files inside)
+		if info.IsDir() {
+			return nil
+		}
+		
+		// Add to results with proper mapping
+		source := relPath
+		target := sourceToTarget(source)
+		result[source] = target
+		
+		return nil
+	})
+	
+	return result
 }
 
 // GetPackagesForManager returns package names for a specific package manager

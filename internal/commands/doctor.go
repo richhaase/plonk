@@ -329,12 +329,16 @@ func checkConfigurationValidity() HealthCheck {
 	} else {
 		// Count configured items
 		packageCount := len(cfg.Homebrew) + len(cfg.NPM)
-		dotfileCount := len(cfg.Dotfiles)
+		
+		// Get auto-discovered dotfiles
+		adapter := config.NewConfigAdapter(cfg)
+		dotfileTargets := adapter.GetDotfileTargets()
+		dotfileCount := len(dotfileTargets)
 		
 		check.Details = append(check.Details,
 			fmt.Sprintf("Default manager: %s", cfg.Settings.DefaultManager),
 			fmt.Sprintf("Configured packages: %d", packageCount),
-			fmt.Sprintf("Configured dotfiles: %d", dotfileCount),
+			fmt.Sprintf("Auto-discovered dotfiles: %d", dotfileCount),
 		)
 
 		if len(result.Warnings) > 0 {

@@ -75,7 +75,6 @@ func runDotAdd(cmd *cobra.Command, args []string) error {
 				Settings: config.Settings{
 					DefaultManager: "homebrew",
 				},
-				Dotfiles: []string{},
 			}
 		} else {
 			return fmt.Errorf("failed to load config: %w", err)
@@ -85,11 +84,11 @@ func runDotAdd(cmd *cobra.Command, args []string) error {
 	// Generate source and destination paths
 	source, destination := generatePaths(resolvedPath, homeDir)
 
-	// Check if already managed
-	for _, entry := range cfg.Dotfiles {
-		if entry == source {
-			return fmt.Errorf("dotfile is already managed: %s", source)
-		}
+	// Check if already managed by checking if source file exists in config dir
+	adapter := config.NewConfigAdapter(cfg)
+	dotfileTargets := adapter.GetDotfileTargets()
+	if _, exists := dotfileTargets[source]; exists {
+		return fmt.Errorf("dotfile is already managed: %s", source)
 	}
 
 	// Copy dotfile to plonk config directory
@@ -98,13 +97,8 @@ func runDotAdd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to copy dotfile: %w", err)
 	}
 
-	// Add to configuration
-	cfg.Dotfiles = append(cfg.Dotfiles, source)
-
-	// Save configuration
-	if err := saveDotfileConfig(cfg, configDir); err != nil {
-		return fmt.Errorf("failed to save configuration: %w", err)
-	}
+	// Configuration doesn't need to be updated since we use auto-discovery
+	// The dotfile will be automatically detected once it's in the config directory
 
 	// Prepare output
 	outputData := DotfileAddOutput{

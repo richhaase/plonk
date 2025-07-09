@@ -11,7 +11,7 @@ import (
 
 // ConfigReader provides methods for loading configuration from various sources
 type ConfigReader interface {
-	// LoadConfig loads configuration from a directory containing plonk.yaml and plonk.local.yaml
+	// LoadConfig loads configuration from a directory containing plonk.yaml
 	LoadConfig(configDir string) (*Config, error)
 	
 	// LoadConfigFromFile loads configuration from a specific file path

@@ -16,11 +16,6 @@ func TestLoadConfig_BasicStructure(t *testing.T) {
 	configContent := `settings:
   default_manager: homebrew
 
-dotfiles:
-  - zshrc
-  - zshenv
-  - plugins.zsh
-
 homebrew:
   - aichat
   - aider
@@ -47,21 +42,6 @@ npm:
 	// Verify settings
 	if config.Settings.DefaultManager != "homebrew" {
 		t.Errorf("Expected default_manager 'homebrew', got '%s'", config.Settings.DefaultManager)
-	}
-
-	// Verify dotfiles
-	expectedDotfiles := []string{
-		"zshrc",
-		"zshenv",
-		"plugins.zsh",
-	}
-	if len(config.Dotfiles) != len(expectedDotfiles) {
-		t.Errorf("Expected %d dotfiles, got %d", len(expectedDotfiles), len(config.Dotfiles))
-	}
-	for i, expected := range expectedDotfiles {
-		if i >= len(config.Dotfiles) || config.Dotfiles[i] != expected {
-			t.Errorf("Expected dotfile %s, got %s", expected, config.Dotfiles[i])
-		}
 	}
 
 	// Verify homebrew packages
@@ -140,7 +120,7 @@ func TestSourceToTarget(t *testing.T) {
 		{"zshenv", "~/.zshenv"},
 		{"config/nvim/", "~/.config/nvim/"},
 		{"config/mcfly/config.yaml", "~/.config/mcfly/config.yaml"},
-		{"dot_gitconfig", "~/.gitconfig"},
+		{"gitconfig", "~/.gitconfig"},
 		{"editorconfig", "~/.editorconfig"},
 	}
 
@@ -152,28 +132,3 @@ func TestSourceToTarget(t *testing.T) {
 	}
 }
 
-func TestGetDotfileTargets(t *testing.T) {
-	config := &Config{
-		Dotfiles: []string{
-			"zshrc",
-			"config/nvim/",
-			"dot_gitconfig",
-		},
-	}
-
-	targets := config.GetDotfileTargets()
-
-	expected := map[string]string{
-		"zshrc":         "~/.zshrc",
-		"config/nvim/":  "~/.config/nvim/",
-		"dot_gitconfig": "~/.gitconfig",
-	}
-
-	for source, expectedTarget := range expected {
-		if target, exists := targets[source]; !exists {
-			t.Errorf("Missing target for source %s", source)
-		} else if target != expectedTarget {
-			t.Errorf("Target for %s = %s, expected %s", source, target, expectedTarget)
-		}
-	}
-}
