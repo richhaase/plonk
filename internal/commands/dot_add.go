@@ -90,7 +90,7 @@ func runDotAdd(cmd *cobra.Command, args []string) error {
 // resolveDotfilePath resolves relative paths and validates the dotfile path
 func resolveDotfilePath(path, homeDir string) (string, error) {
 	var resolvedPath string
-	
+
 	// Handle different path types
 	if strings.HasPrefix(path, "~/") {
 		// Expand ~ to home directory
@@ -104,7 +104,7 @@ func resolveDotfilePath(path, homeDir string) (string, error) {
 		if err != nil {
 			return "", errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "resolve", "failed to resolve path")
 		}
-		
+
 		if _, err := os.Stat(absPath); err == nil {
 			// File exists relative to current working directory
 			resolvedPath = absPath
@@ -179,13 +179,13 @@ func (d DotfileAddOutput) TableOutput() string {
 	} else {
 		actionText = "Added dotfile to plonk configuration"
 	}
-	
+
 	output := "Dotfile Add\n===========\n\n"
 	output += fmt.Sprintf("✅ %s\n", actionText)
 	output += fmt.Sprintf("   Source: %s\n", d.Source)
 	output += fmt.Sprintf("   Destination: %s\n", d.Destination)
 	output += fmt.Sprintf("   Original: %s\n", d.Path)
-	
+
 	if d.Action == "updated" {
 		output += "\nThe system file has been copied to your plonk config directory, overwriting the previous version\n"
 	} else {
@@ -313,12 +313,12 @@ func addSingleFileInternal(filePath, homeDir, configDir string, cfg *config.Conf
 
 	// Copy file to plonk config directory
 	sourcePath := filepath.Join(configDir, source)
-	
+
 	// Create parent directories
 	if err := os.MkdirAll(filepath.Dir(sourcePath), 0750); err != nil {
 		return DotfileAddOutput{}, fmt.Errorf("failed to create parent directories: %v", err)
 	}
-	
+
 	if err := copyFileContents(filePath, sourcePath); err != nil {
 		return DotfileAddOutput{}, fmt.Errorf("failed to copy dotfile: %v", err)
 	}
@@ -376,15 +376,15 @@ func shouldSkipDotfile(relPath string, info os.FileInfo, ignorePatterns []string
 
 // DotfileBatchAddOutput represents the output structure for batch dotfile add operations
 type DotfileBatchAddOutput struct {
-	TotalFiles int                 `json:"total_files" yaml:"total_files"`
-	AddedFiles []DotfileAddOutput  `json:"added_files" yaml:"added_files"`
-	Errors     []string            `json:"errors,omitempty" yaml:"errors,omitempty"`
+	TotalFiles int                `json:"total_files" yaml:"total_files"`
+	AddedFiles []DotfileAddOutput `json:"added_files" yaml:"added_files"`
+	Errors     []string           `json:"errors,omitempty" yaml:"errors,omitempty"`
 }
 
 // TableOutput generates human-friendly table output for batch dotfile add
 func (d DotfileBatchAddOutput) TableOutput() string {
 	output := fmt.Sprintf("Dotfile Directory Add\n=====================\n\n")
-	
+
 	// Count added vs updated
 	var addedCount, updatedCount int
 	for _, file := range d.AddedFiles {
@@ -394,7 +394,7 @@ func (d DotfileBatchAddOutput) TableOutput() string {
 			addedCount++
 		}
 	}
-	
+
 	if addedCount > 0 && updatedCount > 0 {
 		output += fmt.Sprintf("✅ Processed %d files (%d added, %d updated)\n\n", d.TotalFiles, addedCount, updatedCount)
 	} else if updatedCount > 0 {
@@ -402,7 +402,7 @@ func (d DotfileBatchAddOutput) TableOutput() string {
 	} else {
 		output += fmt.Sprintf("✅ Added %d files to plonk configuration\n\n", d.TotalFiles)
 	}
-	
+
 	for _, file := range d.AddedFiles {
 		actionIndicator := "+"
 		if file.Action == "updated" {
@@ -410,14 +410,14 @@ func (d DotfileBatchAddOutput) TableOutput() string {
 		}
 		output += fmt.Sprintf("   %s %s → %s\n", actionIndicator, file.Destination, file.Source)
 	}
-	
+
 	if len(d.Errors) > 0 {
 		output += fmt.Sprintf("\n⚠️  Warnings:\n")
 		for _, err := range d.Errors {
 			output += fmt.Sprintf("   %s\n", err)
 		}
 	}
-	
+
 	output += "\nAll files have been copied to your plonk config directory\n"
 	return output
 }
