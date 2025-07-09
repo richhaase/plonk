@@ -74,8 +74,16 @@ plonk info --output json webpack  # Show information in JSON format
 ### Package Management (`plonk pkg`)
 
 - `plonk pkg list [filter]` - List packages across all managers
-- `plonk pkg add <package>` - Add a package to plonk configuration and install it
+- `plonk pkg add [package]` - Add package(s) to plonk configuration and install them
 - `plonk pkg remove <package>` - Remove a package from plonk configuration
+
+**Package Add Examples:**
+```bash
+plonk pkg add htop                # Add specific package
+plonk pkg add                     # Add all untracked packages
+plonk pkg add --dry-run           # Preview what would be added
+plonk pkg add git --manager homebrew  # Add to specific manager
+```
 
 **List filters:** `managed`, `untracked`, `missing`
 

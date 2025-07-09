@@ -12,6 +12,7 @@ import (
 	"plonk/internal/config"
 	"plonk/internal/dotfiles"
 	"plonk/internal/managers"
+	"plonk/internal/state"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -22,30 +23,36 @@ var (
 )
 
 var pkgAddCmd = &cobra.Command{
-	Use:   "add <package>",
-	Short: "Add a package to plonk configuration and install it",
-	Long: `Add a package to your plonk.yaml configuration and install it immediately.
+	Use:   "add [package]",
+	Short: "Add package(s) to plonk configuration and install them",
+	Long: `Add one or more packages to your plonk.yaml configuration and install them.
 
-The package will be added to the appropriate manager section in your configuration
-and then installed using that manager.
-
-You can specify which manager to use with the --manager flag, otherwise it will
-use the default manager from your configuration.
-
-Examples:
+With package name:
   plonk pkg add htop              # Add htop using default manager
   plonk pkg add git --manager homebrew  # Add git specifically to homebrew
-  plonk pkg add lodash --manager npm     # Add lodash to npm global packages`,
-	Args: cobra.ExactArgs(1),
+  plonk pkg add lodash --manager npm     # Add lodash to npm global packages
+
+Without arguments:
+  plonk pkg add                   # Add all untracked packages
+  plonk pkg add --dry-run         # Preview what would be added`,
+	Args: cobra.MaximumNArgs(1),
 	RunE: runPkgAdd,
 }
 
 func init() {
 	pkgCmd.AddCommand(pkgAddCmd)
 	pkgAddCmd.Flags().StringVar(&manager, "manager", "", "Package manager to use (homebrew|npm)")
+	pkgAddCmd.Flags().BoolP("dry-run", "n", false, "Show what would be added without making changes")
 }
 
 func runPkgAdd(cmd *cobra.Command, args []string) error {
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	
+	if len(args) == 0 {
+		// No package specified - add all untracked packages
+		return addAllUntrackedPackages(cmd, dryRun)
+	}
+	
 	packageName := args[0]
 
 	// Parse output format
@@ -235,5 +242,125 @@ func (a AddOutput) TableOutput() string {
 
 // StructuredData returns the structured data for serialization
 func (a AddOutput) StructuredData() any {
+	return a
+}
+
+// addAllUntrackedPackages adds all untracked packages to the configuration
+func addAllUntrackedPackages(cmd *cobra.Command, dryRun bool) error {
+	// Parse output format
+	format, err := ParseOutputFormat(outputFormat)
+	if err != nil {
+		return err
+	}
+
+	// Get directories
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home directory: %w", err)
+	}
+
+	configDir := filepath.Join(homeDir, ".config", "plonk")
+
+	// Load existing configuration
+	cfg, err := config.LoadConfig(configDir)
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
+
+	// Create reconciler to get untracked packages
+	reconciler := state.NewReconciler()
+	
+	// Create package provider (same as status command)
+	ctx := context.Background()
+	packageProvider, err := createPackageProvider(ctx, cfg)
+	if err != nil {
+		return fmt.Errorf("failed to create package provider: %w", err)
+	}
+	reconciler.RegisterProvider("package", packageProvider)
+
+	// Reconcile to get package states
+	summary, err := reconciler.ReconcileAll(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to reconcile package states: %w", err)
+	}
+
+	// Find package results and collect untracked packages
+	var untrackedPackages []state.Item
+	for _, result := range summary.Results {
+		if result.Domain == "package" {
+			untrackedPackages = append(untrackedPackages, result.Untracked...)
+		}
+	}
+
+	if len(untrackedPackages) == 0 {
+		if format == OutputTable {
+			fmt.Println("No untracked packages found")
+		}
+		return nil
+	}
+
+	if dryRun {
+		if format == OutputTable {
+			fmt.Printf("Would add %d untracked packages:\n\n", len(untrackedPackages))
+			for _, pkg := range untrackedPackages {
+				fmt.Printf("  %s (%s)\n", pkg.Name, pkg.Manager)
+			}
+		}
+		return nil
+	}
+
+	// Add packages to configuration
+	addedCount := 0
+	for _, pkg := range untrackedPackages {
+		if !isPackageInConfig(cfg, pkg.Name, pkg.Manager) {
+			err = addPackageToConfig(cfg, pkg.Name, pkg.Manager)
+			if err != nil {
+				return fmt.Errorf("failed to add package %s to config: %w", pkg.Name, err)
+			}
+			addedCount++
+		}
+	}
+
+	if addedCount == 0 {
+		if format == OutputTable {
+			fmt.Println("No packages were added (all were already in configuration)")
+		}
+		return nil
+	}
+
+	// Save updated configuration
+	err = saveConfig(cfg, configDir)
+	if err != nil {
+		return fmt.Errorf("failed to save configuration: %w", err)
+	}
+
+	if format == OutputTable {
+		fmt.Printf("Successfully added %d packages to configuration\n", addedCount)
+	}
+
+	// Prepare structured output
+	result := AddAllOutput{
+		Added: addedCount,
+		Total: len(untrackedPackages),
+		Action: "added-all",
+	}
+
+	return RenderOutput(result, format)
+}
+
+// AddAllOutput represents the output structure for pkg add-all command
+type AddAllOutput struct {
+	Added  int    `json:"added" yaml:"added"`
+	Total  int    `json:"total" yaml:"total"`
+	Action string `json:"action" yaml:"action"`
+}
+
+// TableOutput generates human-friendly table output for add-all command
+func (a AddAllOutput) TableOutput() string {
+	return "" // Table output is handled in the command logic
+}
+
+// StructuredData returns the structured data for serialization
+func (a AddAllOutput) StructuredData() any {
 	return a
 }
