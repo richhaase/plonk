@@ -190,8 +190,8 @@ type PlonkError struct {
 ### Command Examples
 
 **Status:** Shows all items across all domains with their states
-**Apply:** Reconciles missing items (installs packages, copies dotfiles)
-**List:** Shows items filtered by state or domain
+**Apply:** Unified command that reconciles missing items (installs packages and copies dotfiles)
+**List:** Shows items filtered by state or domain (available for both packages and dotfiles)
 
 ## Key Design Decisions
 

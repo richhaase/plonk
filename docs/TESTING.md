@@ -106,10 +106,12 @@ Key helper functions available:
 - **State reconciliation** (`internal/state/*_test.go`)
 - **Package manager operations** (`internal/managers/*_test.go`)
 - **Dotfile operations** (`internal/dotfiles/*_test.go`)
+- **Apply command** (`internal/commands/apply_test.go`) - Unified apply functionality
 - **Error handling** (`internal/errors/*_test.go`)
 
 ### Integration Test Categories
 - **Binary functionality** (`binary_test.go`)
+- **Apply command** (`apply_test.go`) - Unified package and dotfile application
 - **Package management** (`packages_test.go`)
 - **Configuration validation** (`config_test.go`)
 - **Dotfile operations** (`dotfiles_test.go`)
