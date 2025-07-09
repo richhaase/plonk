@@ -15,7 +15,6 @@ A quick reference guide to navigate the Plonk codebase - a unified package and d
 - `root.go` - Root command setup
 - `status.go` - Show system state
 - `apply.go` - Unified apply command (packages and dotfiles)
-- `import.go` - Import existing packages and dotfiles into plonk management
 - `env.go` - Show environment information for debugging
 - `doctor.go` - Comprehensive health checks and diagnostics
 - `search.go` - Intelligent package search across package managers
