@@ -302,22 +302,96 @@ plonk config edit
 
 ### Exit Codes
 - `0` - Success
-- `1` - Configuration error
-- `2` - Package manager error
-- `3` - File operation error
-- `4` - Validation error
+- `1` - User input or configuration error
+- `2` - System error (permissions, package manager unavailable)
+
+### Structured Error System
+
+Plonk uses a structured error system that provides:
+- **Consistent error codes** across all commands
+- **Domain-based categorization** for better error handling
+- **User-friendly messages** with actionable guidance
+- **Technical details** available in debug mode
+
+### Error Categories
+
+| Code | Domain | Description |
+|------|---------|-------------|
+| `CONFIG_NOT_FOUND` | config | Configuration file missing or unreadable |
+| `CONFIG_PARSE_FAILURE` | config | Configuration syntax errors |
+| `CONFIG_VALIDATION` | config | Configuration validation failures |
+| `INVALID_INPUT` | commands | Invalid user input or arguments |
+| `PACKAGE_INSTALL` | packages | Package installation failures |
+| `MANAGER_UNAVAILABLE` | packages | Package manager not available |
+| `FILE_IO` | dotfiles | File operation errors |
+| `FILE_PERMISSION` | dotfiles | Permission-related file errors |
+| `RECONCILIATION` | state | State reconciliation failures |
 
 ### Error Output Format
+
+**Table format (default):**
+```
+Error: Package 'nonexistent-package' not found in any package manager
+
+Troubleshooting steps:
+  1. Check if the package name is correct: plonk search nonexistent-package
+  2. Try updating package manager: brew update (for Homebrew)
+  3. Check network connectivity
+
+If the problem persists, run: plonk doctor
+```
+
+**JSON format:**
 ```json
 {
   "error": {
-    "code": "CONFIG_NOT_FOUND",
-    "domain": "config",
-    "operation": "load",
-    "message": "Configuration file not found",
-    "suggestion": "Run 'plonk config edit' to create configuration"
+    "code": "PACKAGE_INSTALL",
+    "domain": "packages",
+    "operation": "install",
+    "message": "Package 'nonexistent-package' not found in any package manager",
+    "item": "nonexistent-package",
+    "severity": "error",
+    "user_message": "Package 'nonexistent-package' not found in any package manager\n\nTroubleshooting steps:\n  1. Check if the package name is correct: plonk search nonexistent-package\n  2. Try updating package manager: brew update (for Homebrew)\n  3. Check network connectivity\n\nIf the problem persists, run: plonk doctor"
   }
 }
+```
+
+### Debug Mode
+
+Enable detailed error information:
+```bash
+export PLONK_DEBUG=1
+plonk apply  # Shows technical details for errors
+```
+
+### Common Error Solutions
+
+**Configuration not found:**
+```bash
+# Create initial configuration
+plonk config edit
+```
+
+**Package manager unavailable:**
+```bash
+# Check system health
+plonk doctor
+
+# Install Homebrew (macOS)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install Node.js/NPM
+brew install node
+```
+
+**Permission errors:**
+```bash
+# Check permissions
+ls -la ~/.config/plonk/
+
+# Fix permissions
+chmod 750 ~/.config/plonk/
+chmod 600 ~/.config/plonk/plonk.yaml
 ```
 
 ## AI Agent Integration

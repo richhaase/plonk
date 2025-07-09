@@ -215,11 +215,183 @@ just test       # unit tests
 
 ### Error Handling
 
-Use structured errors for user-facing messages:
-- See `docs/api/errors.md` for complete error type specifications
-- Use `errors.NewPlonkError()` for creating structured errors
-- Include error codes, domains, and user-friendly messages
-- Follow existing error patterns in the codebase
+Plonk uses a structured error system for consistent error handling across all commands.
+
+#### Error Creation Patterns
+
+**Use structured errors for all user-facing operations:**
+
+```go
+// Import the errors package
+import "plonk/internal/errors"
+
+// Create a new error
+return errors.NewError(
+    errors.ErrPackageInstall,    // Error code
+    errors.DomainPackages,       // Domain
+    "install",                   // Operation
+    "failed to install package" // Message
+)
+
+// Wrap an existing error
+return errors.Wrap(
+    err,                         // Original error
+    errors.ErrConfigNotFound,    // Error code
+    errors.DomainConfig,         // Domain
+    "load",                      // Operation
+    "failed to load configuration" // Message
+)
+
+// Wrap with item context
+return errors.WrapWithItem(
+    err,                         // Original error
+    errors.ErrPackageInstall,    // Error code
+    errors.DomainPackages,       // Domain
+    "install",                   // Operation
+    packageName,                 // Item (package name)
+    "failed to install package" // Message
+)
+```
+
+#### Error Codes and Domains
+
+**Always use appropriate error codes:**
+
+```go
+// Configuration errors
+errors.ErrConfigNotFound      // Config file missing
+errors.ErrConfigParseFailure  // Config syntax error
+errors.ErrConfigValidation    // Config validation failed
+
+// Package management errors
+errors.ErrPackageInstall      // Package installation failed
+errors.ErrManagerUnavailable  // Package manager not available
+
+// File operation errors
+errors.ErrFileIO             // General file I/O error
+errors.ErrFilePermission     // Permission denied
+errors.ErrFileNotFound       // File not found
+
+// User input errors
+errors.ErrInvalidInput       // Invalid command arguments
+
+// System errors
+errors.ErrInternal           // Internal system error
+errors.ErrReconciliation     // State reconciliation failed
+```
+
+**Always use appropriate domains:**
+
+```go
+errors.DomainConfig          // Configuration-related operations
+errors.DomainPackages        // Package management operations
+errors.DomainDotfiles        // Dotfile operations
+errors.DomainCommands        // Command-level operations
+errors.DomainState           // State reconciliation
+```
+
+#### Command Error Handling
+
+**Standard pattern for command error handling:**
+
+```go
+func runCommand(cmd *cobra.Command, args []string) error {
+    // Parse output format
+    format, err := ParseOutputFormat(outputFormat)
+    if err != nil {
+        return errors.WrapWithItem(err, errors.ErrInvalidInput, 
+            errors.DomainCommands, "command-name", "output-format", 
+            "invalid output format")
+    }
+    
+    // Load configuration
+    cfg, err := config.LoadConfig(configDir)
+    if err != nil {
+        return errors.Wrap(err, errors.ErrConfigNotFound, 
+            errors.DomainConfig, "load", "failed to load configuration")
+    }
+    
+    // Perform operation
+    if err := performOperation(cfg); err != nil {
+        return errors.WrapWithItem(err, errors.ErrPackageInstall, 
+            errors.DomainPackages, "install", packageName, 
+            "failed to install package")
+    }
+    
+    return nil
+}
+```
+
+#### Error Testing
+
+**Test error conditions explicitly:**
+
+```go
+func TestCommandErrorHandling(t *testing.T) {
+    tests := []struct {
+        name        string
+        setupError  error
+        expectedErr string
+        expectedCode errors.ErrorCode
+    }{
+        {
+            name:        "config not found",
+            setupError:  os.ErrNotExist,
+            expectedErr: "failed to load configuration",
+            expectedCode: errors.ErrConfigNotFound,
+        },
+        {
+            name:        "invalid package manager",
+            setupError:  fmt.Errorf("invalid manager"),
+            expectedErr: "manager not available",
+            expectedCode: errors.ErrManagerUnavailable,
+        },
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            // Setup error condition
+            err := runCommand(cmd, args)
+            
+            // Verify structured error
+            var plonkErr *errors.PlonkError
+            assert.True(t, errors.As(err, &plonkErr))
+            assert.Equal(t, tt.expectedCode, plonkErr.Code)
+            assert.Contains(t, plonkErr.UserMessage(), tt.expectedErr)
+        })
+    }
+}
+```
+
+#### Error Guidelines
+
+1. **Never use `fmt.Errorf` for user-facing errors** - always use structured errors
+2. **Include operation context** - specify what operation was being performed
+3. **Use appropriate error codes** - select the most specific error code available
+4. **Add item context when relevant** - package names, file paths, etc.
+5. **Provide user-friendly messages** - explain what went wrong and how to fix it
+6. **Test error conditions** - ensure error handling works correctly
+7. **Use debug mode** - support `PLONK_DEBUG=1` for detailed error information
+
+#### Exit Code Mapping
+
+The error handling system automatically maps error codes to exit codes:
+
+```go
+// In HandleError function
+switch plonkErr.Code {
+case errors.ErrConfigNotFound, errors.ErrConfigParseFailure, 
+     errors.ErrConfigValidation, errors.ErrInvalidInput:
+    return 1  // User error
+case errors.ErrFilePermission, errors.ErrManagerUnavailable, 
+     errors.ErrInternal:
+    return 2  // System error
+default:
+    return 1  // Default to user error
+}
+```
+
+See `docs/api/errors.md` for complete error type specifications.
 
 ## Contributing
 

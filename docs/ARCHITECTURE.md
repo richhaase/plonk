@@ -149,19 +149,77 @@ npm: [typescript, prettier]
 
 ### 5. Error Handling (`internal/errors/`)
 
-**Structured Error Type:**
-- See `docs/api/errors.md` for complete PlonkError specification
-- Key fields: `Code`, `Domain`, `Operation`, `Message`, `Cause`
-- Provides user-friendly messages with debugging context
+**Structured Error System:**
+Plonk implements a comprehensive structured error system that provides consistent error handling across all commands and operations.
+
+**Core Features:**
+- **Structured Error Types** - All errors use `PlonkError` with standardized fields
+- **Error Codes** - Specific codes for different error categories
+- **Domain Classification** - Errors grouped by functional domain  
+- **User-Friendly Messages** - Clear, actionable error messages
+- **Debug Mode Support** - Detailed technical information when needed
+- **Context Preservation** - Original error causes maintained through wrapping
+
+**Error Codes:**
+```go
+// Configuration errors
+ErrConfigNotFound      // Configuration file missing
+ErrConfigParseFailure  // Configuration syntax error
+ErrConfigValidation    // Configuration validation failed
+
+// Package management errors  
+ErrPackageInstall      // Package installation failed
+ErrManagerUnavailable  // Package manager not available
+
+// File operation errors
+ErrFileIO             // General file I/O error
+ErrFilePermission     // Permission denied
+ErrFileNotFound       // File not found
+
+// User input errors
+ErrInvalidInput       // Invalid command arguments
+
+// System errors
+ErrInternal           // Internal system error
+ErrReconciliation     // State reconciliation failed
+```
 
 **Error Domains:**
-- Config, Dotfiles, Packages, State, Commands
+```go
+DomainConfig          // Configuration-related operations
+DomainPackages        // Package management operations
+DomainDotfiles        // Dotfile operations
+DomainCommands        // Command-level operations
+DomainState           // State reconciliation
+```
 
-**Features:**
-- User-friendly messages with solutions
-- Error wrapping with context preservation
-- Compatible with standard Go error handling
-- Metadata for debugging
+**Error Creation Patterns:**
+```go
+// Create new structured error
+errors.NewError(code, domain, operation, message)
+
+// Wrap existing error with context
+errors.Wrap(err, code, domain, operation, message)
+
+// Wrap with item context (package name, file path, etc.)
+errors.WrapWithItem(err, code, domain, operation, item, message)
+```
+
+**Exit Code Mapping:**
+- `0` - Success
+- `1` - User error (config, input validation)
+- `2` - System error (permissions, unavailable managers)
+
+**User Experience:**
+- **Table Format** - Human-readable error messages with troubleshooting steps
+- **JSON Format** - Structured error data for programmatic handling
+- **Debug Mode** - Technical details via `PLONK_DEBUG=1` environment variable
+
+**Integration:**
+- All commands use consistent error handling patterns
+- Error messages include actionable guidance
+- Automatic exit code determination based on error type
+- Compatible with standard Go error handling (`errors.Is`, `errors.As`)
 
 ## Data Flow
 
