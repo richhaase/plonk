@@ -250,9 +250,19 @@ Add dotfile to plonk management.
 plonk dot add <dotfile>
 ```
 
-**Example:**
+**Path Resolution:**
+- **Absolute paths**: `plonk dot add /home/user/.vimrc`
+- **Tilde paths**: `plonk dot add ~/.vimrc`
+- **Relative paths**: First tries current directory, then home directory
+  - `plonk dot add .vimrc` → looks for `./vimrc` then `~/.vimrc`
+  - `plonk dot add init.lua` → looks for `./init.lua` then `~/init.lua`
+
+**Examples:**
 ```bash
-plonk dot add ~/.vimrc  # Copies to ~/.config/plonk/vimrc
+plonk dot add ~/.vimrc          # Explicit home directory path
+plonk dot add .vimrc            # Finds ~/.vimrc (if not in current dir)
+plonk dot add ~/.config/nvim/   # Add entire directory
+cd ~/.config/nvim && plonk dot add init.lua  # Finds ./init.lua
 ```
 
 ### `plonk dot re-add <dotfile>`

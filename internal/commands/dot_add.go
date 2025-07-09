@@ -25,10 +25,19 @@ This command will:
 - Add it to your plonk.yaml configuration
 - Preserve the original file in case you need to revert
 
+For directories, plonk will recursively add all files individually, respecting
+ignore patterns configured in your plonk.yaml.
+
+Path Resolution:
+- Absolute paths: /home/user/.vimrc
+- Tilde paths: ~/.vimrc
+- Relative paths: First tries current directory, then home directory
+
 Examples:
-  plonk dot add ~/.zshrc           # Add .zshrc to plonk management
-  plonk dot add ~/.config/nvim/    # Add nvim config directory
-  plonk dot add ~/.gitconfig       # Add git config file`,
+  plonk dot add ~/.zshrc           # Add single file
+  plonk dot add .zshrc             # Finds ~/.zshrc (if not in current dir)
+  plonk dot add ~/.config/nvim/    # Add all files in directory recursively
+  cd ~/.config/nvim && plonk dot add init.lua  # Finds ./init.lua`,
 	RunE: runDotAdd,
 	Args: cobra.ExactArgs(1),
 }
@@ -61,74 +70,64 @@ func runDotAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Check if dotfile exists
-	if _, err := os.Stat(resolvedPath); os.IsNotExist(err) {
+	info, err := os.Stat(resolvedPath)
+	if os.IsNotExist(err) {
 		return errors.NewError(errors.ErrFileNotFound, errors.DomainDotfiles, "check", fmt.Sprintf("dotfile does not exist: %s", resolvedPath))
 	}
-
-	// Load existing configuration
-	cfg, err := config.LoadConfig(configDir)
 	if err != nil {
-		// If config doesn't exist, create a new one
-		if os.IsNotExist(err) {
-			cfg = &config.Config{
-				Settings: config.Settings{
-					DefaultManager: "homebrew",
-				},
-			}
-		} else {
-			return errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load", "failed to load config")
-		}
+		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "check", "failed to check dotfile")
 	}
 
-	// Generate source and destination paths
-	source, destination := generatePaths(resolvedPath, homeDir)
-
-	// Check if already managed by checking if source file exists in config dir
-	adapter := config.NewConfigAdapter(cfg)
-	dotfileTargets := adapter.GetDotfileTargets()
-	if _, exists := dotfileTargets[source]; exists {
-		return errors.NewError(errors.ErrInvalidInput, errors.DomainDotfiles, "check", fmt.Sprintf("dotfile is already managed: %s", source))
+	// Check if it's a directory and handle accordingly
+	if info.IsDir() {
+		return addDirectoryFiles(resolvedPath, homeDir, configDir, format)
 	}
 
-	// Copy dotfile to plonk config directory
-	sourcePath := filepath.Join(configDir, source)
-	if err := copyDotfile(resolvedPath, sourcePath); err != nil {
-		return errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", source, "failed to copy dotfile")
-	}
-
-	// Configuration doesn't need to be updated since we use auto-discovery
-	// The dotfile will be automatically detected once it's in the config directory
-
-	// Prepare output
-	outputData := DotfileAddOutput{
-		Source:      source,
-		Destination: destination,
-		Action:      "added",
-		Path:        resolvedPath,
-	}
-
-	return RenderOutput(outputData, format)
+	// Handle single file (existing logic)
+	return addSingleFile(resolvedPath, homeDir, configDir, format)
 }
 
 // resolveDotfilePath resolves relative paths and validates the dotfile path
 func resolveDotfilePath(path, homeDir string) (string, error) {
-	// Expand ~ to home directory
+	var resolvedPath string
+	
+	// Handle different path types
 	if strings.HasPrefix(path, "~/") {
-		path = filepath.Join(homeDir, path[2:])
-	}
-
-	// Get absolute path
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return "", errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "resolve", "failed to resolve path")
+		// Expand ~ to home directory
+		resolvedPath = filepath.Join(homeDir, path[2:])
+	} else if filepath.IsAbs(path) {
+		// Already absolute path
+		resolvedPath = path
+	} else {
+		// Relative path - try to resolve relative to current working directory first
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			return "", errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "resolve", "failed to resolve path")
+		}
+		
+		if _, err := os.Stat(absPath); err == nil {
+			// File exists relative to current working directory
+			resolvedPath = absPath
+		} else {
+			// Fall back to home directory
+			homeRelativePath := filepath.Join(homeDir, path)
+			if _, err := os.Stat(homeRelativePath); err == nil {
+				// File exists relative to home directory
+				resolvedPath = homeRelativePath
+			} else {
+				// Neither location has the file, use the current working directory path
+				// so the error message will be more intuitive
+				resolvedPath = absPath
+			}
+		}
 	}
 
 	// Ensure it's within the home directory
-	if !strings.HasPrefix(absPath, homeDir) {
-		return "", errors.NewError(errors.ErrInvalidInput, errors.DomainDotfiles, "validate", fmt.Sprintf("dotfile must be within home directory: %s", absPath))
+	if !strings.HasPrefix(resolvedPath, homeDir) {
+		return "", errors.NewError(errors.ErrInvalidInput, errors.DomainDotfiles, "validate", fmt.Sprintf("dotfile must be within home directory: %s", resolvedPath))
 	}
 
-	return absPath, nil
+	return resolvedPath, nil
 }
 
 // generatePaths generates source and destination paths for the dotfile
@@ -228,5 +227,210 @@ func (d DotfileAddOutput) TableOutput() string {
 
 // StructuredData returns the structured data for serialization
 func (d DotfileAddOutput) StructuredData() any {
+	return d
+}
+
+// addSingleFile handles adding a single file to plonk management
+func addSingleFile(filePath, homeDir, configDir string, format OutputFormat) error {
+	// Load existing configuration
+	cfg, err := loadOrCreateConfig(configDir)
+	if err != nil {
+		return err
+	}
+
+	// Generate source and destination paths
+	source, destination := generatePaths(filePath, homeDir)
+
+	// Check if already managed by checking if source file exists in config dir
+	adapter := config.NewConfigAdapter(cfg)
+	dotfileTargets := adapter.GetDotfileTargets()
+	if _, exists := dotfileTargets[source]; exists {
+		return errors.NewError(errors.ErrInvalidInput, errors.DomainDotfiles, "check", fmt.Sprintf("dotfile is already managed: %s", source))
+	}
+
+	// Copy dotfile to plonk config directory
+	sourcePath := filepath.Join(configDir, source)
+	if err := copyFileContents(filePath, sourcePath); err != nil {
+		return errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", source, "failed to copy dotfile")
+	}
+
+	// Configuration doesn't need to be updated since we use auto-discovery
+	// The dotfile will be automatically detected once it's in the config directory
+
+	// Prepare output
+	outputData := DotfileAddOutput{
+		Source:      source,
+		Destination: destination,
+		Action:      "added",
+		Path:        filePath,
+	}
+
+	return RenderOutput(outputData, format)
+}
+
+// addDirectoryFiles handles adding all files in a directory recursively
+func addDirectoryFiles(dirPath, homeDir, configDir string, format OutputFormat) error {
+	var addedFiles []DotfileAddOutput
+	var errorList []string
+
+	// Load config to get ignore patterns
+	cfg, err := loadOrCreateConfig(configDir)
+	if err != nil {
+		return err
+	}
+
+	ignorePatterns := cfg.GetIgnorePatterns()
+
+	// Walk the directory tree
+	err = filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Only process files, but DON'T skip directories (let Walk traverse them)
+		if !info.IsDir() {
+			// Get relative path from the base directory being added
+			relPath, err := filepath.Rel(dirPath, path)
+			if err != nil {
+				return err
+			}
+
+			// Use existing shouldSkipDotfile function
+			if shouldSkipDotfile(relPath, info, ignorePatterns) {
+				return nil
+			}
+
+			// Process each file individually
+			result, err := addSingleFileInternal(path, homeDir, configDir, cfg)
+			if err != nil {
+				// Log error but continue with other files
+				errorList = append(errorList, fmt.Sprintf("failed to add %s: %v", path, err))
+				return nil
+			}
+
+			addedFiles = append(addedFiles, result)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// Render output for all added files
+	outputData := DotfileBatchAddOutput{
+		TotalFiles: len(addedFiles),
+		AddedFiles: addedFiles,
+		Errors:     errorList,
+	}
+
+	return RenderOutput(outputData, format)
+}
+
+// addSingleFileInternal handles adding a single file with an existing config
+func addSingleFileInternal(filePath, homeDir, configDir string, cfg *config.Config) (DotfileAddOutput, error) {
+	// Generate source and destination paths
+	source, destination := generatePaths(filePath, homeDir)
+
+	// Check if already managed by checking if source file exists in config dir
+	adapter := config.NewConfigAdapter(cfg)
+	dotfileTargets := adapter.GetDotfileTargets()
+	if _, exists := dotfileTargets[source]; exists {
+		return DotfileAddOutput{}, fmt.Errorf("dotfile is already managed: %s", source)
+	}
+
+	// Copy file to plonk config directory
+	sourcePath := filepath.Join(configDir, source)
+	
+	// Create parent directories
+	if err := os.MkdirAll(filepath.Dir(sourcePath), 0750); err != nil {
+		return DotfileAddOutput{}, fmt.Errorf("failed to create parent directories: %v", err)
+	}
+	
+	if err := copyFileContents(filePath, sourcePath); err != nil {
+		return DotfileAddOutput{}, fmt.Errorf("failed to copy dotfile: %v", err)
+	}
+
+	return DotfileAddOutput{
+		Source:      source,
+		Destination: destination,
+		Action:      "added",
+		Path:        filePath,
+	}, nil
+}
+
+// loadOrCreateConfig loads existing config or creates a new one
+func loadOrCreateConfig(configDir string) (*config.Config, error) {
+	cfg, err := config.LoadConfig(configDir)
+	if err != nil {
+		// If config doesn't exist, create a new one
+		if os.IsNotExist(err) {
+			cfg = &config.Config{
+				Settings: config.Settings{
+					DefaultManager: "homebrew",
+				},
+			}
+		} else {
+			return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load", "failed to load config")
+		}
+	}
+	return cfg, nil
+}
+
+// shouldSkipDotfile uses the existing function from config package
+func shouldSkipDotfile(relPath string, info os.FileInfo, ignorePatterns []string) bool {
+	// Always skip plonk config file
+	if relPath == "plonk.yaml" {
+		return true
+	}
+
+	// Check against configured ignore patterns
+	for _, pattern := range ignorePatterns {
+		// Check exact match for file/directory name
+		if pattern == info.Name() || pattern == relPath {
+			return true
+		}
+		// Check glob pattern match
+		if matched, _ := filepath.Match(pattern, info.Name()); matched {
+			return true
+		}
+		if matched, _ := filepath.Match(pattern, relPath); matched {
+			return true
+		}
+	}
+
+	return false
+}
+
+// DotfileBatchAddOutput represents the output structure for batch dotfile add operations
+type DotfileBatchAddOutput struct {
+	TotalFiles int                 `json:"total_files" yaml:"total_files"`
+	AddedFiles []DotfileAddOutput  `json:"added_files" yaml:"added_files"`
+	Errors     []string            `json:"errors,omitempty" yaml:"errors,omitempty"`
+}
+
+// TableOutput generates human-friendly table output for batch dotfile add
+func (d DotfileBatchAddOutput) TableOutput() string {
+	output := fmt.Sprintf("Dotfile Directory Add\n=====================\n\n")
+	output += fmt.Sprintf("✅ Added %d files to plonk configuration\n\n", d.TotalFiles)
+	
+	for _, file := range d.AddedFiles {
+		output += fmt.Sprintf("   %s → %s\n", file.Destination, file.Source)
+	}
+	
+	if len(d.Errors) > 0 {
+		output += fmt.Sprintf("\n⚠️  Warnings:\n")
+		for _, err := range d.Errors {
+			output += fmt.Sprintf("   %s\n", err)
+		}
+	}
+	
+	output += "\nAll files have been copied to your plonk config directory\n"
+	return output
+}
+
+// StructuredData returns the structured data for serialization
+func (d DotfileBatchAddOutput) StructuredData() any {
 	return d
 }
