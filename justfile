@@ -4,12 +4,33 @@
 default:
     @just --list
 
+# Generate mocks for testing
+generate-mocks:
+    @echo "Generating mocks..."
+    @mockgen -source=internal/managers/common.go -destination=internal/managers/mock_manager.go -package=managers
+    @mockgen -source=internal/state/reconciler.go -destination=internal/state/mock_provider.go -package=state
+    @mockgen -source=internal/state/package_provider.go -destination=internal/state/mock_package_interfaces.go -package=state
+    @mockgen -source=internal/config/interfaces.go -destination=internal/config/mock_config.go -package=config
+    @echo "✅ Generated mocks successfully!"
+
 # Build the plonk binary
 build:
     @echo "Building plonk..."
     @mkdir -p build
     go build -o build/plonk ./cmd/plonk
-    @echo "✅ Built plonk binary to build/"
+    @echo "Built plonk binary to build/"
+
+# Build the plonk binary with version information
+build-versioned:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Building plonk with version information..."
+    mkdir -p build
+    VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+    COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "none")
+    DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    go build -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" -o build/plonk ./cmd/plonk
+    echo "Built versioned plonk binary to build/"
 
 # Run all unit tests  
 test:
@@ -99,7 +120,18 @@ lint:
 
 # Run security checks
 security:
-    @echo "🔍 Running govulncheck..."
+    @echo "Running govulncheck..."
     go run golang.org/x/vuln/cmd/govulncheck ./...
-    @echo "🔐 Running gosec..."
+    @echo "Running gosec..."
     go run github.com/securego/gosec/v2/cmd/gosec ./...
+
+# Interactive release command (simplified for testing)
+release:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Plonk Release Manager"
+    echo "======================="
+    CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+    echo "Current version: $CURRENT_VERSION"
+    echo "Use this to create a manual tag:"
+    echo "git tag -a v1.0.0 -m 'Release v1.0.0'"

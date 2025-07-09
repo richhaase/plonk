@@ -9,7 +9,14 @@ import (
 	"plonk/internal/commands"
 )
 
+// Version information, injected at build time via ldflags
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
-	exitCode := commands.ExecuteWithExitCode()
+	exitCode := commands.ExecuteWithExitCode(version, commit, date)
 	os.Exit(exitCode)
 }

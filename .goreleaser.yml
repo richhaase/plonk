@@ -1,0 +1,111 @@
+# GoReleaser configuration for Plonk
+# Documentation: https://goreleaser.com
+
+version: 1
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - id: plonk
+    main: ./cmd/plonk
+    binary: plonk
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.ShortCommit}}
+      - -X main.date={{.Date}}
+    flags:
+      - -trimpath
+
+archives:
+  - id: plonk
+    builds:
+      - plonk
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}-
+      {{- .Version }}-
+      {{- .Os }}-
+      {{- .Arch }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE
+      - docs/*
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ .ShortCommit }}{{ if .IsGitDirty }}-dirty{{ end }}"
+
+changelog:
+  sort: asc
+  use: git
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^ci:'
+      - '^build:'
+      - '^style:'
+      - '^refactor:'
+      - '^perf:'
+      - '^revert:'
+      - '^Merge'
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: Breaking Changes
+      regexp: '^.*?(.+)!:.+$'
+      order: 2
+    - title: Others
+      order: 999
+
+release:
+  github:
+    owner: "rdh"
+    name: "plonk"
+  name_template: "Release {{.Version}}"
+  draft: false
+  prerelease: auto
+  mode: replace
+
+# Future: Enable when ready for Homebrew tap
+# brews:
+#   - name: plonk
+#     description: "Package and dotfiles management across machines"
+#     homepage: "https://github.com/rdh/plonk"
+#     license: "MIT"
+#     repository:
+#       owner: rdh
+#       name: homebrew-plonk
+#       branch: main
+#     commit_author:
+#       name: goreleaserbot
+#       email: bot@goreleaser.com
+#     install: |
+#       bin.install "plonk"
+#     test: |
+#       system "#{bin}/plonk --version"

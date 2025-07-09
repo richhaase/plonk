@@ -7,116 +7,16 @@ import (
 	"context"
 	"errors"
 	"testing"
+
+	"github.com/golang/mock/gomock"
 )
 
-// MockPackageManager implements PackageManager for testing
-type MockPackageManager struct {
-	available     bool
-	installed     []string
-	installError  error
-	uninstallError error
-	listError     error
-}
-
-func NewMockPackageManager() *MockPackageManager {
-	return &MockPackageManager{
-		available: true,
-		installed: []string{},
-	}
-}
-
-func (m *MockPackageManager) IsAvailable(ctx context.Context) (bool, error) {
-	return m.available, nil
-}
-
-func (m *MockPackageManager) ListInstalled(ctx context.Context) ([]string, error) {
-	if m.listError != nil {
-		return nil, m.listError
-	}
-	return m.installed, nil
-}
-
-func (m *MockPackageManager) Install(ctx context.Context, name string) error {
-	if m.installError != nil {
-		return m.installError
-	}
-	// Simulate successful installation
-	m.installed = append(m.installed, name)
-	return nil
-}
-
-func (m *MockPackageManager) Uninstall(ctx context.Context, name string) error {
-	if m.uninstallError != nil {
-		return m.uninstallError
-	}
-	// Simulate successful uninstallation
-	for i, pkg := range m.installed {
-		if pkg == name {
-			m.installed = append(m.installed[:i], m.installed[i+1:]...)
-			break
-		}
-	}
-	return nil
-}
-
-func (m *MockPackageManager) IsInstalled(ctx context.Context, name string) (bool, error) {
-	for _, pkg := range m.installed {
-		if pkg == name {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func (m *MockPackageManager) SetAvailable(available bool) {
-	m.available = available
-}
-
-func (m *MockPackageManager) SetInstalled(packages []string) {
-	m.installed = make([]string, len(packages))
-	copy(m.installed, packages)
-}
-
-func (m *MockPackageManager) SetListError(err error) {
-	m.listError = err
-}
-
-// MockPackageConfigLoader implements PackageConfigLoader for testing
-type MockPackageConfigLoader struct {
-	packages map[string][]PackageConfigItem
-	error    error
-}
-
-func NewMockPackageConfigLoader() *MockPackageConfigLoader {
-	return &MockPackageConfigLoader{
-		packages: make(map[string][]PackageConfigItem),
-	}
-}
-
-func (m *MockPackageConfigLoader) GetPackagesForManager(managerName string) ([]PackageConfigItem, error) {
-	if m.error != nil {
-		return nil, m.error
-	}
-	
-	packages, exists := m.packages[managerName]
-	if !exists {
-		return []PackageConfigItem{}, nil
-	}
-	
-	return packages, nil
-}
-
-func (m *MockPackageConfigLoader) SetPackages(managerName string, packages []PackageConfigItem) {
-	m.packages[managerName] = packages
-}
-
-func (m *MockPackageConfigLoader) SetError(err error) {
-	m.error = err
-}
-
 func TestNewPackageProvider(t *testing.T) {
-	manager := NewMockPackageManager()
-	configLoader := NewMockPackageConfigLoader()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	manager := NewMockPackageManager(ctrl)
+	configLoader := NewMockPackageConfigLoader(ctrl)
 	
 	provider := NewPackageProvider("homebrew", manager, configLoader)
 	
@@ -137,7 +37,12 @@ func TestNewPackageProvider(t *testing.T) {
 }
 
 func TestPackageProvider_Domain(t *testing.T) {
-	provider := NewPackageProvider("homebrew", NewMockPackageManager(), NewMockPackageConfigLoader())
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	manager := NewMockPackageManager(ctrl)
+	configLoader := NewMockPackageConfigLoader(ctrl)
+	provider := NewPackageProvider("homebrew", manager, configLoader)
 	
 	domain := provider.Domain()
 	if domain != "package" {
@@ -146,15 +51,18 @@ func TestPackageProvider_Domain(t *testing.T) {
 }
 
 func TestPackageProvider_GetConfiguredItems_Success(t *testing.T) {
-	manager := NewMockPackageManager()
-	configLoader := NewMockPackageConfigLoader()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	manager := NewMockPackageManager(ctrl)
+	configLoader := NewMockPackageConfigLoader(ctrl)
 	
-	// Set up test packages
-	configLoader.SetPackages("homebrew", []PackageConfigItem{
+	// Set up expectations
+	configLoader.EXPECT().GetPackagesForManager("homebrew").Return([]PackageConfigItem{
 		{Name: "git"},
 		{Name: "curl"},
 		{Name: "jq"},
-	})
+	}, nil)
 	
 	provider := NewPackageProvider("homebrew", manager, configLoader)
 	
@@ -189,9 +97,13 @@ func TestPackageProvider_GetConfiguredItems_Success(t *testing.T) {
 }
 
 func TestPackageProvider_GetConfiguredItems_Error(t *testing.T) {
-	manager := NewMockPackageManager()
-	configLoader := NewMockPackageConfigLoader()
-	configLoader.SetError(errors.New("config load failed"))
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	manager := NewMockPackageManager(ctrl)
+	configLoader := NewMockPackageConfigLoader(ctrl)
+	
+	configLoader.EXPECT().GetPackagesForManager("homebrew").Return(nil, errors.New("config load failed"))
 	
 	provider := NewPackageProvider("homebrew", manager, configLoader)
 	
@@ -202,9 +114,13 @@ func TestPackageProvider_GetConfiguredItems_Error(t *testing.T) {
 }
 
 func TestPackageProvider_GetActualItems_ManagerNotAvailable(t *testing.T) {
-	manager := NewMockPackageManager()
-	manager.SetAvailable(false)
-	configLoader := NewMockPackageConfigLoader()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	manager := NewMockPackageManager(ctrl)
+	configLoader := NewMockPackageConfigLoader(ctrl)
+	
+	manager.EXPECT().IsAvailable(gomock.Any()).Return(false, nil)
 	
 	provider := NewPackageProvider("homebrew", manager, configLoader)
 	
@@ -219,9 +135,14 @@ func TestPackageProvider_GetActualItems_ManagerNotAvailable(t *testing.T) {
 }
 
 func TestPackageProvider_GetActualItems_Success(t *testing.T) {
-	manager := NewMockPackageManager()
-	manager.SetInstalled([]string{"git", "curl", "wget"})
-	configLoader := NewMockPackageConfigLoader()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	manager := NewMockPackageManager(ctrl)
+	configLoader := NewMockPackageConfigLoader(ctrl)
+	
+	manager.EXPECT().IsAvailable(gomock.Any()).Return(true, nil)
+	manager.EXPECT().ListInstalled(gomock.Any()).Return([]string{"git", "curl", "wget"}, nil)
 	
 	provider := NewPackageProvider("homebrew", manager, configLoader)
 	
@@ -256,9 +177,14 @@ func TestPackageProvider_GetActualItems_Success(t *testing.T) {
 }
 
 func TestPackageProvider_GetActualItems_ListError(t *testing.T) {
-	manager := NewMockPackageManager()
-	manager.SetListError(errors.New("list failed"))
-	configLoader := NewMockPackageConfigLoader()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	manager := NewMockPackageManager(ctrl)
+	configLoader := NewMockPackageConfigLoader(ctrl)
+	
+	manager.EXPECT().IsAvailable(gomock.Any()).Return(true, nil)
+	manager.EXPECT().ListInstalled(gomock.Any()).Return(nil, errors.New("list failed"))
 	
 	provider := NewPackageProvider("homebrew", manager, configLoader)
 	
@@ -269,7 +195,12 @@ func TestPackageProvider_GetActualItems_ListError(t *testing.T) {
 }
 
 func TestPackageProvider_CreateItem(t *testing.T) {
-	provider := NewPackageProvider("npm", NewMockPackageManager(), NewMockPackageConfigLoader())
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	manager := NewMockPackageManager(ctrl)
+	configLoader := NewMockPackageConfigLoader(ctrl)
+	provider := NewPackageProvider("npm", manager, configLoader)
 	
 	tests := []struct {
 		name         string
@@ -355,15 +286,18 @@ func TestPackageProvider_CreateItem(t *testing.T) {
 }
 
 func TestPackageProvider_ContextCancellation(t *testing.T) {
-	manager := NewMockPackageManager()
-	configLoader := NewMockPackageConfigLoader()
-	provider := NewPackageProvider("homebrew", manager, configLoader)
-	
-	manager.SetInstalled([]string{"git", "curl"})
-	
 	t.Run("GetActualItems_ContextCancellation", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		manager := NewMockPackageManager(ctrl)
+		configLoader := NewMockPackageConfigLoader(ctrl)
+		provider := NewPackageProvider("homebrew", manager, configLoader)
+		
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // Cancel immediately
+		
+		// Context is checked before calling manager methods, so they should not be called
 		
 		_, err := provider.GetActualItems(ctx)
 		if err == nil {

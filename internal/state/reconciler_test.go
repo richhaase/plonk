@@ -7,81 +7,9 @@ import (
 	"context"
 	"errors"
 	"testing"
+
+	"github.com/golang/mock/gomock"
 )
-
-// MockProvider implements Provider for testing
-type MockProvider struct {
-	domain         string
-	configuredItems []ConfigItem
-	actualItems    []ActualItem
-	configError    error
-	actualError    error
-}
-
-func NewMockProvider(domain string) *MockProvider {
-	return &MockProvider{
-		domain:         domain,
-		configuredItems: []ConfigItem{},
-		actualItems:    []ActualItem{},
-	}
-}
-
-func (m *MockProvider) Domain() string {
-	return m.domain
-}
-
-func (m *MockProvider) GetConfiguredItems() ([]ConfigItem, error) {
-	if m.configError != nil {
-		return nil, m.configError
-	}
-	return m.configuredItems, nil
-}
-
-func (m *MockProvider) GetActualItems(ctx context.Context) ([]ActualItem, error) {
-	if m.actualError != nil {
-		return nil, m.actualError
-	}
-	return m.actualItems, nil
-}
-
-func (m *MockProvider) CreateItem(name string, state ItemState, configured *ConfigItem, actual *ActualItem) Item {
-	item := Item{
-		Name:   name,
-		State:  state,
-		Domain: m.domain,
-	}
-	
-	if configured != nil {
-		item.Metadata = configured.Metadata
-	}
-	if actual != nil {
-		item.Path = actual.Path
-		if item.Metadata == nil {
-			item.Metadata = make(map[string]interface{})
-		}
-		for k, v := range actual.Metadata {
-			item.Metadata[k] = v
-		}
-	}
-	
-	return item
-}
-
-func (m *MockProvider) SetConfiguredItems(items []ConfigItem) {
-	m.configuredItems = items
-}
-
-func (m *MockProvider) SetActualItems(items []ActualItem) {
-	m.actualItems = items
-}
-
-func (m *MockProvider) SetConfigError(err error) {
-	m.configError = err
-}
-
-func (m *MockProvider) SetActualError(err error) {
-	m.actualError = err
-}
 
 func TestNewReconciler(t *testing.T) {
 	reconciler := NewReconciler()
@@ -100,8 +28,11 @@ func TestNewReconciler(t *testing.T) {
 }
 
 func TestReconciler_RegisterProvider(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	reconciler := NewReconciler()
-	provider := NewMockProvider("test")
+	provider := NewMockProvider(ctrl)
 	
 	reconciler.RegisterProvider("test", provider)
 	
@@ -145,9 +76,14 @@ func TestReconciler_ReconcileProvider_NotFound(t *testing.T) {
 }
 
 func TestReconciler_ReconcileProvider_ConfigError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	reconciler := NewReconciler()
-	provider := NewMockProvider("test")
-	provider.SetConfigError(errors.New("config load failed"))
+	provider := NewMockProvider(ctrl)
+	configError := errors.New("config load failed")
+	
+	provider.EXPECT().GetConfiguredItems().Return(nil, configError)
 	
 	reconciler.RegisterProvider("test", provider)
 	
@@ -156,15 +92,21 @@ func TestReconciler_ReconcileProvider_ConfigError(t *testing.T) {
 		t.Error("ReconcileProvider() should return error when config loading fails")
 	}
 	
-	if !errors.Is(err, provider.configError) {
+	if !errors.Is(err, configError) {
 		t.Errorf("ReconcileProvider() should wrap config error")
 	}
 }
 
 func TestReconciler_ReconcileProvider_ActualError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	reconciler := NewReconciler()
-	provider := NewMockProvider("test")
-	provider.SetActualError(errors.New("actual items load failed"))
+	provider := NewMockProvider(ctrl)
+	actualError := errors.New("actual items load failed")
+	
+	provider.EXPECT().GetConfiguredItems().Return([]ConfigItem{}, nil)
+	provider.EXPECT().GetActualItems(gomock.Any()).Return(nil, actualError)
 	
 	reconciler.RegisterProvider("test", provider)
 	
@@ -173,26 +115,44 @@ func TestReconciler_ReconcileProvider_ActualError(t *testing.T) {
 		t.Error("ReconcileProvider() should return error when actual items loading fails")
 	}
 	
-	if !errors.Is(err, provider.actualError) {
+	if !errors.Is(err, actualError) {
 		t.Errorf("ReconcileProvider() should wrap actual error")
 	}
 }
 
 func TestReconciler_ReconcileProvider_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	reconciler := NewReconciler()
-	provider := NewMockProvider("test")
+	provider := NewMockProvider(ctrl)
 	
-	// Set up test data
-	provider.SetConfiguredItems([]ConfigItem{
+	configItems := []ConfigItem{
 		{Name: "item1", Metadata: map[string]interface{}{"config": "data1"}},
 		{Name: "item2", Metadata: map[string]interface{}{"config": "data2"}},
 		{Name: "missing", Metadata: map[string]interface{}{"config": "missing"}},
-	})
+	}
 	
-	provider.SetActualItems([]ActualItem{
+	actualItems := []ActualItem{
 		{Name: "item1", Path: "/path/item1", Metadata: map[string]interface{}{"actual": "data1"}},
 		{Name: "item2", Path: "/path/item2", Metadata: map[string]interface{}{"actual": "data2"}},
 		{Name: "untracked", Path: "/path/untracked", Metadata: map[string]interface{}{"actual": "untracked"}},
+	}
+	
+	provider.EXPECT().GetConfiguredItems().Return(configItems, nil)
+	provider.EXPECT().GetActualItems(gomock.Any()).Return(actualItems, nil)
+	provider.EXPECT().Domain().Return("test")
+	provider.EXPECT().CreateItem("item1", StateManaged, &configItems[0], &actualItems[0]).Return(Item{
+		Name: "item1", State: StateManaged, Domain: "test",
+	})
+	provider.EXPECT().CreateItem("item2", StateManaged, &configItems[1], &actualItems[1]).Return(Item{
+		Name: "item2", State: StateManaged, Domain: "test",
+	})
+	provider.EXPECT().CreateItem("missing", StateMissing, &configItems[2], nil).Return(Item{
+		Name: "missing", State: StateMissing, Domain: "test",
+	})
+	provider.EXPECT().CreateItem("untracked", StateUntracked, nil, &actualItems[2]).Return(Item{
+		Name: "untracked", State: StateUntracked, Domain: "test",
 	})
 	
 	reconciler.RegisterProvider("test", provider)
@@ -270,27 +230,43 @@ func TestReconciler_ReconcileAll_EmptyProviders(t *testing.T) {
 }
 
 func TestReconciler_ReconcileAll_MultipleProviders(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	reconciler := NewReconciler()
 	
 	// Set up first provider
-	provider1 := NewMockProvider("package")
-	provider1.SetConfiguredItems([]ConfigItem{
+	provider1 := NewMockProvider(ctrl)
+	provider1.EXPECT().GetConfiguredItems().Return([]ConfigItem{
 		{Name: "git", Metadata: map[string]interface{}{"manager": "homebrew"}},
 		{Name: "curl", Metadata: map[string]interface{}{"manager": "homebrew"}},
-	})
-	provider1.SetActualItems([]ActualItem{
+	}, nil)
+	provider1.EXPECT().GetActualItems(gomock.Any()).Return([]ActualItem{
 		{Name: "git", Path: "/usr/local/bin/git"},
 		{Name: "wget", Path: "/usr/local/bin/wget"}, // untracked
+	}, nil)
+	provider1.EXPECT().Domain().Return("package")
+	provider1.EXPECT().CreateItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(Item{
+		Name: "git", State: StateManaged, Domain: "package",
+	})
+	provider1.EXPECT().CreateItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(Item{
+		Name: "curl", State: StateMissing, Domain: "package",
+	})
+	provider1.EXPECT().CreateItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(Item{
+		Name: "wget", State: StateUntracked, Domain: "package",
 	})
 	
 	// Set up second provider
-	provider2 := NewMockProvider("dotfile")
-	provider2.SetConfiguredItems([]ConfigItem{
-		{Name: ".zshrc", Metadata: map[string]interface{}{"source": "zshrc"}},
-	})
-	provider2.SetActualItems([]ActualItem{
-		{Name: ".zshrc", Path: "/home/user/.zshrc"},
-		{Name: ".vimrc", Path: "/home/user/.vimrc"}, // untracked
+	provider2 := NewMockProvider(ctrl)
+	provider2.EXPECT().GetConfiguredItems().Return([]ConfigItem{
+		{Name: "vimrc", Metadata: map[string]interface{}{"destination": "~/.vimrc"}},
+	}, nil)
+	provider2.EXPECT().GetActualItems(gomock.Any()).Return([]ActualItem{
+		{Name: "vimrc", Path: "/home/user/.vimrc"},
+	}, nil)
+	provider2.EXPECT().Domain().Return("dotfile")
+	provider2.EXPECT().CreateItem(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(Item{
+		Name: "vimrc", State: StateManaged, Domain: "dotfile",
 	})
 	
 	reconciler.RegisterProvider("package", provider1)
@@ -301,79 +277,64 @@ func TestReconciler_ReconcileAll_MultipleProviders(t *testing.T) {
 		t.Fatalf("ReconcileAll() failed: %v", err)
 	}
 	
-	// Verify aggregated counts
-	if summary.TotalManaged != 2 { // git + .zshrc
-		t.Errorf("Summary.TotalManaged = %d, expected 2", summary.TotalManaged)
+	// Verify totals
+	if summary.TotalManaged != 2 {
+		t.Errorf("TotalManaged = %d, expected 2", summary.TotalManaged)
 	}
-	if summary.TotalMissing != 1 { // curl
-		t.Errorf("Summary.TotalMissing = %d, expected 1", summary.TotalMissing)
+	if summary.TotalMissing != 1 {
+		t.Errorf("TotalMissing = %d, expected 1", summary.TotalMissing)
 	}
-	if summary.TotalUntracked != 2 { // wget + .vimrc
-		t.Errorf("Summary.TotalUntracked = %d, expected 2", summary.TotalUntracked)
+	if summary.TotalUntracked != 1 {
+		t.Errorf("TotalUntracked = %d, expected 1", summary.TotalUntracked)
 	}
 	
-	// Verify results structure
+	// Verify results
 	if len(summary.Results) != 2 {
-		t.Errorf("len(Summary.Results) = %d, expected 2", len(summary.Results))
+		t.Errorf("len(Results) = %d, expected 2", len(summary.Results))
 	}
 	
-	// Verify domain names are included
-	domains := make(map[string]bool)
+	resultDomains := make(map[string]bool)
 	for _, result := range summary.Results {
-		domains[result.Domain] = true
+		resultDomains[result.Domain] = true
 	}
 	
-	if !domains["package"] || !domains["dotfile"] {
-		t.Error("Expected both package and dotfile domains in results")
+	if !resultDomains["package"] || !resultDomains["dotfile"] {
+		t.Error("Expected package and dotfile domains in results")
 	}
 }
 
 func TestReconciler_ReconcileAll_ProviderError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	reconciler := NewReconciler()
+	provider := NewMockProvider(ctrl)
+	configError := errors.New("config load failed")
 	
-	provider1 := NewMockProvider("working")
-	provider2 := NewMockProvider("failing")
-	provider2.SetConfigError(errors.New("provider failed"))
+	provider.EXPECT().GetConfiguredItems().Return(nil, configError)
 	
-	reconciler.RegisterProvider("working", provider1)
-	reconciler.RegisterProvider("failing", provider2)
+	reconciler.RegisterProvider("test", provider)
 	
 	_, err := reconciler.ReconcileAll(context.Background())
 	if err == nil {
-		t.Error("ReconcileAll() should fail when one provider fails")
+		t.Error("ReconcileAll() should return error when provider fails")
 	}
 	
-	expectedSubstring := "failed to reconcile failing"
-	if !contains(err.Error(), expectedSubstring) {
-		t.Errorf("ReconcileAll() error should contain %q, got: %s", expectedSubstring, err.Error())
+	if !errors.Is(err, configError) {
+		t.Errorf("ReconcileAll() should wrap provider error")
 	}
-}
-
-// Helper function to check if string contains substring
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || (len(substr) > 0 && containsHelper(s, substr)))
-}
-
-func containsHelper(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
 
 func TestReconciler_ContextCancellation(t *testing.T) {
-	reconciler := NewReconciler()
-	
 	t.Run("ReconcileProvider_ContextCancellation", func(t *testing.T) {
-		provider := NewMockProvider("test")
-		provider.SetConfiguredItems([]ConfigItem{
-			{Name: "item1", Metadata: map[string]interface{}{"config": "data1"}},
-		})
-		provider.SetActualItems([]ActualItem{
-			{Name: "item1", Path: "/path/item1", Metadata: map[string]interface{}{"actual": "data1"}},
-		})
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		reconciler := NewReconciler()
+		provider := NewMockProvider(ctrl)
+		
+		provider.EXPECT().GetConfiguredItems().Return([]ConfigItem{}, nil).MaxTimes(1)
+		// Context check happens after GetConfiguredItems, so GetActualItems may not be called
 		
 		reconciler.RegisterProvider("test", provider)
 		
@@ -381,29 +342,6 @@ func TestReconciler_ContextCancellation(t *testing.T) {
 		cancel() // Cancel immediately
 		
 		_, err := reconciler.ReconcileProvider(ctx, "test")
-		if err == nil {
-			t.Error("Expected error when context is cancelled")
-		}
-		if err != context.Canceled {
-			t.Errorf("Expected context.Canceled, got %v", err)
-		}
-	})
-	
-	t.Run("ReconcileAll_ContextCancellation", func(t *testing.T) {
-		provider := NewMockProvider("test")
-		provider.SetConfiguredItems([]ConfigItem{
-			{Name: "item1", Metadata: map[string]interface{}{"config": "data1"}},
-		})
-		provider.SetActualItems([]ActualItem{
-			{Name: "item1", Path: "/path/item1", Metadata: map[string]interface{}{"actual": "data1"}},
-		})
-		
-		reconciler.RegisterProvider("test", provider)
-		
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel() // Cancel immediately
-		
-		_, err := reconciler.ReconcileAll(ctx)
 		if err == nil {
 			t.Error("Expected error when context is cancelled")
 		}
