@@ -1,0 +1,9 @@
+settings:
+  default_manager: homebrew
+homebrew:
+  brews:
+    - git
+    - curl
+dotfiles:
+  - source: gitconfig
+    destination: ~/.gitconfig
