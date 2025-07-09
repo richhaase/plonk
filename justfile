@@ -31,12 +31,6 @@ test:
     go test ./...
     @echo "✅ Unit tests passed!"
 
-# Run all tests
-test-all:
-    @echo "Running all tests..."
-    @just test
-    @echo "✅ All tests passed!"
-
 # Clean build artifacts
 clean:
     @echo "Cleaning build artifacts..."
@@ -64,15 +58,6 @@ precommit:
     @just test
     @just security
     @echo "✅ Pre-commit checks passed!"
-
-# Run full pre-commit checks
-precommit-full:
-    @echo "Running full pre-commit checks..."
-    @just format
-    @just lint
-    @just test
-    @just security
-    @echo "✅ Full pre-commit checks passed!"
 
 # Format Go code and organize imports
 format:
