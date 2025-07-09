@@ -75,7 +75,7 @@ func runDotAdd(cmd *cobra.Command, args []string) error {
 				Settings: config.Settings{
 					DefaultManager: "homebrew",
 				},
-				Dotfiles: []config.DotfileEntry{},
+				Dotfiles: []string{},
 			}
 		} else {
 			return fmt.Errorf("failed to load config: %w", err)
@@ -87,8 +87,8 @@ func runDotAdd(cmd *cobra.Command, args []string) error {
 
 	// Check if already managed
 	for _, entry := range cfg.Dotfiles {
-		if entry.Destination == destination || (entry.Source != "" && entry.Source == source) {
-			return fmt.Errorf("dotfile is already managed: %s", destination)
+		if entry == source {
+			return fmt.Errorf("dotfile is already managed: %s", source)
 		}
 	}
 
@@ -99,11 +99,7 @@ func runDotAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Add to configuration
-	newEntry := config.DotfileEntry{
-		Source:      source,
-		Destination: destination,
-	}
-	cfg.Dotfiles = append(cfg.Dotfiles, newEntry)
+	cfg.Dotfiles = append(cfg.Dotfiles, source)
 
 	// Save configuration
 	if err := saveDotfileConfig(cfg, configDir); err != nil {

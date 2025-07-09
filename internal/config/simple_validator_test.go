@@ -27,9 +27,9 @@ func TestSimpleValidator_ValidateConfig_ValidConfigs(t *testing.T) {
 				Settings: Settings{
 					DefaultManager: "homebrew",
 				},
-				Dotfiles: []DotfileEntry{
-					{Source: "zshrc", Destination: "~/.zshrc"},
-					{Source: "vimrc", Destination: "~/.vimrc"},
+				Dotfiles: []string{
+					"zshrc",
+					"vimrc",
 				},
 				Homebrew: []HomebrewPackage{
 					{Name: "git"},
@@ -90,8 +90,8 @@ func TestSimpleValidator_ValidateConfig_InvalidConfigs(t *testing.T) {
 			name: "invalid file path",
 			config: &Config{
 				Settings: Settings{DefaultManager: "homebrew"},
-				Dotfiles: []DotfileEntry{
-					{Source: "/absolute/path", Destination: "~/.config"},
+				Dotfiles: []string{
+					"/absolute/path",
 				},
 			},
 			expectError: "invalid file path",
@@ -137,10 +137,8 @@ func TestSimpleValidator_ValidateConfigFromYAML_ValidYAML(t *testing.T) {
   default_manager: homebrew
 
 dotfiles:
-  - source: zshrc
-    destination: ~/.zshrc
-  - source: vimrc
-    destination: ~/.vimrc
+  - zshrc
+  - vimrc
 
 homebrew:
   - git

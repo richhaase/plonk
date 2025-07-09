@@ -371,8 +371,7 @@ settings:
 homebrew: []
 npm: []
 dotfiles:
-  - source: test_bashrc
-    destination: ~/.bashrc
+  - test_bashrc
 `
 	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)

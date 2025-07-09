@@ -201,8 +201,7 @@ dotfiles: []
 # dotfiles:
 #   - zshrc
 #   - gitconfig
-#   - source: config/nvim/
-#     destination: ~/.config/nvim/
+#   - config/nvim
 `
 
 	return os.WriteFile(configPath, []byte(defaultConfig), 0644)

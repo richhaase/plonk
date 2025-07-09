@@ -17,12 +17,9 @@ func TestLoadConfig_BasicStructure(t *testing.T) {
   default_manager: homebrew
 
 dotfiles:
-  - source: zshrc
-    destination: ~/.zshrc
-  - source: zshenv
-    destination: ~/.zshenv
-  - source: plugins.zsh
-    destination: ~/.config/plugins.zsh
+  - zshrc
+  - zshenv
+  - plugins.zsh
 
 homebrew:
   - aichat
@@ -53,17 +50,17 @@ npm:
 	}
 
 	// Verify dotfiles
-	expectedDotfiles := []DotfileEntry{
-		{Source: "zshrc", Destination: "~/.zshrc"},
-		{Source: "zshenv", Destination: "~/.zshenv"},
-		{Source: "plugins.zsh", Destination: "~/.config/plugins.zsh"},
+	expectedDotfiles := []string{
+		"zshrc",
+		"zshenv",
+		"plugins.zsh",
 	}
 	if len(config.Dotfiles) != len(expectedDotfiles) {
 		t.Errorf("Expected %d dotfiles, got %d", len(expectedDotfiles), len(config.Dotfiles))
 	}
 	for i, expected := range expectedDotfiles {
-		if i >= len(config.Dotfiles) || config.Dotfiles[i].Source != expected.Source || config.Dotfiles[i].Destination != expected.Destination {
-			t.Errorf("Expected dotfile %+v, got %+v", expected, config.Dotfiles[i])
+		if i >= len(config.Dotfiles) || config.Dotfiles[i] != expected {
+			t.Errorf("Expected dotfile %s, got %s", expected, config.Dotfiles[i])
 		}
 	}
 
@@ -157,10 +154,10 @@ func TestSourceToTarget(t *testing.T) {
 
 func TestGetDotfileTargets(t *testing.T) {
 	config := &Config{
-		Dotfiles: []DotfileEntry{
-			{Source: "zshrc", Destination: "~/.zshrc"},
-			{Source: "config/nvim/", Destination: "~/.config/nvim/"},
-			{Source: "dot_gitconfig", Destination: "~/.gitconfig"},
+		Dotfiles: []string{
+			"zshrc",
+			"config/nvim/",
+			"dot_gitconfig",
 		},
 	}
 

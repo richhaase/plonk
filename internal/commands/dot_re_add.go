@@ -72,7 +72,7 @@ func runDotReAdd(cmd *cobra.Command, args []string) error {
 	// Check if already managed
 	var found bool
 	for _, entry := range cfg.Dotfiles {
-		if entry.Destination == destination {
+		if entry == source {
 			found = true
 			break
 		}

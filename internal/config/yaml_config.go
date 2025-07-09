@@ -26,7 +26,7 @@ import (
 type Config struct {
 	Settings Settings       `yaml:"settings" validate:"required"`
 	Backup   BackupConfig   `yaml:"backup,omitempty"`
-	Dotfiles []DotfileEntry `yaml:"dotfiles,omitempty" validate:"dive"`
+	Dotfiles []string `yaml:"dotfiles,omitempty" validate:"dive,file_path"`
 	Homebrew []HomebrewPackage `yaml:"homebrew,omitempty" validate:"dive"`
 	NPM      []NPMPackage   `yaml:"npm,omitempty" validate:"dive"`
 }
@@ -45,11 +45,12 @@ type BackupConfig struct {
 	KeepCount int    `yaml:"keep_count,omitempty"`
 }
 
-// DotfileEntry represents a dotfile configuration entry.
-type DotfileEntry struct {
-	Source      string `yaml:"source,omitempty" validate:"omitempty,file_path"`
-	Destination string `yaml:"destination,omitempty" validate:"omitempty,file_path"`
-}
+// DotfileEntry represents a dotfile configuration entry (now just a string path).
+// The path is automatically mapped using conventions:
+// - "zshrc" -> "~/.zshrc"
+// - "config/nvim" -> "~/.config/nvim"
+// - "dot_gitconfig" -> "~/.gitconfig"
+type DotfileEntry = string
 
 
 // HomebrewPackage can be a simple string or complex object.
@@ -125,35 +126,8 @@ func (n *NPMPackage) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
-// MarshalYAML implements custom marshaling for DotfileEntry.
-func (d DotfileEntry) MarshalYAML() (interface{}, error) {
-	// If only Destination is set (simple case), marshal as a simple string
-	if d.Source == "" && d.Destination != "" {
-		return d.Destination, nil
-	}
-	// Otherwise, marshal as a full object
-	type dotfileEntryAlias DotfileEntry
-	return dotfileEntryAlias(d), nil
-}
-
-// UnmarshalYAML implements custom unmarshaling for DotfileEntry.
-func (d *DotfileEntry) UnmarshalYAML(node *yaml.Node) error {
-	if node.Kind == yaml.ScalarNode {
-		// Simple string case - treat as destination
-		d.Destination = node.Value
-		d.Source = "" // Will be inferred later
-		return nil
-	}
-
-	// Complex object case.
-	type dotfileEntryAlias DotfileEntry
-	var entry dotfileEntryAlias
-	if err := node.Decode(&entry); err != nil {
-		return err
-	}
-	*d = DotfileEntry(entry)
-	return nil
-}
+// Note: DotfileEntry is now a simple string type alias, so no custom marshaling is needed.
+// YAML will automatically handle []string serialization/deserialization.
 
 // LoadConfig loads configuration from plonk.yaml and optionally plonk.local.yaml.
 func LoadConfig(configDir string) (*Config, error) {
@@ -242,19 +216,9 @@ func loadConfigFile(path string, config *Config) error {
 func (c *Config) GetDotfileTargets() map[string]string {
 	result := make(map[string]string)
 	for _, dotfile := range c.Dotfiles {
-		source := dotfile.Source
-		destination := dotfile.Destination
-		
-		// If source is empty, infer from destination
-		if source == "" {
-			source = TargetToSource(destination)
-		}
-		
-		// If destination is empty, infer from source
-		if destination == "" {
-			destination = sourceToTarget(source)
-		}
-		
+		// dotfile is now just a string representing the source path
+		source := dotfile
+		destination := sourceToTarget(source)
 		result[source] = destination
 	}
 	return result

@@ -12,12 +12,12 @@ func TestConfigAdapter_GetDotfileTargets(t *testing.T) {
 		Settings: Settings{
 			DefaultManager: "homebrew",
 		},
-		Dotfiles: []DotfileEntry{
-			{Source: "zshrc", Destination: "~/.zshrc"},
-			{Source: "gitconfig", Destination: "~/.gitconfig"},
-			{Source: "config/nvim/", Destination: "~/.config/nvim/"},
-			{Source: "", Destination: "~/.vimrc"}, // Source should be inferred
-			{Source: "bashrc", Destination: ""},   // Destination should be inferred
+		Dotfiles: []string{
+			"zshrc",
+			"gitconfig",
+			"config/nvim/",
+			"dot_vimrc",
+			"bashrc",
 		},
 	}
 	
@@ -34,8 +34,8 @@ func TestConfigAdapter_GetDotfileTargets(t *testing.T) {
 		"zshrc":        "~/.zshrc",
 		"gitconfig":    "~/.gitconfig",
 		"config/nvim/": "~/.config/nvim/",
-		"dot_vimrc":    "~/.vimrc",      // Should be inferred from destination
-		"bashrc":       "~/.bashrc",     // Should be inferred from source
+		"dot_vimrc":    "~/.vimrc",
+		"bashrc":       "~/.bashrc",
 	}
 	
 	for source, expectedDest := range expectedTargets {
@@ -211,10 +211,10 @@ func TestStateDotfileConfigAdapter(t *testing.T) {
 		Settings: Settings{
 			DefaultManager: "homebrew",
 		},
-		Dotfiles: []DotfileEntry{
-			{Source: "zshrc", Destination: "~/.zshrc"},
-			{Source: "gitconfig", Destination: "~/.gitconfig"},
-			{Source: "config/nvim/", Destination: "~/.config/nvim/"},
+		Dotfiles: []string{
+			"zshrc",
+			"gitconfig",
+			"config/nvim/",
 		},
 	}
 	

@@ -78,9 +78,9 @@ settings:
   operation_timeout: 600  # 10 minutes
 
 dotfiles:
-  - zshrc                 # Simple form
-  - source: config/nvim/  # Directory form
-    destination: ~/.config/nvim/
+  - zshrc                 # Maps to ~/.zshrc
+  - config/nvim           # Maps to ~/.config/nvim
+  - dot_gitconfig         # Maps to ~/.gitconfig
 
 homebrew: [git, neovim, firefox]
 ```
