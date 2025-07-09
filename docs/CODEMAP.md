@@ -17,9 +17,15 @@ A quick reference guide to navigate the Plonk codebase - a unified package and d
 - `apply.go` - Unified apply command (packages and dotfiles)
 - `import.go` - Import existing packages and dotfiles into plonk management
 - `env.go` - Show environment information for debugging
+- `doctor.go` - Comprehensive health checks and diagnostics
+- `search.go` - Intelligent package search across package managers
+- `info.go` - Detailed package information display
 - `pkg_*.go` - Package management commands (add, remove, list)
 - `dot_*.go` - Dotfile management commands (add, list, re-add)
-- `config_*.go` - Configuration commands (show, validate, edit)
+- `config.go` - Configuration base command
+- `config_show.go` - Display configuration content
+- `config_validate.go` - Validate configuration syntax and structure
+- `config_edit.go` - Edit configuration in preferred editor
 - `output.go` - Output formatting utilities
 - `errors.go` - Command-level error handling
 

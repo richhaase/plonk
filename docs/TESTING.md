@@ -114,10 +114,13 @@ Key helper functions available:
 - **Apply command** (`apply_test.go`) - Unified package and dotfile application
 - **Import command** (`import_test.go`, `import_modes_test.go`, `import_large_test.go`) - Package and dotfile discovery and import
 - **Config commands** (`config_commands_test.go`) - Configuration validation, editing, and environment information
+- **Phase 2 commands** (`phase2_commands_test.go`) - Doctor, search, and info command functionality
 - **Package management** (`packages_test.go`)
 - **Configuration validation** (`config_test.go`)
-- **Dotfile operations** (`dotfiles_test.go`)
+- **Dotfile operations** (`dotfiles_test.go`, `dotfile_directory_test.go`) - File and directory handling
 - **State management** (`state_test.go`)
+- **Status directory** (`status_directory_test.go`) - Directory dotfile status tracking
+- **Workflow tests** (`workflow_test.go`) - End-to-end user workflows
 - **Cross-manager workflows** (`cross_manager_test.go`)
 - **Error recovery** (`error_recovery_test.go`)
 - **Security validation** (`security_test.go`)
