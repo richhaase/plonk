@@ -243,12 +243,17 @@ plonk dot list [managed|missing|untracked] [--output format]
 
 ### `plonk dot add <dotfile>`
 
-Add dotfile to plonk management.
+Add or update dotfile in plonk management.
 
 **Usage:**
 ```bash
 plonk dot add <dotfile>
 ```
+
+**Behavior:**
+- **New files**: Copies file to plonk config and marks as managed
+- **Existing files**: Updates the managed copy with current system version
+- **Directories**: Recursively processes all files, respecting ignore patterns
 
 **Path Resolution:**
 - **Absolute paths**: `plonk dot add /home/user/.vimrc`
@@ -265,14 +270,6 @@ plonk dot add ~/.config/nvim/   # Add entire directory
 cd ~/.config/nvim && plonk dot add init.lua  # Finds ./init.lua
 ```
 
-### `plonk dot re-add <dotfile>`
-
-Re-add existing dotfile (overwrites managed copy).
-
-**Usage:**
-```bash
-plonk dot re-add <dotfile>
-```
 
 ## Configuration Management
 

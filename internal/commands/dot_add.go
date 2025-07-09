@@ -216,12 +216,24 @@ type DotfileAddOutput struct {
 
 // TableOutput generates human-friendly table output for dotfile add
 func (d DotfileAddOutput) TableOutput() string {
+	var actionText string
+	if d.Action == "updated" {
+		actionText = "Updated existing dotfile in plonk configuration"
+	} else {
+		actionText = "Added dotfile to plonk configuration"
+	}
+	
 	output := "Dotfile Add\n===========\n\n"
-	output += fmt.Sprintf("✅ Added dotfile to plonk configuration\n")
+	output += fmt.Sprintf("✅ %s\n", actionText)
 	output += fmt.Sprintf("   Source: %s\n", d.Source)
 	output += fmt.Sprintf("   Destination: %s\n", d.Destination)
 	output += fmt.Sprintf("   Original: %s\n", d.Path)
-	output += "\nThe dotfile has been copied to your plonk config directory and added to plonk.yaml\n"
+	
+	if d.Action == "updated" {
+		output += "\nThe system file has been copied to your plonk config directory, overwriting the previous version\n"
+	} else {
+		output += "\nThe dotfile has been copied to your plonk config directory\n"
+	}
 	return output
 }
 
@@ -244,8 +256,9 @@ func addSingleFile(filePath, homeDir, configDir string, format OutputFormat) err
 	// Check if already managed by checking if source file exists in config dir
 	adapter := config.NewConfigAdapter(cfg)
 	dotfileTargets := adapter.GetDotfileTargets()
+	action := "added"
 	if _, exists := dotfileTargets[source]; exists {
-		return errors.NewError(errors.ErrInvalidInput, errors.DomainDotfiles, "check", fmt.Sprintf("dotfile is already managed: %s", source))
+		action = "updated"
 	}
 
 	// Copy dotfile to plonk config directory
@@ -261,7 +274,7 @@ func addSingleFile(filePath, homeDir, configDir string, format OutputFormat) err
 	outputData := DotfileAddOutput{
 		Source:      source,
 		Destination: destination,
-		Action:      "added",
+		Action:      action,
 		Path:        filePath,
 	}
 
@@ -336,8 +349,9 @@ func addSingleFileInternal(filePath, homeDir, configDir string, cfg *config.Conf
 	// Check if already managed by checking if source file exists in config dir
 	adapter := config.NewConfigAdapter(cfg)
 	dotfileTargets := adapter.GetDotfileTargets()
+	action := "added"
 	if _, exists := dotfileTargets[source]; exists {
-		return DotfileAddOutput{}, fmt.Errorf("dotfile is already managed: %s", source)
+		action = "updated"
 	}
 
 	// Copy file to plonk config directory
@@ -355,7 +369,7 @@ func addSingleFileInternal(filePath, homeDir, configDir string, cfg *config.Conf
 	return DotfileAddOutput{
 		Source:      source,
 		Destination: destination,
-		Action:      "added",
+		Action:      action,
 		Path:        filePath,
 	}, nil
 }
@@ -413,10 +427,31 @@ type DotfileBatchAddOutput struct {
 // TableOutput generates human-friendly table output for batch dotfile add
 func (d DotfileBatchAddOutput) TableOutput() string {
 	output := fmt.Sprintf("Dotfile Directory Add\n=====================\n\n")
-	output += fmt.Sprintf("✅ Added %d files to plonk configuration\n\n", d.TotalFiles)
+	
+	// Count added vs updated
+	var addedCount, updatedCount int
+	for _, file := range d.AddedFiles {
+		if file.Action == "updated" {
+			updatedCount++
+		} else {
+			addedCount++
+		}
+	}
+	
+	if addedCount > 0 && updatedCount > 0 {
+		output += fmt.Sprintf("✅ Processed %d files (%d added, %d updated)\n\n", d.TotalFiles, addedCount, updatedCount)
+	} else if updatedCount > 0 {
+		output += fmt.Sprintf("✅ Updated %d files in plonk configuration\n\n", d.TotalFiles)
+	} else {
+		output += fmt.Sprintf("✅ Added %d files to plonk configuration\n\n", d.TotalFiles)
+	}
 	
 	for _, file := range d.AddedFiles {
-		output += fmt.Sprintf("   %s → %s\n", file.Destination, file.Source)
+		actionIndicator := "+"
+		if file.Action == "updated" {
+			actionIndicator = "↻"
+		}
+		output += fmt.Sprintf("   %s %s → %s\n", actionIndicator, file.Destination, file.Source)
 	}
 	
 	if len(d.Errors) > 0 {
