@@ -40,18 +40,17 @@ settings:
 settings:
   default_manager: homebrew
 homebrew:
-  packages:
-    - name: git
-    - name: curl
-    - name: firefox
+  - name: git
+  - name: curl
+  - name: firefox
 npm:
   - name: typescript
   - name: prettier
 `,
 			expectError: false,
 			validateFn: func(cfg *Config) error {
-				if len(cfg.Homebrew.Packages) != 3 {
-					t.Errorf("Expected 3 homebrew packages, got %d", len(cfg.Homebrew.Packages))
+				if len(cfg.Homebrew) != 3 {
+					t.Errorf("Expected 3 homebrew packages, got %d", len(cfg.Homebrew))
 				}
 				if len(cfg.NPM) != 2 {
 					t.Errorf("Expected 2 npm packages, got %d", len(cfg.NPM))
@@ -175,8 +174,7 @@ func TestYAMLConfigService_LoadConfigFromFile(t *testing.T) {
 settings:
   default_manager: homebrew
 homebrew:
-  packages:
-    - name: git
+  - name: git
 `
 	
 	if _, err := tempFile.WriteString(testConfig); err != nil {
@@ -194,8 +192,8 @@ homebrew:
 		t.Errorf("Expected default_manager to be 'homebrew', got %s", config.Settings.DefaultManager)
 	}
 	
-	if len(config.Homebrew.Packages) != 1 {
-		t.Errorf("Expected 1 homebrew package, got %d", len(config.Homebrew.Packages))
+	if len(config.Homebrew) != 1 {
+		t.Errorf("Expected 1 homebrew package, got %d", len(config.Homebrew))
 	}
 }
 
@@ -215,11 +213,9 @@ func TestYAMLConfigService_SaveConfigToWriter(t *testing.T) {
 		Settings: Settings{
 			DefaultManager: "homebrew",
 		},
-		Homebrew: HomebrewConfig{
-			Packages: []HomebrewPackage{
-				{Name: "git"},
-				{Name: "curl"},
-			},
+		Homebrew: []HomebrewPackage{
+			{Name: "git"},
+			{Name: "curl"},
 		},
 		NPM: []NPMPackage{
 			{Name: "typescript"},
@@ -254,10 +250,8 @@ func TestYAMLConfigService_SaveConfigToFile(t *testing.T) {
 		Settings: Settings{
 			DefaultManager: "homebrew",
 		},
-		Homebrew: HomebrewConfig{
-			Packages: []HomebrewPackage{
-				{Name: "git"},
-			},
+		Homebrew: []HomebrewPackage{
+			{Name: "git"},
 		},
 	}
 	
@@ -434,8 +428,7 @@ func TestYAMLConfigService_LoadConfig_Integration(t *testing.T) {
 settings:
   default_manager: homebrew
 homebrew:
-  packages:
-    - name: git
+  - name: git
 `
 	
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
@@ -453,8 +446,8 @@ homebrew:
 		t.Errorf("Expected default_manager to be 'homebrew', got %s", config.Settings.DefaultManager)
 	}
 	
-	if len(config.Homebrew.Packages) != 1 {
-		t.Errorf("Expected 1 homebrew package, got %d", len(config.Homebrew.Packages))
+	if len(config.Homebrew) != 1 {
+		t.Errorf("Expected 1 homebrew package, got %d", len(config.Homebrew))
 	}
 }
 

@@ -162,7 +162,7 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 func isPackageInConfig(cfg *config.Config, packageName, targetManager string) bool {
 	switch targetManager {
 	case "homebrew":
-		for _, pkg := range cfg.Homebrew.Packages {
+		for _, pkg := range cfg.Homebrew {
 			if pkg.Name == packageName {
 				return true
 			}
@@ -185,7 +185,7 @@ func addPackageToConfig(cfg *config.Config, packageName, targetManager string) e
 		newPackage := config.HomebrewPackage{
 			Name: packageName,
 		}
-		cfg.Homebrew.Packages = append(cfg.Homebrew.Packages, newPackage)
+		cfg.Homebrew = append(cfg.Homebrew, newPackage)
 	case "npm":
 		newPackage := config.NPMPackage{
 			Name: packageName,

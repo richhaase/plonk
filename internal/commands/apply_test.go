@@ -97,8 +97,7 @@ func TestApplyCommand_OutputFormat(t *testing.T) {
 	configContent := `
 settings:
   default_manager: homebrew
-homebrew:
-  brews: []
+homebrew: []
 npm: []
 dotfiles: []
 `
@@ -173,8 +172,7 @@ func TestApplyCommand_EmptyConfig(t *testing.T) {
 	configContent := `
 settings:
   default_manager: homebrew
-homebrew:
-  brews: []
+homebrew: []
 npm: []
 dotfiles: []
 `
@@ -221,8 +219,7 @@ func TestApplyCommand_DryRunFlag(t *testing.T) {
 settings:
   default_manager: homebrew
 homebrew:
-  brews:
-    - nonexistent-test-package
+  - nonexistent-test-package
 npm: []
 dotfiles: []
 `
@@ -371,8 +368,7 @@ func TestApplyCommand_Integration(t *testing.T) {
 	configContent := `
 settings:
   default_manager: homebrew
-homebrew:
-  brews: []
+homebrew: []
 npm: []
 dotfiles:
   - source: test_bashrc
@@ -436,8 +432,7 @@ func TestApplyCommand_Timeout(t *testing.T) {
 	configContent := `
 settings:
   default_manager: homebrew
-homebrew:
-  brews: []
+homebrew: []
 npm: []
 dotfiles: []
 `

@@ -31,11 +31,9 @@ func TestSimpleValidator_ValidateConfig_ValidConfigs(t *testing.T) {
 					{Source: "zshrc", Destination: "~/.zshrc"},
 					{Source: "vimrc", Destination: "~/.vimrc"},
 				},
-				Homebrew: HomebrewConfig{
-					Packages: []HomebrewPackage{
-						{Name: "git"},
-						{Name: "neovim"},
-					},
+				Homebrew: []HomebrewPackage{
+					{Name: "git"},
+					{Name: "neovim"},
 				},
 				NPM: []NPMPackage{
 					{Name: "@vue/cli"},
@@ -82,10 +80,8 @@ func TestSimpleValidator_ValidateConfig_InvalidConfigs(t *testing.T) {
 			name: "invalid package name",
 			config: &Config{
 				Settings: Settings{DefaultManager: "homebrew"},
-				Homebrew: HomebrewConfig{
-					Packages: []HomebrewPackage{
-						{Name: "invalid package name"},
-					},
+				Homebrew: []HomebrewPackage{
+					{Name: "invalid package name"},
 				},
 			},
 			expectError: "invalid package name",
@@ -147,9 +143,8 @@ dotfiles:
     destination: ~/.vimrc
 
 homebrew:
-  packages:
-    - git
-    - name: neovim
+  - git
+  - name: neovim
 
 npm:
   - "@vue/cli"`,
@@ -192,8 +187,7 @@ func TestSimpleValidator_ValidateConfigFromYAML_InvalidYAML(t *testing.T) {
 			yaml: `settings:
   default_manager: homebrew
 homebrew:
-  packages:
-    - "invalid package"`,
+  - "invalid package"`,
 			expectError: "invalid package name",
 		},
 	}

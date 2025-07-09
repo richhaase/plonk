@@ -180,29 +180,23 @@ settings:
   operation_timeout: 600  # 10 minutes
 
 # Package definitions
-homebrew:
-  brews: []
-  casks: []
+homebrew: []
 
-npm:
-  packages: []
+npm: []
 
 # Dotfile definitions
 dotfiles: []
 
 # Example configuration:
 # homebrew:
-#   brews:
-#     - git
-#     - neovim
-#   casks:
-#     - firefox
-#     - visual-studio-code
+#   - git
+#   - neovim
+#   - firefox
+#   - visual-studio-code
 #
 # npm:
-#   packages:
-#     - prettier
-#     - typescript
+#   - prettier
+#   - typescript
 #
 # dotfiles:
 #   - zshrc

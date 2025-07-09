@@ -82,8 +82,7 @@ dotfiles:
   - source: config/nvim/  # Directory form
     destination: ~/.config/nvim/
 
-homebrew:
-  packages: [git, neovim, firefox]
+homebrew: [git, neovim, firefox]
 ```
 
 ### 2. State Management (`internal/state/`)

@@ -150,9 +150,9 @@ func runPkgRemove(cmd *cobra.Command, args []string) error {
 // Returns the manager name and whether the package was found
 func findAndRemovePackageFromConfig(cfg *config.Config, packageName string) (string, bool) {
 	// Check homebrew packages
-	for i, pkg := range cfg.Homebrew.Packages {
+	for i, pkg := range cfg.Homebrew {
 		if pkg.Name == packageName {
-			cfg.Homebrew.Packages = append(cfg.Homebrew.Packages[:i], cfg.Homebrew.Packages[i+1:]...)
+			cfg.Homebrew = append(cfg.Homebrew[:i], cfg.Homebrew[i+1:]...)
 			return "homebrew", true
 		}
 	}

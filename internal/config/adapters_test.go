@@ -52,14 +52,12 @@ func TestConfigAdapter_GetPackagesForManager(t *testing.T) {
 		Settings: Settings{
 			DefaultManager: "homebrew",
 		},
-		Homebrew: HomebrewConfig{
-			Packages: []HomebrewPackage{
-				{Name: "git"},
-				{Name: "curl"},
-				{Name: "htop"},
-				{Name: "firefox"},
-				{Name: "vscode"},
-			},
+		Homebrew: []HomebrewPackage{
+			{Name: "git"},
+			{Name: "curl"},
+			{Name: "htop"},
+			{Name: "firefox"},
+			{Name: "vscode"},
 		},
 		NPM: []NPMPackage{
 			{Name: "typescript"},
@@ -143,11 +141,9 @@ func TestStatePackageConfigAdapter(t *testing.T) {
 		Settings: Settings{
 			DefaultManager: "homebrew",
 		},
-		Homebrew: HomebrewConfig{
-			Packages: []HomebrewPackage{
-				{Name: "git"},
-				{Name: "curl"},
-			},
+		Homebrew: []HomebrewPackage{
+			{Name: "git"},
+			{Name: "curl"},
 		},
 		NPM: []NPMPackage{
 			{Name: "typescript"},

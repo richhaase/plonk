@@ -25,11 +25,10 @@ dotfiles:
     destination: ~/.config/plugins.zsh
 
 homebrew:
-  packages:
-    - aichat
-    - aider
-    - name: neovim
-    - font-hack-nerd-font
+  - aichat
+  - aider
+  - name: neovim
+  - font-hack-nerd-font
 
 npm:
   - "@anthropic-ai/claude-code"
@@ -69,17 +68,17 @@ npm:
 	}
 
 	// Verify homebrew packages
-	if len(config.Homebrew.Packages) != 4 {
-		t.Errorf("Expected 4 homebrew packages, got %d", len(config.Homebrew.Packages))
+	if len(config.Homebrew) != 4 {
+		t.Errorf("Expected 4 homebrew packages, got %d", len(config.Homebrew))
 	}
 
 	// Check simple package
-	if config.Homebrew.Packages[0].Name != "aichat" {
-		t.Errorf("Expected first package 'aichat', got '%s'", config.Homebrew.Packages[0].Name)
+	if config.Homebrew[0].Name != "aichat" {
+		t.Errorf("Expected first package 'aichat', got '%s'", config.Homebrew[0].Name)
 	}
 
 	// Check package with config
-	neovim := config.Homebrew.Packages[2]
+	neovim := config.Homebrew[2]
 	if neovim.Name != "neovim" {
 		t.Errorf("Expected neovim name 'neovim', got '%s'", neovim.Name)
 	}
