@@ -22,7 +22,7 @@ jobs:
         cache: true
         
     - name: Install Just
-      uses: extractions/setup-just@v1
+      uses: extractions/setup-just@v3
       
     - name: Download dependencies
       run: go mod download
