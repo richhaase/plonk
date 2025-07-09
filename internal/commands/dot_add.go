@@ -154,27 +154,6 @@ func targetToSource(target string) string {
 	return config.TargetToSource(target)
 }
 
-// copyDotfile copies a dotfile (file or directory) to the destination
-func copyDotfile(src, dst string) error {
-	// For dot add, we need to copy from the actual file system location
-	// to the plonk config directory, so we use a simple file copy approach
-
-	srcInfo, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-
-	// Create parent directories
-	if err := os.MkdirAll(filepath.Dir(dst), 0750); err != nil {
-		return err
-	}
-
-	if srcInfo.IsDir() {
-		return copyDirectoryContents(src, dst)
-	}
-	return copyFileContents(src, dst)
-}
-
 // copyFileContents copies a file from src to dst
 func copyFileContents(src, dst string) error {
 	content, err := os.ReadFile(src)
@@ -182,28 +161,6 @@ func copyFileContents(src, dst string) error {
 		return err
 	}
 	return os.WriteFile(dst, content, 0600)
-}
-
-// copyDirectoryContents copies a directory from src to dst
-func copyDirectoryContents(src, dst string) error {
-	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		relPath, err := filepath.Rel(src, path)
-		if err != nil {
-			return err
-		}
-
-		destPath := filepath.Join(dst, relPath)
-
-		if info.IsDir() {
-			return os.MkdirAll(destPath, info.Mode())
-		}
-
-		return copyFileContents(path, destPath)
-	})
 }
 
 // DotfileAddOutput represents the output structure for dotfile add command
