@@ -15,6 +15,7 @@ import (
 // DotfileConfigLoader defines how to load dotfile configuration
 type DotfileConfigLoader interface {
 	GetDotfileTargets() map[string]string // source -> destination mapping
+	GetIgnorePatterns() []string          // ignore patterns for file filtering
 }
 
 // DotfileProvider implements the Provider interface for dotfile management
@@ -89,6 +90,9 @@ func (d *DotfileProvider) GetConfiguredItems() ([]ConfigItem, error) {
 func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, error) {
 	var items []ActualItem
 
+	// Get ignore patterns
+	ignorePatterns := d.configLoader.GetIgnorePatterns()
+
 	// Get dotfiles from home directory
 	dotfiles, err := d.manager.ListDotfiles(d.homeDir)
 	if err != nil {
@@ -97,6 +101,17 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 
 	for _, dotfile := range dotfiles {
 		fullPath := filepath.Join(d.homeDir, dotfile)
+
+		// Check if file should be ignored
+		info, err := os.Stat(fullPath)
+		if err != nil {
+			continue // Skip files we can't stat
+		}
+
+		if shouldSkipDotfile(dotfile, info, ignorePatterns) {
+			continue // Skip ignored files
+		}
+
 		items = append(items, ActualItem{
 			Name: dotfile,
 			Path: fullPath,
@@ -134,6 +149,11 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 					return err
 				}
 
+				// Check if file should be ignored
+				if shouldSkipDotfile(relPath, info, ignorePatterns) {
+					return nil
+				}
+
 				// Only add if not already in items (avoid duplicates)
 				name := relPath
 				found := false
@@ -164,6 +184,15 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 			relPath, err := filepath.Rel(d.homeDir, destPath)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get relative path for %s: %w", destPath, err)
+			}
+
+			// Check if file should be ignored
+			info, err := os.Stat(destPath)
+			if err != nil {
+				continue // Skip files we can't stat
+			}
+			if shouldSkipDotfile(relPath, info, ignorePatterns) {
+				continue // Skip ignored files
 			}
 
 			// Only add if not already in items (avoid duplicates)
@@ -243,4 +272,29 @@ func (d *DotfileProvider) expandConfigDirectory(sourceDir, destDir string) ([]Co
 	}
 
 	return items, nil
+}
+
+// shouldSkipDotfile determines if a file/directory should be skipped based on ignore patterns
+func shouldSkipDotfile(relPath string, info os.FileInfo, ignorePatterns []string) bool {
+	// Always skip plonk config file
+	if relPath == "plonk.yaml" {
+		return true
+	}
+
+	// Check against configured ignore patterns
+	for _, pattern := range ignorePatterns {
+		// Check exact match for file/directory name
+		if pattern == info.Name() || pattern == relPath {
+			return true
+		}
+		// Check glob pattern match
+		if matched, _ := filepath.Match(pattern, info.Name()); matched {
+			return true
+		}
+		if matched, _ := filepath.Match(pattern, relPath); matched {
+			return true
+		}
+	}
+
+	return false
 }

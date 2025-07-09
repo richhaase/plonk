@@ -25,6 +25,11 @@ func (m *MockDotfileConfigLoader) GetDotfileTargets() map[string]string {
 	return m.targets
 }
 
+func (m *MockDotfileConfigLoader) GetIgnorePatterns() []string {
+	// Return default ignore patterns for testing
+	return []string{".DS_Store", ".git", "*.backup", "*.tmp", "*.swp"}
+}
+
 func (m *MockDotfileConfigLoader) SetTargets(targets map[string]string) {
 	m.targets = targets
 }

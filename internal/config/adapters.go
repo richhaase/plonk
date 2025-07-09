@@ -47,3 +47,9 @@ func NewStateDotfileConfigAdapter(configAdapter *ConfigAdapter) *StateDotfileCon
 func (s *StateDotfileConfigAdapter) GetDotfileTargets() map[string]string {
 	return s.configAdapter.GetDotfileTargets()
 }
+
+// GetIgnorePatterns implements state.DotfileConfigLoader interface
+func (s *StateDotfileConfigAdapter) GetIgnorePatterns() []string {
+	// Get the underlying config and call its GetIgnorePatterns method
+	return s.configAdapter.config.GetIgnorePatterns()
+}
