@@ -27,7 +27,7 @@ builds:
     ldflags:
       - -s -w
       - -X main.version={{.Version}}
-      - -X main.commit={{.ShortCommit}}
+      - -X main.commit={{.Commit}}
       - -X main.date={{.Date}}
     flags:
       - -trimpath
@@ -53,7 +53,7 @@ checksum:
   name_template: 'checksums.txt'
 
 snapshot:
-  name_template: "{{ .ShortCommit }}{{ if .IsGitDirty }}-dirty{{ end }}"
+  name_template: "{{ .Tag }}-{{ .ShortCommit }}{{ if .IsGitDirty }}-dirty{{ end }}"
 
 changelog:
   sort: asc
