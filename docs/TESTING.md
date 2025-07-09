@@ -48,12 +48,12 @@ go test ./...
 ## Test Categories
 
 ### Unit Test Categories
-- **Configuration parsing** (`internal/config/*_test.go`)
-- **State reconciliation** (`internal/state/*_test.go`)
-- **Package manager operations** (`internal/managers/*_test.go`)
-- **Dotfile operations** (`internal/dotfiles/*_test.go`)
+- **Configuration parsing** (`internal/config/*_test.go`) - YAML parsing, validation, ignore patterns
+- **State reconciliation** (`internal/state/*_test.go`) - State management and provider interfaces
+- **Package manager operations** (`internal/managers/*_test.go`) - Homebrew and NPM implementations
+- **Dotfile operations** (`internal/dotfiles/*_test.go`) - Auto-discovery, file operations
 - **Apply command** (`internal/commands/apply_test.go`) - Unified apply functionality
-- **Error handling** (`internal/errors/*_test.go`)
+- **Error handling** (`internal/errors/*_test.go`) - Structured error types
 
 ## Development Workflow
 
@@ -75,6 +75,7 @@ just precommit
 ### Common Issues
 - **Timeout errors**: Use `-timeout` flag if tests are timing out
 - **Permission errors**: Ensure proper file permissions
+- **Environment variables**: Tests may use `PLONK_DIR` for config directory override
 
 ### Debug Commands
 ```bash
@@ -83,6 +84,9 @@ go test -v ./...
 
 # Debug specific test
 go test -v -run TestSpecificFunction ./path/to/test/
+
+# Test with custom config directory
+PLONK_DIR=/tmp/test-config go test -v ./...
 ```
 
 ## CI/CD Integration

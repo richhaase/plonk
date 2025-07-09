@@ -76,8 +76,9 @@ A quick reference guide to navigate the Plonk codebase - a unified package and d
 3. Reconciler → Package Managers & Dotfile Operations
 
 ### Configuration Files
-- `plonk.yaml` - Main configuration
-- `plonk.local.yaml` - Local overrides (gitignored)
+- `plonk.yaml` - Main configuration (location: `$PLONK_DIR` or `~/.config/plonk`)
+- Auto-discovered dotfiles from config directory
+- Configurable ignore patterns for dotfile discovery
 
 ### Quick Navigation
 

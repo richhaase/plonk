@@ -69,20 +69,26 @@ internal/
 **Features:**
 - Flexible YAML unmarshaling (simple strings or complex objects)
 - Validation with custom rules and timeout settings
-- Support for `plonk.yaml` and `plonk.local.yaml` overrides
+- Environment variable support (`PLONK_DIR` for config directory)
+- Auto-discovery of dotfiles with configurable ignore patterns
 
 **Configuration Example:**
 ```yaml
 settings:
   default_manager: homebrew
   operation_timeout: 600  # 10 minutes
+  package_timeout: 300    # 5 minutes
+  dotfile_timeout: 60     # 1 minute
 
-dotfiles:
-  - zshrc                 # Maps to ~/.zshrc
-  - config/nvim           # Maps to ~/.config/nvim
-  - dot_gitconfig         # Maps to ~/.gitconfig
+ignore_patterns:
+  - .DS_Store
+  - .git
+  - "*.backup"
+  - "*.tmp"
+  - "*.swp"
 
 homebrew: [git, neovim, firefox]
+npm: [typescript, prettier]
 ```
 
 ### 2. State Management (`internal/state/`)
@@ -145,11 +151,13 @@ type PackageManager interface {
 **Path Conventions:**
 - `zshrc` → `~/.zshrc`
 - `config/nvim/` → `~/.config/nvim/`  
-- `dot_gitconfig` → `~/.gitconfig`
+- `editorconfig` → `~/.editorconfig`
 
 **Features:**
+- Auto-discovery of dotfiles from config directory
+- Configurable ignore patterns (gitignore-style)
 - Smart directory expansion to individual files
-- Backup creation before modifications
+- Environment variable support (`PLONK_DIR`)
 - Context-aware file operations
 - Path validation and normalization
 
@@ -211,6 +219,10 @@ type PlonkError struct {
 5. **Structured Errors** - PlonkError type provides user-friendly messages and debugging context.
 
 6. **Separate File Operations** - Dotfile operations extracted from state management for clarity and reusability.
+
+7. **Environment-Aware Configuration** - Uses `PLONK_DIR` environment variable for config directory and `EDITOR` for editing, providing flexibility without complexity.
+
+8. **Convention Over Configuration** - Auto-discovery of dotfiles reduces configuration burden while maintaining customization through ignore patterns.
 
 ## Extension Points
 

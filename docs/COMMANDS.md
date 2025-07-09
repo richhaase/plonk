@@ -103,6 +103,33 @@ plonk pkg add git --manager homebrew  # Add to specific manager
 
 ## Configuration File
 
-Location: `~/.config/plonk/plonk.yaml`
+**Location:** `~/.config/plonk/plonk.yaml` (or `$PLONK_DIR/plonk.yaml`)
 
-Contains package definitions for Homebrew and NPM, dotfile definitions with source and destination paths, and manager-specific settings.
+**Environment Variables:**
+- `PLONK_DIR` - Override default config directory (default: `~/.config/plonk`)
+- `EDITOR` - Editor used by `plonk config edit` command
+
+**Configuration Structure:**
+```yaml
+settings:
+  default_manager: homebrew        # REQUIRED - package manager preference
+  operation_timeout: 300           # Optional - operation timeout in seconds (default: 300)
+  package_timeout: 180             # Optional - package timeout in seconds (default: 180)
+  dotfile_timeout: 60              # Optional - dotfile timeout in seconds (default: 60)
+
+ignore_patterns:                   # Optional - gitignore-style patterns for dotfile auto-discovery
+  - .DS_Store                      # System files
+  - .git                           # Version control
+  - "*.backup"                     # Backup files
+  - "*.tmp"                        # Temporary files
+  - "*.swp"                        # Swap files
+
+homebrew: []                       # Homebrew packages
+npm: []                            # NPM packages
+```
+
+**Features:**
+- **Auto-discovery**: Dotfiles are automatically discovered from the config directory
+- **Sensible defaults**: All settings except `default_manager` are optional
+- **Configurable ignores**: Customize which files are ignored during auto-discovery
+- **Environment-aware**: Uses `$PLONK_DIR` and `$EDITOR` environment variables
