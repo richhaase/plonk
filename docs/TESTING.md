@@ -112,6 +112,7 @@ Key helper functions available:
 ### Integration Test Categories
 - **Binary functionality** (`binary_test.go`)
 - **Apply command** (`apply_test.go`) - Unified package and dotfile application
+- **Import command** (`import_test.go`, `import_modes_test.go`, `import_large_test.go`) - Package and dotfile discovery and import
 - **Package management** (`packages_test.go`)
 - **Configuration validation** (`config_test.go`)
 - **Dotfile operations** (`dotfiles_test.go`)

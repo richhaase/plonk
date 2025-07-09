@@ -191,6 +191,7 @@ type PlonkError struct {
 
 **Status:** Shows all items across all domains with their states
 **Apply:** Unified command that reconciles missing items (installs packages and copies dotfiles)
+**Import:** Discovers untracked packages and dotfiles, allows selective import into plonk management
 **List:** Shows items filtered by state or domain (available for both packages and dotfiles)
 
 ## Key Design Decisions

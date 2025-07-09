@@ -15,6 +15,7 @@ A quick reference guide to navigate the Plonk codebase - a unified package and d
 - `root.go` - Root command setup
 - `status.go` - Show system state
 - `apply.go` - Unified apply command (packages and dotfiles)
+- `import.go` - Import existing packages and dotfiles into plonk management
 - `pkg_*.go` - Package management commands (add, remove, list)
 - `dot_*.go` - Dotfile management commands (add, list, re-add)
 - `config_*.go` - Configuration commands (show)

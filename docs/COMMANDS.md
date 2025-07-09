@@ -22,6 +22,17 @@ Apply entire plonk configuration (packages and dotfiles) to your system.
 
 Applies all configured packages and dotfiles in a single operation.
 
+### `plonk import`
+Import existing packages and dotfiles into plonk management.
+
+**Options:**
+- `--packages, -p` - Import packages only
+- `--dotfiles, -d` - Import dotfiles only
+- `--all, -a` - Import all discovered items without interaction
+- `--interactive, -i` - Interactive selection (default)
+
+Helps new plonk users discover and selectively import their existing packages and dotfiles into plonk management. Features intelligent filtering to exclude system files and interactive selection workflow.
+
 ### Package Management (`plonk pkg`)
 
 - `plonk pkg list [filter]` - List packages across all managers
