@@ -100,7 +100,9 @@ plonk search git      # Search for packages
 
 # Dotfile management
 plonk dot list        # List dotfiles
-plonk dot add .vimrc  # Add dotfile to management
+plonk dot add .vimrc  # Add dotfile (flexible path resolution)
+plonk dot add ~/.config/nvim/init.lua  # Explicit path
+plonk dot add init.lua  # Finds ./init.lua or ~/init.lua
 
 # Configuration
 plonk config show     # Show current config

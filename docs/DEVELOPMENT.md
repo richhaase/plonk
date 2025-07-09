@@ -21,6 +21,9 @@ cd plonk
 # Install development dependencies
 go mod download
 
+# Install git hooks (recommended)
+./scripts/install-hooks.sh
+
 # Generate mocks for testing
 just generate-mocks
 
@@ -193,10 +196,20 @@ mockgen -source=internal/managers/common.go -destination=internal/managers/mock_
 
 ## Code Quality
 
+### Git Hooks
+
+Install the pre-commit hook to automatically run checks before each commit:
+
+```bash
+./scripts/install-hooks.sh
+```
+
+This installs a git pre-commit hook that runs `just precommit` automatically.
+
 ### Pre-commit Checks
 
 ```bash
-# Run all pre-commit checks
+# Run all pre-commit checks manually
 just precommit
 
 # Individual checks
