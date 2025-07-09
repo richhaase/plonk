@@ -62,12 +62,7 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get directories
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("failed to get home directory: %w", err)
-	}
-
-	configDir := filepath.Join(homeDir, ".config", "plonk")
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Load existing configuration
 	cfg, err := config.LoadConfig(configDir)
@@ -249,12 +244,7 @@ func addAllUntrackedPackages(cmd *cobra.Command, dryRun bool) error {
 	}
 
 	// Get directories
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("failed to get home directory: %w", err)
-	}
-
-	configDir := filepath.Join(homeDir, ".config", "plonk")
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Load existing configuration
 	cfg, err := config.LoadConfig(configDir)

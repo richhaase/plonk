@@ -54,7 +54,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, errors.ErrFilePermission, errors.DomainCommands, "status", "failed to get home directory")
 	}
 
-	configDir := filepath.Join(homeDir, ".config", "plonk")
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Load configuration
 	cfg, err := config.LoadConfig(configDir)

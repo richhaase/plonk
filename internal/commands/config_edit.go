@@ -43,11 +43,7 @@ func init() {
 
 func runConfigEdit(cmd *cobra.Command, args []string) error {
 	// Get config directory and file path
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return errors.Wrap(err, errors.ErrFilePermission, errors.DomainCommands, "config-edit", "failed to get home directory")
-	}
-	configDir := filepath.Join(homeDir, ".config", "plonk")
+	configDir := config.GetDefaultConfigDirectory()
 	configPath := filepath.Join(configDir, "plonk.yaml")
 
 	// Create config directory if it doesn't exist

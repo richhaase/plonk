@@ -190,15 +190,7 @@ func checkPermissions() HealthCheck {
 		Message:  "File permissions are correct",
 	}
 
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		check.Status = "fail"
-		check.Issues = append(check.Issues, "Cannot determine home directory")
-		check.Suggestions = append(check.Suggestions, "Check HOME environment variable and file permissions")
-		return check
-	}
-
-	configDir := filepath.Join(homeDir, ".config", "plonk")
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Check if config directory exists and is writable
 	if info, err := os.Stat(configDir); err != nil {
@@ -248,14 +240,7 @@ func checkConfigurationFile() HealthCheck {
 		Message:  "Configuration file is accessible",
 	}
 
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		check.Status = "fail"
-		check.Issues = append(check.Issues, "Cannot determine home directory")
-		return check
-	}
-
-	configDir := filepath.Join(homeDir, ".config", "plonk")
+	configDir := config.GetDefaultConfigDirectory()
 	configPath := filepath.Join(configDir, "plonk.yaml")
 
 	// Check if config file exists
@@ -299,14 +284,7 @@ func checkConfigurationValidity() HealthCheck {
 		Message:  "Configuration is valid",
 	}
 
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		check.Status = "fail"
-		check.Issues = append(check.Issues, "Cannot determine home directory")
-		return check
-	}
-
-	configDir := filepath.Join(homeDir, ".config", "plonk")
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Try to load configuration
 	cfg, err := config.LoadConfig(configDir)

@@ -47,7 +47,7 @@ func runDotReAdd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to get home directory: %w", err)
 	}
 
-	configDir := filepath.Join(homeDir, ".config", "plonk")
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Resolve and validate dotfile path
 	resolvedPath, err := resolveDotfilePath(dotfilePath, homeDir)

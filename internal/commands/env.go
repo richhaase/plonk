@@ -62,7 +62,7 @@ func gatherEnvironmentInfo() EnvOutput {
 	defer cancel()
 
 	homeDir, _ := os.UserHomeDir()
-	configDir := filepath.Join(homeDir, ".config", "plonk")
+	configDir := config.GetDefaultConfigDirectory()
 	configPath := filepath.Join(configDir, "plonk.yaml")
 
 	// System information

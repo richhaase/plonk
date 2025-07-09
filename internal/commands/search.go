@@ -6,8 +6,6 @@ package commands
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -145,12 +143,7 @@ func findInstalledPackage(ctx context.Context, packageName string, managers map[
 
 // getDefaultManager gets the default manager from configuration
 func getDefaultManager() (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("failed to get home directory: %w", err)
-	}
-
-	configDir := filepath.Join(homeDir, ".config", "plonk")
+	configDir := config.GetDefaultConfigDirectory()
 	cfg, err := config.LoadConfig(configDir)
 	if err != nil {
 		// If config doesn't exist or is invalid, we don't have a default manager

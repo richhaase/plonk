@@ -6,8 +6,6 @@ package commands
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"plonk/internal/config"
 	"plonk/internal/managers"
@@ -56,12 +54,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get directories
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("failed to get home directory: %w", err)
-	}
-
-	configDir := filepath.Join(homeDir, ".config", "plonk")
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Load configuration
 	cfg, err := config.LoadConfig(configDir)

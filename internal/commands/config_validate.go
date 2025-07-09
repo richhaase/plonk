@@ -45,11 +45,7 @@ func runConfigValidate(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get config directory
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return errors.Wrap(err, errors.ErrFilePermission, errors.DomainCommands, "config-validate", "failed to get home directory")
-	}
-	configDir := filepath.Join(homeDir, ".config", "plonk")
+	configDir := config.GetDefaultConfigDirectory()
 	configPath := filepath.Join(configDir, "plonk.yaml")
 
 	// Check if config file exists

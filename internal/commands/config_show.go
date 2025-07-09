@@ -49,11 +49,7 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get config directory
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return errors.Wrap(err, errors.ErrFilePermission, errors.DomainCommands, "config-show", "failed to get home directory")
-	}
-	configDir := filepath.Join(homeDir, ".config", "plonk")
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Load configuration
 	cfg, err := config.LoadConfig(configDir)

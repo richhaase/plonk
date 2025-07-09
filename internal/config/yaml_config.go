@@ -24,10 +24,10 @@ import (
 
 // Config represents the configuration structure.
 type Config struct {
-	Settings Settings       `yaml:"settings" validate:"required"`
-	Backup   BackupConfig   `yaml:"backup,omitempty"`
-	Homebrew []HomebrewPackage `yaml:"homebrew,omitempty" validate:"dive"`
-	NPM      []NPMPackage   `yaml:"npm,omitempty" validate:"dive"`
+	Settings        Settings          `yaml:"settings" validate:"required"`
+	IgnorePatterns  []string          `yaml:"ignore_patterns,omitempty"`
+	Homebrew        []HomebrewPackage `yaml:"homebrew,omitempty" validate:"dive"`
+	NPM             []NPMPackage      `yaml:"npm,omitempty" validate:"dive"`
 }
 
 // Settings contains global configuration settings.
@@ -38,11 +38,6 @@ type Settings struct {
 	DotfileTimeout     int    `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`           // Timeout in seconds for dotfile operations (0 for default, 1-600 seconds)
 }
 
-// BackupConfig contains backup configuration settings.
-type BackupConfig struct {
-	Location  string `yaml:"location,omitempty"`
-	KeepCount int    `yaml:"keep_count,omitempty"`
-}
 
 
 
@@ -170,30 +165,39 @@ func loadConfigFile(path string, config *Config) error {
 
 
 // shouldSkipDotfile determines if a file/directory should be skipped during auto-discovery
-func shouldSkipDotfile(relPath string, info os.FileInfo) bool {
-	// Skip plonk config file
+func shouldSkipDotfile(relPath string, info os.FileInfo, ignorePatterns []string) bool {
+	// Always skip plonk config file
 	if relPath == "plonk.yaml" {
 		return true
 	}
 	
-	// Skip backup files
-	if strings.HasSuffix(relPath, ".backup") {
-		return true
-	}
-	
-	// Skip .git directory
-	if relPath == ".git" || strings.HasPrefix(relPath, ".git/") {
-		return true
-	}
-	
-	// Skip .DS_Store files
-	if info.Name() == ".DS_Store" {
-		return true
-	}
-	
-	// Skip other hidden files/directories (starting with .)
-	if info.Name() != "." && strings.HasPrefix(info.Name(), ".") {
-		return true
+	// Check against configured ignore patterns
+	for _, pattern := range ignorePatterns {
+		// Check exact match for file/directory name
+		if pattern == info.Name() || pattern == relPath {
+			return true
+		}
+		
+		// Check glob pattern match
+		if matched, _ := filepath.Match(pattern, info.Name()); matched {
+			return true
+		}
+		if matched, _ := filepath.Match(pattern, relPath); matched {
+			return true
+		}
+		
+		// Handle directory patterns like .git/
+		if strings.HasSuffix(pattern, "/") && info.IsDir() {
+			dirPattern := strings.TrimSuffix(pattern, "/")
+			if dirPattern == info.Name() || dirPattern == relPath {
+				return true
+			}
+		}
+		
+		// Handle prefix patterns for directories
+		if strings.HasPrefix(relPath, pattern+"/") {
+			return true
+		}
 	}
 	
 	return false
@@ -251,6 +255,36 @@ func (s *Settings) GetDotfileTimeout() int {
 		return 60 // Default 1 minute
 	}
 	return s.DotfileTimeout
+}
+
+
+// GetIgnorePatterns returns the ignore patterns with sensible defaults
+func (c *Config) GetIgnorePatterns() []string {
+	if len(c.IgnorePatterns) == 0 {
+		return []string{
+			".DS_Store",
+			".git", 
+			"*.backup",
+			"*.tmp",
+			"*.swp",
+		}
+	}
+	return c.IgnorePatterns
+}
+
+// GetDefaultConfigDirectory returns the default config directory, checking PLONK_DIR environment variable first
+func GetDefaultConfigDirectory() string {
+	// Check for PLONK_DIR environment variable
+	if envDir := os.Getenv("PLONK_DIR"); envDir != "" {
+		// Expand ~ if present
+		if strings.HasPrefix(envDir, "~/") {
+			return filepath.Join(os.Getenv("HOME"), envDir[2:])
+		}
+		return envDir
+	}
+	
+	// Default location
+	return filepath.Join(os.Getenv("HOME"), ".config", "plonk")
 }
 
 // YAMLConfigService implements all configuration interfaces for YAML-based configuration
@@ -406,8 +440,9 @@ func NewConfigAdapter(config *Config) *ConfigAdapter {
 func (c *ConfigAdapter) GetDotfileTargets() map[string]string {
 	result := make(map[string]string)
 	
-	// Auto-discover dotfiles from ~/.config/plonk/
-	configDir := filepath.Join(os.Getenv("HOME"), ".config", "plonk")
+	// Auto-discover dotfiles from configured directory
+	configDir := GetDefaultConfigDirectory()
+	ignorePatterns := c.config.GetIgnorePatterns()
 	
 	// Walk the directory to find all files
 	filepath.Walk(configDir, func(path string, info os.FileInfo, err error) error {
@@ -422,7 +457,7 @@ func (c *ConfigAdapter) GetDotfileTargets() map[string]string {
 		}
 		
 		// Skip certain files and directories
-		if shouldSkipDotfile(relPath, info) {
+		if shouldSkipDotfile(relPath, info, ignorePatterns) {
 			if info.IsDir() {
 				return filepath.SkipDir
 			}
