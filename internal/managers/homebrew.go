@@ -146,3 +146,47 @@ func (h *HomebrewManager) IsInstalled(ctx context.Context, name string) (bool, e
 	return true, nil
 }
 
+// Search searches for packages in Homebrew repositories.
+func (h *HomebrewManager) Search(ctx context.Context, query string) ([]string, error) {
+	cmd := exec.CommandContext(ctx, "brew", "search", query)
+	output, err := cmd.Output()
+	if err != nil {
+		// Check if this is a real error vs expected conditions
+		if exitError, ok := err.(*exec.ExitError); ok {
+			// For brew search, exit code 1 usually means no results found
+			if exitError.ExitCode() == 1 {
+				return []string{}, nil
+			}
+			// Other exit codes indicate real errors
+			return nil, fmt.Errorf("failed to search homebrew packages: %w", err)
+		}
+		// Non-exit errors (e.g., command not found, context cancellation)
+		return nil, fmt.Errorf("failed to execute brew search: %w", err)
+	}
+
+	result := strings.TrimSpace(string(output))
+	if result == "" {
+		// No packages found - this is normal, not an error
+		return []string{}, nil
+	}
+
+	// Parse output into package list
+	var packages []string
+	lines := strings.Split(result, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			// Homebrew search can return multiple packages per line separated by spaces
+			parts := strings.Fields(line)
+			for _, part := range parts {
+				part = strings.TrimSpace(part)
+				if part != "" {
+					packages = append(packages, part)
+				}
+			}
+		}
+	}
+
+	return packages, nil
+}
+

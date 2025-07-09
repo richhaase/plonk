@@ -175,3 +175,54 @@ func (n *NpmManager) IsInstalled(ctx context.Context, name string) (bool, error)
 	return true, nil
 }
 
+// Search searches for packages in NPM registry.
+func (n *NpmManager) Search(ctx context.Context, query string) ([]string, error) {
+	cmd := exec.CommandContext(ctx, "npm", "search", query, "--json")
+	output, err := cmd.Output()
+	if err != nil {
+		// Check if this is a real error vs expected conditions
+		if exitError, ok := err.(*exec.ExitError); ok {
+			// For npm search, exit code 1 usually means no results found
+			if exitError.ExitCode() == 1 {
+				return []string{}, nil
+			}
+			// Other exit codes indicate real errors
+			return nil, fmt.Errorf("failed to search npm packages: %w", err)
+		}
+		// Non-exit errors (e.g., command not found, context cancellation)
+		return nil, fmt.Errorf("failed to execute npm search: %w", err)
+	}
+
+	result := strings.TrimSpace(string(output))
+	if result == "" || result == "[]" {
+		// No packages found - this is normal, not an error
+		return []string{}, nil
+	}
+
+	// Parse JSON output to extract package names
+	var packages []string
+	lines := strings.Split(result, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" && strings.Contains(line, `"name":`) {
+			// Extract package name from JSON line like: "name": "package-name",
+			parts := strings.Split(line, `"name":`)
+			if len(parts) > 1 {
+				namepart := strings.TrimSpace(parts[1])
+				if strings.HasPrefix(namepart, `"`) && strings.Contains(namepart, `"`) {
+					// Extract the name between quotes
+					namepart = namepart[1:] // Remove leading quote
+					if idx := strings.Index(namepart, `"`); idx > 0 {
+						packageName := namepart[:idx]
+						if packageName != "" {
+							packages = append(packages, packageName)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return packages, nil
+}
+

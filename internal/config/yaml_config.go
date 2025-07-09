@@ -167,25 +167,14 @@ func LoadConfig(configDir string) (*Config, error) {
 		},
 	}
 
-	// Load main config file - check both main directory and repo subdirectory.
+	// Load main config file.
 	mainConfigPath := filepath.Join(configDir, "plonk.yaml")
-	repoConfigPath := filepath.Join(configDir, "repo", "plonk.yaml")
 
-	// Try main directory first.
 	if err := loadConfigFile(mainConfigPath, config); err != nil {
 		if os.IsNotExist(err) {
-			// Try repo subdirectory.
-			if err := loadConfigFile(repoConfigPath, config); err != nil {
-				if os.IsNotExist(err) {
-					return nil, errors.ConfigError(errors.ErrConfigNotFound, "load", 
-						fmt.Sprintf("config file not found in %s or %s", mainConfigPath, repoConfigPath)).
-						WithMetadata("main_path", mainConfigPath).
-						WithMetadata("repo_path", repoConfigPath)
-				}
-				return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load", 
-					"failed to load config from repo directory").
-					WithMetadata("path", repoConfigPath)
-			}
+			return nil, errors.ConfigError(errors.ErrConfigNotFound, "load", 
+				fmt.Sprintf("config file not found: %s", mainConfigPath)).
+				WithMetadata("config_path", mainConfigPath)
 		} else {
 			return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load", 
 				"failed to load config").WithMetadata("path", mainConfigPath)
