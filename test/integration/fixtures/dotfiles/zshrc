@@ -1,7 +1,0 @@
-# Test zshrc configuration
-export PATH="/usr/local/bin:$PATH"
-alias ll="ls -la"
-alias grep="grep --color=auto"
-
-# Test comment for integration testing
-echo "Loading test zshrc configuration"

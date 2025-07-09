@@ -55,7 +55,6 @@ A quick reference guide to navigate the Plonk codebase - a unified package and d
 - `types.go` - Structured error types
 
 ### Testing
-- `test/integration/` - Integration test suite
 - `*_test.go` files - Unit tests alongside implementations
 
 ### Key Interfaces
