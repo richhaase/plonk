@@ -190,3 +190,122 @@ func (h *HomebrewManager) Search(ctx context.Context, query string) ([]string, e
 	return packages, nil
 }
 
+// Info retrieves detailed information about a package from Homebrew.
+func (h *HomebrewManager) Info(ctx context.Context, name string) (*PackageInfo, error) {
+	// Check if package is installed first
+	installed, err := h.IsInstalled(ctx, name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if package is installed: %w", err)
+	}
+
+	var info *PackageInfo
+	if installed {
+		// Get info from installed package
+		info, err = h.getInstalledPackageInfo(ctx, name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get installed package info: %w", err)
+		}
+	} else {
+		// Get info from available package
+		info, err = h.getAvailablePackageInfo(ctx, name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get available package info: %w", err)
+		}
+	}
+
+	info.Manager = "homebrew"
+	info.Installed = installed
+	return info, nil
+}
+
+// getInstalledPackageInfo gets information about an installed package
+func (h *HomebrewManager) getInstalledPackageInfo(ctx context.Context, name string) (*PackageInfo, error) {
+	cmd := exec.CommandContext(ctx, "brew", "info", name, "--json")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get package info: %w", err)
+	}
+
+	result := strings.TrimSpace(string(output))
+	if result == "" || result == "[]" {
+		return nil, fmt.Errorf("package '%s' not found", name)
+	}
+
+	// Parse JSON output - homebrew returns an array
+	info := &PackageInfo{Name: name}
+	lines := strings.Split(result, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.Contains(line, `"name":`) {
+			info.Name = h.extractJSONValue(line, "name")
+		} else if strings.Contains(line, `"desc":`) {
+			info.Description = h.extractJSONValue(line, "desc")
+		} else if strings.Contains(line, `"homepage":`) {
+			info.Homepage = h.extractJSONValue(line, "homepage")
+		} else if strings.Contains(line, `"installed":`) && strings.Contains(line, `"version":`) {
+			info.Version = h.extractJSONValue(line, "version")
+		}
+	}
+
+	return info, nil
+}
+
+// getAvailablePackageInfo gets information about an available (but not installed) package
+func (h *HomebrewManager) getAvailablePackageInfo(ctx context.Context, name string) (*PackageInfo, error) {
+	cmd := exec.CommandContext(ctx, "brew", "info", name, "--json")
+	output, err := cmd.Output()
+	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			if exitError.ExitCode() == 1 {
+				return nil, fmt.Errorf("package '%s' not found", name)
+			}
+		}
+		return nil, fmt.Errorf("failed to get package info: %w", err)
+	}
+
+	result := strings.TrimSpace(string(output))
+	if result == "" || result == "[]" {
+		return nil, fmt.Errorf("package '%s' not found", name)
+	}
+
+	// Parse JSON output
+	info := &PackageInfo{Name: name}
+	lines := strings.Split(result, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.Contains(line, `"name":`) {
+			info.Name = h.extractJSONValue(line, "name")
+		} else if strings.Contains(line, `"desc":`) {
+			info.Description = h.extractJSONValue(line, "desc")
+		} else if strings.Contains(line, `"homepage":`) {
+			info.Homepage = h.extractJSONValue(line, "homepage")
+		} else if strings.Contains(line, `"versions":`) && strings.Contains(line, `"stable":`) {
+			info.Version = h.extractJSONValue(line, "stable")
+		}
+	}
+
+	return info, nil
+}
+
+// extractJSONValue extracts a value from a JSON line
+func (h *HomebrewManager) extractJSONValue(line, key string) string {
+	keyPattern := `"` + key + `":`
+	if !strings.Contains(line, keyPattern) {
+		return ""
+	}
+
+	parts := strings.Split(line, keyPattern)
+	if len(parts) < 2 {
+		return ""
+	}
+
+	valuepart := strings.TrimSpace(parts[1])
+	if strings.HasPrefix(valuepart, `"`) {
+		valuepart = valuepart[1:] // Remove leading quote
+		if idx := strings.Index(valuepart, `"`); idx > 0 {
+			return valuepart[:idx]
+		}
+	}
+	return ""
+}
+

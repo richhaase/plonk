@@ -226,3 +226,164 @@ func (n *NpmManager) Search(ctx context.Context, query string) ([]string, error)
 	return packages, nil
 }
 
+// Info retrieves detailed information about a package from NPM.
+func (n *NpmManager) Info(ctx context.Context, name string) (*PackageInfo, error) {
+	// Check if package is installed first
+	installed, err := n.IsInstalled(ctx, name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if package is installed: %w", err)
+	}
+
+	var info *PackageInfo
+	if installed {
+		// Get info from installed package
+		info, err = n.getInstalledPackageInfo(ctx, name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get installed package info: %w", err)
+		}
+	} else {
+		// Get info from available package
+		info, err = n.getAvailablePackageInfo(ctx, name)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get available package info: %w", err)
+		}
+	}
+
+	info.Manager = "npm"
+	info.Installed = installed
+	return info, nil
+}
+
+// getInstalledPackageInfo gets information about an installed package
+func (n *NpmManager) getInstalledPackageInfo(ctx context.Context, name string) (*PackageInfo, error) {
+	cmd := exec.CommandContext(ctx, "npm", "list", "-g", name, "--json")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get package info: %w", err)
+	}
+
+	result := strings.TrimSpace(string(output))
+	if result == "" || result == "{}" {
+		return nil, fmt.Errorf("package '%s' not found", name)
+	}
+
+	// Parse JSON output to get version
+	info := &PackageInfo{Name: name}
+	lines := strings.Split(result, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.Contains(line, `"version":`) {
+			info.Version = n.extractJSONValue(line, "version")
+		}
+	}
+
+	// Get additional info from npm view for installed packages
+	viewInfo, err := n.getPackageView(ctx, name)
+	if err == nil {
+		info.Description = viewInfo.Description
+		info.Homepage = viewInfo.Homepage
+		info.Dependencies = viewInfo.Dependencies
+	}
+
+	return info, nil
+}
+
+// getAvailablePackageInfo gets information about an available (but not installed) package
+func (n *NpmManager) getAvailablePackageInfo(ctx context.Context, name string) (*PackageInfo, error) {
+	return n.getPackageView(ctx, name)
+}
+
+// getPackageView gets package information using npm view
+func (n *NpmManager) getPackageView(ctx context.Context, name string) (*PackageInfo, error) {
+	cmd := exec.CommandContext(ctx, "npm", "view", name, "--json")
+	output, err := cmd.Output()
+	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			if exitError.ExitCode() == 1 {
+				return nil, fmt.Errorf("package '%s' not found", name)
+			}
+		}
+		return nil, fmt.Errorf("failed to get package info: %w", err)
+	}
+
+	result := strings.TrimSpace(string(output))
+	if result == "" || result == "{}" {
+		return nil, fmt.Errorf("package '%s' not found", name)
+	}
+
+	// Parse JSON output
+	info := &PackageInfo{Name: name}
+	lines := strings.Split(result, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.Contains(line, `"name":`) {
+			info.Name = n.extractJSONValue(line, "name")
+		} else if strings.Contains(line, `"version":`) {
+			info.Version = n.extractJSONValue(line, "version")
+		} else if strings.Contains(line, `"description":`) {
+			info.Description = n.extractJSONValue(line, "description")
+		} else if strings.Contains(line, `"homepage":`) {
+			info.Homepage = n.extractJSONValue(line, "homepage")
+		} else if strings.Contains(line, `"dependencies":`) {
+			// Dependencies are in a nested object, we'll parse them separately
+			info.Dependencies = n.extractDependencies(result)
+		}
+	}
+
+	return info, nil
+}
+
+// extractDependencies extracts dependencies from the npm view JSON output
+func (n *NpmManager) extractDependencies(jsonOutput string) []string {
+	var dependencies []string
+	lines := strings.Split(jsonOutput, "\n")
+	inDependencies := false
+	
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.Contains(line, `"dependencies":`) {
+			inDependencies = true
+			continue
+		}
+		if inDependencies {
+			if strings.Contains(line, `}`) && !strings.Contains(line, `"`) {
+				break
+			}
+			if strings.Contains(line, `"`) && strings.Contains(line, `:`) {
+				// Extract package name from dependency line
+				parts := strings.Split(line, `"`)
+				if len(parts) > 1 {
+					depName := parts[1]
+					if depName != "" {
+						dependencies = append(dependencies, depName)
+					}
+				}
+			}
+		}
+	}
+	
+	return dependencies
+}
+
+// extractJSONValue extracts a value from a JSON line
+func (n *NpmManager) extractJSONValue(line, key string) string {
+	keyPattern := `"` + key + `":`
+	if !strings.Contains(line, keyPattern) {
+		return ""
+	}
+
+	parts := strings.Split(line, keyPattern)
+	if len(parts) < 2 {
+		return ""
+	}
+
+	valuepart := strings.TrimSpace(parts[1])
+	if strings.HasPrefix(valuepart, `"`) {
+		valuepart = valuepart[1:] // Remove leading quote
+		if idx := strings.Index(valuepart, `"`); idx > 0 {
+			return valuepart[:idx]
+		}
+	}
+	return ""
+}
+

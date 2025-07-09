@@ -122,6 +122,8 @@ type PackageManager interface {
     Install(ctx context.Context, name string) error
     Uninstall(ctx context.Context, name string) error
     IsInstalled(ctx context.Context, name string) (bool, error)
+    Search(ctx context.Context, query string) ([]string, error)
+    Info(ctx context.Context, name string) (*PackageInfo, error)
 }
 ```
 
@@ -195,6 +197,9 @@ type PlonkError struct {
 **Env:** Shows environment information for debugging and troubleshooting
 **Config:** Manage configuration files (show, validate, edit)
 **List:** Shows items filtered by state or domain (available for both packages and dotfiles)
+**Doctor:** Performs comprehensive health checks on system requirements, environment, and package managers
+**Search:** Intelligent package search across available package managers with context-aware behavior
+**Info:** Detailed package information including version, dependencies, and installation status
 
 ## Key Design Decisions
 

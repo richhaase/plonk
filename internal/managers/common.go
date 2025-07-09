@@ -15,6 +15,7 @@ type PackageManager interface {
 	Uninstall(ctx context.Context, name string) error
 	IsInstalled(ctx context.Context, name string) (bool, error)
 	Search(ctx context.Context, query string) ([]string, error)
+	Info(ctx context.Context, name string) (*PackageInfo, error)
 }
 
 // SearchResult represents the result of a search operation
@@ -22,4 +23,16 @@ type SearchResult struct {
 	Package string `json:"package"`
 	Manager string `json:"manager"`
 	Found   bool   `json:"found"`
+}
+
+// PackageInfo represents detailed information about a package
+type PackageInfo struct {
+	Name          string   `json:"name"`
+	Version       string   `json:"version,omitempty"`
+	Description   string   `json:"description,omitempty"`
+	Homepage      string   `json:"homepage,omitempty"`
+	Dependencies  []string `json:"dependencies,omitempty"`
+	InstalledSize string   `json:"installed_size,omitempty"`
+	Manager       string   `json:"manager"`
+	Installed     bool     `json:"installed"`
 }
