@@ -13,6 +13,15 @@ Plonk manages packages and dotfiles consistently across multiple machines using 
 ### `plonk status`
 Display overall plonk status including configuration, packages, and dotfiles.
 
+### `plonk apply`
+Apply entire plonk configuration (packages and dotfiles) to your system.
+
+**Options:**
+- `--dry-run` - Show what would be applied without making changes
+- `--backup` - Create backups before overwriting existing dotfiles
+
+Equivalent to running `plonk pkg apply` followed by `plonk dot apply`.
+
 ### Package Management (`plonk pkg`)
 
 - `plonk pkg list [filter]` - List packages across all managers

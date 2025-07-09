@@ -25,13 +25,6 @@ build:
     go build -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" -o build/plonk ./cmd/plonk
     echo "Built versioned plonk binary to build/"
 
-# Build the plonk binary without version information (for debugging)
-build-simple:
-    @echo "Building plonk without version information..."
-    @mkdir -p build
-    go build -o build/plonk ./cmd/plonk
-    @echo "Built simple plonk binary to build/"
-
 # Run all unit tests  
 test:
     @echo "Running unit tests..."
@@ -202,8 +195,3 @@ release:
 goreleaser-release:
     @echo "Running goreleaser for release..."
     goreleaser release
-
-# Test goreleaser configuration
-goreleaser-check:
-    @echo "Checking goreleaser configuration..."
-    goreleaser check
