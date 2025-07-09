@@ -13,7 +13,9 @@ var configCmd = &cobra.Command{
 	Long: `Manage plonk configuration files.
 
 Commands:
-  show      Display current configuration`,
+  show      Display current configuration
+  validate  Validate configuration file
+  edit      Edit configuration file`,
 }
 
 func init() {

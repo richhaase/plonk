@@ -33,6 +33,9 @@ Import existing packages and dotfiles into plonk management.
 
 Helps new plonk users discover and selectively import their existing packages and dotfiles into plonk management. Features intelligent filtering to exclude system files and interactive selection workflow.
 
+### `plonk env`
+Show environment information for plonk including system details, package manager availability, configuration status, and path information. Useful for debugging and troubleshooting.
+
 ### Package Management (`plonk pkg`)
 
 - `plonk pkg list [filter]` - List packages across all managers
@@ -52,6 +55,8 @@ Helps new plonk users discover and selectively import their existing packages an
 ### Configuration (`plonk config`)
 
 - `plonk config show` - Display current configuration content
+- `plonk config validate` - Validate configuration file for syntax and structural errors
+- `plonk config edit` - Edit configuration file using your preferred editor
 
 ## Configuration File
 

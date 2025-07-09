@@ -16,9 +16,10 @@ A quick reference guide to navigate the Plonk codebase - a unified package and d
 - `status.go` - Show system state
 - `apply.go` - Unified apply command (packages and dotfiles)
 - `import.go` - Import existing packages and dotfiles into plonk management
+- `env.go` - Show environment information for debugging
 - `pkg_*.go` - Package management commands (add, remove, list)
 - `dot_*.go` - Dotfile management commands (add, list, re-add)
-- `config_*.go` - Configuration commands (show)
+- `config_*.go` - Configuration commands (show, validate, edit)
 - `output.go` - Output formatting utilities
 - `errors.go` - Command-level error handling
 
