@@ -21,12 +21,12 @@ func HandleError(err error) int {
 	if plonkErr, ok := err.(*errors.PlonkError); ok {
 		// Print user-friendly message
 		fmt.Fprintf(os.Stderr, "Error: %s\n", plonkErr.UserMessage())
-		
+
 		// Print technical details if verbose or critical
 		if plonkErr.Severity == errors.SeverityCritical || os.Getenv("PLONK_DEBUG") == "1" {
 			fmt.Fprintf(os.Stderr, "Technical details: %s\n", plonkErr.Error())
 		}
-		
+
 		// Return appropriate exit code based on error type
 		switch plonkErr.Code {
 		case errors.ErrConfigNotFound, errors.ErrConfigParseFailure, errors.ErrConfigValidation:

@@ -29,9 +29,9 @@ type PackageConfigItem struct {
 
 // PackageProvider implements the Provider interface for package management
 type PackageProvider struct {
-	managerName   string
-	manager       PackageManager
-	configLoader  PackageConfigLoader
+	managerName  string
+	manager      PackageManager
+	configLoader PackageConfigLoader
 }
 
 // NewPackageProvider creates a new package provider for a specific manager
@@ -54,7 +54,7 @@ func (p *PackageProvider) GetConfiguredItems() ([]ConfigItem, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	items := make([]ConfigItem, len(packages))
 	for i, pkg := range packages {
 		items[i] = ConfigItem{
@@ -64,7 +64,7 @@ func (p *PackageProvider) GetConfiguredItems() ([]ConfigItem, error) {
 			},
 		}
 	}
-	
+
 	return items, nil
 }
 
@@ -76,7 +76,7 @@ func (p *PackageProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 		return nil, ctx.Err()
 	default:
 	}
-	
+
 	available, err := p.manager.IsAvailable(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check manager availability: %w", err)
@@ -84,12 +84,12 @@ func (p *PackageProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 	if !available {
 		return []ActualItem{}, nil
 	}
-	
+
 	installed, err := p.manager.ListInstalled(ctx)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	items := make([]ActualItem, len(installed))
 	for i, pkg := range installed {
 		items[i] = ActualItem{
@@ -99,7 +99,7 @@ func (p *PackageProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 			},
 		}
 	}
-	
+
 	return items, nil
 }
 
@@ -114,7 +114,7 @@ func (p *PackageProvider) CreateItem(name string, state ItemState, configured *C
 			"manager": p.managerName,
 		},
 	}
-	
+
 	// Add any additional metadata from configured or actual
 	if configured != nil {
 		for k, v := range configured.Metadata {
@@ -126,7 +126,7 @@ func (p *PackageProvider) CreateItem(name string, state ItemState, configured *C
 			item.Metadata[k] = v
 		}
 	}
-	
+
 	return item
 }
 
@@ -155,7 +155,7 @@ func (m *MultiManagerPackageProvider) Domain() string {
 // GetConfiguredItems returns packages from all managers
 func (m *MultiManagerPackageProvider) GetConfiguredItems() ([]ConfigItem, error) {
 	var allItems []ConfigItem
-	
+
 	for _, provider := range m.providers {
 		items, err := provider.GetConfiguredItems()
 		if err != nil {
@@ -163,14 +163,14 @@ func (m *MultiManagerPackageProvider) GetConfiguredItems() ([]ConfigItem, error)
 		}
 		allItems = append(allItems, items...)
 	}
-	
+
 	return allItems, nil
 }
 
 // GetActualItems returns installed packages from all managers
 func (m *MultiManagerPackageProvider) GetActualItems(ctx context.Context) ([]ActualItem, error) {
 	var allItems []ActualItem
-	
+
 	for _, provider := range m.providers {
 		items, err := provider.GetActualItems(ctx)
 		if err != nil {
@@ -178,7 +178,7 @@ func (m *MultiManagerPackageProvider) GetActualItems(ctx context.Context) ([]Act
 		}
 		allItems = append(allItems, items...)
 	}
-	
+
 	return allItems, nil
 }
 
@@ -196,12 +196,12 @@ func (m *MultiManagerPackageProvider) CreateItem(name string, state ItemState, c
 			managerName = mgr
 		}
 	}
-	
+
 	// Delegate to the specific provider if available
 	if provider, exists := m.providers[managerName]; exists {
 		return provider.CreateItem(name, state, configured, actual)
 	}
-	
+
 	// Fallback generic item creation
 	item := Item{
 		Name:    name,
@@ -212,6 +212,6 @@ func (m *MultiManagerPackageProvider) CreateItem(name string, state ItemState, c
 			"manager": managerName,
 		},
 	}
-	
+
 	return item
 }

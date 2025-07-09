@@ -24,30 +24,25 @@ import (
 
 // Config represents the configuration structure.
 type Config struct {
-	Settings        Settings          `yaml:"settings" validate:"required"`
-	IgnorePatterns  []string          `yaml:"ignore_patterns,omitempty"`
-	Homebrew        []HomebrewPackage `yaml:"homebrew,omitempty" validate:"dive"`
-	NPM             []NPMPackage      `yaml:"npm,omitempty" validate:"dive"`
+	Settings       Settings          `yaml:"settings" validate:"required"`
+	IgnorePatterns []string          `yaml:"ignore_patterns,omitempty"`
+	Homebrew       []HomebrewPackage `yaml:"homebrew,omitempty" validate:"dive"`
+	NPM            []NPMPackage      `yaml:"npm,omitempty" validate:"dive"`
 }
 
 // Settings contains global configuration settings.
 type Settings struct {
-	DefaultManager     string `yaml:"default_manager" validate:"required,oneof=homebrew npm"`
-	OperationTimeout   int    `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"`        // Timeout in seconds for operations (0 for default, 1-3600 seconds)
-	PackageTimeout     int    `yaml:"package_timeout,omitempty" validate:"omitempty,min=0,max=1800"`          // Timeout in seconds for package operations (0 for default, 1-1800 seconds)
-	DotfileTimeout     int    `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`           // Timeout in seconds for dotfile operations (0 for default, 1-600 seconds)
+	DefaultManager   string `yaml:"default_manager" validate:"required,oneof=homebrew npm"`
+	OperationTimeout int    `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"` // Timeout in seconds for operations (0 for default, 1-3600 seconds)
+	PackageTimeout   int    `yaml:"package_timeout,omitempty" validate:"omitempty,min=0,max=1800"`   // Timeout in seconds for package operations (0 for default, 1-1800 seconds)
+	DotfileTimeout   int    `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`    // Timeout in seconds for dotfile operations (0 for default, 1-600 seconds)
 }
-
-
-
 
 // HomebrewPackage can be a simple string or complex object.
 type HomebrewPackage struct {
 	Name   string `yaml:"name,omitempty" validate:"required,package_name"`
 	Config string `yaml:"config,omitempty" validate:"omitempty,file_path"`
 }
-
-
 
 // NPMPackage represents an NPM package configuration.
 type NPMPackage struct {
@@ -127,11 +122,11 @@ func LoadConfig(configDir string) (*Config, error) {
 
 	if err := loadConfigFile(configPath, config); err != nil {
 		if os.IsNotExist(err) {
-			return nil, errors.ConfigError(errors.ErrConfigNotFound, "load", 
+			return nil, errors.ConfigError(errors.ErrConfigNotFound, "load",
 				fmt.Sprintf("config file not found: %s", configPath)).
 				WithMetadata("config_path", configPath)
 		} else {
-			return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load", 
+			return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load",
 				"failed to load config").WithMetadata("path", configPath)
 		}
 	}
@@ -140,7 +135,7 @@ func LoadConfig(configDir string) (*Config, error) {
 	validator := NewSimpleValidator()
 	result := validator.ValidateConfig(config)
 	if !result.IsValid() {
-		return nil, errors.ConfigError(errors.ErrConfigValidation, "validate", 
+		return nil, errors.ConfigError(errors.ErrConfigValidation, "validate",
 			fmt.Sprintf("config validation failed: %s", strings.Join(result.Errors, "; "))).
 			WithMetadata("errors", result.Errors).
 			WithMetadata("config_dir", configDir)
@@ -163,21 +158,20 @@ func loadConfigFile(path string, config *Config) error {
 	return nil
 }
 
-
 // shouldSkipDotfile determines if a file/directory should be skipped during auto-discovery
 func shouldSkipDotfile(relPath string, info os.FileInfo, ignorePatterns []string) bool {
 	// Always skip plonk config file
 	if relPath == "plonk.yaml" {
 		return true
 	}
-	
+
 	// Check against configured ignore patterns
 	for _, pattern := range ignorePatterns {
 		// Check exact match for file/directory name
 		if pattern == info.Name() || pattern == relPath {
 			return true
 		}
-		
+
 		// Check glob pattern match
 		if matched, _ := filepath.Match(pattern, info.Name()); matched {
 			return true
@@ -185,7 +179,7 @@ func shouldSkipDotfile(relPath string, info os.FileInfo, ignorePatterns []string
 		if matched, _ := filepath.Match(pattern, relPath); matched {
 			return true
 		}
-		
+
 		// Handle directory patterns like .git/
 		if strings.HasSuffix(pattern, "/") && info.IsDir() {
 			dirPattern := strings.TrimSuffix(pattern, "/")
@@ -193,13 +187,13 @@ func shouldSkipDotfile(relPath string, info os.FileInfo, ignorePatterns []string
 				return true
 			}
 		}
-		
+
 		// Handle prefix patterns for directories
 		if strings.HasPrefix(relPath, pattern+"/") {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -257,13 +251,12 @@ func (s *Settings) GetDotfileTimeout() int {
 	return s.DotfileTimeout
 }
 
-
 // GetIgnorePatterns returns the ignore patterns with sensible defaults
 func (c *Config) GetIgnorePatterns() []string {
 	if len(c.IgnorePatterns) == 0 {
 		return []string{
 			".DS_Store",
-			".git", 
+			".git",
 			"*.backup",
 			"*.tmp",
 			"*.swp",
@@ -282,7 +275,7 @@ func GetDefaultConfigDirectory() string {
 		}
 		return envDir
 	}
-	
+
 	// Default location
 	return filepath.Join(os.Getenv("HOME"), ".config", "plonk")
 }
@@ -310,10 +303,10 @@ func (y *YAMLConfigService) LoadConfig(configDir string) (*Config, error) {
 func (y *YAMLConfigService) LoadConfigFromFile(filePath string) (*Config, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.ErrConfigNotFound, errors.DomainConfig, "load", 
+		return nil, errors.Wrap(err, errors.ErrConfigNotFound, errors.DomainConfig, "load",
 			"failed to read config file").WithItem(filePath)
 	}
-	
+
 	return y.LoadConfigFromReader(strings.NewReader(string(data)))
 }
 
@@ -321,39 +314,39 @@ func (y *YAMLConfigService) LoadConfigFromFile(filePath string) (*Config, error)
 func (y *YAMLConfigService) LoadConfigFromReader(reader io.Reader) (*Config, error) {
 	data, err := io.ReadAll(reader)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load", 
+		return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load",
 			"failed to read config data")
 	}
-	
+
 	config := &Config{
 		Settings: Settings{
 			DefaultManager: "homebrew", // Default value
 		},
 	}
-	
+
 	if err := yaml.Unmarshal(data, config); err != nil {
-		return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load", 
+		return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load",
 			"failed to parse YAML")
 	}
-	
+
 	// Validate configuration
 	result := y.validator.ValidateConfig(config)
 	if !result.IsValid() {
-		return nil, errors.ConfigError(errors.ErrConfigValidation, "validate", 
+		return nil, errors.ConfigError(errors.ErrConfigValidation, "validate",
 			fmt.Sprintf("config validation failed: %s", strings.Join(result.Errors, "; "))).
 			WithMetadata("errors", result.Errors)
 	}
-	
+
 	return config, nil
 }
 
 // SaveConfig saves configuration to a directory as plonk.yaml
 func (y *YAMLConfigService) SaveConfig(configDir string, config *Config) error {
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return errors.Wrap(err, errors.ErrDirectoryCreate, errors.DomainConfig, "save", 
+	if err := os.MkdirAll(configDir, 0750); err != nil {
+		return errors.Wrap(err, errors.ErrDirectoryCreate, errors.DomainConfig, "save",
 			"failed to create config directory").WithItem(configDir)
 	}
-	
+
 	filePath := filepath.Join(configDir, "plonk.yaml")
 	return y.SaveConfigToFile(filePath, config)
 }
@@ -363,16 +356,16 @@ func (y *YAMLConfigService) SaveConfigToFile(filePath string, config *Config) er
 	// Marshal configuration to YAML
 	data, err := yaml.Marshal(config)
 	if err != nil {
-		return errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "save", 
+		return errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "save",
 			"failed to marshal config to YAML")
 	}
-	
+
 	// Write atomically
 	if err := y.atomicWriter.WriteFile(filePath, data, 0644); err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "save", 
+		return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "save",
 			"failed to write config file").WithItem(filePath)
 	}
-	
+
 	return nil
 }
 
@@ -380,15 +373,15 @@ func (y *YAMLConfigService) SaveConfigToFile(filePath string, config *Config) er
 func (y *YAMLConfigService) SaveConfigToWriter(writer io.Writer, config *Config) error {
 	data, err := yaml.Marshal(config)
 	if err != nil {
-		return errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "save", 
+		return errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "save",
 			"failed to marshal config to YAML")
 	}
-	
+
 	if _, err := writer.Write(data); err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "save", 
+		return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "save",
 			"failed to write config data")
 	}
-	
+
 	return nil
 }
 
@@ -410,7 +403,7 @@ func (y *YAMLConfigService) GetPackagesForManager(managerName string) ([]Package
 func (y *YAMLConfigService) ValidateConfig(config *Config) error {
 	result := y.validator.ValidateConfig(config)
 	if !result.IsValid() {
-		return errors.ConfigError(errors.ErrConfigValidation, "validate", 
+		return errors.ConfigError(errors.ErrConfigValidation, "validate",
 			fmt.Sprintf("config validation failed: %s", strings.Join(result.Errors, "; "))).
 			WithMetadata("errors", result.Errors)
 	}
@@ -439,23 +432,23 @@ func NewConfigAdapter(config *Config) *ConfigAdapter {
 // GetDotfileTargets returns a map of source -> destination paths for dotfiles
 func (c *ConfigAdapter) GetDotfileTargets() map[string]string {
 	result := make(map[string]string)
-	
+
 	// Auto-discover dotfiles from configured directory
 	configDir := GetDefaultConfigDirectory()
 	ignorePatterns := c.config.GetIgnorePatterns()
-	
+
 	// Walk the directory to find all files
-	filepath.Walk(configDir, func(path string, info os.FileInfo, err error) error {
+	_ = filepath.Walk(configDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil // Skip files we can't read
 		}
-		
+
 		// Get relative path from config dir
 		relPath, err := filepath.Rel(configDir, path)
 		if err != nil {
 			return nil
 		}
-		
+
 		// Skip certain files and directories
 		if shouldSkipDotfile(relPath, info, ignorePatterns) {
 			if info.IsDir() {
@@ -463,27 +456,27 @@ func (c *ConfigAdapter) GetDotfileTargets() map[string]string {
 			}
 			return nil
 		}
-		
+
 		// Skip directories themselves (we'll get the files inside)
 		if info.IsDir() {
 			return nil
 		}
-		
+
 		// Add to results with proper mapping
 		source := relPath
 		target := sourceToTarget(source)
 		result[source] = target
-		
+
 		return nil
 	})
-	
+
 	return result
 }
 
 // GetPackagesForManager returns package names for a specific package manager
 func (c *ConfigAdapter) GetPackagesForManager(managerName string) ([]PackageConfigItem, error) {
 	var packageNames []string
-	
+
 	switch managerName {
 	case "homebrew":
 		// Get homebrew packages (unified)
@@ -496,14 +489,14 @@ func (c *ConfigAdapter) GetPackagesForManager(managerName string) ([]PackageConf
 			packageNames = append(packageNames, pkg.Name)
 		}
 	default:
-		return nil, errors.NewError(errors.ErrInvalidInput, errors.DomainConfig, "get-packages", 
+		return nil, errors.NewError(errors.ErrInvalidInput, errors.DomainConfig, "get-packages",
 			fmt.Sprintf("unknown package manager: %s", managerName)).WithItem(managerName)
 	}
-	
+
 	items := make([]PackageConfigItem, len(packageNames))
 	for i, name := range packageNames {
 		items[i] = PackageConfigItem{Name: name}
 	}
-	
+
 	return items, nil
 }

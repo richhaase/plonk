@@ -13,10 +13,10 @@ import (
 type ConfigReader interface {
 	// LoadConfig loads configuration from a directory containing plonk.yaml
 	LoadConfig(configDir string) (*Config, error)
-	
+
 	// LoadConfigFromFile loads configuration from a specific file path
 	LoadConfigFromFile(filePath string) (*Config, error)
-	
+
 	// LoadConfigFromReader loads configuration from an io.Reader
 	LoadConfigFromReader(reader io.Reader) (*Config, error)
 }
@@ -25,10 +25,10 @@ type ConfigReader interface {
 type ConfigWriter interface {
 	// SaveConfig saves configuration to a directory as plonk.yaml
 	SaveConfig(configDir string, config *Config) error
-	
+
 	// SaveConfigToFile saves configuration to a specific file path
 	SaveConfigToFile(filePath string, config *Config) error
-	
+
 	// SaveConfigToWriter saves configuration to an io.Writer
 	SaveConfigToWriter(writer io.Writer, config *Config) error
 }
@@ -60,7 +60,7 @@ type PackageConfigItem struct {
 type ConfigValidator interface {
 	// ValidateConfig validates a configuration object
 	ValidateConfig(config *Config) error
-	
+
 	// ValidateConfigFromReader validates configuration from an io.Reader
 	ValidateConfigFromReader(reader io.Reader) error
 }

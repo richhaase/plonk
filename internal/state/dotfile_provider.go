@@ -43,7 +43,7 @@ func (d *DotfileProvider) Domain() string {
 // GetConfiguredItems returns dotfiles defined in configuration
 func (d *DotfileProvider) GetConfiguredItems() ([]ConfigItem, error) {
 	targets := d.configLoader.GetDotfileTargets()
-	
+
 	items := make([]ConfigItem, 0)
 	for source, destination := range targets {
 		// Check if source is a directory
@@ -61,7 +61,7 @@ func (d *DotfileProvider) GetConfiguredItems() ([]ConfigItem, error) {
 			})
 			continue
 		}
-		
+
 		if info.IsDir() {
 			// Expand directory to individual files
 			dirItems, err := d.expandConfigDirectory(source, destination)
@@ -81,20 +81,20 @@ func (d *DotfileProvider) GetConfiguredItems() ([]ConfigItem, error) {
 			})
 		}
 	}
-	
+
 	return items, nil
 }
 
 // GetActualItems returns dotfiles currently present in the home directory
 func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, error) {
 	var items []ActualItem
-	
+
 	// Get dotfiles from home directory
 	dotfiles, err := d.manager.ListDotfiles(d.homeDir)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	for _, dotfile := range dotfiles {
 		fullPath := filepath.Join(d.homeDir, dotfile)
 		items = append(items, ActualItem{
@@ -105,35 +105,35 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 			},
 		})
 	}
-	
+
 	// Also check configured destinations to find files in subdirectories
 	targets := d.configLoader.GetDotfileTargets()
 	for _, destination := range targets {
 		destPath := d.manager.ExpandPath(destination)
-		
+
 		// Check if destination exists
 		if !d.manager.FileExists(destPath) {
 			continue
 		}
-		
+
 		// If it's a directory, walk it to find individual files
 		if d.manager.IsDirectory(destPath) {
 			err := filepath.Walk(destPath, func(path string, info os.FileInfo, err error) error {
 				if err != nil {
 					return err
 				}
-				
+
 				// Skip directories
 				if info.IsDir() {
 					return nil
 				}
-				
+
 				// Calculate relative path to create a proper name
 				relPath, err := filepath.Rel(d.homeDir, path)
 				if err != nil {
 					return err
 				}
-				
+
 				// Only add if not already in items (avoid duplicates)
 				name := relPath
 				found := false
@@ -143,7 +143,7 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 						break
 					}
 				}
-				
+
 				if !found {
 					items = append(items, ActualItem{
 						Name: name,
@@ -153,7 +153,7 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 						},
 					})
 				}
-				
+
 				return nil
 			})
 			if err != nil {
@@ -165,7 +165,7 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 			if err != nil {
 				return nil, fmt.Errorf("failed to get relative path for %s: %w", destPath, err)
 			}
-			
+
 			// Only add if not already in items (avoid duplicates)
 			name := relPath
 			found := false
@@ -175,7 +175,7 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 					break
 				}
 			}
-			
+
 			if !found {
 				items = append(items, ActualItem{
 					Name: name,
@@ -187,7 +187,7 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 			}
 		}
 	}
-	
+
 	return items, nil
 }
 
@@ -198,7 +198,7 @@ func (d *DotfileProvider) CreateItem(name string, state ItemState, configured *C
 		State:  state,
 		Domain: "dotfile",
 	}
-	
+
 	// Set path from actual or infer from configured
 	if actual != nil {
 		item.Path = actual.Path
@@ -209,13 +209,13 @@ func (d *DotfileProvider) CreateItem(name string, state ItemState, configured *C
 	} else {
 		item.Metadata = make(map[string]interface{})
 	}
-	
+
 	// Add configured metadata
 	if configured != nil {
 		for k, v := range configured.Metadata {
 			item.Metadata[k] = v
 		}
-		
+
 		// If no path set and we have destination, use that
 		if item.Path == "" {
 			if dest, ok := configured.Metadata["destination"].(string); ok {
@@ -223,10 +223,9 @@ func (d *DotfileProvider) CreateItem(name string, state ItemState, configured *C
 			}
 		}
 	}
-	
+
 	return item
 }
-
 
 // expandConfigDirectory walks a directory and creates individual ConfigItems for each file
 func (d *DotfileProvider) expandConfigDirectory(sourceDir, destDir string) ([]ConfigItem, error) {
@@ -234,7 +233,7 @@ func (d *DotfileProvider) expandConfigDirectory(sourceDir, destDir string) ([]Co
 	if err != nil {
 		return nil, err
 	}
-	
+
 	items := make([]ConfigItem, len(dotfileInfos))
 	for i, info := range dotfileInfos {
 		items[i] = ConfigItem{
@@ -242,6 +241,6 @@ func (d *DotfileProvider) expandConfigDirectory(sourceDir, destDir string) ([]Co
 			Metadata: info.Metadata,
 		}
 	}
-	
+
 	return items, nil
 }

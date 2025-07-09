@@ -16,44 +16,44 @@ type ErrorCode string
 
 const (
 	// Configuration errors
-	ErrConfigNotFound      ErrorCode = "CONFIG_NOT_FOUND"
-	ErrConfigParseFailure  ErrorCode = "CONFIG_PARSE_FAILURE"
-	ErrConfigValidation    ErrorCode = "CONFIG_VALIDATION"
-	
+	ErrConfigNotFound     ErrorCode = "CONFIG_NOT_FOUND"
+	ErrConfigParseFailure ErrorCode = "CONFIG_PARSE_FAILURE"
+	ErrConfigValidation   ErrorCode = "CONFIG_VALIDATION"
+
 	// File system errors
-	ErrFileNotFound        ErrorCode = "FILE_NOT_FOUND"
-	ErrFilePermission      ErrorCode = "FILE_PERMISSION"
-	ErrFileIO              ErrorCode = "FILE_IO"
-	ErrDirectoryCreate     ErrorCode = "DIRECTORY_CREATE"
-	ErrPathValidation      ErrorCode = "PATH_VALIDATION"
-	
+	ErrFileNotFound    ErrorCode = "FILE_NOT_FOUND"
+	ErrFilePermission  ErrorCode = "FILE_PERMISSION"
+	ErrFileIO          ErrorCode = "FILE_IO"
+	ErrDirectoryCreate ErrorCode = "DIRECTORY_CREATE"
+	ErrPathValidation  ErrorCode = "PATH_VALIDATION"
+
 	// Package manager errors
-	ErrPackageNotFound     ErrorCode = "PACKAGE_NOT_FOUND"
-	ErrPackageInstall      ErrorCode = "PACKAGE_INSTALL"
-	ErrPackageUninstall    ErrorCode = "PACKAGE_UNINSTALL"
-	ErrManagerUnavailable  ErrorCode = "MANAGER_UNAVAILABLE"
-	ErrCommandExecution    ErrorCode = "COMMAND_EXECUTION"
-	
+	ErrPackageNotFound    ErrorCode = "PACKAGE_NOT_FOUND"
+	ErrPackageInstall     ErrorCode = "PACKAGE_INSTALL"
+	ErrPackageUninstall   ErrorCode = "PACKAGE_UNINSTALL"
+	ErrManagerUnavailable ErrorCode = "MANAGER_UNAVAILABLE"
+	ErrCommandExecution   ErrorCode = "COMMAND_EXECUTION"
+
 	// State management errors
-	ErrProviderNotFound    ErrorCode = "PROVIDER_NOT_FOUND"
-	ErrReconciliation      ErrorCode = "RECONCILIATION"
-	ErrItemRetrieval       ErrorCode = "ITEM_RETRIEVAL"
-	
+	ErrProviderNotFound ErrorCode = "PROVIDER_NOT_FOUND"
+	ErrReconciliation   ErrorCode = "RECONCILIATION"
+	ErrItemRetrieval    ErrorCode = "ITEM_RETRIEVAL"
+
 	// General errors
-	ErrInvalidInput        ErrorCode = "INVALID_INPUT"
-	ErrInternal            ErrorCode = "INTERNAL"
-	ErrUnsupported         ErrorCode = "UNSUPPORTED"
+	ErrInvalidInput ErrorCode = "INVALID_INPUT"
+	ErrInternal     ErrorCode = "INTERNAL"
+	ErrUnsupported  ErrorCode = "UNSUPPORTED"
 )
 
 // Domain represents the subsystem where the error occurred
 type Domain string
 
 const (
-	DomainConfig    Domain = "config"
-	DomainDotfiles  Domain = "dotfiles"
-	DomainPackages  Domain = "packages"
-	DomainState     Domain = "state"
-	DomainCommands  Domain = "commands"
+	DomainConfig   Domain = "config"
+	DomainDotfiles Domain = "dotfiles"
+	DomainPackages Domain = "packages"
+	DomainState    Domain = "state"
+	DomainCommands Domain = "commands"
 )
 
 // Severity represents the severity level of the error
@@ -80,19 +80,19 @@ type PlonkError struct {
 // Error implements the error interface
 func (e *PlonkError) Error() string {
 	var parts []string
-	
+
 	if e.Item != "" {
 		parts = append(parts, fmt.Sprintf("plonk %s %s [%s]", e.Operation, e.Domain, e.Item))
 	} else {
 		parts = append(parts, fmt.Sprintf("plonk %s %s", e.Operation, e.Domain))
 	}
-	
+
 	parts = append(parts, e.Message)
-	
+
 	if e.Cause != nil {
 		parts = append(parts, fmt.Sprintf("caused by: %v", e.Cause))
 	}
-	
+
 	return strings.Join(parts, ": ")
 }
 
@@ -168,7 +168,7 @@ func NewError(code ErrorCode, domain Domain, operation string, message string) *
 	if code == ErrInternal {
 		severity = SeverityCritical
 	}
-	
+
 	return &PlonkError{
 		Code:      code,
 		Domain:    domain,
@@ -202,7 +202,7 @@ func (ec *ErrorCollection) Error() string {
 	if len(ec.Errors) == 1 {
 		return ec.Errors[0].Error()
 	}
-	
+
 	var messages []string
 	for _, err := range ec.Errors {
 		messages = append(messages, err.Error())

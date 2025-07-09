@@ -63,14 +63,14 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 			}
 			return RenderOutput(outputData, format)
 		}
-		
+
 		// Handle validation errors - still show the config if possible
 		configPath := getConfigPath(configDir)
 		rawContent, readErr := os.ReadFile(configPath)
 		if readErr != nil {
 			return errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load", "failed to load configuration")
 		}
-		
+
 		outputData := ConfigShowOutput{
 			ConfigPath: configPath,
 			Status:     "invalid",
@@ -107,7 +107,7 @@ func (c ConfigShowOutput) TableOutput() string {
 	}
 
 	output := fmt.Sprintf("# Configuration: %s\n\n", c.ConfigPath)
-	
+
 	if c.Status == "invalid" && c.RawContent != "" {
 		output += "# WARNING: Configuration has validation errors\n"
 		output += fmt.Sprintf("# %s\n\n", c.Message)

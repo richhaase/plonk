@@ -47,7 +47,7 @@ func runConfigEdit(cmd *cobra.Command, args []string) error {
 	configPath := filepath.Join(configDir, "plonk.yaml")
 
 	// Create config directory if it doesn't exist
-	if err := os.MkdirAll(configDir, 0755); err != nil {
+	if err := os.MkdirAll(configDir, 0750); err != nil {
 		return errors.Wrap(err, errors.ErrDirectoryCreate, errors.DomainConfig, "edit", "failed to create config directory")
 	}
 
@@ -73,7 +73,7 @@ func runConfigEdit(cmd *cobra.Command, args []string) error {
 		// Validate the edited config
 		if err := validateEditedConfig(configPath); err != nil {
 			fmt.Printf("\n❌ Configuration validation failed:\n%s\n", err.Error())
-			
+
 			// Ask if user wants to edit again
 			if !promptEditAgain() {
 				return errors.NewError(errors.ErrConfigValidation, errors.DomainConfig, "edit", "configuration validation failed")
@@ -95,8 +95,8 @@ func getEditor() string {
 	editors := []string{
 		os.Getenv("EDITOR"),
 		os.Getenv("VISUAL"),
-		"nano",  // Fallback to nano
-		"vi",    // Last resort
+		"nano", // Fallback to nano
+		"vi",   // Last resort
 	}
 
 	for _, editor := range editors {
@@ -144,14 +144,14 @@ func validateEditedConfig(configPath string) error {
 		for _, err := range result.Errors {
 			errorMsg.WriteString(fmt.Sprintf("  ❌ %s\n", err))
 		}
-		
+
 		if len(result.Warnings) > 0 {
 			errorMsg.WriteString("\nWarnings:\n")
 			for _, warning := range result.Warnings {
 				errorMsg.WriteString(fmt.Sprintf("  ⚠️  %s\n", warning))
 			}
 		}
-		
+
 		return fmt.Errorf("%s", errorMsg.String())
 	}
 
@@ -200,16 +200,16 @@ dotfiles: []
 #   - config/nvim
 `
 
-	return os.WriteFile(configPath, []byte(defaultConfig), 0644)
+	return os.WriteFile(configPath, []byte(defaultConfig), 0600)
 }
 
 // promptEditAgain asks the user if they want to edit the config again
 func promptEditAgain() bool {
 	fmt.Print("\nDo you want to edit the configuration again? (y/N): ")
-	
+
 	var response string
-	fmt.Scanln(&response)
+	_, _ = fmt.Scanln(&response)
 	response = strings.ToLower(strings.TrimSpace(response))
-	
+
 	return response == "y" || response == "yes"
 }

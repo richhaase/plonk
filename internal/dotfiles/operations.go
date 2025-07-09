@@ -30,28 +30,28 @@ func NewManager(homeDir, configDir string) *Manager {
 // DotfileInfo represents information about a dotfile
 type DotfileInfo struct {
 	Name        string
-	Source      string      // Path in config directory
-	Destination string      // Path in home directory
+	Source      string // Path in config directory
+	Destination string // Path in home directory
 	IsDirectory bool
-	ParentDir   string      // For files expanded from directories
+	ParentDir   string // For files expanded from directories
 	Metadata    map[string]interface{}
 }
 
 // ListDotfiles finds all dotfiles in the specified directory
 func (m *Manager) ListDotfiles(dir string) ([]string, error) {
 	var dotfiles []string
-	
+
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	for _, entry := range entries {
 		if strings.HasPrefix(entry.Name(), ".") && entry.Name() != "." && entry.Name() != ".." {
 			dotfiles = append(dotfiles, entry.Name())
 		}
 	}
-	
+
 	return dotfiles, nil
 }
 
@@ -59,28 +59,28 @@ func (m *Manager) ListDotfiles(dir string) ([]string, error) {
 func (m *Manager) ExpandDirectory(sourceDir, destDir string) ([]DotfileInfo, error) {
 	var items []DotfileInfo
 	sourcePath := filepath.Join(m.configDir, sourceDir)
-	
+
 	err := filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		
+
 		// Skip directories
 		if info.IsDir() {
 			return nil
 		}
-		
+
 		// Calculate relative path from source directory
 		relPath, err := filepath.Rel(sourcePath, path)
 		if err != nil {
 			return err
 		}
-		
+
 		// Build source and destination paths
 		source := filepath.Join(sourceDir, relPath)
 		destination := filepath.Join(destDir, relPath)
 		name := m.DestinationToName(destination)
-		
+
 		items = append(items, DotfileInfo{
 			Name:        name,
 			Source:      source,
@@ -93,10 +93,10 @@ func (m *Manager) ExpandDirectory(sourceDir, destDir string) ([]DotfileInfo, err
 				"parent_dir":  sourceDir,
 			},
 		})
-		
+
 		return nil
 	})
-	
+
 	return items, err
 }
 
@@ -146,7 +146,7 @@ func (m *Manager) IsDirectory(path string) bool {
 func (m *Manager) CreateDotfileInfo(source, destination string) DotfileInfo {
 	sourcePath := m.GetSourcePath(source)
 	isDir := m.IsDirectory(sourcePath)
-	
+
 	return DotfileInfo{
 		Name:        m.DestinationToName(destination),
 		Source:      source,
@@ -164,19 +164,19 @@ func (m *Manager) ValidatePaths(source, destination string) error {
 	// Check if source exists in config directory
 	sourcePath := m.GetSourcePath(source)
 	if !m.FileExists(sourcePath) {
-		return errors.DotfileError(errors.ErrFileNotFound, "validate", 
+		return errors.DotfileError(errors.ErrFileNotFound, "validate",
 			"source file does not exist").
 			WithItem(source).
 			WithMetadata("source_path", sourcePath)
 	}
-	
+
 	// Validate destination path format
 	if !strings.HasPrefix(destination, "~/") && !filepath.IsAbs(destination) {
-		return errors.DotfileError(errors.ErrPathValidation, "validate", 
+		return errors.DotfileError(errors.ErrPathValidation, "validate",
 			"destination must start with ~/ or be absolute").
 			WithItem(destination).
 			WithMetadata("destination", destination)
 	}
-	
+
 	return nil
 }

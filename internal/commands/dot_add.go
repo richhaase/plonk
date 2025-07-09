@@ -10,10 +10,8 @@ import (
 	"strings"
 
 	"plonk/internal/config"
-	"plonk/internal/dotfiles"
 
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 var dotAddCmd = &cobra.Command{
@@ -160,14 +158,14 @@ func targetToSource(target string) string {
 func copyDotfile(src, dst string) error {
 	// For dot add, we need to copy from the actual file system location
 	// to the plonk config directory, so we use a simple file copy approach
-	
+
 	srcInfo, err := os.Stat(src)
 	if err != nil {
 		return err
 	}
 
 	// Create parent directories
-	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dst), 0750); err != nil {
 		return err
 	}
 
@@ -183,7 +181,7 @@ func copyFileContents(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(dst, content, 0644)
+	return os.WriteFile(dst, content, 0600)
 }
 
 // copyDirectoryContents copies a directory from src to dst
@@ -206,21 +204,6 @@ func copyDirectoryContents(src, dst string) error {
 
 		return copyFileContents(path, destPath)
 	})
-}
-
-// saveDotfileConfig saves the configuration to plonk.yaml atomically
-func saveDotfileConfig(cfg *config.Config, configDir string) error {
-	configPath := filepath.Join(configDir, "plonk.yaml")
-
-	// Marshal to YAML
-	data, err := yaml.Marshal(cfg)
-	if err != nil {
-		return err
-	}
-
-	// Write to file atomically
-	atomicWriter := dotfiles.NewAtomicFileWriter()
-	return atomicWriter.WriteFile(configPath, data, 0644)
 }
 
 // DotfileAddOutput represents the output structure for dotfile add command

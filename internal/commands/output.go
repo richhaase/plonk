@@ -22,8 +22,8 @@ const (
 
 // OutputData defines the interface for command output data
 type OutputData interface {
-	TableOutput() string   // Human-friendly table format
-	StructuredData() any   // Data structure for json/yaml/toml
+	TableOutput() string // Human-friendly table format
+	StructuredData() any // Data structure for json/yaml/toml
 }
 
 // RenderOutput renders data in the specified format
@@ -125,21 +125,21 @@ type ManagerStatus struct {
 // TableOutput generates human-friendly table output for status
 func (p PackageStatusOutput) TableOutput() string {
 	output := "Package Status\n==============\n\n"
-	
+
 	if p.Summary.Managed > 0 {
 		output += fmt.Sprintf("✅ %d managed packages\n", p.Summary.Managed)
 	} else {
 		output += "📦 No managed packages\n"
 	}
-	
+
 	if p.Summary.Missing > 0 {
 		output += fmt.Sprintf("❌ %d missing packages\n", p.Summary.Missing)
 	}
-	
+
 	if p.Summary.Untracked > 0 {
 		output += fmt.Sprintf("🔍 %d untracked packages\n", p.Summary.Untracked)
 	}
-	
+
 	// Show details if there are any managed or missing packages
 	if p.Summary.Missing > 0 || p.Summary.Managed > 0 {
 		output += "\nDetails:\n"
@@ -147,7 +147,7 @@ func (p PackageStatusOutput) TableOutput() string {
 			if mgr.Managed == 0 && mgr.Missing == 0 {
 				continue
 			}
-			
+
 			output += fmt.Sprintf("  %s: ", mgr.Name)
 			parts := []string{}
 			if mgr.Managed > 0 {
@@ -156,7 +156,7 @@ func (p PackageStatusOutput) TableOutput() string {
 			if mgr.Missing > 0 {
 				parts = append(parts, fmt.Sprintf("%d missing", mgr.Missing))
 			}
-			
+
 			for i, part := range parts {
 				if i > 0 {
 					output += ", "
@@ -166,7 +166,7 @@ func (p PackageStatusOutput) TableOutput() string {
 			output += "\n"
 		}
 	}
-	
+
 	return output
 }
 

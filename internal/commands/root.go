@@ -5,7 +5,6 @@ package commands
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -61,12 +60,6 @@ func init() {
 	// Global flags can be added here if needed
 }
 
-// Helper to check if command should exit early
-func checkPrerequisites() error {
-	// Add any global prerequisites here
-	return nil
-}
-
 // formatVersion formats the version information for display
 func formatVersion() string {
 	if versionInfo.Version == "dev" {
@@ -75,14 +68,4 @@ func formatVersion() string {
 	}
 	// Released version - show clean version
 	return versionInfo.Version
-}
-
-// Helper for consistent error formatting (deprecated - use HandleError instead)
-func exitWithError(msg string, err error) {
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %s: %v\n", msg, err)
-	} else {
-		fmt.Fprintf(os.Stderr, "Error: %s\n", msg)
-	}
-	os.Exit(1)
 }

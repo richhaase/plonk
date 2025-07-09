@@ -38,3 +38,7 @@ Thumbs.db
 # Build directories
 dist/
 build/
+
+# Security reports (if generated locally)
+security-*.json
+*.sarif

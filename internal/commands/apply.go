@@ -82,9 +82,9 @@ func runApply(cmd *cobra.Command, args []string) error {
 
 	// Prepare combined output
 	outputData := CombinedApplyOutput{
-		DryRun:    applyDryRun,
-		Packages:  packageResult,
-		Dotfiles:  dotfileResult,
+		DryRun:   applyDryRun,
+		Packages: packageResult,
+		Dotfiles: dotfileResult,
 	}
 
 	return RenderOutput(outputData, format)
@@ -100,7 +100,7 @@ func applyPackages(configDir string, cfg *config.Config, dryRun bool, format Out
 	packageProvider := state.NewMultiManagerPackageProvider()
 	configAdapter := config.NewConfigAdapter(cfg)
 	packageConfigAdapter := config.NewStatePackageConfigAdapter(configAdapter)
-	
+
 	// Add Homebrew manager
 	homebrewManager := managers.NewHomebrewManager()
 	available, err := homebrewManager.IsAvailable(ctx)
@@ -111,7 +111,7 @@ func applyPackages(configDir string, cfg *config.Config, dryRun bool, format Out
 		managerAdapter := state.NewManagerAdapter(homebrewManager)
 		packageProvider.AddManager("homebrew", managerAdapter, packageConfigAdapter)
 	}
-	
+
 	// Add NPM manager
 	npmManager := managers.NewNpmManager()
 	available, err = npmManager.IsAvailable(ctx)
@@ -122,7 +122,7 @@ func applyPackages(configDir string, cfg *config.Config, dryRun bool, format Out
 		managerAdapter := state.NewManagerAdapter(npmManager)
 		packageProvider.AddManager("npm", managerAdapter, packageConfigAdapter)
 	}
-	
+
 	reconciler.RegisterProvider("package", packageProvider)
 
 	// Reconcile package domain to find missing packages
@@ -143,9 +143,9 @@ func applyPackages(configDir string, cfg *config.Config, dryRun bool, format Out
 
 	// Prepare output structure
 	outputData := ApplyOutput{
-		DryRun:         dryRun,
-		TotalMissing:   len(result.Missing),
-		Managers:       make([]ManagerApplyResult, 0, len(missingByManager)),
+		DryRun:       dryRun,
+		TotalMissing: len(result.Missing),
+		Managers:     make([]ManagerApplyResult, 0, len(missingByManager)),
 	}
 
 	// Handle case where no packages are missing
@@ -254,44 +254,44 @@ func applyPackages(configDir string, cfg *config.Config, dryRun bool, format Out
 func applyDotfiles(configDir, homeDir string, cfg *config.Config, dryRun, backup bool, format OutputFormat) (DotfileApplyOutput, error) {
 	// Create unified state reconciler
 	reconciler := state.NewReconciler()
-	
+
 	// Register dotfile provider
 	configAdapter := config.NewConfigAdapter(cfg)
 	dotfileConfigAdapter := config.NewStateDotfileConfigAdapter(configAdapter)
 	dotfileProvider := state.NewDotfileProvider(homeDir, configDir, dotfileConfigAdapter)
 	reconciler.RegisterProvider("dotfile", dotfileProvider)
-	
+
 	// Reconcile dotfile domain to get expanded file list
 	ctx := context.Background()
 	result, err := reconciler.ReconcileProvider(ctx, "dotfile")
 	if err != nil {
 		return DotfileApplyOutput{}, errors.Wrap(err, errors.ErrReconciliation, errors.DomainDotfiles, "reconcile", "failed to reconcile dotfile state")
 	}
-	
+
 	// Process each dotfile from the reconciled state
 	var actions []DotfileAction
 	deployedCount := 0
 	skippedCount := 0
-	
+
 	// Process only missing items that need deployment
 	allItems := result.Missing
-	
+
 	for _, item := range allItems {
 		// Get source and destination from metadata
 		source, _ := item.Metadata["source"].(string)
 		destination, _ := item.Metadata["destination"].(string)
-		
+
 		if source == "" || destination == "" {
 			continue
 		}
-		
+
 		action, err := processDotfileForApply(ctx, configDir, homeDir, source, destination, dryRun, backup, format)
 		if err != nil {
 			return DotfileApplyOutput{}, errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "deploy", source, "failed to process dotfile")
 		}
-		
+
 		actions = append(actions, action)
-		
+
 		if action.Status == "deployed" || action.Status == "would-deploy" {
 			deployedCount++
 		} else {
@@ -372,7 +372,7 @@ func processDotfileForApply(ctx context.Context, configDir, homeDir, source, des
 	// Need to deploy
 	action.Status = "deployed"
 	action.Reason = "copying from source"
-	
+
 	// Add backup indication if backup is requested and file exists
 	if backup && manager.FileExists(destPath) {
 		action.Reason = "copying from source (with backup)"
@@ -407,12 +407,12 @@ func processDotfileForApply(ctx context.Context, configDir, homeDir, source, des
 
 // ApplyOutput represents the output structure for package apply operations
 type ApplyOutput struct {
-	DryRun             bool                 `json:"dry_run" yaml:"dry_run"`
-	TotalMissing       int                  `json:"total_missing" yaml:"total_missing"`
-	TotalInstalled     int                  `json:"total_installed" yaml:"total_installed"`
-	TotalFailed        int                  `json:"total_failed" yaml:"total_failed"`
-	TotalWouldInstall  int                  `json:"total_would_install" yaml:"total_would_install"`
-	Managers           []ManagerApplyResult `json:"managers" yaml:"managers"`
+	DryRun            bool                 `json:"dry_run" yaml:"dry_run"`
+	TotalMissing      int                  `json:"total_missing" yaml:"total_missing"`
+	TotalInstalled    int                  `json:"total_installed" yaml:"total_installed"`
+	TotalFailed       int                  `json:"total_failed" yaml:"total_failed"`
+	TotalWouldInstall int                  `json:"total_would_install" yaml:"total_would_install"`
+	Managers          []ManagerApplyResult `json:"managers" yaml:"managers"`
 }
 
 // ManagerApplyResult represents the result for a specific manager
@@ -443,10 +443,10 @@ func (a ApplyOutput) StructuredData() any {
 
 // DotfileApplyOutput represents the output structure for dotfile apply operations
 type DotfileApplyOutput struct {
-	DryRun   bool             `json:"dry_run" yaml:"dry_run"`
-	Deployed int              `json:"deployed" yaml:"deployed"`
-	Skipped  int              `json:"skipped" yaml:"skipped"`
-	Actions  []DotfileAction  `json:"actions" yaml:"actions"`
+	DryRun   bool            `json:"dry_run" yaml:"dry_run"`
+	Deployed int             `json:"deployed" yaml:"deployed"`
+	Skipped  int             `json:"skipped" yaml:"skipped"`
+	Actions  []DotfileAction `json:"actions" yaml:"actions"`
 }
 
 // DotfileAction represents a single dotfile deployment action
@@ -464,10 +464,10 @@ func (d DotfileApplyOutput) TableOutput() string {
 		if d.Deployed == 0 && d.Skipped == 0 {
 			return output + "No dotfiles configured\n"
 		}
-		
+
 		output += fmt.Sprintf("Would deploy: %d\n", d.Deployed)
 		output += fmt.Sprintf("Would skip: %d\n", d.Skipped)
-		
+
 		if len(d.Actions) > 0 {
 			output += "\nActions:\n"
 			for _, action := range d.Actions {
@@ -479,7 +479,7 @@ func (d DotfileApplyOutput) TableOutput() string {
 				} else if action.Status == "error" {
 					status = "❌"
 				}
-				
+
 				output += fmt.Sprintf("  %s %s -> %s", status, action.Source, action.Destination)
 				if action.Reason != "" {
 					output += fmt.Sprintf(" (%s)", action.Reason)
@@ -487,7 +487,7 @@ func (d DotfileApplyOutput) TableOutput() string {
 				output += "\n"
 			}
 		}
-		
+
 		return output
 	}
 
@@ -514,7 +514,7 @@ func (d DotfileApplyOutput) TableOutput() string {
 			} else if action.Status == "error" {
 				status = "❌"
 			}
-			
+
 			output += fmt.Sprintf("  %s %s -> %s", status, action.Source, action.Destination)
 			if action.Reason != "" {
 				output += fmt.Sprintf(" (%s)", action.Reason)
@@ -533,15 +533,15 @@ func (d DotfileApplyOutput) StructuredData() any {
 
 // CombinedApplyOutput represents the output structure for the combined apply command
 type CombinedApplyOutput struct {
-	DryRun   bool                `json:"dry_run" yaml:"dry_run"`
-	Packages ApplyOutput         `json:"packages" yaml:"packages"`
-	Dotfiles DotfileApplyOutput  `json:"dotfiles" yaml:"dotfiles"`
+	DryRun   bool               `json:"dry_run" yaml:"dry_run"`
+	Packages ApplyOutput        `json:"packages" yaml:"packages"`
+	Dotfiles DotfileApplyOutput `json:"dotfiles" yaml:"dotfiles"`
 }
 
 // TableOutput generates human-friendly table output for combined apply
 func (c CombinedApplyOutput) TableOutput() string {
 	output := ""
-	
+
 	if c.DryRun {
 		output += "Plonk Apply (Dry Run)\n"
 		output += "=====================\n\n"
@@ -549,7 +549,7 @@ func (c CombinedApplyOutput) TableOutput() string {
 		output += "Plonk Apply\n"
 		output += "===========\n\n"
 	}
-	
+
 	// Summary
 	if c.DryRun {
 		output += fmt.Sprintf("📦 Packages: %d would be installed\n", c.Packages.TotalWouldInstall)
@@ -558,7 +558,7 @@ func (c CombinedApplyOutput) TableOutput() string {
 		output += fmt.Sprintf("📦 Packages: %d installed, %d failed\n", c.Packages.TotalInstalled, c.Packages.TotalFailed)
 		output += fmt.Sprintf("📄 Dotfiles: %d deployed, %d skipped\n", c.Dotfiles.Deployed, c.Dotfiles.Skipped)
 	}
-	
+
 	return output
 }
 

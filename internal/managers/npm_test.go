@@ -15,10 +15,10 @@ func TestNpmManager_ContextCancellation(t *testing.T) {
 	t.Run("ListInstalled_ContextCancellation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // Cancel immediately
-		
+
 		_, err := manager.ListInstalled(ctx)
 		if err == nil {
-			t.Error("Expected error when context is cancelled")
+			t.Error("Expected error when context is canceled")
 		}
 		if !containsContextError(err) {
 			t.Errorf("Expected context cancellation error, got %v", err)
@@ -28,9 +28,9 @@ func TestNpmManager_ContextCancellation(t *testing.T) {
 	t.Run("ListInstalled_ContextTimeout", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 		defer cancel()
-		
+
 		time.Sleep(10 * time.Millisecond) // Ensure timeout
-		
+
 		_, err := manager.ListInstalled(ctx)
 		if err == nil {
 			t.Error("Expected error when context times out")
@@ -43,10 +43,10 @@ func TestNpmManager_ContextCancellation(t *testing.T) {
 	t.Run("Install_ContextCancellation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // Cancel immediately
-		
+
 		err := manager.Install(ctx, "nonexistent-package")
 		if err == nil {
-			t.Error("Expected error when context is cancelled")
+			t.Error("Expected error when context is canceled")
 		}
 		// Should contain context cancellation error
 		if !containsContextError(err) {
@@ -57,9 +57,9 @@ func TestNpmManager_ContextCancellation(t *testing.T) {
 	t.Run("Install_ContextTimeout", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 		defer cancel()
-		
+
 		time.Sleep(10 * time.Millisecond) // Ensure timeout
-		
+
 		err := manager.Install(ctx, "nonexistent-package")
 		if err == nil {
 			t.Error("Expected error when context times out")
@@ -72,10 +72,10 @@ func TestNpmManager_ContextCancellation(t *testing.T) {
 	t.Run("Uninstall_ContextCancellation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // Cancel immediately
-		
+
 		err := manager.Uninstall(ctx, "nonexistent-package")
 		if err == nil {
-			t.Error("Expected error when context is cancelled")
+			t.Error("Expected error when context is canceled")
 		}
 		if !containsContextError(err) {
 			t.Errorf("Expected context cancellation error, got %v", err)
@@ -85,9 +85,9 @@ func TestNpmManager_ContextCancellation(t *testing.T) {
 	t.Run("Uninstall_ContextTimeout", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 		defer cancel()
-		
+
 		time.Sleep(10 * time.Millisecond) // Ensure timeout
-		
+
 		err := manager.Uninstall(ctx, "nonexistent-package")
 		if err == nil {
 			t.Error("Expected error when context times out")
@@ -100,10 +100,10 @@ func TestNpmManager_ContextCancellation(t *testing.T) {
 	t.Run("IsInstalled_ContextCancellation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // Cancel immediately
-		
+
 		_, err := manager.IsInstalled(ctx, "nonexistent-package")
 		if err == nil {
-			t.Error("Expected error when context is cancelled")
+			t.Error("Expected error when context is canceled")
 		}
 		if !containsContextError(err) {
 			t.Errorf("Expected context cancellation error, got %v", err)
@@ -113,9 +113,9 @@ func TestNpmManager_ContextCancellation(t *testing.T) {
 	t.Run("IsInstalled_ContextTimeout", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 		defer cancel()
-		
+
 		time.Sleep(10 * time.Millisecond) // Ensure timeout
-		
+
 		_, err := manager.IsInstalled(ctx, "nonexistent-package")
 		if err == nil {
 			t.Error("Expected error when context times out")
@@ -128,10 +128,10 @@ func TestNpmManager_ContextCancellation(t *testing.T) {
 	t.Run("IsAvailable_ContextCancellation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // Cancel immediately
-		
+
 		_, err := manager.IsAvailable(ctx)
 		if err == nil {
-			t.Error("Expected error when context is cancelled")
+			t.Error("Expected error when context is canceled")
 		}
 		if !containsContextError(err) {
 			t.Errorf("Expected context cancellation error, got %v", err)
@@ -141,9 +141,9 @@ func TestNpmManager_ContextCancellation(t *testing.T) {
 	t.Run("IsAvailable_ContextTimeout", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 		defer cancel()
-		
+
 		time.Sleep(10 * time.Millisecond) // Ensure timeout
-		
+
 		_, err := manager.IsAvailable(ctx)
 		if err == nil {
 			t.Error("Expected error when context times out")
@@ -153,5 +153,3 @@ func TestNpmManager_ContextCancellation(t *testing.T) {
 		}
 	})
 }
-
-

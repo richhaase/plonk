@@ -300,7 +300,7 @@ just release-auto v1.2.3
    - Run security checks
    - Test build
 4. ✅ Creates and pushes git tag
-5. ✅ Builds and publishes release via GoReleaser
+5. ✅ Builds cross-platform release binaries
 6. ✅ Provides clear success/failure feedback
 
 ### Manual Release (If Needed)
@@ -311,7 +311,7 @@ For emergency or special cases, you can manually execute the release steps:
 # Manual steps (emergency use only)
 git tag -a v1.2.3 -m "Release v1.2.3 - Description"
 git push origin v1.2.3
-goreleaser release
+# Build binaries manually for each platform if needed
 ```
 
 ### Release Checklist
@@ -321,8 +321,7 @@ The automated process (`just release-auto`) handles everything:
 - ✅ Documentation generation
 - ✅ Version validation
 - ✅ Tag creation and push
-- ✅ Release binary building
-- ✅ GitHub release creation
+- ✅ Cross-platform binary building
 
 ### Version Guidelines
 

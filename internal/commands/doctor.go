@@ -119,7 +119,7 @@ func checkSystemRequirements() HealthCheck {
 		check.Details = append(check.Details, fmt.Sprintf("Go version: %s", goVersion))
 	}
 
-	check.Details = append(check.Details, 
+	check.Details = append(check.Details,
 		fmt.Sprintf("OS: %s", runtime.GOOS),
 		fmt.Sprintf("Architecture: %s", runtime.GOARCH),
 	)
@@ -213,17 +213,17 @@ func checkPermissions() HealthCheck {
 
 	// Test write permissions by creating a temp file
 	tempFile := filepath.Join(configDir, ".plonk_doctor_test")
-	if err := os.MkdirAll(configDir, 0755); err != nil {
+	if err := os.MkdirAll(configDir, 0750); err != nil {
 		check.Status = "fail"
 		check.Issues = append(check.Issues, fmt.Sprintf("Cannot create config directory: %v", err))
 		check.Suggestions = append(check.Suggestions, "Check permissions on ~/.config directory")
 	} else {
-		if err := os.WriteFile(tempFile, []byte("test"), 0644); err != nil {
+		if err := os.WriteFile(tempFile, []byte("test"), 0600); err != nil {
 			check.Status = "fail"
 			check.Issues = append(check.Issues, fmt.Sprintf("Cannot write to config directory: %v", err))
 			check.Suggestions = append(check.Suggestions, "Check write permissions on ~/.config/plonk directory")
 		} else {
-			os.Remove(tempFile) // Clean up
+			_ = os.Remove(tempFile) // Clean up
 			check.Details = append(check.Details, "Config directory is writable")
 		}
 	}
@@ -256,7 +256,7 @@ func checkConfigurationFile() HealthCheck {
 			check.Suggestions = append(check.Suggestions, "Check file permissions and path")
 		}
 	} else {
-		check.Details = append(check.Details, 
+		check.Details = append(check.Details,
 			fmt.Sprintf("Config file: %s", configPath),
 			fmt.Sprintf("Size: %d bytes", info.Size()),
 			fmt.Sprintf("Modified: %s", info.ModTime().Format("2006-01-02 15:04:05")),
@@ -307,12 +307,12 @@ func checkConfigurationValidity() HealthCheck {
 	} else {
 		// Count configured items
 		packageCount := len(cfg.Homebrew) + len(cfg.NPM)
-		
+
 		// Get auto-discovered dotfiles
 		adapter := config.NewConfigAdapter(cfg)
 		dotfileTargets := adapter.GetDotfileTargets()
 		dotfileCount := len(dotfileTargets)
-		
+
 		check.Details = append(check.Details,
 			fmt.Sprintf("Default manager: %s", cfg.Settings.DefaultManager),
 			fmt.Sprintf("Configured packages: %d", packageCount),
@@ -541,7 +541,7 @@ func (d DoctorOutput) TableOutput() string {
 
 	// Overall status
 	output.WriteString("# Plonk Doctor Report\n\n")
-	
+
 	switch d.Overall.Status {
 	case "healthy":
 		output.WriteString("🟢 Overall Status: HEALTHY\n")
@@ -563,7 +563,7 @@ func (d DoctorOutput) TableOutput() string {
 	for _, category := range categoryOrder {
 		if checks, exists := categories[category]; exists {
 			output.WriteString(fmt.Sprintf("## %s\n", strings.Title(strings.ReplaceAll(category, "-", " "))))
-			
+
 			for _, check := range checks {
 				// Status icon
 				var icon string
@@ -575,16 +575,16 @@ func (d DoctorOutput) TableOutput() string {
 				case "fail":
 					icon = "❌"
 				}
-				
+
 				output.WriteString(fmt.Sprintf("%s **%s**: %s\n", icon, check.Name, check.Message))
-				
+
 				// Details
 				if len(check.Details) > 0 {
 					for _, detail := range check.Details {
 						output.WriteString(fmt.Sprintf("   • %s\n", detail))
 					}
 				}
-				
+
 				// Issues
 				if len(check.Issues) > 0 {
 					output.WriteString("   Issues:\n")
@@ -592,7 +592,7 @@ func (d DoctorOutput) TableOutput() string {
 						output.WriteString(fmt.Sprintf("   ⚠️  %s\n", issue))
 					}
 				}
-				
+
 				// Suggestions
 				if len(check.Suggestions) > 0 {
 					output.WriteString("   Suggestions:\n")
@@ -600,7 +600,7 @@ func (d DoctorOutput) TableOutput() string {
 						output.WriteString(fmt.Sprintf("   💡 %s\n", suggestion))
 					}
 				}
-				
+
 				output.WriteString("\n")
 			}
 		}

@@ -31,11 +31,11 @@ func (s ItemState) String() string {
 
 // Item represents any manageable item (package, dotfile, etc.) with its current state
 type Item struct {
-	Name     string    `json:"name" yaml:"name"`
-	State    ItemState `json:"state" yaml:"state"`
-	Domain   string    `json:"domain" yaml:"domain"`     // "package", "dotfile", etc.
-	Manager  string    `json:"manager,omitempty" yaml:"manager,omitempty"` // "homebrew", "npm", etc.
-	Path     string    `json:"path,omitempty" yaml:"path,omitempty"`       // For dotfiles
+	Name     string                 `json:"name" yaml:"name"`
+	State    ItemState              `json:"state" yaml:"state"`
+	Domain   string                 `json:"domain" yaml:"domain"`                         // "package", "dotfile", etc.
+	Manager  string                 `json:"manager,omitempty" yaml:"manager,omitempty"`   // "homebrew", "npm", etc.
+	Path     string                 `json:"path,omitempty" yaml:"path,omitempty"`         // For dotfiles
 	Metadata map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"` // Additional data
 }
 
@@ -50,9 +50,9 @@ type Result struct {
 
 // Summary provides aggregate counts across all states
 type Summary struct {
-	TotalManaged   int `json:"total_managed" yaml:"total_managed"`
-	TotalMissing   int `json:"total_missing" yaml:"total_missing"`
-	TotalUntracked int `json:"total_untracked" yaml:"total_untracked"`
+	TotalManaged   int      `json:"total_managed" yaml:"total_managed"`
+	TotalMissing   int      `json:"total_missing" yaml:"total_missing"`
+	TotalUntracked int      `json:"total_untracked" yaml:"total_untracked"`
 	Results        []Result `json:"results" yaml:"results"`
 }
 

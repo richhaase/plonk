@@ -102,7 +102,7 @@ func runPkgRemove(cmd *cobra.Command, args []string) error {
 				if format == OutputTable {
 					fmt.Printf("Uninstalling %s from %s...\n", packageName, managerName)
 				}
-				
+
 				err = mgr.Uninstall(ctx, packageName)
 				if err != nil {
 					uninstallError = err

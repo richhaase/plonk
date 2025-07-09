@@ -13,15 +13,15 @@ func TestConfigAdapter_GetDotfileTargets(t *testing.T) {
 			DefaultManager: "homebrew",
 		},
 	}
-	
+
 	adapter := NewConfigAdapter(config)
 	targets := adapter.GetDotfileTargets()
-	
+
 	// Should auto-discover files from ~/.config/plonk/
 	if len(targets) == 0 {
 		t.Errorf("Expected auto-discovered dotfile targets, got 0")
 	}
-	
+
 	// Log what was discovered for debugging
 	t.Logf("Auto-discovered %d dotfiles:", len(targets))
 	for source, target := range targets {
@@ -46,70 +46,70 @@ func TestConfigAdapter_GetPackagesForManager(t *testing.T) {
 			{Name: "prettier"},
 		},
 	}
-	
+
 	adapter := NewConfigAdapter(config)
-	
+
 	t.Run("homebrew packages", func(t *testing.T) {
 		packages, err := adapter.GetPackagesForManager("homebrew")
 		if err != nil {
 			t.Fatalf("GetPackagesForManager(homebrew) failed: %v", err)
 		}
-		
+
 		// Should have 5 packages
 		if len(packages) != 5 {
 			t.Errorf("Expected 5 homebrew packages, got %d", len(packages))
 		}
-		
+
 		// Check that all expected packages are present
 		expectedNames := map[string]bool{
-			"git":      true,
-			"curl":     true,
-			"htop":     true,
-			"firefox":  true,
-			"vscode":   true,
+			"git":     true,
+			"curl":    true,
+			"htop":    true,
+			"firefox": true,
+			"vscode":  true,
 		}
-		
+
 		for _, pkg := range packages {
 			if !expectedNames[pkg.Name] {
 				t.Errorf("Unexpected package: %s", pkg.Name)
 			}
 			delete(expectedNames, pkg.Name)
 		}
-		
+
 		if len(expectedNames) > 0 {
 			t.Errorf("Missing expected packages: %v", expectedNames)
 		}
 	})
-	
+
 	t.Run("npm packages", func(t *testing.T) {
 		packages, err := adapter.GetPackagesForManager("npm")
 		if err != nil {
 			t.Fatalf("GetPackagesForManager(npm) failed: %v", err)
 		}
-		
+
 		// Should have 2 npm packages
 		if len(packages) != 2 {
 			t.Errorf("Expected 2 npm packages, got %d", len(packages))
 		}
-		
+
 		// Check that all expected packages are present
 		expectedNames := map[string]bool{
 			"typescript": true,
 			"prettier":   true,
 		}
-		
+
 		for _, pkg := range packages {
 			if !expectedNames[pkg.Name] {
 				t.Errorf("Unexpected package: %s", pkg.Name)
 			}
 			delete(expectedNames, pkg.Name)
 		}
-		
+
 		if len(expectedNames) > 0 {
 			t.Errorf("Missing expected packages: %v", expectedNames)
 		}
 	})
-	
+
 	t.Run("unknown manager", func(t *testing.T) {
 		_, err := adapter.GetPackagesForManager("unknown")
 		if err == nil {
@@ -131,55 +131,55 @@ func TestStatePackageConfigAdapter(t *testing.T) {
 			{Name: "typescript"},
 		},
 	}
-	
+
 	configAdapter := NewConfigAdapter(config)
 	stateAdapter := NewStatePackageConfigAdapter(configAdapter)
-	
+
 	t.Run("homebrew packages", func(t *testing.T) {
 		packages, err := stateAdapter.GetPackagesForManager("homebrew")
 		if err != nil {
 			t.Fatalf("GetPackagesForManager(homebrew) failed: %v", err)
 		}
-		
+
 		// Should have 2 packages
 		if len(packages) != 2 {
 			t.Errorf("Expected 2 homebrew packages, got %d", len(packages))
 		}
-		
+
 		// Check that packages are correctly converted to state.PackageConfigItem
 		expectedNames := map[string]bool{
 			"git":  true,
 			"curl": true,
 		}
-		
+
 		for _, pkg := range packages {
 			if !expectedNames[pkg.Name] {
 				t.Errorf("Unexpected package: %s", pkg.Name)
 			}
 			delete(expectedNames, pkg.Name)
 		}
-		
+
 		if len(expectedNames) > 0 {
 			t.Errorf("Missing expected packages: %v", expectedNames)
 		}
 	})
-	
+
 	t.Run("npm packages", func(t *testing.T) {
 		packages, err := stateAdapter.GetPackagesForManager("npm")
 		if err != nil {
 			t.Fatalf("GetPackagesForManager(npm) failed: %v", err)
 		}
-		
+
 		// Should have 1 package
 		if len(packages) != 1 {
 			t.Errorf("Expected 1 npm package, got %d", len(packages))
 		}
-		
+
 		if packages[0].Name != "typescript" {
 			t.Errorf("Expected package name 'typescript', got %s", packages[0].Name)
 		}
 	})
-	
+
 	t.Run("unknown manager", func(t *testing.T) {
 		_, err := stateAdapter.GetPackagesForManager("unknown")
 		if err == nil {
@@ -194,12 +194,12 @@ func TestStateDotfileConfigAdapter(t *testing.T) {
 			DefaultManager: "homebrew",
 		},
 	}
-	
+
 	configAdapter := NewConfigAdapter(config)
 	stateAdapter := NewStateDotfileConfigAdapter(configAdapter)
-	
+
 	targets := stateAdapter.GetDotfileTargets()
-	
+
 	// Should auto-discover files from ~/.config/plonk/
 	if len(targets) == 0 {
 		t.Errorf("Expected auto-discovered dotfile targets, got 0")
@@ -212,9 +212,9 @@ func TestConfigAdapter_EmptyConfig(t *testing.T) {
 			DefaultManager: "homebrew",
 		},
 	}
-	
+
 	adapter := NewConfigAdapter(config)
-	
+
 	t.Run("auto-discovered dotfiles", func(t *testing.T) {
 		targets := adapter.GetDotfileTargets()
 		// Should auto-discover files even with empty config
@@ -222,24 +222,24 @@ func TestConfigAdapter_EmptyConfig(t *testing.T) {
 			t.Errorf("Expected auto-discovered dotfile targets, got 0")
 		}
 	})
-	
+
 	t.Run("empty homebrew packages", func(t *testing.T) {
 		packages, err := adapter.GetPackagesForManager("homebrew")
 		if err != nil {
 			t.Fatalf("GetPackagesForManager(homebrew) failed: %v", err)
 		}
-		
+
 		if len(packages) != 0 {
 			t.Errorf("Expected 0 homebrew packages for empty config, got %d", len(packages))
 		}
 	})
-	
+
 	t.Run("empty npm packages", func(t *testing.T) {
 		packages, err := adapter.GetPackagesForManager("npm")
 		if err != nil {
 			t.Fatalf("GetPackagesForManager(npm) failed: %v", err)
 		}
-		
+
 		if len(packages) != 0 {
 			t.Errorf("Expected 0 npm packages for empty config, got %d", len(packages))
 		}
@@ -250,20 +250,20 @@ func TestConfigAdapter_InterfaceCompliance(t *testing.T) {
 	config := &Config{
 		Settings: Settings{DefaultManager: "homebrew"},
 	}
-	
+
 	adapter := NewConfigAdapter(config)
-	
+
 	// Test that ConfigAdapter implements DotfileConfigReader
 	var _ DotfileConfigReader = adapter
-	
+
 	// Test that ConfigAdapter implements PackageConfigReader
 	var _ PackageConfigReader = adapter
-	
+
 	// Test that StatePackageConfigAdapter implements the state interface
 	statePackageAdapter := NewStatePackageConfigAdapter(adapter)
 	// We can't easily test this without importing state package here, but compilation will catch issues
 	_ = statePackageAdapter
-	
+
 	// Test that StateDotfileConfigAdapter implements the state interface
 	stateDotfileAdapter := NewStateDotfileConfigAdapter(adapter)
 	// We can't easily test this without importing state package here, but compilation will catch issues

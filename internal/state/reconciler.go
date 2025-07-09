@@ -12,13 +12,13 @@ import (
 type Provider interface {
 	// Domain returns the domain name (e.g., "package", "dotfile")
 	Domain() string
-	
+
 	// GetConfiguredItems returns items defined in configuration
 	GetConfiguredItems() ([]ConfigItem, error)
-	
+
 	// GetActualItems returns items currently present in the system
 	GetActualItems(ctx context.Context) ([]ActualItem, error)
-	
+
 	// CreateItem creates an Item from configured and actual data
 	CreateItem(name string, state ItemState, configured *ConfigItem, actual *ActualItem) Item
 }
@@ -61,11 +61,11 @@ func (r *Reconciler) ReconcileAll(ctx context.Context) (Summary, error) {
 		return Summary{}, ctx.Err()
 	default:
 	}
-	
+
 	summary := Summary{
 		Results: make([]Result, 0),
 	}
-	
+
 	for domain := range r.providers {
 		// Check context before each provider
 		select {
@@ -73,15 +73,15 @@ func (r *Reconciler) ReconcileAll(ctx context.Context) (Summary, error) {
 			return Summary{}, ctx.Err()
 		default:
 		}
-		
+
 		result, err := r.ReconcileProvider(ctx, domain)
 		if err != nil {
 			return summary, fmt.Errorf("failed to reconcile %s: %w", domain, err)
 		}
-		
+
 		result.AddToSummary(&summary)
 	}
-	
+
 	return summary, nil
 }
 
@@ -93,31 +93,31 @@ func (r *Reconciler) ReconcileProvider(ctx context.Context, domain string) (Resu
 		return Result{}, ctx.Err()
 	default:
 	}
-	
+
 	provider, exists := r.providers[domain]
 	if !exists {
 		return Result{}, fmt.Errorf("provider for domain %s not found", domain)
 	}
-	
+
 	// Get configured items
 	configuredItems, err := provider.GetConfiguredItems()
 	if err != nil {
 		return Result{}, fmt.Errorf("failed to get configured items: %w", err)
 	}
-	
+
 	// Check context before getting actual items
 	select {
 	case <-ctx.Done():
 		return Result{}, ctx.Err()
 	default:
 	}
-	
+
 	// Get actual items
 	actualItems, err := provider.GetActualItems(ctx)
 	if err != nil {
 		return Result{}, fmt.Errorf("failed to get actual items: %w", err)
 	}
-	
+
 	// Perform reconciliation
 	return r.reconcileItems(provider, configuredItems, actualItems), nil
 }
@@ -129,19 +129,19 @@ func (r *Reconciler) reconcileItems(provider Provider, configured []ConfigItem, 
 	for i := range actual {
 		actualSet[actual[i].Name] = &actual[i]
 	}
-	
+
 	configuredSet := make(map[string]*ConfigItem)
 	for i := range configured {
 		configuredSet[configured[i].Name] = &configured[i]
 	}
-	
+
 	result := Result{
 		Domain:    provider.Domain(),
 		Managed:   make([]Item, 0),
 		Missing:   make([]Item, 0),
 		Untracked: make([]Item, 0),
 	}
-	
+
 	// Check each configured item against actual
 	for _, configItem := range configured {
 		if actualItem, exists := actualSet[configItem.Name]; exists {
@@ -154,7 +154,7 @@ func (r *Reconciler) reconcileItems(provider Provider, configured []ConfigItem, 
 			result.Missing = append(result.Missing, item)
 		}
 	}
-	
+
 	// Check each actual item against configured
 	for _, actualItem := range actual {
 		if _, exists := configuredSet[actualItem.Name]; !exists {
@@ -163,7 +163,7 @@ func (r *Reconciler) reconcileItems(provider Provider, configured []ConfigItem, 
 			result.Untracked = append(result.Untracked, item)
 		}
 	}
-	
+
 	return result
 }
 

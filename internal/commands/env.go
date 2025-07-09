@@ -97,21 +97,21 @@ func gatherEnvironmentInfo() EnvOutput {
 
 	// Environment variables
 	envVars := EnvironmentVars{
-		Editor:  os.Getenv("EDITOR"),
-		Visual:  os.Getenv("VISUAL"),
-		Shell:   os.Getenv("SHELL"),
-		Home:    homeDir,
-		Path:    os.Getenv("PATH"),
-		User:    os.Getenv("USER"),
-		Tmpdir:  os.Getenv("TMPDIR"),
+		Editor: os.Getenv("EDITOR"),
+		Visual: os.Getenv("VISUAL"),
+		Shell:  os.Getenv("SHELL"),
+		Home:   homeDir,
+		Path:   os.Getenv("PATH"),
+		User:   os.Getenv("USER"),
+		Tmpdir: os.Getenv("TMPDIR"),
 	}
 
 	// Path information
 	pathInfo := PathInfo{
-		HomeDir:     homeDir,
-		ConfigDir:   configDir,
-		TempDir:     os.TempDir(),
-		WorkingDir:  getCurrentDir(),
+		HomeDir:        homeDir,
+		ConfigDir:      configDir,
+		TempDir:        os.TempDir(),
+		WorkingDir:     getCurrentDir(),
 		ExecutablePath: getExecutablePath(),
 	}
 
@@ -163,7 +163,7 @@ func getManagerInfo(ctx context.Context, managerName string) ManagerInfo {
 // getManagerVersion gets the version of a package manager
 func getManagerVersion(managerName string) string {
 	var cmd *exec.Cmd
-	
+
 	switch managerName {
 	case "homebrew":
 		cmd = exec.Command("brew", "--version")
@@ -193,7 +193,7 @@ func getManagerVersion(managerName string) string {
 // getManagerPath gets the path to a package manager executable
 func getManagerPath(managerName string) string {
 	var command string
-	
+
 	switch managerName {
 	case "homebrew":
 		command = "brew"

@@ -74,7 +74,7 @@ func (a *AtomicFileWriter) CopyFile(ctx context.Context, src, dst string, perm o
 func (a *AtomicFileWriter) writeFileInternal(filename string, writeFunc func(*os.File) error, perm os.FileMode) error {
 	// Create destination directory if it doesn't exist
 	destDir := filepath.Dir(filename)
-	if err := os.MkdirAll(destDir, 0755); err != nil {
+	if err := os.MkdirAll(destDir, 0750); err != nil {
 		return fmt.Errorf("failed to create destination directory: %w", err)
 	}
 
@@ -88,9 +88,9 @@ func (a *AtomicFileWriter) writeFileInternal(filename string, writeFunc func(*os
 	// Ensure cleanup on failure
 	defer func() {
 		if tmpFile != nil {
-			tmpFile.Close()
+			_ = tmpFile.Close()
 		}
-		os.Remove(tmpPath)
+		_ = os.Remove(tmpPath)
 	}()
 
 	// Write data using provided function

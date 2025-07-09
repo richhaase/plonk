@@ -46,7 +46,7 @@ func runInfo(cmd *cobra.Command, args []string) error {
 	}
 
 	packageName := args[0]
-	
+
 	// Create context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -239,32 +239,32 @@ func (i InfoOutput) TableOutput() string {
 		if i.PackageInfo != nil {
 			output.WriteString(i.formatPackageInfo())
 		}
-		
+
 	case "available-default":
 		output.WriteString(fmt.Sprintf("📦 %s\n", i.Message))
 		if i.PackageInfo != nil {
 			output.WriteString(i.formatPackageInfo())
 		}
-		
+
 	case "available-multiple":
 		output.WriteString(fmt.Sprintf("📦 %s\n", i.Message))
 		if i.PackageInfo != nil {
 			output.WriteString(i.formatPackageInfo())
 		}
-		
+
 	case "available-other":
 		output.WriteString(fmt.Sprintf("📦 %s\n", i.Message))
 		if i.PackageInfo != nil {
 			output.WriteString(i.formatPackageInfo())
 		}
-		
+
 	case "not-found":
 		output.WriteString(fmt.Sprintf("❌ %s\n", i.Message))
-		
+
 	case "no-managers":
 		output.WriteString(fmt.Sprintf("⚠️  %s\n", i.Message))
 		output.WriteString("\nPlease install a package manager (Homebrew or NPM) to get package information.\n")
-		
+
 	default:
 		output.WriteString(fmt.Sprintf("❓ %s\n", i.Message))
 	}
@@ -283,26 +283,26 @@ func (i InfoOutput) formatPackageInfo() string {
 
 	output.WriteString("\n")
 	output.WriteString(fmt.Sprintf("Name: %s\n", info.Name))
-	
+
 	if info.Version != "" {
 		output.WriteString(fmt.Sprintf("Version: %s\n", info.Version))
 	}
-	
+
 	if info.Description != "" {
 		output.WriteString(fmt.Sprintf("Description: %s\n", info.Description))
 	}
-	
+
 	if info.Homepage != "" {
 		output.WriteString(fmt.Sprintf("Homepage: %s\n", info.Homepage))
 	}
-	
+
 	output.WriteString(fmt.Sprintf("Manager: %s\n", info.Manager))
 	output.WriteString(fmt.Sprintf("Installed: %t\n", info.Installed))
-	
+
 	if info.InstalledSize != "" {
 		output.WriteString(fmt.Sprintf("Size: %s\n", info.InstalledSize))
 	}
-	
+
 	if len(info.Dependencies) > 0 {
 		output.WriteString(fmt.Sprintf("Dependencies (%d):\n", len(info.Dependencies)))
 		for _, dep := range info.Dependencies {

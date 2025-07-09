@@ -29,16 +29,16 @@ func NewFileOperations(manager *Manager) *FileOperations {
 
 // CopyOptions configures file copy operations
 type CopyOptions struct {
-	CreateBackup bool
-	BackupSuffix string
+	CreateBackup      bool
+	BackupSuffix      string
 	OverwriteExisting bool
 }
 
 // DefaultCopyOptions returns default copy options
 func DefaultCopyOptions() CopyOptions {
 	return CopyOptions{
-		CreateBackup: true,
-		BackupSuffix: ".backup",
+		CreateBackup:      true,
+		BackupSuffix:      ".backup",
 		OverwriteExisting: true,
 	}
 }
@@ -47,44 +47,44 @@ func DefaultCopyOptions() CopyOptions {
 func (f *FileOperations) CopyFile(ctx context.Context, source, destination string, options CopyOptions) error {
 	sourcePath := f.manager.GetSourcePath(source)
 	destPath := f.manager.GetDestinationPath(destination)
-	
+
 	// Check if source exists
 	if !f.manager.FileExists(sourcePath) {
-		return errors.DotfileError(errors.ErrFileNotFound, "copy", 
+		return errors.DotfileError(errors.ErrFileNotFound, "copy",
 			"source file does not exist").
 			WithItem(source).
 			WithMetadata("source_path", sourcePath)
 	}
-	
+
 	// Create destination directory if it doesn't exist
 	destDir := filepath.Dir(destPath)
-	if err := os.MkdirAll(destDir, 0755); err != nil {
-		return errors.Wrap(err, errors.ErrDirectoryCreate, errors.DomainDotfiles, "copy", 
+	if err := os.MkdirAll(destDir, 0750); err != nil {
+		return errors.Wrap(err, errors.ErrDirectoryCreate, errors.DomainDotfiles, "copy",
 			"failed to create destination directory").
 			WithItem(destination).
 			WithMetadata("dest_dir", destDir)
 	}
-	
+
 	// Handle backup if destination exists
 	if f.manager.FileExists(destPath) {
 		if options.CreateBackup {
 			backupPath := destPath + options.BackupSuffix
 			if err := f.createBackup(ctx, destPath, backupPath); err != nil {
-				return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", 
+				return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "copy",
 					"failed to create backup").
 					WithItem(destination).
 					WithMetadata("backup_path", backupPath)
 			}
 		}
-		
+
 		if !options.OverwriteExisting {
-			return errors.DotfileError(errors.ErrFilePermission, "copy", 
+			return errors.DotfileError(errors.ErrFilePermission, "copy",
 				"destination file exists and overwrite is disabled").
 				WithItem(destination).
 				WithMetadata("dest_path", destPath)
 		}
 	}
-	
+
 	// Copy the file
 	return f.copyFileContents(ctx, sourcePath, destPath)
 }
@@ -93,37 +93,37 @@ func (f *FileOperations) CopyFile(ctx context.Context, source, destination strin
 func (f *FileOperations) CopyDirectory(ctx context.Context, source, destination string, options CopyOptions) error {
 	sourcePath := f.manager.GetSourcePath(source)
 	destPath := f.manager.GetDestinationPath(destination)
-	
+
 	// Check if source exists and is a directory
 	if !f.manager.IsDirectory(sourcePath) {
 		return fmt.Errorf("source is not a directory: %s", sourcePath)
 	}
-	
+
 	// Walk the source directory and copy each file
 	return filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		
+
 		// Skip directories
 		if info.IsDir() {
 			return nil
 		}
-		
+
 		// Calculate relative path and destination
 		relPath, err := filepath.Rel(sourcePath, path)
 		if err != nil {
 			return err
 		}
-		
+
 		destFilePath := filepath.Join(destPath, relPath)
-		
+
 		// Create destination directory
 		destDir := filepath.Dir(destFilePath)
-		if err := os.MkdirAll(destDir, 0755); err != nil {
+		if err := os.MkdirAll(destDir, 0750); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", destDir, err)
 		}
-		
+
 		// Handle backup if destination exists
 		if f.manager.FileExists(destFilePath) {
 			if options.CreateBackup {
@@ -132,12 +132,12 @@ func (f *FileOperations) CopyDirectory(ctx context.Context, source, destination 
 					return fmt.Errorf("failed to create backup for %s: %w", destFilePath, err)
 				}
 			}
-			
+
 			if !options.OverwriteExisting {
 				return fmt.Errorf("destination file exists and overwrite is disabled: %s", destFilePath)
 			}
 		}
-		
+
 		// Copy the file
 		return f.copyFileContents(ctx, path, destFilePath)
 	})
@@ -148,7 +148,7 @@ func (f *FileOperations) createBackup(ctx context.Context, source, backupPath st
 	// Add timestamp to backup path
 	timestamp := time.Now().Format("20060102-150405")
 	backupPath = backupPath + "." + timestamp
-	
+
 	return f.copyFileContents(ctx, source, backupPath)
 }
 
@@ -161,11 +161,11 @@ func (f *FileOperations) copyFileContents(ctx context.Context, source, destinati
 // RemoveFile removes a file from the destination
 func (f *FileOperations) RemoveFile(destination string) error {
 	destPath := f.manager.GetDestinationPath(destination)
-	
+
 	if !f.manager.FileExists(destPath) {
 		return nil // File doesn't exist, nothing to remove
 	}
-	
+
 	return os.Remove(destPath)
 }
 
@@ -177,41 +177,41 @@ func (f *FileOperations) FileNeedsUpdate(ctx context.Context, source, destinatio
 		return false, ctx.Err()
 	default:
 	}
-	
+
 	sourcePath := f.manager.GetSourcePath(source)
 	destPath := f.manager.GetDestinationPath(destination)
-	
+
 	// Check if source exists first
 	if !f.manager.FileExists(sourcePath) {
-		return false, errors.DotfileError(errors.ErrFileNotFound, "check", 
+		return false, errors.DotfileError(errors.ErrFileNotFound, "check",
 			"source file does not exist").
 			WithItem(source).
 			WithMetadata("source_path", sourcePath)
 	}
-	
+
 	// If destination doesn't exist, it needs to be created
 	if !f.manager.FileExists(destPath) {
 		return true, nil
 	}
-	
+
 	// Check for context cancellation before file operations
 	select {
 	case <-ctx.Done():
 		return false, ctx.Err()
 	default:
 	}
-	
+
 	// Compare modification times
 	sourceInfo, err := os.Stat(sourcePath)
 	if err != nil {
 		return false, fmt.Errorf("failed to stat source file: %w", err)
 	}
-	
+
 	destInfo, err := os.Stat(destPath)
 	if err != nil {
 		return false, fmt.Errorf("failed to stat destination file: %w", err)
 	}
-	
+
 	// Source is newer than destination
 	return sourceInfo.ModTime().After(destInfo.ModTime()), nil
 }

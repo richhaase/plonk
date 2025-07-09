@@ -28,8 +28,8 @@ func NewSimpleValidator() *SimpleValidator {
 	v := validator.New()
 
 	// Register custom validators
-	v.RegisterValidation("package_name", validatePackageName)
-	v.RegisterValidation("file_path", validateFilePath)
+	_ = v.RegisterValidation("package_name", validatePackageName)
+	_ = v.RegisterValidation("file_path", validateFilePath)
 
 	return &SimpleValidator{validator: v}
 }

@@ -13,7 +13,7 @@ import (
 
 func TestYAMLConfigService_LoadConfigFromReader(t *testing.T) {
 	service := NewYAMLConfigService()
-	
+
 	tests := []struct {
 		name        string
 		yamlContent string
@@ -132,24 +132,24 @@ settings:
 			expectError: true,
 		},
 	}
-	
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			reader := strings.NewReader(test.yamlContent)
 			config, err := service.LoadConfigFromReader(reader)
-			
+
 			if test.expectError {
 				if err == nil {
 					t.Error("Expected error but got none")
 				}
 				return
 			}
-			
+
 			if err != nil {
 				t.Errorf("Expected no error but got: %v", err)
 				return
 			}
-			
+
 			if test.validateFn != nil {
 				if err := test.validateFn(config); err != nil {
 					t.Errorf("Validation failed: %v", err)
@@ -161,14 +161,14 @@ settings:
 
 func TestYAMLConfigService_LoadConfigFromFile(t *testing.T) {
 	service := NewYAMLConfigService()
-	
+
 	// Create temporary file
 	tempFile, err := os.CreateTemp("", "test_config_*.yaml")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
 	defer os.Remove(tempFile.Name())
-	
+
 	// Write test config
 	testConfig := `
 settings:
@@ -176,22 +176,22 @@ settings:
 homebrew:
   - name: git
 `
-	
+
 	if _, err := tempFile.WriteString(testConfig); err != nil {
 		t.Fatalf("Failed to write test config: %v", err)
 	}
 	tempFile.Close()
-	
+
 	// Test loading from file
 	config, err := service.LoadConfigFromFile(tempFile.Name())
 	if err != nil {
 		t.Fatalf("LoadConfigFromFile() failed: %v", err)
 	}
-	
+
 	if config.Settings.DefaultManager != "homebrew" {
 		t.Errorf("Expected default_manager to be 'homebrew', got %s", config.Settings.DefaultManager)
 	}
-	
+
 	if len(config.Homebrew) != 1 {
 		t.Errorf("Expected 1 homebrew package, got %d", len(config.Homebrew))
 	}
@@ -199,7 +199,7 @@ homebrew:
 
 func TestYAMLConfigService_LoadConfigFromFile_NotFound(t *testing.T) {
 	service := NewYAMLConfigService()
-	
+
 	_, err := service.LoadConfigFromFile("/nonexistent/file.yaml")
 	if err == nil {
 		t.Error("Expected error for nonexistent file but got none")
@@ -208,7 +208,7 @@ func TestYAMLConfigService_LoadConfigFromFile_NotFound(t *testing.T) {
 
 func TestYAMLConfigService_SaveConfigToWriter(t *testing.T) {
 	service := NewYAMLConfigService()
-	
+
 	config := &Config{
 		Settings: Settings{
 			DefaultManager: "homebrew",
@@ -221,13 +221,13 @@ func TestYAMLConfigService_SaveConfigToWriter(t *testing.T) {
 			{Name: "typescript"},
 		},
 	}
-	
+
 	var buf strings.Builder
 	err := service.SaveConfigToWriter(&buf, config)
 	if err != nil {
 		t.Fatalf("SaveConfigToWriter() failed: %v", err)
 	}
-	
+
 	// Verify the output contains expected content
 	output := buf.String()
 	if !strings.Contains(output, "default_manager: homebrew") {
@@ -245,7 +245,7 @@ func TestYAMLConfigService_SaveConfigToWriter(t *testing.T) {
 
 func TestYAMLConfigService_SaveConfigToFile(t *testing.T) {
 	service := NewYAMLConfigService()
-	
+
 	config := &Config{
 		Settings: Settings{
 			DefaultManager: "homebrew",
@@ -254,7 +254,7 @@ func TestYAMLConfigService_SaveConfigToFile(t *testing.T) {
 			{Name: "git"},
 		},
 	}
-	
+
 	// Create temporary file
 	tempFile, err := os.CreateTemp("", "test_save_*.yaml")
 	if err != nil {
@@ -262,19 +262,19 @@ func TestYAMLConfigService_SaveConfigToFile(t *testing.T) {
 	}
 	tempFile.Close()
 	defer os.Remove(tempFile.Name())
-	
+
 	// Save config to file
 	err = service.SaveConfigToFile(tempFile.Name(), config)
 	if err != nil {
 		t.Fatalf("SaveConfigToFile() failed: %v", err)
 	}
-	
+
 	// Verify file was created and contains expected content
 	content, err := os.ReadFile(tempFile.Name())
 	if err != nil {
 		t.Fatalf("Failed to read saved file: %v", err)
 	}
-	
+
 	contentStr := string(content)
 	if !strings.Contains(contentStr, "default_manager: homebrew") {
 		t.Error("Saved file should contain default_manager: homebrew")
@@ -287,29 +287,29 @@ func TestYAMLConfigService_SaveConfigToFile(t *testing.T) {
 
 func TestYAMLConfigService_SaveConfig(t *testing.T) {
 	service := NewYAMLConfigService()
-	
+
 	config := &Config{
 		Settings: Settings{
 			DefaultManager: "homebrew",
 		},
 	}
-	
+
 	// Create temporary directory
 	tempDir := t.TempDir()
-	
+
 	// Save config to directory
 	err := service.SaveConfig(tempDir, config)
 	if err != nil {
 		t.Fatalf("SaveConfig() failed: %v", err)
 	}
-	
+
 	// Verify plonk.yaml was created
 	configPath := filepath.Join(tempDir, "plonk.yaml")
 	content, err := os.ReadFile(configPath)
 	if err != nil {
 		t.Fatalf("Failed to read plonk.yaml: %v", err)
 	}
-	
+
 	if !strings.Contains(string(content), "default_manager: homebrew") {
 		t.Error("plonk.yaml should contain default_manager: homebrew")
 	}
@@ -317,7 +317,7 @@ func TestYAMLConfigService_SaveConfig(t *testing.T) {
 
 func TestYAMLConfigService_ValidateConfig(t *testing.T) {
 	service := NewYAMLConfigService()
-	
+
 	tests := []struct {
 		name        string
 		config      *Config
@@ -349,11 +349,11 @@ func TestYAMLConfigService_ValidateConfig(t *testing.T) {
 			expectError: true,
 		},
 	}
-	
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			err := service.ValidateConfig(test.config)
-			
+
 			if test.expectError {
 				if err == nil {
 					t.Error("Expected error but got none")
@@ -369,7 +369,7 @@ func TestYAMLConfigService_ValidateConfig(t *testing.T) {
 
 func TestYAMLConfigService_ValidateConfigFromReader(t *testing.T) {
 	service := NewYAMLConfigService()
-	
+
 	tests := []struct {
 		name        string
 		yamlContent string
@@ -392,17 +392,17 @@ settings:
 			expectError: true,
 		},
 		{
-			name: "invalid yaml",
+			name:        "invalid yaml",
 			yamlContent: `invalid: [`,
 			expectError: true,
 		},
 	}
-	
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			reader := strings.NewReader(test.yamlContent)
 			err := service.ValidateConfigFromReader(reader)
-			
+
 			if test.expectError {
 				if err == nil {
 					t.Error("Expected error but got none")
@@ -418,10 +418,10 @@ settings:
 
 func TestYAMLConfigService_LoadConfig_Integration(t *testing.T) {
 	service := NewYAMLConfigService()
-	
+
 	// Create temporary directory
 	tempDir := t.TempDir()
-	
+
 	// Create plonk.yaml
 	configPath := filepath.Join(tempDir, "plonk.yaml")
 	configContent := `
@@ -430,22 +430,22 @@ settings:
 homebrew:
   - name: git
 `
-	
+
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
 	if err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
-	
+
 	// Test LoadConfig (uses existing LoadConfig function)
 	config, err := service.LoadConfig(tempDir)
 	if err != nil {
 		t.Fatalf("LoadConfig() failed: %v", err)
 	}
-	
+
 	if config.Settings.DefaultManager != "homebrew" {
 		t.Errorf("Expected default_manager to be 'homebrew', got %s", config.Settings.DefaultManager)
 	}
-	
+
 	if len(config.Homebrew) != 1 {
 		t.Errorf("Expected 1 homebrew package, got %d", len(config.Homebrew))
 	}
@@ -454,31 +454,31 @@ homebrew:
 // Test that YAMLConfigService implements all required interfaces
 func TestYAMLConfigService_ImplementsInterfaces(t *testing.T) {
 	service := NewYAMLConfigService()
-	
+
 	// Test that it implements ConfigReader
 	var _ ConfigReader = service
-	
+
 	// Test that it implements ConfigWriter
 	var _ ConfigWriter = service
-	
+
 	// Test that it implements ConfigValidator
 	var _ ConfigValidator = service
-	
+
 	// Test that it implements ConfigReadWriter
 	var _ ConfigReadWriter = service
-	
+
 	// Note: YAMLConfigService doesn't implement DotfileConfigReader or PackageConfigReader
 	// because those require a Config instance - that's handled by ConfigAdapter
 }
 
 func TestYAMLConfigService_ErrorHandling(t *testing.T) {
 	service := NewYAMLConfigService()
-	
+
 	// Test SaveConfigToWriter with failing writer
 	config := &Config{
 		Settings: Settings{DefaultManager: "homebrew"},
 	}
-	
+
 	failingWriter := &failingWriter{}
 	err := service.SaveConfigToWriter(failingWriter, config)
 	if err == nil {

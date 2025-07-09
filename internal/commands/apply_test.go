@@ -59,7 +59,7 @@ func TestApplyCommand_Flags(t *testing.T) {
 func TestApplyCommand_HelpText(t *testing.T) {
 	// Test that help text contains expected information
 	longDesc := applyCmd.Long
-	
+
 	expectedPhrases := []string{
 		"Apply the complete plonk configuration",
 		"Install all missing packages",
@@ -79,7 +79,7 @@ func TestApplyCommand_HelpText(t *testing.T) {
 func TestApplyCommand_OutputFormat(t *testing.T) {
 	// Test that invalid output formats are handled
 	outputFormat = "invalid"
-	
+
 	// Create a temporary directory for testing
 	tmpDir, err := os.MkdirTemp("", "plonk-test-")
 	if err != nil {
@@ -262,7 +262,7 @@ func TestCombinedApplyOutput_TableOutput(t *testing.T) {
 	}
 
 	tableOutput := output.TableOutput()
-	
+
 	expectedElements := []string{
 		"Plonk Apply",
 		"📦 Packages: 2 installed, 1 failed",
@@ -290,7 +290,7 @@ func TestCombinedApplyOutput_DryRunTableOutput(t *testing.T) {
 	}
 
 	tableOutput := output.TableOutput()
-	
+
 	expectedElements := []string{
 		"Plonk Apply (Dry Run)",
 		"📦 Packages: 2 would be installed",
@@ -318,7 +318,7 @@ func TestCombinedApplyOutput_StructuredData(t *testing.T) {
 	}
 
 	data := output.StructuredData()
-	
+
 	// Should return the same struct (test by type assertion)
 	if _, ok := data.(CombinedApplyOutput); !ok {
 		t.Error("StructuredData() should return CombinedApplyOutput type")

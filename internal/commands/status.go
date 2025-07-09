@@ -96,11 +96,11 @@ func runStatus(cmd *cobra.Command, args []string) error {
 // createPackageProvider creates a multi-manager package provider
 func createPackageProvider(ctx context.Context, cfg *config.Config) (*state.MultiManagerPackageProvider, error) {
 	provider := state.NewMultiManagerPackageProvider()
-	
+
 	// Create config adapter using new clean interface
 	configAdapter := config.NewConfigAdapter(cfg)
 	packageConfigAdapter := config.NewStatePackageConfigAdapter(configAdapter)
-	
+
 	// Add Homebrew manager
 	homebrewManager := managers.NewHomebrewManager()
 	available, err := homebrewManager.IsAvailable(ctx)
@@ -111,7 +111,7 @@ func createPackageProvider(ctx context.Context, cfg *config.Config) (*state.Mult
 		managerAdapter := state.NewManagerAdapter(homebrewManager)
 		provider.AddManager("homebrew", managerAdapter, packageConfigAdapter)
 	}
-	
+
 	// Add NPM manager
 	npmManager := managers.NewNpmManager()
 	available, err = npmManager.IsAvailable(ctx)
@@ -122,7 +122,7 @@ func createPackageProvider(ctx context.Context, cfg *config.Config) (*state.Mult
 		managerAdapter := state.NewManagerAdapter(npmManager)
 		provider.AddManager("npm", managerAdapter, packageConfigAdapter)
 	}
-	
+
 	return provider, nil
 }
 
@@ -174,12 +174,12 @@ func (s StatusOutput) TableOutput() string {
 			if result.IsEmpty() {
 				continue
 			}
-			
+
 			domainName := result.Domain
 			if result.Manager != "" {
 				domainName = fmt.Sprintf("%s (%s)", result.Domain, result.Manager)
 			}
-			
+
 			output += fmt.Sprintf("  %s: ", domainName)
 			parts := []string{}
 			if len(result.Managed) > 0 {
@@ -191,7 +191,7 @@ func (s StatusOutput) TableOutput() string {
 			if len(result.Untracked) > 0 {
 				parts = append(parts, fmt.Sprintf("%d untracked", len(result.Untracked)))
 			}
-			
+
 			for i, part := range parts {
 				if i > 0 {
 					output += ", "
@@ -212,22 +212,22 @@ func (s StatusOutput) TableOutput() string {
 			if result.Domain == "dotfile" {
 				emoji = "📄"
 			}
-			
+
 			domainLabel := result.Domain
 			if result.Manager != "" {
 				domainLabel = result.Manager
 			}
-			
+
 			itemNames := make([]string, len(result.Managed))
 			for i, item := range result.Managed {
 				itemNames[i] = item.Name
 			}
-			
-			output += fmt.Sprintf("  %s %s: %s\n", emoji, domainLabel, 
+
+			output += fmt.Sprintf("  %s %s: %s\n", emoji, domainLabel,
 				joinWithLimit(itemNames, ", ", 5))
 		}
 	}
-	
+
 	if !hasItems {
 		output += "  No items currently managed\n"
 	}
@@ -245,7 +245,7 @@ func joinWithLimit(items []string, sep string, limit int) string {
 	if len(items) <= limit {
 		return fmt.Sprintf("%s", items)
 	}
-	
+
 	truncated := make([]string, limit)
 	copy(truncated, items[:limit])
 	result := fmt.Sprintf("%s", truncated)

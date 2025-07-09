@@ -93,7 +93,7 @@ type ConfigValidateOutput struct {
 // TableOutput generates human-friendly table output for config validate
 func (c ConfigValidateOutput) TableOutput() string {
 	output := fmt.Sprintf("Configuration: %s\n", c.ConfigPath)
-	
+
 	if c.Valid {
 		output += "✅ " + c.Message
 		if len(c.Warnings) > 0 {
@@ -117,7 +117,7 @@ func (c ConfigValidateOutput) TableOutput() string {
 			}
 		}
 	}
-	
+
 	return output + "\n"
 }
 

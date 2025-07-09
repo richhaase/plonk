@@ -48,7 +48,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	}
 
 	packageName := args[0]
-	
+
 	// Create context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -231,11 +231,11 @@ func searchAllManagers(ctx context.Context, packageName string, availableManager
 	}
 
 	return SearchOutput{
-		Package:         packageName,
-		Status:          "found-multiple",
-		Message:         fmt.Sprintf("Package '%s' available from: %s", packageName, strings.Join(foundManagers, ", ")),
-		FoundManagers:   foundManagers,
-		ManagerResults:  allResults,
+		Package:        packageName,
+		Status:         "found-multiple",
+		Message:        fmt.Sprintf("Package '%s' available from: %s", packageName, strings.Join(foundManagers, ", ")),
+		FoundManagers:  foundManagers,
+		ManagerResults: allResults,
 	}, nil
 }
 
@@ -275,12 +275,12 @@ func searchOtherManagers(ctx context.Context, packageName string, defaultManager
 	}
 
 	return SearchOutput{
-		Package:         packageName,
-		Status:          "found-other",
-		Message:         fmt.Sprintf("Package '%s' not found in %s (default), but available from: %s", packageName, defaultManager, strings.Join(foundManagers, ", ")),
-		DefaultManager:  defaultManager,
-		FoundManagers:   foundManagers,
-		ManagerResults:  allResults,
+		Package:        packageName,
+		Status:         "found-other",
+		Message:        fmt.Sprintf("Package '%s' not found in %s (default), but available from: %s", packageName, defaultManager, strings.Join(foundManagers, ", ")),
+		DefaultManager: defaultManager,
+		FoundManagers:  foundManagers,
+		ManagerResults: allResults,
 	}, nil
 }
 
@@ -304,7 +304,7 @@ func (s SearchOutput) TableOutput() string {
 	switch s.Status {
 	case "installed":
 		output.WriteString(fmt.Sprintf("✅ %s\n", s.Message))
-		
+
 	case "found-default":
 		output.WriteString(fmt.Sprintf("📦 %s\n", s.Message))
 		if len(s.Results) > 1 {
@@ -315,28 +315,28 @@ func (s SearchOutput) TableOutput() string {
 				}
 			}
 		}
-		
+
 	case "found-multiple":
 		output.WriteString(fmt.Sprintf("📦 %s\n", s.Message))
 		output.WriteString("\nInstall with:\n")
 		for _, manager := range s.FoundManagers {
 			output.WriteString(fmt.Sprintf("  • %s: plonk pkg add %s\n", manager, s.Package))
 		}
-		
+
 	case "found-other":
 		output.WriteString(fmt.Sprintf("📦 %s\n", s.Message))
 		output.WriteString("\nInstall with:\n")
 		for _, manager := range s.FoundManagers {
 			output.WriteString(fmt.Sprintf("  • %s: plonk pkg add %s\n", manager, s.Package))
 		}
-		
+
 	case "not-found":
 		output.WriteString(fmt.Sprintf("❌ %s\n", s.Message))
-		
+
 	case "no-managers":
 		output.WriteString(fmt.Sprintf("⚠️  %s\n", s.Message))
 		output.WriteString("\nPlease install a package manager (Homebrew or NPM) to search for packages.\n")
-		
+
 	default:
 		output.WriteString(fmt.Sprintf("❓ %s\n", s.Message))
 	}

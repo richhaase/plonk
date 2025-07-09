@@ -70,7 +70,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 	packageProvider := state.NewMultiManagerPackageProvider()
 	configAdapter := config.NewConfigAdapter(cfg)
 	packageConfigAdapter := config.NewStatePackageConfigAdapter(configAdapter)
-	
+
 	// Add Homebrew manager
 	homebrewManager := managers.NewHomebrewManager()
 	available, err := homebrewManager.IsAvailable(ctx)
@@ -81,7 +81,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 		managerAdapter := state.NewManagerAdapter(homebrewManager)
 		packageProvider.AddManager("homebrew", managerAdapter, packageConfigAdapter)
 	}
-	
+
 	// Add NPM manager
 	npmManager := managers.NewNpmManager()
 	available, err = npmManager.IsAvailable(ctx)
@@ -92,7 +92,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 		managerAdapter := state.NewManagerAdapter(npmManager)
 		packageProvider.AddManager("npm", managerAdapter, packageConfigAdapter)
 	}
-	
+
 	reconciler.RegisterProvider("package", packageProvider)
 
 	// Reconcile package domain

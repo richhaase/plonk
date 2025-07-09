@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/richhaase/plonk/tree/main/docs
+    about: Check the documentation for guides and examples
+  - name: Discussions
+    url: https://github.com/richhaase/plonk/discussions
+    about: Ask questions and discuss ideas with the community

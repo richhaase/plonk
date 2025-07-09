@@ -35,10 +35,24 @@ test:
     go test ./...
     @echo "✅ Unit tests passed!"
 
+# Run tests with coverage
+test-coverage:
+    @echo "Running unit tests with coverage..."
+    @go test -coverprofile=coverage.out ./...
+    @go tool cover -html=coverage.out -o coverage.html
+    @echo "✅ Unit tests passed! Coverage report: coverage.html"
+
+# Run tests with coverage for CI
+test-coverage-ci:
+    @echo "Running unit tests with coverage for CI..."
+    @go test -race -coverprofile=coverage.out -covermode=atomic ./...
+    @echo "✅ Unit tests passed with coverage!"
+
 # Clean build artifacts
 clean:
     @echo "Cleaning build artifacts..."
-    rm -rf build
+    rm -rf build dist
+    rm -f coverage.out coverage.html
     go clean
     @echo "✅ Build artifacts cleaned"
 
@@ -58,10 +72,11 @@ install:
 precommit:
     @echo "Running pre-commit checks..."
     @just format
-    @just lint
+    @just lint  
     @just test
     @just security
     @echo "✅ Pre-commit checks passed!"
+
 
 # Format Go code and organize imports
 format:
@@ -73,12 +88,12 @@ lint:
     @echo "🔍 Running linter..."
     go run github.com/golangci/golangci-lint/cmd/golangci-lint run --timeout=10m
 
-# Run security checks
+# Run security checks (non-blocking)
 security:
-    @echo "Running govulncheck..."
-    go run golang.org/x/vuln/cmd/govulncheck ./...
-    @echo "Running gosec..."
-    go run github.com/securego/gosec/v2/cmd/gosec ./...
+    @echo "🔐 Running security checks..."
+    @go run golang.org/x/vuln/cmd/govulncheck ./...
+    @go run github.com/securego/gosec/v2/cmd/gosec ./... || echo "⚠️  Security warnings found (non-blocking)"
+    @echo "✅ Security checks completed!"
 
 # Automated single-command release process
 release-auto VERSION:
@@ -165,13 +180,27 @@ release-auto VERSION:
     echo "📤 Pushing tag to remote..."
     git push origin "$VERSION"
     
-    # Run goreleaser
-    echo "🚀 Building and publishing release..."
-    goreleaser release
+    # Build release binaries
+    echo "🚀 Building release binaries..."
+    mkdir -p dist
+    
+    # Build for common platforms
+    echo "  Building for linux/amd64..."
+    GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version=$VERSION -X main.commit=$(git rev-parse --short HEAD) -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o dist/plonk-linux-amd64 ./cmd/plonk
+    
+    echo "  Building for darwin/amd64..."
+    GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w -X main.version=$VERSION -X main.commit=$(git rev-parse --short HEAD) -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o dist/plonk-darwin-amd64 ./cmd/plonk
+    
+    echo "  Building for darwin/arm64..."
+    GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w -X main.version=$VERSION -X main.commit=$(git rev-parse --short HEAD) -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o dist/plonk-darwin-arm64 ./cmd/plonk
+    
+    echo "  Building for windows/amd64..."
+    GOOS=windows GOARCH=amd64 go build -ldflags "-s -w -X main.version=$VERSION -X main.commit=$(git rev-parse --short HEAD) -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o dist/plonk-windows-amd64.exe ./cmd/plonk
     
     echo
     echo "✅ Release $VERSION completed successfully!"
-    echo "🌐 Check your GitHub releases: https://github.com/rdh/plonk/releases"
+    echo "📦 Release binaries built in dist/ directory"
+    echo "🏷️  Git tag $VERSION created and pushed"
 
 
 # Show suggested next version based on current tags

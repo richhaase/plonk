@@ -1,5 +1,9 @@
 # Plonk
 
+[![CI](https://github.com/richhaase/plonk/workflows/CI/badge.svg)](https://github.com/richhaase/plonk/actions)
+[![Security](https://github.com/richhaase/plonk/workflows/Security%20Check/badge.svg)](https://github.com/richhaase/plonk/actions)
+[![codecov](https://codecov.io/gh/richhaase/plonk/branch/main/graph/badge.svg)](https://codecov.io/gh/richhaase/plonk)
+
 A unified package and dotfile manager for developers that maintains consistency across multiple machines.
 
 ## What is Plonk?
@@ -20,7 +24,7 @@ Plonk manages your development environment by treating packages and dotfiles as 
 Currently, plonk must be built from source:
 
 ```bash
-git clone https://github.com/your-username/plonk
+git clone https://github.com/richhaase/plonk
 cd plonk
 just install
 ```
@@ -141,7 +145,7 @@ plonk status --output table  # default
 
 ## License
 
-[License information - check LICENSE file]
+MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Contributing
 

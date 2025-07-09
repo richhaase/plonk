@@ -47,12 +47,12 @@ func init() {
 
 func runPkgAdd(cmd *cobra.Command, args []string) error {
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
-	
+
 	if len(args) == 0 {
 		// No package specified - add all untracked packages
 		return addAllUntrackedPackages(cmd, dryRun)
 	}
-	
+
 	packageName := args[0]
 
 	// Parse output format
@@ -132,7 +132,7 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 		if format == OutputTable {
 			fmt.Printf("Installing %s using %s...\n", packageName, targetManager)
 		}
-		
+
 		err = mgr.Install(ctx, packageName)
 		if err != nil {
 			return fmt.Errorf("failed to install package: %w", err)
@@ -195,9 +195,9 @@ func addPackageToConfig(cfg *config.Config, packageName, targetManager string) e
 // saveConfig saves the configuration back to plonk.yaml atomically
 func saveConfig(cfg *config.Config, configDir string) error {
 	configPath := filepath.Join(configDir, "plonk.yaml")
-	
+
 	// Create config directory if it doesn't exist
-	err := os.MkdirAll(configDir, 0755)
+	err := os.MkdirAll(configDir, 0750)
 	if err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
@@ -254,7 +254,7 @@ func addAllUntrackedPackages(cmd *cobra.Command, dryRun bool) error {
 
 	// Create reconciler to get untracked packages
 	reconciler := state.NewReconciler()
-	
+
 	// Create package provider (same as status command)
 	ctx := context.Background()
 	packageProvider, err := createPackageProvider(ctx, cfg)
@@ -325,8 +325,8 @@ func addAllUntrackedPackages(cmd *cobra.Command, dryRun bool) error {
 
 	// Prepare structured output
 	result := AddAllOutput{
-		Added: addedCount,
-		Total: len(untrackedPackages),
+		Added:  addedCount,
+		Total:  len(untrackedPackages),
 		Action: "added-all",
 	}
 

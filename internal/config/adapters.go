@@ -23,13 +23,13 @@ func (s *StatePackageConfigAdapter) GetPackagesForManager(managerName string) ([
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Convert config.PackageConfigItem to state.PackageConfigItem
 	stateItems := make([]state.PackageConfigItem, len(items))
 	for i, item := range items {
 		stateItems[i] = state.PackageConfigItem{Name: item.Name}
 	}
-	
+
 	return stateItems, nil
 }
 

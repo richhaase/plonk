@@ -17,7 +17,7 @@ type ConfigAdapter struct {
 type ConfigInterface interface {
 	GetDotfileTargets() map[string]string
 	GetHomebrewBrews() []string
-	GetHomebrewCasks() []string  
+	GetHomebrewCasks() []string
 	GetNPMPackages() []string
 }
 
@@ -34,7 +34,7 @@ func (c *ConfigAdapter) GetDotfileTargets() map[string]string {
 // GetPackagesForManager implements PackageConfigLoader
 func (c *ConfigAdapter) GetPackagesForManager(managerName string) ([]PackageConfigItem, error) {
 	var packageNames []string
-	
+
 	switch managerName {
 	case "homebrew":
 		// Combine brews and casks for homebrew
@@ -47,12 +47,12 @@ func (c *ConfigAdapter) GetPackagesForManager(managerName string) ([]PackageConf
 	default:
 		return nil, fmt.Errorf("unknown package manager: %s", managerName)
 	}
-	
+
 	items := make([]PackageConfigItem, len(packageNames))
 	for i, name := range packageNames {
 		items[i] = PackageConfigItem{Name: name}
 	}
-	
+
 	return items, nil
 }
 
