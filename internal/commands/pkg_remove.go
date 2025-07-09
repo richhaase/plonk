@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"plonk/internal/config"
+	"plonk/internal/errors"
 	"plonk/internal/managers"
 
 	"github.com/spf13/cobra"
@@ -45,7 +46,7 @@ func runPkgRemove(cmd *cobra.Command, args []string) error {
 	// Parse output format
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return err
+		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "pkg-remove", "output-format", "invalid output format")
 	}
 
 	// Get directories
@@ -54,7 +55,7 @@ func runPkgRemove(cmd *cobra.Command, args []string) error {
 	// Load existing configuration
 	cfg, err := config.LoadConfig(configDir)
 	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
+		return errors.Wrap(err, errors.ErrConfigNotFound, errors.DomainConfig, "load", "failed to load configuration")
 	}
 
 	// Find and remove package from configuration
@@ -69,7 +70,7 @@ func runPkgRemove(cmd *cobra.Command, args []string) error {
 	// Save updated configuration
 	err = saveConfig(cfg, configDir)
 	if err != nil {
-		return fmt.Errorf("failed to save configuration: %w", err)
+		return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "save", "failed to save configuration")
 	}
 
 	var action string
@@ -86,13 +87,13 @@ func runPkgRemove(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
 		available, err := mgr.IsAvailable(ctx)
 		if err != nil {
-			uninstallError = fmt.Errorf("failed to check if manager '%s' is available: %w", managerName, err)
+			uninstallError = errors.WrapWithItem(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", managerName, "failed to check if manager is available")
 		} else if !available {
-			uninstallError = fmt.Errorf("manager '%s' is not available", managerName)
+			uninstallError = errors.NewError(errors.ErrManagerUnavailable, errors.DomainPackages, "check", fmt.Sprintf("manager '%s' is not available", managerName))
 		} else {
 			installed, err := mgr.IsInstalled(ctx, packageName)
 			if err != nil {
-				uninstallError = fmt.Errorf("failed to check if package is installed: %w", err)
+				uninstallError = errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "check", packageName, "failed to check if package is installed")
 			} else if !installed {
 				if format == OutputTable {
 					fmt.Printf("Package '%s' is not installed in %s\n", packageName, managerName)
@@ -105,7 +106,7 @@ func runPkgRemove(cmd *cobra.Command, args []string) error {
 
 				err = mgr.Uninstall(ctx, packageName)
 				if err != nil {
-					uninstallError = err
+					uninstallError = errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "uninstall", packageName, "failed to uninstall package")
 					action = "removed_from_config_uninstall_failed"
 				} else {
 					if format == OutputTable {

@@ -67,7 +67,7 @@ func performPackageSearch(ctx context.Context, packageName string) (SearchOutput
 	// Get available managers
 	availableManagers, err := getAvailableManagers(ctx)
 	if err != nil {
-		return SearchOutput{}, fmt.Errorf("failed to get available managers: %w", err)
+		return SearchOutput{}, errors.Wrap(err, errors.ErrInternal, errors.DomainPackages, "get-managers", "failed to get available managers")
 	}
 
 	if len(availableManagers) == 0 {
@@ -81,7 +81,7 @@ func performPackageSearch(ctx context.Context, packageName string) (SearchOutput
 	// Check if package is installed
 	installedManager, err := findInstalledPackage(ctx, packageName, availableManagers)
 	if err != nil {
-		return SearchOutput{}, fmt.Errorf("failed to check if package is installed: %w", err)
+		return SearchOutput{}, errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "check", packageName, "failed to check if package is installed")
 	}
 
 	if installedManager != "" {
@@ -96,7 +96,7 @@ func performPackageSearch(ctx context.Context, packageName string) (SearchOutput
 	// Package is not installed, determine search strategy
 	defaultManager, err := getDefaultManager()
 	if err != nil {
-		return SearchOutput{}, fmt.Errorf("failed to get default manager: %w", err)
+		return SearchOutput{}, errors.Wrap(err, errors.ErrConfigNotFound, errors.DomainConfig, "get-default", "failed to get default manager")
 	}
 
 	if defaultManager != "" {
@@ -118,7 +118,7 @@ func getAvailableManagers(ctx context.Context) (map[string]managers.PackageManag
 	availableManagers := make(map[string]managers.PackageManager)
 	for name, manager := range allManagers {
 		if available, err := manager.IsAvailable(ctx); err != nil {
-			return nil, fmt.Errorf("failed to check %s availability: %w", name, err)
+			return nil, errors.WrapWithItem(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", name, "failed to check manager availability")
 		} else if available {
 			availableManagers[name] = manager
 		}
@@ -132,7 +132,7 @@ func findInstalledPackage(ctx context.Context, packageName string, managers map[
 	for name, manager := range managers {
 		installed, err := manager.IsInstalled(ctx, packageName)
 		if err != nil {
-			return "", fmt.Errorf("failed to check if package is installed in %s: %w", name, err)
+			return "", errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "check", packageName, fmt.Sprintf("failed to check if package is installed in %s", name))
 		}
 		if installed {
 			return name, nil
@@ -158,12 +158,12 @@ func searchWithDefaultManager(ctx context.Context, packageName string, defaultMa
 	// Search default manager first
 	defaultMgr, exists := availableManagers[defaultManager]
 	if !exists {
-		return SearchOutput{}, fmt.Errorf("default manager '%s' is not available", defaultManager)
+		return SearchOutput{}, errors.NewError(errors.ErrManagerUnavailable, errors.DomainPackages, "check", fmt.Sprintf("default manager '%s' is not available", defaultManager))
 	}
 
 	results, err := defaultMgr.Search(ctx, packageName)
 	if err != nil {
-		return SearchOutput{}, fmt.Errorf("failed to search in %s: %w", defaultManager, err)
+		return SearchOutput{}, errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "search", packageName, fmt.Sprintf("failed to search in %s", defaultManager))
 	}
 
 	// Check if package is found in default manager
@@ -204,7 +204,7 @@ func searchAllManagers(ctx context.Context, packageName string, availableManager
 	for name, manager := range availableManagers {
 		results, err := manager.Search(ctx, packageName)
 		if err != nil {
-			return SearchOutput{}, fmt.Errorf("failed to search in %s: %w", name, err)
+			return SearchOutput{}, errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "search", packageName, fmt.Sprintf("failed to search in %s", name))
 		}
 
 		// Check if exact package name is found
@@ -247,7 +247,7 @@ func searchOtherManagers(ctx context.Context, packageName string, defaultManager
 	for name, manager := range otherManagers {
 		results, err := manager.Search(ctx, packageName)
 		if err != nil {
-			return SearchOutput{}, fmt.Errorf("failed to search in %s: %w", name, err)
+			return SearchOutput{}, errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "search", packageName, fmt.Sprintf("failed to search in %s", name))
 		}
 
 		// Check if exact package name is found

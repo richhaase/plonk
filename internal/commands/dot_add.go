@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"plonk/internal/config"
+	"plonk/internal/errors"
 
 	"github.com/spf13/cobra"
 )
@@ -42,13 +43,13 @@ func runDotAdd(cmd *cobra.Command, args []string) error {
 	// Parse output format
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return err
+		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "dot-add", "output-format", "invalid output format")
 	}
 
 	// Get directories
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("failed to get home directory: %w", err)
+		return errors.Wrap(err, errors.ErrFilePermission, errors.DomainCommands, "dot-add", "failed to get home directory")
 	}
 
 	configDir := config.GetDefaultConfigDirectory()
@@ -56,12 +57,12 @@ func runDotAdd(cmd *cobra.Command, args []string) error {
 	// Resolve and validate dotfile path
 	resolvedPath, err := resolveDotfilePath(dotfilePath, homeDir)
 	if err != nil {
-		return err
+		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainDotfiles, "resolve", dotfilePath, "failed to resolve dotfile path")
 	}
 
 	// Check if dotfile exists
 	if _, err := os.Stat(resolvedPath); os.IsNotExist(err) {
-		return fmt.Errorf("dotfile does not exist: %s", resolvedPath)
+		return errors.NewError(errors.ErrFileNotFound, errors.DomainDotfiles, "check", fmt.Sprintf("dotfile does not exist: %s", resolvedPath))
 	}
 
 	// Load existing configuration
@@ -75,7 +76,7 @@ func runDotAdd(cmd *cobra.Command, args []string) error {
 				},
 			}
 		} else {
-			return fmt.Errorf("failed to load config: %w", err)
+			return errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load", "failed to load config")
 		}
 	}
 
@@ -86,13 +87,13 @@ func runDotAdd(cmd *cobra.Command, args []string) error {
 	adapter := config.NewConfigAdapter(cfg)
 	dotfileTargets := adapter.GetDotfileTargets()
 	if _, exists := dotfileTargets[source]; exists {
-		return fmt.Errorf("dotfile is already managed: %s", source)
+		return errors.NewError(errors.ErrInvalidInput, errors.DomainDotfiles, "check", fmt.Sprintf("dotfile is already managed: %s", source))
 	}
 
 	// Copy dotfile to plonk config directory
 	sourcePath := filepath.Join(configDir, source)
 	if err := copyDotfile(resolvedPath, sourcePath); err != nil {
-		return fmt.Errorf("failed to copy dotfile: %w", err)
+		return errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", source, "failed to copy dotfile")
 	}
 
 	// Configuration doesn't need to be updated since we use auto-discovery
@@ -119,12 +120,12 @@ func resolveDotfilePath(path, homeDir string) (string, error) {
 	// Get absolute path
 	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return "", fmt.Errorf("failed to resolve path: %w", err)
+		return "", errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "resolve", "failed to resolve path")
 	}
 
 	// Ensure it's within the home directory
 	if !strings.HasPrefix(absPath, homeDir) {
-		return "", fmt.Errorf("dotfile must be within home directory: %s", absPath)
+		return "", errors.NewError(errors.ErrInvalidInput, errors.DomainDotfiles, "validate", fmt.Sprintf("dotfile must be within home directory: %s", absPath))
 	}
 
 	return absPath, nil

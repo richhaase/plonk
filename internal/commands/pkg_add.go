@@ -11,6 +11,7 @@ import (
 
 	"plonk/internal/config"
 	"plonk/internal/dotfiles"
+	"plonk/internal/errors"
 	"plonk/internal/managers"
 	"plonk/internal/state"
 
@@ -58,7 +59,7 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 	// Parse output format
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return err
+		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "pkg-add", "output-format", "invalid output format")
 	}
 
 	// Get directories
@@ -67,7 +68,7 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 	// Load existing configuration
 	cfg, err := config.LoadConfig(configDir)
 	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
+		return errors.Wrap(err, errors.ErrConfigNotFound, errors.DomainConfig, "load", "failed to load configuration")
 	}
 
 	// Determine which manager to use
@@ -78,7 +79,7 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 
 	// Validate manager
 	if targetManager != "homebrew" && targetManager != "npm" {
-		return fmt.Errorf("unsupported manager '%s'. Use: homebrew, npm", targetManager)
+		return errors.NewError(errors.ErrInvalidInput, errors.DomainPackages, "validate", fmt.Sprintf("unsupported manager '%s'. Use: homebrew, npm", targetManager))
 	}
 
 	// Check if package is already in config
@@ -92,13 +93,13 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 	// Add package to configuration
 	err = addPackageToConfig(cfg, packageName, targetManager)
 	if err != nil {
-		return fmt.Errorf("failed to add package to config: %w", err)
+		return errors.WrapWithItem(err, errors.ErrConfigParseFailure, errors.DomainConfig, "update", packageName, "failed to add package to config")
 	}
 
 	// Save updated configuration
 	err = saveConfig(cfg, configDir)
 	if err != nil {
-		return fmt.Errorf("failed to save configuration: %w", err)
+		return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "save", "failed to save configuration")
 	}
 
 	// Install the package
@@ -111,16 +112,16 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 	available, err := mgr.IsAvailable(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to check if manager '%s' is available: %w", targetManager, err)
+		return errors.WrapWithItem(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", targetManager, "failed to check if manager is available")
 	}
 	if !available {
-		return fmt.Errorf("manager '%s' is not available", targetManager)
+		return errors.NewError(errors.ErrManagerUnavailable, errors.DomainPackages, "check", fmt.Sprintf("manager '%s' is not available", targetManager))
 	}
 
 	// Check if already installed
 	installed, err := mgr.IsInstalled(ctx, packageName)
 	if err != nil {
-		return fmt.Errorf("failed to check if package is installed: %w", err)
+		return errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "check", packageName, "failed to check if package is installed")
 	}
 	if installed {
 		if format == OutputTable {
@@ -135,7 +136,7 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 
 		err = mgr.Install(ctx, packageName)
 		if err != nil {
-			return fmt.Errorf("failed to install package: %w", err)
+			return errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "install", packageName, "failed to install package")
 		}
 
 		if format == OutputTable {
@@ -187,7 +188,7 @@ func addPackageToConfig(cfg *config.Config, packageName, targetManager string) e
 		}
 		cfg.NPM = append(cfg.NPM, newPackage)
 	default:
-		return fmt.Errorf("unsupported manager: %s", targetManager)
+		return errors.NewError(errors.ErrInvalidInput, errors.DomainPackages, "validate", fmt.Sprintf("unsupported manager: %s", targetManager))
 	}
 	return nil
 }
@@ -199,20 +200,20 @@ func saveConfig(cfg *config.Config, configDir string) error {
 	// Create config directory if it doesn't exist
 	err := os.MkdirAll(configDir, 0750)
 	if err != nil {
-		return fmt.Errorf("failed to create config directory: %w", err)
+		return errors.Wrap(err, errors.ErrFilePermission, errors.DomainConfig, "create", "failed to create config directory")
 	}
 
 	// Marshal configuration to YAML
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
+		return errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "marshal", "failed to marshal config")
 	}
 
 	// Write to file atomically
 	atomicWriter := dotfiles.NewAtomicFileWriter()
 	err = atomicWriter.WriteFile(configPath, data, 0644)
 	if err != nil {
-		return fmt.Errorf("failed to write config file: %w", err)
+		return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "write", "failed to write config file")
 	}
 
 	return nil
@@ -240,7 +241,7 @@ func addAllUntrackedPackages(cmd *cobra.Command, dryRun bool) error {
 	// Parse output format
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return err
+		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "pkg-add-all", "output-format", "invalid output format")
 	}
 
 	// Get directories
@@ -249,7 +250,7 @@ func addAllUntrackedPackages(cmd *cobra.Command, dryRun bool) error {
 	// Load existing configuration
 	cfg, err := config.LoadConfig(configDir)
 	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
+		return errors.Wrap(err, errors.ErrConfigNotFound, errors.DomainConfig, "load", "failed to load configuration")
 	}
 
 	// Create reconciler to get untracked packages
@@ -259,14 +260,14 @@ func addAllUntrackedPackages(cmd *cobra.Command, dryRun bool) error {
 	ctx := context.Background()
 	packageProvider, err := createPackageProvider(ctx, cfg)
 	if err != nil {
-		return fmt.Errorf("failed to create package provider: %w", err)
+		return errors.Wrap(err, errors.ErrInternal, errors.DomainPackages, "create", "failed to create package provider")
 	}
 	reconciler.RegisterProvider("package", packageProvider)
 
 	// Reconcile to get package states
 	summary, err := reconciler.ReconcileAll(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to reconcile package states: %w", err)
+		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainState, "reconcile", "failed to reconcile package states")
 	}
 
 	// Find package results and collect untracked packages
@@ -300,7 +301,7 @@ func addAllUntrackedPackages(cmd *cobra.Command, dryRun bool) error {
 		if !isPackageInConfig(cfg, pkg.Name, pkg.Manager) {
 			err = addPackageToConfig(cfg, pkg.Name, pkg.Manager)
 			if err != nil {
-				return fmt.Errorf("failed to add package %s to config: %w", pkg.Name, err)
+				return errors.WrapWithItem(err, errors.ErrConfigParseFailure, errors.DomainConfig, "update", pkg.Name, "failed to add package to config")
 			}
 			addedCount++
 		}
@@ -316,7 +317,7 @@ func addAllUntrackedPackages(cmd *cobra.Command, dryRun bool) error {
 	// Save updated configuration
 	err = saveConfig(cfg, configDir)
 	if err != nil {
-		return fmt.Errorf("failed to save configuration: %w", err)
+		return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "save", "failed to save configuration")
 	}
 
 	if format == OutputTable {

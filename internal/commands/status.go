@@ -105,7 +105,7 @@ func createPackageProvider(ctx context.Context, cfg *config.Config) (*state.Mult
 	homebrewManager := managers.NewHomebrewManager()
 	available, err := homebrewManager.IsAvailable(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check homebrew availability: %w", err)
+		return nil, errors.WrapWithItem(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", "homebrew", "failed to check homebrew availability")
 	}
 	if available {
 		managerAdapter := state.NewManagerAdapter(homebrewManager)
@@ -116,7 +116,7 @@ func createPackageProvider(ctx context.Context, cfg *config.Config) (*state.Mult
 	npmManager := managers.NewNpmManager()
 	available, err = npmManager.IsAvailable(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check npm availability: %w", err)
+		return nil, errors.WrapWithItem(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", "npm", "failed to check npm availability")
 	}
 	if available {
 		managerAdapter := state.NewManagerAdapter(npmManager)
