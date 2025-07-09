@@ -27,6 +27,16 @@ jobs:
     - name: Download dependencies
       run: go mod download
       
+    - name: Install mockgen
+      run: go install go.uber.org/mock/mockgen@latest
+      
+    - name: Install Homebrew (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
+        echo "/home/linuxbrew/.linuxbrew/sbin" >> $GITHUB_PATH
+      
     - name: Generate mocks
       run: just generate-mocks
       
@@ -65,6 +75,13 @@ jobs:
         
     - name: Download dependencies
       run: go mod download
+      
+    - name: Install Homebrew (Linux)
+      if: runner.os == 'Linux'
+      run: |
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
+        echo "/home/linuxbrew/.linuxbrew/sbin" >> $GITHUB_PATH
       
     - name: Run tests
       run: go test ./...
