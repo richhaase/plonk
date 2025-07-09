@@ -279,35 +279,61 @@ refactor: simplify configuration loading
 
 ## Release Process
 
-### Version Management
+### Automated Release (Recommended)
 
-Plonk uses semantic versioning with Git tags:
+Single command for complete release automation:
 
 ```bash
-# Create release (interactive)
-just release
+# Get version suggestions
+just release-version-suggest
 
-# Manual tagging
-git tag -a v1.2.3 -m "Release v1.2.3 - Description"
-git push origin v1.2.3
+# Create automated release
+just release-auto v1.2.3
 ```
 
-### Release Build
+**What it does:**
+1. ✅ Validates version format and checks for duplicates
+2. ✅ Ensures clean working directory
+3. ✅ Runs full pre-release validation:
+   - Generate API documentation
+   - Run tests
+   - Run linter
+   - Run security checks
+   - Test build
+4. ✅ Creates and pushes git tag
+5. ✅ Builds and publishes release via GoReleaser
+6. ✅ Provides clear success/failure feedback
+
+### Manual Release (Legacy)
+
+For step-by-step control:
 
 ```bash
-# Build release binaries
+# Interactive release (suggests using automated process)
+just release
+
+# Manual steps (if needed)
+git tag -a v1.2.3 -m "Release v1.2.3 - Description"
+git push origin v1.2.3
 just goreleaser-release
 ```
 
 ### Release Checklist
 
-1. ✅ All tests pass (`just precommit`)
-2. ✅ Documentation updated
-3. ✅ Version bumped appropriately
-4. ✅ Release notes prepared
-5. ✅ Tag created and pushed
-6. ✅ Release binaries built
-7. ✅ GitHub release created
+The automated process (`just release-auto`) handles everything:
+- ✅ Pre-release validation (tests, lint, security, build)
+- ✅ Documentation generation
+- ✅ Version validation
+- ✅ Tag creation and push
+- ✅ Release binary building
+- ✅ GitHub release creation
+
+### Version Guidelines
+
+- **Patch** (v1.2.3 → v1.2.4): Bug fixes, small improvements
+- **Minor** (v1.2.3 → v1.3.0): New features, non-breaking changes
+- **Major** (v1.2.3 → v2.0.0): Breaking changes, major rewrites
+- **RC** (v1.2.3 → v1.3.0-rc1): Release candidates for testing
 
 ## Troubleshooting
 

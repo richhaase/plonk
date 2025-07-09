@@ -146,3 +146,13 @@ plonk status --output table  # default
 ## Contributing
 
 See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for development setup and contributing guidelines.
+
+### Releasing
+
+```bash
+# Get version suggestions
+just release-version-suggest
+
+# Create automated release
+just release-auto v1.2.3
+```

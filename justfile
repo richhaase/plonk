@@ -3,6 +3,10 @@
 # Show available recipes
 default:
     @just --list
+    @echo
+    @echo "Quick release workflow:"
+    @echo "  just release-version-suggest  # Get version suggestions"
+    @echo "  just release-auto v1.2.3      # Automated release"
 
 # Generate mocks for testing
 generate-mocks:
@@ -76,7 +80,100 @@ security:
     @echo "Running gosec..."
     go run github.com/securego/gosec/v2/cmd/gosec ./...
 
-# Interactive release command
+# Automated single-command release process
+release-auto VERSION:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    
+    VERSION="{{VERSION}}"
+    
+    # Validate version format
+    if [[ ! $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$ ]]; then
+        echo "❌ Invalid version format. Use vX.Y.Z or vX.Y.Z-rcN (e.g., v1.2.3)"
+        exit 1
+    fi
+    
+    # Check if tag already exists
+    if git tag -l | grep -q "^$VERSION$"; then
+        echo "❌ Tag $VERSION already exists!"
+        exit 1
+    fi
+    
+    # Check if we're on main branch (optional safety check)
+    CURRENT_BRANCH=$(git branch --show-current)
+    if [[ "$CURRENT_BRANCH" != "main" && "$CURRENT_BRANCH" != "master" ]]; then
+        echo "⚠️  Warning: Not on main/master branch (currently on: $CURRENT_BRANCH)"
+        read -p "Continue anyway? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "❌ Release cancelled"
+            exit 1
+        fi
+    fi
+    
+    # Check working directory is clean
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+        echo "❌ Working directory not clean. Please commit or stash changes."
+        exit 1
+    fi
+    
+    echo "🚀 Starting automated release process for $VERSION"
+    echo "=================================================="
+    
+    # Pre-release validation
+    echo "📋 Running pre-release validation..."
+    
+    # Generate API documentation
+    echo "  📖 Generating API documentation..."
+    just generate-docs
+    
+    # Run tests
+    echo "  🧪 Running tests..."
+    just test
+    
+    # Run linter
+    echo "  🔍 Running linter..."
+    just lint
+    
+    # Run security checks
+    echo "  🔐 Running security checks..."
+    just security
+    
+    # Test build
+    echo "  🔨 Testing build..."
+    just build
+    
+    echo "✅ Pre-release validation passed!"
+    echo
+    
+    # Get release notes
+    CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+    echo "📝 Preparing release notes..."
+    echo "Recent commits since $CURRENT_VERSION:"
+    git log --oneline --no-merges $CURRENT_VERSION..HEAD 2>/dev/null || echo "  (no commits since last tag)"
+    echo
+    
+    read -p "Enter release notes: " RELEASE_NOTES
+    if [[ -z "$RELEASE_NOTES" ]]; then
+        RELEASE_NOTES="Release $VERSION"
+    fi
+    
+    # Create and push tag
+    echo "🏷️  Creating release tag..."
+    git tag -a "$VERSION" -m "Release $VERSION - $RELEASE_NOTES"
+    
+    echo "📤 Pushing tag to remote..."
+    git push origin "$VERSION"
+    
+    # Run goreleaser
+    echo "🚀 Building and publishing release..."
+    goreleaser release
+    
+    echo
+    echo "✅ Release $VERSION completed successfully!"
+    echo "🌐 Check your GitHub releases: https://github.com/rdh/plonk/releases"
+
+# Interactive release command (legacy)
 release:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -130,8 +227,16 @@ release:
     fi
     
     echo
-    echo "Creating release: $NEW_VERSION"
+    echo "🚀 Use automated release instead: just release-auto $NEW_VERSION"
+    echo "Or continue with manual process..."
     echo
+    
+    read -p "Continue with manual process? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "❌ Use: just release-auto $NEW_VERSION"
+        exit 1
+    fi
     
     # Create annotated tag
     read -p "Enter release notes: " RELEASE_NOTES
@@ -143,6 +248,53 @@ release:
     echo "  1. Push the tag: git push origin $NEW_VERSION"
     echo "  2. Run release build: just goreleaser-release"
     echo "  3. Check GitHub releases"
+
+# Show suggested next version based on current tags
+release-version-suggest:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    
+    # Get current version
+    CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+    echo "Current version: $CURRENT_VERSION"
+    echo
+    
+    # Show recent commits since last tag
+    echo "Recent commits since $CURRENT_VERSION:"
+    git log --oneline --no-merges $CURRENT_VERSION..HEAD 2>/dev/null || echo "  (no commits since last tag)"
+    echo
+    
+    # Parse current version for increment suggestions
+    if [[ $CURRENT_VERSION =~ ^v?([0-9]+)\.([0-9]+)\.([0-9]+)(-rc([0-9]+))?$ ]]; then
+        MAJOR=${BASH_REMATCH[1]}
+        MINOR=${BASH_REMATCH[2]}
+        PATCH=${BASH_REMATCH[3]}
+        RC=${BASH_REMATCH[5]:-""}
+    else
+        MAJOR=0
+        MINOR=0
+        PATCH=0
+        RC=""
+    fi
+    
+    # Calculate version options
+    PATCH_VERSION="v$MAJOR.$MINOR.$((PATCH + 1))"
+    MINOR_VERSION="v$MAJOR.$((MINOR + 1)).0"
+    MAJOR_VERSION="v$((MAJOR + 1)).0.0"
+    if [[ -n $RC ]]; then
+        RC_VERSION="v$MAJOR.$MINOR.$PATCH-rc$((RC + 1))"
+    else
+        RC_VERSION="v$MAJOR.$((MINOR + 1)).0-rc1"
+    fi
+    
+    echo "Suggested versions:"
+    echo "  Patch: $PATCH_VERSION (bug fixes)"
+    echo "  Minor: $MINOR_VERSION (new features)"
+    echo "  Major: $MAJOR_VERSION (breaking changes)"
+    echo "  RC: $RC_VERSION (release candidate)"
+    echo
+    echo "Usage: just release-auto <version>"
+    echo "Example: just release-auto $PATCH_VERSION"
 
 # Generate API documentation
 generate-docs:
