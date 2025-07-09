@@ -173,81 +173,6 @@ release-auto VERSION:
     echo "✅ Release $VERSION completed successfully!"
     echo "🌐 Check your GitHub releases: https://github.com/rdh/plonk/releases"
 
-# Interactive release command (legacy)
-release:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo "Plonk Release Manager"
-    echo "======================="
-    
-    # Get current version
-    CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-    echo "Current version: $CURRENT_VERSION"
-    echo
-    
-    # Show recent commits since last tag
-    echo "Recent commits since $CURRENT_VERSION:"
-    git log --oneline --no-merges $CURRENT_VERSION..HEAD 2>/dev/null || echo "  (no commits since last tag)"
-    echo
-    
-    # Parse current version for increment suggestions
-    if [[ $CURRENT_VERSION =~ ^v?([0-9]+)\.([0-9]+)\.([0-9]+)(-rc([0-9]+))?$ ]]; then
-        MAJOR=${BASH_REMATCH[1]}
-        MINOR=${BASH_REMATCH[2]}
-        PATCH=${BASH_REMATCH[3]}
-        RC=${BASH_REMATCH[5]:-""}
-    else
-        MAJOR=0
-        MINOR=0
-        PATCH=0
-        RC=""
-    fi
-    
-    # Calculate version options
-    PATCH_VERSION="v$MAJOR.$MINOR.$((PATCH + 1))"
-    MINOR_VERSION="v$MAJOR.$((MINOR + 1)).0"
-    MAJOR_VERSION="v$((MAJOR + 1)).0.0"
-    if [[ -n $RC ]]; then
-        RC_VERSION="v$MAJOR.$MINOR.$PATCH-rc$((RC + 1))"
-    else
-        RC_VERSION="v$MAJOR.$((MINOR + 1)).0-rc1"
-    fi
-    
-    echo "Suggested versions:"
-    echo "  Patch: $PATCH_VERSION (bug fixes)"
-    echo "  Minor: $MINOR_VERSION (new features)"
-    echo "  Major: $MAJOR_VERSION (breaking changes)"
-    echo "  RC: $RC_VERSION (release candidate)"
-    echo
-    
-    read -p "Enter version (e.g., v1.2.3): " NEW_VERSION
-    if [[ ! $NEW_VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$ ]]; then
-        echo "Invalid version format. Use vX.Y.Z or vX.Y.Z-rcN"
-        exit 1
-    fi
-    
-    echo
-    echo "🚀 Use automated release instead: just release-auto $NEW_VERSION"
-    echo "Or continue with manual process..."
-    echo
-    
-    read -p "Continue with manual process? (y/N): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "❌ Use: just release-auto $NEW_VERSION"
-        exit 1
-    fi
-    
-    # Create annotated tag
-    read -p "Enter release notes: " RELEASE_NOTES
-    git tag -a "$NEW_VERSION" -m "Release $NEW_VERSION - $RELEASE_NOTES"
-    
-    echo "Created tag: $NEW_VERSION"
-    echo
-    echo "Next steps:"
-    echo "  1. Push the tag: git push origin $NEW_VERSION"
-    echo "  2. Run release build: just goreleaser-release"
-    echo "  3. Check GitHub releases"
 
 # Show suggested next version based on current tags
 release-version-suggest:
@@ -308,7 +233,3 @@ generate-docs:
     @go doc -all ./internal/commands > docs/api/commands.md
     @echo "✅ API documentation generated in docs/api/"
 
-# Run goreleaser for actual release (requires tag)
-goreleaser-release:
-    @echo "Running goreleaser for release..."
-    goreleaser release

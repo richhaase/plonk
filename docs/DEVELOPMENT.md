@@ -59,9 +59,8 @@ just precommit          # Run all pre-commit checks
 # Mock generation
 just generate-mocks     # Generate test mocks
 
-# Release (interactive)
-just release            # Create release tag
-just goreleaser-release # Build release binaries
+# Release (automated)
+just release-auto v1.2.3 # Complete automated release
 ```
 
 ### Build Process
@@ -304,18 +303,15 @@ just release-auto v1.2.3
 5. ✅ Builds and publishes release via GoReleaser
 6. ✅ Provides clear success/failure feedback
 
-### Manual Release (Legacy)
+### Manual Release (If Needed)
 
-For step-by-step control:
+For emergency or special cases, you can manually execute the release steps:
 
 ```bash
-# Interactive release (suggests using automated process)
-just release
-
-# Manual steps (if needed)
+# Manual steps (emergency use only)
 git tag -a v1.2.3 -m "Release v1.2.3 - Description"
 git push origin v1.2.3
-just goreleaser-release
+goreleaser release
 ```
 
 ### Release Checklist
