@@ -12,6 +12,16 @@ import (
 func TestHomebrewManager_ContextCancellation(t *testing.T) {
 	manager := NewHomebrewManager()
 
+	// First check if brew is available - if not, skip context tests
+	ctx := context.Background()
+	available, err := manager.IsAvailable(ctx)
+	if err != nil {
+		t.Fatalf("Failed to check if homebrew is available: %v", err)
+	}
+	if !available {
+		t.Skip("Homebrew not available, skipping context cancellation tests")
+	}
+
 	t.Run("ListInstalled_ContextCancellation", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel() // Cancel immediately
@@ -177,4 +187,46 @@ func findSubstring(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+func TestHomebrewManager_IsAvailable(t *testing.T) {
+	manager := NewHomebrewManager()
+	ctx := context.Background()
+
+	available, err := manager.IsAvailable(ctx)
+	if err != nil {
+		t.Errorf("IsAvailable should not return an error: %v", err)
+	}
+
+	// Log availability for debugging
+	t.Logf("Homebrew available: %v", available)
+
+	// Test behavior when homebrew is not available
+	if !available {
+		t.Run("operations_when_unavailable", func(t *testing.T) {
+			_, err := manager.ListInstalled(ctx)
+			if err == nil {
+				t.Error("Expected error when homebrew is not available")
+			}
+			t.Logf("ListInstalled error (expected): %v", err)
+
+			err = manager.Install(ctx, "test-package")
+			if err == nil {
+				t.Error("Expected error when homebrew is not available")
+			}
+			t.Logf("Install error (expected): %v", err)
+
+			err = manager.Uninstall(ctx, "test-package")
+			if err == nil {
+				t.Error("Expected error when homebrew is not available")
+			}
+			t.Logf("Uninstall error (expected): %v", err)
+
+			_, err = manager.IsInstalled(ctx, "test-package")
+			if err == nil {
+				t.Error("Expected error when homebrew is not available")
+			}
+			t.Logf("IsInstalled error (expected): %v", err)
+		})
+	}
 }

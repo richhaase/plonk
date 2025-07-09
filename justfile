@@ -11,10 +11,10 @@ default:
 # Generate mocks for testing
 generate-mocks:
     @echo "Generating mocks..."
-    @mockgen -source=internal/managers/common.go -destination=internal/managers/mock_manager.go -package=managers
-    @mockgen -source=internal/state/reconciler.go -destination=internal/state/mock_provider.go -package=state
-    @mockgen -source=internal/state/package_provider.go -destination=internal/state/mock_package_interfaces.go -package=state
-    @mockgen -source=internal/config/interfaces.go -destination=internal/config/mock_config.go -package=config
+    @go run go.uber.org/mock/mockgen@latest -source=internal/managers/common.go -destination=internal/managers/mock_manager.go -package=managers
+    @go run go.uber.org/mock/mockgen@latest -source=internal/state/reconciler.go -destination=internal/state/mock_provider.go -package=state
+    @go run go.uber.org/mock/mockgen@latest -source=internal/state/package_provider.go -destination=internal/state/mock_package_interfaces.go -package=state
+    @go run go.uber.org/mock/mockgen@latest -source=internal/config/interfaces.go -destination=internal/config/mock_config.go -package=config
     @echo "✅ Generated mocks successfully!"
 
 # Build the plonk binary with version information

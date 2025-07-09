@@ -4,10 +4,11 @@ go 1.24.4
 
 require (
 	github.com/go-playground/validator/v10 v10.27.0
-	github.com/golang/mock v1.6.0
+	github.com/golang/mock v1.4.4
 	github.com/golangci/golangci-lint v1.64.8
 	github.com/securego/gosec/v2 v2.22.5
 	github.com/spf13/cobra v1.9.1
+	go.uber.org/mock v0.5.2
 	golang.org/x/tools v0.34.0
 	golang.org/x/vuln v1.1.4
 	gopkg.in/yaml.v3 v3.0.1
