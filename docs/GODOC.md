@@ -87,18 +87,19 @@ func (y *YAMLConfigService) ReadConfig() (*Config, error) {
 
 Interfaces should clearly document their contract:
 
-For complete interface specifications and usage examples, see the generated API documentation in `docs/api/managers.md`.
+For complete interface specifications and usage examples, see the generated API documentation in `docs/API.md`.
 
-## API Documentation by Package
+## API Documentation
 
-Complete API documentation is auto-generated and available in `docs/api/`:
+Complete API documentation is auto-generated and available in **`docs/API.md`**, which includes:
 
-- **`docs/api/config.md`** - Configuration management interfaces and types
-- **`docs/api/state.md`** - State reconciliation engine and provider interfaces
-- **`docs/api/managers.md`** - Package manager implementations and interfaces
-- **`docs/api/dotfiles.md`** - Dotfile operations and file management
-- **`docs/api/errors.md`** - Structured error handling types and codes
-- **`docs/api/commands.md`** - CLI command implementations
+- **Configuration management** - interfaces and types
+- **State reconciliation** - engine and provider interfaces  
+- **Package managers** - implementations and interfaces
+- **Dotfile operations** - file management
+- **Error handling** - structured error types and codes
+- **CLI commands** - command implementations
+- **Lock file management** - package state tracking
 
 **Key package relationships:**
 - `config` provides configuration loading and validation
@@ -168,11 +169,8 @@ func FunctionName(ctx context.Context, a InputType, b string) (ResultType, error
 ### Documentation Commands
 
 ```bash
-# Generate all API documentation (automated)
+# Generate consolidated API documentation
 just generate-docs
-
-# Generate documentation for specific package
-go doc -all ./internal/config > docs/api/config.md
 
 # Check documentation coverage
 go doc -all ./... | grep -c "^func\|^type"

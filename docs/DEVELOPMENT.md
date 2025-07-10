@@ -99,10 +99,7 @@ docs/                   # Documentation
 
 ### Key Interfaces
 For complete interface specifications, see:
-- **Configuration interfaces:** `docs/api/config.md`
-- **Package manager interface:** `docs/api/managers.md`
-- **State provider interface:** `docs/api/state.md`
-- **Error handling types:** `docs/api/errors.md`
+- **Complete API documentation:** `docs/API.md` (all interfaces and types)
 
 ## Testing
 
@@ -404,7 +401,7 @@ default:
 }
 ```
 
-See `docs/api/errors.md` for complete error type specifications.
+See `docs/API.md` for complete error type specifications.
 
 ## Contributing
 
@@ -441,7 +438,7 @@ refactor: simplify configuration loading
 ### Adding Package Managers
 
 1. **Implement interface** in `internal/managers/`
-   - See `docs/api/managers.md` for complete PackageManager interface
+   - See `docs/API.md` for complete PackageManager interface
    - Follow existing patterns from `HomebrewManager` and `NpmManager`
 2. **Add tests** with mocks and context support
 3. **Register manager** in command layer
