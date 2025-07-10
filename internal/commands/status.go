@@ -11,6 +11,7 @@ import (
 
 	"plonk/internal/config"
 	"plonk/internal/errors"
+	"plonk/internal/lock"
 	"plonk/internal/managers"
 	"plonk/internal/state"
 
@@ -65,9 +66,9 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	// Create unified state reconciler
 	reconciler := state.NewReconciler()
 
-	// Register package provider (multi-manager)
+	// Register package provider (multi-manager) - using lock file
 	ctx := context.Background()
-	packageProvider, err := createPackageProvider(ctx, cfg)
+	packageProvider, err := createPackageProvider(ctx, configDir)
 	if err != nil {
 		return err
 	}
@@ -86,6 +87,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	// Prepare output
 	outputData := StatusOutput{
 		ConfigPath:   filepath.Join(configDir, "plonk.yaml"),
+		LockPath:     filepath.Join(configDir, "plonk.lock"),
 		ConfigValid:  true,
 		StateSummary: summary,
 	}
@@ -93,13 +95,13 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	return RenderOutput(outputData, format)
 }
 
-// createPackageProvider creates a multi-manager package provider
-func createPackageProvider(ctx context.Context, cfg *config.Config) (*state.MultiManagerPackageProvider, error) {
+// createPackageProvider creates a multi-manager package provider using lock file
+func createPackageProvider(ctx context.Context, configDir string) (*state.MultiManagerPackageProvider, error) {
 	provider := state.NewMultiManagerPackageProvider()
 
-	// Create config adapter using new clean interface
-	configAdapter := config.NewConfigAdapter(cfg)
-	packageConfigAdapter := config.NewStatePackageConfigAdapter(configAdapter)
+	// Create lock file adapter
+	lockService := lock.NewYAMLLockService(configDir)
+	lockAdapter := lock.NewLockFileAdapter(lockService)
 
 	// Add Homebrew manager
 	homebrewManager := managers.NewHomebrewManager()
@@ -109,7 +111,7 @@ func createPackageProvider(ctx context.Context, cfg *config.Config) (*state.Mult
 	}
 	if available {
 		managerAdapter := state.NewManagerAdapter(homebrewManager)
-		provider.AddManager("homebrew", managerAdapter, packageConfigAdapter)
+		provider.AddManager("homebrew", managerAdapter, lockAdapter)
 	}
 
 	// Add NPM manager
@@ -120,7 +122,7 @@ func createPackageProvider(ctx context.Context, cfg *config.Config) (*state.Mult
 	}
 	if available {
 		managerAdapter := state.NewManagerAdapter(npmManager)
-		provider.AddManager("npm", managerAdapter, packageConfigAdapter)
+		provider.AddManager("npm", managerAdapter, lockAdapter)
 	}
 
 	// Add Cargo manager
@@ -131,7 +133,7 @@ func createPackageProvider(ctx context.Context, cfg *config.Config) (*state.Mult
 	}
 	if available {
 		managerAdapter := state.NewManagerAdapter(cargoManager)
-		provider.AddManager("cargo", managerAdapter, packageConfigAdapter)
+		provider.AddManager("cargo", managerAdapter, lockAdapter)
 	}
 
 	return provider, nil
@@ -149,6 +151,7 @@ func createDotfileProvider(homeDir string, configDir string, cfg *config.Config)
 // StatusOutput represents the output structure for status command
 type StatusOutput struct {
 	ConfigPath   string        `json:"config_path" yaml:"config_path"`
+	LockPath     string        `json:"lock_path" yaml:"lock_path"`
 	ConfigValid  bool          `json:"config_valid" yaml:"config_valid"`
 	StateSummary state.Summary `json:"state_summary" yaml:"state_summary"`
 }
@@ -163,7 +166,8 @@ func (s StatusOutput) TableOutput() string {
 	if s.ConfigValid {
 		configStatus = "✅"
 	}
-	output += fmt.Sprintf("📁 Config: %s (%s valid)\n\n", s.ConfigPath, configStatus)
+	output += fmt.Sprintf("📁 Config: %s (%s valid)\n", s.ConfigPath, configStatus)
+	output += fmt.Sprintf("🔒 Lock:   %s\n\n", s.LockPath)
 
 	// Overall state summary
 	summary := s.StateSummary
