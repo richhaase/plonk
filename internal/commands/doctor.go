@@ -15,6 +15,7 @@ import (
 
 	"plonk/internal/config"
 	"plonk/internal/errors"
+	"plonk/internal/lock"
 	"plonk/internal/managers"
 
 	"github.com/spf13/cobra"
@@ -80,6 +81,10 @@ func runHealthChecks() DoctorOutput {
 	// Configuration checks
 	report.Checks = append(report.Checks, checkConfigurationFile())
 	report.Checks = append(report.Checks, checkConfigurationValidity())
+
+	// Lock file checks
+	report.Checks = append(report.Checks, checkLockFile())
+	report.Checks = append(report.Checks, checkLockFileValidity())
 
 	// Package manager checks
 	report.Checks = append(report.Checks, checkPackageManagerAvailability(ctx))
@@ -306,7 +311,7 @@ func checkConfigurationValidity() HealthCheck {
 		check.Message = "Configuration has validation errors"
 	} else {
 		// Count configured items - packages now in lock file
-		packageCount := 0 // TODO: Read from lock file
+		packageCount := getPackageCountFromLockFile(configDir)
 
 		// Get auto-discovered dotfiles
 		adapter := config.NewConfigAdapter(cfg)
@@ -612,4 +617,111 @@ func (d DoctorOutput) TableOutput() string {
 // StructuredData returns the structured data for serialization
 func (d DoctorOutput) StructuredData() any {
 	return d
+}
+
+// getPackageCountFromLockFile counts packages in the lock file
+func getPackageCountFromLockFile(configDir string) int {
+	lockService := lock.NewYAMLLockService(configDir)
+
+	totalCount := 0
+	managers := []string{"homebrew", "npm", "cargo"}
+
+	for _, manager := range managers {
+		packages, err := lockService.GetPackages(manager)
+		if err == nil {
+			totalCount += len(packages)
+		}
+	}
+
+	return totalCount
+}
+
+// checkLockFile checks for the existence and accessibility of the lock file
+func checkLockFile() HealthCheck {
+	check := HealthCheck{
+		Name:     "Lock File",
+		Category: "configuration",
+		Status:   "pass",
+		Message:  "Lock file accessible",
+	}
+
+	configDir := config.GetDefaultConfigDirectory()
+	lockPath := filepath.Join(configDir, "plonk.lock")
+
+	check.Details = append(check.Details, fmt.Sprintf("Lock file path: %s", lockPath))
+
+	// Check if lock file exists
+	if _, err := os.Stat(lockPath); os.IsNotExist(err) {
+		check.Status = "warn"
+		check.Message = "Lock file does not exist (will be created when packages are added)"
+		check.Details = append(check.Details, "Lock file will be automatically created when you add packages")
+		return check
+	}
+
+	// Check if file is readable
+	if content, err := os.ReadFile(lockPath); err != nil {
+		check.Status = "fail"
+		check.Issues = append(check.Issues, fmt.Sprintf("Cannot read lock file: %v", err))
+		check.Suggestions = append(check.Suggestions, "Check file permissions and directory access")
+		check.Message = "Lock file is not readable"
+	} else {
+		check.Details = append(check.Details, fmt.Sprintf("Lock file size: %d bytes", len(content)))
+
+		// Basic file integrity check
+		if len(content) == 0 {
+			check.Status = "warn"
+			check.Message = "Lock file is empty"
+			check.Details = append(check.Details, "No packages currently managed")
+		}
+	}
+
+	return check
+}
+
+// checkLockFileValidity validates the lock file format and content
+func checkLockFileValidity() HealthCheck {
+	check := HealthCheck{
+		Name:     "Lock File Validity",
+		Category: "configuration",
+		Status:   "pass",
+		Message:  "Lock file is valid",
+	}
+
+	configDir := config.GetDefaultConfigDirectory()
+	lockService := lock.NewYAMLLockService(configDir)
+
+	// Try to load the lock file
+	lockFile, err := lockService.Load()
+	if err != nil {
+		// If file doesn't exist, that's okay
+		if os.IsNotExist(err) {
+			check.Status = "info"
+			check.Message = "No lock file found (packages will be tracked when added)"
+			return check
+		}
+
+		check.Status = "fail"
+		check.Issues = append(check.Issues, fmt.Sprintf("Lock file is invalid: %v", err))
+		check.Suggestions = append(check.Suggestions, "Validate lock file format or regenerate by running 'plonk pkg add' commands")
+		check.Message = "Lock file has format errors"
+		return check
+	}
+
+	// Count packages by manager
+	totalPackages := 0
+	for manager, packages := range lockFile.Packages {
+		count := len(packages)
+		totalPackages += count
+		check.Details = append(check.Details, fmt.Sprintf("%s packages: %d", manager, count))
+	}
+
+	check.Details = append(check.Details, fmt.Sprintf("Total managed packages: %d", totalPackages))
+	check.Details = append(check.Details, fmt.Sprintf("Lock file version: %d", lockFile.Version))
+
+	if totalPackages == 0 {
+		check.Status = "info"
+		check.Message = "Lock file is valid but contains no packages"
+	}
+
+	return check
 }
