@@ -66,29 +66,32 @@ packages:
 - [x] Create lock file adapter for PackageConfigLoader
 - [x] Add comprehensive tests for lock service
 
-### Phase 2: Config Refactoring
-- [ ] Remove package fields from `Config` struct (homebrew, npm, cargo)
-- [ ] Update `Settings` struct to only contain configuration settings
-- [ ] Remove package-related methods from `ConfigService` and `ConfigAdapter`
-- [ ] Update config validation to exclude package validation
-- [ ] Update config tests to reflect package-free structure
-- [ ] Ensure `plonk config show` only displays settings (not packages)
+### Phase 2: Config Refactoring (COMPLETED ✅)
+- [x] Remove package fields from `Config` struct (homebrew, npm, cargo)
+- [x] Update `Settings` struct to only contain configuration settings
+- [x] Remove package-related methods from `ConfigService` and `ConfigAdapter`
+- [x] Update config validation to exclude package validation
+- [x] Update config tests to reflect package-free structure
+- [x] Ensure `plonk config show` only displays settings (not packages)
+- [x] Temporarily disable pkg add/remove commands with clear error messages
 
 ### Phase 3: Command Updates
-- [ ] Update `pkg add` to write to lock file instead of config
-- [ ] Update `pkg remove` to modify lock file instead of config
+- [ ] Re-enable `pkg add` command with lock file integration
+- [ ] Re-enable `pkg remove` command with lock file integration
 - [ ] Update `pkg list` to read from lock file (use existing adapter)
 - [ ] Update `apply` command to use lock file for reconciliation
 - [ ] Update `status` command to read from lock file
 - [ ] Add lock file path to `doctor` command checks
 - [ ] Update command tests to use lock file
+- [ ] Ensure proper error handling for lock file operations
 
 ### Phase 4: State Provider Updates
 - [ ] Update reconciler initialization to use `LockFileAdapter` instead of `ConfigAdapter`
-- [ ] Remove package-related methods from `ConfigAdapter`
 - [ ] Update `MultiManagerPackageProvider` to use lock file adapter
 - [ ] Test full reconciliation flow with lock file
 - [ ] Update state provider tests
+- [ ] Verify end-to-end package reconciliation workflow
+- [ ] Update any remaining references to config-based package management
 
 ### Phase 5: Testing and Documentation
 - [ ] Update all package-related tests
@@ -180,6 +183,120 @@ Since we're not maintaining backwards compatibility:
 - All config tests pass
 - `plonk config show` displays clean, package-free output
 
+## Phase 3 Detailed Plan
+
+### Overview
+Phase 3 focuses on re-enabling package commands to work with the lock file instead of the config file. The lock file infrastructure is already in place, so we need to integrate it with the command layer.
+
+### Current State
+- Package commands (`pkg add`, `pkg remove`) are temporarily disabled
+- Lock file service (`YAMLLockService`) is implemented and tested
+- Lock file adapter (`LockFileAdapter`) bridges lock service to existing interfaces
+- Config no longer contains package information
+
+### Step 1: Re-enable `pkg add` Command
+**File**: `internal/commands/pkg_add.go`
+**Goal**: Replace temporary error message with lock file integration
+
+**Implementation**:
+1. Remove the temporary error return
+2. Initialize `YAMLLockService` with default config directory
+3. For named package addition:
+   - Add package to lock file using `AddPackage(manager, name, version)`
+   - Install package using existing manager implementation
+   - Handle installation errors (remove from lock file if install fails)
+4. For bulk addition (`pkg add` with no args):
+   - Use existing package discovery logic
+   - Add untracked packages to lock file
+5. Add proper error handling for lock file operations
+
+**Key Considerations**:
+- Use atomic operations (add to lock file, then install)
+- Rollback lock file changes if installation fails
+- Maintain existing command flags and behavior
+- Use existing package manager integrations
+
+### Step 2: Re-enable `pkg remove` Command  
+**File**: `internal/commands/pkg_remove.go`
+**Goal**: Replace temporary error message with lock file integration
+
+**Implementation**:
+1. Remove the temporary error return
+2. Initialize `YAMLLockService` with default config directory
+3. For package removal:
+   - Remove package from lock file using `RemovePackage(manager, name)`
+   - If `--uninstall` flag is set, also uninstall from system
+   - Handle uninstall errors gracefully
+4. Add proper error handling for lock file operations
+
+**Key Considerations**:
+- Lock file is always updated (even without `--uninstall`)
+- Uninstall errors should not prevent lock file updates
+- Maintain existing command flags and behavior
+
+### Step 3: Update `pkg list` Command
+**File**: `internal/commands/pkg_list.go`
+**Goal**: Use lock file adapter instead of config adapter
+
+**Implementation**:
+1. Replace `ConfigAdapter` with `LockFileAdapter` 
+2. Update package listing to read from lock file
+3. Maintain existing output format and filtering
+4. Add lock file status to output (managed packages)
+
+### Step 4: Update `apply` Command
+**File**: `internal/commands/apply.go`
+**Goal**: Use lock file for package reconciliation
+
+**Implementation**:
+1. Update reconciler initialization to use `LockFileAdapter`
+2. Ensure state reconciliation works with lock file
+3. Test full apply workflow with lock file
+
+### Step 5: Update `status` Command
+**File**: `internal/commands/status.go`
+**Goal**: Show package status from lock file
+
+**Implementation**:
+1. Update status display to read from lock file
+2. Show managed vs untracked packages
+3. Display lock file location and status
+
+### Step 6: Update `doctor` Command
+**File**: `internal/commands/doctor.go`
+**Goal**: Check lock file health
+
+**Implementation**:
+1. Add lock file path to system checks
+2. Verify lock file is readable/writable
+3. Check lock file format validity
+4. Update package count to read from lock file
+
+### Step 7: Update Command Tests
+**Files**: `internal/commands/*_test.go`
+**Goal**: Test commands with lock file
+
+**Implementation**:
+1. Update test fixtures to use lock file
+2. Create test helpers for lock file setup
+3. Test error scenarios (corrupted lock file, etc.)
+4. Test command interactions with lock file
+
+### Success Criteria for Phase 3
+- `pkg add` and `pkg remove` commands work with lock file
+- `pkg list` shows packages from lock file
+- `apply` command reconciles using lock file
+- `status` command shows lock file-based package status
+- `doctor` command validates lock file health
+- All command tests pass with lock file integration
+- No references to config file for package management remain
+
+### Risk Mitigation
+- Comprehensive testing of lock file operations
+- Proper error handling for file I/O operations
+- Atomic operations to prevent corrupted state
+- Clear error messages for user debugging
+
 ## Open Questions
 
 1. Should we track additional metadata (e.g., who installed, dependencies)?
@@ -192,10 +309,11 @@ Since we're not maintaining backwards compatibility:
 - [x] Lock file service implemented  
 - [x] Lock file adapter created
 - [x] Unit tests for lock service
-- [ ] Config types updated
-- [ ] Commands updated
-- [ ] Tests updated
-- [ ] Documentation updated
+- [x] Config types updated (Phase 2 complete)
+- [ ] Commands updated (Phase 3)
+- [ ] State provider updated (Phase 4)
+- [ ] Tests updated (Phase 5)
+- [ ] Documentation updated (Phase 5)
 - [ ] PR ready for review
 
 ## Lessons Learned from Phase 1
@@ -204,3 +322,12 @@ Since we're not maintaining backwards compatibility:
 2. **Atomic Writes**: The `AtomicFileWriter` is already available in the dotfiles package and takes no constructor arguments
 3. **Testing Strategy**: Creating focused unit tests for each component helps validate the implementation incrementally
 4. **Interface Adapters**: Creating adapters (like `LockFileAdapter`) helps bridge new components with existing interfaces without breaking changes
+
+## Lessons Learned from Phase 2
+
+1. **Complete Changes Over Incremental**: Making complete, cohesive changes is better than overly small incremental changes that leave the codebase in broken states
+2. **Test-Driven Refactoring**: Updating tests in parallel with implementation helps catch issues early and ensures comprehensive coverage
+3. **Validation Method Signatures**: The `ValidateConfig` method needed to return `*ValidationResult` instead of `error` to match the interface
+4. **Default Configuration**: Adding a `GetDefaultConfig()` method helps with testing and initialization
+5. **Consistent Error Messages**: Test assertions need to match the actual validation error messages (e.g., "min" instead of "timeout must be positive")
+6. **Commit Completeness**: Commits should be "complete enough to pass tests and linter" - ensuring each commit maintains a working state
