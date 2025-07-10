@@ -114,9 +114,9 @@ func LoadConfig(configDir string) (*Config, error) {
 
 	if err := loadConfigFile(configPath, config); err != nil {
 		if os.IsNotExist(err) {
-			return nil, errors.ConfigError(errors.ErrConfigNotFound, "load",
-				fmt.Sprintf("config file not found: %s", configPath)).
-				WithMetadata("config_path", configPath)
+			// Zero-config: Return empty config when file doesn't exist
+			// This will use all defaults when resolved
+			config = &Config{}
 		} else {
 			return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load",
 				"failed to load config").WithMetadata("path", configPath)
@@ -134,6 +134,26 @@ func LoadConfig(configDir string) (*Config, error) {
 	}
 
 	return config, nil
+}
+
+// GetOrCreateConfig loads configuration if it exists, or creates a default config
+// with the specified directory if it doesn't exist. Useful for commands that need
+// to save configuration.
+func GetOrCreateConfig(configDir string) (*Config, error) {
+	cfg, err := LoadConfig(configDir)
+	if err != nil {
+		// LoadConfig only returns errors for parse/validation failures now,
+		// not for missing files (zero-config behavior)
+		return nil, err
+	}
+
+	// Ensure config directory exists for future saves
+	if err := os.MkdirAll(configDir, 0750); err != nil {
+		return nil, errors.Wrap(err, errors.ErrDirectoryCreate, errors.DomainConfig, "create",
+			"failed to create config directory").WithItem(configDir)
+	}
+
+	return cfg, nil
 }
 
 // loadConfigFile loads a single YAML config file.

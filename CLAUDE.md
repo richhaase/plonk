@@ -87,26 +87,21 @@ type ResolvedConfig struct {
 - [x] Fix all command files to use Config.Resolve() API
 - [x] Add helper functions (StringPtr, IntPtr, StringSlicePtr) for tests
 
-### Phase 2: Make Configuration Optional
-**Status**: Ready to implement  
+### Phase 2: Make Configuration Optional ✅
+**Status**: COMPLETED  
 **Goal**: Handle missing config files gracefully with defaults
 
-- [ ] Update LoadConfig() to handle missing config file gracefully
-- [ ] Return default-only Config when no config file exists
-- [ ] Remove config file existence requirements from commands
-- [ ] Update error handling to not fail on missing config
-- [ ] Add GetOrCreateConfig() helper for commands that need to save config
+- [x] Update LoadConfig() to handle missing config file gracefully
+- [x] Return default-only Config when no config file exists
+- [x] Remove config file existence requirements from commands
+- [x] Update error handling to not fail on missing config
+- [x] Add GetOrCreateConfig() helper for commands that need to save config
+- [x] Implement `plonk init` command for creating starter configurations
 
-### Phase 3: Update Service Integration  
-**Status**: Pending Phase 2  
-**Goal**: Ensure all services work with optional configuration
+### Phase 3: Testing and Documentation  
+**Status**: Ready to implement  
+**Goal**: Comprehensive testing and user documentation
 
-- [ ] Update YAMLConfigService to handle missing files
-- [ ] Update config adapters to work with defaults-only configs
-- [ ] Ensure backward compatibility for existing config files
-- [ ] Test all commands work without any config file
-
-### Phase 4: Testing and Documentation
 - [ ] Add tests for zero-config scenarios
 - [ ] Test config resolution with partial user overrides
 - [ ] Update documentation to emphasize optional nature
@@ -517,6 +512,45 @@ This foundation provides the structure for the zero-config approach while mainta
 
 5. **Test Maintenance**: Converting existing tests to use the new pointer-based structure requires systematic attention to comparison operations and error message formatting
 
-### Next Steps: Phase 2
+### Phase 2: Make Configuration Optional ✅ COMPLETED  
+**Completed**: 2025-07-10  
+**Commits**: Multiple commits implementing zero-config functionality
 
-Phase 2 will focus on making configuration completely optional by updating LoadConfig() to handle missing config files gracefully and return a defaults-only Config when no file exists. This will complete the zero-config functionality.
+**Key Achievements**:
+- **Zero-Config LoadConfig()**: Modified LoadConfig() to return empty config (all defaults) when plonk.yaml doesn't exist
+- **Graceful Error Handling**: Commands no longer fail due to missing config files
+- **GetOrCreateConfig() Helper**: Added utility function for commands that need to save configuration  
+- **plonk init Command**: Created comprehensive init command with helpful config template and comments
+- **End-to-End Testing**: Verified zero-config behavior works across all major commands (status, doctor, config show)
+
+**Files Created**:
+- `internal/commands/init.go` - New plonk init command implementation
+
+**Files Modified**:
+- `internal/config/yaml_config.go` - Updated LoadConfig() for zero-config behavior, added GetOrCreateConfig()
+- `internal/commands/dot_add.go` - Updated to use GetOrCreateConfig() helper
+- `internal/commands/apply_test.go` - Updated test to expect zero-config behavior
+- `internal/config/yaml_config_test.go` - Updated test to verify zero-config works
+- `internal/errors/types.go` - Added ErrFileExists error type for init command
+
+**Zero-Config User Experience Achieved**:
+- Users can install Plonk and immediately use it without any configuration
+- `plonk status`, `plonk doctor`, `plonk config show` all work without config files
+- `plonk init` provides easy way to create config when customization is desired
+- Doctor command provides helpful guidance but doesn't block functionality
+
+**Technical Implementation**:
+- LoadConfig() returns `&Config{}` when file missing (resolves to all defaults)
+- Commands use `cfg.Resolve()` pattern to get computed values
+- Backwards compatibility maintained - existing configs work exactly as before
+
+### Lessons Learned from Phase 2
+
+1. **Zero-Config Pattern**: The approach of returning empty structs that resolve to defaults is clean and maintainable
+2. **User Experience Focus**: Adding `plonk init` immediately after implementing zero-config provides complete workflow
+3. **Helpful Config Templates**: Generated config files with comments significantly improve user experience
+4. **Test Updates Required**: Zero-config changes require updating tests that expect errors for missing files
+
+### Next Steps: Phase 3
+
+Phase 3 will focus on comprehensive testing of zero-config scenarios and updating documentation to emphasize the optional nature of configuration.

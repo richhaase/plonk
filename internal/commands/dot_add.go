@@ -333,20 +333,7 @@ func addSingleFileInternal(filePath, homeDir, configDir string, cfg *config.Conf
 
 // loadOrCreateConfig loads existing config or creates a new one
 func loadOrCreateConfig(configDir string) (*config.Config, error) {
-	cfg, err := config.LoadConfig(configDir)
-	if err != nil {
-		// If config doesn't exist, create a new one
-		if os.IsNotExist(err) {
-			cfg = &config.Config{
-				Settings: &config.Settings{
-					DefaultManager: config.StringPtr("homebrew"),
-				},
-			}
-		} else {
-			return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load", "failed to load config")
-		}
-	}
-	return cfg, nil
+	return config.GetOrCreateConfig(configDir)
 }
 
 // shouldSkipDotfile uses the existing function from config package

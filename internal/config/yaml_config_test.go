@@ -59,9 +59,19 @@ ignore_patterns:
 func TestLoadConfig_NonExistentFile(t *testing.T) {
 	tempDir := t.TempDir()
 
-	_, err := LoadConfig(tempDir)
-	if err == nil {
-		t.Error("Expected error for non-existent config file")
+	config, err := LoadConfig(tempDir)
+	if err != nil {
+		t.Errorf("Expected no error for non-existent config file (zero-config), got: %v", err)
+	}
+
+	if config == nil {
+		t.Error("Expected default config when file doesn't exist")
+	}
+
+	// Verify it resolves to defaults
+	resolved := config.Resolve()
+	if resolved.GetDefaultManager() != "homebrew" {
+		t.Errorf("Expected default manager 'homebrew', got %s", resolved.GetDefaultManager())
 	}
 }
 

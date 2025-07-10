@@ -142,15 +142,12 @@ func TestApplyCommand_NoConfig(t *testing.T) {
 	applyBackup = false
 	outputFormat = "table"
 
-	// Test that missing config returns error
+	// Test that missing config works with zero-config (uses defaults)
 	err = runApply(applyCmd, []string{})
-	if err == nil {
-		t.Error("Expected error for missing config file")
-	}
-
-	// Should contain config-related error
-	if !strings.Contains(err.Error(), "config") {
-		t.Errorf("Expected config-related error, got: %v", err)
+	// With zero-config, this should work (though may fail later due to package managers)
+	// We don't expect a config-related error anymore
+	if err != nil && strings.Contains(err.Error(), "config") {
+		t.Errorf("Should not get config-related error with zero-config, got: %v", err)
 	}
 }
 
