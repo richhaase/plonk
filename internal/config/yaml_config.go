@@ -24,11 +24,8 @@ import (
 
 // Config represents the configuration structure.
 type Config struct {
-	Settings       Settings          `yaml:"settings" validate:"required"`
-	IgnorePatterns []string          `yaml:"ignore_patterns,omitempty"`
-	Homebrew       []HomebrewPackage `yaml:"homebrew,omitempty" validate:"dive"`
-	NPM            []NPMPackage      `yaml:"npm,omitempty" validate:"dive"`
-	Cargo          []CargoPackage    `yaml:"cargo,omitempty" validate:"dive"`
+	Settings       Settings `yaml:"settings" validate:"required"`
+	IgnorePatterns []string `yaml:"ignore_patterns,omitempty"`
 }
 
 // Settings contains global configuration settings.
@@ -40,112 +37,9 @@ type Settings struct {
 	ExpandDirectories []string `yaml:"expand_directories,omitempty"`                                    // Directories to expand in dot list output
 }
 
-// HomebrewPackage can be a simple string or complex object.
-type HomebrewPackage struct {
-	Name   string `yaml:"name,omitempty" validate:"required,package_name"`
-	Config string `yaml:"config,omitempty" validate:"omitempty,file_path"`
-}
+// Package types removed - packages now managed in lock file
 
-// NPMPackage represents an NPM package configuration.
-type NPMPackage struct {
-	Name    string `yaml:"name,omitempty" validate:"omitempty,package_name"`
-	Package string `yaml:"package,omitempty" validate:"omitempty,package_name"` // If different from name.
-	Config  string `yaml:"config,omitempty" validate:"omitempty,file_path"`
-}
-
-// CargoPackage represents a cargo package configuration.
-type CargoPackage struct {
-	Name    string `yaml:"name,omitempty" validate:"omitempty,package_name"`
-	Package string `yaml:"package,omitempty" validate:"omitempty,package_name"` // If different from name.
-	Config  string `yaml:"config,omitempty" validate:"omitempty,file_path"`
-}
-
-// MarshalYAML implements custom marshaling for HomebrewPackage.
-func (h HomebrewPackage) MarshalYAML() (interface{}, error) {
-	// If only Name is set, marshal as a simple string
-	if h.Config == "" {
-		return h.Name, nil
-	}
-	// Otherwise, marshal as a full object
-	type homebrewPackageAlias HomebrewPackage
-	return homebrewPackageAlias(h), nil
-}
-
-// UnmarshalYAML implements custom unmarshaling for HomebrewPackage.
-func (h *HomebrewPackage) UnmarshalYAML(node *yaml.Node) error {
-	if node.Kind == yaml.ScalarNode {
-		// Simple string case.
-		h.Name = node.Value
-		return nil
-	}
-
-	// Complex object case.
-	type homebrewPackageAlias HomebrewPackage
-	var pkg homebrewPackageAlias
-	if err := node.Decode(&pkg); err != nil {
-		return err
-	}
-	*h = HomebrewPackage(pkg)
-	return nil
-}
-
-// MarshalYAML implements custom marshaling for NPMPackage.
-func (n NPMPackage) MarshalYAML() (interface{}, error) {
-	// If only Name is set (no Package or Config), marshal as a simple string
-	if n.Package == "" && n.Config == "" {
-		return n.Name, nil
-	}
-	// Otherwise, marshal as a full object
-	type npmPackageAlias NPMPackage
-	return npmPackageAlias(n), nil
-}
-
-// UnmarshalYAML implements custom unmarshaling for NPMPackage.
-func (n *NPMPackage) UnmarshalYAML(node *yaml.Node) error {
-	if node.Kind == yaml.ScalarNode {
-		// Simple string case.
-		n.Name = node.Value
-		return nil
-	}
-
-	// Complex object case.
-	type npmPackageAlias NPMPackage
-	var pkg npmPackageAlias
-	if err := node.Decode(&pkg); err != nil {
-		return err
-	}
-	*n = NPMPackage(pkg)
-	return nil
-}
-
-// MarshalYAML implements custom marshaling for CargoPackage.
-func (c CargoPackage) MarshalYAML() (interface{}, error) {
-	// If only Name is set (no Package or Config), marshal as a simple string
-	if c.Package == "" && c.Config == "" {
-		return c.Name, nil
-	}
-	// Otherwise, marshal as a full object
-	type cargoPackageAlias CargoPackage
-	return cargoPackageAlias(c), nil
-}
-
-// UnmarshalYAML implements custom unmarshaling for CargoPackage.
-func (c *CargoPackage) UnmarshalYAML(node *yaml.Node) error {
-	if node.Kind == yaml.ScalarNode {
-		// Simple string case.
-		c.Name = node.Value
-		return nil
-	}
-
-	// Complex object case.
-	type cargoPackageAlias CargoPackage
-	var pkg cargoPackageAlias
-	if err := node.Decode(&pkg); err != nil {
-		return err
-	}
-	*c = CargoPackage(pkg)
-	return nil
-}
+// Package marshal/unmarshal methods removed - packages now managed in lock file
 
 // LoadConfig loads configuration from plonk.yaml.
 func LoadConfig(configDir string) (*Config, error) {
@@ -384,7 +278,7 @@ func (y *YAMLConfigService) LoadConfigFromReader(reader io.Reader) (*Config, err
 	}
 
 	// Validate configuration
-	result := y.validator.ValidateConfig(config)
+	result := y.ValidateConfig(config)
 	if !result.IsValid() {
 		return nil, errors.ConfigError(errors.ErrConfigValidation, "validate",
 			fmt.Sprintf("config validation failed: %s", strings.Join(result.Errors, "; "))).
@@ -454,14 +348,8 @@ func (y *YAMLConfigService) GetPackagesForManager(managerName string) ([]Package
 }
 
 // ValidateConfig validates a configuration object
-func (y *YAMLConfigService) ValidateConfig(config *Config) error {
-	result := y.validator.ValidateConfig(config)
-	if !result.IsValid() {
-		return errors.ConfigError(errors.ErrConfigValidation, "validate",
-			fmt.Sprintf("config validation failed: %s", strings.Join(result.Errors, "; "))).
-			WithMetadata("errors", result.Errors)
-	}
-	return nil
+func (y *YAMLConfigService) ValidateConfig(config *Config) *ValidationResult {
+	return y.validator.ValidateConfig(config)
 }
 
 // ValidateConfigFromReader validates configuration from an io.Reader
@@ -470,7 +358,27 @@ func (y *YAMLConfigService) ValidateConfigFromReader(reader io.Reader) error {
 	if err != nil {
 		return err
 	}
-	return y.ValidateConfig(config)
+	result := y.ValidateConfig(config)
+	if !result.IsValid() {
+		return errors.ConfigError(errors.ErrConfigValidation, "validate",
+			fmt.Sprintf("config validation failed: %s", strings.Join(result.Errors, "; "))).
+			WithMetadata("errors", result.Errors)
+	}
+	return nil
+}
+
+// GetDefaultConfig returns a default configuration with sensible defaults
+func (y *YAMLConfigService) GetDefaultConfig() *Config {
+	return &Config{
+		Settings: Settings{
+			DefaultManager:    "homebrew",
+			OperationTimeout:  300,
+			PackageTimeout:    120,
+			DotfileTimeout:    60,
+			ExpandDirectories: []string{".config", ".ssh", ".aws", ".kube", ".docker", ".gnupg", ".local"},
+		},
+		IgnorePatterns: []string{".DS_Store", ".git", "*.backup", "*.tmp", "*.swp"},
+	}
 }
 
 // ConfigAdapter adapts a loaded Config to provide domain-specific interfaces
@@ -528,34 +436,15 @@ func (c *ConfigAdapter) GetDotfileTargets() map[string]string {
 }
 
 // GetPackagesForManager returns package names for a specific package manager
+// NOTE: Packages are now managed by the lock file, so this always returns empty
 func (c *ConfigAdapter) GetPackagesForManager(managerName string) ([]PackageConfigItem, error) {
-	var packageNames []string
-
+	// Validate manager name
 	switch managerName {
-	case "homebrew":
-		// Get homebrew packages (unified)
-		for _, pkg := range c.config.Homebrew {
-			packageNames = append(packageNames, pkg.Name)
-		}
-	case "npm":
-		// Get NPM packages
-		for _, pkg := range c.config.NPM {
-			packageNames = append(packageNames, pkg.Name)
-		}
-	case "cargo":
-		// Get Cargo packages
-		for _, pkg := range c.config.Cargo {
-			packageNames = append(packageNames, pkg.Name)
-		}
+	case "homebrew", "npm", "cargo":
+		// Return empty slice - packages are now in lock file
+		return []PackageConfigItem{}, nil
 	default:
 		return nil, errors.NewError(errors.ErrInvalidInput, errors.DomainConfig, "get-packages",
 			fmt.Sprintf("unknown package manager: %s", managerName)).WithItem(managerName)
 	}
-
-	items := make([]PackageConfigItem, len(packageNames))
-	for i, name := range packageNames {
-		items[i] = PackageConfigItem{Name: name}
-	}
-
-	return items, nil
 }

@@ -305,8 +305,8 @@ func checkConfigurationValidity() HealthCheck {
 		check.Suggestions = append(check.Suggestions, "Run 'plonk config validate' for detailed error information")
 		check.Message = "Configuration has validation errors"
 	} else {
-		// Count configured items
-		packageCount := len(cfg.Homebrew) + len(cfg.NPM)
+		// Count configured items - packages now in lock file
+		packageCount := 0 // TODO: Read from lock file
 
 		// Get auto-discovered dotfiles
 		adapter := config.NewConfigAdapter(cfg)

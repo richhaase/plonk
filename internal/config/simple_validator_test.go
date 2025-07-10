@@ -22,18 +22,12 @@ func TestSimpleValidator_ValidateConfig_ValidConfigs(t *testing.T) {
 			},
 		},
 		{
-			name: "config with valid packages",
+			name: "config with ignore patterns",
 			config: &Config{
 				Settings: Settings{
 					DefaultManager: "homebrew",
 				},
-				Homebrew: []HomebrewPackage{
-					{Name: "git"},
-					{Name: "neovim"},
-				},
-				NPM: []NPMPackage{
-					{Name: "@vue/cli"},
-				},
+				IgnorePatterns: []string{".DS_Store", "*.log"},
 			},
 		},
 	}
@@ -73,14 +67,14 @@ func TestSimpleValidator_ValidateConfig_InvalidConfigs(t *testing.T) {
 			expectError: "must be one of: homebrew npm",
 		},
 		{
-			name: "invalid package name",
+			name: "invalid operation timeout",
 			config: &Config{
-				Settings: Settings{DefaultManager: "homebrew"},
-				Homebrew: []HomebrewPackage{
-					{Name: "invalid package name"},
+				Settings: Settings{
+					DefaultManager:   "homebrew",
+					OperationTimeout: -1,
 				},
 			},
-			expectError: "invalid package name",
+			expectError: "min",
 		},
 	}
 
@@ -121,17 +115,11 @@ func TestSimpleValidator_ValidateConfigFromYAML_ValidYAML(t *testing.T) {
 			name: "complete valid YAML",
 			yaml: `settings:
   default_manager: homebrew
+  operation_timeout: 600
 
-dotfiles:
-  - zshrc
-  - vimrc
-
-homebrew:
-  - git
-  - name: neovim
-
-npm:
-  - "@vue/cli"`,
+ignore_patterns:
+  - .DS_Store
+  - "*.log"`,
 		},
 	}
 
@@ -167,12 +155,11 @@ func TestSimpleValidator_ValidateConfigFromYAML_InvalidYAML(t *testing.T) {
 			expectError: "must be one of",
 		},
 		{
-			name: "invalid package name",
+			name: "invalid timeout",
 			yaml: `settings:
   default_manager: homebrew
-homebrew:
-  - "invalid package"`,
-			expectError: "invalid package name",
+  operation_timeout: -1`,
+			expectError: "min",
 		},
 	}
 
