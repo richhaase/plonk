@@ -67,23 +67,28 @@ packages:
 - [x] Add comprehensive tests for lock service
 
 ### Phase 2: Config Refactoring
-- [ ] Remove package fields from `Config` struct
-- [ ] Update `Settings` to only contain configuration settings
-- [ ] Remove package-related methods from `ConfigService`
+- [ ] Remove package fields from `Config` struct (homebrew, npm, cargo)
+- [ ] Update `Settings` struct to only contain configuration settings
+- [ ] Remove package-related methods from `ConfigService` and `ConfigAdapter`
 - [ ] Update config validation to exclude package validation
+- [ ] Update config tests to reflect package-free structure
+- [ ] Ensure `plonk config show` only displays settings (not packages)
 
 ### Phase 3: Command Updates
 - [ ] Update `pkg add` to write to lock file instead of config
-- [ ] Update `pkg remove` to modify lock file
-- [ ] Update `pkg list` to read from lock file
+- [ ] Update `pkg remove` to modify lock file instead of config
+- [ ] Update `pkg list` to read from lock file (use existing adapter)
 - [ ] Update `apply` command to use lock file for reconciliation
 - [ ] Update `status` command to read from lock file
+- [ ] Add lock file path to `doctor` command checks
+- [ ] Update command tests to use lock file
 
 ### Phase 4: State Provider Updates
-- [ ] Create `LockFilePackageConfigLoader` implementing `PackageConfigLoader`
-- [ ] Update `PackageProvider` to use lock file loader
-- [ ] Update reconciler initialization to use lock file
-- [ ] Remove `ConfigAdapter` or update to only handle settings
+- [ ] Update reconciler initialization to use `LockFileAdapter` instead of `ConfigAdapter`
+- [ ] Remove package-related methods from `ConfigAdapter`
+- [ ] Update `MultiManagerPackageProvider` to use lock file adapter
+- [ ] Test full reconciliation flow with lock file
+- [ ] Update state provider tests
 
 ### Phase 5: Testing and Documentation
 - [ ] Update all package-related tests
@@ -137,6 +142,44 @@ Since we're not maintaining backwards compatibility:
 2. Clear release notes about breaking changes
 3. Update all documentation before release
 
+## Phase 2 Detailed Plan
+
+### Step 1: Remove Package Fields from Config Struct
+- Update `internal/config/yaml_config.go` Config struct
+- Remove `Homebrew`, `NPM`, `Cargo` fields
+- Update YAML tags and struct comments
+
+### Step 2: Update Config Service Methods
+- Remove `GetPackagesForManager()` from `ConfigAdapter`
+- Remove package-related validation from `SimpleValidator`
+- Update `LoadConfig()` to not process package sections
+- Update `SaveConfig()` to not save package sections
+
+### Step 3: Update Config Commands
+- Modify `config show` to only display settings and ignore patterns
+- Update `config validate` to exclude package validation
+- Ensure `config edit` still works with package-free config
+
+### Step 4: Update Config Tests
+- Remove package-related test cases from config tests
+- Update test fixtures to use package-free config
+- Verify config loading/saving works without packages
+
+### Step 5: Update Example Configs
+- Update README examples to show package-free config
+- Update test fixtures and mock configs
+
+### Expected Breaking Changes
+- Existing `plonk.yaml` files with package sections will need migration
+- Commands that rely on config for package info will temporarily break
+- This is acceptable since we're not maintaining backwards compatibility
+
+### Success Criteria
+- Config struct has no package fields
+- Config service only handles settings and ignore patterns
+- All config tests pass
+- `plonk config show` displays clean, package-free output
+
 ## Open Questions
 
 1. Should we track additional metadata (e.g., who installed, dependencies)?
@@ -145,10 +188,19 @@ Since we're not maintaining backwards compatibility:
 
 ## Progress Tracking
 
-- [ ] Lock file interfaces defined
-- [ ] Lock file service implemented
+- [x] Lock file interfaces defined
+- [x] Lock file service implemented  
+- [x] Lock file adapter created
+- [x] Unit tests for lock service
 - [ ] Config types updated
 - [ ] Commands updated
 - [ ] Tests updated
 - [ ] Documentation updated
 - [ ] PR ready for review
+
+## Lessons Learned from Phase 1
+
+1. **Error Handling**: The existing error system (`errors.ConfigError`) requires error codes, operation names, and messages - not just simple error strings
+2. **Atomic Writes**: The `AtomicFileWriter` is already available in the dotfiles package and takes no constructor arguments
+3. **Testing Strategy**: Creating focused unit tests for each component helps validate the implementation incrementally
+4. **Interface Adapters**: Creating adapters (like `LockFileAdapter`) helps bridge new components with existing interfaces without breaking changes
