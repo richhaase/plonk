@@ -42,6 +42,10 @@ homebrew:
 npm:
   - typescript
   - prettier
+
+cargo:
+  - ripgrep
+  - fd-find
 ```
 
 ### Minimal Example
@@ -62,7 +66,7 @@ homebrew:
 #### `default_manager`
 **Type:** string  
 **Required:** Yes  
-**Values:** `homebrew`, `npm`  
+**Values:** `homebrew`, `npm`, `cargo`  
 **Purpose:** Default package manager for new packages
 
 ```yaml
@@ -205,6 +209,23 @@ npm:
   - "@types/node"      # Scoped packages
   - "lodash-cli"       # CLI tools
 ```
+
+### Cargo
+
+**Key:** `cargo`  
+**Type:** array of strings  
+**Purpose:** Cargo packages (crates)
+
+```yaml
+cargo:
+  - ripgrep
+  - fd-find
+  - bat
+```
+
+**Package resolution:**
+- Installs packages from crates.io
+- Version pinning not supported
 
 **Package resolution:**
 - Global installation (`npm install -g`)

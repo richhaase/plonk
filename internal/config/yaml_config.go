@@ -28,11 +28,12 @@ type Config struct {
 	IgnorePatterns []string          `yaml:"ignore_patterns,omitempty"`
 	Homebrew       []HomebrewPackage `yaml:"homebrew,omitempty" validate:"dive"`
 	NPM            []NPMPackage      `yaml:"npm,omitempty" validate:"dive"`
+	Cargo          []CargoPackage    `yaml:"cargo,omitempty" validate:"dive"`
 }
 
 // Settings contains global configuration settings.
 type Settings struct {
-	DefaultManager    string   `yaml:"default_manager" validate:"required,oneof=homebrew npm"`
+	DefaultManager    string   `yaml:"default_manager" validate:"required,oneof=homebrew npm cargo"`
 	OperationTimeout  int      `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"` // Timeout in seconds for operations (0 for default, 1-3600 seconds)
 	PackageTimeout    int      `yaml:"package_timeout,omitempty" validate:"omitempty,min=0,max=1800"`   // Timeout in seconds for package operations (0 for default, 1-1800 seconds)
 	DotfileTimeout    int      `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`    // Timeout in seconds for dotfile operations (0 for default, 1-600 seconds)
@@ -47,6 +48,13 @@ type HomebrewPackage struct {
 
 // NPMPackage represents an NPM package configuration.
 type NPMPackage struct {
+	Name    string `yaml:"name,omitempty" validate:"omitempty,package_name"`
+	Package string `yaml:"package,omitempty" validate:"omitempty,package_name"` // If different from name.
+	Config  string `yaml:"config,omitempty" validate:"omitempty,file_path"`
+}
+
+// CargoPackage represents a cargo package configuration.
+type CargoPackage struct {
 	Name    string `yaml:"name,omitempty" validate:"omitempty,package_name"`
 	Package string `yaml:"package,omitempty" validate:"omitempty,package_name"` // If different from name.
 	Config  string `yaml:"config,omitempty" validate:"omitempty,file_path"`
@@ -107,6 +115,35 @@ func (n *NPMPackage) UnmarshalYAML(node *yaml.Node) error {
 		return err
 	}
 	*n = NPMPackage(pkg)
+	return nil
+}
+
+// MarshalYAML implements custom marshaling for CargoPackage.
+func (c CargoPackage) MarshalYAML() (interface{}, error) {
+	// If only Name is set (no Package or Config), marshal as a simple string
+	if c.Package == "" && c.Config == "" {
+		return c.Name, nil
+	}
+	// Otherwise, marshal as a full object
+	type cargoPackageAlias CargoPackage
+	return cargoPackageAlias(c), nil
+}
+
+// UnmarshalYAML implements custom unmarshaling for CargoPackage.
+func (c *CargoPackage) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind == yaml.ScalarNode {
+		// Simple string case.
+		c.Name = node.Value
+		return nil
+	}
+
+	// Complex object case.
+	type cargoPackageAlias CargoPackage
+	var pkg cargoPackageAlias
+	if err := node.Decode(&pkg); err != nil {
+		return err
+	}
+	*c = CargoPackage(pkg)
 	return nil
 }
 
@@ -503,6 +540,11 @@ func (c *ConfigAdapter) GetPackagesForManager(managerName string) ([]PackageConf
 	case "npm":
 		// Get NPM packages
 		for _, pkg := range c.config.NPM {
+			packageNames = append(packageNames, pkg.Name)
+		}
+	case "cargo":
+		// Get Cargo packages
+		for _, pkg := range c.config.Cargo {
 			packageNames = append(packageNames, pkg.Name)
 		}
 	default:

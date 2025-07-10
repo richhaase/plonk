@@ -123,6 +123,17 @@ func createPackageProvider(ctx context.Context, cfg *config.Config) (*state.Mult
 		provider.AddManager("npm", managerAdapter, packageConfigAdapter)
 	}
 
+	// Add Cargo manager
+	cargoManager := managers.NewCargoManager()
+	available, err = cargoManager.IsAvailable(ctx)
+	if err != nil {
+		return nil, errors.WrapWithItem(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", "cargo", "failed to check cargo availability")
+	}
+	if available {
+		managerAdapter := state.NewManagerAdapter(cargoManager)
+		provider.AddManager("cargo", managerAdapter, packageConfigAdapter)
+	}
+
 	return provider, nil
 }
 

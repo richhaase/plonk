@@ -50,6 +50,9 @@ plonk status [--output format]
     ],
     "npm": [
       {"name": "typescript", "state": "managed"}
+    ],
+    "cargo": [
+      {"name": "ripgrep", "state": "managed"}
     ]
   },
   "dotfiles": [
@@ -206,6 +209,7 @@ Total: 25 packages | ✓ Managed: 18 | ⚠ Missing: 2 | ? Untracked: 5
   ✓      curl                           homebrew  
   ⚠      htop                           homebrew  
   ✓      typescript                     npm       
+  ✓      ripgrep                        cargo     
 
 5 untracked packages (use --verbose to show details)
 ```
@@ -223,6 +227,7 @@ plonk pkg add [package] [--manager manager] [--dry-run] [--output format]
 - `plonk pkg add` - Add all untracked packages
 - `plonk pkg add htop` - Add specific package to config and install
 - `plonk pkg add htop --manager homebrew` - Force specific manager
+- `plonk pkg add ripgrep --manager cargo` - Force specific manager
 - `plonk pkg add htop --dry-run` - Preview what would be added/installed
 
 **Options:**
