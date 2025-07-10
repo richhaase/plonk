@@ -53,3 +53,9 @@ func (s *StateDotfileConfigAdapter) GetIgnorePatterns() []string {
 	// Get the underlying config and call its GetIgnorePatterns method
 	return s.configAdapter.config.GetIgnorePatterns()
 }
+
+// GetExpandDirectories implements state.DotfileConfigLoader interface
+func (s *StateDotfileConfigAdapter) GetExpandDirectories() []string {
+	// Get the underlying config and call its GetExpandDirectories method
+	return s.configAdapter.config.GetExpandDirectories()
+}

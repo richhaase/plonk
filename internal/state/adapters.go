@@ -20,6 +20,7 @@ type ConfigInterface interface {
 	GetHomebrewCasks() []string
 	GetNPMPackages() []string
 	GetIgnorePatterns() []string
+	GetExpandDirectories() []string
 }
 
 // NewConfigAdapter creates a new config adapter
@@ -35,6 +36,11 @@ func (c *ConfigAdapter) GetDotfileTargets() map[string]string {
 // GetIgnorePatterns implements DotfileConfigLoader
 func (c *ConfigAdapter) GetIgnorePatterns() []string {
 	return c.config.GetIgnorePatterns()
+}
+
+// GetExpandDirectories implements DotfileConfigLoader
+func (c *ConfigAdapter) GetExpandDirectories() []string {
+	return c.config.GetExpandDirectories()
 }
 
 // GetPackagesForManager implements PackageConfigLoader

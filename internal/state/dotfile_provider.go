@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"plonk/internal/dotfiles"
 )
@@ -16,6 +17,7 @@ import (
 type DotfileConfigLoader interface {
 	GetDotfileTargets() map[string]string // source -> destination mapping
 	GetIgnorePatterns() []string          // ignore patterns for file filtering
+	GetExpandDirectories() []string       // directories to expand in dot list
 }
 
 // DotfileProvider implements the Provider interface for dotfile management
@@ -112,13 +114,82 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 			continue // Skip ignored files
 		}
 
-		items = append(items, ActualItem{
-			Name: dotfile,
-			Path: fullPath,
-			Metadata: map[string]interface{}{
-				"path": fullPath,
-			},
-		})
+		// For directories, check if we should expand them
+		expandDirs := d.configLoader.GetExpandDirectories()
+		if info.IsDir() && shouldExpandDirectory(dotfile, expandDirs) {
+			// Expand directory to show individual files (limited depth)
+			err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					// Skip directories we can't access but continue processing
+					return nil
+				}
+
+				// Skip the root directory itself
+				if path == fullPath {
+					return nil
+				}
+
+				// Limit depth to avoid huge expansions
+				relPath, err := filepath.Rel(fullPath, path)
+				if err != nil {
+					return nil
+				}
+				if strings.Count(relPath, string(os.PathSeparator)) > 2 {
+					return nil
+				}
+
+				// Calculate relative path from home directory
+				homeRelPath, err := filepath.Rel(d.homeDir, path)
+				if err != nil {
+					return nil
+				}
+
+				// Check if file should be ignored
+				if shouldSkipDotfile(homeRelPath, info, ignorePatterns) {
+					return nil
+				}
+
+				// Only add if not already in items (avoid duplicates)
+				found := false
+				for _, item := range items {
+					if item.Name == homeRelPath {
+						found = true
+						break
+					}
+				}
+
+				if !found {
+					items = append(items, ActualItem{
+						Name: homeRelPath,
+						Path: path,
+						Metadata: map[string]interface{}{
+							"path": path,
+						},
+					})
+				}
+
+				return nil
+			})
+			if err != nil {
+				// If we can't walk the directory, fall back to showing it as a single item
+				items = append(items, ActualItem{
+					Name: dotfile,
+					Path: fullPath,
+					Metadata: map[string]interface{}{
+						"path": fullPath,
+					},
+				})
+			}
+		} else {
+			// Single file or unexpanded directory
+			items = append(items, ActualItem{
+				Name: dotfile,
+				Path: fullPath,
+				Metadata: map[string]interface{}{
+					"path": fullPath,
+				},
+			})
+		}
 	}
 
 	// Also check configured destinations to find files in subdirectories
@@ -296,5 +367,15 @@ func shouldSkipDotfile(relPath string, info os.FileInfo, ignorePatterns []string
 		}
 	}
 
+	return false
+}
+
+// shouldExpandDirectory determines if a directory should be expanded to show its contents
+func shouldExpandDirectory(dirname string, expandDirs []string) bool {
+	for _, dir := range expandDirs {
+		if dirname == dir {
+			return true
+		}
+	}
 	return false
 }

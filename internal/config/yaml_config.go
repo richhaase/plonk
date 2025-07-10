@@ -32,10 +32,11 @@ type Config struct {
 
 // Settings contains global configuration settings.
 type Settings struct {
-	DefaultManager   string `yaml:"default_manager" validate:"required,oneof=homebrew npm"`
-	OperationTimeout int    `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"` // Timeout in seconds for operations (0 for default, 1-3600 seconds)
-	PackageTimeout   int    `yaml:"package_timeout,omitempty" validate:"omitempty,min=0,max=1800"`   // Timeout in seconds for package operations (0 for default, 1-1800 seconds)
-	DotfileTimeout   int    `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`    // Timeout in seconds for dotfile operations (0 for default, 1-600 seconds)
+	DefaultManager    string   `yaml:"default_manager" validate:"required,oneof=homebrew npm"`
+	OperationTimeout  int      `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"` // Timeout in seconds for operations (0 for default, 1-3600 seconds)
+	PackageTimeout    int      `yaml:"package_timeout,omitempty" validate:"omitempty,min=0,max=1800"`   // Timeout in seconds for package operations (0 for default, 1-1800 seconds)
+	DotfileTimeout    int      `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`    // Timeout in seconds for dotfile operations (0 for default, 1-600 seconds)
+	ExpandDirectories []string `yaml:"expand_directories,omitempty"`                                    // Directories to expand in dot list output
 }
 
 // HomebrewPackage can be a simple string or complex object.
@@ -263,6 +264,22 @@ func (c *Config) GetIgnorePatterns() []string {
 		}
 	}
 	return c.IgnorePatterns
+}
+
+// GetExpandDirectories returns the directories to expand in dot list with sensible defaults
+func (c *Config) GetExpandDirectories() []string {
+	if len(c.Settings.ExpandDirectories) == 0 {
+		return []string{
+			".config",
+			".ssh",
+			".aws",
+			".kube",
+			".docker",
+			".gnupg",
+			".local",
+		}
+	}
+	return c.Settings.ExpandDirectories
 }
 
 // GetDefaultConfigDirectory returns the default config directory, checking PLONK_DIR environment variable first

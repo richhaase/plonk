@@ -30,6 +30,11 @@ func (m *MockDotfileConfigLoader) GetIgnorePatterns() []string {
 	return []string{".DS_Store", ".git", "*.backup", "*.tmp", "*.swp"}
 }
 
+func (m *MockDotfileConfigLoader) GetExpandDirectories() []string {
+	// Return empty list to disable directory expansion in tests
+	return []string{}
+}
+
 func (m *MockDotfileConfigLoader) SetTargets(targets map[string]string) {
 	m.targets = targets
 }
