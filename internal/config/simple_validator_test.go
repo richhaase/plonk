@@ -16,24 +16,18 @@ func TestSimpleValidator_ValidateConfig_ValidConfigs(t *testing.T) {
 		{
 			name: "minimal valid config",
 			config: &Config{
-				Settings: Settings{
-					DefaultManager: "homebrew",
+				Settings: &Settings{
+					DefaultManager: StringPtr("homebrew"),
 				},
 			},
 		},
 		{
-			name: "config with valid packages",
+			name: "config with ignore patterns",
 			config: &Config{
-				Settings: Settings{
-					DefaultManager: "homebrew",
+				Settings: &Settings{
+					DefaultManager: StringPtr("homebrew"),
 				},
-				Homebrew: []HomebrewPackage{
-					{Name: "git"},
-					{Name: "neovim"},
-				},
-				NPM: []NPMPackage{
-					{Name: "@vue/cli"},
-				},
+				IgnorePatterns: []string{".DS_Store", "*.log"},
 			},
 		},
 	}
@@ -57,30 +51,30 @@ func TestSimpleValidator_ValidateConfig_InvalidConfigs(t *testing.T) {
 		expectError string
 	}{
 		{
-			name: "missing default manager",
+			name: "missing default manager should be valid with zero-config",
 			config: &Config{
-				Settings: Settings{}, // DefaultManager is empty
+				Settings: &Settings{}, // DefaultManager is nil, should use default
 			},
-			expectError: "DefaultManager is required",
+			expectError: "", // Should be valid - will use default
 		},
 		{
 			name: "invalid default manager",
 			config: &Config{
-				Settings: Settings{
-					DefaultManager: "invalid",
+				Settings: &Settings{
+					DefaultManager: StringPtr("invalid"),
 				},
 			},
 			expectError: "must be one of: homebrew npm",
 		},
 		{
-			name: "invalid package name",
+			name: "invalid operation timeout",
 			config: &Config{
-				Settings: Settings{DefaultManager: "homebrew"},
-				Homebrew: []HomebrewPackage{
-					{Name: "invalid package name"},
+				Settings: &Settings{
+					DefaultManager:   StringPtr("homebrew"),
+					OperationTimeout: IntPtr(-1),
 				},
 			},
-			expectError: "invalid package name",
+			expectError: "min",
 		},
 	}
 
@@ -89,19 +83,27 @@ func TestSimpleValidator_ValidateConfig_InvalidConfigs(t *testing.T) {
 			validator := NewSimpleValidator()
 			result := validator.ValidateConfig(tt.config)
 
-			if result.IsValid() {
-				t.Errorf("Expected validation error, but config was valid")
-			}
-
-			found := false
-			for _, err := range result.Errors {
-				if strings.Contains(strings.ToLower(err), strings.ToLower(tt.expectError)) {
-					found = true
-					break
+			if tt.expectError == "" {
+				// Expect validation to pass
+				if !result.IsValid() {
+					t.Errorf("Expected validation to pass, but got errors: %v", result.Errors)
 				}
-			}
-			if !found {
-				t.Errorf("Expected error containing %q, got: %v", tt.expectError, result.Errors)
+			} else {
+				// Expect validation to fail
+				if result.IsValid() {
+					t.Errorf("Expected validation error, but config was valid")
+				}
+
+				found := false
+				for _, err := range result.Errors {
+					if strings.Contains(strings.ToLower(err), strings.ToLower(tt.expectError)) {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("Expected error containing %q, got: %v", tt.expectError, result.Errors)
+				}
 			}
 		})
 	}
@@ -121,17 +123,11 @@ func TestSimpleValidator_ValidateConfigFromYAML_ValidYAML(t *testing.T) {
 			name: "complete valid YAML",
 			yaml: `settings:
   default_manager: homebrew
+  operation_timeout: 600
 
-dotfiles:
-  - zshrc
-  - vimrc
-
-homebrew:
-  - git
-  - name: neovim
-
-npm:
-  - "@vue/cli"`,
+ignore_patterns:
+  - .DS_Store
+  - "*.log"`,
 		},
 	}
 
@@ -167,12 +163,11 @@ func TestSimpleValidator_ValidateConfigFromYAML_InvalidYAML(t *testing.T) {
 			expectError: "must be one of",
 		},
 		{
-			name: "invalid package name",
+			name: "invalid timeout",
 			yaml: `settings:
   default_manager: homebrew
-homebrew:
-  - "invalid package"`,
-			expectError: "invalid package name",
+  operation_timeout: -1`,
+			expectError: "min",
 		},
 	}
 
@@ -201,8 +196,8 @@ homebrew:
 
 func TestSimpleValidator_Warnings(t *testing.T) {
 	config := &Config{
-		Settings: Settings{
-			DefaultManager: "npm", // Should trigger warning
+		Settings: &Settings{
+			DefaultManager: StringPtr("npm"), // Should trigger warning
 		},
 	}
 

@@ -8,13 +8,16 @@ A unified package and dotfile manager for developers that maintains consistency 
 
 ## What is Plonk?
 
-Plonk manages your development environment by treating packages and dotfiles as unified configuration. It uses state reconciliation to compare your desired configuration with your actual system state and applies the necessary changes.
+Plonk manages your development environment by tracking packages and dotfiles automatically. It uses state reconciliation to compare your desired state with your actual system state and applies the necessary changes.
+
+**🚀 Zero Configuration Required** - Start using Plonk immediately without any setup!
 
 **Key features:**
-- **Unified management**: Packages (Homebrew, NPM) and dotfiles in one configuration
+- **Zero-config**: Works immediately with sensible defaults - no setup required
+- **Unified management**: Packages (Homebrew, NPM, Cargo) and dotfiles tracked automatically
 - **State reconciliation**: Automatically detects and applies missing configurations
 - **Auto-discovery**: Finds dotfiles automatically with configurable ignore patterns
-- **Directory expansion**: Smart expansion of configured directories in dot list output
+- **Optional customization**: Create configuration only when you need to customize defaults
 - **AI-friendly**: Structured output formats and clear command syntax
 - **Cross-platform**: Works on macOS, Linux, and Windows
 
@@ -37,9 +40,11 @@ just install
 
 ### Basic Usage
 
-1. **Initialize configuration:**
+**🎉 No setup required!** Plonk works immediately with zero configuration:
+
+1. **Check your current environment:**
 ```bash
-plonk config edit
+plonk status
 ```
 
 2. **Add your first package:**
@@ -52,14 +57,24 @@ plonk pkg add git
 plonk apply
 ```
 
-4. **Check status:**
+4. **Get system health check:**
 ```bash
-plonk status
+plonk doctor
+```
+
+**Optional:** Create a configuration file if you want to customize settings:
+```bash
+plonk init    # Creates helpful config template
 ```
 
 ## Configuration
 
-Plonk uses a single configuration file at `~/.config/plonk/plonk.yaml` (or `$PLONK_DIR/plonk.yaml`):
+**Configuration is completely optional!** Plonk works with sensible defaults out of the box.
+
+When you do want to customize settings, Plonk uses two files:
+
+### Configuration File (`~/.config/plonk/plonk.yaml`) - Optional
+Contains your custom settings and preferences (create with `plonk init`):
 
 ```yaml
 settings:
@@ -77,20 +92,114 @@ ignore_patterns:
   - .DS_Store
   - .git
   - "*.backup"
+```
 
-homebrew:
-  - git
-  - curl
-  - neovim
+### Lock File (`~/.config/plonk/plonk.lock`) - Automatic
+Automatically created and managed file that tracks your packages (similar to package-lock.json):
 
-npm:
-  - typescript
-  - prettier
+```yaml
+version: 1
+packages:
+  homebrew:
+    - name: git
+      installed_at: "2024-01-15T10:30:00Z"
+      version: "2.43.0"
+    - name: neovim
+      installed_at: "2024-01-15T10:31:00Z"
+      version: "0.9.5"
+  npm:
+    - name: typescript
+      installed_at: "2024-01-15T10:32:00Z"
+      version: "5.3.3"
+  cargo:
+    - name: ripgrep
+      installed_at: "2024-01-15T10:35:00Z"
+      version: "14.1.0"
+```
+
+**Note:** The lock file is automatically created and updated when you add/remove packages. You don't need to edit it manually.
+
+### Zero-Config Defaults
+
+When no configuration file exists, Plonk uses these sensible defaults:
+
+```yaml
+# Default settings (you can override these with `plonk init`)
+settings:
+  default_manager: homebrew      # Primary package manager
+  operation_timeout: 300         # 5 minutes for overall operations
+  package_timeout: 180           # 3 minutes for package operations
+  dotfile_timeout: 60            # 1 minute for dotfile operations
+  expand_directories:            # Directories shown expanded in lists
+    - .config
+    - .ssh
+    - .aws
+    - .kube
+    - .docker
+    - .gnupg
+    - .local
+
+ignore_patterns:                 # Files ignored during dotfile discovery
+  - .DS_Store
+  - .git
+  - "*.backup"
+  - "*.tmp"
+  - "*.swp"
 ```
 
 **Dotfiles are auto-discovered** from your config directory:
 - `~/.config/plonk/zshrc` → `~/.zshrc`
 - `~/.config/plonk/config/nvim/` → `~/.config/nvim/`
+
+## Getting Started Guide
+
+### First Time Setup (Zero Configuration!)
+
+1. **Install Plonk** (see Installation section above)
+
+2. **Check what's already on your system:**
+```bash
+plonk status
+# Shows: 
+# - Untracked packages (already installed but not managed by Plonk)
+# - Auto-discovered dotfiles  
+# - Overall system health
+```
+
+3. **Start managing packages:**
+```bash
+# Add packages you want Plonk to track
+plonk pkg add git neovim ripgrep
+
+# Or discover and add untracked packages
+plonk pkg list --untracked    # See what's installed but not tracked
+plonk apply --add-untracked   # Add them to Plonk management
+```
+
+4. **Check system health:**
+```bash
+plonk doctor
+# Verifies:
+# - Package managers are working
+# - File permissions are correct
+# - Configuration is valid
+```
+
+5. **Optional: Customize settings** (only if needed)
+```bash
+plonk init           # Creates config template with helpful comments
+plonk config show    # See current effective configuration  
+plonk config edit    # Edit configuration file
+```
+
+### Daily Workflow
+
+```bash
+plonk status         # Check what needs attention
+plonk apply          # Install missing packages, sync dotfiles
+plonk pkg add <name> # Add new packages
+plonk doctor         # Health check when something seems wrong
+```
 
 ## Common Commands
 
@@ -106,11 +215,11 @@ plonk apply           # Apply changes
 plonk pkg list                    # List managed + missing + untracked count
 plonk pkg list --verbose          # Show all packages including untracked
 plonk pkg list --manager homebrew # Filter by package manager
-plonk pkg add htop               # Add package to config and install
+plonk pkg add htop               # Add package to lock file and install
 plonk pkg add htop --dry-run     # Preview what would be added
-plonk pkg remove htop            # Remove from config only
+plonk pkg remove htop            # Remove from lock file only
 plonk pkg remove htop --dry-run  # Preview what would be removed
-plonk pkg remove htop --uninstall # Remove from config and uninstall
+plonk pkg remove htop --uninstall # Remove from lock file and uninstall
 plonk search git                 # Search for packages
 
 # Dotfile management
@@ -120,8 +229,9 @@ plonk dot add .vimrc     # Add dotfile (flexible path resolution)
 plonk dot add ~/.config/nvim/init.lua  # Explicit path
 plonk dot add init.lua   # Finds ./init.lua or ~/init.lua
 
-# Configuration
-plonk config show     # Show current config
+# Configuration (optional - works without any config!)
+plonk init            # Create config template with defaults
+plonk config show     # Show current effective config
 plonk config validate # Validate config syntax
 plonk config edit     # Edit config file
 

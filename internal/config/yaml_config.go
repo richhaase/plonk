@@ -22,147 +22,101 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config represents the configuration structure.
+// Config represents the user's configuration overrides.
+// All fields are optional - defaults will be used for nil values.
 type Config struct {
-	Settings       Settings          `yaml:"settings" validate:"required"`
-	IgnorePatterns []string          `yaml:"ignore_patterns,omitempty"`
-	Homebrew       []HomebrewPackage `yaml:"homebrew,omitempty" validate:"dive"`
-	NPM            []NPMPackage      `yaml:"npm,omitempty" validate:"dive"`
-	Cargo          []CargoPackage    `yaml:"cargo,omitempty" validate:"dive"`
+	Settings       *Settings `yaml:"settings,omitempty"`
+	IgnorePatterns []string  `yaml:"ignore_patterns,omitempty"`
 }
 
 // Settings contains global configuration settings.
+// All fields use pointers to distinguish between "not set" (nil) and "set to zero value".
 type Settings struct {
-	DefaultManager    string   `yaml:"default_manager" validate:"required,oneof=homebrew npm cargo"`
-	OperationTimeout  int      `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"` // Timeout in seconds for operations (0 for default, 1-3600 seconds)
-	PackageTimeout    int      `yaml:"package_timeout,omitempty" validate:"omitempty,min=0,max=1800"`   // Timeout in seconds for package operations (0 for default, 1-1800 seconds)
-	DotfileTimeout    int      `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`    // Timeout in seconds for dotfile operations (0 for default, 1-600 seconds)
-	ExpandDirectories []string `yaml:"expand_directories,omitempty"`                                    // Directories to expand in dot list output
+	DefaultManager    *string   `yaml:"default_manager,omitempty" validate:"omitempty,oneof=homebrew npm cargo"`
+	OperationTimeout  *int      `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"` // Timeout in seconds for operations (0 for unlimited, 1-3600 seconds)
+	PackageTimeout    *int      `yaml:"package_timeout,omitempty" validate:"omitempty,min=0,max=1800"`   // Timeout in seconds for package operations (0 for unlimited, 1-1800 seconds)
+	DotfileTimeout    *int      `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`    // Timeout in seconds for dotfile operations (0 for unlimited, 1-600 seconds)
+	ExpandDirectories *[]string `yaml:"expand_directories,omitempty"`                                    // Directories to expand in dot list output
 }
 
-// HomebrewPackage can be a simple string or complex object.
-type HomebrewPackage struct {
-	Name   string `yaml:"name,omitempty" validate:"required,package_name"`
-	Config string `yaml:"config,omitempty" validate:"omitempty,file_path"`
+// Package types removed - packages now managed in lock file
+
+// Package marshal/unmarshal methods removed - packages now managed in lock file
+
+// Resolve merges user configuration with defaults to produce final configuration values
+func (c *Config) Resolve() *ResolvedConfig {
+	defaults := GetDefaults()
+
+	return &ResolvedConfig{
+		DefaultManager:    c.getDefaultManager(defaults.DefaultManager),
+		OperationTimeout:  c.getOperationTimeout(defaults.OperationTimeout),
+		PackageTimeout:    c.getPackageTimeout(defaults.PackageTimeout),
+		DotfileTimeout:    c.getDotfileTimeout(defaults.DotfileTimeout),
+		ExpandDirectories: c.getExpandDirectories(defaults.ExpandDirectories),
+		IgnorePatterns:    c.getIgnorePatterns(defaults.IgnorePatterns),
+	}
 }
 
-// NPMPackage represents an NPM package configuration.
-type NPMPackage struct {
-	Name    string `yaml:"name,omitempty" validate:"omitempty,package_name"`
-	Package string `yaml:"package,omitempty" validate:"omitempty,package_name"` // If different from name.
-	Config  string `yaml:"config,omitempty" validate:"omitempty,file_path"`
+// getDefaultManager returns the user's default manager or the default value
+func (c *Config) getDefaultManager(defaultValue string) string {
+	if c.Settings != nil && c.Settings.DefaultManager != nil {
+		return *c.Settings.DefaultManager
+	}
+	return defaultValue
 }
 
-// CargoPackage represents a cargo package configuration.
-type CargoPackage struct {
-	Name    string `yaml:"name,omitempty" validate:"omitempty,package_name"`
-	Package string `yaml:"package,omitempty" validate:"omitempty,package_name"` // If different from name.
-	Config  string `yaml:"config,omitempty" validate:"omitempty,file_path"`
+// getOperationTimeout returns the user's operation timeout or the default value
+func (c *Config) getOperationTimeout(defaultValue int) int {
+	if c.Settings != nil && c.Settings.OperationTimeout != nil {
+		return *c.Settings.OperationTimeout
+	}
+	return defaultValue
 }
 
-// MarshalYAML implements custom marshaling for HomebrewPackage.
-func (h HomebrewPackage) MarshalYAML() (interface{}, error) {
-	// If only Name is set, marshal as a simple string
-	if h.Config == "" {
-		return h.Name, nil
+// getPackageTimeout returns the user's package timeout or the default value
+func (c *Config) getPackageTimeout(defaultValue int) int {
+	if c.Settings != nil && c.Settings.PackageTimeout != nil {
+		return *c.Settings.PackageTimeout
 	}
-	// Otherwise, marshal as a full object
-	type homebrewPackageAlias HomebrewPackage
-	return homebrewPackageAlias(h), nil
+	return defaultValue
 }
 
-// UnmarshalYAML implements custom unmarshaling for HomebrewPackage.
-func (h *HomebrewPackage) UnmarshalYAML(node *yaml.Node) error {
-	if node.Kind == yaml.ScalarNode {
-		// Simple string case.
-		h.Name = node.Value
-		return nil
+// getDotfileTimeout returns the user's dotfile timeout or the default value
+func (c *Config) getDotfileTimeout(defaultValue int) int {
+	if c.Settings != nil && c.Settings.DotfileTimeout != nil {
+		return *c.Settings.DotfileTimeout
 	}
-
-	// Complex object case.
-	type homebrewPackageAlias HomebrewPackage
-	var pkg homebrewPackageAlias
-	if err := node.Decode(&pkg); err != nil {
-		return err
-	}
-	*h = HomebrewPackage(pkg)
-	return nil
+	return defaultValue
 }
 
-// MarshalYAML implements custom marshaling for NPMPackage.
-func (n NPMPackage) MarshalYAML() (interface{}, error) {
-	// If only Name is set (no Package or Config), marshal as a simple string
-	if n.Package == "" && n.Config == "" {
-		return n.Name, nil
+// getExpandDirectories returns the user's expand directories or the default value
+func (c *Config) getExpandDirectories(defaultValue []string) []string {
+	if c.Settings != nil && c.Settings.ExpandDirectories != nil {
+		return *c.Settings.ExpandDirectories
 	}
-	// Otherwise, marshal as a full object
-	type npmPackageAlias NPMPackage
-	return npmPackageAlias(n), nil
+	return defaultValue
 }
 
-// UnmarshalYAML implements custom unmarshaling for NPMPackage.
-func (n *NPMPackage) UnmarshalYAML(node *yaml.Node) error {
-	if node.Kind == yaml.ScalarNode {
-		// Simple string case.
-		n.Name = node.Value
-		return nil
+// getIgnorePatterns returns the user's ignore patterns or the default value
+func (c *Config) getIgnorePatterns(defaultValue []string) []string {
+	if len(c.IgnorePatterns) > 0 {
+		return c.IgnorePatterns
 	}
-
-	// Complex object case.
-	type npmPackageAlias NPMPackage
-	var pkg npmPackageAlias
-	if err := node.Decode(&pkg); err != nil {
-		return err
-	}
-	*n = NPMPackage(pkg)
-	return nil
-}
-
-// MarshalYAML implements custom marshaling for CargoPackage.
-func (c CargoPackage) MarshalYAML() (interface{}, error) {
-	// If only Name is set (no Package or Config), marshal as a simple string
-	if c.Package == "" && c.Config == "" {
-		return c.Name, nil
-	}
-	// Otherwise, marshal as a full object
-	type cargoPackageAlias CargoPackage
-	return cargoPackageAlias(c), nil
-}
-
-// UnmarshalYAML implements custom unmarshaling for CargoPackage.
-func (c *CargoPackage) UnmarshalYAML(node *yaml.Node) error {
-	if node.Kind == yaml.ScalarNode {
-		// Simple string case.
-		c.Name = node.Value
-		return nil
-	}
-
-	// Complex object case.
-	type cargoPackageAlias CargoPackage
-	var pkg cargoPackageAlias
-	if err := node.Decode(&pkg); err != nil {
-		return err
-	}
-	*c = CargoPackage(pkg)
-	return nil
+	return defaultValue
 }
 
 // LoadConfig loads configuration from plonk.yaml.
 func LoadConfig(configDir string) (*Config, error) {
-	config := &Config{
-		Settings: Settings{
-			DefaultManager: "homebrew", // Default value.
-		},
-	}
+	config := &Config{}
 
 	// Load config file.
 	configPath := filepath.Join(configDir, "plonk.yaml")
 
 	if err := loadConfigFile(configPath, config); err != nil {
 		if os.IsNotExist(err) {
-			return nil, errors.ConfigError(errors.ErrConfigNotFound, "load",
-				fmt.Sprintf("config file not found: %s", configPath)).
-				WithMetadata("config_path", configPath)
+			// Zero-config: Return empty config when file doesn't exist
+			// This will use all defaults when resolved
+			config = &Config{}
 		} else {
 			return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load",
 				"failed to load config").WithMetadata("path", configPath)
@@ -180,6 +134,26 @@ func LoadConfig(configDir string) (*Config, error) {
 	}
 
 	return config, nil
+}
+
+// GetOrCreateConfig loads configuration if it exists, or creates a default config
+// with the specified directory if it doesn't exist. Useful for commands that need
+// to save configuration.
+func GetOrCreateConfig(configDir string) (*Config, error) {
+	cfg, err := LoadConfig(configDir)
+	if err != nil {
+		// LoadConfig only returns errors for parse/validation failures now,
+		// not for missing files (zero-config behavior)
+		return nil, err
+	}
+
+	// Ensure config directory exists for future saves
+	if err := os.MkdirAll(configDir, 0750); err != nil {
+		return nil, errors.Wrap(err, errors.ErrDirectoryCreate, errors.DomainConfig, "create",
+			"failed to create config directory").WithItem(configDir)
+	}
+
+	return cfg, nil
 }
 
 // loadConfigFile loads a single YAML config file.
@@ -265,59 +239,7 @@ func TargetToSource(target string) string {
 	return target
 }
 
-// GetOperationTimeout returns the operation timeout in seconds with a default of 300 seconds (5 minutes)
-func (s *Settings) GetOperationTimeout() int {
-	if s.OperationTimeout <= 0 {
-		return 300 // Default 5 minutes
-	}
-	return s.OperationTimeout
-}
-
-// GetPackageTimeout returns the package timeout in seconds with a default of 180 seconds (3 minutes)
-func (s *Settings) GetPackageTimeout() int {
-	if s.PackageTimeout <= 0 {
-		return 180 // Default 3 minutes
-	}
-	return s.PackageTimeout
-}
-
-// GetDotfileTimeout returns the dotfile timeout in seconds with a default of 60 seconds (1 minute)
-func (s *Settings) GetDotfileTimeout() int {
-	if s.DotfileTimeout <= 0 {
-		return 60 // Default 1 minute
-	}
-	return s.DotfileTimeout
-}
-
-// GetIgnorePatterns returns the ignore patterns with sensible defaults
-func (c *Config) GetIgnorePatterns() []string {
-	if len(c.IgnorePatterns) == 0 {
-		return []string{
-			".DS_Store",
-			".git",
-			"*.backup",
-			"*.tmp",
-			"*.swp",
-		}
-	}
-	return c.IgnorePatterns
-}
-
-// GetExpandDirectories returns the directories to expand in dot list with sensible defaults
-func (c *Config) GetExpandDirectories() []string {
-	if len(c.Settings.ExpandDirectories) == 0 {
-		return []string{
-			".config",
-			".ssh",
-			".aws",
-			".kube",
-			".docker",
-			".gnupg",
-			".local",
-		}
-	}
-	return c.Settings.ExpandDirectories
-}
+// Legacy timeout methods removed - use ResolvedConfig.Get*Timeout() instead
 
 // GetDefaultConfigDirectory returns the default config directory, checking PLONK_DIR environment variable first
 func GetDefaultConfigDirectory() string {
@@ -372,11 +294,7 @@ func (y *YAMLConfigService) LoadConfigFromReader(reader io.Reader) (*Config, err
 			"failed to read config data")
 	}
 
-	config := &Config{
-		Settings: Settings{
-			DefaultManager: "homebrew", // Default value
-		},
-	}
+	config := &Config{}
 
 	if err := yaml.Unmarshal(data, config); err != nil {
 		return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load",
@@ -384,7 +302,7 @@ func (y *YAMLConfigService) LoadConfigFromReader(reader io.Reader) (*Config, err
 	}
 
 	// Validate configuration
-	result := y.validator.ValidateConfig(config)
+	result := y.ValidateConfig(config)
 	if !result.IsValid() {
 		return nil, errors.ConfigError(errors.ErrConfigValidation, "validate",
 			fmt.Sprintf("config validation failed: %s", strings.Join(result.Errors, "; "))).
@@ -454,14 +372,8 @@ func (y *YAMLConfigService) GetPackagesForManager(managerName string) ([]Package
 }
 
 // ValidateConfig validates a configuration object
-func (y *YAMLConfigService) ValidateConfig(config *Config) error {
-	result := y.validator.ValidateConfig(config)
-	if !result.IsValid() {
-		return errors.ConfigError(errors.ErrConfigValidation, "validate",
-			fmt.Sprintf("config validation failed: %s", strings.Join(result.Errors, "; "))).
-			WithMetadata("errors", result.Errors)
-	}
-	return nil
+func (y *YAMLConfigService) ValidateConfig(config *Config) *ValidationResult {
+	return y.validator.ValidateConfig(config)
 }
 
 // ValidateConfigFromReader validates configuration from an io.Reader
@@ -470,7 +382,28 @@ func (y *YAMLConfigService) ValidateConfigFromReader(reader io.Reader) error {
 	if err != nil {
 		return err
 	}
-	return y.ValidateConfig(config)
+	result := y.ValidateConfig(config)
+	if !result.IsValid() {
+		return errors.ConfigError(errors.ErrConfigValidation, "validate",
+			fmt.Sprintf("config validation failed: %s", strings.Join(result.Errors, "; "))).
+			WithMetadata("errors", result.Errors)
+	}
+	return nil
+}
+
+// GetDefaultConfig returns a default configuration with sensible defaults
+func (y *YAMLConfigService) GetDefaultConfig() *Config {
+	defaults := GetDefaults()
+	return &Config{
+		Settings: &Settings{
+			DefaultManager:    &defaults.DefaultManager,
+			OperationTimeout:  &defaults.OperationTimeout,
+			PackageTimeout:    &defaults.PackageTimeout,
+			DotfileTimeout:    &defaults.DotfileTimeout,
+			ExpandDirectories: &defaults.ExpandDirectories,
+		},
+		IgnorePatterns: defaults.IgnorePatterns,
+	}
 }
 
 // ConfigAdapter adapts a loaded Config to provide domain-specific interfaces
@@ -489,7 +422,8 @@ func (c *ConfigAdapter) GetDotfileTargets() map[string]string {
 
 	// Auto-discover dotfiles from configured directory
 	configDir := GetDefaultConfigDirectory()
-	ignorePatterns := c.config.GetIgnorePatterns()
+	resolvedConfig := c.config.Resolve()
+	ignorePatterns := resolvedConfig.GetIgnorePatterns()
 
 	// Walk the directory to find all files
 	_ = filepath.Walk(configDir, func(path string, info os.FileInfo, err error) error {
@@ -528,34 +462,15 @@ func (c *ConfigAdapter) GetDotfileTargets() map[string]string {
 }
 
 // GetPackagesForManager returns package names for a specific package manager
+// NOTE: Packages are now managed by the lock file, so this always returns empty
 func (c *ConfigAdapter) GetPackagesForManager(managerName string) ([]PackageConfigItem, error) {
-	var packageNames []string
-
+	// Validate manager name
 	switch managerName {
-	case "homebrew":
-		// Get homebrew packages (unified)
-		for _, pkg := range c.config.Homebrew {
-			packageNames = append(packageNames, pkg.Name)
-		}
-	case "npm":
-		// Get NPM packages
-		for _, pkg := range c.config.NPM {
-			packageNames = append(packageNames, pkg.Name)
-		}
-	case "cargo":
-		// Get Cargo packages
-		for _, pkg := range c.config.Cargo {
-			packageNames = append(packageNames, pkg.Name)
-		}
+	case "homebrew", "npm", "cargo":
+		// Return empty slice - packages are now in lock file
+		return []PackageConfigItem{}, nil
 	default:
 		return nil, errors.NewError(errors.ErrInvalidInput, errors.DomainConfig, "get-packages",
 			fmt.Sprintf("unknown package manager: %s", managerName)).WithItem(managerName)
 	}
-
-	items := make([]PackageConfigItem, len(packageNames))
-	for i, name := range packageNames {
-		items[i] = PackageConfigItem{Name: name}
-	}
-
-	return items, nil
 }

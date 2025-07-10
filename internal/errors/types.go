@@ -22,6 +22,7 @@ const (
 
 	// File system errors
 	ErrFileNotFound    ErrorCode = "FILE_NOT_FOUND"
+	ErrFileExists      ErrorCode = "FILE_EXISTS"
 	ErrFilePermission  ErrorCode = "FILE_PERMISSION"
 	ErrFileIO          ErrorCode = "FILE_IO"
 	ErrDirectoryCreate ErrorCode = "DIRECTORY_CREATE"
@@ -123,6 +124,11 @@ func (e *PlonkError) UserMessage() string {
 			return fmt.Sprintf("File not found: %s", e.Item)
 		}
 		return "Required file not found"
+	case ErrFileExists:
+		if e.Item != "" {
+			return fmt.Sprintf("File already exists: %s", e.Item)
+		}
+		return "File already exists"
 	case ErrFilePermission:
 		return fmt.Sprintf("Permission denied accessing file: %s", e.Item)
 	case ErrPackageNotFound:

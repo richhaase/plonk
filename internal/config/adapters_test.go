@@ -9,18 +9,17 @@ import (
 
 func TestConfigAdapter_GetDotfileTargets(t *testing.T) {
 	config := &Config{
-		Settings: Settings{
-			DefaultManager: "homebrew",
+		Settings: &Settings{
+			DefaultManager: StringPtr("homebrew"),
 		},
 	}
 
 	adapter := NewConfigAdapter(config)
 	targets := adapter.GetDotfileTargets()
 
-	// Should auto-discover files from ~/.config/plonk/ if they exist
-	// It's valid to have no dotfiles under management
-	if len(targets) == 0 {
-		t.Logf("No dotfiles found in config directory")
+	// We can't predict exact dotfiles, but we can verify the function works
+	if targets == nil {
+		t.Error("GetDotfileTargets returned nil")
 	}
 
 	// Log what was discovered for debugging
@@ -32,82 +31,32 @@ func TestConfigAdapter_GetDotfileTargets(t *testing.T) {
 
 func TestConfigAdapter_GetPackagesForManager(t *testing.T) {
 	config := &Config{
-		Settings: Settings{
-			DefaultManager: "homebrew",
-		},
-		Homebrew: []HomebrewPackage{
-			{Name: "git"},
-			{Name: "curl"},
-			{Name: "htop"},
-			{Name: "firefox"},
-			{Name: "vscode"},
-		},
-		NPM: []NPMPackage{
-			{Name: "typescript"},
-			{Name: "prettier"},
+		Settings: &Settings{
+			DefaultManager: StringPtr("homebrew"),
 		},
 	}
 
 	adapter := NewConfigAdapter(config)
 
-	t.Run("homebrew packages", func(t *testing.T) {
+	t.Run("homebrew packages (empty - now in lock file)", func(t *testing.T) {
 		packages, err := adapter.GetPackagesForManager("homebrew")
 		if err != nil {
 			t.Fatalf("GetPackagesForManager(homebrew) failed: %v", err)
 		}
 
-		// Should have 5 packages
-		if len(packages) != 5 {
-			t.Errorf("Expected 5 homebrew packages, got %d", len(packages))
-		}
-
-		// Check that all expected packages are present
-		expectedNames := map[string]bool{
-			"git":     true,
-			"curl":    true,
-			"htop":    true,
-			"firefox": true,
-			"vscode":  true,
-		}
-
-		for _, pkg := range packages {
-			if !expectedNames[pkg.Name] {
-				t.Errorf("Unexpected package: %s", pkg.Name)
-			}
-			delete(expectedNames, pkg.Name)
-		}
-
-		if len(expectedNames) > 0 {
-			t.Errorf("Missing expected packages: %v", expectedNames)
+		if len(packages) != 0 {
+			t.Errorf("Expected 0 homebrew packages (now in lock file), got %d", len(packages))
 		}
 	})
 
-	t.Run("npm packages", func(t *testing.T) {
+	t.Run("npm packages (empty - now in lock file)", func(t *testing.T) {
 		packages, err := adapter.GetPackagesForManager("npm")
 		if err != nil {
 			t.Fatalf("GetPackagesForManager(npm) failed: %v", err)
 		}
 
-		// Should have 2 npm packages
-		if len(packages) != 2 {
-			t.Errorf("Expected 2 npm packages, got %d", len(packages))
-		}
-
-		// Check that all expected packages are present
-		expectedNames := map[string]bool{
-			"typescript": true,
-			"prettier":   true,
-		}
-
-		for _, pkg := range packages {
-			if !expectedNames[pkg.Name] {
-				t.Errorf("Unexpected package: %s", pkg.Name)
-			}
-			delete(expectedNames, pkg.Name)
-		}
-
-		if len(expectedNames) > 0 {
-			t.Errorf("Missing expected packages: %v", expectedNames)
+		if len(packages) != 0 {
+			t.Errorf("Expected 0 npm packages (now in lock file), got %d", len(packages))
 		}
 	})
 
@@ -117,67 +66,48 @@ func TestConfigAdapter_GetPackagesForManager(t *testing.T) {
 			t.Error("Expected error for unknown package manager")
 		}
 	})
+
+	t.Run("cargo packages (empty - now in lock file)", func(t *testing.T) {
+		packages, err := adapter.GetPackagesForManager("cargo")
+		if err != nil {
+			t.Fatalf("GetPackagesForManager(cargo) failed: %v", err)
+		}
+
+		if len(packages) != 0 {
+			t.Errorf("Expected 0 cargo packages (now in lock file), got %d", len(packages))
+		}
+	})
 }
 
 func TestStatePackageConfigAdapter(t *testing.T) {
 	config := &Config{
-		Settings: Settings{
-			DefaultManager: "homebrew",
-		},
-		Homebrew: []HomebrewPackage{
-			{Name: "git"},
-			{Name: "curl"},
-		},
-		NPM: []NPMPackage{
-			{Name: "typescript"},
+		Settings: &Settings{
+			DefaultManager: StringPtr("homebrew"),
 		},
 	}
 
-	configAdapter := NewConfigAdapter(config)
-	stateAdapter := NewStatePackageConfigAdapter(configAdapter)
+	adapter := NewConfigAdapter(config)
+	stateAdapter := NewStatePackageConfigAdapter(adapter)
 
-	t.Run("homebrew packages", func(t *testing.T) {
+	t.Run("homebrew packages (empty - now in lock file)", func(t *testing.T) {
 		packages, err := stateAdapter.GetPackagesForManager("homebrew")
 		if err != nil {
 			t.Fatalf("GetPackagesForManager(homebrew) failed: %v", err)
 		}
 
-		// Should have 2 packages
-		if len(packages) != 2 {
-			t.Errorf("Expected 2 homebrew packages, got %d", len(packages))
-		}
-
-		// Check that packages are correctly converted to state.PackageConfigItem
-		expectedNames := map[string]bool{
-			"git":  true,
-			"curl": true,
-		}
-
-		for _, pkg := range packages {
-			if !expectedNames[pkg.Name] {
-				t.Errorf("Unexpected package: %s", pkg.Name)
-			}
-			delete(expectedNames, pkg.Name)
-		}
-
-		if len(expectedNames) > 0 {
-			t.Errorf("Missing expected packages: %v", expectedNames)
+		if len(packages) != 0 {
+			t.Errorf("Expected 0 homebrew packages (now in lock file), got %d", len(packages))
 		}
 	})
 
-	t.Run("npm packages", func(t *testing.T) {
+	t.Run("npm packages (empty - now in lock file)", func(t *testing.T) {
 		packages, err := stateAdapter.GetPackagesForManager("npm")
 		if err != nil {
 			t.Fatalf("GetPackagesForManager(npm) failed: %v", err)
 		}
 
-		// Should have 1 package
-		if len(packages) != 1 {
-			t.Errorf("Expected 1 npm package, got %d", len(packages))
-		}
-
-		if packages[0].Name != "typescript" {
-			t.Errorf("Expected package name 'typescript', got %s", packages[0].Name)
+		if len(packages) != 0 {
+			t.Errorf("Expected 0 npm packages (now in lock file), got %d", len(packages))
 		}
 	})
 
@@ -191,84 +121,70 @@ func TestStatePackageConfigAdapter(t *testing.T) {
 
 func TestStateDotfileConfigAdapter(t *testing.T) {
 	config := &Config{
-		Settings: Settings{
-			DefaultManager: "homebrew",
+		Settings: &Settings{
+			DefaultManager: StringPtr("homebrew"),
 		},
 	}
 
 	configAdapter := NewConfigAdapter(config)
-	stateAdapter := NewStateDotfileConfigAdapter(configAdapter)
+	adapter := NewStateDotfileConfigAdapter(configAdapter)
 
-	targets := stateAdapter.GetDotfileTargets()
+	// Test GetDotfileTargets
+	targets := adapter.GetDotfileTargets()
+	if targets == nil {
+		t.Error("GetDotfileTargets returned nil")
+	}
 
-	// Should auto-discover files from ~/.config/plonk/ if they exist
-	// It's valid to have no dotfiles under management
-	if len(targets) == 0 {
-		t.Logf("No dotfiles found in config directory")
+	// Test GetIgnorePatterns
+	patterns := adapter.GetIgnorePatterns()
+	if patterns == nil {
+		t.Error("GetIgnorePatterns returned nil")
+	}
+
+	// Test GetExpandDirectories
+	dirs := adapter.GetExpandDirectories()
+	if dirs == nil {
+		t.Error("GetExpandDirectories returned nil")
 	}
 }
 
 func TestConfigAdapter_EmptyConfig(t *testing.T) {
 	config := &Config{
-		Settings: Settings{
-			DefaultManager: "homebrew",
+		Settings: &Settings{
+			DefaultManager: StringPtr("homebrew"),
 		},
 	}
 
 	adapter := NewConfigAdapter(config)
 
-	t.Run("auto-discovered dotfiles", func(t *testing.T) {
-		targets := adapter.GetDotfileTargets()
-		// Should auto-discover files even with empty config if they exist
-		// It's valid to have no dotfiles under management
-		if len(targets) == 0 {
-			t.Logf("No dotfiles found in config directory")
-		}
-	})
-
-	t.Run("empty homebrew packages", func(t *testing.T) {
-		packages, err := adapter.GetPackagesForManager("homebrew")
+	// Test empty package lists
+	for _, manager := range []string{"homebrew", "npm", "cargo"} {
+		packages, err := adapter.GetPackagesForManager(manager)
 		if err != nil {
-			t.Fatalf("GetPackagesForManager(homebrew) failed: %v", err)
+			t.Errorf("GetPackagesForManager(%s) failed: %v", manager, err)
 		}
-
 		if len(packages) != 0 {
-			t.Errorf("Expected 0 homebrew packages for empty config, got %d", len(packages))
+			t.Errorf("Expected 0 packages for %s (now in lock file), got %d", manager, len(packages))
 		}
-	})
+	}
 
-	t.Run("empty npm packages", func(t *testing.T) {
-		packages, err := adapter.GetPackagesForManager("npm")
-		if err != nil {
-			t.Fatalf("GetPackagesForManager(npm) failed: %v", err)
-		}
-
-		if len(packages) != 0 {
-			t.Errorf("Expected 0 npm packages for empty config, got %d", len(packages))
-		}
-	})
+	// Test dotfile targets (should still work)
+	targets := adapter.GetDotfileTargets()
+	if targets == nil {
+		t.Error("GetDotfileTargets returned nil")
+	}
 }
 
 func TestConfigAdapter_InterfaceCompliance(t *testing.T) {
 	config := &Config{
-		Settings: Settings{DefaultManager: "homebrew"},
+		Settings: &Settings{
+			DefaultManager: StringPtr("homebrew"),
+		},
 	}
 
 	adapter := NewConfigAdapter(config)
 
-	// Test that ConfigAdapter implements DotfileConfigReader
-	var _ DotfileConfigReader = adapter
-
-	// Test that ConfigAdapter implements PackageConfigReader
+	// Verify adapter implements the expected interfaces
 	var _ PackageConfigReader = adapter
-
-	// Test that StatePackageConfigAdapter implements the state interface
-	statePackageAdapter := NewStatePackageConfigAdapter(adapter)
-	// We can't easily test this without importing state package here, but compilation will catch issues
-	_ = statePackageAdapter
-
-	// Test that StateDotfileConfigAdapter implements the state interface
-	stateDotfileAdapter := NewStateDotfileConfigAdapter(adapter)
-	// We can't easily test this without importing state package here, but compilation will catch issues
-	_ = stateDotfileAdapter
+	var _ DotfileConfigReader = adapter
 }

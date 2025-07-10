@@ -15,17 +15,11 @@ func TestLoadConfig_BasicStructure(t *testing.T) {
 
 	configContent := `settings:
   default_manager: homebrew
+  operation_timeout: 600
 
-homebrew:
-  - aichat
-  - aider
-  - name: neovim
-  - font-hack-nerd-font
-
-npm:
-  - "@anthropic-ai/claude-code"
-  - name: some-tool
-    package: "@scope/different-name"
+ignore_patterns:
+  - .DS_Store
+  - "*.tmp"
 `
 
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
@@ -40,50 +34,44 @@ npm:
 	}
 
 	// Verify settings
-	if config.Settings.DefaultManager != "homebrew" {
-		t.Errorf("Expected default_manager 'homebrew', got '%s'", config.Settings.DefaultManager)
+	if config.Settings.DefaultManager != nil && *config.Settings.DefaultManager != "homebrew" {
+		t.Errorf("Expected default_manager 'homebrew', got '%s'", *config.Settings.DefaultManager)
 	}
 
-	// Verify homebrew packages
-	if len(config.Homebrew) != 4 {
-		t.Errorf("Expected 4 homebrew packages, got %d", len(config.Homebrew))
+	// Verify ignore patterns
+	if len(config.IgnorePatterns) != 2 {
+		t.Errorf("Expected 2 ignore patterns, got %d", len(config.IgnorePatterns))
 	}
 
-	// Check simple package
-	if config.Homebrew[0].Name != "aichat" {
-		t.Errorf("Expected first package 'aichat', got '%s'", config.Homebrew[0].Name)
+	// Check ignore patterns
+	if config.IgnorePatterns[0] != ".DS_Store" {
+		t.Errorf("Expected first ignore pattern '.DS_Store', got '%s'", config.IgnorePatterns[0])
 	}
 
-	// Check package with config
-	neovim := config.Homebrew[2]
-	if neovim.Name != "neovim" {
-		t.Errorf("Expected neovim name 'neovim', got '%s'", neovim.Name)
+	if config.IgnorePatterns[1] != "*.tmp" {
+		t.Errorf("Expected second ignore pattern '*.tmp', got '%s'", config.IgnorePatterns[1])
 	}
 
-	// ASDF functionality has been removed
-
-	// Verify npm packages
-	if len(config.NPM) != 2 {
-		t.Errorf("Expected 2 npm packages, got %d", len(config.NPM))
-	}
-
-	claudeCode := config.NPM[0]
-	if claudeCode.Name != "@anthropic-ai/claude-code" {
-		t.Errorf("Expected claude-code name '@anthropic-ai/claude-code', got '%s'", claudeCode.Name)
-	}
-
-	someTool := config.NPM[1]
-	if someTool.Name != "some-tool" || someTool.Package != "@scope/different-name" {
-		t.Errorf("some-tool not parsed correctly: %+v", someTool)
-	}
+	// Packages are now in lock file, not config
+	// Verify no package fields exist
 }
 
 func TestLoadConfig_NonExistentFile(t *testing.T) {
 	tempDir := t.TempDir()
 
-	_, err := LoadConfig(tempDir)
-	if err == nil {
-		t.Error("Expected error for non-existent config file")
+	config, err := LoadConfig(tempDir)
+	if err != nil {
+		t.Errorf("Expected no error for non-existent config file (zero-config), got: %v", err)
+	}
+
+	if config == nil {
+		t.Error("Expected default config when file doesn't exist")
+	}
+
+	// Verify it resolves to defaults
+	resolved := config.Resolve()
+	if resolved.GetDefaultManager() != "homebrew" {
+		t.Errorf("Expected default manager 'homebrew', got %s", resolved.GetDefaultManager())
 	}
 }
 

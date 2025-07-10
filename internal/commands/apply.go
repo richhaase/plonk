@@ -11,6 +11,7 @@ import (
 	"plonk/internal/config"
 	"plonk/internal/dotfiles"
 	"plonk/internal/errors"
+	"plonk/internal/lock"
 	"plonk/internal/managers"
 	"plonk/internal/state"
 
@@ -95,11 +96,13 @@ func applyPackages(configDir string, cfg *config.Config, dryRun bool, format Out
 	// Create unified state reconciler
 	reconciler := state.NewReconciler()
 
-	// Register package provider (multi-manager)
+	// Register package provider (multi-manager) - using lock file
 	ctx := context.Background()
 	packageProvider := state.NewMultiManagerPackageProvider()
-	configAdapter := config.NewConfigAdapter(cfg)
-	packageConfigAdapter := config.NewStatePackageConfigAdapter(configAdapter)
+
+	// Create lock file adapter
+	lockService := lock.NewYAMLLockService(configDir)
+	lockAdapter := lock.NewLockFileAdapter(lockService)
 
 	// Add Homebrew manager
 	homebrewManager := managers.NewHomebrewManager()
@@ -109,7 +112,7 @@ func applyPackages(configDir string, cfg *config.Config, dryRun bool, format Out
 	}
 	if available {
 		managerAdapter := state.NewManagerAdapter(homebrewManager)
-		packageProvider.AddManager("homebrew", managerAdapter, packageConfigAdapter)
+		packageProvider.AddManager("homebrew", managerAdapter, lockAdapter)
 	}
 
 	// Add NPM manager
@@ -120,7 +123,18 @@ func applyPackages(configDir string, cfg *config.Config, dryRun bool, format Out
 	}
 	if available {
 		managerAdapter := state.NewManagerAdapter(npmManager)
-		packageProvider.AddManager("npm", managerAdapter, packageConfigAdapter)
+		packageProvider.AddManager("npm", managerAdapter, lockAdapter)
+	}
+
+	// Add Cargo manager
+	cargoManager := managers.NewCargoManager()
+	available, err = cargoManager.IsAvailable(ctx)
+	if err != nil {
+		return ApplyOutput{}, fmt.Errorf("failed to check cargo availability: %w", err)
+	}
+	if available {
+		managerAdapter := state.NewManagerAdapter(cargoManager)
+		packageProvider.AddManager("cargo", managerAdapter, lockAdapter)
 	}
 
 	reconciler.RegisterProvider("package", packageProvider)
@@ -160,6 +174,7 @@ func applyPackages(configDir string, cfg *config.Config, dryRun bool, format Out
 	managerInstances := map[string]managers.PackageManager{
 		"homebrew": managers.NewHomebrewManager(),
 		"npm":      managers.NewNpmManager(),
+		"cargo":    managers.NewCargoManager(),
 	}
 
 	for managerName, missingItems := range missingByManager {
@@ -189,6 +204,8 @@ func applyPackages(configDir string, cfg *config.Config, dryRun bool, format Out
 			displayName = "Homebrew"
 		case "npm":
 			displayName = "NPM"
+		case "cargo":
+			displayName = "Cargo"
 		}
 
 		// Process missing packages for this manager

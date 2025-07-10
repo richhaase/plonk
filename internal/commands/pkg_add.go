@@ -6,17 +6,14 @@ package commands
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"plonk/internal/config"
-	"plonk/internal/dotfiles"
 	"plonk/internal/errors"
+	"plonk/internal/lock"
 	"plonk/internal/managers"
 	"plonk/internal/state"
 
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -26,12 +23,13 @@ var (
 var pkgAddCmd = &cobra.Command{
 	Use:   "add [package]",
 	Short: "Add package(s) to plonk configuration and install them",
-	Long: `Add one or more packages to your plonk.yaml configuration and install them.
+	Long: `Add one or more packages to your plonk.lock file and install them.
 
 With package name:
   plonk pkg add htop              # Add htop using default manager
   plonk pkg add git --manager homebrew  # Add git specifically to homebrew
   plonk pkg add lodash --manager npm     # Add lodash to npm global packages
+  plonk pkg add ripgrep --manager cargo  # Add ripgrep to cargo packages
 
 Without arguments:
   plonk pkg add                   # Add all untracked packages
@@ -42,7 +40,7 @@ Without arguments:
 
 func init() {
 	pkgCmd.AddCommand(pkgAddCmd)
-	pkgAddCmd.Flags().StringVar(&manager, "manager", "", "Package manager to use (homebrew|npm)")
+	pkgAddCmd.Flags().StringVar(&manager, "manager", "", "Package manager to use (homebrew|npm|cargo)")
 	pkgAddCmd.Flags().BoolP("dry-run", "n", false, "Show what would be added without making changes")
 }
 
@@ -65,21 +63,24 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 	// Get directories
 	configDir := config.GetDefaultConfigDirectory()
 
-	// Load existing configuration
+	// Load config for default manager
 	cfg, err := config.LoadConfig(configDir)
 	if err != nil {
 		return errors.Wrap(err, errors.ErrConfigNotFound, errors.DomainConfig, "load", "failed to load configuration")
 	}
 
+	// Initialize lock file service
+	lockService := lock.NewYAMLLockService(configDir)
+
 	// Determine which manager to use
 	targetManager := manager
 	if targetManager == "" {
-		targetManager = cfg.Settings.DefaultManager
+		targetManager = cfg.Resolve().GetDefaultManager()
 	}
 
 	// Validate manager
-	if targetManager != "homebrew" && targetManager != "npm" {
-		return errors.NewError(errors.ErrInvalidInput, errors.DomainPackages, "validate", fmt.Sprintf("unsupported manager '%s'. Use: homebrew, npm", targetManager))
+	if targetManager != "homebrew" && targetManager != "npm" && targetManager != "cargo" {
+		return errors.NewError(errors.ErrInvalidInput, errors.DomainPackages, "validate", fmt.Sprintf("unsupported manager '%s'. Use: homebrew, npm, cargo", targetManager))
 	}
 
 	// Initialize result structure
@@ -89,145 +90,74 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 		Actions: []string{},
 	}
 
-	// Check if package is already in config
-	alreadyInConfig := isPackageInConfig(cfg, packageName, targetManager)
-	if alreadyInConfig {
+	// Check if package is already in lock file
+	alreadyInLock := lockService.HasPackage(targetManager, packageName)
+	if alreadyInLock {
 		result.AlreadyInConfig = true
-		result.Actions = append(result.Actions, fmt.Sprintf("%s already in %s configuration", packageName, targetManager))
+		result.Actions = append(result.Actions, fmt.Sprintf("%s already managed by %s", packageName, targetManager))
 	} else {
-		// Add package to configuration
-		err = addPackageToConfig(cfg, packageName, targetManager)
+		// Get package manager for version detection
+		packageManagers := map[string]managers.PackageManager{
+			"homebrew": managers.NewHomebrewManager(),
+			"npm":      managers.NewNpmManager(),
+			"cargo":    managers.NewCargoManager(),
+		}
+
+		mgr := packageManagers[targetManager]
+		ctx := context.Background()
+		available, err := mgr.IsAvailable(ctx)
 		if err != nil {
-			result.Error = fmt.Sprintf("failed to add package to config: %v", err)
+			result.Error = fmt.Sprintf("failed to check if %s manager is available: %v", targetManager, err)
+			return RenderOutput(result, format)
+		}
+		if !available {
+			result.Error = fmt.Sprintf("manager '%s' is not available", targetManager)
 			return RenderOutput(result, format)
 		}
 
-		// Save updated configuration
-		err = saveConfig(cfg, configDir)
+		// Install package first (so we can get version info)
+		installed, err := mgr.IsInstalled(ctx, packageName)
 		if err != nil {
-			result.Error = fmt.Sprintf("failed to save configuration: %v", err)
+			result.Error = fmt.Sprintf("failed to check if package is installed: %v", err)
 			return RenderOutput(result, format)
 		}
 
-		result.ConfigAdded = true
-		result.Actions = append(result.Actions, fmt.Sprintf("Added %s to %s configuration", packageName, targetManager))
-	}
+		if !installed {
+			if !dryRun {
+				err = mgr.Install(ctx, packageName)
+				if err != nil {
+					result.Error = fmt.Sprintf("failed to install package: %v", err)
+					return RenderOutput(result, format)
+				}
+				result.Installed = true
+				result.Actions = append(result.Actions, fmt.Sprintf("Successfully installed %s", packageName))
+			} else {
+				result.Actions = append(result.Actions, fmt.Sprintf("Would install %s", packageName))
+			}
+		} else {
+			result.AlreadyInstalled = true
+			result.Actions = append(result.Actions, fmt.Sprintf("%s already installed", packageName))
+		}
 
-	// Install the package
-	packageManagers := map[string]managers.PackageManager{
-		"homebrew": managers.NewHomebrewManager(),
-		"npm":      managers.NewNpmManager(),
-	}
-
-	mgr := packageManagers[targetManager]
-	ctx := context.Background()
-	available, err := mgr.IsAvailable(ctx)
-	if err != nil {
-		result.Error = fmt.Sprintf("failed to check if %s manager is available: %v", targetManager, err)
-		return RenderOutput(result, format)
-	}
-	if !available {
-		result.Error = fmt.Sprintf("manager '%s' is not available", targetManager)
-		return RenderOutput(result, format)
-	}
-
-	// Check if already installed
-	installed, err := mgr.IsInstalled(ctx, packageName)
-	if err != nil {
-		result.Error = fmt.Sprintf("failed to check if package is installed: %v", err)
-		return RenderOutput(result, format)
-	}
-
-	if installed {
-		result.AlreadyInstalled = true
-		result.Actions = append(result.Actions, fmt.Sprintf("%s already installed", packageName))
-	} else {
-		// Install the package
+		// Add package to lock file (with basic version info)
 		if !dryRun {
-			err = mgr.Install(ctx, packageName)
+			// Use "latest" as version for now - we could enhance this later
+			err = lockService.AddPackage(targetManager, packageName, "latest")
 			if err != nil {
-				result.Error = fmt.Sprintf("failed to install package: %v", err)
+				result.Error = fmt.Sprintf("failed to add package to lock file: %v", err)
 				return RenderOutput(result, format)
 			}
-		}
-
-		result.Installed = true
-		if dryRun {
-			result.Actions = append(result.Actions, fmt.Sprintf("Would install %s", packageName))
+			result.ConfigAdded = true
+			result.Actions = append(result.Actions, fmt.Sprintf("Added %s to lock file", packageName))
 		} else {
-			result.Actions = append(result.Actions, fmt.Sprintf("Successfully installed %s", packageName))
+			result.Actions = append(result.Actions, fmt.Sprintf("Would add %s to lock file", packageName))
 		}
 	}
 
 	return RenderOutput(result, format)
 }
 
-// isPackageInConfig checks if a package is already in the configuration
-func isPackageInConfig(cfg *config.Config, packageName, targetManager string) bool {
-	switch targetManager {
-	case "homebrew":
-		for _, pkg := range cfg.Homebrew {
-			if pkg.Name == packageName {
-				return true
-			}
-		}
-	case "npm":
-		for _, pkg := range cfg.NPM {
-			if pkg.Name == packageName || pkg.Package == packageName {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// addPackageToConfig adds a package to the appropriate section of the configuration
-func addPackageToConfig(cfg *config.Config, packageName, targetManager string) error {
-	switch targetManager {
-	case "homebrew":
-		// Add to packages section (unified homebrew packages)
-		newPackage := config.HomebrewPackage{
-			Name: packageName,
-		}
-		cfg.Homebrew = append(cfg.Homebrew, newPackage)
-	case "npm":
-		newPackage := config.NPMPackage{
-			Name: packageName,
-		}
-		cfg.NPM = append(cfg.NPM, newPackage)
-	default:
-		return errors.NewError(errors.ErrInvalidInput, errors.DomainPackages, "validate", fmt.Sprintf("unsupported manager: %s", targetManager))
-	}
-	return nil
-}
-
-// saveConfig saves the configuration back to plonk.yaml atomically
-func saveConfig(cfg *config.Config, configDir string) error {
-	configPath := filepath.Join(configDir, "plonk.yaml")
-
-	// Create config directory if it doesn't exist
-	err := os.MkdirAll(configDir, 0750)
-	if err != nil {
-		return errors.Wrap(err, errors.ErrFilePermission, errors.DomainConfig, "create", "failed to create config directory")
-	}
-
-	// Marshal configuration to YAML
-	data, err := yaml.Marshal(cfg)
-	if err != nil {
-		return errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "marshal", "failed to marshal config")
-	}
-
-	// Write to file atomically
-	atomicWriter := dotfiles.NewAtomicFileWriter()
-	err = atomicWriter.WriteFile(configPath, data, 0644)
-	if err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "write", "failed to write config file")
-	}
-
-	return nil
-}
-
-// addAllUntrackedPackages adds all untracked packages to the configuration
+// addAllUntrackedPackages adds all untracked packages to the lock file
 func addAllUntrackedPackages(cmd *cobra.Command, dryRun bool) error {
 	// Parse output format
 	format, err := ParseOutputFormat(outputFormat)
@@ -238,36 +168,44 @@ func addAllUntrackedPackages(cmd *cobra.Command, dryRun bool) error {
 	// Get directories
 	configDir := config.GetDefaultConfigDirectory()
 
-	// Load existing configuration
-	cfg, err := config.LoadConfig(configDir)
-	if err != nil {
-		return errors.Wrap(err, errors.ErrConfigNotFound, errors.DomainConfig, "load", "failed to load configuration")
-	}
+	// Initialize lock file service
+	lockService := lock.NewYAMLLockService(configDir)
+	lockAdapter := lock.NewLockFileAdapter(lockService)
 
 	// Create reconciler to get untracked packages
 	reconciler := state.NewReconciler()
 
-	// Create package provider (same as status command)
+	// Create package provider using lock file adapter
 	ctx := context.Background()
-	packageProvider, err := createPackageProvider(ctx, cfg)
-	if err != nil {
-		return errors.Wrap(err, errors.ErrInternal, errors.DomainPackages, "create", "failed to create package provider")
+	packageProvider := state.NewMultiManagerPackageProvider()
+
+	// Add all available managers
+	managers := map[string]managers.PackageManager{
+		"homebrew": managers.NewHomebrewManager(),
+		"npm":      managers.NewNpmManager(),
+		"cargo":    managers.NewCargoManager(),
 	}
+
+	for managerName, mgr := range managers {
+		available, err := mgr.IsAvailable(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to check %s availability: %w", managerName, err)
+		}
+		if available {
+			managerAdapter := state.NewManagerAdapter(mgr)
+			packageProvider.AddManager(managerName, managerAdapter, lockAdapter)
+		}
+	}
+
 	reconciler.RegisterProvider("package", packageProvider)
 
 	// Reconcile to get package states
-	summary, err := reconciler.ReconcileAll(ctx)
+	result, err := reconciler.ReconcileProvider(ctx, "package")
 	if err != nil {
 		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainState, "reconcile", "failed to reconcile package states")
 	}
 
-	// Find package results and collect untracked packages
-	var untrackedPackages []state.Item
-	for _, result := range summary.Results {
-		if result.Domain == "package" {
-			untrackedPackages = append(untrackedPackages, result.Untracked...)
-		}
-	}
+	untrackedPackages := result.Untracked
 
 	if len(untrackedPackages) == 0 {
 		if format == OutputTable {
@@ -286,13 +224,13 @@ func addAllUntrackedPackages(cmd *cobra.Command, dryRun bool) error {
 		return nil
 	}
 
-	// Add packages to configuration
+	// Add packages to lock file
 	addedCount := 0
 	for _, pkg := range untrackedPackages {
-		if !isPackageInConfig(cfg, pkg.Name, pkg.Manager) {
-			err = addPackageToConfig(cfg, pkg.Name, pkg.Manager)
+		if !lockService.HasPackage(pkg.Manager, pkg.Name) {
+			err = lockService.AddPackage(pkg.Manager, pkg.Name, "latest")
 			if err != nil {
-				return errors.WrapWithItem(err, errors.ErrConfigParseFailure, errors.DomainConfig, "update", pkg.Name, "failed to add package to config")
+				return errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainCommands, "update", pkg.Name, "failed to add package to lock file")
 			}
 			addedCount++
 		}
@@ -300,27 +238,21 @@ func addAllUntrackedPackages(cmd *cobra.Command, dryRun bool) error {
 
 	if addedCount == 0 {
 		if format == OutputTable {
-			fmt.Println("No packages were added (all were already in configuration)")
+			fmt.Println("No packages were added (all were already managed)")
 		}
 		return nil
 	}
 
-	// Save updated configuration
-	err = saveConfig(cfg, configDir)
-	if err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "save", "failed to save configuration")
-	}
-
 	if format == OutputTable {
-		fmt.Printf("Successfully added %d packages to configuration\n", addedCount)
+		fmt.Printf("Successfully added %d packages to lock file\n", addedCount)
 	}
 
 	// Prepare structured output
-	result := AddAllOutput{
+	addAllResult := AddAllOutput{
 		Added:  addedCount,
 		Total:  len(untrackedPackages),
 		Action: "added-all",
 	}
 
-	return RenderOutput(result, format)
+	return RenderOutput(addAllResult, format)
 }

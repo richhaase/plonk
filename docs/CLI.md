@@ -64,7 +64,7 @@ plonk status [--output format]
 
 ### `plonk apply`
 
-Apply configuration to system - installs missing packages and deploys dotfiles.
+Apply managed state to system - installs missing packages and deploys dotfiles.
 
 **Usage:**
 ```bash
@@ -216,7 +216,7 @@ Total: 25 packages | ✓ Managed: 18 | ⚠ Missing: 2 | ? Untracked: 5
 
 ### `plonk pkg add [package]`
 
-Add packages to configuration and install them.
+Add packages to lock file and install them.
 
 **Usage:**
 ```bash
@@ -225,7 +225,7 @@ plonk pkg add [package] [--manager manager] [--dry-run] [--output format]
 
 **Behaviors:**
 - `plonk pkg add` - Add all untracked packages
-- `plonk pkg add htop` - Add specific package to config and install
+- `plonk pkg add htop` - Add specific package to lock file and install
 - `plonk pkg add htop --manager homebrew` - Force specific manager
 - `plonk pkg add ripgrep --manager cargo` - Force specific manager
 - `plonk pkg add htop --dry-run` - Preview what would be added/installed
@@ -246,7 +246,7 @@ Summary: Added to configuration and installed
 
 ### `plonk pkg remove <package>`
 
-Remove package from configuration with enhanced output.
+Remove package from lock file with enhanced output.
 
 **Usage:**
 ```bash
@@ -258,8 +258,8 @@ plonk pkg remove <package> [--uninstall] [--dry-run] [--output format]
 - `--dry-run` - Show what would be removed without making changes
 
 **Behaviors:**
-- `plonk pkg remove htop` - Remove from config only
-- `plonk pkg remove htop --uninstall` - Remove from config and uninstall
+- `plonk pkg remove htop` - Remove from lock file only
+- `plonk pkg remove htop --uninstall` - Remove from lock file and uninstall
 - `plonk pkg remove htop --dry-run` - Preview what would be removed
 
 **Example output:**

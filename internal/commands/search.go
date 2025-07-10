@@ -150,7 +150,7 @@ func getDefaultManager() (string, error) {
 		return "", nil
 	}
 
-	return cfg.Settings.DefaultManager, nil
+	return cfg.Resolve().GetDefaultManager(), nil
 }
 
 // searchWithDefaultManager searches the default manager first, then others if needed
