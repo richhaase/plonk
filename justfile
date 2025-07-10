@@ -92,7 +92,11 @@ lint:
 security:
     @echo "🔐 Running security checks..."
     @go run golang.org/x/vuln/cmd/govulncheck ./...
-    @go run github.com/securego/gosec/v2/cmd/gosec ./... || echo "⚠️  Security warnings found (non-blocking)"
+    @if go run github.com/securego/gosec/v2/cmd/gosec ./...; then \
+        echo "✅ No security issues found!"; \
+    else \
+        echo "⚠️  Security warnings found (non-blocking)"; \
+    fi
     @echo "✅ Security checks completed!"
 
 # Automated single-command release process
