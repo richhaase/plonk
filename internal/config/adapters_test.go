@@ -9,9 +9,7 @@ import (
 
 func TestConfigAdapter_GetDotfileTargets(t *testing.T) {
 	config := &Config{
-		Settings: &Settings{
-			DefaultManager: StringPtr("homebrew"),
-		},
+		DefaultManager: StringPtr("homebrew"),
 	}
 
 	adapter := NewConfigAdapter(config)
@@ -31,9 +29,7 @@ func TestConfigAdapter_GetDotfileTargets(t *testing.T) {
 
 func TestConfigAdapter_GetPackagesForManager(t *testing.T) {
 	config := &Config{
-		Settings: &Settings{
-			DefaultManager: StringPtr("homebrew"),
-		},
+		DefaultManager: StringPtr("homebrew"),
 	}
 
 	adapter := NewConfigAdapter(config)
@@ -81,9 +77,7 @@ func TestConfigAdapter_GetPackagesForManager(t *testing.T) {
 
 func TestStatePackageConfigAdapter(t *testing.T) {
 	config := &Config{
-		Settings: &Settings{
-			DefaultManager: StringPtr("homebrew"),
-		},
+		DefaultManager: StringPtr("homebrew"),
 	}
 
 	adapter := NewConfigAdapter(config)
@@ -121,9 +115,7 @@ func TestStatePackageConfigAdapter(t *testing.T) {
 
 func TestStateDotfileConfigAdapter(t *testing.T) {
 	config := &Config{
-		Settings: &Settings{
-			DefaultManager: StringPtr("homebrew"),
-		},
+		DefaultManager: StringPtr("homebrew"),
 	}
 
 	configAdapter := NewConfigAdapter(config)
@@ -150,9 +142,7 @@ func TestStateDotfileConfigAdapter(t *testing.T) {
 
 func TestConfigAdapter_EmptyConfig(t *testing.T) {
 	config := &Config{
-		Settings: &Settings{
-			DefaultManager: StringPtr("homebrew"),
-		},
+		DefaultManager: StringPtr("homebrew"),
 	}
 
 	adapter := NewConfigAdapter(config)
@@ -177,9 +167,7 @@ func TestConfigAdapter_EmptyConfig(t *testing.T) {
 
 func TestConfigAdapter_InterfaceCompliance(t *testing.T) {
 	config := &Config{
-		Settings: &Settings{
-			DefaultManager: StringPtr("homebrew"),
-		},
+		DefaultManager: StringPtr("homebrew"),
 	}
 
 	adapter := NewConfigAdapter(config)

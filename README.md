@@ -77,16 +77,15 @@ When you do want to customize settings, Plonk uses two files:
 Contains your custom settings and preferences (create with `plonk init`):
 
 ```yaml
-settings:
-  default_manager: homebrew
-  expand_directories:
-    - .config
-    - .ssh
-    - .aws
-    - .kube
-    - .docker
-    - .gnupg
-    - .local
+default_manager: homebrew
+expand_directories:
+  - .config
+  - .ssh
+  - .aws
+  - .kube
+  - .docker
+  - .gnupg
+  - .local
 
 ignore_patterns:
   - .DS_Store
@@ -125,19 +124,18 @@ When no configuration file exists, Plonk uses these sensible defaults:
 
 ```yaml
 # Default settings (you can override these with `plonk init`)
-settings:
-  default_manager: homebrew      # Primary package manager
-  operation_timeout: 300         # 5 minutes for overall operations
-  package_timeout: 180           # 3 minutes for package operations
-  dotfile_timeout: 60            # 1 minute for dotfile operations
-  expand_directories:            # Directories shown expanded in lists
-    - .config
-    - .ssh
-    - .aws
-    - .kube
-    - .docker
-    - .gnupg
-    - .local
+default_manager: homebrew      # Primary package manager
+operation_timeout: 300         # 5 minutes for overall operations
+package_timeout: 180           # 3 minutes for package operations
+dotfile_timeout: 60            # 1 minute for dotfile operations
+expand_directories:            # Directories shown expanded in lists
+  - .config
+  - .ssh
+  - .aws
+  - .kube
+  - .docker
+  - .gnupg
+  - .local
 
 ignore_patterns:                 # Files ignored during dotfile discovery
   - .DS_Store

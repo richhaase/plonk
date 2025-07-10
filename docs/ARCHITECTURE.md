@@ -74,11 +74,10 @@ internal/
 
 **Configuration Example:**
 ```yaml
-settings:
-  default_manager: homebrew
-  operation_timeout: 600  # 10 minutes
-  package_timeout: 300    # 5 minutes
-  dotfile_timeout: 60     # 1 minute
+default_manager: homebrew
+operation_timeout: 600  # 10 minutes
+package_timeout: 300    # 5 minutes
+dotfile_timeout: 60     # 1 minute
 
 ignore_patterns:
   - .DS_Store

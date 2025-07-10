@@ -13,9 +13,8 @@ func TestLoadConfig_BasicStructure(t *testing.T) {
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "plonk.yaml")
 
-	configContent := `settings:
-  default_manager: homebrew
-  operation_timeout: 600
+	configContent := `default_manager: homebrew
+operation_timeout: 600
 
 ignore_patterns:
   - .DS_Store
@@ -34,8 +33,8 @@ ignore_patterns:
 	}
 
 	// Verify settings
-	if config.Settings.DefaultManager != nil && *config.Settings.DefaultManager != "homebrew" {
-		t.Errorf("Expected default_manager 'homebrew', got '%s'", *config.Settings.DefaultManager)
+	if config.DefaultManager != nil && *config.DefaultManager != "homebrew" {
+		t.Errorf("Expected default_manager 'homebrew', got '%s'", *config.DefaultManager)
 	}
 
 	// Verify ignore patterns
@@ -80,12 +79,7 @@ func TestConfigValidation(t *testing.T) {
 	configPath := filepath.Join(tempDir, "plonk.yaml")
 
 	// Test invalid default manager should fail
-	configContent := `settings:
-  default_manager: invalid_manager
-
-dotfiles:
-  - source: test
-    destination: ~/.test
+	configContent := `default_manager: invalid_manager
 `
 
 	err := os.WriteFile(configPath, []byte(configContent), 0644)

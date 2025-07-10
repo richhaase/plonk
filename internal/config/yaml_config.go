@@ -25,18 +25,12 @@ import (
 // Config represents the user's configuration overrides.
 // All fields are optional - defaults will be used for nil values.
 type Config struct {
-	Settings       *Settings `yaml:"settings,omitempty"`
-	IgnorePatterns []string  `yaml:"ignore_patterns,omitempty"`
-}
-
-// Settings contains global configuration settings.
-// All fields use pointers to distinguish between "not set" (nil) and "set to zero value".
-type Settings struct {
 	DefaultManager    *string   `yaml:"default_manager,omitempty" validate:"omitempty,oneof=homebrew npm cargo"`
 	OperationTimeout  *int      `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"` // Timeout in seconds for operations (0 for unlimited, 1-3600 seconds)
 	PackageTimeout    *int      `yaml:"package_timeout,omitempty" validate:"omitempty,min=0,max=1800"`   // Timeout in seconds for package operations (0 for unlimited, 1-1800 seconds)
 	DotfileTimeout    *int      `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`    // Timeout in seconds for dotfile operations (0 for unlimited, 1-600 seconds)
 	ExpandDirectories *[]string `yaml:"expand_directories,omitempty"`                                    // Directories to expand in dot list output
+	IgnorePatterns    []string  `yaml:"ignore_patterns,omitempty"`
 }
 
 // Package types removed - packages now managed in lock file
@@ -59,40 +53,40 @@ func (c *Config) Resolve() *ResolvedConfig {
 
 // getDefaultManager returns the user's default manager or the default value
 func (c *Config) getDefaultManager(defaultValue string) string {
-	if c.Settings != nil && c.Settings.DefaultManager != nil {
-		return *c.Settings.DefaultManager
+	if c.DefaultManager != nil {
+		return *c.DefaultManager
 	}
 	return defaultValue
 }
 
 // getOperationTimeout returns the user's operation timeout or the default value
 func (c *Config) getOperationTimeout(defaultValue int) int {
-	if c.Settings != nil && c.Settings.OperationTimeout != nil {
-		return *c.Settings.OperationTimeout
+	if c.OperationTimeout != nil {
+		return *c.OperationTimeout
 	}
 	return defaultValue
 }
 
 // getPackageTimeout returns the user's package timeout or the default value
 func (c *Config) getPackageTimeout(defaultValue int) int {
-	if c.Settings != nil && c.Settings.PackageTimeout != nil {
-		return *c.Settings.PackageTimeout
+	if c.PackageTimeout != nil {
+		return *c.PackageTimeout
 	}
 	return defaultValue
 }
 
 // getDotfileTimeout returns the user's dotfile timeout or the default value
 func (c *Config) getDotfileTimeout(defaultValue int) int {
-	if c.Settings != nil && c.Settings.DotfileTimeout != nil {
-		return *c.Settings.DotfileTimeout
+	if c.DotfileTimeout != nil {
+		return *c.DotfileTimeout
 	}
 	return defaultValue
 }
 
 // getExpandDirectories returns the user's expand directories or the default value
 func (c *Config) getExpandDirectories(defaultValue []string) []string {
-	if c.Settings != nil && c.Settings.ExpandDirectories != nil {
-		return *c.Settings.ExpandDirectories
+	if c.ExpandDirectories != nil {
+		return *c.ExpandDirectories
 	}
 	return defaultValue
 }
@@ -395,14 +389,12 @@ func (y *YAMLConfigService) ValidateConfigFromReader(reader io.Reader) error {
 func (y *YAMLConfigService) GetDefaultConfig() *Config {
 	defaults := GetDefaults()
 	return &Config{
-		Settings: &Settings{
-			DefaultManager:    &defaults.DefaultManager,
-			OperationTimeout:  &defaults.OperationTimeout,
-			PackageTimeout:    &defaults.PackageTimeout,
-			DotfileTimeout:    &defaults.DotfileTimeout,
-			ExpandDirectories: &defaults.ExpandDirectories,
-		},
-		IgnorePatterns: defaults.IgnorePatterns,
+		DefaultManager:    &defaults.DefaultManager,
+		OperationTimeout:  &defaults.OperationTimeout,
+		PackageTimeout:    &defaults.PackageTimeout,
+		DotfileTimeout:    &defaults.DotfileTimeout,
+		ExpandDirectories: &defaults.ExpandDirectories,
+		IgnorePatterns:    defaults.IgnorePatterns,
 	}
 }
 

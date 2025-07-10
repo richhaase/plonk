@@ -68,26 +68,25 @@ func runInit(cmd *cobra.Command, args []string) error {
 # The values shown below are the actual defaults that plonk uses.
 # You can modify any of these values to customize plonk's behavior.
 
-settings:
-  # Default package manager to use when installing packages
-  # Options: homebrew, npm, cargo
-  default_manager: %s
-  
-  # Timeout settings (in seconds)
-  # Set to 0 for unlimited timeout (not recommended)
-  
-  # Overall operation timeout - maximum time for any single command
-  operation_timeout: %d   # %d seconds = %d minutes
-  
-  # Individual package operation timeout - time limit for package install/uninstall
-  package_timeout: %d     # %d seconds = %d minutes
-  
-  # Dotfile operation timeout - time limit for file copy/link operations
-  dotfile_timeout: %d      # %d seconds = %d minute
-  
-  # Directories to expand when listing dotfiles with 'plonk dot list'
-  # These directories will show individual files instead of just the directory name
-  expand_directories:`,
+# Default package manager to use when installing packages
+# Options: homebrew, npm, cargo
+default_manager: %s
+
+# Timeout settings (in seconds)
+# Set to 0 for unlimited timeout (not recommended)
+
+# Overall operation timeout - maximum time for any single command
+operation_timeout: %d   # %d seconds = %d minutes
+
+# Individual package operation timeout - time limit for package install/uninstall
+package_timeout: %d     # %d seconds = %d minutes
+
+# Dotfile operation timeout - time limit for file copy/link operations
+dotfile_timeout: %d      # %d seconds = %d minute
+
+# Directories to expand when listing dotfiles with 'plonk dot list'
+# These directories will show individual files instead of just the directory name
+expand_directories:`,
 		defaults.DefaultManager,
 		defaults.OperationTimeout, defaults.OperationTimeout, defaults.OperationTimeout/60,
 		defaults.PackageTimeout, defaults.PackageTimeout, defaults.PackageTimeout/60,
@@ -95,7 +94,7 @@ settings:
 
 	// Add expand directories
 	for _, dir := range defaults.ExpandDirectories {
-		configContent += fmt.Sprintf("\n    - %s", dir)
+		configContent += fmt.Sprintf("\n  - %s", dir)
 	}
 
 	configContent += `

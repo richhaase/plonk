@@ -25,12 +25,11 @@ When no configuration file exists, these defaults are used:
 
 ```yaml
 # These are the built-in defaults - no config file needed!
-settings:
-  default_manager: homebrew      # Primary package manager
-  operation_timeout: 300         # 5 minutes
-  package_timeout: 180           # 3 minutes  
-  dotfile_timeout: 60            # 1 minute
-  expand_directories:
+default_manager: homebrew      # Primary package manager
+operation_timeout: 300         # 5 minutes
+package_timeout: 180           # 3 minutes  
+dotfile_timeout: 60            # 1 minute
+expand_directories:
     - .config
     - .ssh
     - .aws
@@ -52,12 +51,11 @@ ignore_patterns:
 Only specify settings you want to override from the defaults above:
 
 ```yaml
-settings:
-  default_manager: homebrew
-  operation_timeout: 300
-  package_timeout: 180
-  dotfile_timeout: 60
-  expand_directories:
+default_manager: homebrew
+operation_timeout: 300
+package_timeout: 180
+dotfile_timeout: 60
+expand_directories:
     - .config
     - .ssh
     - .aws
@@ -78,8 +76,7 @@ ignore_patterns:
 
 **Example 1: Just change package manager**
 ```yaml
-settings:
-  default_manager: npm
+default_manager: npm
 # Everything else uses defaults
 ```
 
@@ -94,9 +91,8 @@ ignore_patterns:
 
 **Example 3: Custom timeouts only**
 ```yaml
-settings:
-  operation_timeout: 600    # 10 minutes instead of 5
-  package_timeout: 300      # 5 minutes instead of 3
+operation_timeout: 600    # 10 minutes instead of 5
+package_timeout: 300      # 5 minutes instead of 3
 # Other settings and ignore patterns use defaults
 ```
 
@@ -131,8 +127,7 @@ packages:
 ### Minimal Example
 
 ```yaml
-settings:
-  default_manager: homebrew
+default_manager: homebrew
 ```
 
 ## Settings Section
@@ -146,8 +141,7 @@ settings:
 **Purpose:** Default package manager for new packages
 
 ```yaml
-settings:
-  default_manager: homebrew
+default_manager: homebrew
 ```
 
 ### Optional Settings
@@ -159,8 +153,7 @@ settings:
 **Purpose:** Overall operation timeout
 
 ```yaml
-settings:
-  operation_timeout: 600  # 10 minutes
+operation_timeout: 600  # 10 minutes
 ```
 
 #### `package_timeout`
@@ -170,8 +163,7 @@ settings:
 **Purpose:** Individual package operation timeout
 
 ```yaml
-settings:
-  package_timeout: 300  # 5 minutes
+package_timeout: 300  # 5 minutes
 ```
 
 #### `dotfile_timeout`
@@ -181,8 +173,7 @@ settings:
 **Purpose:** Dotfile operation timeout
 
 ```yaml
-settings:
-  dotfile_timeout: 120  # 2 minutes
+dotfile_timeout: 120  # 2 minutes
 ```
 
 #### `expand_directories`
@@ -191,8 +182,7 @@ settings:
 **Purpose:** Directories to expand in `plonk dot list` output
 
 ```yaml
-settings:
-  expand_directories:
+expand_directories:
     - .config
     - .ssh
     - .aws
@@ -355,22 +345,19 @@ plonk config validate
 
 #### Missing Default Manager
 ```yaml
-# ERROR: default_manager required
-settings: {}
+# ERROR: default_manager can be nil - uses default value
 ```
 
 #### Invalid Manager Name
 ```yaml
 # ERROR: invalid manager
-settings:
-  default_manager: invalid_manager
+default_manager: invalid_manager
 ```
 
 #### Invalid Timeout Values
 ```yaml
 # ERROR: negative timeout
-settings:
-  operation_timeout: -1
+operation_timeout: -1
 ```
 
 ## Configuration Examples
@@ -378,10 +365,9 @@ settings:
 ### Developer Workstation
 
 ```yaml
-settings:
-  default_manager: homebrew
-  operation_timeout: 600
-  expand_directories:
+default_manager: homebrew
+operation_timeout: 600
+expand_directories:
     - .config
     - .ssh
     - .aws
@@ -398,15 +384,13 @@ ignore_patterns:
 ### Minimal Setup
 
 ```yaml
-settings:
-  default_manager: homebrew
+default_manager: homebrew
 ```
 
 ### NPM-focused Setup
 
 ```yaml
-settings:
-  default_manager: npm
+default_manager: npm
 ```
 
 ## Migration and Upgrades

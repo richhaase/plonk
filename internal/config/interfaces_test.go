@@ -26,8 +26,8 @@ settings:
 			expectError: false,
 			validateFn: func(cfg *Config) error {
 				// Packages are now in lock file, just validate config loaded
-				if cfg.Settings.DefaultManager != nil && *cfg.Settings.DefaultManager != "homebrew" {
-					t.Errorf("Expected default manager homebrew, got %s", *cfg.Settings.DefaultManager)
+				if cfg.DefaultManager != nil && *cfg.DefaultManager != "homebrew" {
+					t.Errorf("Expected default manager homebrew, got %s", *cfg.DefaultManager)
 				}
 				return nil
 			},
@@ -43,8 +43,8 @@ settings:
 `,
 			expectError: false,
 			validateFn: func(cfg *Config) error {
-				if cfg.Settings.OperationTimeout != nil && *cfg.Settings.OperationTimeout != 600 {
-					t.Errorf("Expected operation timeout 600, got %d", *cfg.Settings.OperationTimeout)
+				if cfg.OperationTimeout != nil && *cfg.OperationTimeout != 600 {
+					t.Errorf("Expected operation timeout 600, got %d", *cfg.OperationTimeout)
 				}
 				return nil
 			},
@@ -75,8 +75,8 @@ settings:
 `,
 			expectError: false,
 			validateFn: func(cfg *Config) error {
-				if cfg.Settings.DefaultManager != nil && *cfg.Settings.DefaultManager != "homebrew" {
-					t.Errorf("Expected default manager homebrew, got %s", *cfg.Settings.DefaultManager)
+				if cfg.DefaultManager != nil && *cfg.DefaultManager != "homebrew" {
+					t.Errorf("Expected default manager homebrew, got %s", *cfg.DefaultManager)
 				}
 				return nil
 			},
@@ -148,8 +148,8 @@ settings:
 		t.Fatalf("LoadConfig() failed: %v", err)
 	}
 
-	if config.Settings.DefaultManager != nil && *config.Settings.DefaultManager != "homebrew" {
-		t.Errorf("Expected default_manager to be 'homebrew', got %s", *config.Settings.DefaultManager)
+	if config.DefaultManager != nil && *config.DefaultManager != "homebrew" {
+		t.Errorf("Expected default_manager to be 'homebrew', got %s", *config.DefaultManager)
 	}
 
 	// Packages now in lock file, not config
@@ -168,9 +168,7 @@ func TestYAMLConfigService_SaveConfigToWriter(t *testing.T) {
 	service := NewYAMLConfigService()
 
 	config := &Config{
-		Settings: &Settings{
-			DefaultManager: StringPtr("homebrew"),
-		},
+		DefaultManager: StringPtr("homebrew"),
 		// Packages now in lock file
 	}
 
@@ -196,9 +194,7 @@ func TestYAMLConfigService_SaveConfigToFile(t *testing.T) {
 
 	service := NewYAMLConfigService()
 	config := &Config{
-		Settings: &Settings{
-			DefaultManager: StringPtr("homebrew"),
-		},
+		DefaultManager: StringPtr("homebrew"),
 		// Packages now in lock file
 	}
 
@@ -216,12 +212,12 @@ func TestYAMLConfigService_SaveConfigToFile(t *testing.T) {
 
 	// Compare default manager values
 	configManager := ""
-	if config.Settings.DefaultManager != nil {
-		configManager = *config.Settings.DefaultManager
+	if config.DefaultManager != nil {
+		configManager = *config.DefaultManager
 	}
 	loadedManager := ""
-	if loadedConfig.Settings.DefaultManager != nil {
-		loadedManager = *loadedConfig.Settings.DefaultManager
+	if loadedConfig.DefaultManager != nil {
+		loadedManager = *loadedConfig.DefaultManager
 	}
 	if configManager != loadedManager {
 		t.Errorf("Default manager mismatch: expected %s, got %s", configManager, loadedManager)
@@ -233,9 +229,7 @@ func TestYAMLConfigService_ValidateConfig(t *testing.T) {
 
 	// Valid config
 	validConfig := &Config{
-		Settings: &Settings{
-			DefaultManager: StringPtr("homebrew"),
-		},
+		DefaultManager: StringPtr("homebrew"),
 	}
 
 	result := service.ValidateConfig(validConfig)
@@ -245,9 +239,7 @@ func TestYAMLConfigService_ValidateConfig(t *testing.T) {
 
 	// Invalid config
 	invalidConfig := &Config{
-		Settings: &Settings{
-			DefaultManager: StringPtr("invalid_manager"),
-		},
+		DefaultManager: StringPtr("invalid_manager"),
 	}
 
 	result = service.ValidateConfig(invalidConfig)
@@ -260,8 +252,8 @@ func TestYAMLConfigService_LoadDefaultConfig(t *testing.T) {
 	service := NewYAMLConfigService()
 	config := service.GetDefaultConfig()
 
-	if config.Settings.DefaultManager != nil && *config.Settings.DefaultManager != "homebrew" {
-		t.Errorf("Default config should have homebrew as default manager, got %s", *config.Settings.DefaultManager)
+	if config.DefaultManager != nil && *config.DefaultManager != "homebrew" {
+		t.Errorf("Default config should have homebrew as default manager, got %s", *config.DefaultManager)
 	}
 
 	// Packages now in lock file, not config

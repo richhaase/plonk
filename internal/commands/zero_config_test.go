@@ -147,9 +147,8 @@ func TestConfigResolutionInCommands(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "plonk.yaml")
 
 		// Create config with only some settings
-		configContent := `settings:
-  default_manager: cargo
-  operation_timeout: 900
+		configContent := `default_manager: cargo
+operation_timeout: 900
 # Note: package_timeout and dotfile_timeout not specified - should use defaults
 `
 
@@ -265,22 +264,20 @@ func TestZeroConfigValidation(t *testing.T) {
 		}
 	})
 
-	t.Run("config with nil settings validates successfully", func(t *testing.T) {
+	t.Run("config with nil fields validates successfully", func(t *testing.T) {
 		cfg := &config.Config{
-			Settings: nil, // Explicit nil settings
+			// All fields nil by default
 		}
 		validator := config.NewSimpleValidator()
 
 		result := validator.ValidateConfig(cfg)
 		if !result.IsValid() {
-			t.Errorf("Expected config with nil settings to be valid, got errors: %v", result.Errors)
+			t.Errorf("Expected config with nil fields to be valid, got errors: %v", result.Errors)
 		}
 	})
 
-	t.Run("config with empty settings validates successfully", func(t *testing.T) {
-		cfg := &config.Config{
-			Settings: &config.Settings{}, // Empty settings (all fields nil)
-		}
+	t.Run("config with empty fields validates successfully", func(t *testing.T) {
+		cfg := &config.Config{} // Empty config (all fields nil)
 		validator := config.NewSimpleValidator()
 
 		result := validator.ValidateConfig(cfg)

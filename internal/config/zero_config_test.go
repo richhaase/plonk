@@ -24,13 +24,11 @@ func TestZeroConfigScenarios(t *testing.T) {
 		}
 
 		// Config should be empty (all nil/zero values)
-		if config.Settings != nil {
-			if config.Settings.DefaultManager != nil {
-				t.Error("Expected DefaultManager to be nil in empty config")
-			}
-			if config.Settings.OperationTimeout != nil {
-				t.Error("Expected OperationTimeout to be nil in empty config")
-			}
+		if config.DefaultManager != nil {
+			t.Error("Expected DefaultManager to be nil in empty config")
+		}
+		if config.OperationTimeout != nil {
+			t.Error("Expected OperationTimeout to be nil in empty config")
 		}
 
 		if len(config.IgnorePatterns) != 0 {
@@ -120,11 +118,9 @@ func TestZeroConfigScenarios(t *testing.T) {
 func TestPartialConfigOverrides(t *testing.T) {
 	t.Run("partial settings override defaults", func(t *testing.T) {
 		config := &Config{
-			Settings: &Settings{
-				DefaultManager:   StringPtr("npm"),
-				OperationTimeout: IntPtr(600),
-				// Other settings left as nil - should use defaults
-			},
+			DefaultManager:   StringPtr("npm"),
+			OperationTimeout: IntPtr(600),
+			// Other settings left as nil - should use defaults
 		}
 
 		resolved := config.Resolve()
@@ -168,9 +164,7 @@ func TestPartialConfigOverrides(t *testing.T) {
 	t.Run("expand directories override completely", func(t *testing.T) {
 		customDirs := []string{".custom1", ".custom2"}
 		config := &Config{
-			Settings: &Settings{
-				ExpandDirectories: &customDirs,
-			},
+			ExpandDirectories: &customDirs,
 		}
 
 		resolved := config.Resolve()
@@ -227,12 +221,9 @@ func TestZeroConfigIntegration(t *testing.T) {
 			t.Fatal("Expected default config to be returned, got nil")
 		}
 
-		// Should have defaults populated
-		if config.Settings == nil {
-			t.Fatal("Expected settings to be populated in default config")
-		}
+		// Should have defaults populated - fields should be set
 
-		if config.Settings.DefaultManager == nil || *config.Settings.DefaultManager != "homebrew" {
+		if config.DefaultManager == nil || *config.DefaultManager != "homebrew" {
 			t.Error("Expected default manager to be 'homebrew' in default config")
 		}
 

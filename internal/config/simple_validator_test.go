@@ -16,17 +16,13 @@ func TestSimpleValidator_ValidateConfig_ValidConfigs(t *testing.T) {
 		{
 			name: "minimal valid config",
 			config: &Config{
-				Settings: &Settings{
-					DefaultManager: StringPtr("homebrew"),
-				},
+				DefaultManager: StringPtr("homebrew"),
 			},
 		},
 		{
 			name: "config with ignore patterns",
 			config: &Config{
-				Settings: &Settings{
-					DefaultManager: StringPtr("homebrew"),
-				},
+				DefaultManager: StringPtr("homebrew"),
 				IgnorePatterns: []string{".DS_Store", "*.log"},
 			},
 		},
@@ -51,28 +47,24 @@ func TestSimpleValidator_ValidateConfig_InvalidConfigs(t *testing.T) {
 		expectError string
 	}{
 		{
-			name: "missing default manager should be valid with zero-config",
+			name:   "missing default manager should be valid with zero-config",
 			config: &Config{
-				Settings: &Settings{}, // DefaultManager is nil, should use default
+				// DefaultManager is nil, should use default
 			},
 			expectError: "", // Should be valid - will use default
 		},
 		{
 			name: "invalid default manager",
 			config: &Config{
-				Settings: &Settings{
-					DefaultManager: StringPtr("invalid"),
-				},
+				DefaultManager: StringPtr("invalid"),
 			},
 			expectError: "must be one of: homebrew npm",
 		},
 		{
 			name: "invalid operation timeout",
 			config: &Config{
-				Settings: &Settings{
-					DefaultManager:   StringPtr("homebrew"),
-					OperationTimeout: IntPtr(-1),
-				},
+				DefaultManager:   StringPtr("homebrew"),
+				OperationTimeout: IntPtr(-1),
 			},
 			expectError: "min",
 		},
@@ -116,14 +108,12 @@ func TestSimpleValidator_ValidateConfigFromYAML_ValidYAML(t *testing.T) {
 	}{
 		{
 			name: "minimal valid YAML",
-			yaml: `settings:
-  default_manager: homebrew`,
+			yaml: `default_manager: homebrew`,
 		},
 		{
 			name: "complete valid YAML",
-			yaml: `settings:
-  default_manager: homebrew
-  operation_timeout: 600
+			yaml: `default_manager: homebrew
+operation_timeout: 600
 
 ignore_patterns:
   - .DS_Store
@@ -151,22 +141,19 @@ func TestSimpleValidator_ValidateConfigFromYAML_InvalidYAML(t *testing.T) {
 	}{
 		{
 			name: "invalid YAML syntax",
-			yaml: `settings:
-  default_manager: homebrew
+			yaml: `default_manager: homebrew
     invalid_indent: value`,
 			expectError: "YAML syntax error",
 		},
 		{
-			name: "invalid default manager",
-			yaml: `settings:
-  default_manager: invalid`,
+			name:        "invalid default manager",
+			yaml:        `default_manager: invalid`,
 			expectError: "must be one of",
 		},
 		{
 			name: "invalid timeout",
-			yaml: `settings:
-  default_manager: homebrew
-  operation_timeout: -1`,
+			yaml: `default_manager: homebrew
+operation_timeout: -1`,
 			expectError: "min",
 		},
 	}
@@ -196,9 +183,7 @@ func TestSimpleValidator_ValidateConfigFromYAML_InvalidYAML(t *testing.T) {
 
 func TestSimpleValidator_Warnings(t *testing.T) {
 	config := &Config{
-		Settings: &Settings{
-			DefaultManager: StringPtr("npm"), // Should trigger warning
-		},
+		DefaultManager: StringPtr("npm"), // Should trigger warning
 	}
 
 	validator := NewSimpleValidator()

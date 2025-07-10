@@ -53,7 +53,7 @@ func (v *SimpleValidator) ValidateConfig(config *Config) *ValidationResult {
 	}
 
 	// Add warnings for best practices
-	if config.Settings != nil && config.Settings.DefaultManager != nil && *config.Settings.DefaultManager == "npm" {
+	if config.DefaultManager != nil && *config.DefaultManager == "npm" {
 		result.Warnings = append(result.Warnings,
 			"Using npm as default manager may be slower than homebrew for most packages")
 	}
