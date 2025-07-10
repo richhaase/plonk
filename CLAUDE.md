@@ -75,23 +75,25 @@ packages:
 - [x] Ensure `plonk config show` only displays settings (not packages)
 - [x] Temporarily disable pkg add/remove commands with clear error messages
 
-### Phase 3: Command Updates
-- [ ] Re-enable `pkg add` command with lock file integration
-- [ ] Re-enable `pkg remove` command with lock file integration
-- [ ] Update `pkg list` to read from lock file (use existing adapter)
-- [ ] Update `apply` command to use lock file for reconciliation
-- [ ] Update `status` command to read from lock file
-- [ ] Add lock file path to `doctor` command checks
-- [ ] Update command tests to use lock file
-- [ ] Ensure proper error handling for lock file operations
+### Phase 3: Command Updates (COMPLETED ✅)
+- [x] Update `pkg list` to read from lock file (use existing adapter)
+- [x] Re-enable `pkg add` command with lock file integration
+- [x] Re-enable `pkg remove` command with lock file integration
+- [x] Update `status` command to read from lock file
+- [x] Add lock file path to `doctor` command checks
+- [x] Ensure proper error handling for lock file operations
+- [x] Add cargo package manager support across all commands
+- [ ] Update command tests to use lock file (deferred to Phase 5)
+- [ ] Update `apply` command to use lock file for reconciliation (moved to Phase 4)
 
-### Phase 4: State Provider Updates
-- [ ] Update reconciler initialization to use `LockFileAdapter` instead of `ConfigAdapter`
-- [ ] Update `MultiManagerPackageProvider` to use lock file adapter
-- [ ] Test full reconciliation flow with lock file
-- [ ] Update state provider tests
-- [ ] Verify end-to-end package reconciliation workflow
-- [ ] Update any remaining references to config-based package management
+### Phase 4: Apply Command and Reconciliation Updates
+- [ ] Update `apply` command to use lock file for package reconciliation
+- [ ] Update reconciler initialization in apply command to use `LockFileAdapter`
+- [ ] Test full apply workflow with lock file-based package management
+- [ ] Verify package reconciliation flow (install missing, remove untracked)
+- [ ] Update apply command tests to use lock file
+- [ ] Add error handling for lock file operations during apply
+- [ ] Test apply command with mixed package states (managed/missing/untracked)
 
 ### Phase 5: Testing and Documentation
 - [ ] Update all package-related tests
@@ -297,6 +299,98 @@ Phase 3 focuses on re-enabling package commands to work with the lock file inste
 - Atomic operations to prevent corrupted state
 - Clear error messages for user debugging
 
+## Phase 4 Detailed Plan
+
+### Overview
+Phase 4 focuses on updating the `apply` command to use the lock file for package reconciliation. This is the final piece needed for complete lock file integration. The apply command performs bulk operations (install missing packages, optionally remove untracked packages) and needs to work seamlessly with the lock file.
+
+### Current State After Phase 3
+- All individual package commands (`pkg add`, `pkg remove`, `pkg list`) work with lock file
+- Lock file infrastructure is robust and well-tested
+- Status and doctor commands provide visibility into lock file state
+- Configuration is completely separated from package management
+
+### Step 1: Update Apply Command Package Provider
+**File**: `internal/commands/apply.go`
+**Goal**: Replace config-based package provider with lock file-based provider
+
+**Current Implementation Analysis**:
+The apply command likely uses a similar pattern to status command:
+```go
+packageProvider, err := createPackageProvider(ctx, cfg)
+```
+
+**Required Changes**:
+1. Update `createPackageProvider` call to use `configDir` instead of `cfg`
+2. Ensure the package provider uses `LockFileAdapter` 
+3. Update reconciler to use lock file for package state
+
+**Key Considerations**:
+- Apply command may have its own `createPackageProvider` function or reuse one from another command
+- Need to ensure cargo manager support is included
+- Maintain existing apply command behavior and flags
+
+### Step 2: Test Apply Command Workflow
+**Goal**: Verify that apply command works correctly with lock file-based package management
+
+**Test Scenarios**:
+1. **Missing Packages**: Packages in lock file but not installed on system
+   - Apply should install these packages
+   - Apply should update lock file timestamps if needed
+2. **Untracked Packages**: Packages installed on system but not in lock file
+   - Apply should report these (and optionally add them with `--add-untracked`)
+3. **Managed Packages**: Packages both in lock file and installed
+   - Apply should leave these alone
+4. **Mixed State**: Combination of managed, missing, and untracked packages
+   - Apply should handle all scenarios correctly
+
+### Step 3: Error Handling and Edge Cases
+**Goal**: Ensure robust error handling during apply operations
+
+**Scenarios to Handle**:
+1. **Lock File Corruption**: Apply should detect and report lock file issues
+2. **Installation Failures**: If package installation fails, don't update lock file
+3. **Partial Failures**: Some packages install successfully, others fail
+4. **Permission Issues**: Handle lock file write permission errors
+5. **Manager Unavailability**: Gracefully handle when package managers aren't available
+
+### Step 4: Update Apply Command Tests
+**Files**: `internal/commands/apply_test.go` (if exists)
+**Goal**: Update tests to work with lock file instead of config
+
+**Required Changes**:
+1. Replace config fixtures with lock file fixtures
+2. Test apply command with various lock file states
+3. Test error scenarios (corrupted lock file, etc.)
+4. Verify apply command respects lock file state correctly
+
+### Integration Points
+The apply command will integrate with:
+- **Lock File Service**: For reading/writing package state
+- **Package Managers**: For installing/removing packages (unchanged)
+- **State Reconciler**: For determining what actions to take (unchanged)
+- **Command Output**: For reporting results to user (unchanged)
+
+### Success Criteria for Phase 4
+- `plonk apply` installs packages from lock file (not config)
+- Apply command handles missing, managed, and untracked packages correctly
+- Lock file is updated appropriately during apply operations
+- Error handling is robust for lock file operations
+- All apply command tests pass with lock file integration
+- Apply command maintains existing CLI interface and behavior
+
+### Phase 4 Risks and Mitigation
+**Risks**:
+- Apply command is more complex than individual package commands
+- Bulk operations have higher chance of partial failures
+- Lock file consistency during multi-package operations
+
+**Mitigation**:
+- Use existing reconciler infrastructure (proven in status command)
+- Implement atomic operations where possible
+- Provide clear progress reporting and error messages
+- Test thoroughly with various package states
+
 ## Open Questions
 
 1. Should we track additional metadata (e.g., who installed, dependencies)?
@@ -305,14 +399,14 @@ Phase 3 focuses on re-enabling package commands to work with the lock file inste
 
 ## Progress Tracking
 
-- [x] Lock file interfaces defined
-- [x] Lock file service implemented  
-- [x] Lock file adapter created
-- [x] Unit tests for lock service
+- [x] Lock file interfaces defined (Phase 1)
+- [x] Lock file service implemented (Phase 1)
+- [x] Lock file adapter created (Phase 1)
+- [x] Unit tests for lock service (Phase 1)
 - [x] Config types updated (Phase 2 complete)
-- [ ] Commands updated (Phase 3)
-- [ ] State provider updated (Phase 4)
-- [ ] Tests updated (Phase 5)
+- [x] Core commands updated (Phase 3 complete)
+- [ ] Apply command updated (Phase 4)
+- [ ] Integration tests updated (Phase 5)
 - [ ] Documentation updated (Phase 5)
 - [ ] PR ready for review
 
@@ -331,3 +425,13 @@ Phase 3 focuses on re-enabling package commands to work with the lock file inste
 4. **Default Configuration**: Adding a `GetDefaultConfig()` method helps with testing and initialization
 5. **Consistent Error Messages**: Test assertions need to match the actual validation error messages (e.g., "min" instead of "timeout must be positive")
 6. **Commit Completeness**: Commits should be "complete enough to pass tests and linter" - ensuring each commit maintains a working state
+
+## Lessons Learned from Phase 3
+
+1. **Interface Compatibility**: The `LockFileAdapter` implements `PackageConfigLoader` directly, so it can be used without wrapper adapters like `NewStatePackageConfigAdapter`
+2. **Execution Order Matters**: Starting with read-only commands (`pkg list`) before write commands (`pkg add/remove`) reduces risk and validates the infrastructure
+3. **Consistent Manager Support**: Adding cargo support consistently across all commands maintains feature parity and user expectations
+4. **Atomic Operations**: Install first, then update lock file - this ensures system state remains consistent even if lock file operations fail
+5. **Error Recovery**: Lock file operations should be designed to gracefully handle missing files (creating them as needed) vs. corrupted files (clear error messages)
+6. **Command Output Structure**: Existing output structures can be extended (like adding `LockPath` to `StatusOutput`) without breaking compatibility
+7. **Diagnostic Integration**: Adding lock file checks to `doctor` command provides essential debugging capabilities for users
