@@ -57,38 +57,60 @@ func runInit(cmd *cobra.Command, args []string) error {
 			"failed to create config directory").WithItem(configDir)
 	}
 
-	// Create a configuration file with helpful comments and some common settings
-	configContent := `# Plonk Configuration File
+	// Get actual default values
+	defaults := config.GetDefaults()
+
+	// Create a configuration file with all default values shown
+	configContent := fmt.Sprintf(`# Plonk Configuration File
 # This file contains your custom settings. All settings are optional.
 # Remove or comment out any settings you want to use the defaults for.
+# 
+# The values shown below are the actual defaults that plonk uses.
+# You can modify any of these values to customize plonk's behavior.
 
 settings:
-  # Default package manager (homebrew, npm, cargo)
-  default_manager: homebrew
+  # Default package manager to use when installing packages
+  # Options: homebrew, npm, cargo
+  default_manager: %s
   
   # Timeout settings (in seconds)
-  # operation_timeout: 300   # 5 minutes - overall operation timeout
-  # package_timeout: 180     # 3 minutes - individual package operations  
-  # dotfile_timeout: 60      # 1 minute - dotfile operations
+  # Set to 0 for unlimited timeout (not recommended)
   
-  # Directories to expand when listing dotfiles
-  # expand_directories:
-  #   - .config
-  #   - .ssh
-  #   - .aws
-  #   - .kube
-  #   - .docker
-  #   - .gnupg
-  #   - .local
+  # Overall operation timeout - maximum time for any single command
+  operation_timeout: %d   # %d seconds = %d minutes
+  
+  # Individual package operation timeout - time limit for package install/uninstall
+  package_timeout: %d     # %d seconds = %d minutes
+  
+  # Dotfile operation timeout - time limit for file copy/link operations
+  dotfile_timeout: %d      # %d seconds = %d minute
+  
+  # Directories to expand when listing dotfiles with 'plonk dot list'
+  # These directories will show individual files instead of just the directory name
+  expand_directories:`,
+		defaults.DefaultManager,
+		defaults.OperationTimeout, defaults.OperationTimeout, defaults.OperationTimeout/60,
+		defaults.PackageTimeout, defaults.PackageTimeout, defaults.PackageTimeout/60,
+		defaults.DotfileTimeout, defaults.DotfileTimeout, defaults.DotfileTimeout/60)
+
+	// Add expand directories
+	for _, dir := range defaults.ExpandDirectories {
+		configContent += fmt.Sprintf("\n    - %s", dir)
+	}
+
+	configContent += `
 
 # Files and patterns to ignore when discovering dotfiles
-# ignore_patterns:
-#   - .DS_Store
-#   - .git
-#   - "*.backup"
-#   - "*.tmp"
-#   - "*.swp"
-`
+# These patterns prevent certain files from being managed by plonk
+# Supports glob patterns like *.tmp, *.backup, etc.
+ignore_patterns:`
+
+	// Add ignore patterns
+	for _, pattern := range defaults.IgnorePatterns {
+		configContent += fmt.Sprintf("\n  - %q", pattern)
+	}
+
+	configContent += "\n"
 
 	// Write the configuration file
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
