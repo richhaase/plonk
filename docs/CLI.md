@@ -389,16 +389,10 @@ Shows the complete configuration that plonk is actually using, including all def
 plonk config show [--output format]
 ```
 
-**Behavior:**
-- **No config file**: Shows all default values with status "missing"
-- **Partial config file**: Shows user settings merged with defaults
-- **Complete config file**: Shows the resolved effective configuration
-- **Invalid config file**: Shows validation errors with raw content
-
 **Examples:**
 ```bash
 plonk config show                 # Show effective config as YAML
-plonk config show --output json   # Show as JSON with both raw and resolved config
+plonk config show --output json   # Show as JSON
 plonk config show --output yaml   # Show as YAML (default)
 ```
 
