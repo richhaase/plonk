@@ -38,11 +38,25 @@ func ValidateYAML(content []byte) error
 
 TYPES
 
+type CargoPackage struct {
+	Name    string `yaml:"name,omitempty" validate:"omitempty,package_name"`
+	Package string `yaml:"package,omitempty" validate:"omitempty,package_name"` // If different from name.
+	Config  string `yaml:"config,omitempty" validate:"omitempty,file_path"`
+}
+    CargoPackage represents a cargo package configuration.
+
+func (c CargoPackage) MarshalYAML() (interface{}, error)
+    MarshalYAML implements custom marshaling for CargoPackage.
+
+func (c *CargoPackage) UnmarshalYAML(node *yaml.Node) error
+    UnmarshalYAML implements custom unmarshaling for CargoPackage.
+
 type Config struct {
 	Settings       Settings          `yaml:"settings" validate:"required"`
 	IgnorePatterns []string          `yaml:"ignore_patterns,omitempty"`
 	Homebrew       []HomebrewPackage `yaml:"homebrew,omitempty" validate:"dive"`
 	NPM            []NPMPackage      `yaml:"npm,omitempty" validate:"dive"`
+	Cargo          []CargoPackage    `yaml:"cargo,omitempty" validate:"dive"`
 }
     Config represents the configuration structure.
 
@@ -436,7 +450,7 @@ type PackageConfigReader interface {
     PackageConfigReader provides methods for reading package configuration
 
 type Settings struct {
-	DefaultManager    string   `yaml:"default_manager" validate:"required,oneof=homebrew npm"`
+	DefaultManager    string   `yaml:"default_manager" validate:"required,oneof=homebrew npm cargo"`
 	OperationTimeout  int      `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"` // Timeout in seconds for operations (0 for default, 1-3600 seconds)
 	PackageTimeout    int      `yaml:"package_timeout,omitempty" validate:"omitempty,min=0,max=1800"`   // Timeout in seconds for package operations (0 for default, 1-1800 seconds)
 	DotfileTimeout    int      `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`    // Timeout in seconds for dotfile operations (0 for default, 1-600 seconds)

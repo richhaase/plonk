@@ -36,26 +36,22 @@ type AddAllOutput struct {
 	Total  int    `json:"total" yaml:"total"`
 	Action string `json:"action" yaml:"action"`
 }
-    AddAllOutput represents the output structure for pkg add-all command
 
 func (a AddAllOutput) StructuredData() any
-    StructuredData returns the structured data for serialization
 
 func (a AddAllOutput) TableOutput() string
-    TableOutput generates human-friendly table output for add-all command
 
 type AddOutput struct {
 	Package string `json:"package" yaml:"package"`
 	Manager string `json:"manager" yaml:"manager"`
 	Action  string `json:"action" yaml:"action"`
 }
-    AddOutput represents the output structure for pkg add command
+    Legacy add/remove output types (keeping for compatibility)
 
 func (a AddOutput) StructuredData() any
-    StructuredData returns the structured data for serialization
 
 func (a AddOutput) TableOutput() string
-    TableOutput generates human-friendly table output for add command
+    Legacy table output methods (minimal output, handled in command logic)
 
 type ApplyOutput struct {
 	DryRun            bool                 `json:"dry_run" yaml:"dry_run"`
@@ -72,6 +68,20 @@ func (a ApplyOutput) StructuredData() any
 
 func (a ApplyOutput) TableOutput() string
     TableOutput generates human-friendly table output for apply results
+
+type BatchAddOutput struct {
+	TotalPackages     int                 `json:"total_packages" yaml:"total_packages"`
+	AddedToConfig     int                 `json:"added_to_config" yaml:"added_to_config"`
+	Installed         int                 `json:"installed" yaml:"installed"`
+	AlreadyConfigured int                 `json:"already_configured" yaml:"already_configured"`
+	AlreadyInstalled  int                 `json:"already_installed" yaml:"already_installed"`
+	Errors            int                 `json:"errors" yaml:"errors"`
+	Packages          []EnhancedAddOutput `json:"packages" yaml:"packages"`
+}
+
+func (b BatchAddOutput) StructuredData() any
+
+func (b BatchAddOutput) TableOutput() string
 
 type CombinedApplyOutput struct {
 	DryRun   bool               `json:"dry_run" yaml:"dry_run"`
@@ -203,6 +213,54 @@ func (d DotfileListOutput) StructuredData() any
 func (d DotfileListOutput) TableOutput() string
     TableOutput generates human-friendly table output for dotfiles
 
+type EnhancedAddOutput struct {
+	Package          string   `json:"package" yaml:"package"`
+	Manager          string   `json:"manager" yaml:"manager"`
+	ConfigAdded      bool     `json:"config_added" yaml:"config_added"`
+	AlreadyInConfig  bool     `json:"already_in_config" yaml:"already_in_config"`
+	Installed        bool     `json:"installed" yaml:"installed"`
+	AlreadyInstalled bool     `json:"already_installed" yaml:"already_installed"`
+	Error            string   `json:"error,omitempty" yaml:"error,omitempty"`
+	Actions          []string `json:"actions" yaml:"actions"`
+}
+    Enhanced Add/Remove Output structures
+
+func (a EnhancedAddOutput) StructuredData() any
+
+func (a EnhancedAddOutput) TableOutput() string
+    Enhanced table output methods
+
+type EnhancedManagerOutput struct {
+	Name           string                  `json:"name" yaml:"name"`
+	ManagedCount   int                     `json:"managed_count" yaml:"managed_count"`
+	MissingCount   int                     `json:"missing_count" yaml:"missing_count"`
+	UntrackedCount int                     `json:"untracked_count" yaml:"untracked_count"`
+	Packages       []EnhancedPackageOutput `json:"packages" yaml:"packages"`
+}
+    EnhancedManagerOutput represents a package manager's enhanced output
+
+type EnhancedPackageOutput struct {
+	Name    string `json:"name" yaml:"name"`
+	State   string `json:"state" yaml:"state"`
+	Manager string `json:"manager" yaml:"manager"`
+}
+    EnhancedPackageOutput represents a package in the enhanced output
+
+type EnhancedRemoveOutput struct {
+	Package       string   `json:"package" yaml:"package"`
+	Manager       string   `json:"manager" yaml:"manager"`
+	ConfigRemoved bool     `json:"config_removed" yaml:"config_removed"`
+	Uninstalled   bool     `json:"uninstalled" yaml:"uninstalled"`
+	WasInConfig   bool     `json:"was_in_config" yaml:"was_in_config"`
+	WasInstalled  bool     `json:"was_installed" yaml:"was_installed"`
+	Error         string   `json:"error,omitempty" yaml:"error,omitempty"`
+	Actions       []string `json:"actions" yaml:"actions"`
+}
+
+func (r EnhancedRemoveOutput) StructuredData() any
+
+func (r EnhancedRemoveOutput) TableOutput() string
+
 type EnvOutput struct {
 	System      SystemInfo      `json:"system" yaml:"system"`
 	Config      ConfigInfo      `json:"config" yaml:"config"`
@@ -275,7 +333,7 @@ type ManagerOutput struct {
 	Count    int             `json:"count" yaml:"count"`
 	Packages []PackageOutput `json:"packages" yaml:"packages"`
 }
-    ManagerOutput represents a package manager's output
+    Legacy types for backward compatibility
 
 type ManagerStatus struct {
 	Name    string `json:"name" yaml:"name"`
@@ -309,8 +367,13 @@ type PackageApplyResult struct {
     PackageApplyResult represents the result for a specific package
 
 type PackageListOutput struct {
-	Filter   string          `json:"filter" yaml:"filter"`
-	Managers []ManagerOutput `json:"managers" yaml:"managers"`
+	ManagedCount   int                     `json:"managed_count" yaml:"managed_count"`
+	MissingCount   int                     `json:"missing_count" yaml:"missing_count"`
+	UntrackedCount int                     `json:"untracked_count" yaml:"untracked_count"`
+	TotalCount     int                     `json:"total_count" yaml:"total_count"`
+	Managers       []EnhancedManagerOutput `json:"managers" yaml:"managers"`
+	Verbose        bool                    `json:"verbose" yaml:"verbose"`
+	Items          []EnhancedPackageOutput `json:"items" yaml:"items"`
 }
     PackageListOutput represents the output structure for package list commands
 
@@ -324,7 +387,6 @@ type PackageOutput struct {
 	Name  string `json:"name" yaml:"name"`
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
 }
-    PackageOutput represents a package in the output
 
 type PackageStatusOutput struct {
 	Summary StatusSummary   `json:"summary" yaml:"summary"`
@@ -353,13 +415,10 @@ type RemoveOutput struct {
 	Action  string `json:"action" yaml:"action"`
 	Error   string `json:"error,omitempty" yaml:"error,omitempty"`
 }
-    RemoveOutput represents the output structure for pkg remove command
 
 func (r RemoveOutput) StructuredData() any
-    StructuredData returns the structured data for serialization
 
 func (r RemoveOutput) TableOutput() string
-    TableOutput generates human-friendly table output for remove command
 
 type SearchOutput struct {
 	Package          string              `json:"package" yaml:"package"`

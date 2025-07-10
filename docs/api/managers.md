@@ -4,6 +4,33 @@ Package managers is a generated GoMock package.
 
 TYPES
 
+type CargoManager struct{}
+    CargoManager manages cargo packages.
+
+func NewCargoManager() *CargoManager
+    NewCargoManager creates a new cargo manager.
+
+func (c *CargoManager) Info(ctx context.Context, name string) (*PackageInfo, error)
+    Info retrieves detailed information about a package.
+
+func (c *CargoManager) Install(ctx context.Context, name string) error
+    Install installs a cargo package.
+
+func (c *CargoManager) IsAvailable(ctx context.Context) (bool, error)
+    IsAvailable checks if cargo is installed and accessible.
+
+func (c *CargoManager) IsInstalled(ctx context.Context, name string) (bool, error)
+    IsInstalled checks if a specific package is installed.
+
+func (c *CargoManager) ListInstalled(ctx context.Context) ([]string, error)
+    ListInstalled lists all installed cargo packages.
+
+func (c *CargoManager) Search(ctx context.Context, query string) ([]string, error)
+    Search searches for packages in the cargo registry.
+
+func (c *CargoManager) Uninstall(ctx context.Context, name string) error
+    Uninstall removes a cargo package.
+
 type HomebrewManager struct{}
     HomebrewManager manages Homebrew packages.
 
