@@ -30,7 +30,8 @@ Use the --uninstall flag to also uninstall the package from your system.
 
 Examples:
   plonk pkg remove htop                 # Remove from config only
-  plonk pkg remove htop --uninstall     # Remove from config and uninstall`,
+  plonk pkg remove htop --uninstall     # Remove from config and uninstall
+  plonk pkg remove htop --dry-run       # Preview what would be removed`,
 	Args: cobra.ExactArgs(1),
 	RunE: runPkgRemove,
 }
@@ -38,10 +39,14 @@ Examples:
 func init() {
 	pkgCmd.AddCommand(pkgRemoveCmd)
 	pkgRemoveCmd.Flags().BoolVar(&uninstall, "uninstall", false, "Also uninstall the package from the system")
+	pkgRemoveCmd.Flags().BoolP("dry-run", "n", false, "Show what would be removed without making changes")
 }
 
 func runPkgRemove(cmd *cobra.Command, args []string) error {
 	packageName := args[0]
+
+	// Get dry-run flag
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
 
 	// Parse output format
 	format, err := ParseOutputFormat(outputFormat)
@@ -64,8 +69,8 @@ func runPkgRemove(cmd *cobra.Command, args []string) error {
 		Actions: []string{},
 	}
 
-	// Find and remove package from configuration
-	managerName, found := findAndRemovePackageFromConfig(cfg, packageName)
+	// Check if package exists in configuration (without removing yet)
+	managerName, found := findPackageInConfig(cfg, packageName)
 	result.Manager = managerName
 
 	if !found {
@@ -76,15 +81,23 @@ func runPkgRemove(cmd *cobra.Command, args []string) error {
 
 	result.WasInConfig = true
 
-	// Save updated configuration
-	err = saveConfig(cfg, configDir)
-	if err != nil {
-		result.Error = fmt.Sprintf("failed to save configuration: %v", err)
-		return RenderOutput(result, format)
-	}
+	// For dry-run, simulate removal without actually doing it
+	if dryRun {
+		result.Actions = append(result.Actions, fmt.Sprintf("Would remove %s from %s configuration", packageName, managerName))
+	} else {
+		// Actually remove package from configuration
+		findAndRemovePackageFromConfig(cfg, packageName)
 
-	result.ConfigRemoved = true
-	result.Actions = append(result.Actions, fmt.Sprintf("Removed %s from %s configuration", packageName, managerName))
+		// Save updated configuration
+		err = saveConfig(cfg, configDir)
+		if err != nil {
+			result.Error = fmt.Sprintf("failed to save configuration: %v", err)
+			return RenderOutput(result, format)
+		}
+
+		result.ConfigRemoved = true
+		result.Actions = append(result.Actions, fmt.Sprintf("Removed %s from %s configuration", packageName, managerName))
+	}
 
 	// Optionally uninstall the package
 	if uninstall {
@@ -116,14 +129,18 @@ func runPkgRemove(cmd *cobra.Command, args []string) error {
 		if !installed {
 			result.Actions = append(result.Actions, fmt.Sprintf("%s was not installed", packageName))
 		} else {
-			err = mgr.Uninstall(ctx, packageName)
-			if err != nil {
-				result.Error = fmt.Sprintf("failed to uninstall package: %v", err)
-				return RenderOutput(result, format)
-			}
+			if dryRun {
+				result.Actions = append(result.Actions, fmt.Sprintf("Would uninstall %s from system", packageName))
+			} else {
+				err = mgr.Uninstall(ctx, packageName)
+				if err != nil {
+					result.Error = fmt.Sprintf("failed to uninstall package: %v", err)
+					return RenderOutput(result, format)
+				}
 
-			result.Uninstalled = true
-			result.Actions = append(result.Actions, fmt.Sprintf("Successfully uninstalled %s from system", packageName))
+				result.Uninstalled = true
+				result.Actions = append(result.Actions, fmt.Sprintf("Successfully uninstalled %s from system", packageName))
+			}
 		}
 	}
 
@@ -145,6 +162,26 @@ func findAndRemovePackageFromConfig(cfg *config.Config, packageName string) (str
 	for i, pkg := range cfg.NPM {
 		if pkg.Name == packageName || pkg.Package == packageName {
 			cfg.NPM = append(cfg.NPM[:i], cfg.NPM[i+1:]...)
+			return "npm", true
+		}
+	}
+
+	return "", false
+}
+
+// findPackageInConfig finds a package in the configuration without removing it
+// Returns the manager name and whether the package was found
+func findPackageInConfig(cfg *config.Config, packageName string) (string, bool) {
+	// Check homebrew packages
+	for _, pkg := range cfg.Homebrew {
+		if pkg.Name == packageName {
+			return "homebrew", true
+		}
+	}
+
+	// Check npm packages
+	for _, pkg := range cfg.NPM {
+		if pkg.Name == packageName || pkg.Package == packageName {
 			return "npm", true
 		}
 	}
