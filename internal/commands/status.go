@@ -57,10 +57,11 @@ func runStatus(cmd *cobra.Command, args []string) error {
 
 	configDir := config.GetDefaultConfigDirectory()
 
-	// Load configuration
-	cfg, err := config.LoadConfig(configDir)
-	if err != nil {
-		return errors.Wrap(err, errors.ErrConfigNotFound, errors.DomainConfig, "load", "failed to load configuration")
+	// Load configuration (may fail if config is invalid)
+	cfg, configLoadErr := config.LoadConfig(configDir)
+	if configLoadErr != nil {
+		// For invalid config, use empty config and continue
+		cfg = &config.Config{}
 	}
 
 	// Create unified state reconciler
@@ -84,11 +85,30 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainState, "reconcile", "failed to reconcile state")
 	}
 
+	// Check file existence and validity
+	configPath := filepath.Join(configDir, "plonk.yaml")
+	lockPath := filepath.Join(configDir, "plonk.lock")
+
+	configExists := false
+	configValid := false
+	if _, err := os.Stat(configPath); err == nil {
+		configExists = true
+		// Config is valid only if it loaded without error
+		configValid = (configLoadErr == nil)
+	}
+
+	lockExists := false
+	if _, err := os.Stat(lockPath); err == nil {
+		lockExists = true
+	}
+
 	// Prepare output
 	outputData := StatusOutput{
-		ConfigPath:   filepath.Join(configDir, "plonk.yaml"),
-		LockPath:     filepath.Join(configDir, "plonk.lock"),
-		ConfigValid:  true,
+		ConfigPath:   configPath,
+		LockPath:     lockPath,
+		ConfigExists: configExists,
+		ConfigValid:  configValid,
+		LockExists:   lockExists,
 		StateSummary: summary,
 	}
 
@@ -152,7 +172,9 @@ func createDotfileProvider(homeDir string, configDir string, cfg *config.Config)
 type StatusOutput struct {
 	ConfigPath   string        `json:"config_path" yaml:"config_path"`
 	LockPath     string        `json:"lock_path" yaml:"lock_path"`
+	ConfigExists bool          `json:"config_exists" yaml:"config_exists"`
 	ConfigValid  bool          `json:"config_valid" yaml:"config_valid"`
+	LockExists   bool          `json:"lock_exists" yaml:"lock_exists"`
 	StateSummary state.Summary `json:"state_summary" yaml:"state_summary"`
 }
 
@@ -162,12 +184,22 @@ func (s StatusOutput) TableOutput() string {
 	output += "============\n\n"
 
 	// Configuration status
-	configStatus := "❌"
-	if s.ConfigValid {
-		configStatus = "✅"
+	configStatus := "ℹ️ using defaults"
+	if s.ConfigExists {
+		if s.ConfigValid {
+			configStatus = "✅ valid"
+		} else {
+			configStatus = "❌ invalid"
+		}
 	}
-	output += fmt.Sprintf("📁 Config: %s (%s valid)\n", s.ConfigPath, configStatus)
-	output += fmt.Sprintf("🔒 Lock:   %s\n\n", s.LockPath)
+
+	lockStatus := "ℹ️ using defaults"
+	if s.LockExists {
+		lockStatus = "✅ exists"
+	}
+
+	output += fmt.Sprintf("📁 Config: %s (%s)\n", s.ConfigPath, configStatus)
+	output += fmt.Sprintf("🔒 Lock:   %s (%s)\n\n", s.LockPath, lockStatus)
 
 	// Overall state summary
 	summary := s.StateSummary

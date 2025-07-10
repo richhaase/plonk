@@ -35,7 +35,16 @@ Display overall system state across all domains.
 plonk status [--output format]
 ```
 
-**Output states:**
+**Configuration File Status:**
+- `ℹ️ using defaults` - No configuration file (zero-config mode)
+- `✅ valid` - Configuration file exists and is valid
+- `❌ invalid` - Configuration file exists but has syntax/validation errors
+
+**Lock File Status:**
+- `ℹ️ using defaults` - No lock file (no packages managed yet)
+- `✅ exists` - Lock file exists with managed packages
+
+**Item States:**
 - `Managed` - In configuration AND present on system
 - `Missing` - In configuration BUT NOT present on system
 - `Untracked` - Present on system BUT NOT in configuration
@@ -43,22 +52,31 @@ plonk status [--output format]
 **JSON output structure:**
 ```json
 {
-  "packages": {
-    "homebrew": [
-      {"name": "git", "state": "managed"},
-      {"name": "curl", "state": "missing"}
-    ],
-    "npm": [
-      {"name": "typescript", "state": "managed"}
-    ],
-    "cargo": [
-      {"name": "ripgrep", "state": "managed"}
+  "config_path": "/Users/user/.config/plonk/plonk.yaml",
+  "lock_path": "/Users/user/.config/plonk/plonk.lock",
+  "config_exists": false,
+  "config_valid": false,
+  "lock_exists": false,
+  "state_summary": {
+    "total_managed": 5,
+    "total_missing": 1,
+    "total_untracked": 23,
+    "results": [
+      {
+        "domain": "package",
+        "manager": "homebrew",
+        "managed": [{"name": "git", "state": "managed"}],
+        "missing": [{"name": "curl", "state": "missing"}],
+        "untracked": [{"name": "vim", "state": "untracked"}]
+      },
+      {
+        "domain": "dotfile",
+        "managed": [{"name": "zshrc", "state": "managed"}],
+        "missing": [],
+        "untracked": [{"name": "vimrc", "state": "untracked"}]
+      }
     ]
-  },
-  "dotfiles": [
-    {"name": "zshrc", "state": "managed", "source": "~/.config/plonk/zshrc", "target": "~/.zshrc"},
-    {"name": "vimrc", "state": "missing", "source": "~/.config/plonk/vimrc", "target": "~/.vimrc"}
-  ]
+  }
 }
 ```
 
