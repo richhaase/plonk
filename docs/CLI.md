@@ -14,6 +14,7 @@ Complete command-line interface reference for plonk. All commands support struct
 
 | Command | Purpose | AI Usage |
 |---------|---------|----------|
+| `init` | Create config template | Initial setup |
 | `status` | Show system state | State reconciliation analysis |
 | `apply` | Apply configuration | Automated deployment |
 | `env` | Environment info | Debugging context |
@@ -25,6 +26,38 @@ Complete command-line interface reference for plonk. All commands support struct
 | `config` | Configuration management | Config operations |
 
 ## Core Commands
+
+### `plonk init`
+
+Create a configuration file template with all available options and helpful comments.
+
+**Usage:**
+```bash
+plonk init [--force]
+```
+
+**Options:**
+- `--force` - Overwrite existing configuration file
+
+**Behavior:**
+- Creates `~/.config/plonk/plonk.yaml` with all default values
+- Includes helpful comments explaining each option
+- Shows current default values that plonk uses
+- Configuration is optional - plonk works without any config file
+
+**Generated file includes:**
+- All timeout settings with explanations
+- Default package manager selection
+- Directory expansion settings for dotfile listing
+- Ignore patterns for dotfile discovery
+- Extensive comments explaining each option
+
+**Example:**
+```bash
+plonk init           # Create config template
+plonk config show    # View effective configuration
+plonk config edit    # Edit configuration
+```
 
 ### `plonk status`
 

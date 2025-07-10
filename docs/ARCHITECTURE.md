@@ -235,7 +235,7 @@ errors.WrapWithItem(err, code, domain, operation, item, message)
 **Status:** Shows all items across all domains with their states
 **Apply:** Unified command that reconciles missing items (installs packages and copies dotfiles)
 **Env:** Shows environment information for debugging and troubleshooting
-**Config:** Manage configuration files (show, validate, edit)
+**Config:** Manage configuration files (show effective config with defaults, validate, edit)
 **List:** Shows items filtered by state or domain (available for both packages and dotfiles)
 **Doctor:** Performs comprehensive health checks on system requirements, environment, and package managers
 **Search:** Intelligent package search across available package managers with context-aware behavior
