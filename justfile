@@ -256,13 +256,15 @@ release-version-suggest:
 
 # Generate API documentation
 generate-docs:
-    @echo "Generating API documentation..."
-    @mkdir -p docs/api
-    @go doc -all ./internal/config > docs/api/config.md
-    @go doc -all ./internal/managers > docs/api/managers.md
-    @go doc -all ./internal/state > docs/api/state.md
-    @go doc -all ./internal/errors > docs/api/errors.md
-    @go doc -all ./internal/dotfiles > docs/api/dotfiles.md
-    @go doc -all ./internal/commands > docs/api/commands.md
-    @echo "✅ API documentation generated in docs/api/"
+    @echo "Generating API documentation with gomarkdoc..."
+    @mkdir -p docs
+    @echo "Installing gomarkdoc..."
+    @go install github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest
+    @echo "Generating consolidated markdown documentation..."
+    @gomarkdoc --format github \
+               --header "# Plonk API Documentation" \
+               --footer "Generated on $(date)" \
+               ./internal/config ./internal/managers ./internal/state ./internal/errors ./internal/dotfiles ./internal/commands ./internal/lock | \
+    grep -v -E "Mock|generated GoMock|mocks base method" > docs/API.md
+    @echo "✅ API documentation generated in docs/API.md"
 
