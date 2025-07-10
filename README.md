@@ -8,10 +8,10 @@ A unified package and dotfile manager for developers that maintains consistency 
 
 ## What is Plonk?
 
-Plonk manages your development environment by treating packages and dotfiles as unified configuration. It uses state reconciliation to compare your desired configuration with your actual system state and applies the necessary changes.
+Plonk manages your development environment by tracking packages and dotfiles automatically. It uses state reconciliation to compare your desired state with your actual system state and applies the necessary changes.
 
 **Key features:**
-- **Unified management**: Packages (Homebrew, NPM) and dotfiles in one configuration
+- **Unified management**: Packages (Homebrew, NPM, Cargo) and dotfiles tracked automatically
 - **State reconciliation**: Automatically detects and applies missing configurations
 - **Auto-discovery**: Finds dotfiles automatically with configurable ignore patterns
 - **Directory expansion**: Smart expansion of configured directories in dot list output
@@ -59,7 +59,10 @@ plonk status
 
 ## Configuration
 
-Plonk uses a single configuration file at `~/.config/plonk/plonk.yaml` (or `$PLONK_DIR/plonk.yaml`):
+Plonk uses two files to manage your environment:
+
+### Configuration File (`~/.config/plonk/plonk.yaml`)
+Contains your settings and preferences:
 
 ```yaml
 settings:
@@ -77,16 +80,32 @@ ignore_patterns:
   - .DS_Store
   - .git
   - "*.backup"
-
-homebrew:
-  - git
-  - curl
-  - neovim
-
-npm:
-  - typescript
-  - prettier
 ```
+
+### Lock File (`~/.config/plonk/plonk.lock`)
+Automatically managed file that tracks your packages:
+
+```yaml
+version: 1
+packages:
+  homebrew:
+    - name: git
+      installed_at: "2024-01-15T10:30:00Z"
+      version: "2.43.0"
+    - name: neovim
+      installed_at: "2024-01-15T10:31:00Z"
+      version: "0.9.5"
+  npm:
+    - name: typescript
+      installed_at: "2024-01-15T10:32:00Z"
+      version: "5.3.3"
+  cargo:
+    - name: ripgrep
+      installed_at: "2024-01-15T10:35:00Z"
+      version: "14.1.0"
+```
+
+**Note:** The lock file is automatically created and updated when you add/remove packages. You don't need to edit it manually.
 
 **Dotfiles are auto-discovered** from your config directory:
 - `~/.config/plonk/zshrc` → `~/.zshrc`
@@ -106,11 +125,11 @@ plonk apply           # Apply changes
 plonk pkg list                    # List managed + missing + untracked count
 plonk pkg list --verbose          # Show all packages including untracked
 plonk pkg list --manager homebrew # Filter by package manager
-plonk pkg add htop               # Add package to config and install
+plonk pkg add htop               # Add package to lock file and install
 plonk pkg add htop --dry-run     # Preview what would be added
-plonk pkg remove htop            # Remove from config only
+plonk pkg remove htop            # Remove from lock file only
 plonk pkg remove htop --dry-run  # Preview what would be removed
-plonk pkg remove htop --uninstall # Remove from config and uninstall
+plonk pkg remove htop --uninstall # Remove from lock file and uninstall
 plonk search git                 # Search for packages
 
 # Dotfile management

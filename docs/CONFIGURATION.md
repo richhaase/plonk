@@ -2,13 +2,18 @@
 
 Complete configuration file format and environment variable reference for plonk.
 
-## Configuration File Location
+## File Overview
+
+Plonk uses two files to manage your environment:
+
+- **`plonk.yaml`**: Configuration file (settings and preferences)
+- **`plonk.lock`**: Lock file (automatically managed package state)
+
+## Configuration File (`plonk.yaml`)
 
 **Default location:** `~/.config/plonk/plonk.yaml`
 
 **Environment override:** `$PLONK_DIR/plonk.yaml`
-
-## Configuration Structure
 
 ### Complete Example
 
@@ -33,19 +38,34 @@ ignore_patterns:
   - "*.backup"
   - "*.tmp"
   - "*.swp"
+```
 
-homebrew:
-  - git
-  - curl
-  - neovim
+## Lock File (`plonk.lock`)
 
-npm:
-  - typescript
-  - prettier
+**Location:** `~/.config/plonk/plonk.lock` (or `$PLONK_DIR/plonk.lock`)
 
-cargo:
-  - ripgrep
-  - fd-find
+**Note:** This file is automatically managed by plonk. Do not edit manually.
+
+### Example Lock File
+
+```yaml
+version: 1
+packages:
+  homebrew:
+    - name: git
+      installed_at: "2024-01-15T10:30:00Z"
+      version: "2.43.0"
+    - name: neovim
+      installed_at: "2024-01-15T10:31:00Z" 
+      version: "0.9.5"
+  npm:
+    - name: typescript
+      installed_at: "2024-01-15T10:32:00Z"
+      version: "5.3.3"
+  cargo:
+    - name: ripgrep
+      installed_at: "2024-01-15T10:35:00Z"
+      version: "14.1.0"
 ```
 
 ### Minimal Example
@@ -53,10 +73,6 @@ cargo:
 ```yaml
 settings:
   default_manager: homebrew
-
-homebrew:
-  - git
-  - curl
 ```
 
 ## Settings Section
@@ -172,65 +188,28 @@ ignore_patterns:
   - "!important.backup" # Exception - include this backup file
 ```
 
-## Package Managers
+## Package Management
 
-### Homebrew
+Packages are automatically tracked in the lock file (`plonk.lock`) when you use package commands:
 
-**Key:** `homebrew`  
-**Type:** array of strings  
-**Purpose:** Homebrew packages and casks
+```bash
+# Add packages (updates lock file automatically)
+plonk pkg add git
+plonk pkg add typescript --manager npm  
+plonk pkg add ripgrep --manager cargo
 
-```yaml
-homebrew:
-  - git                 # CLI tools
-  - curl
-  - neovim
-  - docker
-  - font-hack-nerd-font # Casks (auto-detected)
-  - google-chrome
+# Remove packages
+plonk pkg remove git
+plonk pkg remove typescript --uninstall
+
+# List packages
+plonk pkg list
 ```
 
-**Package resolution:**
-- Checks formulae first
-- Falls back to casks if not found
-- Case-sensitive matching
-
-### NPM
-
-**Key:** `npm`  
-**Type:** array of strings  
-**Purpose:** Global NPM packages
-
-```yaml
-npm:
-  - typescript
-  - prettier
-  - eslint
-  - "@types/node"      # Scoped packages
-  - "lodash-cli"       # CLI tools
-```
-
-### Cargo
-
-**Key:** `cargo`  
-**Type:** array of strings  
-**Purpose:** Cargo packages (crates)
-
-```yaml
-cargo:
-  - ripgrep
-  - fd-find
-  - bat
-```
-
-**Package resolution:**
-- Installs packages from crates.io
-- Version pinning not supported
-
-**Package resolution:**
-- Global installation (`npm install -g`)
-- Supports scoped packages (`@scope/package`)
-- Version pinning not supported
+**Supported managers:**
+- **Homebrew**: Formulae and casks
+- **NPM**: Global packages
+- **Cargo**: Rust packages
 
 ## Dotfile Management
 
@@ -354,25 +333,6 @@ ignore_patterns:
   - .git
   - "*.log"
   - "*.cache"
-
-homebrew:
-  - git
-  - gh
-  - docker
-  - kubernetes-cli
-  - terraform
-  - aws-cli
-  - jq
-  - curl
-  - neovim
-  - fzf
-
-npm:
-  - typescript
-  - prettier
-  - eslint
-  - "@aws-cdk/cli"
-  - nodemon
 ```
 
 ### Minimal Setup
@@ -380,10 +340,6 @@ npm:
 ```yaml
 settings:
   default_manager: homebrew
-
-homebrew:
-  - git
-  - curl
 ```
 
 ### NPM-focused Setup
@@ -391,17 +347,6 @@ homebrew:
 ```yaml
 settings:
   default_manager: npm
-
-npm:
-  - typescript
-  - prettier
-  - eslint
-  - nodemon
-  - "@types/node"
-
-homebrew:
-  - git
-  - node
 ```
 
 ## Migration and Upgrades
