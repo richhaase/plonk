@@ -16,16 +16,16 @@ func TestSimpleValidator_ValidateConfig_ValidConfigs(t *testing.T) {
 		{
 			name: "minimal valid config",
 			config: &Config{
-				Settings: Settings{
-					DefaultManager: "homebrew",
+				Settings: &Settings{
+					DefaultManager: StringPtr("homebrew"),
 				},
 			},
 		},
 		{
 			name: "config with ignore patterns",
 			config: &Config{
-				Settings: Settings{
-					DefaultManager: "homebrew",
+				Settings: &Settings{
+					DefaultManager: StringPtr("homebrew"),
 				},
 				IgnorePatterns: []string{".DS_Store", "*.log"},
 			},
@@ -51,17 +51,17 @@ func TestSimpleValidator_ValidateConfig_InvalidConfigs(t *testing.T) {
 		expectError string
 	}{
 		{
-			name: "missing default manager",
+			name: "missing default manager should be valid with zero-config",
 			config: &Config{
-				Settings: Settings{}, // DefaultManager is empty
+				Settings: &Settings{}, // DefaultManager is nil, should use default
 			},
-			expectError: "DefaultManager is required",
+			expectError: "", // Should be valid - will use default
 		},
 		{
 			name: "invalid default manager",
 			config: &Config{
-				Settings: Settings{
-					DefaultManager: "invalid",
+				Settings: &Settings{
+					DefaultManager: StringPtr("invalid"),
 				},
 			},
 			expectError: "must be one of: homebrew npm",
@@ -69,9 +69,9 @@ func TestSimpleValidator_ValidateConfig_InvalidConfigs(t *testing.T) {
 		{
 			name: "invalid operation timeout",
 			config: &Config{
-				Settings: Settings{
-					DefaultManager:   "homebrew",
-					OperationTimeout: -1,
+				Settings: &Settings{
+					DefaultManager:   StringPtr("homebrew"),
+					OperationTimeout: IntPtr(-1),
 				},
 			},
 			expectError: "min",
@@ -83,19 +83,27 @@ func TestSimpleValidator_ValidateConfig_InvalidConfigs(t *testing.T) {
 			validator := NewSimpleValidator()
 			result := validator.ValidateConfig(tt.config)
 
-			if result.IsValid() {
-				t.Errorf("Expected validation error, but config was valid")
-			}
-
-			found := false
-			for _, err := range result.Errors {
-				if strings.Contains(strings.ToLower(err), strings.ToLower(tt.expectError)) {
-					found = true
-					break
+			if tt.expectError == "" {
+				// Expect validation to pass
+				if !result.IsValid() {
+					t.Errorf("Expected validation to pass, but got errors: %v", result.Errors)
 				}
-			}
-			if !found {
-				t.Errorf("Expected error containing %q, got: %v", tt.expectError, result.Errors)
+			} else {
+				// Expect validation to fail
+				if result.IsValid() {
+					t.Errorf("Expected validation error, but config was valid")
+				}
+
+				found := false
+				for _, err := range result.Errors {
+					if strings.Contains(strings.ToLower(err), strings.ToLower(tt.expectError)) {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("Expected error containing %q, got: %v", tt.expectError, result.Errors)
+				}
 			}
 		})
 	}
@@ -188,8 +196,8 @@ func TestSimpleValidator_ValidateConfigFromYAML_InvalidYAML(t *testing.T) {
 
 func TestSimpleValidator_Warnings(t *testing.T) {
 	config := &Config{
-		Settings: Settings{
-			DefaultManager: "npm", // Should trigger warning
+		Settings: &Settings{
+			DefaultManager: StringPtr("npm"), // Should trigger warning
 		},
 	}
 

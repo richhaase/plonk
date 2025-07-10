@@ -50,12 +50,14 @@ func (s *StateDotfileConfigAdapter) GetDotfileTargets() map[string]string {
 
 // GetIgnorePatterns implements state.DotfileConfigLoader interface
 func (s *StateDotfileConfigAdapter) GetIgnorePatterns() []string {
-	// Get the underlying config and call its GetIgnorePatterns method
-	return s.configAdapter.config.GetIgnorePatterns()
+	// Get the resolved config and call its GetIgnorePatterns method
+	resolvedConfig := s.configAdapter.config.Resolve()
+	return resolvedConfig.GetIgnorePatterns()
 }
 
 // GetExpandDirectories implements state.DotfileConfigLoader interface
 func (s *StateDotfileConfigAdapter) GetExpandDirectories() []string {
-	// Get the underlying config and call its GetExpandDirectories method
-	return s.configAdapter.config.GetExpandDirectories()
+	// Get the resolved config and call its GetExpandDirectories method
+	resolvedConfig := s.configAdapter.config.Resolve()
+	return resolvedConfig.GetExpandDirectories()
 }

@@ -22,32 +22,92 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config represents the configuration structure.
+// Config represents the user's configuration overrides.
+// All fields are optional - defaults will be used for nil values.
 type Config struct {
-	Settings       Settings `yaml:"settings" validate:"required"`
-	IgnorePatterns []string `yaml:"ignore_patterns,omitempty"`
+	Settings       *Settings `yaml:"settings,omitempty"`
+	IgnorePatterns []string  `yaml:"ignore_patterns,omitempty"`
 }
 
 // Settings contains global configuration settings.
+// All fields use pointers to distinguish between "not set" (nil) and "set to zero value".
 type Settings struct {
-	DefaultManager    string   `yaml:"default_manager" validate:"required,oneof=homebrew npm cargo"`
-	OperationTimeout  int      `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"` // Timeout in seconds for operations (0 for default, 1-3600 seconds)
-	PackageTimeout    int      `yaml:"package_timeout,omitempty" validate:"omitempty,min=0,max=1800"`   // Timeout in seconds for package operations (0 for default, 1-1800 seconds)
-	DotfileTimeout    int      `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`    // Timeout in seconds for dotfile operations (0 for default, 1-600 seconds)
-	ExpandDirectories []string `yaml:"expand_directories,omitempty"`                                    // Directories to expand in dot list output
+	DefaultManager    *string   `yaml:"default_manager,omitempty" validate:"omitempty,oneof=homebrew npm cargo"`
+	OperationTimeout  *int      `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"` // Timeout in seconds for operations (0 for unlimited, 1-3600 seconds)
+	PackageTimeout    *int      `yaml:"package_timeout,omitempty" validate:"omitempty,min=0,max=1800"`   // Timeout in seconds for package operations (0 for unlimited, 1-1800 seconds)
+	DotfileTimeout    *int      `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`    // Timeout in seconds for dotfile operations (0 for unlimited, 1-600 seconds)
+	ExpandDirectories *[]string `yaml:"expand_directories,omitempty"`                                    // Directories to expand in dot list output
 }
 
 // Package types removed - packages now managed in lock file
 
 // Package marshal/unmarshal methods removed - packages now managed in lock file
 
+// Resolve merges user configuration with defaults to produce final configuration values
+func (c *Config) Resolve() *ResolvedConfig {
+	defaults := GetDefaults()
+
+	return &ResolvedConfig{
+		DefaultManager:    c.getDefaultManager(defaults.DefaultManager),
+		OperationTimeout:  c.getOperationTimeout(defaults.OperationTimeout),
+		PackageTimeout:    c.getPackageTimeout(defaults.PackageTimeout),
+		DotfileTimeout:    c.getDotfileTimeout(defaults.DotfileTimeout),
+		ExpandDirectories: c.getExpandDirectories(defaults.ExpandDirectories),
+		IgnorePatterns:    c.getIgnorePatterns(defaults.IgnorePatterns),
+	}
+}
+
+// getDefaultManager returns the user's default manager or the default value
+func (c *Config) getDefaultManager(defaultValue string) string {
+	if c.Settings != nil && c.Settings.DefaultManager != nil {
+		return *c.Settings.DefaultManager
+	}
+	return defaultValue
+}
+
+// getOperationTimeout returns the user's operation timeout or the default value
+func (c *Config) getOperationTimeout(defaultValue int) int {
+	if c.Settings != nil && c.Settings.OperationTimeout != nil {
+		return *c.Settings.OperationTimeout
+	}
+	return defaultValue
+}
+
+// getPackageTimeout returns the user's package timeout or the default value
+func (c *Config) getPackageTimeout(defaultValue int) int {
+	if c.Settings != nil && c.Settings.PackageTimeout != nil {
+		return *c.Settings.PackageTimeout
+	}
+	return defaultValue
+}
+
+// getDotfileTimeout returns the user's dotfile timeout or the default value
+func (c *Config) getDotfileTimeout(defaultValue int) int {
+	if c.Settings != nil && c.Settings.DotfileTimeout != nil {
+		return *c.Settings.DotfileTimeout
+	}
+	return defaultValue
+}
+
+// getExpandDirectories returns the user's expand directories or the default value
+func (c *Config) getExpandDirectories(defaultValue []string) []string {
+	if c.Settings != nil && c.Settings.ExpandDirectories != nil {
+		return *c.Settings.ExpandDirectories
+	}
+	return defaultValue
+}
+
+// getIgnorePatterns returns the user's ignore patterns or the default value
+func (c *Config) getIgnorePatterns(defaultValue []string) []string {
+	if len(c.IgnorePatterns) > 0 {
+		return c.IgnorePatterns
+	}
+	return defaultValue
+}
+
 // LoadConfig loads configuration from plonk.yaml.
 func LoadConfig(configDir string) (*Config, error) {
-	config := &Config{
-		Settings: Settings{
-			DefaultManager: "homebrew", // Default value.
-		},
-	}
+	config := &Config{}
 
 	// Load config file.
 	configPath := filepath.Join(configDir, "plonk.yaml")
@@ -159,59 +219,7 @@ func TargetToSource(target string) string {
 	return target
 }
 
-// GetOperationTimeout returns the operation timeout in seconds with a default of 300 seconds (5 minutes)
-func (s *Settings) GetOperationTimeout() int {
-	if s.OperationTimeout <= 0 {
-		return 300 // Default 5 minutes
-	}
-	return s.OperationTimeout
-}
-
-// GetPackageTimeout returns the package timeout in seconds with a default of 180 seconds (3 minutes)
-func (s *Settings) GetPackageTimeout() int {
-	if s.PackageTimeout <= 0 {
-		return 180 // Default 3 minutes
-	}
-	return s.PackageTimeout
-}
-
-// GetDotfileTimeout returns the dotfile timeout in seconds with a default of 60 seconds (1 minute)
-func (s *Settings) GetDotfileTimeout() int {
-	if s.DotfileTimeout <= 0 {
-		return 60 // Default 1 minute
-	}
-	return s.DotfileTimeout
-}
-
-// GetIgnorePatterns returns the ignore patterns with sensible defaults
-func (c *Config) GetIgnorePatterns() []string {
-	if len(c.IgnorePatterns) == 0 {
-		return []string{
-			".DS_Store",
-			".git",
-			"*.backup",
-			"*.tmp",
-			"*.swp",
-		}
-	}
-	return c.IgnorePatterns
-}
-
-// GetExpandDirectories returns the directories to expand in dot list with sensible defaults
-func (c *Config) GetExpandDirectories() []string {
-	if len(c.Settings.ExpandDirectories) == 0 {
-		return []string{
-			".config",
-			".ssh",
-			".aws",
-			".kube",
-			".docker",
-			".gnupg",
-			".local",
-		}
-	}
-	return c.Settings.ExpandDirectories
-}
+// Legacy timeout methods removed - use ResolvedConfig.Get*Timeout() instead
 
 // GetDefaultConfigDirectory returns the default config directory, checking PLONK_DIR environment variable first
 func GetDefaultConfigDirectory() string {
@@ -266,11 +274,7 @@ func (y *YAMLConfigService) LoadConfigFromReader(reader io.Reader) (*Config, err
 			"failed to read config data")
 	}
 
-	config := &Config{
-		Settings: Settings{
-			DefaultManager: "homebrew", // Default value
-		},
-	}
+	config := &Config{}
 
 	if err := yaml.Unmarshal(data, config); err != nil {
 		return nil, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load",
@@ -369,15 +373,16 @@ func (y *YAMLConfigService) ValidateConfigFromReader(reader io.Reader) error {
 
 // GetDefaultConfig returns a default configuration with sensible defaults
 func (y *YAMLConfigService) GetDefaultConfig() *Config {
+	defaults := GetDefaults()
 	return &Config{
-		Settings: Settings{
-			DefaultManager:    "homebrew",
-			OperationTimeout:  300,
-			PackageTimeout:    120,
-			DotfileTimeout:    60,
-			ExpandDirectories: []string{".config", ".ssh", ".aws", ".kube", ".docker", ".gnupg", ".local"},
+		Settings: &Settings{
+			DefaultManager:    &defaults.DefaultManager,
+			OperationTimeout:  &defaults.OperationTimeout,
+			PackageTimeout:    &defaults.PackageTimeout,
+			DotfileTimeout:    &defaults.DotfileTimeout,
+			ExpandDirectories: &defaults.ExpandDirectories,
 		},
-		IgnorePatterns: []string{".DS_Store", ".git", "*.backup", "*.tmp", "*.swp"},
+		IgnorePatterns: defaults.IgnorePatterns,
 	}
 }
 
@@ -397,7 +402,8 @@ func (c *ConfigAdapter) GetDotfileTargets() map[string]string {
 
 	// Auto-discover dotfiles from configured directory
 	configDir := GetDefaultConfigDirectory()
-	ignorePatterns := c.config.GetIgnorePatterns()
+	resolvedConfig := c.config.Resolve()
+	ignorePatterns := resolvedConfig.GetIgnorePatterns()
 
 	// Walk the directory to find all files
 	_ = filepath.Walk(configDir, func(path string, info os.FileInfo, err error) error {

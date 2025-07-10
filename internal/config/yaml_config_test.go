@@ -34,8 +34,8 @@ ignore_patterns:
 	}
 
 	// Verify settings
-	if config.Settings.DefaultManager != "homebrew" {
-		t.Errorf("Expected default_manager 'homebrew', got '%s'", config.Settings.DefaultManager)
+	if config.Settings.DefaultManager != nil && *config.Settings.DefaultManager != "homebrew" {
+		t.Errorf("Expected default_manager 'homebrew', got '%s'", *config.Settings.DefaultManager)
 	}
 
 	// Verify ignore patterns

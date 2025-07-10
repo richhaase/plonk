@@ -75,7 +75,7 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 	// Determine which manager to use
 	targetManager := manager
 	if targetManager == "" {
-		targetManager = cfg.Settings.DefaultManager
+		targetManager = cfg.Resolve().GetDefaultManager()
 	}
 
 	// Validate manager

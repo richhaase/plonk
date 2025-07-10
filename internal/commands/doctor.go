@@ -319,7 +319,7 @@ func checkConfigurationValidity() HealthCheck {
 		dotfileCount := len(dotfileTargets)
 
 		check.Details = append(check.Details,
-			fmt.Sprintf("Default manager: %s", cfg.Settings.DefaultManager),
+			fmt.Sprintf("Default manager: %s", cfg.Resolve().GetDefaultManager()),
 			fmt.Sprintf("Configured packages: %d", packageCount),
 			fmt.Sprintf("Auto-discovered dotfiles: %d", dotfileCount),
 		)

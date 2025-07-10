@@ -249,7 +249,7 @@ func addDirectoryFiles(dirPath, homeDir, configDir string, format OutputFormat) 
 		return err
 	}
 
-	ignorePatterns := cfg.GetIgnorePatterns()
+	ignorePatterns := cfg.Resolve().GetIgnorePatterns()
 
 	// Walk the directory tree
 	err = filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
@@ -338,8 +338,8 @@ func loadOrCreateConfig(configDir string) (*config.Config, error) {
 		// If config doesn't exist, create a new one
 		if os.IsNotExist(err) {
 			cfg = &config.Config{
-				Settings: config.Settings{
-					DefaultManager: "homebrew",
+				Settings: &config.Settings{
+					DefaultManager: config.StringPtr("homebrew"),
 				},
 			}
 		} else {
