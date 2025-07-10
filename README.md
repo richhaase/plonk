@@ -103,9 +103,15 @@ plonk apply --dry-run  # Preview changes
 plonk apply           # Apply changes
 
 # Package management
-plonk pkg list        # List all packages
-plonk pkg add htop    # Add package to config
-plonk search git      # Search for packages
+plonk pkg list                    # List managed + missing + untracked count
+plonk pkg list --verbose          # Show all packages including untracked
+plonk pkg list --manager homebrew # Filter by package manager
+plonk pkg add htop               # Add package to config and install
+plonk pkg add htop --dry-run     # Preview what would be added
+plonk pkg remove htop            # Remove from config only
+plonk pkg remove htop --dry-run  # Preview what would be removed
+plonk pkg remove htop --uninstall # Remove from config and uninstall
+plonk search git                 # Search for packages
 
 # Dotfile management
 plonk dot list           # List dotfiles (missing + managed + untracked count)

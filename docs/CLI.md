@@ -175,45 +175,99 @@ plonk info <package> [--output format]
 
 ## Package Management
 
-### `plonk pkg list [filter]`
+### `plonk pkg list`
 
-List packages across all managers.
+List packages across all managers with smart defaults.
 
 **Usage:**
 ```bash
-plonk pkg list [managed|missing|untracked] [--output format]
+plonk pkg list [--verbose] [--manager manager] [--output format]
 ```
 
-**Filters:**
-- `managed` - In config AND installed
-- `missing` - In config BUT NOT installed
-- `untracked` - Installed BUT NOT in config
-- No filter - All packages
+**Behavior:**
+- By default shows managed + missing packages with untracked count
+- Use `--verbose` to see all packages including full untracked list
+- Use `--manager` to filter by package manager (homebrew, npm)
+- Sort by state (managed, missing, untracked), then alphabetically
+
+**Options:**
+- `--verbose` - Show all packages including untracked
+- `--manager` - Filter by package manager (homebrew, npm)
+
+**Example output:**
+```
+Package Summary
+===============
+Total: 25 packages | ✓ Managed: 18 | ⚠ Missing: 2 | ? Untracked: 5
+
+  Status Package                        Manager   
+  ------ ------------------------------ ----------
+  ✓      git                            homebrew  
+  ✓      curl                           homebrew  
+  ⚠      htop                           homebrew  
+  ✓      typescript                     npm       
+
+5 untracked packages (use --verbose to show details)
+```
 
 ### `plonk pkg add [package]`
 
-Add packages to configuration.
+Add packages to configuration and install them.
 
 **Usage:**
 ```bash
-plonk pkg add [package] [--manager manager] [--dry-run]
+plonk pkg add [package] [--manager manager] [--dry-run] [--output format]
 ```
 
 **Behaviors:**
 - `plonk pkg add` - Add all untracked packages
-- `plonk pkg add htop` - Add specific package
+- `plonk pkg add htop` - Add specific package to config and install
 - `plonk pkg add htop --manager homebrew` - Force specific manager
+- `plonk pkg add htop --dry-run` - Preview what would be added/installed
+
+**Options:**
+- `--manager` - Force specific package manager (homebrew, npm)
+- `--dry-run` - Show what would be added without making changes
+
+**Example output:**
+```
+Package Add
+===========
+✓ Added htop to homebrew configuration
+✓ Successfully installed htop
+
+Summary: Added to configuration and installed
+```
 
 ### `plonk pkg remove <package>`
 
-Remove package from configuration.
+Remove package from configuration with enhanced output.
 
 **Usage:**
 ```bash
-plonk pkg remove <package> [--dry-run]
+plonk pkg remove <package> [--uninstall] [--dry-run] [--output format]
 ```
 
-**Note:** Only removes from config, does not uninstall from system.
+**Options:**
+- `--uninstall` - Also uninstall the package from the system
+- `--dry-run` - Show what would be removed without making changes
+
+**Behaviors:**
+- `plonk pkg remove htop` - Remove from config only
+- `plonk pkg remove htop --uninstall` - Remove from config and uninstall
+- `plonk pkg remove htop --dry-run` - Preview what would be removed
+
+**Example output:**
+```
+Package Remove
+==============
+✓ Removed htop from homebrew configuration
+✓ Successfully uninstalled htop from system
+
+Summary: removed from configuration and uninstalled from system
+```
+
+**Note:** By default, only removes from config. Use `--uninstall` to also remove from system.
 
 ## Dotfile Management
 
