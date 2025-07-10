@@ -87,6 +87,192 @@ type EnhancedPackageOutput struct {
 	Manager string `json:"manager" yaml:"manager"`
 }
 
+// Enhanced Add/Remove Output structures
+type EnhancedAddOutput struct {
+	Package          string   `json:"package" yaml:"package"`
+	Manager          string   `json:"manager" yaml:"manager"`
+	ConfigAdded      bool     `json:"config_added" yaml:"config_added"`
+	AlreadyInConfig  bool     `json:"already_in_config" yaml:"already_in_config"`
+	Installed        bool     `json:"installed" yaml:"installed"`
+	AlreadyInstalled bool     `json:"already_installed" yaml:"already_installed"`
+	Error            string   `json:"error,omitempty" yaml:"error,omitempty"`
+	Actions          []string `json:"actions" yaml:"actions"`
+}
+
+type EnhancedRemoveOutput struct {
+	Package       string   `json:"package" yaml:"package"`
+	Manager       string   `json:"manager" yaml:"manager"`
+	ConfigRemoved bool     `json:"config_removed" yaml:"config_removed"`
+	Uninstalled   bool     `json:"uninstalled" yaml:"uninstalled"`
+	WasInConfig   bool     `json:"was_in_config" yaml:"was_in_config"`
+	WasInstalled  bool     `json:"was_installed" yaml:"was_installed"`
+	Error         string   `json:"error,omitempty" yaml:"error,omitempty"`
+	Actions       []string `json:"actions" yaml:"actions"`
+}
+
+type BatchAddOutput struct {
+	TotalPackages     int                 `json:"total_packages" yaml:"total_packages"`
+	AddedToConfig     int                 `json:"added_to_config" yaml:"added_to_config"`
+	Installed         int                 `json:"installed" yaml:"installed"`
+	AlreadyConfigured int                 `json:"already_configured" yaml:"already_configured"`
+	AlreadyInstalled  int                 `json:"already_installed" yaml:"already_installed"`
+	Errors            int                 `json:"errors" yaml:"errors"`
+	Packages          []EnhancedAddOutput `json:"packages" yaml:"packages"`
+}
+
+// Enhanced table output methods
+func (a EnhancedAddOutput) TableOutput() string {
+	var output strings.Builder
+
+	// Header
+	output.WriteString("Package Add\n")
+	output.WriteString("===========\n")
+
+	// Actions
+	for _, action := range a.Actions {
+		if strings.Contains(action, "error") || strings.Contains(action, "failed") {
+			output.WriteString("✗ " + action + "\n")
+		} else if strings.Contains(action, "already") {
+			output.WriteString("• " + action + "\n")
+		} else {
+			output.WriteString("✓ " + action + "\n")
+		}
+	}
+
+	// Error if present
+	if a.Error != "" {
+		output.WriteString("✗ Error: " + a.Error + "\n")
+	}
+
+	// Summary
+	output.WriteString("\n")
+	if a.Error != "" {
+		output.WriteString("Summary: Failed to add " + a.Package + "\n")
+	} else {
+		summary := "Summary: "
+		if a.ConfigAdded {
+			summary += "Added to configuration"
+		} else if a.AlreadyInConfig {
+			summary += "Already in configuration"
+		}
+
+		if a.Installed {
+			if a.ConfigAdded {
+				summary += " and installed"
+			} else {
+				summary += " and installed"
+			}
+		} else if a.AlreadyInstalled {
+			summary += " (already installed)"
+		}
+
+		output.WriteString(summary + "\n")
+	}
+
+	return output.String()
+}
+
+func (r EnhancedRemoveOutput) TableOutput() string {
+	var output strings.Builder
+
+	// Header
+	output.WriteString("Package Remove\n")
+	output.WriteString("==============\n")
+
+	// Actions
+	for _, action := range r.Actions {
+		if strings.Contains(action, "error") || strings.Contains(action, "failed") {
+			output.WriteString("✗ " + action + "\n")
+		} else if strings.Contains(action, "not found") || strings.Contains(action, "already") {
+			output.WriteString("• " + action + "\n")
+		} else {
+			output.WriteString("✓ " + action + "\n")
+		}
+	}
+
+	// Error if present
+	if r.Error != "" {
+		output.WriteString("✗ Error: " + r.Error + "\n")
+	}
+
+	// Summary
+	output.WriteString("\n")
+	if r.Error != "" {
+		output.WriteString("Summary: Failed to remove " + r.Package + "\n")
+	} else {
+		summary := "Summary: "
+		parts := []string{}
+		if r.ConfigRemoved {
+			parts = append(parts, "removed from configuration")
+		}
+		if r.Uninstalled {
+			parts = append(parts, "uninstalled from system")
+		}
+		if len(parts) == 0 {
+			summary += "No changes made"
+		} else {
+			summary += strings.Join(parts, " and ")
+		}
+
+		output.WriteString(summary + "\n")
+	}
+
+	return output.String()
+}
+
+func (b BatchAddOutput) TableOutput() string {
+	var output strings.Builder
+
+	// Header
+	output.WriteString("Package Add\n")
+	output.WriteString("===========\n")
+
+	// Individual package actions
+	for _, pkg := range b.Packages {
+		for _, action := range pkg.Actions {
+			if strings.Contains(action, "error") || strings.Contains(action, "failed") {
+				output.WriteString("✗ " + action + "\n")
+			} else if strings.Contains(action, "already") {
+				output.WriteString("• " + action + "\n")
+			} else {
+				output.WriteString("✓ " + action + "\n")
+			}
+		}
+	}
+
+	// Summary
+	output.WriteString("\n")
+	summary := fmt.Sprintf("Summary: %d packages processed", b.TotalPackages)
+	if b.AddedToConfig > 0 {
+		summary += fmt.Sprintf(" | %d added to config", b.AddedToConfig)
+	}
+	if b.Installed > 0 {
+		summary += fmt.Sprintf(" | %d installed", b.Installed)
+	}
+	if b.AlreadyConfigured > 0 {
+		summary += fmt.Sprintf(" | %d already configured", b.AlreadyConfigured)
+	}
+	if b.Errors > 0 {
+		summary += fmt.Sprintf(" | %d errors", b.Errors)
+	}
+
+	output.WriteString(summary + "\n")
+
+	return output.String()
+}
+
+func (a EnhancedAddOutput) StructuredData() any {
+	return a
+}
+
+func (r EnhancedRemoveOutput) StructuredData() any {
+	return r
+}
+
+func (b BatchAddOutput) StructuredData() any {
+	return b
+}
+
 // Legacy types for backward compatibility
 type ManagerOutput struct {
 	Name     string          `json:"name" yaml:"name"`
@@ -97,6 +283,51 @@ type ManagerOutput struct {
 type PackageOutput struct {
 	Name  string `json:"name" yaml:"name"`
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
+}
+
+// Legacy add/remove output types (keeping for compatibility)
+type AddOutput struct {
+	Package string `json:"package" yaml:"package"`
+	Manager string `json:"manager" yaml:"manager"`
+	Action  string `json:"action" yaml:"action"`
+}
+
+type AddAllOutput struct {
+	Added  int    `json:"added" yaml:"added"`
+	Total  int    `json:"total" yaml:"total"`
+	Action string `json:"action" yaml:"action"`
+}
+
+type RemoveOutput struct {
+	Package string `json:"package" yaml:"package"`
+	Manager string `json:"manager" yaml:"manager"`
+	Action  string `json:"action" yaml:"action"`
+	Error   string `json:"error,omitempty" yaml:"error,omitempty"`
+}
+
+// Legacy table output methods (minimal output, handled in command logic)
+func (a AddOutput) TableOutput() string {
+	return "" // Table output is handled in the command logic
+}
+
+func (a AddAllOutput) TableOutput() string {
+	return "" // Table output is handled in the command logic
+}
+
+func (r RemoveOutput) TableOutput() string {
+	return "" // Table output is handled in the command logic
+}
+
+func (a AddOutput) StructuredData() any {
+	return a
+}
+
+func (a AddAllOutput) StructuredData() any {
+	return a
+}
+
+func (r RemoveOutput) StructuredData() any {
+	return r
 }
 
 // TableOutput generates human-friendly table output

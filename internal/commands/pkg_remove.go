@@ -58,23 +58,33 @@ func runPkgRemove(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, errors.ErrConfigNotFound, errors.DomainConfig, "load", "failed to load configuration")
 	}
 
+	// Initialize result structure
+	result := EnhancedRemoveOutput{
+		Package: packageName,
+		Actions: []string{},
+	}
+
 	// Find and remove package from configuration
 	managerName, found := findAndRemovePackageFromConfig(cfg, packageName)
+	result.Manager = managerName
+
 	if !found {
-		if format == OutputTable {
-			fmt.Printf("Package '%s' not found in configuration\n", packageName)
-		}
-		return nil
+		result.WasInConfig = false
+		result.Actions = append(result.Actions, fmt.Sprintf("%s not found in configuration", packageName))
+		return RenderOutput(result, format)
 	}
+
+	result.WasInConfig = true
 
 	// Save updated configuration
 	err = saveConfig(cfg, configDir)
 	if err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "save", "failed to save configuration")
+		result.Error = fmt.Sprintf("failed to save configuration: %v", err)
+		return RenderOutput(result, format)
 	}
 
-	var action string
-	var uninstallError error
+	result.ConfigRemoved = true
+	result.Actions = append(result.Actions, fmt.Sprintf("Removed %s from %s configuration", packageName, managerName))
 
 	// Optionally uninstall the package
 	if uninstall {
@@ -87,53 +97,33 @@ func runPkgRemove(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
 		available, err := mgr.IsAvailable(ctx)
 		if err != nil {
-			uninstallError = errors.WrapWithItem(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", managerName, "failed to check if manager is available")
-		} else if !available {
-			uninstallError = errors.NewError(errors.ErrManagerUnavailable, errors.DomainPackages, "check", fmt.Sprintf("manager '%s' is not available", managerName))
+			result.Error = fmt.Sprintf("failed to check if %s manager is available: %v", managerName, err)
+			return RenderOutput(result, format)
+		}
+		if !available {
+			result.Error = fmt.Sprintf("manager '%s' is not available", managerName)
+			return RenderOutput(result, format)
+		}
+
+		installed, err := mgr.IsInstalled(ctx, packageName)
+		if err != nil {
+			result.Error = fmt.Sprintf("failed to check if package is installed: %v", err)
+			return RenderOutput(result, format)
+		}
+
+		result.WasInstalled = installed
+
+		if !installed {
+			result.Actions = append(result.Actions, fmt.Sprintf("%s was not installed", packageName))
 		} else {
-			installed, err := mgr.IsInstalled(ctx, packageName)
+			err = mgr.Uninstall(ctx, packageName)
 			if err != nil {
-				uninstallError = errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "check", packageName, "failed to check if package is installed")
-			} else if !installed {
-				if format == OutputTable {
-					fmt.Printf("Package '%s' is not installed in %s\n", packageName, managerName)
-				}
-				action = "removed_from_config_only"
-			} else {
-				if format == OutputTable {
-					fmt.Printf("Uninstalling %s from %s...\n", packageName, managerName)
-				}
-
-				err = mgr.Uninstall(ctx, packageName)
-				if err != nil {
-					uninstallError = errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "uninstall", packageName, "failed to uninstall package")
-					action = "removed_from_config_uninstall_failed"
-				} else {
-					if format == OutputTable {
-						fmt.Printf("Successfully removed from configuration and uninstalled: %s\n", packageName)
-					}
-					action = "removed_and_uninstalled"
-				}
+				result.Error = fmt.Sprintf("failed to uninstall package: %v", err)
+				return RenderOutput(result, format)
 			}
-		}
-	} else {
-		if format == OutputTable {
-			fmt.Printf("Removed from configuration: %s\n", packageName)
-		}
-		action = "removed_from_config_only"
-	}
 
-	// Prepare structured output
-	result := RemoveOutput{
-		Package: packageName,
-		Manager: managerName,
-		Action:  action,
-	}
-
-	if uninstallError != nil {
-		result.Error = uninstallError.Error()
-		if format == OutputTable {
-			fmt.Printf("Warning: Failed to uninstall package: %v\n", uninstallError)
+			result.Uninstalled = true
+			result.Actions = append(result.Actions, fmt.Sprintf("Successfully uninstalled %s from system", packageName))
 		}
 	}
 
@@ -160,22 +150,4 @@ func findAndRemovePackageFromConfig(cfg *config.Config, packageName string) (str
 	}
 
 	return "", false
-}
-
-// RemoveOutput represents the output structure for pkg remove command
-type RemoveOutput struct {
-	Package string `json:"package" yaml:"package"`
-	Manager string `json:"manager" yaml:"manager"`
-	Action  string `json:"action" yaml:"action"`
-	Error   string `json:"error,omitempty" yaml:"error,omitempty"`
-}
-
-// TableOutput generates human-friendly table output for remove command
-func (r RemoveOutput) TableOutput() string {
-	return "" // Table output is handled in the command logic
-}
-
-// StructuredData returns the structured data for serialization
-func (r RemoveOutput) StructuredData() any {
-	return r
 }

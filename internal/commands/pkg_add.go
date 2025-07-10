@@ -82,24 +82,35 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 		return errors.NewError(errors.ErrInvalidInput, errors.DomainPackages, "validate", fmt.Sprintf("unsupported manager '%s'. Use: homebrew, npm", targetManager))
 	}
 
+	// Initialize result structure
+	result := EnhancedAddOutput{
+		Package: packageName,
+		Manager: targetManager,
+		Actions: []string{},
+	}
+
 	// Check if package is already in config
-	if isPackageInConfig(cfg, packageName, targetManager) {
-		if format == OutputTable {
-			fmt.Printf("Package '%s' is already in %s configuration\n", packageName, targetManager)
+	alreadyInConfig := isPackageInConfig(cfg, packageName, targetManager)
+	if alreadyInConfig {
+		result.AlreadyInConfig = true
+		result.Actions = append(result.Actions, fmt.Sprintf("%s already in %s configuration", packageName, targetManager))
+	} else {
+		// Add package to configuration
+		err = addPackageToConfig(cfg, packageName, targetManager)
+		if err != nil {
+			result.Error = fmt.Sprintf("failed to add package to config: %v", err)
+			return RenderOutput(result, format)
 		}
-		return nil
-	}
 
-	// Add package to configuration
-	err = addPackageToConfig(cfg, packageName, targetManager)
-	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrConfigParseFailure, errors.DomainConfig, "update", packageName, "failed to add package to config")
-	}
+		// Save updated configuration
+		err = saveConfig(cfg, configDir)
+		if err != nil {
+			result.Error = fmt.Sprintf("failed to save configuration: %v", err)
+			return RenderOutput(result, format)
+		}
 
-	// Save updated configuration
-	err = saveConfig(cfg, configDir)
-	if err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "save", "failed to save configuration")
+		result.ConfigAdded = true
+		result.Actions = append(result.Actions, fmt.Sprintf("Added %s to %s configuration", packageName, targetManager))
 	}
 
 	// Install the package
@@ -112,43 +123,40 @@ func runPkgAdd(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 	available, err := mgr.IsAvailable(ctx)
 	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", targetManager, "failed to check if manager is available")
+		result.Error = fmt.Sprintf("failed to check if %s manager is available: %v", targetManager, err)
+		return RenderOutput(result, format)
 	}
 	if !available {
-		return errors.NewError(errors.ErrManagerUnavailable, errors.DomainPackages, "check", fmt.Sprintf("manager '%s' is not available", targetManager))
+		result.Error = fmt.Sprintf("manager '%s' is not available", targetManager)
+		return RenderOutput(result, format)
 	}
 
 	// Check if already installed
 	installed, err := mgr.IsInstalled(ctx, packageName)
 	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "check", packageName, "failed to check if package is installed")
+		result.Error = fmt.Sprintf("failed to check if package is installed: %v", err)
+		return RenderOutput(result, format)
 	}
+
 	if installed {
-		if format == OutputTable {
-			fmt.Printf("Package '%s' is already installed in %s\n", packageName, targetManager)
-			fmt.Printf("Added to configuration: %s\n", packageName)
-		}
+		result.AlreadyInstalled = true
+		result.Actions = append(result.Actions, fmt.Sprintf("%s already installed", packageName))
 	} else {
 		// Install the package
-		if format == OutputTable {
-			fmt.Printf("Installing %s using %s...\n", packageName, targetManager)
+		if !dryRun {
+			err = mgr.Install(ctx, packageName)
+			if err != nil {
+				result.Error = fmt.Sprintf("failed to install package: %v", err)
+				return RenderOutput(result, format)
+			}
 		}
 
-		err = mgr.Install(ctx, packageName)
-		if err != nil {
-			return errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "install", packageName, "failed to install package")
+		result.Installed = true
+		if dryRun {
+			result.Actions = append(result.Actions, fmt.Sprintf("Would install %s", packageName))
+		} else {
+			result.Actions = append(result.Actions, fmt.Sprintf("Successfully installed %s", packageName))
 		}
-
-		if format == OutputTable {
-			fmt.Printf("Successfully installed and added to configuration: %s\n", packageName)
-		}
-	}
-
-	// Prepare structured output
-	result := AddOutput{
-		Package: packageName,
-		Manager: targetManager,
-		Action:  "added",
 	}
 
 	return RenderOutput(result, format)
@@ -217,23 +225,6 @@ func saveConfig(cfg *config.Config, configDir string) error {
 	}
 
 	return nil
-}
-
-// AddOutput represents the output structure for pkg add command
-type AddOutput struct {
-	Package string `json:"package" yaml:"package"`
-	Manager string `json:"manager" yaml:"manager"`
-	Action  string `json:"action" yaml:"action"`
-}
-
-// TableOutput generates human-friendly table output for add command
-func (a AddOutput) TableOutput() string {
-	return "" // Table output is handled in the command logic
-}
-
-// StructuredData returns the structured data for serialization
-func (a AddOutput) StructuredData() any {
-	return a
 }
 
 // addAllUntrackedPackages adds all untracked packages to the configuration
@@ -332,21 +323,4 @@ func addAllUntrackedPackages(cmd *cobra.Command, dryRun bool) error {
 	}
 
 	return RenderOutput(result, format)
-}
-
-// AddAllOutput represents the output structure for pkg add-all command
-type AddAllOutput struct {
-	Added  int    `json:"added" yaml:"added"`
-	Total  int    `json:"total" yaml:"total"`
-	Action string `json:"action" yaml:"action"`
-}
-
-// TableOutput generates human-friendly table output for add-all command
-func (a AddAllOutput) TableOutput() string {
-	return "" // Table output is handled in the command logic
-}
-
-// StructuredData returns the structured data for serialization
-func (a AddAllOutput) StructuredData() any {
-	return a
 }
