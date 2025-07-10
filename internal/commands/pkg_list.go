@@ -6,6 +6,8 @@ package commands
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strings"
 
 	"plonk/internal/config"
 	"plonk/internal/managers"
@@ -15,36 +17,37 @@ import (
 )
 
 var pkgListCmd = &cobra.Command{
-	Use:   "list [filter]",
+	Use:   "list",
 	Short: "List packages across all managers",
 	Long: `List packages from Homebrew and NPM managers.
 
-Available filters:
-  (no filter)  List all installed packages
-  managed      List packages managed by plonk configuration
-  untracked    List installed packages not in plonk configuration  
-  missing      List packages in configuration but not installed
+By default, shows managed and missing packages with a count of untracked packages.
+Use --verbose to see all packages including the full list of untracked packages.
 
 Examples:
-  plonk pkg list           # List all installed packages
-  plonk pkg list managed   # List only packages in plonk.yaml
-  plonk pkg list untracked # List packages not tracked by plonk`,
+  plonk pkg list                    # Show managed + missing + untracked count
+  plonk pkg list --verbose          # Show all packages including untracked
+  plonk pkg list --manager homebrew # Show only Homebrew packages
+  plonk pkg list --manager npm      # Show only NPM packages`,
 	RunE: runPkgList,
-	Args: cobra.MaximumNArgs(1),
+	Args: cobra.NoArgs,
 }
 
+var (
+	pkgListVerbose bool
+	pkgListManager string
+)
+
 func init() {
+	pkgListCmd.Flags().BoolVar(&pkgListVerbose, "verbose", false, "Show all packages including untracked")
+	pkgListCmd.Flags().StringVar(&pkgListManager, "manager", "", "Filter by package manager (homebrew, npm)")
 	pkgCmd.AddCommand(pkgListCmd)
 }
 
 func runPkgList(cmd *cobra.Command, args []string) error {
-	// Determine filter type
-	filter := "all"
-	if len(args) > 0 {
-		filter = args[0]
-		if filter != "managed" && filter != "untracked" && filter != "missing" && filter != "all" {
-			return fmt.Errorf("invalid filter '%s'. Use: managed, untracked, missing, or no filter for all", filter)
-		}
+	// Validate manager filter if provided
+	if pkgListManager != "" && pkgListManager != "homebrew" && pkgListManager != "npm" {
+		return fmt.Errorf("invalid manager '%s'. Use: homebrew, npm", pkgListManager)
 	}
 
 	// Parse output format
@@ -71,26 +74,29 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 	configAdapter := config.NewConfigAdapter(cfg)
 	packageConfigAdapter := config.NewStatePackageConfigAdapter(configAdapter)
 
-	// Add Homebrew manager
-	homebrewManager := managers.NewHomebrewManager()
-	available, err := homebrewManager.IsAvailable(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to check homebrew availability: %w", err)
-	}
-	if available {
-		managerAdapter := state.NewManagerAdapter(homebrewManager)
-		packageProvider.AddManager("homebrew", managerAdapter, packageConfigAdapter)
+	// Add managers based on filter
+	if pkgListManager == "" || pkgListManager == "homebrew" {
+		homebrewManager := managers.NewHomebrewManager()
+		available, err := homebrewManager.IsAvailable(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to check homebrew availability: %w", err)
+		}
+		if available {
+			managerAdapter := state.NewManagerAdapter(homebrewManager)
+			packageProvider.AddManager("homebrew", managerAdapter, packageConfigAdapter)
+		}
 	}
 
-	// Add NPM manager
-	npmManager := managers.NewNpmManager()
-	available, err = npmManager.IsAvailable(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to check npm availability: %w", err)
-	}
-	if available {
-		managerAdapter := state.NewManagerAdapter(npmManager)
-		packageProvider.AddManager("npm", managerAdapter, packageConfigAdapter)
+	if pkgListManager == "" || pkgListManager == "npm" {
+		npmManager := managers.NewNpmManager()
+		available, err := npmManager.IsAvailable(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to check npm availability: %w", err)
+		}
+		if available {
+			managerAdapter := state.NewManagerAdapter(npmManager)
+			packageProvider.AddManager("npm", managerAdapter, packageConfigAdapter)
+		}
 	}
 
 	reconciler.RegisterProvider("package", packageProvider)
@@ -101,61 +107,106 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to reconcile package state: %w", err)
 	}
 
-	// Filter items based on the requested filter
-	var filteredItems []state.Item
-	switch filter {
-	case "all":
-		filteredItems = append(filteredItems, result.Managed...)
-		filteredItems = append(filteredItems, result.Untracked...)
-	case "managed":
-		filteredItems = result.Managed
-	case "untracked":
-		filteredItems = result.Untracked
-	case "missing":
-		filteredItems = result.Missing
+	// Collect all items for processing
+	allItems := make([]state.Item, 0)
+	allItems = append(allItems, result.Managed...)
+	allItems = append(allItems, result.Missing...)
+	allItems = append(allItems, result.Untracked...)
+
+	// Convert to enhanced package output format
+	var enhancedItems []EnhancedPackageOutput
+	for _, item := range allItems {
+		enhancedItems = append(enhancedItems, EnhancedPackageOutput{
+			Name:    item.Name,
+			State:   item.State.String(),
+			Manager: item.Manager,
+		})
 	}
 
-	// Group items by manager for output
-	managerGroups := make(map[string][]state.Item)
-	for _, item := range filteredItems {
+	// Sort items: by state first (managed, missing, untracked), then alphabetically
+	sort.Slice(enhancedItems, func(i, j int) bool {
+		// Define state priority
+		stateOrder := map[string]int{
+			"managed":   0,
+			"missing":   1,
+			"untracked": 2,
+		}
+
+		stateI := stateOrder[enhancedItems[i].State]
+		stateJ := stateOrder[enhancedItems[j].State]
+
+		if stateI != stateJ {
+			return stateI < stateJ
+		}
+
+		// Same state, sort alphabetically
+		return strings.ToLower(enhancedItems[i].Name) < strings.ToLower(enhancedItems[j].Name)
+	})
+
+	// Calculate counts
+	managedCount := len(result.Managed)
+	missingCount := len(result.Missing)
+	untrackedCount := len(result.Untracked)
+	totalCount := managedCount + missingCount + untrackedCount
+
+	// Create enhanced manager outputs for structured data
+	managerGroups := make(map[string]*EnhancedManagerOutput)
+	for _, item := range enhancedItems {
 		manager := item.Manager
 		if manager == "" {
 			manager = "unknown"
 		}
-		managerGroups[manager] = append(managerGroups[manager], item)
-	}
 
-	// Prepare output structure
-	outputData := PackageListOutput{
-		Filter:   filter,
-		Managers: make([]ManagerOutput, 0, len(managerGroups)),
-	}
+		if managerGroups[manager] == nil {
+			displayName := manager
+			switch manager {
+			case "homebrew":
+				displayName = "Homebrew"
+			case "npm":
+				displayName = "NPM"
+			}
 
-	// Convert to legacy output format for compatibility
-	for managerName, items := range managerGroups {
-		// Convert manager name for display
-		displayName := managerName
-		switch managerName {
-		case "homebrew":
-			displayName = "Homebrew"
-		case "npm":
-			displayName = "NPM"
-		}
-
-		managerOutput := ManagerOutput{
-			Name:     displayName,
-			Count:    len(items),
-			Packages: make([]PackageOutput, len(items)),
-		}
-
-		for i, item := range items {
-			managerOutput.Packages[i] = PackageOutput{
-				Name:  item.Name,
-				State: item.State.String(),
+			managerGroups[manager] = &EnhancedManagerOutput{
+				Name:           displayName,
+				ManagedCount:   0,
+				MissingCount:   0,
+				UntrackedCount: 0,
+				Packages:       []EnhancedPackageOutput{},
 			}
 		}
 
-		outputData.Managers = append(outputData.Managers, managerOutput)
+		managerGroups[manager].Packages = append(managerGroups[manager].Packages, item)
+
+		switch item.State {
+		case "managed":
+			managerGroups[manager].ManagedCount++
+		case "missing":
+			managerGroups[manager].MissingCount++
+		case "untracked":
+			managerGroups[manager].UntrackedCount++
+		}
+	}
+
+	// Convert to slice for output
+	managers := make([]EnhancedManagerOutput, 0, len(managerGroups))
+	for _, mgr := range managerGroups {
+		managers = append(managers, *mgr)
+	}
+
+	// Sort managers by name
+	sort.Slice(managers, func(i, j int) bool {
+		return strings.ToLower(managers[i].Name) < strings.ToLower(managers[j].Name)
+	})
+
+	// Prepare output structure
+	outputData := PackageListOutput{
+		ManagedCount:   managedCount,
+		MissingCount:   missingCount,
+		UntrackedCount: untrackedCount,
+		TotalCount:     totalCount,
+		Managers:       managers,
+		Verbose:        pkgListVerbose,
+		Items:          enhancedItems,
 	}
 
 	return RenderOutput(outputData, format)

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -61,18 +62,38 @@ func ParseOutputFormat(format string) (OutputFormat, error) {
 
 // PackageListOutput represents the output structure for package list commands
 type PackageListOutput struct {
-	Filter   string          `json:"filter" yaml:"filter"`
-	Managers []ManagerOutput `json:"managers" yaml:"managers"`
+	ManagedCount   int                     `json:"managed_count" yaml:"managed_count"`
+	MissingCount   int                     `json:"missing_count" yaml:"missing_count"`
+	UntrackedCount int                     `json:"untracked_count" yaml:"untracked_count"`
+	TotalCount     int                     `json:"total_count" yaml:"total_count"`
+	Managers       []EnhancedManagerOutput `json:"managers" yaml:"managers"`
+	Verbose        bool                    `json:"verbose" yaml:"verbose"`
+	Items          []EnhancedPackageOutput `json:"items" yaml:"items"`
 }
 
-// ManagerOutput represents a package manager's output
+// EnhancedManagerOutput represents a package manager's enhanced output
+type EnhancedManagerOutput struct {
+	Name           string                  `json:"name" yaml:"name"`
+	ManagedCount   int                     `json:"managed_count" yaml:"managed_count"`
+	MissingCount   int                     `json:"missing_count" yaml:"missing_count"`
+	UntrackedCount int                     `json:"untracked_count" yaml:"untracked_count"`
+	Packages       []EnhancedPackageOutput `json:"packages" yaml:"packages"`
+}
+
+// EnhancedPackageOutput represents a package in the enhanced output
+type EnhancedPackageOutput struct {
+	Name    string `json:"name" yaml:"name"`
+	State   string `json:"state" yaml:"state"`
+	Manager string `json:"manager" yaml:"manager"`
+}
+
+// Legacy types for backward compatibility
 type ManagerOutput struct {
 	Name     string          `json:"name" yaml:"name"`
 	Count    int             `json:"count" yaml:"count"`
 	Packages []PackageOutput `json:"packages" yaml:"packages"`
 }
 
-// PackageOutput represents a package in the output
 type PackageOutput struct {
 	Name  string `json:"name" yaml:"name"`
 	State string `json:"state,omitempty" yaml:"state,omitempty"`
@@ -80,21 +101,73 @@ type PackageOutput struct {
 
 // TableOutput generates human-friendly table output
 func (p PackageListOutput) TableOutput() string {
-	var output string
-	for _, mgr := range p.Managers {
-		if mgr.Count == 0 {
-			continue
-		}
-		output += fmt.Sprintf("# %s (%d packages)\n", mgr.Name, mgr.Count)
-		for _, pkg := range mgr.Packages {
-			output += pkg.Name + "\n"
-		}
-		output += "\n"
+	var output strings.Builder
+
+	// Header with summary
+	output.WriteString("Package Summary\n")
+	output.WriteString("===============\n")
+	output.WriteString(fmt.Sprintf("Total: %d packages | ✓ Managed: %d | ⚠ Missing: %d | ? Untracked: %d\n\n",
+		p.TotalCount, p.ManagedCount, p.MissingCount, p.UntrackedCount))
+
+	// If no packages, show simple message
+	if p.TotalCount == 0 {
+		output.WriteString("No packages found\n")
+		return output.String()
 	}
-	if output == "" {
-		output = "No packages found\n"
+
+	// Collect items to show based on verbose mode
+	var itemsToShow []EnhancedPackageOutput
+	if p.Verbose {
+		itemsToShow = p.Items
+	} else {
+		// Show only managed and missing packages
+		for _, item := range p.Items {
+			if item.State == "managed" || item.State == "missing" {
+				itemsToShow = append(itemsToShow, item)
+			}
+		}
 	}
-	return output
+
+	// If we have items to show, create the table
+	if len(itemsToShow) > 0 {
+		// Table header
+		output.WriteString("  Status Package                        Manager   \n")
+		output.WriteString("  ------ ------------------------------ ----------\n")
+
+		// Table rows
+		for _, item := range itemsToShow {
+			var statusIcon string
+			switch item.State {
+			case "managed":
+				statusIcon = "✓"
+			case "missing":
+				statusIcon = "⚠"
+			case "untracked":
+				statusIcon = "?"
+			default:
+				statusIcon = "-"
+			}
+
+			output.WriteString(fmt.Sprintf("  %-6s %-30s %-10s\n",
+				statusIcon, truncateString(item.Name, 30), item.Manager))
+		}
+		output.WriteString("\n")
+	}
+
+	// Show untracked count hint if not in verbose mode
+	if !p.Verbose && p.UntrackedCount > 0 {
+		output.WriteString(fmt.Sprintf("%d untracked packages (use --verbose to show details)\n", p.UntrackedCount))
+	}
+
+	return output.String()
+}
+
+// Helper function to truncate strings to a specified length
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen-3] + "..."
 }
 
 // StructuredData returns the structured data for serialization
