@@ -1,21 +1,55 @@
 # Configuration Reference
 
-Complete configuration file format and environment variable reference for plonk.
+**🚀 Configuration is completely optional!** Plonk works with sensible defaults out of the box.
+
+This reference shows available configuration options when you want to customize behavior.
 
 ## File Overview
 
-Plonk uses two files to manage your environment:
+Plonk uses up to two files to manage your environment:
 
-- **`plonk.yaml`**: Configuration file (settings and preferences)
+- **`plonk.yaml`**: Optional configuration file (create with `plonk init`)
 - **`plonk.lock`**: Lock file (automatically managed package state)
 
-## Configuration File (`plonk.yaml`)
+## Configuration File (`plonk.yaml`) - Optional
 
 **Default location:** `~/.config/plonk/plonk.yaml`
 
 **Environment override:** `$PLONK_DIR/plonk.yaml`
 
+**Create with:** `plonk init` (generates helpful template with comments)
+
+### Zero-Config Defaults
+
+When no configuration file exists, these defaults are used:
+
+```yaml
+# These are the built-in defaults - no config file needed!
+settings:
+  default_manager: homebrew      # Primary package manager
+  operation_timeout: 300         # 5 minutes
+  package_timeout: 180           # 3 minutes  
+  dotfile_timeout: 60            # 1 minute
+  expand_directories:
+    - .config
+    - .ssh
+    - .aws
+    - .kube
+    - .docker
+    - .gnupg
+    - .local
+
+ignore_patterns:
+  - .DS_Store
+  - .git
+  - "*.backup"
+  - "*.tmp"
+  - "*.swp"
+```
+
 ### Complete Example
+
+Only specify settings you want to override from the defaults above:
 
 ```yaml
 settings:
@@ -38,6 +72,32 @@ ignore_patterns:
   - "*.backup"
   - "*.tmp"
   - "*.swp"
+```
+
+### Minimal Examples
+
+**Example 1: Just change package manager**
+```yaml
+settings:
+  default_manager: npm
+# Everything else uses defaults
+```
+
+**Example 2: Custom ignore patterns**
+```yaml
+ignore_patterns:
+  - .DS_Store
+  - "*.log"
+  - node_modules/
+# All settings use defaults
+```
+
+**Example 3: Custom timeouts only**
+```yaml
+settings:
+  operation_timeout: 600    # 10 minutes instead of 5
+  package_timeout: 300      # 5 minutes instead of 3
+# Other settings and ignore patterns use defaults
 ```
 
 ## Lock File (`plonk.lock`)
