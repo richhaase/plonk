@@ -68,6 +68,10 @@ settings:
     - .config
     - .ssh
     - .aws
+    - .kube
+    - .docker
+    - .gnupg
+    - .local
 
 ignore_patterns:
   - .DS_Store
