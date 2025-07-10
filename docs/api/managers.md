@@ -42,6 +42,9 @@ func NewMockPackageManager(ctrl *gomock.Controller) *MockPackageManager
 func (m *MockPackageManager) EXPECT() *MockPackageManagerMockRecorder
     EXPECT returns an object that allows the caller to indicate expected use.
 
+func (m *MockPackageManager) Info(ctx context.Context, name string) (*PackageInfo, error)
+    Info mocks base method.
+
 func (m *MockPackageManager) Install(ctx context.Context, name string) error
     Install mocks base method.
 
@@ -54,6 +57,9 @@ func (m *MockPackageManager) IsInstalled(ctx context.Context, name string) (bool
 func (m *MockPackageManager) ListInstalled(ctx context.Context) ([]string, error)
     ListInstalled mocks base method.
 
+func (m *MockPackageManager) Search(ctx context.Context, query string) ([]string, error)
+    Search mocks base method.
+
 func (m *MockPackageManager) Uninstall(ctx context.Context, name string) error
     Uninstall mocks base method.
 
@@ -62,19 +68,25 @@ type MockPackageManagerMockRecorder struct {
 }
     MockPackageManagerMockRecorder is the mock recorder for MockPackageManager.
 
-func (mr *MockPackageManagerMockRecorder) Install(ctx, name interface{}) *gomock.Call
+func (mr *MockPackageManagerMockRecorder) Info(ctx, name any) *gomock.Call
+    Info indicates an expected call of Info.
+
+func (mr *MockPackageManagerMockRecorder) Install(ctx, name any) *gomock.Call
     Install indicates an expected call of Install.
 
-func (mr *MockPackageManagerMockRecorder) IsAvailable(ctx interface{}) *gomock.Call
+func (mr *MockPackageManagerMockRecorder) IsAvailable(ctx any) *gomock.Call
     IsAvailable indicates an expected call of IsAvailable.
 
-func (mr *MockPackageManagerMockRecorder) IsInstalled(ctx, name interface{}) *gomock.Call
+func (mr *MockPackageManagerMockRecorder) IsInstalled(ctx, name any) *gomock.Call
     IsInstalled indicates an expected call of IsInstalled.
 
-func (mr *MockPackageManagerMockRecorder) ListInstalled(ctx interface{}) *gomock.Call
+func (mr *MockPackageManagerMockRecorder) ListInstalled(ctx any) *gomock.Call
     ListInstalled indicates an expected call of ListInstalled.
 
-func (mr *MockPackageManagerMockRecorder) Uninstall(ctx, name interface{}) *gomock.Call
+func (mr *MockPackageManagerMockRecorder) Search(ctx, query any) *gomock.Call
+    Search indicates an expected call of Search.
+
+func (mr *MockPackageManagerMockRecorder) Uninstall(ctx, name any) *gomock.Call
     Uninstall indicates an expected call of Uninstall.
 
 type NpmManager struct{}

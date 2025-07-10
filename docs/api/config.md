@@ -49,6 +49,10 @@ type Config struct {
 func LoadConfig(configDir string) (*Config, error)
     LoadConfig loads configuration from plonk.yaml.
 
+func (c *Config) GetExpandDirectories() []string
+    GetExpandDirectories returns the directories to expand in dot list with
+    sensible defaults
+
 func (c *Config) GetIgnorePatterns() []string
     GetIgnorePatterns returns the ignore patterns with sensible defaults
 
@@ -168,22 +172,22 @@ type MockConfigReadWriterMockRecorder struct {
     MockConfigReadWriterMockRecorder is the mock recorder for
     MockConfigReadWriter.
 
-func (mr *MockConfigReadWriterMockRecorder) LoadConfig(configDir interface{}) *gomock.Call
+func (mr *MockConfigReadWriterMockRecorder) LoadConfig(configDir any) *gomock.Call
     LoadConfig indicates an expected call of LoadConfig.
 
-func (mr *MockConfigReadWriterMockRecorder) LoadConfigFromFile(filePath interface{}) *gomock.Call
+func (mr *MockConfigReadWriterMockRecorder) LoadConfigFromFile(filePath any) *gomock.Call
     LoadConfigFromFile indicates an expected call of LoadConfigFromFile.
 
-func (mr *MockConfigReadWriterMockRecorder) LoadConfigFromReader(reader interface{}) *gomock.Call
+func (mr *MockConfigReadWriterMockRecorder) LoadConfigFromReader(reader any) *gomock.Call
     LoadConfigFromReader indicates an expected call of LoadConfigFromReader.
 
-func (mr *MockConfigReadWriterMockRecorder) SaveConfig(configDir, config interface{}) *gomock.Call
+func (mr *MockConfigReadWriterMockRecorder) SaveConfig(configDir, config any) *gomock.Call
     SaveConfig indicates an expected call of SaveConfig.
 
-func (mr *MockConfigReadWriterMockRecorder) SaveConfigToFile(filePath, config interface{}) *gomock.Call
+func (mr *MockConfigReadWriterMockRecorder) SaveConfigToFile(filePath, config any) *gomock.Call
     SaveConfigToFile indicates an expected call of SaveConfigToFile.
 
-func (mr *MockConfigReadWriterMockRecorder) SaveConfigToWriter(writer, config interface{}) *gomock.Call
+func (mr *MockConfigReadWriterMockRecorder) SaveConfigToWriter(writer, config any) *gomock.Call
     SaveConfigToWriter indicates an expected call of SaveConfigToWriter.
 
 type MockConfigReader struct {
@@ -211,13 +215,13 @@ type MockConfigReaderMockRecorder struct {
 }
     MockConfigReaderMockRecorder is the mock recorder for MockConfigReader.
 
-func (mr *MockConfigReaderMockRecorder) LoadConfig(configDir interface{}) *gomock.Call
+func (mr *MockConfigReaderMockRecorder) LoadConfig(configDir any) *gomock.Call
     LoadConfig indicates an expected call of LoadConfig.
 
-func (mr *MockConfigReaderMockRecorder) LoadConfigFromFile(filePath interface{}) *gomock.Call
+func (mr *MockConfigReaderMockRecorder) LoadConfigFromFile(filePath any) *gomock.Call
     LoadConfigFromFile indicates an expected call of LoadConfigFromFile.
 
-func (mr *MockConfigReaderMockRecorder) LoadConfigFromReader(reader interface{}) *gomock.Call
+func (mr *MockConfigReaderMockRecorder) LoadConfigFromReader(reader any) *gomock.Call
     LoadConfigFromReader indicates an expected call of LoadConfigFromReader.
 
 type MockConfigService struct {
@@ -269,31 +273,31 @@ type MockConfigServiceMockRecorder struct {
 func (mr *MockConfigServiceMockRecorder) GetDotfileTargets() *gomock.Call
     GetDotfileTargets indicates an expected call of GetDotfileTargets.
 
-func (mr *MockConfigServiceMockRecorder) GetPackagesForManager(managerName interface{}) *gomock.Call
+func (mr *MockConfigServiceMockRecorder) GetPackagesForManager(managerName any) *gomock.Call
     GetPackagesForManager indicates an expected call of GetPackagesForManager.
 
-func (mr *MockConfigServiceMockRecorder) LoadConfig(configDir interface{}) *gomock.Call
+func (mr *MockConfigServiceMockRecorder) LoadConfig(configDir any) *gomock.Call
     LoadConfig indicates an expected call of LoadConfig.
 
-func (mr *MockConfigServiceMockRecorder) LoadConfigFromFile(filePath interface{}) *gomock.Call
+func (mr *MockConfigServiceMockRecorder) LoadConfigFromFile(filePath any) *gomock.Call
     LoadConfigFromFile indicates an expected call of LoadConfigFromFile.
 
-func (mr *MockConfigServiceMockRecorder) LoadConfigFromReader(reader interface{}) *gomock.Call
+func (mr *MockConfigServiceMockRecorder) LoadConfigFromReader(reader any) *gomock.Call
     LoadConfigFromReader indicates an expected call of LoadConfigFromReader.
 
-func (mr *MockConfigServiceMockRecorder) SaveConfig(configDir, config interface{}) *gomock.Call
+func (mr *MockConfigServiceMockRecorder) SaveConfig(configDir, config any) *gomock.Call
     SaveConfig indicates an expected call of SaveConfig.
 
-func (mr *MockConfigServiceMockRecorder) SaveConfigToFile(filePath, config interface{}) *gomock.Call
+func (mr *MockConfigServiceMockRecorder) SaveConfigToFile(filePath, config any) *gomock.Call
     SaveConfigToFile indicates an expected call of SaveConfigToFile.
 
-func (mr *MockConfigServiceMockRecorder) SaveConfigToWriter(writer, config interface{}) *gomock.Call
+func (mr *MockConfigServiceMockRecorder) SaveConfigToWriter(writer, config any) *gomock.Call
     SaveConfigToWriter indicates an expected call of SaveConfigToWriter.
 
-func (mr *MockConfigServiceMockRecorder) ValidateConfig(config interface{}) *gomock.Call
+func (mr *MockConfigServiceMockRecorder) ValidateConfig(config any) *gomock.Call
     ValidateConfig indicates an expected call of ValidateConfig.
 
-func (mr *MockConfigServiceMockRecorder) ValidateConfigFromReader(reader interface{}) *gomock.Call
+func (mr *MockConfigServiceMockRecorder) ValidateConfigFromReader(reader any) *gomock.Call
     ValidateConfigFromReader indicates an expected call of
     ValidateConfigFromReader.
 
@@ -320,10 +324,10 @@ type MockConfigValidatorMockRecorder struct {
     MockConfigValidatorMockRecorder is the mock recorder for
     MockConfigValidator.
 
-func (mr *MockConfigValidatorMockRecorder) ValidateConfig(config interface{}) *gomock.Call
+func (mr *MockConfigValidatorMockRecorder) ValidateConfig(config any) *gomock.Call
     ValidateConfig indicates an expected call of ValidateConfig.
 
-func (mr *MockConfigValidatorMockRecorder) ValidateConfigFromReader(reader interface{}) *gomock.Call
+func (mr *MockConfigValidatorMockRecorder) ValidateConfigFromReader(reader any) *gomock.Call
     ValidateConfigFromReader indicates an expected call of
     ValidateConfigFromReader.
 
@@ -352,13 +356,13 @@ type MockConfigWriterMockRecorder struct {
 }
     MockConfigWriterMockRecorder is the mock recorder for MockConfigWriter.
 
-func (mr *MockConfigWriterMockRecorder) SaveConfig(configDir, config interface{}) *gomock.Call
+func (mr *MockConfigWriterMockRecorder) SaveConfig(configDir, config any) *gomock.Call
     SaveConfig indicates an expected call of SaveConfig.
 
-func (mr *MockConfigWriterMockRecorder) SaveConfigToFile(filePath, config interface{}) *gomock.Call
+func (mr *MockConfigWriterMockRecorder) SaveConfigToFile(filePath, config any) *gomock.Call
     SaveConfigToFile indicates an expected call of SaveConfigToFile.
 
-func (mr *MockConfigWriterMockRecorder) SaveConfigToWriter(writer, config interface{}) *gomock.Call
+func (mr *MockConfigWriterMockRecorder) SaveConfigToWriter(writer, config any) *gomock.Call
     SaveConfigToWriter indicates an expected call of SaveConfigToWriter.
 
 type MockDotfileConfigReader struct {
@@ -404,7 +408,7 @@ type MockPackageConfigReaderMockRecorder struct {
     MockPackageConfigReaderMockRecorder is the mock recorder for
     MockPackageConfigReader.
 
-func (mr *MockPackageConfigReaderMockRecorder) GetPackagesForManager(managerName interface{}) *gomock.Call
+func (mr *MockPackageConfigReaderMockRecorder) GetPackagesForManager(managerName any) *gomock.Call
     GetPackagesForManager indicates an expected call of GetPackagesForManager.
 
 type NPMPackage struct {
@@ -432,10 +436,11 @@ type PackageConfigReader interface {
     PackageConfigReader provides methods for reading package configuration
 
 type Settings struct {
-	DefaultManager   string `yaml:"default_manager" validate:"required,oneof=homebrew npm"`
-	OperationTimeout int    `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"` // Timeout in seconds for operations (0 for default, 1-3600 seconds)
-	PackageTimeout   int    `yaml:"package_timeout,omitempty" validate:"omitempty,min=0,max=1800"`   // Timeout in seconds for package operations (0 for default, 1-1800 seconds)
-	DotfileTimeout   int    `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`    // Timeout in seconds for dotfile operations (0 for default, 1-600 seconds)
+	DefaultManager    string   `yaml:"default_manager" validate:"required,oneof=homebrew npm"`
+	OperationTimeout  int      `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"` // Timeout in seconds for operations (0 for default, 1-3600 seconds)
+	PackageTimeout    int      `yaml:"package_timeout,omitempty" validate:"omitempty,min=0,max=1800"`   // Timeout in seconds for package operations (0 for default, 1-1800 seconds)
+	DotfileTimeout    int      `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`    // Timeout in seconds for dotfile operations (0 for default, 1-600 seconds)
+	ExpandDirectories []string `yaml:"expand_directories,omitempty"`                                    // Directories to expand in dot list output
 }
     Settings contains global configuration settings.
 
@@ -478,6 +483,12 @@ func NewStateDotfileConfigAdapter(configAdapter *ConfigAdapter) *StateDotfileCon
 
 func (s *StateDotfileConfigAdapter) GetDotfileTargets() map[string]string
     GetDotfileTargets implements state.DotfileConfigLoader interface
+
+func (s *StateDotfileConfigAdapter) GetExpandDirectories() []string
+    GetExpandDirectories implements state.DotfileConfigLoader interface
+
+func (s *StateDotfileConfigAdapter) GetIgnorePatterns() []string
+    GetIgnorePatterns implements state.DotfileConfigLoader interface
 
 type StatePackageConfigAdapter struct {
 	// Has unexported fields.

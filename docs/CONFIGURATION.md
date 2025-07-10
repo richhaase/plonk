@@ -18,6 +18,14 @@ settings:
   operation_timeout: 300
   package_timeout: 180
   dotfile_timeout: 60
+  expand_directories:
+    - .config
+    - .ssh
+    - .aws
+    - .kube
+    - .docker
+    - .gnupg
+    - .local
 
 ignore_patterns:
   - .DS_Store
@@ -96,6 +104,29 @@ settings:
 settings:
   dotfile_timeout: 120  # 2 minutes
 ```
+
+#### `expand_directories`
+**Type:** array of strings  
+**Default:** `[".config", ".ssh", ".aws", ".kube", ".docker", ".gnupg", ".local"]`  
+**Purpose:** Directories to expand in `plonk dot list` output
+
+```yaml
+settings:
+  expand_directories:
+    - .config
+    - .ssh
+    - .aws
+    - .kube
+    - .docker
+    - .gnupg
+    - .local
+```
+
+**Behavior:**
+- Directories in this list show individual files and subdirectories
+- Other directories appear as single entries
+- Helps users see detailed contents of important dotfile directories
+- Expansion is limited to 2 levels deep for performance
 
 ## Ignore Patterns
 
@@ -290,6 +321,12 @@ settings:
 settings:
   default_manager: homebrew
   operation_timeout: 600
+  expand_directories:
+    - .config
+    - .ssh
+    - .aws
+    - .kube
+    - .docker
 
 ignore_patterns:
   - .DS_Store

@@ -28,6 +28,12 @@ func NewConfigAdapter(config ConfigInterface) *ConfigAdapter
 func (c *ConfigAdapter) GetDotfileTargets() map[string]string
     GetDotfileTargets implements DotfileConfigLoader
 
+func (c *ConfigAdapter) GetExpandDirectories() []string
+    GetExpandDirectories implements DotfileConfigLoader
+
+func (c *ConfigAdapter) GetIgnorePatterns() []string
+    GetIgnorePatterns implements DotfileConfigLoader
+
 func (c *ConfigAdapter) GetPackagesForManager(managerName string) ([]PackageConfigItem, error)
     GetPackagesForManager implements PackageConfigLoader
 
@@ -36,6 +42,8 @@ type ConfigInterface interface {
 	GetHomebrewBrews() []string
 	GetHomebrewCasks() []string
 	GetNPMPackages() []string
+	GetIgnorePatterns() []string
+	GetExpandDirectories() []string
 }
     ConfigInterface defines the methods needed from the config package
 
@@ -47,6 +55,8 @@ type ConfigItem struct {
 
 type DotfileConfigLoader interface {
 	GetDotfileTargets() map[string]string // source -> destination mapping
+	GetIgnorePatterns() []string          // ignore patterns for file filtering
+	GetExpandDirectories() []string       // directories to expand in dot list
 }
     DotfileConfigLoader defines how to load dotfile configuration
 
@@ -145,7 +155,7 @@ type MockPackageConfigLoaderMockRecorder struct {
     MockPackageConfigLoaderMockRecorder is the mock recorder for
     MockPackageConfigLoader.
 
-func (mr *MockPackageConfigLoaderMockRecorder) GetPackagesForManager(managerName interface{}) *gomock.Call
+func (mr *MockPackageConfigLoaderMockRecorder) GetPackagesForManager(managerName any) *gomock.Call
     GetPackagesForManager indicates an expected call of GetPackagesForManager.
 
 type MockPackageManager struct {
@@ -179,19 +189,19 @@ type MockPackageManagerMockRecorder struct {
 }
     MockPackageManagerMockRecorder is the mock recorder for MockPackageManager.
 
-func (mr *MockPackageManagerMockRecorder) Install(ctx, name interface{}) *gomock.Call
+func (mr *MockPackageManagerMockRecorder) Install(ctx, name any) *gomock.Call
     Install indicates an expected call of Install.
 
-func (mr *MockPackageManagerMockRecorder) IsAvailable(ctx interface{}) *gomock.Call
+func (mr *MockPackageManagerMockRecorder) IsAvailable(ctx any) *gomock.Call
     IsAvailable indicates an expected call of IsAvailable.
 
-func (mr *MockPackageManagerMockRecorder) IsInstalled(ctx, name interface{}) *gomock.Call
+func (mr *MockPackageManagerMockRecorder) IsInstalled(ctx, name any) *gomock.Call
     IsInstalled indicates an expected call of IsInstalled.
 
-func (mr *MockPackageManagerMockRecorder) ListInstalled(ctx interface{}) *gomock.Call
+func (mr *MockPackageManagerMockRecorder) ListInstalled(ctx any) *gomock.Call
     ListInstalled indicates an expected call of ListInstalled.
 
-func (mr *MockPackageManagerMockRecorder) Uninstall(ctx, name interface{}) *gomock.Call
+func (mr *MockPackageManagerMockRecorder) Uninstall(ctx, name any) *gomock.Call
     Uninstall indicates an expected call of Uninstall.
 
 type MockProvider struct {
@@ -222,13 +232,13 @@ type MockProviderMockRecorder struct {
 }
     MockProviderMockRecorder is the mock recorder for MockProvider.
 
-func (mr *MockProviderMockRecorder) CreateItem(name, state, configured, actual interface{}) *gomock.Call
+func (mr *MockProviderMockRecorder) CreateItem(name, state, configured, actual any) *gomock.Call
     CreateItem indicates an expected call of CreateItem.
 
 func (mr *MockProviderMockRecorder) Domain() *gomock.Call
     Domain indicates an expected call of Domain.
 
-func (mr *MockProviderMockRecorder) GetActualItems(ctx interface{}) *gomock.Call
+func (mr *MockProviderMockRecorder) GetActualItems(ctx any) *gomock.Call
     GetActualItems indicates an expected call of GetActualItems.
 
 func (mr *MockProviderMockRecorder) GetConfiguredItems() *gomock.Call

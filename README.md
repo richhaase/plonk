@@ -14,6 +14,7 @@ Plonk manages your development environment by treating packages and dotfiles as 
 - **Unified management**: Packages (Homebrew, NPM) and dotfiles in one configuration
 - **State reconciliation**: Automatically detects and applies missing configurations
 - **Auto-discovery**: Finds dotfiles automatically with configurable ignore patterns
+- **Directory expansion**: Smart expansion of configured directories in dot list output
 - **AI-friendly**: Structured output formats and clear command syntax
 - **Cross-platform**: Works on macOS, Linux, and Windows
 
@@ -63,6 +64,10 @@ Plonk uses a single configuration file at `~/.config/plonk/plonk.yaml` (or `$PLO
 ```yaml
 settings:
   default_manager: homebrew
+  expand_directories:
+    - .config
+    - .ssh
+    - .aws
 
 ignore_patterns:
   - .DS_Store
@@ -99,10 +104,11 @@ plonk pkg add htop    # Add package to config
 plonk search git      # Search for packages
 
 # Dotfile management
-plonk dot list        # List dotfiles
-plonk dot add .vimrc  # Add dotfile (flexible path resolution)
+plonk dot list           # List dotfiles (missing + managed + untracked count)
+plonk dot list --verbose # Show all files including full untracked list
+plonk dot add .vimrc     # Add dotfile (flexible path resolution)
 plonk dot add ~/.config/nvim/init.lua  # Explicit path
-plonk dot add init.lua  # Finds ./init.lua or ~/init.lua
+plonk dot add init.lua   # Finds ./init.lua or ~/init.lua
 
 # Configuration
 plonk config show     # Show current config

@@ -217,25 +217,53 @@ plonk pkg remove <package> [--dry-run]
 
 ## Dotfile Management
 
-### `plonk dot list [filter]`
+### `plonk dot list`
 
-List dotfiles with their states.
+List dotfiles with their states and smart defaults.
 
 **Usage:**
 ```bash
-plonk dot list [managed|missing|untracked] [--output format]
+plonk dot list [--verbose] [--output format]
+```
+
+**Behavior:**
+- By default shows missing + managed files with untracked count
+- Use `--verbose` to see all files including full untracked list
+- Configured directories are expanded to show individual files
+- Applies ignore patterns to filter out noise files
+
+**Example output:**
+```
+Dotfiles Summary
+================
+Total: 59 files | ✓ Managed: 12 | ⚠ Missing: 0 | ? Untracked: 47
+
+  Status Target                                    Source                                
+  ------ ----------------------------------------- --------------------------------------
+  ✓      ~/.config/nvim/init.lua                   config/nvim/init.lua                  
+  ✓      ~/.zshrc                                  zshrc                                 
+  ?      ~/.aws/cli                                -                                     
+  ?      ~/.aws/config                             -                                     
+
+47 untracked files (use --verbose to show details)
 ```
 
 **JSON output:**
 ```json
 {
+  "summary": {
+    "total": 59,
+    "managed": 12,
+    "missing": 0,
+    "untracked": 47,
+    "verbose": false
+  },
   "dotfiles": [
     {
-      "name": "zshrc",
+      "name": ".zshrc",
       "state": "managed",
-      "source": "~/.config/plonk/zshrc",
       "target": "~/.zshrc",
-      "exists": true
+      "source": "zshrc"
     }
   ]
 }

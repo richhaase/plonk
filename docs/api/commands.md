@@ -174,10 +174,26 @@ func (d DotfileApplyOutput) StructuredData() any
 func (d DotfileApplyOutput) TableOutput() string
     TableOutput generates human-friendly table output for dotfile apply
 
+type DotfileBatchAddOutput struct {
+	TotalFiles int                `json:"total_files" yaml:"total_files"`
+	AddedFiles []DotfileAddOutput `json:"added_files" yaml:"added_files"`
+	Errors     []string           `json:"errors,omitempty" yaml:"errors,omitempty"`
+}
+    DotfileBatchAddOutput represents the output structure for batch dotfile add
+    operations
+
+func (d DotfileBatchAddOutput) StructuredData() any
+    StructuredData returns the structured data for serialization
+
+func (d DotfileBatchAddOutput) TableOutput() string
+    TableOutput generates human-friendly table output for batch dotfile add
+
 type DotfileListOutput struct {
-	Filter   string   `json:"filter" yaml:"filter"`
-	Count    int      `json:"count" yaml:"count"`
-	Dotfiles []string `json:"dotfiles" yaml:"dotfiles"`
+	ManagedCount   int          `json:"managed_count" yaml:"managed_count"`
+	MissingCount   int          `json:"missing_count" yaml:"missing_count"`
+	UntrackedCount int          `json:"untracked_count" yaml:"untracked_count"`
+	Items          []state.Item `json:"items" yaml:"items"`
+	Verbose        bool         `json:"verbose" yaml:"verbose"`
 }
     DotfileListOutput represents the output structure for dotfile list commands
 
@@ -186,21 +202,6 @@ func (d DotfileListOutput) StructuredData() any
 
 func (d DotfileListOutput) TableOutput() string
     TableOutput generates human-friendly table output for dotfiles
-
-type DotfileReAddOutput struct {
-	Source      string `json:"source" yaml:"source"`
-	Destination string `json:"destination" yaml:"destination"`
-	Action      string `json:"action" yaml:"action"`
-	Path        string `json:"path" yaml:"path"`
-}
-    DotfileReAddOutput represents the output structure for dotfile re-add
-    command
-
-func (d DotfileReAddOutput) StructuredData() any
-    StructuredData returns the structured data for serialization
-
-func (d DotfileReAddOutput) TableOutput() string
-    TableOutput generates human-friendly table output for dotfile re-add
 
 type EnvOutput struct {
 	System      SystemInfo      `json:"system" yaml:"system"`
