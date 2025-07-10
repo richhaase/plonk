@@ -142,10 +142,6 @@ release-auto VERSION:
     # Pre-release validation
     echo "📋 Running pre-release validation..."
     
-    # Generate API documentation
-    echo "  📖 Generating API documentation..."
-    just generate-docs
-    
     # Run tests
     echo "  🧪 Running tests..."
     just test
@@ -253,18 +249,3 @@ release-version-suggest:
     echo
     echo "Usage: just release-auto <version>"
     echo "Example: just release-auto $PATCH_VERSION"
-
-# Generate API documentation
-generate-docs:
-    @echo "Generating API documentation with gomarkdoc..."
-    @mkdir -p docs
-    @echo "Installing gomarkdoc..."
-    @go install github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest
-    @echo "Generating consolidated markdown documentation..."
-    @gomarkdoc --format github \
-               --header "# Plonk API Documentation" \
-               --footer "Generated on $(date)" \
-               ./internal/config ./internal/managers ./internal/state ./internal/errors ./internal/dotfiles ./internal/commands ./internal/lock | \
-    grep -v -E "Mock|generated GoMock|mocks base method" > docs/API.md
-    @echo "✅ API documentation generated in docs/API.md"
-

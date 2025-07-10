@@ -85,7 +85,6 @@ A quick reference guide to navigate the Plonk codebase - a unified package and d
 #### Adding a Package Manager
 1. **Interface location:** `internal/managers/common.go:PackageManager`
 2. **Implementation template:** `internal/managers/homebrew.go`
-3. **Complete interface specification:** `docs/api/managers.md`
 4. **Registration:** Add to command layer in `internal/commands/`
 
 #### Adding a Command
@@ -93,7 +92,6 @@ A quick reference guide to navigate the Plonk codebase - a unified package and d
 2. **Registration:** `internal/commands/root.go:rootCmd.AddCommand()`
 3. **Output formatting:** Use `internal/commands/output.go`
 4. **Error handling:** Use `internal/errors/types.go:PlonkError`
-5. **Command API details:** `docs/api/commands.md`
 
 #### Understanding State Reconciliation
 1. **Entry point:** `internal/state/reconciler.go:GetState()`
@@ -101,16 +99,13 @@ A quick reference guide to navigate the Plonk codebase - a unified package and d
 3. **State types:** `internal/state/types.go:ItemState`
 4. **Package provider:** `internal/state/package_provider.go`
 5. **Dotfile provider:** `internal/state/dotfile_provider.go`
-6. **Complete API specification:** `docs/api/state.md`
 
 #### Configuration Management
 1. **Interface definitions:** `internal/config/interfaces.go`
 2. **YAML implementation:** `internal/config/yaml_config.go`
 3. **Validation:** `internal/config/simple_validator.go`
-4. **Complete API specification:** `docs/api/config.md`
 
 #### Error Handling Patterns
 1. **Error types:** `internal/errors/types.go:PlonkError`
 2. **Error codes:** `internal/errors/types.go:ErrorCode`
 3. **Error domains:** `internal/errors/types.go:Domain`
-4. **Complete API specification:** `docs/api/errors.md`

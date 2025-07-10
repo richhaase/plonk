@@ -101,7 +101,6 @@ npm: [typescript, prettier]
 - `Untracked` - Installed/present BUT NOT in configuration
 
 **Provider Interface:**
-- See `docs/api/state.md` for complete Provider interface specification
 - Key methods: `Domain()`, `GetConfiguredItems()`, `GetActualItems()`, `CreateItem()`
 
 **Reconciliation Process:**
@@ -113,7 +112,6 @@ npm: [typescript, prettier]
 ### 3. Package Management (`internal/managers/`)
 
 **Unified Interface:**
-- See `docs/api/managers.md` for complete PackageManager interface specification
 - Key methods: `IsAvailable()`, `ListInstalled()`, `Install()`, `Uninstall()`, `IsInstalled()`, `Search()`, `Info()`
 - All methods accept context for cancellation and timeout support
 
@@ -269,7 +267,6 @@ All long-running operations accept context for cancellation and timeout support.
 - All operations accept context for cancellation and timeout
 - Check `ctx.Done()` before and during long-running operations
 - Return `ctx.Err()` on cancellation
-- See `docs/api/` for specific implementation examples
 
 ### 4. Comprehensive Error Handling
 PackageManager methods return (result, error) following Go best practices with smart detection of expected conditions vs real errors.
@@ -282,7 +279,6 @@ PackageManager methods return (result, error) following Go best practices with s
 PlonkError type provides user-friendly messages and debugging context.
 
 **Error Structure:**
-- See `docs/api/errors.md` for complete error type definitions
 - Structured errors with codes, domains, and user-friendly messages
 - Compatible with standard Go error handling patterns
 

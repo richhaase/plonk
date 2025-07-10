@@ -97,10 +97,6 @@ internal/
 docs/                   # Documentation
 ```
 
-### Key Interfaces
-For complete interface specifications, see:
-- **Complete API documentation:** `docs/API.md` (all interfaces and types)
-
 ## Testing
 
 ### Test Structure
@@ -401,8 +397,6 @@ default:
 }
 ```
 
-See `docs/API.md` for complete error type specifications.
-
 ## Contributing
 
 ### Development Workflow
@@ -438,7 +432,6 @@ refactor: simplify configuration loading
 ### Adding Package Managers
 
 1. **Implement interface** in `internal/managers/`
-   - See `docs/API.md` for complete PackageManager interface
    - Follow existing patterns from `HomebrewManager` and `NpmManager`
 2. **Add tests** with mocks and context support
 3. **Register manager** in command layer
@@ -476,7 +469,6 @@ just release-auto v1.2.3
 1. ✅ Validates version format and checks for duplicates
 2. ✅ Ensures clean working directory
 3. ✅ Runs full pre-release validation:
-   - Generate API documentation
    - Run tests
    - Run linter
    - Run security checks
@@ -581,4 +573,3 @@ go tool pprof mem.prof
 - [ARCHITECTURE.md](ARCHITECTURE.md) - Technical architecture
 - [TESTING.md](TESTING.md) - Testing infrastructure
 - [CODEMAP.md](CODEMAP.md) - Code navigation
-- [GODOC.md](GODOC.md) - API documentation
