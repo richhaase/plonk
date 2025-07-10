@@ -380,11 +380,26 @@ cd ~/.config/nvim && plonk dot add init.lua  # Finds ./init.lua
 
 ### `plonk config show`
 
-Display current configuration.
+Display effective configuration (defaults merged with user settings).
+
+Shows the complete configuration that plonk is actually using, including all default values merged with any user-specified overrides from the config file. This provides a comprehensive view of the active configuration regardless of whether a config file exists or contains only partial settings.
 
 **Usage:**
 ```bash
 plonk config show [--output format]
+```
+
+**Behavior:**
+- **No config file**: Shows all default values with status "missing"
+- **Partial config file**: Shows user settings merged with defaults
+- **Complete config file**: Shows the resolved effective configuration
+- **Invalid config file**: Shows validation errors with raw content
+
+**Examples:**
+```bash
+plonk config show                 # Show effective config as YAML
+plonk config show --output json   # Show as JSON with both raw and resolved config
+plonk config show --output yaml   # Show as YAML (default)
 ```
 
 ### `plonk config validate`

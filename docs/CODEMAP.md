@@ -22,7 +22,7 @@ A quick reference guide to navigate the Plonk codebase - a unified package and d
 - `pkg_*.go` - Package management commands (add, remove, list)
 - `dot_*.go` - Dotfile management commands (add, list, re-add)
 - `config.go` - Configuration base command
-- `config_show.go` - Display configuration content
+- `config_show.go` - Display effective configuration (defaults merged with user settings)
 - `config_validate.go` - Validate configuration syntax and structure
 - `config_edit.go` - Edit configuration in preferred editor
 - `output.go` - Output formatting utilities

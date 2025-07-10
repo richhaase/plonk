@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"plonk/internal/config"
 	"plonk/internal/errors"
@@ -50,22 +49,18 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 
 	// Get config directory
 	configDir := config.GetDefaultConfigDirectory()
+	configPath := getConfigPath(configDir)
 
-	// Load configuration
+	// Check if config file exists
+	configExists := true
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		configExists = false
+	}
+
+	// Load configuration (this handles missing files gracefully due to zero-config)
 	cfg, err := config.LoadConfig(configDir)
 	if err != nil {
-		// Handle missing config gracefully
-		if strings.Contains(err.Error(), "config file not found") {
-			outputData := ConfigShowOutput{
-				ConfigPath: filepath.Join(configDir, "plonk.yaml"),
-				Status:     "missing",
-				Message:    "Configuration file not found. Run 'plonk config init' to create one.",
-			}
-			return RenderOutput(outputData, format)
-		}
-
 		// Handle validation errors - still show the config if possible
-		configPath := getConfigPath(configDir)
 		rawContent, readErr := os.ReadFile(configPath)
 		if readErr != nil {
 			return errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load", "failed to load configuration")
@@ -80,12 +75,25 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 		return RenderOutput(outputData, format)
 	}
 
-	// Build output data with valid config
+	// Build output data with resolved config (merges defaults with user config)
+	resolvedConfig := cfg.Resolve()
+
+	// Determine status based on whether config file exists
+	var status, message string
+	if !configExists {
+		status = "missing"
+		message = "Configuration file not found, showing defaults. Run 'plonk config init' to create one."
+	} else {
+		status = "valid"
+		message = "Configuration is valid"
+	}
+
 	outputData := ConfigShowOutput{
-		ConfigPath: getConfigPath(configDir),
-		Status:     "valid",
-		Message:    "Configuration is valid",
-		Config:     cfg,
+		ConfigPath:     configPath,
+		Status:         status,
+		Message:        message,
+		Config:         cfg,
+		ResolvedConfig: resolvedConfig,
 	}
 
 	return RenderOutput(outputData, format)
@@ -93,17 +101,29 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 
 // ConfigShowOutput represents the output structure for config show command
 type ConfigShowOutput struct {
-	ConfigPath string         `json:"config_path" yaml:"config_path"`
-	Status     string         `json:"status" yaml:"status"`
-	Message    string         `json:"message,omitempty" yaml:"message,omitempty"`
-	Config     *config.Config `json:"config,omitempty" yaml:"config,omitempty"`
-	RawContent string         `json:"raw_content,omitempty" yaml:"raw_content,omitempty"`
+	ConfigPath     string                 `json:"config_path" yaml:"config_path"`
+	Status         string                 `json:"status" yaml:"status"`
+	Message        string                 `json:"message,omitempty" yaml:"message,omitempty"`
+	Config         *config.Config         `json:"config,omitempty" yaml:"config,omitempty"`
+	ResolvedConfig *config.ResolvedConfig `json:"resolved_config,omitempty" yaml:"resolved_config,omitempty"`
+	RawContent     string                 `json:"raw_content,omitempty" yaml:"raw_content,omitempty"`
 }
 
 // TableOutput generates human-friendly table output for config show
 func (c ConfigShowOutput) TableOutput() string {
 	if c.Status == "missing" {
-		return fmt.Sprintf("Configuration file not found: %s\n\n%s\n", c.ConfigPath, c.Message)
+		output := fmt.Sprintf("# Configuration: %s\n", c.ConfigPath)
+		output += fmt.Sprintf("# %s\n\n", c.Message)
+
+		// Show resolved config even when file is missing
+		if c.ResolvedConfig != nil {
+			yamlBytes, err := yaml.Marshal(c.ResolvedConfig)
+			if err != nil {
+				return fmt.Sprintf("Error formatting configuration: %v\n", err)
+			}
+			output += string(yamlBytes)
+		}
+		return output
 	}
 
 	output := fmt.Sprintf("# Configuration: %s\n\n", c.ConfigPath)
@@ -115,9 +135,9 @@ func (c ConfigShowOutput) TableOutput() string {
 		return output
 	}
 
-	if c.Config != nil {
-		// Convert config back to YAML for display
-		yamlBytes, err := yaml.Marshal(c.Config)
+	if c.ResolvedConfig != nil {
+		// Convert resolved config to YAML for display (shows effective config with defaults)
+		yamlBytes, err := yaml.Marshal(c.ResolvedConfig)
 		if err != nil {
 			return fmt.Sprintf("Error formatting configuration: %v\n", err)
 		}

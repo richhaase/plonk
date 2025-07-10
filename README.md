@@ -186,7 +186,7 @@ plonk doctor
 5. **Optional: Customize settings** (only if needed)
 ```bash
 plonk init           # Creates config template with helpful comments
-plonk config show    # See current effective configuration  
+plonk config show    # Show effective config (defaults merged with user settings)
 plonk config edit    # Edit configuration file
 ```
 
@@ -229,7 +229,7 @@ plonk dot add init.lua   # Finds ./init.lua or ~/init.lua
 
 # Configuration (optional - works without any config!)
 plonk init            # Create config template with defaults
-plonk config show     # Show current effective config
+plonk config show     # Show effective config (defaults merged with user settings)
 plonk config validate # Validate config syntax
 plonk config edit     # Edit config file
 
