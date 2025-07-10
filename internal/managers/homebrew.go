@@ -81,7 +81,7 @@ func (h *HomebrewManager) Install(ctx context.Context, name string) error {
 		// Check for specific error conditions
 		if exitError, ok := err.(*exec.ExitError); ok {
 			// Check for "already installed" - this might be a warning, not an error
-			if strings.Contains(outputStr, "already installed") || strings.Contains(outputStr, "Warning:") {
+			if strings.Contains(outputStr, "already installed") {
 				// Package is already installed - this is typically fine
 				return nil
 			}

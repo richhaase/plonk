@@ -36,6 +36,7 @@ func GetDefaults() ConfigDefaults {
 			"*.backup",
 			"*.tmp",
 			"*.swp",
+			"plonk.lock",
 		},
 	}
 }

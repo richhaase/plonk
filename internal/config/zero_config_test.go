@@ -63,7 +63,7 @@ func TestZeroConfigScenarios(t *testing.T) {
 			t.Errorf("Expected %d expand directories, got %d", len(expectedDirs), len(resolved.ExpandDirectories))
 		}
 
-		expectedPatterns := []string{".DS_Store", ".git", "*.backup", "*.tmp", "*.swp"}
+		expectedPatterns := []string{".DS_Store", ".git", "*.backup", "*.tmp", "*.swp", "plonk.lock"}
 		if len(resolved.IgnorePatterns) != len(expectedPatterns) {
 			t.Errorf("Expected %d ignore patterns, got %d", len(expectedPatterns), len(resolved.IgnorePatterns))
 		}

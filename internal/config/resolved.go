@@ -6,12 +6,12 @@ package config
 // ResolvedConfig represents the final computed configuration values
 // after merging defaults with user overrides. This is what commands should use.
 type ResolvedConfig struct {
-	DefaultManager    string
-	OperationTimeout  int
-	PackageTimeout    int
-	DotfileTimeout    int
-	ExpandDirectories []string
-	IgnorePatterns    []string
+	DefaultManager    string   `yaml:"default_manager" json:"default_manager"`
+	OperationTimeout  int      `yaml:"operation_timeout" json:"operation_timeout"`
+	PackageTimeout    int      `yaml:"package_timeout" json:"package_timeout"`
+	DotfileTimeout    int      `yaml:"dotfile_timeout" json:"dotfile_timeout"`
+	ExpandDirectories []string `yaml:"expand_directories" json:"expand_directories"`
+	IgnorePatterns    []string `yaml:"ignore_patterns" json:"ignore_patterns"`
 }
 
 // GetOperationTimeout returns the operation timeout in seconds
