@@ -126,6 +126,37 @@ plonk apply [--dry-run] [--backup]
 - `--dry-run` - Show changes without applying
 - `--backup` - Create backups before overwriting dotfiles
 
+**Behavior:**
+- Processes both missing dotfiles (new deployments) and managed dotfiles (updates)
+- Installs packages marked as missing in the lock file
+- Deploys dotfiles from the configuration directory to their target locations
+
+**Backup functionality:**
+- When `--backup` is used, creates timestamped backups before overwriting existing files
+- Backup format: `{filename}.backup.{YYYYMMDD-HHMMSS}`
+- Backups are created in the same directory as the original file
+- Multiple backups can exist with unique timestamps
+- To restore: manually copy the desired backup file over the current file
+
+**Example output:**
+```
+Apply Configuration
+===================
+
+Packages:
+✓ Installing htop via homebrew
+✓ Installing ripgrep via homebrew
+✓ All 2 missing packages installed
+
+Dotfiles:
+✓ Deployed ~/.zshrc from zshrc
+✓ Deployed ~/.vimrc from vimrc (backup created)
+✓ Updated ~/.config/nvim/init.lua from config/nvim/init.lua
+✓ All 3 dotfiles processed
+
+Summary: 2 packages installed, 3 dotfiles deployed
+```
+
 **Exit codes:**
 - `0` - Success
 - `1` - Configuration error

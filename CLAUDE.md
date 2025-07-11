@@ -316,6 +316,33 @@ The plonk tool now provides reliable backup functionality and handles complex di
 
 ---
 
+## Session 3 - Documentation Updates
+
+### Overview
+Session 3 focused on updating documentation to reflect the apply command fix and clarify backup functionality based on Session 2 findings.
+
+### Documentation Updates Completed
+
+#### 1. CLI.md Updates ✅
+**Changes Made:**
+- **Behavior Section Added**: Clarified that apply processes both missing and managed dotfiles
+- **Backup Functionality Details**: Added comprehensive explanation of backup behavior
+  - Format: `{filename}.backup.{YYYYMMDD-HHMMSS}`
+  - Location: Same directory as original
+  - Multiple backups supported
+  - Manual restoration process documented
+- **Example Output Added**: Provided clear example showing packages and dotfiles being processed
+
+**Benefits:**
+- Users now understand apply command processes updates, not just new deployments
+- Clear documentation of backup behavior reduces uncertainty
+- Example output sets proper expectations
+
+### Summary
+Documentation has been updated to accurately reflect the current behavior of the apply command, including the fix that enables processing of managed items for updates and comprehensive backup functionality details.
+
+---
+
 ## Remaining Work Items
 
 ### Near-term Improvements
@@ -336,3 +363,28 @@ Both dogfooding sessions have been highly successful:
 - **Session 2**: Fixed 1 blocking issue, validated core functionality
 
 **The dogfooding/round-2 branch successfully achieves all objectives and is ready for merge.**
+
+---
+
+## Session 3 - Documentation Updates
+
+### Overview
+Session 3 focused on updating project documentation to reflect the fixes and improvements made during Sessions 1 and 2.
+
+### Documentation Updates Applied
+
+#### 1. README.md
+- Added `--backup` flag example to common commands section
+- Updated default ignore patterns to include `plonk.lock`
+- Ensured apply command description accurately reflects it syncs dotfiles
+
+#### 2. ARCHITECTURE.md  
+- Updated apply command description to clarify it processes "all managed items" not just "missing items"
+- Accurately reflects the fix from Session 2
+
+#### 3. CLI.md
+- Already contained comprehensive backup functionality documentation from Session 2
+- Includes backup file format, location, and restoration instructions
+
+### Result
+All documentation now accurately reflects plonk's current behavior and capabilities, including the critical apply command fix and backup functionality.

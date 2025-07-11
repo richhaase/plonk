@@ -97,6 +97,7 @@ ignore_patterns:
   - "*.backup"
   - "*.tmp"
   - "*.swp"
+  - plonk.lock
 ```
 
 ### Lock File (`~/.config/plonk/plonk.lock`) - Automatic
@@ -216,6 +217,7 @@ plonk status
 # Apply all configuration
 plonk apply --dry-run  # Preview changes
 plonk apply           # Apply changes
+plonk apply --backup  # Apply with backups of existing files
 
 # Package management
 plonk pkg list                    # List managed + missing + untracked count
