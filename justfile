@@ -84,7 +84,7 @@ build:
         echo "❌ Build failed"
         exit 1
     fi
-    echo "✅ Built versioned plonk binary to build/ (version: $VERSION)"
+    echo "✅ Built versioned plonk binary to bin/ (version: $VERSION)"
 
 # Run all unit tests
 test:
