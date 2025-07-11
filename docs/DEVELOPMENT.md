@@ -21,13 +21,8 @@ cd plonk
 # Install development dependencies
 go mod download
 
-# Install git hooks (choose one option)
-
-# Option A: Pre-commit framework (recommended)
+# Install git hooks
 pre-commit install
-
-# Option B: Custom hooks (legacy)
-./scripts/install-hooks.sh
 
 # Generate mocks for testing
 just generate-mocks
@@ -104,7 +99,7 @@ docs/                   # Documentation
 
 ## Git Hooks & Pre-commit
 
-### Pre-commit Framework (Recommended)
+### Pre-commit Framework
 
 Plonk uses the industry-standard pre-commit framework for better developer experience:
 
@@ -130,21 +125,18 @@ pre-commit autoupdate
 - 🛠 **Rich ecosystem** of community hooks
 - 📊 **Better error reporting** with file context
 
-### Custom Hooks (Legacy)
+### Manual Checks
 
-Traditional git hooks are still supported:
+You can still run checks manually using just:
 
 ```bash
-# Install custom hooks
-./scripts/install-hooks.sh
-
-# Run pre-commit checks manually
+# Run all pre-commit checks manually
 just precommit
 ```
 
 ### Available Checks
 
-Both systems run the same core checks:
+The pre-commit framework includes:
 - **Format**: `goimports` code formatting
 - **Lint**: `golangci-lint` static analysis
 - **Test**: Go unit tests
@@ -249,15 +241,7 @@ mockgen -source=internal/managers/common.go -destination=internal/managers/mock_
 
 ## Code Quality
 
-### Git Hooks
-
-Install the pre-commit hook to automatically run checks before each commit:
-
-```bash
-./scripts/install-hooks.sh
-```
-
-This installs a git pre-commit hook that runs `just precommit` automatically.
+See [Pre-commit Migration Guide](../.github/PRE_COMMIT_MIGRATION.md) for complete setup information.
 
 ### Pre-commit Checks
 

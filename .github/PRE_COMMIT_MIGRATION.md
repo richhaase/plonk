@@ -2,7 +2,7 @@
 
 ## 🎯 Overview
 
-Plonk now supports the industry-standard **pre-commit framework** alongside our existing custom git hooks. This provides better developer experience, faster execution, and more comprehensive checks.
+Plonk uses the industry-standard **pre-commit framework** for git hooks. This provides better developer experience, faster execution, and more comprehensive checks compared to traditional custom git hooks.
 
 ## 🚀 Quick Start (Recommended)
 
@@ -22,27 +22,23 @@ pre-commit install
 
 ### For Existing Developers
 
-You can continue using your existing setup, or migrate to pre-commit:
+Simply install the pre-commit framework:
 
 ```bash
-# Option A: Keep current setup (no change needed)
-# Your existing hooks continue to work
-
-# Option B: Migrate to pre-commit framework
+# Install pre-commit framework
 pre-commit install
-# Your old hooks are preserved as .git/hooks/pre-commit.legacy
+# That's it! Legacy hooks are automatically replaced
 ```
 
-## 🔄 Migration Options
+## 🔄 Migration Status
 
-### Option 1: Parallel Usage (Recommended)
-- Keep both systems running
-- Gradually switch to pre-commit as you get comfortable
-- Old hooks preserved as backup
+**Migration Complete!** Plonk now uses the pre-commit framework exclusively:
 
-### Option 2: Full Migration
-- Uninstall old hooks: `scripts/uninstall-hooks.sh` (when created)
-- Install pre-commit: `pre-commit install`
+- ✅ **Legacy hooks removed** - all custom scripts and hooks cleaned up
+- ✅ **Pre-commit framework active** - industry standard implementation
+- ✅ **Legacy `just precommit`** - still available for manual execution
+- ✅ **Enhanced performance** - 94% faster on documentation changes
+- ✅ **Migration documentation updated** - all references to legacy system removed
 
 ## ⚡ Performance Benefits
 
