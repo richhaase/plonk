@@ -10,6 +10,57 @@ default:
     @echo "  just release-snapshot        # Test release (no publishing)"
     @echo "  just release v1.2.3          # Create release with GoReleaser"
 
+# =============================================================================
+# INTERNAL HELPER FUNCTIONS (prefixed with _)
+# =============================================================================
+
+# Check if GoReleaser is installed
+_check-goreleaser:
+    #!/usr/bin/env bash
+    if ! command -v goreleaser &> /dev/null; then
+        echo "❌ GoReleaser not found. Install with:"
+        echo "   brew install goreleaser"
+        echo "   or visit: https://goreleaser.com/install/"
+        exit 1
+    fi
+
+# Get version information for builds
+_get-version-info:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+    COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "none")
+    DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    echo "export VERSION='$VERSION'"
+    echo "export COMMIT='$COMMIT'"
+    echo "export DATE='$DATE'"
+
+# Validate git working directory is clean
+_require-clean-git:
+    #!/usr/bin/env bash
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+        echo "❌ Working directory not clean. Please commit or stash changes."
+        exit 1
+    fi
+
+# Check if we're on main/master branch with optional override
+_check-main-branch:
+    #!/usr/bin/env bash
+    CURRENT_BRANCH=$(git branch --show-current)
+    if [[ "$CURRENT_BRANCH" != "main" && "$CURRENT_BRANCH" != "master" ]]; then
+        echo "⚠️  Warning: Not on main/master branch (currently on: $CURRENT_BRANCH)"
+        read -p "Continue anyway? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "❌ Operation cancelled"
+            exit 1
+        fi
+    fi
+
+# =============================================================================
+# MAIN RECIPES
+# =============================================================================
+
 # Generate mocks for testing
 generate-mocks:
     @echo "Generating mocks..."
@@ -25,11 +76,15 @@ build:
     set -euo pipefail
     echo "Building plonk with version information..."
     mkdir -p build
-    VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
-    COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "none")
-    DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    go build -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" -o build/plonk ./cmd/plonk
-    echo "Built versioned plonk binary to build/"
+    
+    # Get version info using helper
+    eval $(just _get-version-info)
+    
+    if ! go build -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" -o build/plonk ./cmd/plonk; then
+        echo "❌ Build failed"
+        exit 1
+    fi
+    echo "✅ Built versioned plonk binary to build/ (version: $VERSION)"
 
 # Run all unit tests  
 test:
@@ -63,11 +118,15 @@ install:
     #!/usr/bin/env bash
     set -euo pipefail
     echo "Installing plonk globally with version information..."
-    VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
-    COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "none")
-    DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    go install -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" ./cmd/plonk
-    echo "✅ Plonk installed globally!"
+    
+    # Get version info using helper
+    eval $(just _get-version-info)
+    
+    if ! go install -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" ./cmd/plonk; then
+        echo "❌ Installation failed"
+        exit 1
+    fi
+    echo "✅ Plonk installed globally! (version: $VERSION)"
     echo "Run 'plonk --help' to get started"
 
 # Run pre-commit checks (format, lint, test, security)
@@ -120,31 +179,10 @@ release VERSION:
         exit 1
     fi
     
-    # Check if GoReleaser is installed
-    if ! command -v goreleaser &> /dev/null; then
-        echo "❌ GoReleaser not found. Install with:"
-        echo "   brew install goreleaser"
-        echo "   or visit: https://goreleaser.com/install/"
-        exit 1
-    fi
-    
-    # Check if we're on main branch (optional safety check)
-    CURRENT_BRANCH=$(git branch --show-current)
-    if [[ "$CURRENT_BRANCH" != "main" && "$CURRENT_BRANCH" != "master" ]]; then
-        echo "⚠️  Warning: Not on main/master branch (currently on: $CURRENT_BRANCH)"
-        read -p "Continue anyway? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            echo "❌ Release cancelled"
-            exit 1
-        fi
-    fi
-    
-    # Check working directory is clean
-    if ! git diff --quiet || ! git diff --cached --quiet; then
-        echo "❌ Working directory not clean. Please commit or stash changes."
-        exit 1
-    fi
+    # Use helper functions for validation
+    just _check-goreleaser
+    just _check-main-branch
+    just _require-clean-git
     
     echo "🚀 Starting GoReleaser release process for $VERSION"
     echo "================================================="
@@ -169,16 +207,14 @@ release-snapshot:
     #!/usr/bin/env bash
     set -euo pipefail
     
-    # Check if GoReleaser is installed
-    if ! command -v goreleaser &> /dev/null; then
-        echo "❌ GoReleaser not found. Install with:"
-        echo "   brew install goreleaser"
-        echo "   or visit: https://goreleaser.com/install/"
-        exit 1
-    fi
+    # Use helper function for validation
+    just _check-goreleaser
     
     echo "🔍 Running GoReleaser in snapshot mode (no publishing)..."
-    goreleaser release --snapshot --clean
+    if ! goreleaser release --snapshot --clean; then
+        echo "❌ Snapshot build failed"
+        exit 1
+    fi
     
     echo
     echo "✅ Snapshot build completed!"
@@ -189,16 +225,14 @@ release-check:
     #!/usr/bin/env bash
     set -euo pipefail
     
-    # Check if GoReleaser is installed
-    if ! command -v goreleaser &> /dev/null; then
-        echo "❌ GoReleaser not found. Install with:"
-        echo "   brew install goreleaser"
-        echo "   or visit: https://goreleaser.com/install/"
-        exit 1
-    fi
+    # Use helper function for validation
+    just _check-goreleaser
     
     echo "🔍 Validating GoReleaser configuration..."
-    goreleaser check
+    if ! goreleaser check; then
+        echo "❌ GoReleaser configuration is invalid"
+        exit 1
+    fi
     
     echo "✅ GoReleaser configuration is valid!"
 
@@ -247,5 +281,5 @@ release-version-suggest:
     echo "  Major: $MAJOR_VERSION (breaking changes)"
     echo "  RC: $RC_VERSION (release candidate)"
     echo
-    echo "Usage: just release-auto <version>"
-    echo "Example: just release-auto $PATCH_VERSION"
+    echo "Usage: just release <version>"
+    echo "Example: just release $PATCH_VERSION"
