@@ -111,11 +111,11 @@ Plonk uses a structured error system that requires specific testing patterns:
 func TestCommandError(t *testing.T) {
     // Test error creation
     err := runCommand(cmd, []string{"invalid"})
-    
+
     // Verify it's a structured error
     var plonkErr *errors.PlonkError
     assert.True(t, errors.As(err, &plonkErr))
-    
+
     // Check error properties
     assert.Equal(t, errors.ErrInvalidInput, plonkErr.Code)
     assert.Equal(t, errors.DomainCommands, plonkErr.Domain)
@@ -149,12 +149,12 @@ func TestErrorHandling(t *testing.T) {
             expectedMessage: "package manager not available",
         },
     }
-    
+
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
             // Setup error condition
             err := functionUnderTest(tt.setupError)
-            
+
             // Verify structured error
             var plonkErr *errors.PlonkError
             require.True(t, errors.As(err, &plonkErr))
@@ -170,7 +170,7 @@ func TestErrorHandling(t *testing.T) {
 ```go
 func TestErrorContext(t *testing.T) {
     packageName := "test-package"
-    
+
     // Create error with item context
     err := errors.WrapWithItem(
         fmt.Errorf("install failed"),
@@ -180,10 +180,10 @@ func TestErrorContext(t *testing.T) {
         packageName,
         "failed to install package"
     )
-    
+
     var plonkErr *errors.PlonkError
     require.True(t, errors.As(err, &plonkErr))
-    
+
     // Verify context is preserved
     assert.Equal(t, packageName, plonkErr.Item)
     assert.Contains(t, plonkErr.UserMessage(), packageName)
@@ -194,7 +194,7 @@ func TestErrorContext(t *testing.T) {
 ```go
 func TestErrorWrapping(t *testing.T) {
     originalErr := fmt.Errorf("original error")
-    
+
     // Wrap error with context
     wrappedErr := errors.Wrap(
         originalErr,
@@ -203,10 +203,10 @@ func TestErrorWrapping(t *testing.T) {
         "copy",
         "failed to copy file"
     )
-    
+
     // Verify wrapping preserves original error
     assert.ErrorIs(t, wrappedErr, originalErr)
-    
+
     // Verify structured error properties
     var plonkErr *errors.PlonkError
     require.True(t, errors.As(wrappedErr, &plonkErr))
@@ -240,7 +240,7 @@ func TestExitCodes(t *testing.T) {
             expectedCode: 2,
         },
     }
-    
+
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
             exitCode := commands.HandleError(tt.error)
@@ -260,13 +260,13 @@ func TestErrorMessages(t *testing.T) {
         "check",
         "homebrew is not available"
     ).WithItem("homebrew")
-    
+
     userMessage := err.UserMessage()
-    
+
     // Verify user-friendly message
     assert.Contains(t, userMessage, "homebrew")
     assert.Contains(t, userMessage, "not available")
-    
+
     // Verify it doesn't contain technical details
     assert.NotContains(t, userMessage, "stack trace")
     assert.NotContains(t, userMessage, "internal error")
@@ -280,16 +280,16 @@ func TestDebugMode(t *testing.T) {
     // Set debug mode
     originalDebug := os.Getenv("PLONK_DEBUG")
     defer os.Setenv("PLONK_DEBUG", originalDebug)
-    
+
     os.Setenv("PLONK_DEBUG", "1")
-    
+
     err := errors.NewError(
         errors.ErrInternal,
         errors.DomainCommands,
         "test",
         "internal error"
     )
-    
+
     // In debug mode, HandleError should show technical details
     // This would typically be tested by capturing stderr output
     exitCode := commands.HandleError(err)

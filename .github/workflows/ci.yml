@@ -10,7 +10,7 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -42,7 +42,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
         go-version: ['1.22', '1.23']
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4

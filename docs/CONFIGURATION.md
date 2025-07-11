@@ -27,7 +27,7 @@ When no configuration file exists, these defaults are used:
 # These are the built-in defaults - no config file needed!
 default_manager: homebrew      # Primary package manager
 operation_timeout: 300         # 5 minutes
-package_timeout: 180           # 3 minutes  
+package_timeout: 180           # 3 minutes
 dotfile_timeout: 60            # 1 minute
 expand_directories:
     - .config
@@ -112,7 +112,7 @@ packages:
       installed_at: "2024-01-15T10:30:00Z"
       version: "2.43.0"
     - name: neovim
-      installed_at: "2024-01-15T10:31:00Z" 
+      installed_at: "2024-01-15T10:31:00Z"
       version: "0.9.5"
   npm:
     - name: typescript
@@ -135,9 +135,9 @@ default_manager: homebrew
 ### Required Settings
 
 #### `default_manager`
-**Type:** string  
-**Required:** Yes  
-**Values:** `homebrew`, `npm`, `cargo`  
+**Type:** string
+**Required:** Yes
+**Values:** `homebrew`, `npm`, `cargo`
 **Purpose:** Default package manager for new packages
 
 ```yaml
@@ -147,9 +147,9 @@ default_manager: homebrew
 ### Optional Settings
 
 #### `operation_timeout`
-**Type:** integer  
-**Default:** 300  
-**Units:** seconds  
+**Type:** integer
+**Default:** 300
+**Units:** seconds
 **Purpose:** Overall operation timeout
 
 ```yaml
@@ -157,9 +157,9 @@ operation_timeout: 600  # 10 minutes
 ```
 
 #### `package_timeout`
-**Type:** integer  
-**Default:** 180  
-**Units:** seconds  
+**Type:** integer
+**Default:** 180
+**Units:** seconds
 **Purpose:** Individual package operation timeout
 
 ```yaml
@@ -167,9 +167,9 @@ package_timeout: 300  # 5 minutes
 ```
 
 #### `dotfile_timeout`
-**Type:** integer  
-**Default:** 60  
-**Units:** seconds  
+**Type:** integer
+**Default:** 60
+**Units:** seconds
 **Purpose:** Dotfile operation timeout
 
 ```yaml
@@ -177,8 +177,8 @@ dotfile_timeout: 120  # 2 minutes
 ```
 
 #### `expand_directories`
-**Type:** array of strings  
-**Default:** `[".config", ".ssh", ".aws", ".kube", ".docker", ".gnupg", ".local"]`  
+**Type:** array of strings
+**Default:** `[".config", ".ssh", ".aws", ".kube", ".docker", ".gnupg", ".local"]`
 **Purpose:** Directories to expand in `plonk dot list` output
 
 ```yaml
@@ -200,8 +200,8 @@ expand_directories:
 
 ## Ignore Patterns
 
-**Type:** array of strings  
-**Format:** Gitignore-style patterns  
+**Type:** array of strings
+**Format:** Gitignore-style patterns
 **Purpose:** Files/directories to ignore during dotfile auto-discovery
 
 ### Pattern Rules
@@ -245,7 +245,7 @@ Packages are automatically tracked in the lock file (`plonk.lock`) when you use 
 ```bash
 # Add packages (updates lock file automatically)
 plonk pkg add git
-plonk pkg add typescript --manager npm  
+plonk pkg add typescript --manager npm
 plonk pkg add ripgrep --manager cargo
 
 # Remove packages
@@ -299,8 +299,8 @@ ignore_patterns:
 
 ### `PLONK_DIR`
 
-**Purpose:** Override default configuration directory  
-**Default:** `~/.config/plonk`  
+**Purpose:** Override default configuration directory
+**Default:** `~/.config/plonk`
 **Examples:**
 
 ```bash
@@ -316,8 +316,8 @@ export PLONK_DIR=/etc/plonk
 
 ### `EDITOR`
 
-**Purpose:** Editor for `plonk config edit`  
-**Default:** System default  
+**Purpose:** Editor for `plonk config edit`
+**Default:** System default
 **Examples:**
 
 ```bash

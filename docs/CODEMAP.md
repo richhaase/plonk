@@ -61,7 +61,7 @@ A quick reference guide to navigate the Plonk codebase - a unified package and d
 
 #### Configuration
 - `ConfigReader` - Load configuration
-- `ConfigWriter` - Save configuration  
+- `ConfigWriter` - Save configuration
 - `ConfigValidator` - Validate config
 - `DotfileConfigReader` - Dotfile-specific config
 - `PackageConfigReader` - Package-specific config

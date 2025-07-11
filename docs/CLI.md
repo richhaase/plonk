@@ -285,13 +285,13 @@ Package Summary
 ===============
 Total: 25 packages | ✓ Managed: 18 | ⚠ Missing: 2 | ? Untracked: 5
 
-  Status Package                        Manager   
+  Status Package                        Manager
   ------ ------------------------------ ----------
-  ✓      git                            homebrew  
-  ✓      curl                           homebrew  
-  ⚠      htop                           homebrew  
-  ✓      typescript                     npm       
-  ✓      ripgrep                        cargo     
+  ✓      git                            homebrew
+  ✓      curl                           homebrew
+  ⚠      htop                           homebrew
+  ✓      typescript                     npm
+  ✓      ripgrep                        cargo
 
 5 untracked packages (use --verbose to show details)
 ```
@@ -379,12 +379,12 @@ Dotfiles Summary
 ================
 Total: 59 files | ✓ Managed: 12 | ⚠ Missing: 0 | ? Untracked: 47
 
-  Status Target                                    Source                                
+  Status Target                                    Source
   ------ ----------------------------------------- --------------------------------------
-  ✓      ~/.config/nvim/init.lua                   config/nvim/init.lua                  
-  ✓      ~/.zshrc                                  zshrc                                 
-  ?      ~/.aws/cli                                -                                     
-  ?      ~/.aws/config                             -                                     
+  ✓      ~/.config/nvim/init.lua                   config/nvim/init.lua
+  ✓      ~/.zshrc                                  zshrc
+  ?      ~/.aws/cli                                -
+  ?      ~/.aws/config                             -
 
 47 untracked files (use --verbose to show details)
 ```

@@ -7,7 +7,7 @@ Plonk manages packages and dotfiles through unified state reconciliation. It com
 ## Core Principles
 
 1. **State Reconciliation** - All operations reconcile configured vs actual state
-2. **Provider Pattern** - Extensible architecture for different domains  
+2. **Provider Pattern** - Extensible architecture for different domains
 3. **Interface-Based Design** - Loose coupling through well-defined interfaces
 4. **Context-Aware Operations** - Cancellable operations with configurable timeouts
 5. **Structured Error Handling** - User-friendly errors with actionable guidance
@@ -18,7 +18,7 @@ Plonk manages packages and dotfiles through unified state reconciliation. It com
 
 ```
 internal/
-├── commands/    # CLI command implementations  
+├── commands/    # CLI command implementations
 ├── config/      # Configuration with interfaces and validation
 ├── dotfiles/    # File operations and path management
 ├── errors/      # Structured error types and handling
@@ -34,20 +34,20 @@ internal/
 │     (CLI)   │     │ (Reconciler)│     │ (Homebrew,  │
 └─────────────┘     └─────────────┘     │    NPM)     │
        │                    │            └─────────────┘
-       │                    │                     
-       ▼                    ▼                    
+       │                    │
+       ▼                    ▼
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
 │   Config    │     │  Providers  │────▶│  Dotfiles   │
 │ (Interfaces)│────▶│  (Package,  │     │   (File     │
 └─────────────┘     │  Dotfile)   │     │ Operations) │
                     └─────────────┘     └─────────────┘
-                            │                     
-                            ▼                    
-                    ┌─────────────┐              
-                    │   Errors    │              
-                    │ (Structured │              
-                    │  Messages)  │              
-                    └─────────────┘              
+                            │
+                            ▼
+                    ┌─────────────┐
+                    │   Errors    │
+                    │ (Structured │
+                    │  Messages)  │
+                    └─────────────┘
 ```
 
 ## Key Components
@@ -96,7 +96,7 @@ npm: [typescript, prettier]
 
 **Item States:**
 - `Managed` - In configuration AND installed/present
-- `Missing` - In configuration BUT NOT installed/present  
+- `Missing` - In configuration BUT NOT installed/present
 - `Untracked` - Installed/present BUT NOT in configuration
 
 **Provider Interface:**
@@ -133,7 +133,7 @@ npm: [typescript, prettier]
 
 **Path Conventions:**
 - `zshrc` → `~/.zshrc`
-- `config/nvim/` → `~/.config/nvim/`  
+- `config/nvim/` → `~/.config/nvim/`
 - `editorconfig` → `~/.editorconfig`
 
 **Features:**
@@ -152,7 +152,7 @@ Plonk implements a comprehensive structured error system that provides consisten
 **Core Features:**
 - **Structured Error Types** - All errors use `PlonkError` with standardized fields
 - **Error Codes** - Specific codes for different error categories
-- **Domain Classification** - Errors grouped by functional domain  
+- **Domain Classification** - Errors grouped by functional domain
 - **User-Friendly Messages** - Clear, actionable error messages
 - **Debug Mode Support** - Detailed technical information when needed
 - **Context Preservation** - Original error causes maintained through wrapping
@@ -164,7 +164,7 @@ ErrConfigNotFound      // Configuration file missing
 ErrConfigParseFailure  // Configuration syntax error
 ErrConfigValidation    // Configuration validation failed
 
-// Package management errors  
+// Package management errors
 ErrPackageInstall      // Package installation failed
 ErrManagerUnavailable  // Package manager not available
 
@@ -305,7 +305,7 @@ Auto-discovery of dotfiles reduces configuration burden while maintaining custom
 4. Register in command layer
 5. Add tests including context cancellation coverage
 
-### Adding New Domains  
+### Adding New Domains
 1. Create `Provider` implementation
 2. Define configuration interface
 3. Create adapters if needed
@@ -338,6 +338,6 @@ Auto-discovery of dotfiles reduces configuration burden while maintaining custom
 
 ## Development
 
-**Build:** `just` command runner with common tasks  
-**Dependencies:** Minimal - only essential Go packages  
+**Build:** `just` command runner with common tasks
+**Dependencies:** Minimal - only essential Go packages
 **Contributing:** Extend via interfaces, maintain test coverage

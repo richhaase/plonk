@@ -64,7 +64,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	configContent := fmt.Sprintf(`# Plonk Configuration File
 # This file contains your custom settings. All settings are optional.
 # Remove or comment out any settings you want to use the defaults for.
-# 
+#
 # The values shown below are the actual defaults that plonk uses.
 # You can modify any of these values to customize plonk's behavior.
 

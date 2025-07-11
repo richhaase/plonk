@@ -21,7 +21,12 @@ cd plonk
 # Install development dependencies
 go mod download
 
-# Install git hooks (recommended)
+# Install git hooks (choose one option)
+
+# Option A: Pre-commit framework (recommended)
+pre-commit install
+
+# Option B: Custom hooks (legacy)
 ./scripts/install-hooks.sh
 
 # Generate mocks for testing
@@ -97,6 +102,61 @@ internal/
 docs/                   # Documentation
 ```
 
+## Git Hooks & Pre-commit
+
+### Pre-commit Framework (Recommended)
+
+Plonk uses the industry-standard pre-commit framework for better developer experience:
+
+```bash
+# Install pre-commit (one-time setup)
+brew install pre-commit  # macOS
+pip install pre-commit   # Python
+
+# Install hooks for this repository
+pre-commit install
+
+# Run all hooks manually
+pre-commit run --all-files
+
+# Update hook versions
+pre-commit autoupdate
+```
+
+**Benefits:**
+- ⚡ **Faster execution** (only runs relevant checks)
+- 🎯 **File-specific filtering** (Go hooks only on .go files)
+- 🔄 **Automatic updates** via `pre-commit autoupdate`
+- 🛠 **Rich ecosystem** of community hooks
+- 📊 **Better error reporting** with file context
+
+### Custom Hooks (Legacy)
+
+Traditional git hooks are still supported:
+
+```bash
+# Install custom hooks
+./scripts/install-hooks.sh
+
+# Run pre-commit checks manually
+just precommit
+```
+
+### Available Checks
+
+Both systems run the same core checks:
+- **Format**: `goimports` code formatting
+- **Lint**: `golangci-lint` static analysis
+- **Test**: Go unit tests
+- **Security**: `govulncheck` vulnerability scanning
+
+Plus additional checks in pre-commit framework:
+- YAML/TOML syntax validation
+- Trailing whitespace removal
+- End-of-file fixing
+- Large file detection
+- Merge conflict detection
+
 ## Testing
 
 ### Test Structure
@@ -141,7 +201,7 @@ func TestPackageManager(t *testing.T) {
         {"valid package", "git", "git", false},
         {"invalid package", "", "", true},
     }
-    
+
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
             // test implementation
@@ -155,12 +215,12 @@ func TestPackageManager(t *testing.T) {
 func TestWithMock(t *testing.T) {
     ctrl := gomock.NewController(t)
     defer ctrl.Finish()
-    
+
     mockManager := managers.NewMockPackageManager(ctrl)
     mockManager.EXPECT().
         IsAvailable(gomock.Any()).
         Return(true, nil)
-    
+
     // test with mock
 }
 ```
@@ -170,7 +230,7 @@ func TestWithMock(t *testing.T) {
 func TestContextCancellation(t *testing.T) {
     ctx, cancel := context.WithCancel(context.Background())
     cancel() // Cancel immediately
-    
+
     _, err := manager.ListInstalled(ctx)
     assert.Error(t, err)
     assert.Contains(t, err.Error(), "context canceled")
@@ -305,25 +365,25 @@ func runCommand(cmd *cobra.Command, args []string) error {
     // Parse output format
     format, err := ParseOutputFormat(outputFormat)
     if err != nil {
-        return errors.WrapWithItem(err, errors.ErrInvalidInput, 
-            errors.DomainCommands, "command-name", "output-format", 
+        return errors.WrapWithItem(err, errors.ErrInvalidInput,
+            errors.DomainCommands, "command-name", "output-format",
             "invalid output format")
     }
-    
+
     // Load configuration
     cfg, err := config.LoadConfig(configDir)
     if err != nil {
-        return errors.Wrap(err, errors.ErrConfigNotFound, 
+        return errors.Wrap(err, errors.ErrConfigNotFound,
             errors.DomainConfig, "load", "failed to load configuration")
     }
-    
+
     // Perform operation
     if err := performOperation(cfg); err != nil {
-        return errors.WrapWithItem(err, errors.ErrPackageInstall, 
-            errors.DomainPackages, "install", packageName, 
+        return errors.WrapWithItem(err, errors.ErrPackageInstall,
+            errors.DomainPackages, "install", packageName,
             "failed to install package")
     }
-    
+
     return nil
 }
 ```
@@ -353,12 +413,12 @@ func TestCommandErrorHandling(t *testing.T) {
             expectedCode: errors.ErrManagerUnavailable,
         },
     }
-    
+
     for _, tt := range tests {
         t.Run(tt.name, func(t *testing.T) {
             // Setup error condition
             err := runCommand(cmd, args)
-            
+
             // Verify structured error
             var plonkErr *errors.PlonkError
             assert.True(t, errors.As(err, &plonkErr))
@@ -386,10 +446,10 @@ The error handling system automatically maps error codes to exit codes:
 ```go
 // In HandleError function
 switch plonkErr.Code {
-case errors.ErrConfigNotFound, errors.ErrConfigParseFailure, 
+case errors.ErrConfigNotFound, errors.ErrConfigParseFailure,
      errors.ErrConfigValidation, errors.ErrInvalidInput:
     return 1  // User error
-case errors.ErrFilePermission, errors.ErrManagerUnavailable, 
+case errors.ErrFilePermission, errors.ErrManagerUnavailable,
      errors.ErrInternal:
     return 2  // System error
 default:

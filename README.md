@@ -165,9 +165,9 @@ ignore_patterns:                 # Files ignored during dotfile discovery
 2. **Check what's already on your system:**
 ```bash
 plonk status
-# Shows: 
+# Shows:
 # - Untracked packages (already installed but not managed by Plonk)
-# - Auto-discovered dotfiles  
+# - Auto-discovered dotfiles
 # - Overall system health
 ```
 
@@ -296,3 +296,5 @@ just release-version-suggest
 # Create automated release
 just release-auto v1.2.3
 ```
+Test comment
+Test comment

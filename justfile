@@ -76,17 +76,17 @@ build:
     set -euo pipefail
     echo "Building plonk with version information..."
     mkdir -p build
-    
+
     # Get version info using helper
     eval $(just _get-version-info)
-    
+
     if ! go build -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" -o build/plonk ./cmd/plonk; then
         echo "❌ Build failed"
         exit 1
     fi
     echo "✅ Built versioned plonk binary to build/ (version: $VERSION)"
 
-# Run all unit tests  
+# Run all unit tests
 test:
     @echo "Running unit tests..."
     go test ./...
@@ -118,10 +118,10 @@ install:
     #!/usr/bin/env bash
     set -euo pipefail
     echo "Installing plonk globally with version information..."
-    
+
     # Get version info using helper
     eval $(just _get-version-info)
-    
+
     if ! go install -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" ./cmd/plonk; then
         echo "❌ Installation failed"
         exit 1
@@ -133,7 +133,7 @@ install:
 precommit:
     @echo "Running pre-commit checks..."
     @just format
-    @just lint  
+    @just lint
     @just test
     @just security
     @echo "✅ Pre-commit checks passed!"
@@ -164,40 +164,40 @@ security:
 release VERSION:
     #!/usr/bin/env bash
     set -euo pipefail
-    
+
     VERSION="{{VERSION}}"
-    
+
     # Validate version format
     if [[ ! $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
         echo "❌ Invalid version format. Use vX.Y.Z or vX.Y.Z-suffix (e.g., v1.2.3, v1.2.3-rc1)"
         exit 1
     fi
-    
+
     # Check if tag already exists
     if git tag -l | grep -q "^$VERSION$"; then
         echo "❌ Tag $VERSION already exists!"
         exit 1
     fi
-    
+
     # Use helper functions for validation
     just _check-goreleaser
     just _check-main-branch
     just _require-clean-git
-    
+
     echo "🚀 Starting GoReleaser release process for $VERSION"
     echo "================================================="
-    
+
     # Create and push tag (GoReleaser will build from this tag)
     echo "🏷️  Creating release tag..."
     git tag -a "$VERSION" -m "Release $VERSION"
-    
+
     echo "📤 Pushing tag to remote..."
     git push origin "$VERSION"
-    
+
     # Run GoReleaser
     echo "🚀 Running GoReleaser..."
     goreleaser release --clean
-    
+
     echo
     echo "✅ Release $VERSION completed successfully!"
     echo "🎉 Check GitHub releases: https://github.com/richhaase/plonk/releases"
@@ -206,16 +206,16 @@ release VERSION:
 release-snapshot:
     #!/usr/bin/env bash
     set -euo pipefail
-    
+
     # Use helper function for validation
     just _check-goreleaser
-    
+
     echo "🔍 Running GoReleaser in snapshot mode (no publishing)..."
     if ! goreleaser release --snapshot --clean; then
         echo "❌ Snapshot build failed"
         exit 1
     fi
-    
+
     echo
     echo "✅ Snapshot build completed!"
     echo "📦 Check dist/ directory for generated binaries"
@@ -224,16 +224,16 @@ release-snapshot:
 release-check:
     #!/usr/bin/env bash
     set -euo pipefail
-    
+
     # Use helper function for validation
     just _check-goreleaser
-    
+
     echo "🔍 Validating GoReleaser configuration..."
     if ! goreleaser check; then
         echo "❌ GoReleaser configuration is invalid"
         exit 1
     fi
-    
+
     echo "✅ GoReleaser configuration is valid!"
 
 
@@ -241,17 +241,17 @@ release-check:
 release-version-suggest:
     #!/usr/bin/env bash
     set -euo pipefail
-    
+
     # Get current version
     CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
     echo "Current version: $CURRENT_VERSION"
     echo
-    
+
     # Show recent commits since last tag
     echo "Recent commits since $CURRENT_VERSION:"
     git log --oneline --no-merges $CURRENT_VERSION..HEAD 2>/dev/null || echo "  (no commits since last tag)"
     echo
-    
+
     # Parse current version for increment suggestions
     if [[ $CURRENT_VERSION =~ ^v?([0-9]+)\.([0-9]+)\.([0-9]+)(-rc([0-9]+))?$ ]]; then
         MAJOR=${BASH_REMATCH[1]}
@@ -264,7 +264,7 @@ release-version-suggest:
         PATCH=0
         RC=""
     fi
-    
+
     # Calculate version options
     PATCH_VERSION="v$MAJOR.$MINOR.$((PATCH + 1))"
     MINOR_VERSION="v$MAJOR.$((MINOR + 1)).0"
@@ -274,7 +274,7 @@ release-version-suggest:
     else
         RC_VERSION="v$MAJOR.$((MINOR + 1)).0-rc1"
     fi
-    
+
     echo "Suggested versions:"
     echo "  Patch: $PATCH_VERSION (bug fixes)"
     echo "  Minor: $MINOR_VERSION (new features)"

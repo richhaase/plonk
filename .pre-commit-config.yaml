@@ -1,0 +1,70 @@
+repos:
+  # Local hooks using our justfile commands
+  - repo: local
+    hooks:
+      - id: go-fmt-import
+        name: Format Go code
+        entry: just format
+        language: system
+        files: \.go$
+        pass_filenames: false
+
+      - id: go-lint
+        name: Lint Go code
+        entry: just lint
+        language: system
+        files: \.go$
+        pass_filenames: false
+
+      - id: go-test
+        name: Test Go code
+        entry: just test
+        language: system
+        files: \.go$
+        pass_filenames: false
+
+  # Standard file quality checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+        name: Check YAML syntax
+      - id: check-toml
+        name: Check TOML syntax
+      - id: end-of-file-fixer
+        name: Fix end of files
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+      - id: check-added-large-files
+        name: Check for large files
+        args: ['--maxkb=1000']
+      - id: check-case-conflict
+        name: Check for case conflicts
+      - id: mixed-line-ending
+        name: Check for mixed line endings
+
+  # Go-specific community hooks
+  - repo: https://github.com/dnephin/pre-commit-golang
+    rev: v0.5.1
+    hooks:
+      - id: go-mod-tidy
+        name: Tidy Go modules
+      # Note: go-vet can be enabled once we resolve module path detection
+      # - id: go-vet
+      #   name: Go vet
+      #   files: \.go$
+      - id: go-fmt
+        name: Go fmt
+      - id: go-imports
+        name: Go imports
+        args: [-local, plonk]
+
+  # Additional security checks can be added here
+  # Example: detect-secrets, commitizen, etc.
+
+# Global configuration
+default_stages: [pre-commit]
+fail_fast: false
+minimum_pre_commit_version: '3.0.0'

@@ -1,4 +1,4 @@
-# golangci-lint configuration for Plonk  
+# golangci-lint configuration for Plonk
 # Compatible with both v1 and v2 config formats
 # https://golangci-lint.run/usage/configuration/
 
@@ -17,10 +17,10 @@ linters:
 linters-settings:
   govet:
     shadow: true
-  
+
   misspell:
     locale: US
-  
+
 
 issues:
   max-issues-per-linter: 0

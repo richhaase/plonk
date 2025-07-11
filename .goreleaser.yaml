@@ -89,22 +89,22 @@ release:
   name_template: "{{.ProjectName}} v{{.Version}}"
   header: |
     ## Plonk v{{.Version}}
-    
+
     A unified package and dotfile manager for developers.
   footer: |
     ---
-    
+
     **Full Changelog**: https://github.com/richhaase/plonk/compare/{{ .PreviousTag }}...{{ .Tag }}
-    
+
     ## Installation
-    
+
     ### macOS/Linux
     ```bash
     # Download and extract (replace VERSION and OS/ARCH as needed)
     curl -L https://github.com/richhaase/plonk/releases/download/v{{.Version}}/plonk_{{.Version}}_Darwin_x86_64.tar.gz | tar xz
     sudo mv plonk /usr/local/bin/
     ```
-    
+
     ### Homebrew (coming soon)
     ```bash
     brew install richhaase/tap/plonk
@@ -117,4 +117,3 @@ announce:
 # Sign releases with GPG (disabled - requires GPG setup)
 # signs:
 #   - artifacts: checksum
-

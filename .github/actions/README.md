@@ -44,7 +44,7 @@ This directory contains reusable composite actions for the Plonk project's CI/CD
 
 **Inputs**:
 - `run-linter` (optional): Run golangci-lint (default: true)
-- `run-formatter` (optional): Run goimports formatter (default: true) 
+- `run-formatter` (optional): Run goimports formatter (default: true)
 - `run-security` (optional): Run security checks (default: false)
 - `test-build` (optional): Test that the project builds (default: true)
 
