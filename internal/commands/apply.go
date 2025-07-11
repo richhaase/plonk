@@ -290,8 +290,8 @@ func applyDotfiles(configDir, homeDir string, cfg *config.Config, dryRun, backup
 	deployedCount := 0
 	skippedCount := 0
 
-	// Process only missing items that need deployment
-	allItems := result.Missing
+	// Process both missing and managed items that may need deployment
+	allItems := append(result.Missing, result.Managed...)
 
 	for _, item := range allItems {
 		// Get source and destination from metadata

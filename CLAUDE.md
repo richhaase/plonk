@@ -248,3 +248,97 @@ The plonk tool now exhibits polished, professional behavior across all use cases
 - **Reliable package management**
 
 All review objectives have been achieved. The branch is ready for merge.
+
+---
+
+## Session 2 - Proposed Next Steps
+
+### Overview
+While Session 1 successfully resolved all critical issues and achieved the initial review objectives, there are additional areas identified for testing and potential enhancement to further improve the user experience.
+
+### 1. High Priority - Core Functionality Testing
+
+#### Backup Creation and Restoration
+- **Current State**: Backup functionality exists but untested
+- **Goal**: Thoroughly test backup creation during `plonk apply --backup`
+- **Enhancement**: Document backup restoration process and location
+- **Test Cases**: 
+  - Backup creation with existing dotfiles
+  - Backup naming conventions and timestamps
+  - Multiple backup handling
+- **User Benefit**: Confidence when overwriting existing dotfiles
+
+### 2. Medium Priority - Edge Cases & Robustness
+
+#### Directory Structure Handling
+- **Goal**: Ensure robust handling of complex directory structures
+- **Test Cases**: Nested directories, empty directories, permission issues
+- **User Benefit**: Reliable dotfile management across various scenarios
+
+#### Progress Feedback Enhancement
+- **Current State**: Basic progress indicators exist
+- **Goal**: Review feedback for long-running operations
+- **Test Cases**: Large package installations, many dotfiles
+- **User Benefit**: Better visibility into operation status
+
+### 3. UX Enhancement Opportunities
+
+#### Interactive Mode
+- **Proposal**: Add `--interactive` flag for selective application
+- **Example**: `plonk apply --interactive` shows each change for approval
+- **User Benefit**: Fine-grained control over changes
+
+#### Diff Preview for Dotfiles
+- **Proposal**: Show diffs when updating existing managed dotfiles
+- **Example**: `plonk dot add .vimrc --diff` shows what will change
+- **User Benefit**: Transparency before overwriting files
+
+#### Undo/Rollback Capability
+- **Proposal**: Track operations for potential rollback
+- **Implementation**: Operation log with reversal information
+- **User Benefit**: Recovery from mistakes
+
+#### Multi-Profile Support
+- **Proposal**: Allow different configurations for different contexts
+- **Example**: `plonk --profile work apply`
+- **User Benefit**: Manage work/personal/server environments separately
+
+### 4. Documentation Improvements
+
+#### Missing Documentation
+- Document backup file location and restoration process
+- Add best practices guide for multi-machine setup
+- Include troubleshooting guide for common scenarios
+- Explain when and how dotfiles are synchronized
+
+#### Examples and Tutorials
+- Real-world workflow examples
+- Migration guide from other dotfile managers
+- Video tutorials for common operations
+
+### 5. Testing Priority Order
+
+1. **Immediate Testing** (Session 2 Focus):
+   - [ ] Backup creation and restoration testing
+   - [ ] Progress feedback review
+   - [ ] Complex directory structures
+
+2. **Follow-up Testing**:
+   - [ ] Network failure scenarios
+   - [ ] Interrupted operations
+   - [ ] Very long timeout behavior
+   - [ ] Permission edge cases
+
+3. **Future Enhancements** (Post-Testing):
+   - [ ] Interactive mode implementation
+   - [ ] Diff preview feature
+   - [ ] Multi-profile support
+   - [ ] Undo/rollback system
+
+### Success Criteria for Session 2
+
+- All high-priority items tested and documented
+- Any discovered issues logged and fixed
+- Documentation updated to reflect findings
+- User experience improvements identified and prioritized
+- Clear roadmap for future enhancements based on findings
