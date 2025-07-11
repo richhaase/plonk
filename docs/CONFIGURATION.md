@@ -231,7 +231,7 @@ ignore_patterns:
 
 ```yaml
 ignore_patterns:
-  - "build/"            # Build directories
+  - "bin/"              # Binary output directories
   - "node_modules/"     # Node.js modules
   - "*.cache"           # Cache files
   - "secrets.*"         # Secret files
