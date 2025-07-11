@@ -1,5 +1,6 @@
 # GoReleaser configuration for plonk
 # Documentation: https://goreleaser.com
+version: 2
 
 before:
   hooks:
@@ -42,9 +43,9 @@ archives:
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
-    format_overrides:
-      - goos: windows
-        format: zip
+    formats:
+      - tar.gz
+      - zip
     files:
       - README.md
       - LICENSE
@@ -54,7 +55,7 @@ checksum:
   algorithm: sha256
 
 snapshot:
-  name_template: "{{ incpatch .Version }}-next"
+  version_template: "{{ incpatch .Version }}-next"
 
 changelog:
   sort: asc
