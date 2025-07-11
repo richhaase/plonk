@@ -37,7 +37,7 @@ Thumbs.db
 
 # Build directories
 dist/
-build/
+bin/
 
 # Security reports (if generated locally)
 security-*.json

@@ -80,7 +80,7 @@ build:
     # Get version info using helper
     eval $(just _get-version-info)
 
-    if ! go build -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" -o build/plonk ./cmd/plonk; then
+    if ! go build -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" -o bin/plonk ./cmd/plonk; then
         echo "❌ Build failed"
         exit 1
     fi
@@ -108,7 +108,7 @@ test-coverage-ci:
 # Clean build artifacts
 clean:
     @echo "Cleaning build artifacts..."
-    rm -rf build dist
+    rm -rf bin dist
     rm -f coverage.out coverage.html
     go clean
     @echo "✅ Build artifacts cleaned"

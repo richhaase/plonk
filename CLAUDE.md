@@ -211,7 +211,7 @@ just test
 just precommit
 
 # Build and test locally
-just build && ./build/plonk status
+just build && ./bin/plonk status
 ```
 
 ### Focus Areas for This Session ✅ COMPLETED
