@@ -75,7 +75,7 @@ build:
     #!/usr/bin/env bash
     set -euo pipefail
     echo "Building plonk with version information..."
-    mkdir -p build
+    mkdir -p bin
 
     # Get version info using helper
     eval $(just _get-version-info)
