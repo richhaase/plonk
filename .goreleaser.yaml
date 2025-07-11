@@ -1,0 +1,119 @@
+# GoReleaser configuration for plonk
+# Documentation: https://goreleaser.com
+
+before:
+  hooks:
+    # Ensure module dependencies are tidy
+    - go mod tidy
+    # Run tests before release
+    - go test ./...
+
+builds:
+  - id: plonk
+    main: ./cmd/plonk
+    binary: plonk
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    # Skip certain combinations
+    ignore:
+      - goos: windows
+        goarch: arm64
+    # Custom ldflags for version info
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
+
+archives:
+  - id: plonk-archive
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^style:'
+      - '^refactor:'
+      - '^perf:'
+      - '^ci:'
+  groups:
+    - title: '🚀 Features'
+      regexp: '^feat'
+    - title: '🐛 Bug Fixes'
+      regexp: '^fix'
+    - title: '🔒 Security'
+      regexp: '^sec'
+    - title: '⚠️ Breaking Changes'
+      regexp: '^.*!:'
+    - title: 'Other Changes'
+
+release:
+  github:
+    owner: richhaase
+    name: plonk
+  draft: false
+  prerelease: auto
+  name_template: "{{.ProjectName}} v{{.Version}}"
+  header: |
+    ## Plonk v{{.Version}}
+    
+    A unified package and dotfile manager for developers.
+  footer: |
+    ---
+    
+    **Full Changelog**: https://github.com/richhaase/plonk/compare/{{ .PreviousTag }}...{{ .Tag }}
+    
+    ## Installation
+    
+    ### macOS/Linux
+    ```bash
+    # Download and extract (replace VERSION and OS/ARCH as needed)
+    curl -L https://github.com/richhaase/plonk/releases/download/v{{.Version}}/plonk_{{.Version}}_Darwin_x86_64.tar.gz | tar xz
+    sudo mv plonk /usr/local/bin/
+    ```
+    
+    ### Homebrew (coming soon)
+    ```bash
+    brew install richhaase/tap/plonk
+    ```
+
+# Announce releases on social media (optional)
+announce:
+  skip: true
+
+# Sign releases with GPG (disabled - requires GPG setup)
+# signs:
+#   - artifacts: checksum
+

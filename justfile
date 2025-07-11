@@ -6,7 +6,9 @@ default:
     @echo
     @echo "Quick release workflow:"
     @echo "  just release-version-suggest  # Get version suggestions"
-    @echo "  just release-auto v1.2.3      # Automated release"
+    @echo "  just release-check           # Validate GoReleaser config"
+    @echo "  just release-snapshot        # Test release (no publishing)"
+    @echo "  just release v1.2.3          # Create release with GoReleaser"
 
 # Generate mocks for testing
 generate-mocks:
@@ -99,22 +101,30 @@ security:
     fi
     @echo "✅ Security checks completed!"
 
-# Automated single-command release process
-release-auto VERSION:
+# Release using GoReleaser (requires GoReleaser to be installed)
+release VERSION:
     #!/usr/bin/env bash
     set -euo pipefail
     
     VERSION="{{VERSION}}"
     
     # Validate version format
-    if [[ ! $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc[0-9]+)?$ ]]; then
-        echo "❌ Invalid version format. Use vX.Y.Z or vX.Y.Z-rcN (e.g., v1.2.3)"
+    if [[ ! $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+        echo "❌ Invalid version format. Use vX.Y.Z or vX.Y.Z-suffix (e.g., v1.2.3, v1.2.3-rc1)"
         exit 1
     fi
     
     # Check if tag already exists
     if git tag -l | grep -q "^$VERSION$"; then
         echo "❌ Tag $VERSION already exists!"
+        exit 1
+    fi
+    
+    # Check if GoReleaser is installed
+    if ! command -v goreleaser &> /dev/null; then
+        echo "❌ GoReleaser not found. Install with:"
+        echo "   brew install goreleaser"
+        echo "   or visit: https://goreleaser.com/install/"
         exit 1
     fi
     
@@ -136,71 +146,61 @@ release-auto VERSION:
         exit 1
     fi
     
-    echo "🚀 Starting automated release process for $VERSION"
-    echo "=================================================="
+    echo "🚀 Starting GoReleaser release process for $VERSION"
+    echo "================================================="
     
-    # Pre-release validation
-    echo "📋 Running pre-release validation..."
-    
-    # Run tests
-    echo "  🧪 Running tests..."
-    just test
-    
-    # Run linter
-    echo "  🔍 Running linter..."
-    just lint
-    
-    # Run security checks
-    echo "  🔐 Running security checks..."
-    just security
-    
-    # Test build
-    echo "  🔨 Testing build..."
-    just build
-    
-    echo "✅ Pre-release validation passed!"
-    echo
-    
-    # Get release notes
-    CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-    echo "📝 Preparing release notes..."
-    echo "Recent commits since $CURRENT_VERSION:"
-    git log --oneline --no-merges $CURRENT_VERSION..HEAD 2>/dev/null || echo "  (no commits since last tag)"
-    echo
-    
-    read -p "Enter release notes: " RELEASE_NOTES
-    if [[ -z "$RELEASE_NOTES" ]]; then
-        RELEASE_NOTES="Release $VERSION"
-    fi
-    
-    # Create and push tag
+    # Create and push tag (GoReleaser will build from this tag)
     echo "🏷️  Creating release tag..."
-    git tag -a "$VERSION" -m "Release $VERSION - $RELEASE_NOTES"
+    git tag -a "$VERSION" -m "Release $VERSION"
     
     echo "📤 Pushing tag to remote..."
     git push origin "$VERSION"
     
-    # Build release binaries
-    echo "🚀 Building release binaries..."
-    mkdir -p dist
-    
-    # Build for common platforms
-    echo "  Building for linux/amd64..."
-    GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -X main.version=$VERSION -X main.commit=$(git rev-parse --short HEAD) -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o dist/plonk-linux-amd64 ./cmd/plonk
-    
-    echo "  Building for darwin/amd64..."
-    GOOS=darwin GOARCH=amd64 go build -ldflags "-s -w -X main.version=$VERSION -X main.commit=$(git rev-parse --short HEAD) -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o dist/plonk-darwin-amd64 ./cmd/plonk
-    
-    echo "  Building for darwin/arm64..."
-    GOOS=darwin GOARCH=arm64 go build -ldflags "-s -w -X main.version=$VERSION -X main.commit=$(git rev-parse --short HEAD) -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o dist/plonk-darwin-arm64 ./cmd/plonk
-    
-    echo "  Building for windows/amd64..."
-    GOOS=windows GOARCH=amd64 go build -ldflags "-s -w -X main.version=$VERSION -X main.commit=$(git rev-parse --short HEAD) -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" -o dist/plonk-windows-amd64.exe ./cmd/plonk
+    # Run GoReleaser
+    echo "🚀 Running GoReleaser..."
+    goreleaser release --clean
     
     echo
     echo "✅ Release $VERSION completed successfully!"
-    echo "📦 Release binaries built in dist/ directory"
-    echo "🏷️  Git tag $VERSION created and pushed"
+    echo "🎉 Check GitHub releases: https://github.com/richhaase/plonk/releases"
+
+# Test release process without publishing (dry run)
+release-snapshot:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    
+    # Check if GoReleaser is installed
+    if ! command -v goreleaser &> /dev/null; then
+        echo "❌ GoReleaser not found. Install with:"
+        echo "   brew install goreleaser"
+        echo "   or visit: https://goreleaser.com/install/"
+        exit 1
+    fi
+    
+    echo "🔍 Running GoReleaser in snapshot mode (no publishing)..."
+    goreleaser release --snapshot --clean
+    
+    echo
+    echo "✅ Snapshot build completed!"
+    echo "📦 Check dist/ directory for generated binaries"
+
+# Validate GoReleaser configuration
+release-check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    
+    # Check if GoReleaser is installed
+    if ! command -v goreleaser &> /dev/null; then
+        echo "❌ GoReleaser not found. Install with:"
+        echo "   brew install goreleaser"
+        echo "   or visit: https://goreleaser.com/install/"
+        exit 1
+    fi
+    
+    echo "🔍 Validating GoReleaser configuration..."
+    goreleaser check
+    
+    echo "✅ GoReleaser configuration is valid!"
 
 
 # Show suggested next version based on current tags
