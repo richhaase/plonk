@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"plonk/internal/errors"
 )
 
 // NpmManager manages NPM packages.
@@ -30,8 +32,12 @@ func (n *NpmManager) IsAvailable(ctx context.Context) (bool, error) {
 	cmd := exec.CommandContext(ctx, "npm", "--version")
 	err = cmd.Run()
 	if err != nil {
+		// If the command fails due to context cancellation, return the context error
+		if ctx.Err() != nil {
+			return false, ctx.Err()
+		}
 		// npm exists but is not functional - this is an error
-		return false, fmt.Errorf("npm binary found but not functional: %w", err)
+		return false, errors.Wrap(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", "npm binary found but not functional")
 	}
 
 	return true, nil

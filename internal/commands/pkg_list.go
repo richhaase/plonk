@@ -79,9 +79,9 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 		homebrewManager := managers.NewHomebrewManager()
 		available, err := homebrewManager.IsAvailable(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to check homebrew availability: %w", err)
-		}
-		if available {
+			// Log the error but continue without this manager
+			// TODO: Add proper logging mechanism
+		} else if available {
 			managerAdapter := state.NewManagerAdapter(homebrewManager)
 			packageProvider.AddManager("homebrew", managerAdapter, packageConfigLoader)
 		}
@@ -91,9 +91,9 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 		npmManager := managers.NewNpmManager()
 		available, err := npmManager.IsAvailable(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to check npm availability: %w", err)
-		}
-		if available {
+			// Log the error but continue without this manager
+			// TODO: Add proper logging mechanism
+		} else if available {
 			managerAdapter := state.NewManagerAdapter(npmManager)
 			packageProvider.AddManager("npm", managerAdapter, packageConfigLoader)
 		}
@@ -103,9 +103,9 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 		cargoManager := managers.NewCargoManager()
 		available, err := cargoManager.IsAvailable(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to check cargo availability: %w", err)
-		}
-		if available {
+			// Log the error but continue without this manager
+			// TODO: Add proper logging mechanism
+		} else if available {
 			managerAdapter := state.NewManagerAdapter(cargoManager)
 			packageProvider.AddManager("cargo", managerAdapter, packageConfigLoader)
 		}

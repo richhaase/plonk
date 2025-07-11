@@ -127,9 +127,9 @@ func createPackageProvider(ctx context.Context, configDir string) (*state.MultiM
 	homebrewManager := managers.NewHomebrewManager()
 	available, err := homebrewManager.IsAvailable(ctx)
 	if err != nil {
-		return nil, errors.WrapWithItem(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", "homebrew", "failed to check homebrew availability")
-	}
-	if available {
+		// Log the error but continue without this manager
+		// TODO: Add proper logging mechanism
+	} else if available {
 		managerAdapter := state.NewManagerAdapter(homebrewManager)
 		provider.AddManager("homebrew", managerAdapter, lockAdapter)
 	}
@@ -138,9 +138,9 @@ func createPackageProvider(ctx context.Context, configDir string) (*state.MultiM
 	npmManager := managers.NewNpmManager()
 	available, err = npmManager.IsAvailable(ctx)
 	if err != nil {
-		return nil, errors.WrapWithItem(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", "npm", "failed to check npm availability")
-	}
-	if available {
+		// Log the error but continue without this manager
+		// TODO: Add proper logging mechanism
+	} else if available {
 		managerAdapter := state.NewManagerAdapter(npmManager)
 		provider.AddManager("npm", managerAdapter, lockAdapter)
 	}
@@ -149,9 +149,9 @@ func createPackageProvider(ctx context.Context, configDir string) (*state.MultiM
 	cargoManager := managers.NewCargoManager()
 	available, err = cargoManager.IsAvailable(ctx)
 	if err != nil {
-		return nil, errors.WrapWithItem(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", "cargo", "failed to check cargo availability")
-	}
-	if available {
+		// Log the error but continue without this manager
+		// TODO: Add proper logging mechanism
+	} else if available {
 		managerAdapter := state.NewManagerAdapter(cargoManager)
 		provider.AddManager("cargo", managerAdapter, lockAdapter)
 	}

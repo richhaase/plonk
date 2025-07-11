@@ -20,13 +20,22 @@ func NewCargoManager() *CargoManager {
 
 // IsAvailable checks if cargo is installed and accessible.
 func (c *CargoManager) IsAvailable(ctx context.Context) (bool, error) {
+	_, err := exec.LookPath("cargo")
+	if err != nil {
+		// Binary not found in PATH - this is not an error condition
+		return false, nil
+	}
+
+	// Verify cargo is actually functional by running a simple command
 	cmd := exec.CommandContext(ctx, "cargo", "--version")
-	if err := cmd.Run(); err != nil {
+	err = cmd.Run()
+	if err != nil {
 		// If the command fails due to context cancellation, return the context error
 		if ctx.Err() != nil {
 			return false, ctx.Err()
 		}
-		return false, errors.Wrap(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", "cargo is not available")
+		// cargo exists but is not functional - this is an error
+		return false, errors.Wrap(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", "cargo binary found but not functional")
 	}
 	return true, nil
 }

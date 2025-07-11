@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"plonk/internal/errors"
 )
 
 // HomebrewManager manages Homebrew packages.
@@ -30,8 +32,12 @@ func (h *HomebrewManager) IsAvailable(ctx context.Context) (bool, error) {
 	cmd := exec.CommandContext(ctx, "brew", "--version")
 	err = cmd.Run()
 	if err != nil {
+		// If the command fails due to context cancellation, return the context error
+		if ctx.Err() != nil {
+			return false, ctx.Err()
+		}
 		// brew exists but is not functional - this is an error
-		return false, fmt.Errorf("brew binary found but not functional: %w", err)
+		return false, errors.Wrap(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", "brew binary found but not functional")
 	}
 
 	return true, nil

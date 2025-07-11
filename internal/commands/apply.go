@@ -108,9 +108,10 @@ func applyPackages(configDir string, cfg *config.Config, dryRun bool, format Out
 	homebrewManager := managers.NewHomebrewManager()
 	available, err := homebrewManager.IsAvailable(ctx)
 	if err != nil {
-		return ApplyOutput{}, fmt.Errorf("failed to check homebrew availability: %w", err)
-	}
-	if available {
+		// Log the error but continue without this manager
+		// TODO: Add proper logging mechanism
+		// For now, silently skip problematic managers
+	} else if available {
 		managerAdapter := state.NewManagerAdapter(homebrewManager)
 		packageProvider.AddManager("homebrew", managerAdapter, lockAdapter)
 	}
@@ -119,9 +120,9 @@ func applyPackages(configDir string, cfg *config.Config, dryRun bool, format Out
 	npmManager := managers.NewNpmManager()
 	available, err = npmManager.IsAvailable(ctx)
 	if err != nil {
-		return ApplyOutput{}, fmt.Errorf("failed to check npm availability: %w", err)
-	}
-	if available {
+		// Log the error but continue without this manager
+		// TODO: Add proper logging mechanism
+	} else if available {
 		managerAdapter := state.NewManagerAdapter(npmManager)
 		packageProvider.AddManager("npm", managerAdapter, lockAdapter)
 	}
@@ -130,9 +131,9 @@ func applyPackages(configDir string, cfg *config.Config, dryRun bool, format Out
 	cargoManager := managers.NewCargoManager()
 	available, err = cargoManager.IsAvailable(ctx)
 	if err != nil {
-		return ApplyOutput{}, fmt.Errorf("failed to check cargo availability: %w", err)
-	}
-	if available {
+		// Log the error but continue without this manager
+		// TODO: Add proper logging mechanism
+	} else if available {
 		managerAdapter := state.NewManagerAdapter(cargoManager)
 		packageProvider.AddManager("cargo", managerAdapter, lockAdapter)
 	}
@@ -188,7 +189,10 @@ func applyPackages(configDir string, cfg *config.Config, dryRun bool, format Out
 
 		available, err := managerInstance.IsAvailable(ctx)
 		if err != nil {
-			return ApplyOutput{}, fmt.Errorf("failed to check if manager '%s' is available: %w", managerName, err)
+			// Log the error but continue without this manager
+			// TODO: Add proper logging mechanism
+			// For now, silently skip problematic managers
+			continue
 		}
 		if !available {
 			if format == OutputTable {
