@@ -14,43 +14,26 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
-    - name: Set up Go
-      uses: actions/setup-go@v5
+
+    - name: Setup Go environment
+      uses: ./.github/actions/setup-go-env
       with:
-        go-version-file: 'go.mod'
-        cache: true
-        
-    - name: Install Just
-      uses: extractions/setup-just@v3
-      
-    - name: Download dependencies
-      run: go mod download
-      
-    - name: Install Homebrew (Linux)
-      if: runner.os == 'Linux'
-      run: |
-        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-        echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
-        echo "/home/linuxbrew/.linuxbrew/sbin" >> $GITHUB_PATH
-      
-    - name: Generate mocks
-      run: just generate-mocks
-      
-    - name: Run tests with coverage
-      run: just test-coverage-ci
-      
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v5
+        install-homebrew: 'true'
+        install-just: 'true'
+
+    - name: Run tests
+      uses: ./.github/actions/run-tests
       with:
-        file: ./coverage.out
-        fail_ci_if_error: false
-        
-    - name: Run linter
-      run: just lint
-      
-    - name: Test build
-      run: just build
+        coverage: 'true'
+        coverage-format: 'ci'
+        generate-mocks: 'true'
+        upload-codecov: 'true'
+
+    - name: Quality checks
+      uses: ./.github/actions/quality-checks
+      with:
+        run-linter: 'true'
+        test-build: 'true'
 
   test-matrix:
     name: Test Matrix
@@ -63,25 +46,18 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
-    - name: Set up Go
-      uses: actions/setup-go@v5
+
+    - name: Setup Go environment
+      uses: ./.github/actions/setup-go-env
       with:
         go-version: ${{ matrix.go-version }}
-        cache: true
-        
-    - name: Download dependencies
-      run: go mod download
-      
-    - name: Install Homebrew (Linux)
-      if: runner.os == 'Linux'
-      run: |
-        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-        echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
-        echo "/home/linuxbrew/.linuxbrew/sbin" >> $GITHUB_PATH
-      
+        install-homebrew: ${{ runner.os == 'Linux' }}
+        install-just: 'true'
+
     - name: Run tests
-      run: go test ./...
-      
+      uses: ./.github/actions/run-tests
+      with:
+        coverage: 'false'
+
     - name: Test build
       run: go build ./cmd/plonk

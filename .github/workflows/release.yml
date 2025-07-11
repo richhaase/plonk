@@ -17,10 +17,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Go
-        uses: actions/setup-go@v4
+      - name: Setup Go environment
+        uses: ./.github/actions/setup-go-env
         with:
-          go-version: stable
+          go-version: 'stable'
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5

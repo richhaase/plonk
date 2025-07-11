@@ -1,0 +1,46 @@
+name: 'Quality Checks'
+description: 'Run linting, formatting, and security checks'
+inputs:
+  run-linter:
+    description: 'Run golangci-lint (default: true)'
+    required: false
+    default: 'true'
+  run-formatter:
+    description: 'Run goimports formatter (default: true)'
+    required: false
+    default: 'true'
+  run-security:
+    description: 'Run security checks (default: false)'
+    required: false
+    default: 'false'
+  test-build:
+    description: 'Test that the project builds (default: true)'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Format code
+      if: ${{ inputs.run-formatter == 'true' }}
+      run: just format
+      shell: bash
+
+    - name: Run linter
+      if: ${{ inputs.run-linter == 'true' }}
+      run: just lint
+      shell: bash
+
+    - name: Run security checks
+      if: ${{ inputs.run-security == 'true' }}
+      run: just security
+      shell: bash
+
+    - name: Test build
+      if: ${{ inputs.test-build == 'true' }}
+      run: just build
+      shell: bash
+
+    - name: Verify quality checks
+      run: echo "✅ All quality checks completed"
+      shell: bash

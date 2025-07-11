@@ -1,0 +1,49 @@
+name: 'Run Tests'
+description: 'Run Go tests with optional coverage and mocking'
+inputs:
+  coverage:
+    description: 'Enable coverage reporting (default: false)'
+    required: false
+    default: 'false'
+  coverage-format:
+    description: 'Coverage format: ci or html (default: ci)'
+    required: false
+    default: 'ci'
+  generate-mocks:
+    description: 'Generate mocks before testing (default: false)'
+    required: false
+    default: 'false'
+  upload-codecov:
+    description: 'Upload coverage to Codecov (default: false)'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Generate mocks
+      if: ${{ inputs.generate-mocks == 'true' }}
+      run: just generate-mocks
+      shell: bash
+
+    - name: Run tests with coverage (CI)
+      if: ${{ inputs.coverage == 'true' && inputs.coverage-format == 'ci' }}
+      run: just test-coverage-ci
+      shell: bash
+
+    - name: Run tests with coverage (HTML)
+      if: ${{ inputs.coverage == 'true' && inputs.coverage-format == 'html' }}
+      run: just test-coverage
+      shell: bash
+
+    - name: Run tests (no coverage)
+      if: ${{ inputs.coverage != 'true' }}
+      run: just test
+      shell: bash
+
+    - name: Upload coverage to Codecov
+      if: ${{ inputs.coverage == 'true' && inputs.upload-codecov == 'true' }}
+      uses: codecov/codecov-action@v5
+      with:
+        file: ./coverage.out
+        fail_ci_if_error: false
