@@ -25,7 +25,18 @@ Plonk manages your development environment by tracking packages and dotfiles aut
 
 ### Installation
 
-Currently, plonk must be built from source:
+The easiest way to install plonk is using Go's built-in package manager:
+
+```bash
+go install github.com/richhaase/plonk/cmd/plonk@latest
+```
+
+**Requirements:**
+- Go 1.24.4+
+
+#### Alternative: Build from source
+
+For development or if you need a specific version:
 
 ```bash
 git clone https://github.com/richhaase/plonk
@@ -34,8 +45,7 @@ just dev-setup  # Sets up development environment
 just install    # Installs plonk globally
 ```
 
-**Requirements:**
-- Go 1.24.4+
+**Additional requirements for building from source:**
 - Just (command runner)
 - Git
 - Pre-commit (optional, for development)
