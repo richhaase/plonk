@@ -30,13 +30,15 @@ Currently, plonk must be built from source:
 ```bash
 git clone https://github.com/richhaase/plonk
 cd plonk
-just install
+just dev-setup  # Sets up development environment
+just install    # Installs plonk globally
 ```
 
 **Requirements:**
 - Go 1.24.4+
 - Just (command runner)
 - Git
+- Pre-commit (optional, for development)
 
 ### Basic Usage
 
@@ -287,14 +289,22 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for development setup and contributing guidelines.
 
-### Releasing
+### Development
+
+Key automation features for contributors:
 
 ```bash
-# Get version suggestions
-just release-version-suggest
+# One-time setup for new developers
+just dev-setup
 
-# Create automated release
+# Update all dependencies safely
+just deps-update
+
+# Complete cleanup for troubleshooting
+just clean-all
+
+# Create a release
 just release-auto v1.2.3
 ```
-Test comment
-Test comment
+
+See [Development Guide](docs/DEVELOPMENT.md) for complete details.

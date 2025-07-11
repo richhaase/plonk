@@ -18,24 +18,21 @@ Development setup, build processes, and contributing guidelines for plonk.
 git clone https://github.com/your-username/plonk
 cd plonk
 
-# Install development dependencies
+# One-command development setup (recommended)
+just dev-setup
+
+# Or manual setup:
 go mod download
-
-# Install git hooks
 pre-commit install
-
-# Generate mocks for testing
 just generate-mocks
-
-# Run tests
 just test
 
-# Build binary
+# Build and install
 just build
-
-# Install locally
 just install
 ```
+
+The `dev-setup` command handles all development environment setup automatically, including dependencies, git hooks, mocks, and verification tests.
 
 ## Build System
 
@@ -52,6 +49,11 @@ just build              # Build binary with version info
 just test               # Run unit tests
 just install            # Install binary globally
 just clean              # Clean build artifacts
+
+# Developer automation
+just dev-setup          # Complete development environment setup
+just deps-update        # Update dependencies with safety checks
+just clean-all          # Deep clean including caches
 
 # Code quality
 just format             # Format code and organize imports
@@ -104,24 +106,24 @@ docs/                   # Documentation
 Plonk uses the industry-standard pre-commit framework for better developer experience:
 
 ```bash
-# Install pre-commit (one-time setup)
+# Automatic setup (included in dev-setup)
+just dev-setup
+
+# Or manual installation
 brew install pre-commit  # macOS
 pip install pre-commit   # Python
-
-# Install hooks for this repository
 pre-commit install
 
-# Run all hooks manually
-pre-commit run --all-files
-
-# Update hook versions
-pre-commit autoupdate
+# Common pre-commit commands
+pre-commit run --all-files     # Run all hooks manually
+pre-commit autoupdate          # Update hook versions
+SKIP=go-test git commit        # Skip specific hooks
 ```
 
 **Benefits:**
-- ⚡ **Faster execution** (only runs relevant checks)
+- ⚡ **94% faster** on non-Go file changes
 - 🎯 **File-specific filtering** (Go hooks only on .go files)
-- 🔄 **Automatic updates** via `pre-commit autoupdate`
+- 🔄 **Automatic updates** via `just deps-update`
 - 🛠 **Rich ecosystem** of community hooks
 - 📊 **Better error reporting** with file context
 
@@ -446,12 +448,13 @@ default:
 ### Development Workflow
 
 1. **Fork and clone** the repository
-2. **Create feature branch** from main
-3. **Make changes** following code style
-4. **Add tests** for new functionality
-5. **Run pre-commit checks** (`just precommit`)
-6. **Commit changes** with descriptive messages
-7. **Push branch** and create pull request
+2. **Setup environment** (`just dev-setup`)
+3. **Create feature branch** from main
+4. **Make changes** following code style
+5. **Add tests** for new functionality
+6. **Run pre-commit checks** (automatic on commit)
+7. **Commit changes** with descriptive messages
+8. **Push branch** and create pull request
 
 ### Commit Messages
 
@@ -576,6 +579,16 @@ just generate-mocks
 
 # Check mock interfaces match
 go mod tidy
+```
+
+#### Dependency Issues
+```bash
+# Update all dependencies safely
+just deps-update
+
+# Or complete cleanup and reinstall
+just clean-all
+just dev-setup
 ```
 
 ### Debug Commands
