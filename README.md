@@ -78,6 +78,10 @@ Contains your custom settings and preferences (create with `plonk init`):
 
 ```yaml
 default_manager: homebrew
+operation_timeout: 300   # 5 minutes
+package_timeout: 180     # 3 minutes
+dotfile_timeout: 60      # 1 minute
+
 expand_directories:
   - .config
   - .ssh
@@ -91,6 +95,9 @@ ignore_patterns:
   - .DS_Store
   - .git
   - "*.backup"
+  - "*.tmp"
+  - "*.swp"
+  - plonk.lock
 ```
 
 ### Lock File (`~/.config/plonk/plonk.lock`) - Automatic
@@ -190,6 +197,8 @@ plonk config show    # Show effective config (defaults merged with user settings
 plonk config edit    # Edit configuration file
 ```
 
+**Note:** `plonk config show` always displays the complete effective configuration that plonk is using, including all defaults merged with any user overrides.
+
 ### Daily Workflow
 
 ```bash
@@ -208,6 +217,7 @@ plonk status
 # Apply all configuration
 plonk apply --dry-run  # Preview changes
 plonk apply           # Apply changes
+plonk apply --backup  # Apply with backups of existing files
 
 # Package management
 plonk pkg list                    # List managed + missing + untracked count

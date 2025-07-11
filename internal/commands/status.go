@@ -178,6 +178,41 @@ type StatusOutput struct {
 	StateSummary state.Summary `json:"state_summary" yaml:"state_summary"`
 }
 
+// StatusOutputSummary represents a summary-focused version for JSON/YAML output
+type StatusOutputSummary struct {
+	ConfigPath   string            `json:"config_path" yaml:"config_path"`
+	LockPath     string            `json:"lock_path" yaml:"lock_path"`
+	ConfigExists bool              `json:"config_exists" yaml:"config_exists"`
+	ConfigValid  bool              `json:"config_valid" yaml:"config_valid"`
+	LockExists   bool              `json:"lock_exists" yaml:"lock_exists"`
+	Summary      StatusSummaryData `json:"summary" yaml:"summary"`
+	ManagedItems []ManagedItem     `json:"managed_items" yaml:"managed_items"`
+}
+
+// StatusSummaryData represents aggregate counts and domain summaries
+type StatusSummaryData struct {
+	TotalManaged   int             `json:"total_managed" yaml:"total_managed"`
+	TotalMissing   int             `json:"total_missing" yaml:"total_missing"`
+	TotalUntracked int             `json:"total_untracked" yaml:"total_untracked"`
+	Domains        []DomainSummary `json:"domains" yaml:"domains"`
+}
+
+// DomainSummary represents counts for a specific domain/manager
+type DomainSummary struct {
+	Domain         string `json:"domain" yaml:"domain"`
+	Manager        string `json:"manager,omitempty" yaml:"manager,omitempty"`
+	ManagedCount   int    `json:"managed_count" yaml:"managed_count"`
+	MissingCount   int    `json:"missing_count" yaml:"missing_count"`
+	UntrackedCount int    `json:"untracked_count" yaml:"untracked_count"`
+}
+
+// ManagedItem represents a currently managed item
+type ManagedItem struct {
+	Name    string `json:"name" yaml:"name"`
+	Domain  string `json:"domain" yaml:"domain"`
+	Manager string `json:"manager,omitempty" yaml:"manager,omitempty"`
+}
+
 // TableOutput generates human-friendly table output for status
 func (s StatusOutput) TableOutput() string {
 	output := "Plonk Status\n"
@@ -284,7 +319,54 @@ func (s StatusOutput) TableOutput() string {
 
 // StructuredData returns the structured data for serialization
 func (s StatusOutput) StructuredData() any {
-	return s
+	// Create a summary-focused version for structured output
+	return StatusOutputSummary{
+		ConfigPath:   s.ConfigPath,
+		LockPath:     s.LockPath,
+		ConfigExists: s.ConfigExists,
+		ConfigValid:  s.ConfigValid,
+		LockExists:   s.LockExists,
+		Summary: StatusSummaryData{
+			TotalManaged:   s.StateSummary.TotalManaged,
+			TotalMissing:   s.StateSummary.TotalMissing,
+			TotalUntracked: s.StateSummary.TotalUntracked,
+			Domains:        createDomainSummary(s.StateSummary.Results),
+		},
+		ManagedItems: extractManagedItems(s.StateSummary.Results),
+	}
+}
+
+// createDomainSummary creates domain summaries with counts only
+func createDomainSummary(results []state.Result) []DomainSummary {
+	var domains []DomainSummary
+	for _, result := range results {
+		if result.IsEmpty() {
+			continue
+		}
+		domains = append(domains, DomainSummary{
+			Domain:         result.Domain,
+			Manager:        result.Manager,
+			ManagedCount:   len(result.Managed),
+			MissingCount:   len(result.Missing),
+			UntrackedCount: len(result.Untracked),
+		})
+	}
+	return domains
+}
+
+// extractManagedItems extracts only the managed items without full metadata
+func extractManagedItems(results []state.Result) []ManagedItem {
+	var items []ManagedItem
+	for _, result := range results {
+		for _, managed := range result.Managed {
+			items = append(items, ManagedItem{
+				Name:    managed.Name,
+				Domain:  managed.Domain,
+				Manager: managed.Manager,
+			})
+		}
+	}
+	return items
 }
 
 // joinWithLimit joins strings with a separator, truncating if too many
