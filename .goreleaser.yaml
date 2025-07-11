@@ -1,6 +1,6 @@
 # GoReleaser configuration for plonk
 # Documentation: https://goreleaser.com
-version: 2
+version: 1
 
 before:
   hooks:
