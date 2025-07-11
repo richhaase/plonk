@@ -113,6 +113,69 @@ clean:
     go clean
     @echo "✅ Build artifacts cleaned"
 
+# Complete development environment cleanup
+clean-all: clean
+    @echo "🧹 Performing complete cleanup..."
+    @echo "  • Clearing Go module cache..."
+    go clean -modcache
+    @echo "  • Clearing pre-commit cache..."
+    pre-commit clean || true
+    rm -rf ~/.cache/pre-commit
+    @echo "  • Clearing test cache..."
+    go clean -testcache
+    @echo "✅ Complete cleanup done!"
+
+# Setup development environment for new contributors
+dev-setup:
+    @echo "🚀 Setting up development environment..."
+    @echo "  • Downloading Go dependencies..."
+    go mod download
+    @echo "  • Installing pre-commit hooks..."
+    @if command -v pre-commit &> /dev/null; then \
+        pre-commit install; \
+    else \
+        echo "⚠️  pre-commit not found. Install with: brew install pre-commit"; \
+        exit 1; \
+    fi
+    @echo "  • Generating test mocks..."
+    just generate-mocks
+    @echo "  • Running tests to verify setup..."
+    just test
+    @echo "✅ Development environment ready!"
+    @echo ""
+    @echo "Next steps:"
+    @echo "  • Run 'just' to see available commands"
+    @echo "  • Run 'just build' to build the binary"
+    @echo "  • Run 'just precommit' before committing changes"
+
+# Update all dependencies with safety checks
+deps-update:
+    @echo "🔄 Updating project dependencies..."
+    @echo "  • Updating Go dependencies..."
+    go get -u ./...
+    go mod tidy
+    @echo "  • Updating pre-commit hooks..."
+    @if command -v pre-commit &> /dev/null; then \
+        pre-commit autoupdate; \
+    else \
+        echo "⚠️  pre-commit not found, skipping hook updates"; \
+    fi
+    @echo "  • Running validation..."
+    @echo "    - Testing..."
+    @if ! just test; then \
+        echo "❌ Tests failed after update. Review changes carefully."; \
+        exit 1; \
+    fi
+    @echo "    - Linting..."
+    @if ! just lint; then \
+        echo "❌ Linting failed after update. Review changes carefully."; \
+        exit 1; \
+    fi
+    @echo "✅ Dependencies updated successfully!"
+    @echo ""
+    @echo "📊 Review changes with:"
+    @echo "  git diff go.mod go.sum .pre-commit-config.yaml"
+
 # Install plonk globally
 install:
     #!/usr/bin/env bash
