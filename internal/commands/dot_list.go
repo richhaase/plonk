@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -86,6 +87,13 @@ func runDotList(cmd *cobra.Command, args []string) error {
 	if verboseOutput {
 		filteredItems = append(filteredItems, result.Untracked...)
 	}
+
+	// Sort items alphabetically by target path for consistent display
+	sort.Slice(filteredItems, func(i, j int) bool {
+		targetI := getTargetPath(filteredItems[i])
+		targetJ := getTargetPath(filteredItems[j])
+		return targetI < targetJ
+	})
 
 	// Prepare enhanced output with full item information
 	outputData := DotfileListOutput{
