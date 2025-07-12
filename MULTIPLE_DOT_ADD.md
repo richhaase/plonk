@@ -57,9 +57,59 @@ The following pre-work has been completed:
 
 **Note:** Dotfile implementation does not require PackageManager interface changes.
 
-### Phase 1: Core Multiple Dotfile Support
+### Phase 1: Core Multiple Dotfile Support (✅ COMPLETED)
 
-#### 1.1 Update Command Arguments Handling
+**Implementation Summary:**
+- ✅ Updated command interface to accept multiple dotfile arguments
+- ✅ Implemented sequential dotfile processing with shared utilities
+- ✅ Added glob expansion and file discovery for directories
+- ✅ Added file attribute preservation (permissions, timestamps)
+- ✅ Added progress reporting for each dotfile
+- ✅ Enhanced error handling with contextual suggestions
+- ✅ Added dry-run support for preview mode
+- ✅ Comprehensive test coverage with filesystem-based testing
+- ✅ **RESOLVED**: Dotfile management detection working correctly
+
+### Phase 2: Implementation Complete (✅ COMPLETED)
+
+**Final Implementation Status:**
+- ✅ All core functionality implemented in `internal/commands/dot_add.go`
+- ✅ Multiple dotfile processing with `addDotfiles()` function
+- ✅ Single file processing with `addSingleFileNew()`
+- ✅ Directory processing with `addDirectoryFilesNew()`
+- ✅ File attribute preservation with `copyFileWithAttributes()`
+- ✅ Path resolution with `resolveDotfilePath()`
+- ✅ Source/destination mapping with `generatePaths()`
+- ✅ Progress reporting using shared operations utilities
+- ✅ Structured output support for both single and batch operations
+- ✅ Error handling with continue-on-failure approach
+- ✅ All tests passing including filesystem-based dotfile detection
+- ✅ PLONK_DIR environment variable handling for test isolation
+
+**Key Finding - Dotfile Management Detection (✅ VERIFIED):**
+Investigation of `GetDotfileTargets()` confirms filesystem-based behavior:
+
+**How Plonk Determines "Already Managed" Dotfiles:**
+1. **Filesystem-Based Discovery**: Uses `filepath.Walk()` to scan `$PLONK_DIR`
+2. **Auto-Discovery**: No manual configuration - files in config dir = managed dotfiles
+3. **Convention-Based Mapping**:
+   - Source: `zshrc` → Target: `~/.zshrc`
+   - Source: `config/nvim/init.lua` → Target: `~/.config/nvim/init.lua`
+4. **Ignore Pattern Filtering**: Skips `.DS_Store`, `.git`, `*.tmp`, etc.
+5. **Zero-Config Philosophy**: Works immediately without explicit configuration
+
+**Test Fix Required:**
+- "Already managed" = source file physically exists in `$PLONK_DIR` filesystem
+- Tests must create actual files in config directory to simulate existing dotfiles
+- No need to modify config objects - pure filesystem detection
+
+**Implementation Approach:**
+- Using `config.GetDotfileTargets()` to detect existing managed dotfiles
+- Sequential processing with immediate progress reporting
+- File attribute preservation during copy operations
+- Continue-on-failure with comprehensive error reporting
+
+#### 1.1 Update Command Arguments Handling (✅ COMPLETED)
 
 **File:** `internal/commands/dot_add.go`
 

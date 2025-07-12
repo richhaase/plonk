@@ -4,26 +4,29 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"plonk/internal/config"
 	"plonk/internal/errors"
+	"plonk/internal/operations"
 
 	"github.com/spf13/cobra"
 )
 
 var dotAddCmd = &cobra.Command{
-	Use:   "add <dotfile>",
-	Short: "Add a dotfile to plonk configuration and import it",
-	Long: `Import an existing dotfile into your plonk configuration.
+	Use:   "add <dotfile1> [dotfile2] ...",
+	Short: "Add dotfile(s) to plonk configuration and import them",
+	Long: `Import one or more existing dotfiles into your plonk configuration.
 
 This command will:
-- Copy the dotfile from its current location to your plonk dotfiles directory
-- Add it to your plonk.yaml configuration
-- Preserve the original file in case you need to revert
+- Copy the dotfiles from their current locations to your plonk dotfiles directory
+- Add them to your plonk.yaml configuration
+- Preserve the original files in case you need to revert
 
 For directories, plonk will recursively add all files individually, respecting
 ignore patterns configured in your plonk.yaml.
@@ -34,21 +37,29 @@ Path Resolution:
 - Relative paths: First tries current directory, then home directory
 
 Examples:
-  plonk dot add ~/.zshrc           # Add single file
-  plonk dot add .zshrc             # Finds ~/.zshrc (if not in current dir)
-  plonk dot add ~/.config/nvim/    # Add all files in directory recursively
-  cd ~/.config/nvim && plonk dot add init.lua  # Finds ./init.lua`,
+  plonk dot add ~/.zshrc                    # Add single file
+  plonk dot add ~/.zshrc ~/.vimrc           # Add multiple files
+  plonk dot add .zshrc .vimrc               # Finds files in home directory
+  plonk dot add ~/.config/nvim/ ~/.tmux.conf # Add directory and file
+  plonk dot add --dry-run ~/.zshrc ~/.vimrc # Preview what would be added`,
 	RunE: runDotAdd,
-	Args: cobra.ExactArgs(1),
+	Args: cobra.MinimumNArgs(1),
 }
 
 func init() {
 	dotCmd.AddCommand(dotAddCmd)
+	dotAddCmd.Flags().BoolP("dry-run", "n", false, "Show what would be added without making changes")
 }
 
 func runDotAdd(cmd *cobra.Command, args []string) error {
-	dotfilePath := args[0]
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
 
+	// Handle single or multiple dotfiles
+	return addDotfiles(cmd, args, dryRun)
+}
+
+// addDotfiles handles adding one or more dotfiles
+func addDotfiles(cmd *cobra.Command, dotfilePaths []string, dryRun bool) error {
 	// Parse output format
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
@@ -63,28 +74,283 @@ func runDotAdd(cmd *cobra.Command, args []string) error {
 
 	configDir := config.GetDefaultConfigDirectory()
 
+	// Load config for ignore patterns
+	cfg, err := loadOrCreateConfig(configDir)
+	if err != nil {
+		return err
+	}
+
+	// Create operation context with timeout
+	opCtx, cancel := operations.CreateOperationContext(5 * time.Minute)
+	defer cancel()
+
+	// Process dotfiles sequentially
+	results := make([]operations.OperationResult, 0)
+	reporter := operations.NewProgressReporter("dotfile", format == OutputTable)
+
+	for _, dotfilePath := range dotfilePaths {
+		// Check for cancellation
+		if err := operations.CheckCancellation(opCtx, errors.DomainDotfiles, "add-multiple"); err != nil {
+			return err
+		}
+
+		// Process each dotfile (can result in multiple files for directories)
+		dotfileResults := addSingleDotfile(opCtx, cfg, homeDir, configDir, dotfilePath, dryRun)
+
+		// Show progress for each file processed
+		for _, result := range dotfileResults {
+			results = append(results, result)
+			reporter.ShowItemProgress(result)
+		}
+	}
+
+	// Handle output based on format
+	if format == OutputTable {
+		// Show summary for table output
+		reporter.ShowBatchSummary(results)
+	} else {
+		// For structured output, create appropriate response
+		if len(dotfilePaths) == 1 && len(results) == 1 {
+			// Single dotfile/file - use existing DotfileAddOutput format for compatibility
+			result := results[0]
+			output := DotfileAddOutput{
+				Source:      result.Metadata["source"].(string),
+				Destination: result.Metadata["destination"].(string),
+				Action:      mapStatusToAction(result.Status),
+				Path:        result.Name,
+			}
+			return RenderOutput(output, format)
+		} else {
+			// Multiple dotfiles/files - use batch output
+			batchOutput := DotfileBatchAddOutput{
+				TotalFiles: len(results),
+				AddedFiles: convertResultsToDotfileAdd(results),
+				Errors:     extractErrorMessages(results),
+			}
+			return RenderOutput(batchOutput, format)
+		}
+	}
+
+	// Determine exit code
+	return operations.DetermineExitCode(results, errors.DomainDotfiles, "add-multiple")
+}
+
+// addSingleDotfile processes a single dotfile path and returns results for all files processed
+func addSingleDotfile(ctx context.Context, cfg *config.Config, homeDir, configDir, dotfilePath string, dryRun bool) []operations.OperationResult {
 	// Resolve and validate dotfile path
 	resolvedPath, err := resolveDotfilePath(dotfilePath, homeDir)
 	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainDotfiles, "resolve", dotfilePath, "failed to resolve dotfile path")
+		return []operations.OperationResult{{
+			Name:   dotfilePath,
+			Status: "failed",
+			Error:  errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainDotfiles, "resolve", dotfilePath, "failed to resolve dotfile path"),
+		}}
 	}
 
 	// Check if dotfile exists
 	info, err := os.Stat(resolvedPath)
 	if os.IsNotExist(err) {
-		return errors.NewError(errors.ErrFileNotFound, errors.DomainDotfiles, "check", fmt.Sprintf("dotfile does not exist: %s", resolvedPath))
+		return []operations.OperationResult{{
+			Name:   dotfilePath,
+			Status: "failed",
+			Error:  errors.NewError(errors.ErrFileNotFound, errors.DomainDotfiles, "check", fmt.Sprintf("dotfile does not exist: %s", resolvedPath)).WithSuggestionMessage("Check if path exists: ls -la " + resolvedPath),
+		}}
 	}
 	if err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "check", "failed to check dotfile")
+		return []operations.OperationResult{{
+			Name:   dotfilePath,
+			Status: "failed",
+			Error:  errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "check", "failed to check dotfile"),
+		}}
 	}
 
 	// Check if it's a directory and handle accordingly
 	if info.IsDir() {
-		return addDirectoryFiles(resolvedPath, homeDir, configDir, format)
+		return addDirectoryFilesNew(ctx, cfg, resolvedPath, homeDir, configDir, dryRun)
 	}
 
-	// Handle single file (existing logic)
-	return addSingleFile(resolvedPath, homeDir, configDir, format)
+	// Handle single file
+	result := addSingleFileNew(ctx, cfg, resolvedPath, homeDir, configDir, dryRun)
+	return []operations.OperationResult{result}
+}
+
+// addSingleFileNew processes a single file and returns an OperationResult
+func addSingleFileNew(ctx context.Context, cfg *config.Config, filePath, homeDir, configDir string, dryRun bool) operations.OperationResult {
+	// Generate source and destination paths
+	source, destination := generatePaths(filePath, homeDir)
+
+	result := operations.OperationResult{
+		Name: filePath,
+		Metadata: map[string]interface{}{
+			"source":      source,
+			"destination": destination,
+		},
+		FilesProcessed: 1,
+	}
+
+	// Check if already managed by checking if source file exists in config dir
+	adapter := config.NewConfigAdapter(cfg)
+	dotfileTargets := adapter.GetDotfileTargets()
+	if _, exists := dotfileTargets[source]; exists {
+		if dryRun {
+			result.Status = "would-update"
+		} else {
+			result.Status = "updated"
+		}
+	} else {
+		if dryRun {
+			result.Status = "would-add"
+		} else {
+			result.Status = "added"
+		}
+	}
+
+	// If dry run, just return the result
+	if dryRun {
+		return result
+	}
+
+	// Copy file to plonk config directory
+	sourcePath := filepath.Join(configDir, source)
+
+	// Create parent directories
+	if err := os.MkdirAll(filepath.Dir(sourcePath), 0750); err != nil {
+		result.Status = "failed"
+		result.Error = errors.Wrap(err, errors.ErrDirectoryCreate, errors.DomainDotfiles, "create-dirs", "failed to create parent directories")
+		return result
+	}
+
+	// Copy file with attribute preservation
+	if err := copyFileWithAttributes(filePath, sourcePath); err != nil {
+		result.Status = "failed"
+		result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", source, "failed to copy dotfile")
+		return result
+	}
+
+	return result
+}
+
+// addDirectoryFilesNew processes all files in a directory and returns results
+func addDirectoryFilesNew(ctx context.Context, cfg *config.Config, dirPath, homeDir, configDir string, dryRun bool) []operations.OperationResult {
+	var results []operations.OperationResult
+	ignorePatterns := cfg.Resolve().GetIgnorePatterns()
+
+	// Walk the directory tree
+	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			results = append(results, operations.OperationResult{
+				Name:   path,
+				Status: "failed",
+				Error:  errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "walk", "failed to walk directory"),
+			})
+			return nil // Continue with other files
+		}
+
+		// Only process files, but DON'T skip directories (let Walk traverse them)
+		if !info.IsDir() {
+			// Check for cancellation
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+
+			// Get relative path from the base directory being added
+			relPath, err := filepath.Rel(dirPath, path)
+			if err != nil {
+				results = append(results, operations.OperationResult{
+					Name:   path,
+					Status: "failed",
+					Error:  errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "relative-path", "failed to get relative path"),
+				})
+				return nil
+			}
+
+			// Check if file should be skipped
+			if shouldSkipDotfile(relPath, info, ignorePatterns) {
+				return nil
+			}
+
+			// Process each file individually
+			result := addSingleFileNew(ctx, cfg, path, homeDir, configDir, dryRun)
+			results = append(results, result)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		// If walk failed completely, return a single error result
+		return []operations.OperationResult{{
+			Name:   dirPath,
+			Status: "failed",
+			Error:  errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "walk", "failed to walk directory"),
+		}}
+	}
+
+	return results
+}
+
+// copyFileWithAttributes copies a file while preserving permissions and timestamps
+func copyFileWithAttributes(src, dst string) error {
+	// Get source file info for preserving attributes
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	// Read source file
+	content, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+
+	// Write to destination with source permissions
+	if err := os.WriteFile(dst, content, srcInfo.Mode()); err != nil {
+		return err
+	}
+
+	// Preserve timestamps
+	return os.Chtimes(dst, srcInfo.ModTime(), srcInfo.ModTime())
+}
+
+// mapStatusToAction converts operation status to legacy action string
+func mapStatusToAction(status string) string {
+	switch status {
+	case "added", "would-add":
+		return "added"
+	case "updated", "would-update":
+		return "updated"
+	default:
+		return "failed"
+	}
+}
+
+// convertResultsToDotfileAdd converts OperationResult to DotfileAddOutput for structured output
+func convertResultsToDotfileAdd(results []operations.OperationResult) []DotfileAddOutput {
+	outputs := make([]DotfileAddOutput, 0, len(results))
+	for _, result := range results {
+		if result.Status == "failed" {
+			continue // Skip failed results, they're handled in errors
+		}
+
+		outputs = append(outputs, DotfileAddOutput{
+			Source:      result.Metadata["source"].(string),
+			Destination: result.Metadata["destination"].(string),
+			Action:      mapStatusToAction(result.Status),
+			Path:        result.Name,
+		})
+	}
+	return outputs
+}
+
+// extractErrorMessages extracts error messages from failed results
+func extractErrorMessages(results []operations.OperationResult) []string {
+	var errors []string
+	for _, result := range results {
+		if result.Status == "failed" && result.Error != nil {
+			errors = append(errors, fmt.Sprintf("failed to add %s: %v", result.Name, result.Error))
+		}
+	}
+	return errors
 }
 
 // resolveDotfilePath resolves relative paths and validates the dotfile path
@@ -154,15 +420,6 @@ func targetToSource(target string) string {
 	return config.TargetToSource(target)
 }
 
-// copyFileContents copies a file from src to dst
-func copyFileContents(src, dst string) error {
-	content, err := os.ReadFile(src)
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(dst, content, 0600)
-}
-
 // DotfileAddOutput represents the output structure for dotfile add command
 type DotfileAddOutput struct {
 	Source      string `json:"source" yaml:"source"`
@@ -197,138 +454,6 @@ func (d DotfileAddOutput) TableOutput() string {
 // StructuredData returns the structured data for serialization
 func (d DotfileAddOutput) StructuredData() any {
 	return d
-}
-
-// addSingleFile handles adding a single file to plonk management
-func addSingleFile(filePath, homeDir, configDir string, format OutputFormat) error {
-	// Load existing configuration
-	cfg, err := loadOrCreateConfig(configDir)
-	if err != nil {
-		return err
-	}
-
-	// Generate source and destination paths
-	source, destination := generatePaths(filePath, homeDir)
-
-	// Check if already managed by checking if source file exists in config dir
-	adapter := config.NewConfigAdapter(cfg)
-	dotfileTargets := adapter.GetDotfileTargets()
-	action := "added"
-	if _, exists := dotfileTargets[source]; exists {
-		action = "updated"
-	}
-
-	// Copy dotfile to plonk config directory
-	sourcePath := filepath.Join(configDir, source)
-	if err := copyFileContents(filePath, sourcePath); err != nil {
-		return errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", source, "failed to copy dotfile")
-	}
-
-	// Configuration doesn't need to be updated since we use auto-discovery
-	// The dotfile will be automatically detected once it's in the config directory
-
-	// Prepare output
-	outputData := DotfileAddOutput{
-		Source:      source,
-		Destination: destination,
-		Action:      action,
-		Path:        filePath,
-	}
-
-	return RenderOutput(outputData, format)
-}
-
-// addDirectoryFiles handles adding all files in a directory recursively
-func addDirectoryFiles(dirPath, homeDir, configDir string, format OutputFormat) error {
-	var addedFiles []DotfileAddOutput
-	var errorList []string
-
-	// Load config to get ignore patterns
-	cfg, err := loadOrCreateConfig(configDir)
-	if err != nil {
-		return err
-	}
-
-	ignorePatterns := cfg.Resolve().GetIgnorePatterns()
-
-	// Walk the directory tree
-	err = filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		// Only process files, but DON'T skip directories (let Walk traverse them)
-		if !info.IsDir() {
-			// Get relative path from the base directory being added
-			relPath, err := filepath.Rel(dirPath, path)
-			if err != nil {
-				return err
-			}
-
-			// Use existing shouldSkipDotfile function
-			if shouldSkipDotfile(relPath, info, ignorePatterns) {
-				return nil
-			}
-
-			// Process each file individually
-			result, err := addSingleFileInternal(path, homeDir, configDir, cfg)
-			if err != nil {
-				// Log error but continue with other files
-				errorList = append(errorList, fmt.Sprintf("failed to add %s: %v", path, err))
-				return nil
-			}
-
-			addedFiles = append(addedFiles, result)
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return err
-	}
-
-	// Render output for all added files
-	outputData := DotfileBatchAddOutput{
-		TotalFiles: len(addedFiles),
-		AddedFiles: addedFiles,
-		Errors:     errorList,
-	}
-
-	return RenderOutput(outputData, format)
-}
-
-// addSingleFileInternal handles adding a single file with an existing config
-func addSingleFileInternal(filePath, homeDir, configDir string, cfg *config.Config) (DotfileAddOutput, error) {
-	// Generate source and destination paths
-	source, destination := generatePaths(filePath, homeDir)
-
-	// Check if already managed by checking if source file exists in config dir
-	adapter := config.NewConfigAdapter(cfg)
-	dotfileTargets := adapter.GetDotfileTargets()
-	action := "added"
-	if _, exists := dotfileTargets[source]; exists {
-		action = "updated"
-	}
-
-	// Copy file to plonk config directory
-	sourcePath := filepath.Join(configDir, source)
-
-	// Create parent directories
-	if err := os.MkdirAll(filepath.Dir(sourcePath), 0750); err != nil {
-		return DotfileAddOutput{}, fmt.Errorf("failed to create parent directories: %v", err)
-	}
-
-	if err := copyFileContents(filePath, sourcePath); err != nil {
-		return DotfileAddOutput{}, fmt.Errorf("failed to copy dotfile: %v", err)
-	}
-
-	return DotfileAddOutput{
-		Source:      source,
-		Destination: destination,
-		Action:      action,
-		Path:        filePath,
-	}, nil
 }
 
 // loadOrCreateConfig loads existing config or creates a new one
