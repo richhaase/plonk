@@ -66,16 +66,23 @@ const (
 	SeverityCritical Severity = "critical"
 )
 
+// ErrorSuggestion represents a helpful suggestion for resolving an error
+type ErrorSuggestion struct {
+	Message string `json:"message"`
+	Command string `json:"command,omitempty"`
+}
+
 // PlonkError represents a structured error with context and metadata
 type PlonkError struct {
-	Code      ErrorCode              `json:"code"`
-	Domain    Domain                 `json:"domain"`
-	Operation string                 `json:"operation"`
-	Item      string                 `json:"item,omitempty"`
-	Message   string                 `json:"message"`
-	Severity  Severity               `json:"severity"`
-	Metadata  map[string]interface{} `json:"metadata,omitempty"`
-	Cause     error                  `json:"-"` // Original error, not serialized
+	Code       ErrorCode              `json:"code"`
+	Domain     Domain                 `json:"domain"`
+	Operation  string                 `json:"operation"`
+	Item       string                 `json:"item,omitempty"`
+	Message    string                 `json:"message"`
+	Severity   Severity               `json:"severity"`
+	Suggestion *ErrorSuggestion       `json:"suggestion,omitempty"`
+	Metadata   map[string]interface{} `json:"metadata,omitempty"`
+	Cause      error                  `json:"-"` // Original error, not serialized
 }
 
 // Error implements the error interface
@@ -110,38 +117,53 @@ func (e *PlonkError) Is(target error) bool {
 	return false
 }
 
-// UserMessage returns a user-friendly error message
+// UserMessage returns a user-friendly error message with suggestions
 func (e *PlonkError) UserMessage() string {
+	var message string
+
 	switch e.Code {
 	case ErrConfigNotFound:
-		return fmt.Sprintf("Configuration file not found. Please run 'plonk config init' to create one.")
+		message = "Configuration file not found. Please run 'plonk config init' to create one."
 	case ErrConfigParseFailure:
-		return fmt.Sprintf("Configuration file has invalid syntax. Please check the YAML format.")
+		message = "Configuration file has invalid syntax. Please check the YAML format."
 	case ErrConfigValidation:
-		return fmt.Sprintf("Configuration is invalid: %s", e.Message)
+		message = fmt.Sprintf("Configuration is invalid: %s", e.Message)
 	case ErrFileNotFound:
 		if e.Item != "" {
-			return fmt.Sprintf("File not found: %s", e.Item)
+			message = fmt.Sprintf("File not found: %s", e.Item)
+		} else {
+			message = "Required file not found"
 		}
-		return "Required file not found"
 	case ErrFileExists:
 		if e.Item != "" {
-			return fmt.Sprintf("File already exists: %s", e.Item)
+			message = fmt.Sprintf("File already exists: %s", e.Item)
+		} else {
+			message = "File already exists"
 		}
-		return "File already exists"
 	case ErrFilePermission:
-		return fmt.Sprintf("Permission denied accessing file: %s", e.Item)
+		message = fmt.Sprintf("Permission denied accessing file: %s", e.Item)
 	case ErrPackageNotFound:
-		return fmt.Sprintf("Package not found: %s", e.Item)
+		message = fmt.Sprintf("Package not found: %s", e.Item)
 	case ErrPackageInstall:
-		return fmt.Sprintf("Failed to install package: %s", e.Item)
+		message = fmt.Sprintf("Failed to install package: %s", e.Item)
 	case ErrManagerUnavailable:
-		return fmt.Sprintf("Package manager '%s' is not available", e.Item)
+		message = fmt.Sprintf("Package manager '%s' is not available", e.Item)
 	case ErrProviderNotFound:
-		return fmt.Sprintf("No provider found for domain: %s", e.Item)
+		message = fmt.Sprintf("No provider found for domain: %s", e.Item)
 	default:
-		return e.Message
+		message = e.Message
 	}
+
+	// Add suggestion if present
+	if e.Suggestion != nil {
+		if e.Suggestion.Command != "" {
+			message += fmt.Sprintf("\n     Try: %s", e.Suggestion.Command)
+		} else {
+			message += fmt.Sprintf("\n     %s", e.Suggestion.Message)
+		}
+	}
+
+	return message
 }
 
 // WithMetadata adds metadata to the error
@@ -165,6 +187,24 @@ func (e *PlonkError) WithItem(item string) *PlonkError {
 	return e
 }
 
+// WithSuggestion adds a helpful suggestion to the error
+func (e *PlonkError) WithSuggestion(suggestion ErrorSuggestion) *PlonkError {
+	e.Suggestion = &suggestion
+	return e
+}
+
+// WithSuggestionCommand adds a command suggestion to the error
+func (e *PlonkError) WithSuggestionCommand(command string) *PlonkError {
+	e.Suggestion = &ErrorSuggestion{Command: command}
+	return e
+}
+
+// WithSuggestionMessage adds a message suggestion to the error
+func (e *PlonkError) WithSuggestionMessage(message string) *PlonkError {
+	e.Suggestion = &ErrorSuggestion{Message: message}
+	return e
+}
+
 // NewError creates a new PlonkError with the specified parameters
 func NewError(code ErrorCode, domain Domain, operation string, message string) *PlonkError {
 	severity := SeverityError
@@ -176,12 +216,13 @@ func NewError(code ErrorCode, domain Domain, operation string, message string) *
 	}
 
 	return &PlonkError{
-		Code:      code,
-		Domain:    domain,
-		Operation: operation,
-		Message:   message,
-		Severity:  severity,
-		Metadata:  make(map[string]interface{}),
+		Code:       code,
+		Domain:     domain,
+		Operation:  operation,
+		Message:    message,
+		Severity:   severity,
+		Suggestion: nil,
+		Metadata:   make(map[string]interface{}),
 	}
 }
 

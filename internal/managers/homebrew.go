@@ -293,6 +293,40 @@ func (h *HomebrewManager) getAvailablePackageInfo(ctx context.Context, name stri
 	return info, nil
 }
 
+// GetInstalledVersion retrieves the installed version of a package
+func (h *HomebrewManager) GetInstalledVersion(ctx context.Context, name string) (string, error) {
+	// First check if package is installed
+	installed, err := h.IsInstalled(ctx, name)
+	if err != nil {
+		return "", fmt.Errorf("failed to check if package is installed: %w", err)
+	}
+	if !installed {
+		return "", fmt.Errorf("package '%s' is not installed", name)
+	}
+
+	// Get version using brew list with --versions flag
+	cmd := exec.CommandContext(ctx, "brew", "list", "--versions", name)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get package version: %w", err)
+	}
+
+	result := strings.TrimSpace(string(output))
+	if result == "" {
+		return "", fmt.Errorf("no version information found for package '%s'", name)
+	}
+
+	// Parse output: "package_name version1 version2 ..."
+	// We want the latest (last) version
+	parts := strings.Fields(result)
+	if len(parts) < 2 {
+		return "", fmt.Errorf("unexpected version output format for package '%s': %s", name, result)
+	}
+
+	// Return the last version (most recent)
+	return parts[len(parts)-1], nil
+}
+
 // extractJSONValue extracts a value from a JSON line
 func (h *HomebrewManager) extractJSONValue(line, key string) string {
 	keyPattern := `"` + key + `":`

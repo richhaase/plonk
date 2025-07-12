@@ -16,6 +16,7 @@ type PackageManager interface {
 	IsInstalled(ctx context.Context, name string) (bool, error)
 	Search(ctx context.Context, query string) ([]string, error)
 	Info(ctx context.Context, name string) (*PackageInfo, error)
+	GetInstalledVersion(ctx context.Context, name string) (string, error)
 }
 
 // SearchResult represents the result of a search operation

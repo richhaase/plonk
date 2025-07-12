@@ -163,3 +163,51 @@ func (c *CargoManager) Info(ctx context.Context, name string) (*PackageInfo, err
 		Manager:     "cargo",
 	}, nil
 }
+
+// GetInstalledVersion retrieves the installed version of a Cargo package
+func (c *CargoManager) GetInstalledVersion(ctx context.Context, name string) (string, error) {
+	// First check if package is installed
+	installed, err := c.IsInstalled(ctx, name)
+	if err != nil {
+		return "", fmt.Errorf("failed to check if package is installed: %w", err)
+	}
+	if !installed {
+		return "", fmt.Errorf("package '%s' is not installed", name)
+	}
+
+	// Use cargo install --list to get version information
+	cmd := exec.CommandContext(ctx, "cargo", "install", "--list")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get package version: %w", err)
+	}
+
+	result := strings.TrimSpace(string(output))
+	if result == "" {
+		return "", fmt.Errorf("no version information found for package '%s'", name)
+	}
+
+	// Parse output to find the package
+	lines := strings.Split(result, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		// Look for lines like "packagename v1.2.3:"
+		if strings.HasPrefix(line, name+" v") {
+			// Extract version from "packagename v1.2.3:"
+			parts := strings.Fields(line)
+			if len(parts) >= 2 {
+				version := parts[1]
+				// Remove 'v' prefix and trailing colon if present
+				if strings.HasPrefix(version, "v") {
+					version = version[1:]
+				}
+				if strings.HasSuffix(version, ":") {
+					version = version[:len(version)-1]
+				}
+				return version, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("could not find version information for package '%s'", name)
+}

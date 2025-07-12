@@ -371,6 +371,83 @@ func (n *NpmManager) extractDependencies(jsonOutput string) []string {
 	return dependencies
 }
 
+// GetInstalledVersion retrieves the installed version of a global NPM package
+func (n *NpmManager) GetInstalledVersion(ctx context.Context, name string) (string, error) {
+	// First check if package is installed
+	installed, err := n.IsInstalled(ctx, name)
+	if err != nil {
+		return "", fmt.Errorf("failed to check if package is installed: %w", err)
+	}
+	if !installed {
+		return "", fmt.Errorf("package '%s' is not installed globally", name)
+	}
+
+	// Get version using npm list with specific package
+	cmd := exec.CommandContext(ctx, "npm", "list", "-g", name, "--depth=0", "--json")
+	output, err := cmd.Output()
+	if err != nil {
+		// Try alternative approach if JSON fails
+		return n.getVersionFromLS(ctx, name)
+	}
+
+	result := strings.TrimSpace(string(output))
+	if result == "" {
+		return "", fmt.Errorf("no version information found for package '%s'", name)
+	}
+
+	// Parse JSON to extract version
+	lines := strings.Split(result, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.Contains(line, `"`+name+`":`) && strings.Contains(line, `"version":`) {
+			version := n.extractJSONValue(line, "version")
+			if version != "" {
+				return version, nil
+			}
+		}
+		// Also check for direct version field after package name
+		if strings.Contains(line, `"version":`) {
+			version := n.extractJSONValue(line, "version")
+			if version != "" {
+				return version, nil
+			}
+		}
+	}
+
+	// Fallback to ls approach
+	return n.getVersionFromLS(ctx, name)
+}
+
+// getVersionFromLS gets version using npm ls command as fallback
+func (n *NpmManager) getVersionFromLS(ctx context.Context, name string) (string, error) {
+	cmd := exec.CommandContext(ctx, "npm", "ls", "-g", name, "--depth=0")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get package version: %w", err)
+	}
+
+	result := strings.TrimSpace(string(output))
+	lines := strings.Split(result, "\n")
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		// Look for lines like "├── packagename@version" or "└── packagename@version"
+		if strings.Contains(line, name+"@") {
+			parts := strings.Split(line, "@")
+			if len(parts) >= 2 {
+				version := strings.TrimSpace(parts[len(parts)-1])
+				// Clean up any extra characters that might be in the version
+				if idx := strings.Index(version, " "); idx > 0 {
+					version = version[:idx]
+				}
+				return version, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("could not extract version for package '%s' from npm output", name)
+}
+
 // extractJSONValue extracts a value from a JSON line
 func (n *NpmManager) extractJSONValue(line, key string) string {
 	keyPattern := `"` + key + `":`

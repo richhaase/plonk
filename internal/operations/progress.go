@@ -1,0 +1,127 @@
+// Copyright (c) 2025 Rich Haase
+// Licensed under the MIT License. See LICENSE file in the project root for license information.
+
+package operations
+
+import (
+	"fmt"
+	"strings"
+)
+
+// DefaultProgressReporter provides a standard implementation of progress reporting
+type DefaultProgressReporter struct {
+	ShowIndividualProgress bool
+	ItemType               string // "package" or "dotfile"
+}
+
+// NewProgressReporter creates a new progress reporter
+func NewProgressReporter(itemType string, showIndividual bool) *DefaultProgressReporter {
+	return &DefaultProgressReporter{
+		ShowIndividualProgress: showIndividual,
+		ItemType:               itemType,
+	}
+}
+
+// ShowItemProgress displays progress for an individual item
+func (r *DefaultProgressReporter) ShowItemProgress(result OperationResult) {
+	if !r.ShowIndividualProgress {
+		return
+	}
+
+	switch result.Status {
+	case "added":
+		if result.Version != "" {
+			fmt.Printf("✓ %s@%s (%s)\n", result.Name, result.Version, result.Manager)
+		} else {
+			if result.FilesProcessed > 0 {
+				fmt.Printf("✓ %s\n", result.Name)
+			} else {
+				fmt.Printf("✓ %s\n", result.Name)
+			}
+		}
+	case "updated":
+		if result.Version != "" {
+			fmt.Printf("↻ %s@%s (%s) (updated)\n", result.Name, result.Version, result.Manager)
+		} else {
+			fmt.Printf("↻ %s (updated)\n", result.Name)
+		}
+	case "skipped":
+		fmt.Printf("✗ %s - already managed\n", result.Name)
+	case "failed":
+		fmt.Printf("✗ %s - %s\n", result.Name, FormatErrorWithSuggestion(result.Error, result.Name, r.ItemType))
+	case "would-add":
+		if result.Version != "" {
+			fmt.Printf("+ %s (%s) - would add\n", result.Name, result.Manager)
+		} else {
+			fmt.Printf("+ %s - would add\n", result.Name)
+		}
+	case "would-update":
+		fmt.Printf("+ %s - would update\n", result.Name)
+	}
+}
+
+// ShowBatchSummary displays a summary of the batch operation
+func (r *DefaultProgressReporter) ShowBatchSummary(results []OperationResult) {
+	summary := CalculateSummary(results)
+
+	if r.ItemType == "dotfile" && summary.FilesProcessed > 0 {
+		fmt.Printf("\nSummary: %d added, %d updated, %d skipped, %d failed (%d total files)\n",
+			summary.Added, summary.Updated, summary.Skipped, summary.Failed, summary.FilesProcessed)
+	} else {
+		fmt.Printf("\nSummary: %d added, %d updated, %d skipped, %d failed\n",
+			summary.Added, summary.Updated, summary.Skipped, summary.Failed)
+	}
+
+	// Show failed items with suggestions
+	if summary.Failed > 0 {
+		fmt.Printf("\nFailed %ss:\n", r.ItemType)
+		for _, result := range results {
+			if result.Status == "failed" {
+				fmt.Printf("  %s: %v\n", result.Name, result.Error)
+			}
+		}
+		if r.ItemType == "package" {
+			fmt.Println("\nTry running 'plonk doctor' to check system health")
+		}
+	}
+}
+
+// FormatErrorWithSuggestion formats an error message with helpful suggestions
+func FormatErrorWithSuggestion(err error, itemName string, itemType string) string {
+	if err == nil {
+		return ""
+	}
+
+	msg := err.Error()
+
+	// Add suggestions based on error type and item type
+	if strings.Contains(msg, "not found") {
+		if itemType == "package" {
+			return fmt.Sprintf("%s\n     Try: plonk search %s", msg, itemName)
+		} else {
+			return fmt.Sprintf("%s\n     Check if path exists: ls -la %s", msg, itemName)
+		}
+	}
+
+	if strings.Contains(msg, "manager unavailable") || strings.Contains(msg, "command not found") {
+		return fmt.Sprintf("%s\n     Try: plonk doctor", msg)
+	}
+
+	if strings.Contains(msg, "network") || strings.Contains(msg, "timeout") {
+		return fmt.Sprintf("%s\n     Check network connectivity", msg)
+	}
+
+	if strings.Contains(msg, "permission") {
+		if itemType == "package" {
+			return fmt.Sprintf("%s\n     Check file permissions and try again", msg)
+		} else {
+			return fmt.Sprintf("%s\n     Try: chmod +r %s", msg, itemName)
+		}
+	}
+
+	if strings.Contains(msg, "already exists") {
+		return fmt.Sprintf("%s\n     Use --force to overwrite", msg)
+	}
+
+	return msg
+}

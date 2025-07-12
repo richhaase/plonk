@@ -40,6 +40,21 @@ func (m *MockPackageManager) EXPECT() *MockPackageManagerMockRecorder {
 	return m.recorder
 }
 
+// GetInstalledVersion mocks base method.
+func (m *MockPackageManager) GetInstalledVersion(ctx context.Context, name string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInstalledVersion", ctx, name)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetInstalledVersion indicates an expected call of GetInstalledVersion.
+func (mr *MockPackageManagerMockRecorder) GetInstalledVersion(ctx, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstalledVersion", reflect.TypeOf((*MockPackageManager)(nil).GetInstalledVersion), ctx, name)
+}
+
 // Info mocks base method.
 func (m *MockPackageManager) Info(ctx context.Context, name string) (*PackageInfo, error) {
 	m.ctrl.T.Helper()
