@@ -52,7 +52,7 @@ just install    # Installs plonk globally
 
 ### Basic Usage
 
-**🎉 No setup required!** Plonk works immediately with zero configuration:
+**🎉 No setup required!** Plonk works immediately with zero-config:
 
 1. **Check your current environment:**
 ```bash
@@ -81,7 +81,7 @@ plonk init    # Creates helpful config template
 
 ## Configuration
 
-**🚀 Zero configuration required!** Plonk works immediately with sensible defaults.
+**🚀 Zero-config required!** Plonk works immediately with sensible defaults.
 
 **Optional customization:** Create a config file only when you need to change defaults:
 
@@ -99,7 +99,7 @@ plonk config edit    # Edit your settings
 
 ## Getting Started Guide
 
-### First Time Setup (Zero Configuration!)
+### First Time Setup (Zero-Config!)
 
 1. **Install Plonk** (see Installation section above)
 
