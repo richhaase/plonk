@@ -296,27 +296,28 @@ Total: 25 packages | ✓ Managed: 18 | ⚠ Missing: 2 | ? Untracked: 5
 5 untracked packages (use --verbose to show details)
 ```
 
-### `plonk pkg add [package]`
+### `plonk pkg add [package1] [package2] ...`
 
-Add packages to lock file and install them.
+Add one or more packages to lock file and install them.
 
 **Usage:**
 ```bash
-plonk pkg add [package] [--manager manager] [--dry-run] [--output format]
+plonk pkg add [package1] [package2] ... [--manager manager] [--dry-run] [--output format]
 ```
 
 **Behaviors:**
 - `plonk pkg add` - Add all untracked packages
 - `plonk pkg add htop` - Add specific package to lock file and install
-- `plonk pkg add htop --manager homebrew` - Force specific manager
-- `plonk pkg add ripgrep --manager cargo` - Force specific manager
+- `plonk pkg add git neovim ripgrep htop` - Add multiple packages at once
+- `plonk pkg add --manager npm typescript prettier eslint` - Multiple packages with specific manager
 - `plonk pkg add htop --dry-run` - Preview what would be added/installed
+- `plonk pkg add git neovim --dry-run` - Preview multiple package additions
 
 **Options:**
-- `--manager` - Force specific package manager (homebrew, npm)
+- `--manager` - Force specific package manager for all packages (homebrew, npm, cargo)
 - `--dry-run` - Show what would be added without making changes
 
-**Example output:**
+**Single package output:**
 ```
 Package Add
 ===========
@@ -325,6 +326,23 @@ Package Add
 
 Summary: Added to configuration and installed
 ```
+
+**Multiple package output:**
+```
+Adding packages...
+✓ git@2.43.0 (homebrew)
+✓ neovim@0.9.5 (homebrew)
+✗ ripgrep (homebrew) - already managed
+✓ htop@3.2.2 (homebrew)
+
+Summary: 3 added, 0 updated, 1 skipped, 0 failed
+```
+
+**Error handling:**
+- Continues processing all packages even if some fail
+- Shows progress for each package with version information
+- Provides contextual error messages with suggestions
+- Exit code 0 if any packages succeed, 1 only if all fail
 
 ### `plonk pkg remove <package>`
 
@@ -410,19 +428,20 @@ Total: 59 files | ✓ Managed: 12 | ⚠ Missing: 0 | ? Untracked: 47
 }
 ```
 
-### `plonk dot add <dotfile>`
+### `plonk dot add <dotfile1> [dotfile2] ...`
 
-Add or update dotfile in plonk management.
+Add or update one or more dotfiles in plonk management.
 
 **Usage:**
 ```bash
-plonk dot add <dotfile>
+plonk dot add <dotfile1> [dotfile2] ... [--dry-run] [--output format]
 ```
 
 **Behavior:**
-- **New files**: Copies file to plonk config and marks as managed
+- **New files**: Copies files to plonk config and marks as managed
 - **Existing files**: Updates the managed copy with current system version
 - **Directories**: Recursively processes all files, respecting ignore patterns
+- **Mixed input**: Supports combination of files and directories in single command
 
 **Path Resolution:**
 - **Absolute paths**: `plonk dot add /home/user/.vimrc`
@@ -431,13 +450,57 @@ plonk dot add <dotfile>
   - `plonk dot add .vimrc` → looks for `./vimrc` then `~/.vimrc`
   - `plonk dot add init.lua` → looks for `./init.lua` then `~/init.lua`
 
-**Examples:**
+**Options:**
+- `--dry-run` - Show what would be added without making changes
+
+**Single dotfile examples:**
 ```bash
 plonk dot add ~/.vimrc          # Explicit home directory path
 plonk dot add .vimrc            # Finds ~/.vimrc (if not in current dir)
 plonk dot add ~/.config/nvim/   # Add entire directory
 cd ~/.config/nvim && plonk dot add init.lua  # Finds ./init.lua
 ```
+
+**Multiple dotfile examples:**
+```bash
+plonk dot add ~/.vimrc ~/.zshrc ~/.gitconfig    # Multiple files
+plonk dot add ~/.config/nvim/ ~/.tmux.conf      # Directory and file
+plonk dot add ~/.ssh/config ~/.aws/config       # Configuration files
+plonk dot add --dry-run ~/.vimrc ~/.zshrc       # Preview changes
+```
+
+**Single dotfile output:**
+```
+Dotfile Add
+===========
+✅ Added dotfile to plonk configuration
+   Source: vimrc
+   Destination: ~/.vimrc
+   Original: /home/user/.vimrc
+
+The dotfile has been copied to your plonk config directory
+```
+
+**Multiple dotfile output:**
+```bash
+$ plonk dot add ~/.vimrc ~/.config/nvim/ ~/.nonexistent ~/.zshrc
+✓ ~/.vimrc → vimrc
+✓ ~/.config/nvim/init.lua → config/nvim/init.lua
+✓ ~/.config/nvim/lua/config.lua → config/nvim/lua/config.lua
+↻ ~/.config/nvim/lua/plugins.lua → config/nvim/lua/plugins.lua (updated)
+✗ ~/.nonexistent - file not found
+     Check if path exists: ls -la ~/.nonexistent
+↻ ~/.zshrc → zshrc (updated)
+
+Summary: 3 added, 2 updated, 0 skipped, 1 failed (5 total files)
+```
+
+**Features:**
+- **File attribute preservation**: Maintains permissions and timestamps
+- **Progress indication**: Real-time feedback for each file processed
+- **Error handling**: Continues processing all files even if some fail
+- **Contextual suggestions**: Helpful error messages with suggested commands
+- **Directory traversal**: Processes individual files within directories
 
 
 ## Configuration Management

@@ -185,8 +185,11 @@ plonk status
 
 3. **Start managing packages:**
 ```bash
-# Add packages you want Plonk to track
-plonk pkg add git neovim ripgrep
+# Add multiple packages at once
+plonk pkg add git neovim ripgrep htop
+
+# Add packages with specific manager
+plonk pkg add --manager npm typescript prettier eslint
 
 # Or discover and add untracked packages
 plonk pkg list --untracked    # See what's installed but not tracked
@@ -235,7 +238,9 @@ plonk apply --backup  # Apply with backups of existing files
 plonk pkg list                    # List managed + missing + untracked count
 plonk pkg list --verbose          # Show all packages including untracked
 plonk pkg list --manager homebrew # Filter by package manager
-plonk pkg add htop               # Add package to lock file and install
+plonk pkg add htop               # Add single package to lock file and install
+plonk pkg add git neovim ripgrep htop  # Add multiple packages at once
+plonk pkg add --manager npm typescript prettier  # Multiple packages with specific manager
 plonk pkg add htop --dry-run     # Preview what would be added
 plonk pkg remove htop            # Remove from lock file only
 plonk pkg remove htop --dry-run  # Preview what would be removed
@@ -245,9 +250,12 @@ plonk search git                 # Search for packages
 # Dotfile management
 plonk dot list           # List dotfiles (missing + managed + untracked count)
 plonk dot list --verbose # Show all files including full untracked list
-plonk dot add .vimrc     # Add dotfile (flexible path resolution)
+plonk dot add .vimrc     # Add single dotfile (flexible path resolution)
+plonk dot add ~/.vimrc ~/.zshrc ~/.gitconfig  # Add multiple dotfiles at once
+plonk dot add ~/.config/nvim/ ~/.tmux.conf    # Mix directories and files
 plonk dot add ~/.config/nvim/init.lua  # Explicit path
 plonk dot add init.lua   # Finds ./init.lua or ~/init.lua
+plonk dot add --dry-run ~/.vimrc ~/.zshrc  # Preview multiple dotfile additions
 
 # Configuration (optional - works without any config!)
 plonk init            # Create config template with defaults
