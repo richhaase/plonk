@@ -7,11 +7,10 @@ import (
 	"context"
 	"fmt"
 
-	"plonk/internal/config"
-	"plonk/internal/errors"
-	"plonk/internal/lock"
-	"plonk/internal/managers"
-
+	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/lock"
+	"github.com/richhaase/plonk/internal/managers"
 	"github.com/spf13/cobra"
 )
 

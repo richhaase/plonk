@@ -7,14 +7,12 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"plonk/internal/config"
-	"plonk/internal/errors"
-
+	"github.com/richhaase/plonk/internal/config" // getConfigPath returns the path to the main configuration file
+	"github.com/richhaase/plonk/internal/errors"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
-// getConfigPath returns the path to the main configuration file
 func getConfigPath(configDir string) string {
 	return filepath.Join(configDir, "plonk.yaml")
 }

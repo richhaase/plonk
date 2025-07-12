@@ -8,9 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"plonk/internal/config"
-	"plonk/internal/errors"
-
+	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/errors"
 	"github.com/spf13/cobra"
 )
 

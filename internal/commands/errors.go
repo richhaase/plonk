@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/errors"
 )
 
 // HandleError processes an error and returns a user-friendly exit code

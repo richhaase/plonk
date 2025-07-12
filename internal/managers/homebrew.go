@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/errors"
 )
 
 // HomebrewManager manages Homebrew packages.

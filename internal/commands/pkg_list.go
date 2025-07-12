@@ -9,11 +9,10 @@ import (
 	"sort"
 	"strings"
 
-	"plonk/internal/config"
-	"plonk/internal/lock"
-	"plonk/internal/managers"
-	"plonk/internal/state"
-
+	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/lock"
+	"github.com/richhaase/plonk/internal/managers"
+	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
 )
 

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"plonk/internal/config"
+	"github.com/richhaase/plonk/internal/config"
 )
 
 // TestZeroConfigCommands tests that commands work without configuration files

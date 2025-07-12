@@ -3,7 +3,7 @@
 
 package lock
 
-import "plonk/internal/state"
+import "github.com/richhaase/plonk/internal/state"
 
 // LockFileAdapter adapts the lock file service to the PackageConfigLoader interface
 type LockFileAdapter struct {

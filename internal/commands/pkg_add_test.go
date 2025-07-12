@@ -8,11 +8,10 @@ import (
 	"fmt"
 	"testing"
 
-	"plonk/internal/config"
-	"plonk/internal/lock"
-	"plonk/internal/managers"
-	"plonk/internal/operations"
-
+	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/lock"
+	"github.com/richhaase/plonk/internal/managers"
+	"github.com/richhaase/plonk/internal/operations"
 	"go.uber.org/mock/gomock"
 )
 

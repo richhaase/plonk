@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/errors"
 )
 
 // NpmManager manages NPM packages.

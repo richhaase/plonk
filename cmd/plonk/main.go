@@ -6,7 +6,7 @@ package main
 import (
 	"os"
 
-	"plonk/internal/commands"
+	"github.com/richhaase/plonk/internal/commands"
 )
 
 // Version information, injected at build time via ldflags

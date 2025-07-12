@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/errors"
 )
 
 // CreateOperationContext creates a context with timeout for batch operations

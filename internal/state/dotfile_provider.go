@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"plonk/internal/dotfiles"
+	"github.com/richhaase/plonk/internal/dotfiles"
 )
 
 // DotfileConfigLoader defines how to load dotfile configuration

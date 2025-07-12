@@ -11,10 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"plonk/internal/config"
-	"plonk/internal/errors"
-	"plonk/internal/operations"
-
+	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/operations"
 	"github.com/spf13/cobra"
 )
 

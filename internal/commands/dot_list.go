@@ -9,9 +9,8 @@ import (
 	"os"
 	"strings"
 
-	"plonk/internal/config"
-	"plonk/internal/state"
-
+	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
 )
 

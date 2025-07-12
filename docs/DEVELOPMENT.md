@@ -275,7 +275,7 @@ Plonk uses a structured error system for consistent error handling across all co
 
 ```go
 // Import the errors package
-import "plonk/internal/errors"
+import "github.com/richhaase/plonk/internal/errors"
 
 // Create a new error
 return errors.NewError(

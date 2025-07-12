@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"plonk/internal/config"
-	"plonk/internal/operations"
+	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/operations"
 )
 
 func TestDotAddCommand_Creation(t *testing.T) {
@@ -224,6 +224,17 @@ func TestAddDirectoryFilesNew(t *testing.T) {
 		}
 	}
 
+	// Set environment variable to use test config directory
+	originalPlonkDir := os.Getenv("PLONK_DIR")
+	os.Setenv("PLONK_DIR", configDir)
+	defer func() {
+		if originalPlonkDir == "" {
+			os.Unsetenv("PLONK_DIR")
+		} else {
+			os.Setenv("PLONK_DIR", originalPlonkDir)
+		}
+	}()
+
 	// Create minimal config
 	cfg := &config.Config{}
 
@@ -249,9 +260,19 @@ func TestAddDirectoryFilesNew(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Create fresh config directory for each test to avoid interference
+			testConfigDir := filepath.Join(tempDir, "config_"+tt.name)
+			err := os.MkdirAll(testConfigDir, 0755)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Update PLONK_DIR for this specific test
+			os.Setenv("PLONK_DIR", testConfigDir)
+
 			// Execute function
 			ctx := context.Background()
-			results := addDirectoryFilesNew(ctx, cfg, testDir, homeDir, configDir, tt.dryRun)
+			results := addDirectoryFilesNew(ctx, cfg, testDir, homeDir, testConfigDir, tt.dryRun)
 
 			// Verify results
 			if len(results) != tt.expectedFiles {
@@ -273,7 +294,7 @@ func TestAddDirectoryFilesNew(t *testing.T) {
 				for _, result := range results {
 					if result.Status == "added" {
 						source := result.Metadata["source"].(string)
-						sourcePath := filepath.Join(configDir, source)
+						sourcePath := filepath.Join(testConfigDir, source)
 						if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
 							t.Errorf("File should have been copied: %s", sourcePath)
 						}

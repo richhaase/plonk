@@ -9,9 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"plonk/internal/errors"
-	"plonk/internal/managers"
-
+	"github.com/richhaase/plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/managers"
 	"github.com/spf13/cobra"
 )
 

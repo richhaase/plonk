@@ -4,7 +4,7 @@
 package config
 
 import (
-	"plonk/internal/state"
+	"github.com/richhaase/plonk/internal/state"
 )
 
 // StatePackageConfigAdapter adapts ConfigAdapter to work with state.PackageConfigLoader

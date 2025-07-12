@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/errors"
 )
 
 // CargoManager manages cargo packages.

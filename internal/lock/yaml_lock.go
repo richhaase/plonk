@@ -8,9 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"plonk/internal/dotfiles"
-	"plonk/internal/errors"
-
+	"github.com/richhaase/plonk/internal/dotfiles"
+	"github.com/richhaase/plonk/internal/errors"
 	"gopkg.in/yaml.v3"
 )
 

@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/errors"
 )
 
 // FileOperations handles file system operations for dotfiles

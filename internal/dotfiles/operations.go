@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/errors"
 )
 
 // Manager handles dotfile operations and path management
