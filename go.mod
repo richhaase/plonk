@@ -1,4 +1,4 @@
-module plonk
+module github.com/richhaase/plonk
 
 go 1.24.4
 
