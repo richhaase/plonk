@@ -81,92 +81,21 @@ plonk init    # Creates helpful config template
 
 ## Configuration
 
-**Configuration is completely optional!** Plonk works with sensible defaults out of the box.
+**🚀 Zero configuration required!** Plonk works immediately with sensible defaults.
 
-When you do want to customize settings, Plonk uses two files:
+**Optional customization:** Create a config file only when you need to change defaults:
 
-### Configuration File (`~/.config/plonk/plonk.yaml`) - Optional
-Contains your custom settings and preferences (create with `plonk init`):
-
-```yaml
-default_manager: homebrew
-operation_timeout: 300   # 5 minutes
-package_timeout: 180     # 3 minutes
-dotfile_timeout: 60      # 1 minute
-
-expand_directories:
-  - .config
-  - .ssh
-  - .aws
-  - .kube
-  - .docker
-  - .gnupg
-  - .local
-
-ignore_patterns:
-  - .DS_Store
-  - .git
-  - "*.backup"
-  - "*.tmp"
-  - "*.swp"
-  - plonk.lock
+```bash
+plonk init           # Create config template
+plonk config show    # View current settings (including defaults)
+plonk config edit    # Edit your settings
 ```
 
-### Lock File (`~/.config/plonk/plonk.lock`) - Automatic
-Automatically created and managed file that tracks your packages (similar to package-lock.json):
+**Two file types:**
+- **`plonk.yaml`** - Your optional settings (timeouts, preferences)
+- **`plonk.lock`** - Automatic package tracking (like package-lock.json)
 
-```yaml
-version: 1
-packages:
-  homebrew:
-    - name: git
-      installed_at: "2024-01-15T10:30:00Z"
-      version: "2.43.0"
-    - name: neovim
-      installed_at: "2024-01-15T10:31:00Z"
-      version: "0.9.5"
-  npm:
-    - name: typescript
-      installed_at: "2024-01-15T10:32:00Z"
-      version: "5.3.3"
-  cargo:
-    - name: ripgrep
-      installed_at: "2024-01-15T10:35:00Z"
-      version: "14.1.0"
-```
-
-**Note:** The lock file is automatically created and updated when you add/remove packages. You don't need to edit it manually.
-
-### Zero-Config Defaults
-
-When no configuration file exists, Plonk uses these sensible defaults:
-
-```yaml
-# Default settings (you can override these with `plonk init`)
-default_manager: homebrew      # Primary package manager
-operation_timeout: 300         # 5 minutes for overall operations
-package_timeout: 180           # 3 minutes for package operations
-dotfile_timeout: 60            # 1 minute for dotfile operations
-expand_directories:            # Directories shown expanded in lists
-  - .config
-  - .ssh
-  - .aws
-  - .kube
-  - .docker
-  - .gnupg
-  - .local
-
-ignore_patterns:                 # Files ignored during dotfile discovery
-  - .DS_Store
-  - .git
-  - "*.backup"
-  - "*.tmp"
-  - "*.swp"
-```
-
-**Dotfiles are auto-discovered** from your config directory:
-- `~/.config/plonk/zshrc` → `~/.zshrc`
-- `~/.config/plonk/config/nvim/` → `~/.config/nvim/`
+> **📖 Complete Configuration Guide**: See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for detailed configuration options, examples, and file formats.
 
 ## Getting Started Guide
 
@@ -226,47 +155,15 @@ plonk doctor         # Health check when something seems wrong
 ## Common Commands
 
 ```bash
-# Show overall status
-plonk status
-
-# Apply all configuration
-plonk apply --dry-run  # Preview changes
-plonk apply           # Apply changes
-plonk apply --backup  # Apply with backups of existing files
-
-# Package management
-plonk pkg list                    # List managed + missing + untracked count
-plonk pkg list --verbose          # Show all packages including untracked
-plonk pkg list --manager homebrew # Filter by package manager
-plonk pkg add htop               # Add single package to lock file and install
-plonk pkg add git neovim ripgrep htop  # Add multiple packages at once
-plonk pkg add --manager npm typescript prettier  # Multiple packages with specific manager
-plonk pkg add htop --dry-run     # Preview what would be added
-plonk pkg remove htop            # Remove from lock file only
-plonk pkg remove htop --dry-run  # Preview what would be removed
-plonk pkg remove htop --uninstall # Remove from lock file and uninstall
-plonk search git                 # Search for packages
-
-# Dotfile management
-plonk dot list           # List dotfiles (missing + managed + untracked count)
-plonk dot list --verbose # Show all files including full untracked list
-plonk dot add .vimrc     # Add single dotfile (flexible path resolution)
-plonk dot add ~/.vimrc ~/.zshrc ~/.gitconfig  # Add multiple dotfiles at once
-plonk dot add ~/.config/nvim/ ~/.tmux.conf    # Mix directories and files
-plonk dot add ~/.config/nvim/init.lua  # Explicit path
-plonk dot add init.lua   # Finds ./init.lua or ~/init.lua
-plonk dot add --dry-run ~/.vimrc ~/.zshrc  # Preview multiple dotfile additions
-
-# Configuration (optional - works without any config!)
-plonk init            # Create config template with defaults
-plonk config show     # Show effective config (defaults merged with user settings)
-plonk config validate # Validate config syntax
-plonk config edit     # Edit config file
-
-# Diagnostics
-plonk doctor          # Health check
-plonk env             # Environment info
+# Essential workflows
+plonk status                                      # Check system state
+plonk apply                                       # Apply all changes
+plonk pkg add git neovim ripgrep                 # Add multiple packages
+plonk dot add ~/.vimrc ~/.zshrc ~/.gitconfig     # Add multiple dotfiles
+plonk doctor                                      # Health check
 ```
+
+> **📖 Complete Command Reference**: See [docs/CLI.md](docs/CLI.md) for comprehensive command documentation with examples and options.
 
 ## Output Formats
 

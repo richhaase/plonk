@@ -1,26 +1,6 @@
-# Plonk Development Guidelines
+# Plonk Development History
 
-## Development Rules
-
-### Error Handling
-- **Always use plonk's error handling** - `errors.Wrap()` not `fmt.Errorf()`
-- **Package manager availability** - Return `(false, nil)` not error when binary missing
-- **Structured errors** - Use appropriate error codes and domains for user-friendly messages
-
-### Testing & Quality
-- **Test before release** - Run `just precommit` before any release
-- **Graceful degradation** - Features should fail gracefully (e.g., unavailable package managers)
-- **Context everywhere** - All long-running operations must accept context for cancellation
-
-### Developer Experience
-- **Zero-config first** - Features must work without configuration
-- **One-command setup** - New developers should be productive with `just dev-setup`
-- **Fast feedback loops** - Use pre-commit framework for file-specific checks (94% faster)
-
-### Build & Release
-- **Binary location** - Output to `bin/` not `build/`
-- **Automated releases** - Use GoReleaser via `just release-auto`
-- **Composite actions** - Reuse GitHub Actions for consistency
+> **Note**: For current development guidelines and patterns, see [CLAUDE.md](CLAUDE.md)
 
 ## Completed Work Summary
 
@@ -102,11 +82,3 @@
 - Unicode path support
 - Network failure handling
 - Performance benchmarking
-
-## Commands Reference
-```bash
-just dev-setup      # One-time developer setup
-just deps-update    # Update dependencies safely
-just clean-all      # Complete cleanup
-just release-auto   # Create automated release
-```
