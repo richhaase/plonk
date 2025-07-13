@@ -1,0 +1,11 @@
+Plonk Overview
+==============
+Total: 67 managed | 0 missing | 198 untracked
+
+Dotfile:
+  22 managed
+
+Package:
+  45 managed
+
+Use 'plonk ls -v' to see all items or 'plonk ls -a' to include 198 untracked items

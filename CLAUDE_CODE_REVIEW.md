@@ -1,12 +1,30 @@
 # Plonk Critical Code Review
 
+**Last Updated**: 2025-07-13
+
 ## Executive Summary
 
 This review examines the plonk codebase after one week of intensive development and multiple refactoring cycles. The project shows signs of rapid evolution with incomplete architectural transitions, significant code duplication, and unclear boundaries between responsibilities. While recent Phase 4 improvements have added valuable infrastructure, they have also introduced parallel systems that need consolidation.
 
+**Status**: Most findings remain valid. The `business` → `services` rename has been completed, but core architectural issues persist.
+
+## Updates Since Initial Review
+
+### ✅ Completed
+- Renamed `internal/business` to `internal/services` for better naming clarity
+- Updated all imports and documentation to reflect services package
+
+### ⚠️ Still Outstanding
+- Interface duplication between `/internal/interfaces/` and `/internal/config/` remains
+- SharedContext vs RuntimeState confusion persists (recommend keeping SharedContext)
+- shared.go still contains 959 lines of mixed responsibilities
+- Services layer remains underutilized (only 2 files)
+- Error handling consistency not addressed
+- Legacy types and TODOs still present
+
 ## 1. Major Architectural Issues
 
-### 1.1 Duplicate Interface Hierarchies
+### 1.1 Duplicate Interface Hierarchies ✅ VERIFIED
 
 **Critical Issue**: The codebase maintains two parallel interface systems:
 
@@ -18,14 +36,15 @@ This review examines the plonk codebase after one week of intensive development 
 2. **New Unified System** (Phase 4):
    - `/internal/interfaces/` (intended central location)
 
-**Specific Duplications Found**:
-- `ConfigReader`, `ConfigWriter`, `ConfigValidator`, `ConfigService` defined in BOTH locations
-- `PackageConfigItem` struct duplicated
+**Specific Duplications Confirmed**:
+- `ConfigReader`, `ConfigWriter`, `ConfigValidator`, `ConfigService` defined in BOTH locations with different signatures
+- `PackageConfigItem` struct duplicated identically in both locations
 - `DotfileConfigLoader` defined in multiple places
+- No type aliases exist to resolve these duplications
 
 **Impact**: This duplication creates confusion, requires multiple adapter layers, and makes the codebase harder to understand and maintain.
 
-### 1.2 Commands Layer Bloat
+### 1.2 Commands Layer Bloat ✅ VERIFIED
 
 **Critical Issue**: The commands package contains massive files with mixed responsibilities:
 
@@ -33,24 +52,26 @@ This review examines the plonk codebase after one week of intensive development 
 - `doctor.go`: 22KB of mixed diagnostic logic
 - `output.go`: 12KB with legacy types marked "for backward compatibility"
 
-**Root Cause**: Business logic is embedded in the presentation layer rather than properly separated.
+**Root Cause**: Business logic is embedded in the presentation layer rather than properly separated. While a `services` layer now exists, it remains underutilized with only two files.
 
-### 1.3 Incomplete Architectural Transitions
+### 1.3 Incomplete Architectural Transitions ✅ VERIFIED
 
 **Evidence of Multiple Refactoring Attempts**:
 
-1. **RuntimeState Pattern** (partially implemented):
+1. **RuntimeState Pattern** (barely used):
    - Created to unify config/state management
-   - Contains TODOs: "Replace with RuntimeState in future refactoring"
-   - Not consistently used across commands
+   - Contains TODOs: "Replace with RuntimeState in future refactoring" (lines 435, 448 in shared.go)
+   - Almost no adoption across commands
 
-2. **Business Layer** (minimal implementation):
+2. **Services Layer** (minimal implementation):
    - Only two files: `dotfile_operations.go`, `package_operations.go`
    - Most business logic still in commands layer
+   - **UPDATE**: Renamed from `business` to `services` package
 
-3. **Shared Context** (Phase 4):
+3. **Shared Context** (widely adopted):
    - Good singleton pattern for resource sharing
-   - But parallel to RuntimeState, creating confusion
+   - Used in 10+ commands (install, rm, add, uninstall, sync, env, search, info, etc.)
+   - But parallel to RuntimeState, creating confusion about which to use
 
 ## 2. Code Duplication and Extraction Opportunities
 
@@ -143,16 +164,19 @@ Commands (thin presentation layer)
    - Remove ALL duplicate interface definitions
    - Use only `/internal/interfaces/` package
    - Eliminate unnecessary adapters
+   - **Status**: Not started - duplicates confirmed to still exist
 
 2. **Extract Business Logic from Commands**:
    - Move shared.go logic to proper service layer
    - Create application services for each domain
    - Commands should only handle CLI concerns
+   - **Status**: Partially started - services layer exists but underutilized
 
 3. **Standardize Error Handling**:
    - Use structured errors consistently
    - Define clear error domains
    - Remove all `fmt.Errorf` usage
+   - **Status**: Not verified - likely still inconsistent
 
 ### 5.2 Architectural Corrections
 
@@ -160,6 +184,7 @@ Commands (thin presentation layer)
    - Either RuntimeState OR SharedContext, not both
    - Complete the implementation of chosen pattern
    - Remove incomplete abstractions
+   - **Recommendation**: Keep SharedContext (already widely adopted), remove RuntimeState
 
 2. **Implement Proper Layering**:
    ```go
@@ -246,15 +271,20 @@ Commands (thin presentation layer)
 
 The plonk codebase shows clear signs of rapid development with multiple incomplete refactoring attempts. While Phase 4 added valuable infrastructure, it also introduced parallel systems that need consolidation. The primary issues are:
 
-1. **Duplicate interface hierarchies** requiring immediate consolidation
-2. **Business logic in presentation layer** needing proper extraction
-3. **Multiple incomplete abstractions** creating confusion
-4. **Unclear boundaries** between architectural layers
+1. **Duplicate interface hierarchies** requiring immediate consolidation ✅ VERIFIED
+2. **Business logic in presentation layer** needing proper extraction ✅ VERIFIED
+3. **Multiple incomplete abstractions** creating confusion ✅ VERIFIED
+4. **Unclear boundaries** between architectural layers ✅ VERIFIED
 
 The codebase needs focused refactoring to:
-- Complete ONE chosen abstraction pattern
+- Complete ONE chosen abstraction pattern (recommend SharedContext over RuntimeState)
 - Extract business logic to proper service layer
 - Consolidate duplicate interfaces and types
 - Establish clear architectural boundaries
+
+**Priority Order**:
+1. **High**: Interface consolidation, SharedContext vs RuntimeState decision
+2. **Medium**: Extract shared.go logic to services, standardize errors
+3. **Low**: Naming consistency, legacy cleanup
 
 These changes will significantly improve maintainability, testability, and clarity of the codebase.

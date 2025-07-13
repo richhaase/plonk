@@ -1,0 +1,31 @@
+Plonk manages packages and dotfiles consistently across multiple machines
+using Homebrew and NPM package managers.
+
+Usage:
+  plonk [flags]
+  plonk [command]
+
+Available Commands:
+  add         Add dotfiles to plonk management
+  completion  Generate the autocompletion script for the specified shell
+  config      Manage plonk configuration
+  doctor      Check system health and diagnose issues
+  dotfiles    List dotfiles specifically
+  env         Show environment information
+  help        Help about any command
+  info        Show detailed information about a package
+  init        Initialize plonk configuration
+  install     Install packages to plonk management
+  ls          List managed items
+  rm          Remove dotfiles from plonk management
+  search      Search for packages across package managers
+  status      Display overall plonk status
+  sync        Sync all pending changes
+  uninstall   Remove packages from plonk management
+
+Flags:
+  -h, --help            help for plonk
+  -o, --output string   Output format (table|json|yaml) (default "table")
+  -v, --version         Show version information
+
+Use "plonk [command] --help" for more information about a command.

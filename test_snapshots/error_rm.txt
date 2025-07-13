@@ -1,0 +1,3 @@
+✗ nonexistent-package-12345 - not managed
+
+Summary: 0 removed, 0 unlinked, 1 skipped, 0 failed

@@ -1,0 +1,58 @@
+# Plonk Doctor Report
+
+🟢 Overall Status: HEALTHY
+   All systems operational
+
+## System
+✅ **System Requirements**: System requirements met
+   • Go version: go1.24.4
+   • OS: darwin
+   • Architecture: arm64
+
+## Environment
+✅ **Environment Variables**: Environment variables configured
+   • HOME: /Users/rdh
+   • PATH entries: 26
+
+✅ **PATH Configuration**: PATH is configured correctly
+   • PATH contains 26 directories
+
+## Permissions
+✅ **File Permissions**: File permissions are correct
+   • Config directory: /Users/rdh/.config/plonk
+   • Config directory is writable
+
+## Configuration
+✅ **Configuration File**: Configuration file is accessible
+   • Config file: /Users/rdh/.config/plonk/plonk.yaml
+   • Size: 1338 bytes
+   • Modified: 2025-07-13 07:39:19
+   • Content length: 1338 characters
+
+✅ **Configuration Validity**: Configuration is valid
+   • Default manager: homebrew
+   • Configured packages: 45
+   • Auto-discovered dotfiles: 22
+
+✅ **Lock File**: Lock file accessible
+   • Lock file path: /Users/rdh/.config/plonk/plonk.lock
+   • Lock file size: 4773 bytes
+
+✅ **Lock File Validity**: Lock file is valid
+   • homebrew packages: 45
+   • Total managed packages: 45
+   • Lock file version: 1
+
+## Package Managers
+✅ **Package Manager Availability**: Package managers are available
+   • homebrew: ✅ Available
+   • npm: ✅ Available
+
+✅ **Package Manager Functionality**: Package managers are functional
+   • homebrew: Listed 124 installed packages
+   • npm: Listed 10 installed packages
+
+## Installation
+✅ **Executable Path**: Executable is accessible
+   • Executable: /Users/rdh/.asdf/installs/golang/1.24.4/bin/plonk
+   • Found in PATH: /Users/rdh/.asdf/installs/golang/1.24.4/bin/plonk

@@ -1,0 +1,1 @@
+❌ Package 'nonexistent-package-12345' not found in homebrew (default) or any other package manager

@@ -10,14 +10,12 @@ import (
 
 	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/interfaces"
 )
 
 // DotfileConfigLoader defines how to load dotfile configuration
-type DotfileConfigLoader interface {
-	GetDotfileTargets() map[string]string // source -> destination mapping
-	GetIgnorePatterns() []string          // ignore patterns for file filtering
-	GetExpandDirectories() []string       // directories to expand in dot list
-}
+// DotfileConfigLoader is now an alias to the unified interfaces package
+type DotfileConfigLoader = interfaces.DotfileConfigLoader
 
 // DotfileProvider implements the Provider interface for dotfile management
 type DotfileProvider struct {

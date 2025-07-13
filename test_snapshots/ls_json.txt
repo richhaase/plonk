@@ -1,0 +1,338 @@
+{
+  "total_managed": 67,
+  "total_missing": 0,
+  "total_untracked": 198,
+  "verbose": false,
+  "show_all": false,
+  "domains": [
+    {
+      "name": "dotfile",
+      "managed_count": 22,
+      "missing_count": 0,
+      "untracked_count": 109,
+      "items": [
+        {
+          "name": ".config/bat/config",
+          "state": "managed"
+        },
+        {
+          "name": ".config/btop/btop.conf",
+          "state": "managed"
+        },
+        {
+          "name": ".config/ghostty/config",
+          "state": "managed"
+        },
+        {
+          "name": ".config/helix/config.toml",
+          "state": "managed"
+        },
+        {
+          "name": ".config/mcfly/config.yaml",
+          "state": "managed"
+        },
+        {
+          "name": ".config/nvim/init.lua",
+          "state": "managed"
+        },
+        {
+          "name": ".config/nvim/lazy-lock.json",
+          "state": "managed"
+        },
+        {
+          "name": ".config/nvim/lazyvim.json",
+          "state": "managed"
+        },
+        {
+          "name": ".config/nvim/lua/config/autocmds.lua",
+          "state": "managed"
+        },
+        {
+          "name": ".config/nvim/lua/config/keymaps.lua",
+          "state": "managed"
+        },
+        {
+          "name": ".config/nvim/lua/config/lazy.lua",
+          "state": "managed"
+        },
+        {
+          "name": ".config/nvim/lua/config/options.lua",
+          "state": "managed"
+        },
+        {
+          "name": ".config/nvim/lua/plugins/disabled.lua",
+          "state": "managed"
+        },
+        {
+          "name": ".config/nvim/stylua.toml",
+          "state": "managed"
+        },
+        {
+          "name": ".config/wezterm/wezterm.lua",
+          "state": "managed"
+        },
+        {
+          "name": ".config/zellij/config.kdl",
+          "state": "managed"
+        },
+        {
+          "name": ".config/zellij/config.kdl.bak",
+          "state": "managed"
+        },
+        {
+          "name": ".editorconfig",
+          "state": "managed"
+        },
+        {
+          "name": ".gitconfig",
+          "state": "managed"
+        },
+        {
+          "name": ".plugins.zsh",
+          "state": "managed"
+        },
+        {
+          "name": ".zshenv",
+          "state": "managed"
+        },
+        {
+          "name": ".zshrc",
+          "state": "managed"
+        }
+      ]
+    },
+    {
+      "name": "package",
+      "managed_count": 45,
+      "missing_count": 0,
+      "untracked_count": 89,
+      "items": [
+        {
+          "name": "aichat",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "aider",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "asdf",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "awscli",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "bandwhich",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "bat",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "btop",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "choose",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "colima",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "coreutils",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "curl",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "docker",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "duf",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "dust",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "editorconfig",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "eza",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "fd",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "fish",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "fzf",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "gcc",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "gh",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "ghostty",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "git",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "git-delta",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "google-cloud-sdk",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "goreleaser",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "helix",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "jq",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "just",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "lazygit",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "lima",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "mcfly",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "neovim",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "ollama",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "pre-commit",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "procs",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "ripgrep",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "sd",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "starship",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "tldr",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "tokei",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "xh",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "yazi",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "zellij",
+          "state": "managed",
+          "manager": "homebrew"
+        },
+        {
+          "name": "zoxide",
+          "state": "managed",
+          "manager": "homebrew"
+        }
+      ]
+    }
+  ]
+}

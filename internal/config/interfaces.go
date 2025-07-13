@@ -7,7 +7,13 @@ package config
 
 import (
 	"io"
+
+	"github.com/richhaase/plonk/internal/interfaces"
 )
+
+// ConfigReader is now an alias to the unified interfaces package.
+// Note: The signatures differ (interface{} vs *Config), so we'll need an adapter temporarily.
+// type ConfigReader = interfaces.ConfigReader
 
 // ConfigReader provides methods for loading configuration from various sources
 type ConfigReader interface {
@@ -51,10 +57,9 @@ type PackageConfigReader interface {
 	GetPackagesForManager(managerName string) ([]PackageConfigItem, error)
 }
 
-// PackageConfigItem represents a package from configuration
-type PackageConfigItem struct {
-	Name string
-}
+// PackageConfigItem is now an alias to the unified interfaces package
+// to maintain backward compatibility during migration.
+type PackageConfigItem = interfaces.PackageConfigItem
 
 // ConfigValidator provides methods for validating configuration
 type ConfigValidator interface {
