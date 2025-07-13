@@ -12,27 +12,30 @@ A quick reference guide to navigate the Plonk codebase - a unified package and d
 ### Core Components
 
 #### Commands Layer (`internal/commands/`)
-- `root.go` - Root command setup
-- `status.go` - Show system state
-- `apply.go` - Unified apply command (packages and dotfiles)
-- `env.go` - Show environment information for debugging
-- `doctor.go` - Comprehensive health checks and diagnostics
-- `search.go` - Intelligent package search across package managers
-- `info.go` - Detailed package information display
-- `pkg_*.go` - Package management commands (add, remove, list)
-- `dot_*.go` - Dotfile management commands (add, list, re-add)
-- `config.go` - Configuration base command
-- `config_show.go` - Display effective configuration (defaults merged with user settings)
-- `config_validate.go` - Validate configuration syntax and structure
-- `config_edit.go` - Edit configuration in preferred editor
+- `root.go` - Root command setup and zero-argument status
+- `add.go` - Intelligent package/dotfile addition with mixed operations
+- `rm.go` - Intelligent package/dotfile removal with mixed operations
+- `ls.go` - Smart listing with filtering (packages, dotfiles, managers)
+- `sync.go` - Apply configuration (renamed from apply)
+- `install.go` - Add and sync workflow command
+- `link.go` - Explicit dotfile linking operations
+- `unlink.go` - Explicit dotfile unlinking operations
+- `dotfiles.go` - Dotfile-specific listing with enhanced detail
+- `env.go` - Environment information for debugging
+- `doctor.go` - Health checks and diagnostics
+- `search.go` - Package search across managers
+- `info.go` - Package information display
+- `init.go` - Configuration template creation
+- `pipeline.go` - CommandPipeline abstraction for unified processing
 - `output.go` - Output formatting utilities
-- `errors.go` - Command-level error handling
+- `shared.go` - Shared utilities and detection logic
 
 #### Configuration (`internal/config/`)
 - `interfaces.go` - Core configuration interfaces
 - `yaml_config.go` - YAML implementation
 - `adapters.go` - Bridge between config and state
 - `simple_validator.go` - Configuration validation
+- `schema.go` - JSON schema generation (Phase 4)
 
 #### State Management (`internal/state/`)
 - `reconciler.go` - Core reconciliation engine
@@ -42,6 +45,7 @@ A quick reference guide to navigate the Plonk codebase - a unified package and d
 - `adapters.go` - State-config adapters
 
 #### Package Managers (`internal/managers/`)
+- `registry.go` - Manager registry with caching
 - `homebrew.go` - Homebrew/Cask implementation
 - `npm.go` - NPM global packages
 - `common.go` - Shared manager utilities
@@ -51,8 +55,24 @@ A quick reference guide to navigate the Plonk codebase - a unified package and d
 - `fileops.go` - File operations (copy, backup)
 - `atomic.go` - Atomic file operations
 
+#### Shared Operations (`internal/operations/`)
+- `types.go` - OperationResult and shared utilities
+- `progress.go` - Progress reporting infrastructure
+
 #### Error Handling (`internal/errors/`)
 - `types.go` - Structured error types
+
+#### Runtime Infrastructure (`internal/runtime/`) - Phase 4
+- `context.go` - Shared context singleton with caching
+- `logging.go` - Industry-standard logging system
+
+#### Interface Definitions (`internal/interfaces/`) - Phase 4
+- `core.go` - Unified Provider interface
+- `package_manager.go` - Unified PackageManager interface
+- `mocks/` - Centralized mock generation
+
+#### Test Infrastructure (`internal/testing/`) - Phase 4
+- `helpers.go` - Test context and isolation utilities
 
 ### Testing
 - `*_test.go` files - Unit tests alongside implementations

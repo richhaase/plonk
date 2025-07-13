@@ -14,21 +14,19 @@ Plonk manages your development environment by tracking packages and dotfiles aut
 
 **Key features:**
 - **Zero-config**: Works immediately with sensible defaults - no setup required
-- **Separate commands**: Distinct commands for packages (`install`/`uninstall`) and dotfiles (`add`/`rm`)
-- **Clean separation**: No more guessing - packages and dotfiles have dedicated workflows
-- **Unified management**: Packages (Homebrew, NPM, Cargo) and dotfiles tracked automatically
-- **State reconciliation**: Automatically detects and applies missing configurations
+- **Intelligent detection**: Automatically recognizes packages vs dotfiles
+- **Unified management**: Packages (Homebrew, NPM, Cargo) and dotfiles in one tool
+- **State reconciliation**: Compares desired vs actual state and applies changes
 - **Auto-discovery**: Finds dotfiles automatically with configurable ignore patterns
 - **Shell completion**: Tab completion for commands, package names, and file paths
-- **Optional customization**: Create configuration only when you need to customize defaults
-- **AI-friendly**: Structured output formats and clear command syntax
+- **AI-friendly**: Structured output formats (JSON/YAML) and clear command syntax
 - **Cross-platform**: Works on macOS, Linux, and Windows
 
-**🚀 New CLI Benefits:**
-- **Clear command separation**: `install` for packages, `add` for dotfiles
-- **Predictable behavior**: No more automatic detection confusion
-- **Unix-style commands**: Familiar `install`, `uninstall`, `add`, `rm` commands
+**🚀 CLI Benefits:**
+- **Unix-style commands**: Familiar `add`, `rm`, `ls`, `sync` commands
+- **Smart operations**: Mixed package/dotfile operations in single commands
 - **Zero-argument status**: Just type `plonk` for system overview (like git)
+- **One-command workflows**: `plonk install` = add + sync
 
 ## Quick Start
 
@@ -63,31 +61,24 @@ just install    # Installs plonk globally
 
 **🎉 No setup required!** Plonk works immediately with zero-config:
 
-1. **Check your current environment:**
 ```bash
-plonk status
-plonk          # Zero-argument status (like git)
-```
+# Check your current environment
+plonk                    # Zero-argument status (like git)
 
-2. **Install your first package:**
-```bash
-plonk install git
-```
+# Add packages and dotfiles intelligently
+plonk add git ~/.vimrc   # Mixed operations
 
-3. **Sync all changes:**
-```bash
+# Apply all changes
 plonk sync
+
+# One-command install and sync
+plonk install htop
+
+# Get help
+plonk --help
 ```
 
-4. **Get system health check:**
-```bash
-plonk doctor
-```
-
-**Optional:** Create a configuration file if you want to customize settings:
-```bash
-plonk init    # Creates helpful config template
-```
+See [CLI Reference](docs/CLI.md) for complete command documentation.
 
 ### Shell Completion
 

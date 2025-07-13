@@ -91,9 +91,21 @@ Plonk compares desired state (configuration) with actual state (system):
 
 ### Provider Pattern
 Extensible architecture through well-defined interfaces:
-- Package managers implement `PackageManager` interface
+- Package managers implement `PackageManager` interface from `internal/interfaces/`
 - Commands use dependency injection for testability
 - State reconciliation through provider abstractions
+
+### Shared Runtime Context (Phase 4)
+Use the singleton pattern for expensive resources:
+- `runtime.GetSharedContext()` provides cached access to ManagerRegistry, Reconciler, Config
+- Manager availability cached for 5 minutes to avoid repeated checks
+- Configuration caching with `ConfigWithDefaults()` fallback pattern
+
+### Logging System (Phase 4)
+Industry-standard logging levels with domain-specific control:
+- Use `runtime.Error/Warn/Info/Debug/Trace(domain, format, args...)`
+- Domains: `DomainCommand`, `DomainConfig`, `DomainManager`, `DomainState`, `DomainFile`, `DomainLock`
+- Environment: `PLONK_DEBUG=debug:manager,state` for targeted debugging
 
 ## Essential Commands
 
@@ -132,21 +144,25 @@ PLONK_DIR=/tmp/test-config go test -v ./...
 ```
 cmd/plonk/              # CLI entry point
 internal/
-├── commands/           # CLI command implementations
+├── commands/           # CLI command implementations using CommandPipeline
 ├── config/             # Configuration management (YAML-based)
 ├── dotfiles/           # Dotfile operations and atomic updates
 ├── errors/             # Structured error handling system
+├── interfaces/         # Unified interface definitions (Phase 4)
 ├── managers/           # Package manager implementations
 ├── operations/         # Shared utilities for batch operations
-└── state/              # State reconciliation engine
-docs/                   # Complete documentation
+├── runtime/            # Shared context and logging (Phase 4)
+├── state/              # State reconciliation engine
+└── testing/            # Test helpers and utilities (Phase 4)
+docs/                   # Technical documentation
 ```
 
 ## Testing Infrastructure
 
 ### Test Patterns
 - **Table-driven tests**: Comprehensive scenario coverage
-- **Mock usage**: Isolated testing of business logic
+- **Mock usage**: Isolated testing of business logic from `internal/interfaces/mocks/`
+- **Test helpers**: Use `testing.NewTestContext(t)` for isolated environments (Phase 4)
 - **Context testing**: Timeout and cancellation scenarios
 - **Error scenarios**: Validate error codes and user messages
 - **Environment isolation**: Use `PLONK_DIR` for test separation

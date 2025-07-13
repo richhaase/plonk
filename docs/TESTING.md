@@ -20,6 +20,8 @@ Key unit test areas:
 - `internal/managers/` - Package manager implementations
 - `internal/dotfiles/` - Dotfile operations and atomic updates
 - `internal/errors/` - Error handling and structured errors
+- `internal/runtime/` - Shared context and logging infrastructure (Phase 4)
+- `internal/interfaces/` - Unified interface definitions (Phase 4)
 
 ## Running Tests
 
@@ -40,11 +42,13 @@ go test ./...
 ## Test Patterns and Conventions
 
 ### Unit Test Patterns
-- **Mocking**: Mock providers implement interfaces for isolated testing
+- **Test helpers**: Use `testing.NewTestContext(t)` for isolated environments (Phase 4)
+- **Mocking**: Centralized mocks from `internal/interfaces/mocks/` (Phase 4)
 - **Context handling**: Tests verify context cancellation and timeouts
 - **Error scenarios**: Comprehensive error condition testing
 - **State management**: Mock providers for testing reconciliation logic
 - **Structured error testing**: Verify error codes, domains, and user messages
+- **Table-driven tests**: Standard pattern for comprehensive scenario coverage
 
 ## Test Categories
 
