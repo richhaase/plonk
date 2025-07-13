@@ -38,6 +38,9 @@ using Homebrew and NPM package managers.`,
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "table", "Output format (table|json|yaml)")
 	rootCmd.Flags().BoolP("version", "v", false, "Show version information")
+
+	// Add output format completion
+	rootCmd.RegisterFlagCompletionFunc("output", completeOutputFormats)
 }
 
 // Execute runs the root command
@@ -68,4 +71,10 @@ func formatVersion() string {
 	}
 	// Released version - show clean version
 	return versionInfo.Version
+}
+
+// completeOutputFormats provides completion for output format flag
+func completeOutputFormats(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	formats := []string{"table", "json", "yaml"}
+	return formats, cobra.ShellCompDirectiveNoFileComp
 }

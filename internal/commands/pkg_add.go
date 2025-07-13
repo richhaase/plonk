@@ -6,6 +6,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -45,6 +46,12 @@ func init() {
 	pkgCmd.AddCommand(pkgAddCmd)
 	pkgAddCmd.Flags().StringVar(&manager, "manager", "", "Package manager to use (homebrew|npm|cargo)")
 	pkgAddCmd.Flags().BoolP("dry-run", "n", false, "Show what would be added without making changes")
+
+	// Add package name completion
+	pkgAddCmd.ValidArgsFunction = completePackageNames
+
+	// Add manager flag completion
+	pkgAddCmd.RegisterFlagCompletionFunc("manager", completeManagerNames)
 }
 
 func runPkgAdd(cmd *cobra.Command, args []string) error {
@@ -375,4 +382,98 @@ func addAllUntrackedPackages(cmd *cobra.Command, dryRun bool) error {
 	}
 
 	return RenderOutput(addAllResult, format)
+}
+
+// completePackageNames provides package name completion based on available managers
+func completePackageNames(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	ctx := context.Background()
+
+	// Get manager preference from flag or config
+	targetManager, _ := cmd.Flags().GetString("manager")
+	if targetManager == "" {
+		configDir := config.GetDefaultConfigDirectory()
+		cfg, err := config.LoadConfig(configDir)
+		if err == nil {
+			targetManager = cfg.Resolve().GetDefaultManager()
+		} else {
+			targetManager = "homebrew" // fallback
+		}
+	}
+
+	// Get manager instance
+	mgr := getManagerInstance(targetManager)
+	if mgr == nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	// Check if manager is available
+	available, err := mgr.IsAvailable(ctx)
+	if err != nil || !available {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	// For now, return some common packages based on manager type
+	// This could be enhanced to use actual search functionality
+	suggestions := getCommonPackages(targetManager, toComplete)
+
+	return suggestions, cobra.ShellCompDirectiveNoFileComp
+}
+
+// completeManagerNames provides completion for manager flag
+func completeManagerNames(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	managers := []string{"homebrew", "npm", "cargo"}
+	return managers, cobra.ShellCompDirectiveNoFileComp
+}
+
+// getManagerInstance returns a manager instance for the given name
+func getManagerInstance(managerName string) managers.PackageManager {
+	switch managerName {
+	case "homebrew":
+		return managers.NewHomebrewManager()
+	case "npm":
+		return managers.NewNpmManager()
+	case "cargo":
+		return managers.NewCargoManager()
+	default:
+		return nil
+	}
+}
+
+// getCommonPackages returns common package suggestions for the given manager
+func getCommonPackages(managerName, prefix string) []string {
+	var packages []string
+
+	switch managerName {
+	case "homebrew":
+		packages = []string{
+			"git", "curl", "wget", "htop", "ripgrep", "fzf", "neovim", "tmux",
+			"jq", "tree", "bat", "exa", "fd", "zsh", "fish", "nodejs", "python",
+			"go", "rust", "docker", "kubectl", "helm", "terraform", "awscli",
+		}
+	case "npm":
+		packages = []string{
+			"typescript", "eslint", "prettier", "jest", "webpack", "babel",
+			"react", "vue", "angular", "express", "lodash", "axios", "moment",
+			"chalk", "commander", "inquirer", "yargs", "cross-env", "nodemon",
+		}
+	case "cargo":
+		packages = []string{
+			"ripgrep", "bat", "exa", "fd-find", "tokei", "hyperfine", "dust",
+			"bandwhich", "bottom", "starship", "zoxide", "delta", "gitui",
+		}
+	}
+
+	// Filter packages that start with the prefix
+	if prefix == "" {
+		return packages
+	}
+
+	var filtered []string
+	for _, pkg := range packages {
+		if strings.HasPrefix(pkg, prefix) {
+			filtered = append(filtered, pkg)
+		}
+	}
+
+	return filtered
 }
