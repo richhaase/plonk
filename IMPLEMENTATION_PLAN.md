@@ -159,19 +159,17 @@ return errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages,
 // internal/managers/registry.go
 type ManagerRegistry struct {
     managers map[string]ManagerFactory
-    logger   logging.Logger
 }
 
 type ManagerFactory func() PackageManager
 
-func NewManagerRegistry(logger logging.Logger) *ManagerRegistry {
+func NewManagerRegistry() *ManagerRegistry {
     return &ManagerRegistry{
         managers: map[string]ManagerFactory{
             "homebrew": func() PackageManager { return NewHomebrewManager() },
             "npm":      func() PackageManager { return NewNpmManager() },
             "cargo":    func() PackageManager { return NewCargoManager() },
         },
-        logger: logger,
     }
 }
 
