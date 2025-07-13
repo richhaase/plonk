@@ -3,17 +3,17 @@
 
 package lock
 
-import "github.com/richhaase/plonk/internal/state"
+import "github.com/richhaase/plonk/internal/interfaces"
 
 // Compile-time interface compliance check
-var _ state.PackageConfigLoader = (*LockFileAdapter)(nil)
+var _ interfaces.PackageConfigLoader = (*LockFileAdapter)(nil)
 
 // LockFileAdapter bridges the lock package's LockService to the state package's
 // PackageConfigLoader interface. This adapter enables the state package to treat
 // the lock file as another source of package configuration, alongside the main
 // config file. It prevents circular dependencies between the lock and state packages.
 //
-// Bridge: lock.LockService → state.PackageConfigLoader
+// Bridge: lock.LockService → interfaces.PackageConfigLoader
 type LockFileAdapter struct {
 	lockService LockService
 }
@@ -26,16 +26,16 @@ func NewLockFileAdapter(lockService LockService) *LockFileAdapter {
 }
 
 // GetPackagesForManager returns packages for a specific manager from the lock file
-func (a *LockFileAdapter) GetPackagesForManager(managerName string) ([]state.PackageConfigItem, error) {
+func (a *LockFileAdapter) GetPackagesForManager(managerName string) ([]interfaces.PackageConfigItem, error) {
 	packages, err := a.lockService.GetPackages(managerName)
 	if err != nil {
 		return nil, err
 	}
 
 	// Convert lock file entries to config items
-	items := make([]state.PackageConfigItem, len(packages))
+	items := make([]interfaces.PackageConfigItem, len(packages))
 	for i, pkg := range packages {
-		items[i] = state.PackageConfigItem{
+		items[i] = interfaces.PackageConfigItem{
 			Name: pkg.Name,
 		}
 	}
