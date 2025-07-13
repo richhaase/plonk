@@ -406,7 +406,7 @@ Plonk automatically handles configuration migration between versions. No manual 
 cp ~/.config/plonk/plonk.yaml ~/.config/plonk/plonk.yaml.backup
 
 # Validate before applying
-plonk config validate && plonk apply --dry-run
+plonk config validate && plonk sync --dry-run
 ```
 
 ## See Also

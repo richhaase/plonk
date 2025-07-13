@@ -14,8 +14,8 @@ Plonk manages your development environment by tracking packages and dotfiles aut
 
 **Key features:**
 - **Zero-config**: Works immediately with sensible defaults - no setup required
-- **Intelligent CLI**: Auto-detects packages vs dotfiles - no need to specify type
-- **Mixed operations**: Add packages and dotfiles in single commands
+- **Separate commands**: Distinct commands for packages (`install`/`uninstall`) and dotfiles (`add`/`rm`)
+- **Clean separation**: No more guessing - packages and dotfiles have dedicated workflows
 - **Unified management**: Packages (Homebrew, NPM, Cargo) and dotfiles tracked automatically
 - **State reconciliation**: Automatically detects and applies missing configurations
 - **Auto-discovery**: Finds dotfiles automatically with configurable ignore patterns
@@ -24,10 +24,10 @@ Plonk manages your development environment by tracking packages and dotfiles aut
 - **AI-friendly**: Structured output formats and clear command syntax
 - **Cross-platform**: Works on macOS, Linux, and Windows
 
-**🚀 CLI 2.0 Benefits:**
-- **50-60% less typing**: `plonk add git` vs `plonk pkg add git`
-- **Unix-style commands**: Familiar `add`, `rm`, `ls` commands
-- **Workflow shortcuts**: `plonk install htop` = add + sync in one command
+**🚀 New CLI Benefits:**
+- **Clear command separation**: `install` for packages, `add` for dotfiles
+- **Predictable behavior**: No more automatic detection confusion
+- **Unix-style commands**: Familiar `install`, `uninstall`, `add`, `rm` commands
 - **Zero-argument status**: Just type `plonk` for system overview (like git)
 
 ## Quick Start
@@ -69,9 +69,9 @@ plonk status
 plonk          # Zero-argument status (like git)
 ```
 
-2. **Add your first package (intelligent detection):**
+2. **Install your first package:**
 ```bash
-plonk add git
+plonk install git
 ```
 
 3. **Sync all changes:**
@@ -142,23 +142,23 @@ plonk status
 # - Overall system health
 ```
 
-3. **Start managing packages (intelligent detection):**
+3. **Start managing packages and dotfiles:**
 ```bash
-# Add multiple packages at once (auto-detects as packages)
-plonk add git neovim ripgrep htop
+# Install packages
+plonk install git neovim ripgrep htop
 
-# Add packages with specific manager
-plonk add --npm typescript prettier eslint
+# Install packages with specific manager
+plonk install typescript --npm
+plonk install ripgrep --cargo
 
-# Add dotfiles (auto-detects as dotfiles)
+# Add dotfiles to management
 plonk add ~/.vimrc ~/.zshrc ~/.gitconfig
 
-# Mixed operations (packages + dotfiles together)
-plonk add git ~/.vimrc htop ~/.zshrc
+# Add entire directories of dotfiles
+plonk add ~/.config/nvim/
 
-# Or discover and add untracked items
+# See what's available to manage
 plonk ls --verbose            # See everything including untracked
-plonk add                     # Add all untracked packages and dotfiles
 ```
 
 4. **Check system health:**
@@ -182,32 +182,40 @@ plonk config edit    # Edit configuration file
 ### Daily Workflow
 
 ```bash
-plonk status         # Check what needs attention (or just 'plonk')
-plonk sync           # Install missing packages, sync dotfiles
-plonk add <name>     # Add new packages or dotfiles (intelligent detection)
-plonk install <name> # Add and sync in one command
-plonk doctor         # Health check when something seems wrong
+plonk status           # Check what needs attention (or just 'plonk')
+plonk sync             # Install missing packages, sync dotfiles
+plonk install <pkg>    # Install and manage packages
+plonk add <dotfile>    # Add dotfiles to management
+plonk uninstall <pkg>  # Remove packages from management
+plonk rm <dotfile>     # Remove dotfiles from management
+plonk doctor           # Health check when something seems wrong
 ```
 
 ## Common Commands
 
 ```bash
-# Essential workflows (CLI 2.0 - intelligent detection)
+# Essential workflows
 plonk                                             # Check system state (zero-argument)
 plonk status                                      # Check system state (explicit)
 plonk sync                                        # Apply all changes
-plonk add git neovim ripgrep                     # Add packages (auto-detected)
-plonk add ~/.vimrc ~/.zshrc ~/.gitconfig         # Add dotfiles (auto-detected)
-plonk add git ~/.vimrc htop                      # Mixed operations (packages + dotfiles)
-plonk install ripgrep                            # Add and sync in one command
-plonk ls                                          # Smart overview of managed items
-plonk rm htop ~/.vimrc                           # Remove items (auto-detected)
-plonk doctor                                      # Health check
 
-# Legacy-style commands for specific filtering
+# Package management
+plonk install git neovim ripgrep                 # Install packages
+plonk install typescript --npm                   # Install with specific manager
+plonk uninstall htop                             # Remove from management only
+plonk uninstall htop --uninstall                 # Remove from management AND system
+
+# Dotfile management
+plonk add ~/.vimrc ~/.zshrc ~/.gitconfig         # Add dotfiles to management
+plonk add ~/.config/nvim/                        # Add directory of dotfiles
+plonk rm ~/.vimrc                                # Remove dotfile from management
+
+# System overview
+plonk ls                                          # Smart overview of managed items
 plonk ls --packages                               # Show packages only
 plonk ls --dotfiles                               # Show dotfiles only
 plonk ls --manager homebrew                       # Show Homebrew packages only
+plonk doctor                                      # Health check
 ```
 
 > **📖 Complete Command Reference**: See [docs/CLI.md](docs/CLI.md) for comprehensive command documentation with examples and options.
