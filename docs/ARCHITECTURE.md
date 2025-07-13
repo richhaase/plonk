@@ -26,6 +26,7 @@ internal/
 ├── managers/    # Package manager implementations
 ├── operations/  # Shared utilities for batch operations
 ├── runtime/     # Shared context and logging system (Phase 4)
+├── services/    # Application service layer orchestration
 ├── state/       # State reconciliation engine
 └── testing/     # Test helpers and utilities (Phase 4)
 ```
@@ -34,24 +35,23 @@ internal/
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Commands  │────▶│    State    │────▶│  Managers   │
-│     (CLI)   │     │ (Reconciler)│     │ (Homebrew,  │
-└─────────────┘     └─────────────┘     │    NPM)     │
-       │                    │            └─────────────┘
-       │                    │
-       ▼                    ▼
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Config    │     │  Providers  │────▶│  Dotfiles   │
-│ (Interfaces)│────▶│  (Package,  │     │   (File     │
-└─────────────┘     │  Dotfile)   │     │ Operations) │
+│   Commands  │────▶│   Services  │────▶│    State    │
+│     (CLI)   │     │(Application)│     │ (Reconciler)│
+└─────────────┘     └─────────────┘     └─────────────┘
+                            │                    │
+                            ▼                    ▼
+                    ┌─────────────┐     ┌─────────────┐
+                    │  Providers  │────▶│  Managers   │
+                    │  (Package,  │     │ (Homebrew,  │
+                    │  Dotfile)   │     │    NPM)     │
                     └─────────────┘     └─────────────┘
-                            │
-                            ▼
-                    ┌─────────────┐
-                    │   Errors    │
-                    │ (Structured │
-                    │  Messages)  │
-                    └─────────────┘
+                            │                    │
+                            ▼                    ▼
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Config    │     │  Dotfiles   │     │   Errors    │
+│ (Interfaces)│     │   (File     │     │ (Structured │
+└─────────────┘     │ Operations) │     │  Messages)  │
+                    └─────────────┘     └─────────────┘
 ```
 
 ## Key Components
@@ -169,7 +169,24 @@ npm: [typescript, prettier]
 - Environment variable isolation
 - Cleanup automation
 
-### 7. Dotfile Management (`internal/dotfiles/`)
+### 7. Application Services (`internal/services/`)
+
+**Service Layer:**
+- Orchestrates operations between commands and domain logic
+- Encapsulates complex business workflows
+- Provides high-level operations for commands to use
+
+**Components:**
+- `dotfile_operations.go` - ApplyDotfiles orchestration
+- `package_operations.go` - ApplyPackages orchestration
+
+**Responsibilities:**
+- Coordinate multiple domain operations
+- Handle transaction-like workflows
+- Aggregate results for presentation layer
+- Maintain operation consistency
+
+### 8. Dotfile Management (`internal/dotfiles/`)
 
 **Components:**
 - `Manager` - Path resolution and directory expansion
@@ -188,7 +205,7 @@ npm: [typescript, prettier]
 - Context-aware file operations
 - Path validation and normalization
 
-### 5. Error Handling (`internal/errors/`)
+### 9. Error Handling (`internal/errors/`)
 
 **Structured Error System:**
 Plonk implements a comprehensive structured error system that provides consistent error handling across all commands and operations.

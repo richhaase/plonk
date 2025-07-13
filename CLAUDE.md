@@ -191,10 +191,11 @@ docs/                   # Technical documentation
 
 ### Adding New Commands
 1. Create in `internal/commands/` following existing patterns
-2. Implement comprehensive error handling with suggestions
-3. Support structured output formats (table, JSON, YAML)
-4. Add table-driven tests with mocks and error scenarios
-5. Update CLI.md with examples and usage patterns
+2. Use `internal/services/` for complex business logic orchestration
+3. Implement comprehensive error handling with suggestions
+4. Support structured output formats (table, JSON, YAML)
+5. Add table-driven tests with mocks and error scenarios
+6. Update CLI.md with examples and usage patterns
 
 ### Extending Package Managers
 1. Implement `PackageManager` interface

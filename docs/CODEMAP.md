@@ -62,6 +62,10 @@ A quick reference guide to navigate the Plonk codebase - a unified package and d
 #### Error Handling (`internal/errors/`)
 - `types.go` - Structured error types
 
+#### Application Services (`internal/services/`)
+- `dotfile_operations.go` - High-level dotfile operations
+- `package_operations.go` - High-level package operations
+
 #### Runtime Infrastructure (`internal/runtime/`) - Phase 4
 - `context.go` - Shared context singleton with caching
 - `logging.go` - Industry-standard logging system
