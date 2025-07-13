@@ -176,22 +176,6 @@ deps-update:
     @echo "📊 Review changes with:"
     @echo "  git diff go.mod go.sum .pre-commit-config.yaml"
 
-# Install plonk globally
-install:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo "Installing plonk globally with version information..."
-
-    # Get version info using helper
-    eval $(just _get-version-info)
-
-    if ! go install -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" ./cmd/plonk; then
-        echo "❌ Installation failed"
-        exit 1
-    fi
-    echo "✅ Plonk installed globally! (version: $VERSION)"
-    echo "Run 'plonk --help' to get started"
-
 # Run pre-commit checks (format, lint, test, security)
 precommit:
     @echo "Running pre-commit checks..."
