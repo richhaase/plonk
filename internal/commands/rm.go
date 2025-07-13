@@ -96,7 +96,7 @@ func processMixedRemovals(cmd *cobra.Command, packages []string, dotfiles []stri
 	}
 
 	var allResults []operations.OperationResult
-	reporter := operations.NewProgressReporter("remove", format == OutputTable)
+	reporter := operations.NewProgressReporterForOperation("remove", "item", format == OutputTable)
 
 	// Process packages if any
 	if len(packages) > 0 {
@@ -361,8 +361,8 @@ func handleMixedRemovalResults(results []operations.OperationResult, format Outp
 		PackageResults: packageResults,
 		DotfileResults: dotfileResults,
 		Summary: MixedRemovalSummary{
-			PackagesRemoved:  CountByStatus(packageResults, "removed"),
-			DotfilesUnlinked: CountByStatus(dotfileResults, "unlinked"),
+			PackagesRemoved:  CountByStatus(packageResults, "removed") + CountByStatus(packageResults, "would-remove"),
+			DotfilesUnlinked: CountByStatus(dotfileResults, "unlinked") + CountByStatus(dotfileResults, "would-unlink"),
 			Failed:           CountByStatus(results, "failed"),
 			Skipped:          CountByStatus(results, "skipped"),
 		},

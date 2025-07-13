@@ -38,6 +38,8 @@ type ResultSummary struct {
 	Total          int `json:"total"`
 	Added          int `json:"added"`
 	Updated        int `json:"updated"`
+	Removed        int `json:"removed"`
+	Unlinked       int `json:"unlinked"`
 	Skipped        int `json:"skipped"`
 	Failed         int `json:"failed"`
 	FilesProcessed int `json:"files_processed,omitempty"` // Total files processed (for dotfiles)
@@ -49,10 +51,14 @@ func CalculateSummary(results []OperationResult) ResultSummary {
 
 	for _, result := range results {
 		switch result.Status {
-		case "added":
+		case "added", "would-add":
 			summary.Added++
-		case "updated":
+		case "updated", "would-update":
 			summary.Updated++
+		case "removed", "would-remove":
+			summary.Removed++
+		case "unlinked", "would-unlink":
+			summary.Unlinked++
 		case "skipped":
 			summary.Skipped++
 		case "failed":
