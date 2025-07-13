@@ -16,13 +16,18 @@ Complete command-line interface reference for plonk. All commands support struct
 |---------|---------|----------|
 | `init` | Create config template | Initial setup |
 | `status` | Show system state | State reconciliation analysis |
-| `apply` | Apply configuration | Automated deployment |
+| `add` | Add packages/dotfiles | Intelligent addition |
+| `rm` | Remove packages/dotfiles | Intelligent removal |
+| `ls` | List managed items | Smart overview |
+| `sync` | Apply configuration | Automated deployment |
+| `install` | Add and sync items | One-command setup |
+| `link` | Link dotfiles explicitly | Dotfile deployment |
+| `unlink` | Unlink dotfiles explicitly | Dotfile removal |
+| `dotfiles` | List dotfiles specifically | Dotfile overview |
 | `env` | Environment info | Debugging context |
 | `doctor` | Health checks | System validation |
 | `search` | Find packages | Package discovery |
 | `info` | Package details | Package analysis |
-| `pkg` | Package management | Package operations |
-| `dot` | Dotfile management | Dotfile operations |
 | `config` | Configuration management | Config operations |
 
 ## Core Commands
@@ -61,11 +66,12 @@ plonk config edit    # Edit configuration
 
 ### `plonk status`
 
-Display overall system state across all domains.
+Display overall system state across all domains (equivalent to `plonk` with no arguments).
 
 **Usage:**
 ```bash
 plonk status [--output format]
+plonk              # Zero-argument status (like git)
 ```
 
 **Configuration File Status:**
@@ -113,102 +119,292 @@ plonk status [--output format]
 }
 ```
 
-### `plonk apply`
+## Intelligent Operations
 
-Apply managed state to system - installs missing packages and deploys dotfiles.
+### `plonk add <items...>`
+
+Intelligently add packages or dotfiles based on argument format with automatic detection.
 
 **Usage:**
 ```bash
-plonk apply [--dry-run] [--backup]
+plonk add <items...> [flags]
+```
+
+**Automatic Detection Examples:**
+
+**Packages (detected automatically):**
+```bash
+plonk add htop                        # Add htop using default manager
+plonk add git neovim ripgrep          # Add multiple packages
+plonk add git --brew                  # Add git specifically to homebrew
+plonk add lodash --npm                # Add lodash to npm global packages
+plonk add ripgrep --cargo             # Add ripgrep to cargo packages
+```
+
+**Dotfiles (detected automatically):**
+```bash
+plonk add ~/.zshrc                    # Add single dotfile
+plonk add ~/.zshrc ~/.vimrc           # Add multiple dotfiles
+plonk add ~/.config/nvim/             # Add directory of dotfiles
+```
+
+**Mixed operations:**
+```bash
+plonk add git ~/.vimrc                # Add package and dotfile together
+plonk add --dry-run git neovim ~/.zshrc # Preview mixed additions
+```
+
+**Force type interpretation:**
+```bash
+plonk add config --package            # Force 'config' to be treated as package
+plonk add config --dotfile            # Force 'config' to be treated as dotfile
+```
+
+**Add all untracked items:**
+```bash
+plonk add                             # Add all untracked packages and dotfiles
+plonk add --dry-run                   # Preview all untracked items
 ```
 
 **Options:**
-- `--dry-run` - Show changes without applying
-- `--backup` - Create backups before overwriting dotfiles
-
-**Behavior:**
-- Processes both missing dotfiles (new deployments) and managed dotfiles (updates)
-- Installs packages marked as missing in the lock file
-- Deploys dotfiles from the configuration directory to their target locations
-
-**Backup functionality:**
-- When `--backup` is used, creates timestamped backups before overwriting existing files
-- Backup format: `{filename}.backup.{YYYYMMDD-HHMMSS}`
-- Backups are created in the same directory as the original file
-- Multiple backups can exist with unique timestamps
-- To restore: manually copy the desired backup file over the current file
+- `--brew`, `--npm`, `--cargo` - Force specific package manager (mutually exclusive)
+- `--package`, `--dotfile` - Force type interpretation (mutually exclusive)
+- `--dry-run, -n` - Show what would be added without making changes
+- `--force, -f` - Force addition even if already managed
 
 **Example output:**
 ```
-Apply Configuration
-===================
+✓ git@2.43.0 (homebrew)
+✓ ~/.vimrc → vimrc
+✗ ripgrep (homebrew) - already managed
+✓ htop@3.2.2 (homebrew)
 
-Packages:
-✓ Installing htop via homebrew
-✓ Installing ripgrep via homebrew
-✓ All 2 missing packages installed
-
-Dotfiles:
-✓ Deployed ~/.zshrc from zshrc
-✓ Deployed ~/.vimrc from vimrc (backup created)
-✓ Updated ~/.config/nvim/init.lua from config/nvim/init.lua
-✓ All 3 dotfiles processed
-
-Summary: 2 packages installed, 3 dotfiles deployed
+Summary: 3 added, 0 updated, 1 skipped, 0 failed
 ```
 
-**Exit codes:**
-- `0` - Success
-- `1` - Configuration error
-- `2` - Package manager error
-- `3` - File operation error
+### `plonk rm <items...>`
 
-### `plonk env`
-
-Show environment information for debugging.
+Intelligently remove packages or dotfiles with automatic detection.
 
 **Usage:**
 ```bash
-plonk env [--output format]
+plonk rm <items...> [flags]
 ```
 
-**Output includes:**
-- System information (OS, architecture)
-- Package manager availability
-- Configuration paths
-- Environment variables
+**Automatic Detection Examples:**
 
-### `plonk doctor`
+**Packages:**
+```bash
+plonk rm htop                         # Remove htop from configuration
+plonk rm htop --uninstall             # Remove from config AND uninstall
+plonk rm git neovim                   # Remove multiple packages
+plonk rm --dry-run htop               # Preview what would be removed
+```
 
-Comprehensive health check with actionable diagnostics.
+**Dotfiles:**
+```bash
+plonk rm ~/.zshrc                     # Remove dotfile from management
+plonk rm zshrc                        # Remove by source name
+plonk rm ~/.config/nvim/              # Remove directory of dotfiles
+```
+
+**Mixed operations:**
+```bash
+plonk rm git ~/.vimrc                 # Remove both package and dotfile
+plonk rm --dry-run git ~/.zshrc       # Preview mixed removals
+```
+
+**Options:**
+- `--uninstall` - Also uninstall packages from system (packages only)
+- `--package`, `--dotfile` - Force type interpretation (mutually exclusive)
+- `--dry-run, -n` - Show what would be removed without making changes
+
+**Example output:**
+```
+✓ Removed htop from homebrew configuration
+✓ Removed ~/.vimrc from dotfile management
+✗ ripgrep - not managed
+
+Summary: removed from configuration
+```
+
+### `plonk ls [filter]`
+
+Smart overview of managed items with filtering options.
 
 **Usage:**
 ```bash
-plonk doctor [--output format]
+plonk ls [--packages] [--dotfiles] [--manager manager] [--verbose] [--output format]
 ```
 
-**Check categories:**
-- System requirements
-- Environment variables
-- File permissions
-- Configuration validation
-- Package manager functionality
+**Filtering Options:**
+- `--packages` - Show packages only
+- `--dotfiles` - Show dotfiles only
+- `--manager` - Filter by package manager (homebrew, npm, cargo)
+- `--verbose` - Show all items including untracked
 
-**JSON output:**
-```json
-{
-  "status": "healthy|warning|error",
-  "checks": [
-    {
-      "category": "system",
-      "name": "go_version",
-      "status": "pass|fail|warn",
-      "message": "Go 1.24.4 found",
-      "suggestion": "Update to latest version"
-    }
-  ]
-}
+**Behavior:**
+- By default shows managed + missing items with untracked count
+- Use `--verbose` to see all items including full untracked list
+- Sorts by state (managed, missing, untracked), then alphabetically
+
+**Example output:**
+```bash
+# Default overview
+$ plonk ls
+Overview: 43 total | ✓ 25 managed | ⚠ 3 missing | ? 15 untracked
+
+Packages (25):
+  Status Package                        Manager    Version
+  ------ ------------------------------ ---------- --------
+  ✓      git                            homebrew   2.43.0
+  ✓      neovim                         homebrew   0.9.5
+  ⚠      htop                           homebrew   -
+  ✓      typescript                     npm        5.3.3
+
+Dotfiles (18):
+  Status Target                         Source
+  ------ ------------------------------ --------------
+  ✓      ~/.zshrc                       zshrc
+  ✓      ~/.config/nvim/init.lua        config/nvim/init.lua
+  ⚠      ~/.vimrc                       vimrc
+
+15 untracked items (use --verbose to show details)
+
+# Packages only
+$ plonk ls --packages
+Package Summary: 30 total | ✓ 25 managed | ⚠ 3 missing | ? 2 untracked
+
+# Specific manager
+$ plonk ls --manager homebrew
+Homebrew packages: 20 total | ✓ 18 managed | ⚠ 2 missing
 ```
+
+## Workflow Commands
+
+### `plonk sync`
+
+Apply all pending changes from your plonk configuration to your system (replaces `apply`).
+
+**Usage:**
+```bash
+plonk sync [--dry-run] [--backup] [--packages] [--dotfiles]
+```
+
+**Options:**
+- `--dry-run, -n` - Show changes without applying
+- `--backup` - Create backups before overwriting dotfiles
+- `--packages` - Sync packages only (mutually exclusive with --dotfiles)
+- `--dotfiles` - Sync dotfiles only (mutually exclusive with --packages)
+
+**Behavior:**
+- Installs packages marked as missing in the lock file
+- Deploys dotfiles from the configuration directory to their target locations
+- Processes both missing dotfiles (new deployments) and managed dotfiles (updates)
+
+**Example output:**
+```
+Plonk Sync
+==========
+
+📦📄 Syncing packages and dotfiles
+
+📦 Packages: 2 installed, 0 failed
+📄 Dotfiles: 3 deployed, 1 skipped
+
+Summary: All changes applied successfully
+```
+
+### `plonk install <items...>`
+
+Add packages or dotfiles and apply changes in one command (convenience workflow).
+
+**Usage:**
+```bash
+plonk install <items...> [flags]
+```
+
+**Behavior:**
+1. First, adds the specified items to your configuration (like `plonk add`)
+2. Then, immediately syncs all pending changes (like `plonk sync`)
+
+**Examples:**
+```bash
+plonk install ripgrep                 # Add ripgrep to config and install it
+plonk install ~/.config/nvim/         # Add nvim config and deploy it
+plonk install git ~/.gitconfig        # Add both package and dotfile, then sync
+plonk install --dry-run htop          # Preview what would be added and synced
+```
+
+**Options:**
+- Same flags as `add` command for the addition phase
+- `--backup` - Create backups during sync phase
+- `--dry-run, -n` - Preview both add and sync operations
+
+**Example output:**
+```
+Step 1: Adding items to configuration
+=====================================
+✓ ripgrep@14.0.3 (cargo)
+
+Step 2: Syncing all changes
+===========================
+📦 Packages: 1 installed, 0 failed
+📄 Dotfiles: 0 deployed, 0 skipped
+
+Summary: Item added and changes synced
+```
+
+## Explicit Dotfile Commands
+
+### `plonk link <dotfiles...>`
+
+Explicitly link dotfiles (deploys from config to home directory).
+
+**Usage:**
+```bash
+plonk link <dotfiles...> [--dry-run] [--backup]
+```
+
+**Examples:**
+```bash
+plonk link zshrc                      # Link ~/.zshrc from config/zshrc
+plonk link ~/.vimrc                   # Link by target path
+plonk link config/nvim/               # Link entire directory
+plonk link --backup zshrc vimrc       # Create backups before linking
+```
+
+### `plonk unlink <dotfiles...>`
+
+Explicitly unlink dotfiles (removes symlinks, keeps original files).
+
+**Usage:**
+```bash
+plonk unlink <dotfiles...> [--dry-run]
+```
+
+**Examples:**
+```bash
+plonk unlink zshrc                    # Unlink ~/.zshrc
+plonk unlink ~/.vimrc                 # Unlink by target path
+plonk unlink config/nvim/             # Unlink entire directory
+```
+
+### `plonk dotfiles`
+
+List dotfiles specifically with enhanced detail.
+
+**Usage:**
+```bash
+plonk dotfiles [--verbose] [--output format]
+```
+
+**Behavior:**
+- Same as `plonk ls --dotfiles` but with dotfile-specific formatting
+- Shows source → target mappings clearly
+- Includes deployment status and last modified times
+
+## Package Discovery
 
 ### `plonk search <package>`
 
@@ -258,250 +454,54 @@ plonk info <package> [--output format]
 - Dependencies (when available)
 - Size information
 
-## Package Management
+## System Commands
 
-### `plonk pkg list`
+### `plonk env`
 
-List packages across all managers with smart defaults.
-
-**Usage:**
-```bash
-plonk pkg list [--verbose] [--manager manager] [--output format]
-```
-
-**Behavior:**
-- By default shows managed + missing packages with untracked count
-- Use `--verbose` to see all packages including full untracked list
-- Use `--manager` to filter by package manager (homebrew, npm)
-- Sort by state (managed, missing, untracked), then alphabetically
-
-**Options:**
-- `--verbose` - Show all packages including untracked
-- `--manager` - Filter by package manager (homebrew, npm)
-
-**Example output:**
-```
-Package Summary
-===============
-Total: 25 packages | ✓ Managed: 18 | ⚠ Missing: 2 | ? Untracked: 5
-
-  Status Package                        Manager
-  ------ ------------------------------ ----------
-  ✓      git                            homebrew
-  ✓      curl                           homebrew
-  ⚠      htop                           homebrew
-  ✓      typescript                     npm
-  ✓      ripgrep                        cargo
-
-5 untracked packages (use --verbose to show details)
-```
-
-### `plonk pkg add [package1] [package2] ...`
-
-Add one or more packages to lock file and install them.
+Show environment information for debugging.
 
 **Usage:**
 ```bash
-plonk pkg add [package1] [package2] ... [--manager manager] [--dry-run] [--output format]
+plonk env [--output format]
 ```
 
-**Behaviors:**
-- `plonk pkg add` - Add all untracked packages
-- `plonk pkg add htop` - Add specific package to lock file and install
-- `plonk pkg add git neovim ripgrep htop` - Add multiple packages at once
-- `plonk pkg add --manager npm typescript prettier eslint` - Multiple packages with specific manager
-- `plonk pkg add htop --dry-run` - Preview what would be added/installed
-- `plonk pkg add git neovim --dry-run` - Preview multiple package additions
+**Output includes:**
+- System information (OS, architecture)
+- Package manager availability
+- Configuration paths
+- Environment variables
 
-**Options:**
-- `--manager` - Force specific package manager for all packages (homebrew, npm, cargo)
-- `--dry-run` - Show what would be added without making changes
+### `plonk doctor`
 
-**Single package output:**
-```
-Package Add
-===========
-✓ Added htop to homebrew configuration
-✓ Successfully installed htop
-
-Summary: Added to configuration and installed
-```
-
-**Multiple package output:**
-```
-Adding packages...
-✓ git@2.43.0 (homebrew)
-✓ neovim@0.9.5 (homebrew)
-✗ ripgrep (homebrew) - already managed
-✓ htop@3.2.2 (homebrew)
-
-Summary: 3 added, 0 updated, 1 skipped, 0 failed
-```
-
-**Error handling:**
-- Continues processing all packages even if some fail
-- Shows progress for each package with version information
-- Provides contextual error messages with suggestions
-- Exit code 0 if any packages succeed, 1 only if all fail
-
-### `plonk pkg remove <package>`
-
-Remove package from lock file with enhanced output.
+Comprehensive health check with actionable diagnostics.
 
 **Usage:**
 ```bash
-plonk pkg remove <package> [--uninstall] [--dry-run] [--output format]
+plonk doctor [--output format]
 ```
 
-**Options:**
-- `--uninstall` - Also uninstall the package from the system
-- `--dry-run` - Show what would be removed without making changes
-
-**Behaviors:**
-- `plonk pkg remove htop` - Remove from lock file only
-- `plonk pkg remove htop --uninstall` - Remove from lock file and uninstall
-- `plonk pkg remove htop --dry-run` - Preview what would be removed
-
-**Example output:**
-```
-Package Remove
-==============
-✓ Removed htop from homebrew configuration
-✓ Successfully uninstalled htop from system
-
-Summary: removed from configuration and uninstalled from system
-```
-
-**Note:** By default, only removes from config. Use `--uninstall` to also remove from system.
-
-## Dotfile Management
-
-### `plonk dot list`
-
-List dotfiles with their states and smart defaults.
-
-**Usage:**
-```bash
-plonk dot list [--verbose] [--output format]
-```
-
-**Behavior:**
-- By default shows missing + managed files with untracked count
-- Use `--verbose` to see all files including full untracked list
-- Configured directories are expanded to show individual files
-- Applies ignore patterns to filter out noise files
-
-**Example output:**
-```
-Dotfiles Summary
-================
-Total: 59 files | ✓ Managed: 12 | ⚠ Missing: 0 | ? Untracked: 47
-
-  Status Target                                    Source
-  ------ ----------------------------------------- --------------------------------------
-  ✓      ~/.config/nvim/init.lua                   config/nvim/init.lua
-  ✓      ~/.zshrc                                  zshrc
-  ?      ~/.aws/cli                                -
-  ?      ~/.aws/config                             -
-
-47 untracked files (use --verbose to show details)
-```
+**Check categories:**
+- System requirements
+- Environment variables
+- File permissions
+- Configuration validation
+- Package manager functionality
 
 **JSON output:**
 ```json
 {
-  "summary": {
-    "total": 59,
-    "managed": 12,
-    "missing": 0,
-    "untracked": 47,
-    "verbose": false
-  },
-  "dotfiles": [
+  "status": "healthy|warning|error",
+  "checks": [
     {
-      "name": ".zshrc",
-      "state": "managed",
-      "target": "~/.zshrc",
-      "source": "zshrc"
+      "category": "system",
+      "name": "go_version",
+      "status": "pass|fail|warn",
+      "message": "Go 1.24.4 found",
+      "suggestion": "Update to latest version"
     }
   ]
 }
 ```
-
-### `plonk dot add <dotfile1> [dotfile2] ...`
-
-Add or update one or more dotfiles in plonk management.
-
-**Usage:**
-```bash
-plonk dot add <dotfile1> [dotfile2] ... [--dry-run] [--output format]
-```
-
-**Behavior:**
-- **New files**: Copies files to plonk config and marks as managed
-- **Existing files**: Updates the managed copy with current system version
-- **Directories**: Recursively processes all files, respecting ignore patterns
-- **Mixed input**: Supports combination of files and directories in single command
-
-**Path Resolution:**
-- **Absolute paths**: `plonk dot add /home/user/.vimrc`
-- **Tilde paths**: `plonk dot add ~/.vimrc`
-- **Relative paths**: First tries current directory, then home directory
-  - `plonk dot add .vimrc` → looks for `./vimrc` then `~/.vimrc`
-  - `plonk dot add init.lua` → looks for `./init.lua` then `~/init.lua`
-
-**Options:**
-- `--dry-run` - Show what would be added without making changes
-
-**Single dotfile examples:**
-```bash
-plonk dot add ~/.vimrc          # Explicit home directory path
-plonk dot add .vimrc            # Finds ~/.vimrc (if not in current dir)
-plonk dot add ~/.config/nvim/   # Add entire directory
-cd ~/.config/nvim && plonk dot add init.lua  # Finds ./init.lua
-```
-
-**Multiple dotfile examples:**
-```bash
-plonk dot add ~/.vimrc ~/.zshrc ~/.gitconfig    # Multiple files
-plonk dot add ~/.config/nvim/ ~/.tmux.conf      # Directory and file
-plonk dot add ~/.ssh/config ~/.aws/config       # Configuration files
-plonk dot add --dry-run ~/.vimrc ~/.zshrc       # Preview changes
-```
-
-**Single dotfile output:**
-```
-Dotfile Add
-===========
-✅ Added dotfile to plonk configuration
-   Source: vimrc
-   Destination: ~/.vimrc
-   Original: /home/user/.vimrc
-
-The dotfile has been copied to your plonk config directory
-```
-
-**Multiple dotfile output:**
-```bash
-$ plonk dot add ~/.vimrc ~/.config/nvim/ ~/.nonexistent ~/.zshrc
-✓ ~/.vimrc → vimrc
-✓ ~/.config/nvim/init.lua → config/nvim/init.lua
-✓ ~/.config/nvim/lua/config.lua → config/nvim/lua/config.lua
-↻ ~/.config/nvim/lua/plugins.lua → config/nvim/lua/plugins.lua (updated)
-✗ ~/.nonexistent - file not found
-     Check if path exists: ls -la ~/.nonexistent
-↻ ~/.zshrc → zshrc (updated)
-
-Summary: 3 added, 2 updated, 0 skipped, 1 failed (5 total files)
-```
-
-**Features:**
-- **File attribute preservation**: Maintains permissions and timestamps
-- **Progress indication**: Real-time feedback for each file processed
-- **Error handling**: Continues processing all files even if some fail
-- **Contextual suggestions**: Helpful error messages with suggested commands
-- **Directory traversal**: Processes individual files within directories
-
 
 ## Configuration Management
 
@@ -545,6 +545,26 @@ Edit configuration file using `$EDITOR`.
 ```bash
 plonk config edit
 ```
+
+## CLI 2.0 Migration from Legacy Commands
+
+The new CLI provides significant typing reduction and improved ergonomics:
+
+| Legacy Command | New Command | Typing Reduction |
+|----------------|-------------|------------------|
+| `plonk pkg add htop` | `plonk add htop` | 33% fewer characters |
+| `plonk dot add ~/.vimrc` | `plonk add ~/.vimrc` | 25% fewer characters |
+| `plonk pkg list` | `plonk ls --packages` | Similar length but more flexible |
+| `plonk dot list` | `plonk ls --dotfiles` | Similar length but more flexible |
+| `plonk apply` | `plonk sync` | 17% fewer characters |
+| `plonk pkg add htop && plonk apply` | `plonk install htop` | 60% fewer characters |
+
+**Key improvements:**
+- **Intelligent detection**: No need to specify pkg/dot - plonk detects automatically
+- **Mixed operations**: Add packages and dotfiles in single command
+- **Unix-style**: Familiar commands like `ls`, `rm`, `add`
+- **Workflow shortcuts**: `install` combines add + sync
+- **Zero-argument status**: Just type `plonk` for status (like git)
 
 ## Error Handling
 
@@ -609,7 +629,7 @@ If the problem persists, run: plonk doctor
 Enable detailed error information:
 ```bash
 export PLONK_DEBUG=1
-plonk apply  # Shows technical details for errors
+plonk add nonexistent-package  # Shows technical details for errors
 ```
 
 ### Common Error Solutions
@@ -656,14 +676,14 @@ Commands can be chained for automated workflows:
 
 ```bash
 # Check system health, then apply if healthy
-plonk doctor --output json && plonk apply --dry-run
+plonk doctor --output json && plonk sync --dry-run
 ```
 
 ### Configuration Validation
 Always validate before applying:
 
 ```bash
-plonk config validate && plonk apply
+plonk config validate && plonk sync
 ```
 
 ## Shell Completion
@@ -730,30 +750,31 @@ plonk completion powershell >> $PROFILE
 
 **Command and subcommand completion:**
 ```bash
-plonk <TAB>          # status, apply, pkg, dot, config, etc.
-plonk pkg <TAB>      # add, list, remove
-plonk dot <TAB>      # add, list
+plonk <TAB>          # status, add, rm, ls, sync, install, etc.
+plonk add <TAB>      # Intelligent package/dotfile suggestions
+plonk ls <TAB>       # --packages, --dotfiles, --manager, etc.
 ```
 
 **Package name completion:**
 ```bash
-plonk pkg add <TAB>              # git, curl, htop, ripgrep, etc.
-plonk pkg add ri<TAB>            # ripgrep
-plonk pkg add --manager npm <TAB> # typescript, eslint, prettier, etc.
+plonk add <TAB>              # git, curl, htop, ripgrep, etc.
+plonk add ri<TAB>            # ripgrep
+plonk add --brew <TAB>       # homebrew packages
+plonk add --npm <TAB>        # npm packages
 ```
 
 **Dotfile path completion:**
 ```bash
-plonk dot add <TAB>      # ~/.zshrc, ~/.vimrc, ~/.config/, etc.
-plonk dot add ~/.<TAB>   # ~/.zshrc, ~/.bashrc, ~/.gitconfig, etc.
-plonk dot add ~/.c<TAB>  # ~/.config/, falls back to system completion
+plonk add <TAB>      # ~/.zshrc, ~/.vimrc, ~/.config/, etc.
+plonk add ~/.<TAB>   # ~/.zshrc, ~/.bashrc, ~/.gitconfig, etc.
+plonk add ~/.c<TAB>  # ~/.config/, falls back to system completion
 ```
 
 **Flag and option completion:**
 ```bash
-plonk status --output <TAB>      # table, json, yaml
-plonk pkg add --manager <TAB>    # homebrew, npm, cargo
-plonk apply --<TAB>              # dry-run, backup
+plonk ls --output <TAB>      # table, json, yaml
+plonk add --<TAB>            # brew, npm, cargo, package, dotfile, dry-run, force
+plonk sync --<TAB>           # dry-run, backup, packages, dotfiles
 ```
 
 **Manager-aware suggestions:**
@@ -765,9 +786,9 @@ plonk apply --<TAB>              # dry-run, backup
 
 Test that completion is working:
 ```bash
-plonk pkg add <TAB><TAB>     # Should show package suggestions
-plonk dot add ~/.<TAB>       # Should show dotfile suggestions
-plonk --output <TAB>         # Should show: table, json, yaml
+plonk add <TAB><TAB>         # Should show package suggestions
+plonk add ~/.<TAB>           # Should show dotfile suggestions
+plonk ls --output <TAB>      # Should show: table, json, yaml
 ```
 
 ### Debugging Completion
@@ -775,9 +796,9 @@ plonk --output <TAB>         # Should show: table, json, yaml
 If completion isn't working, you can test it directly:
 ```bash
 # Test completion manually
-plonk __complete pkg add ""
-plonk __complete dot add "~/"
-plonk __complete status --output ""
+plonk __complete add ""
+plonk __complete add "~/"
+plonk __complete ls --output ""
 ```
 
 ## See Also
