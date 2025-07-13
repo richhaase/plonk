@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/richhaase/plonk/internal/business"
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
@@ -245,153 +245,59 @@ func (d DotfileListOutput) StructuredData() any {
 
 // Shared functions from the original commands
 
-// applyPackages applies package configuration and returns the result (from apply.go)
+// applyPackages applies package configuration and returns the result (refactored to use business module)
 func applyPackages(configDir string, cfg *config.Config, dryRun bool, format OutputFormat) (ApplyOutput, error) {
-	// Create unified state reconciler
-	reconciler := state.NewReconciler()
-
-	// Register package provider (multi-manager) - using lock file
 	ctx := context.Background()
 
-	// Create lock file adapter
-	lockService := lock.NewYAMLLockService(configDir)
-	lockAdapter := lock.NewLockFileAdapter(lockService)
+	// Use business module for package operations
+	options := business.PackageApplyOptions{
+		ConfigDir: configDir,
+		Config:    cfg,
+		DryRun:    dryRun,
+	}
 
-	// Create package provider using registry
-	registry := managers.NewManagerRegistry()
-	packageProvider, err := registry.CreateMultiProvider(ctx, lockAdapter)
+	result, err := business.ApplyPackages(ctx, options)
 	if err != nil {
-		return ApplyOutput{}, errors.Wrap(err, errors.ErrProviderNotFound, errors.DomainPackages, "apply",
-			"failed to create package provider")
+		return ApplyOutput{}, err
 	}
 
-	reconciler.RegisterProvider("package", packageProvider)
-
-	// Reconcile package domain to find missing packages
-	result, err := reconciler.ReconcileProvider(ctx, "package")
-	if err != nil {
-		return ApplyOutput{}, errors.Wrap(err, errors.ErrReconciliation, errors.DomainPackages, "reconcile", "failed to reconcile package state")
-	}
-
-	// Group missing packages by manager
-	missingByManager := make(map[string][]state.Item)
-	for _, item := range result.Missing {
-		manager := item.Manager
-		if manager == "" {
-			manager = "unknown"
-		}
-		missingByManager[manager] = append(missingByManager[manager], item)
-	}
-
-	// Prepare output structure
+	// Convert business result to command output format
 	outputData := ApplyOutput{
-		DryRun:       dryRun,
-		TotalMissing: len(result.Missing),
-		Managers:     make([]ManagerApplyResult, 0, len(missingByManager)),
+		DryRun:            result.DryRun,
+		TotalMissing:      result.TotalMissing,
+		TotalInstalled:    result.TotalInstalled,
+		TotalFailed:       result.TotalFailed,
+		TotalWouldInstall: result.TotalWouldInstall,
+		Managers:          make([]ManagerApplyResult, len(result.Managers)),
 	}
 
-	// Handle case where no packages are missing
-	if len(result.Missing) == 0 {
-		if format == OutputTable {
-			fmt.Println("📦 All packages up to date")
-		}
-		return outputData, nil
-	}
-
-	// Process each manager that has missing packages
-	managerInstances := make(map[string]managers.PackageManager)
-	for _, name := range registry.GetAllManagerNames() {
-		manager, err := registry.GetManager(name)
-		if err == nil {
-			managerInstances[name] = manager
-		}
-	}
-
-	for managerName, missingItems := range missingByManager {
-		managerInstance, exists := managerInstances[managerName]
-		if !exists {
-			if format == OutputTable {
-				fmt.Printf("📦 %s: Unknown manager, skipping\n", managerName)
+	// Convert manager results
+	for i, mgr := range result.Managers {
+		packages := make([]PackageApplyResult, len(mgr.Packages))
+		for j, pkg := range mgr.Packages {
+			packages[j] = PackageApplyResult{
+				Name:   pkg.Name,
+				Status: pkg.Status,
+				Error:  pkg.Error,
 			}
-			continue
 		}
-
-		available, err := managerInstance.IsAvailable(ctx)
-		if err != nil {
-			// Log the error but continue without this manager
-			// Note: Structured logging deferred to future enhancement
-			continue
+		outputData.Managers[i] = ManagerApplyResult{
+			Name:         mgr.Name,
+			MissingCount: mgr.MissingCount,
+			Packages:     packages,
 		}
-		if !available {
-			if format == OutputTable {
-				fmt.Printf("📦 %s: Not available, skipping\n", managerName)
-			}
-			continue
-		}
-
-		// Convert manager name for display
-		displayName := managerName
-		switch managerName {
-		case "homebrew":
-			displayName = "Homebrew"
-		case "npm":
-			displayName = "NPM"
-		case "cargo":
-			displayName = "Cargo"
-		}
-
-		// Process missing packages for this manager
-		managerResult := ManagerApplyResult{
-			Name:         displayName,
-			MissingCount: len(missingItems),
-			Packages:     make([]PackageApplyResult, 0, len(missingItems)),
-		}
-
-		for _, item := range missingItems {
-			packageResult := PackageApplyResult{
-				Name:   item.Name,
-				Status: "pending",
-			}
-
-			if dryRun {
-				packageResult.Status = "would-install"
-				if format == OutputTable {
-					fmt.Printf("📦 Would install: %s (%s)\n", item.Name, displayName)
-				}
-				outputData.TotalWouldInstall++
-			} else {
-				// Actually install the package
-				err := managerInstance.Install(ctx, item.Name)
-				if err != nil {
-					packageResult.Status = "failed"
-					// Use structured error for better user messages
-					plonkErr := errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "install", item.Name, "failed to install package")
-					packageResult.Error = plonkErr.UserMessage()
-					if format == OutputTable {
-						fmt.Printf("📦 Failed to install %s: %v\n", item.Name, plonkErr.UserMessage())
-					}
-					outputData.TotalFailed++
-				} else {
-					packageResult.Status = "installed"
-					if format == OutputTable {
-						fmt.Printf("📦 Installed: %s (%s)\n", item.Name, displayName)
-					}
-					outputData.TotalInstalled++
-				}
-			}
-
-			managerResult.Packages = append(managerResult.Packages, packageResult)
-		}
-
-		outputData.Managers = append(outputData.Managers, managerResult)
 	}
 
 	// Output summary for table format
 	if format == OutputTable {
-		if dryRun {
-			fmt.Printf("📦 Package summary: %d packages would be installed\n", outputData.TotalWouldInstall)
+		if result.TotalMissing == 0 {
+			fmt.Println("📦 All packages up to date")
 		} else {
-			fmt.Printf("📦 Package summary: %d installed, %d failed\n", outputData.TotalInstalled, outputData.TotalFailed)
+			if dryRun {
+				fmt.Printf("📦 Package summary: %d packages would be installed\n", outputData.TotalWouldInstall)
+			} else {
+				fmt.Printf("📦 Package summary: %d installed, %d failed\n", outputData.TotalInstalled, outputData.TotalFailed)
+			}
 		}
 		fmt.Println()
 	}
@@ -399,159 +305,56 @@ func applyPackages(configDir string, cfg *config.Config, dryRun bool, format Out
 	return outputData, nil
 }
 
-// applyDotfiles applies dotfile configuration and returns the result (from apply.go)
+// applyDotfiles applies dotfile configuration and returns the result (refactored to use business module)
 func applyDotfiles(configDir, homeDir string, cfg *config.Config, dryRun, backup bool, format OutputFormat) (DotfileApplyOutput, error) {
-	// Create unified state reconciler
-	reconciler := state.NewReconciler()
-
-	// Register dotfile provider
-	configAdapter := config.NewConfigAdapter(cfg)
-	dotfileConfigAdapter := config.NewStateDotfileConfigAdapter(configAdapter)
-	dotfileProvider := state.NewDotfileProvider(homeDir, configDir, dotfileConfigAdapter)
-	reconciler.RegisterProvider("dotfile", dotfileProvider)
-
-	// Reconcile dotfile domain to get expanded file list
 	ctx := context.Background()
-	result, err := reconciler.ReconcileProvider(ctx, "dotfile")
-	if err != nil {
-		return DotfileApplyOutput{}, errors.Wrap(err, errors.ErrReconciliation, errors.DomainDotfiles, "reconcile", "failed to reconcile dotfile state")
+
+	// Use business module for dotfile operations
+	options := business.DotfileApplyOptions{
+		ConfigDir: configDir,
+		HomeDir:   homeDir,
+		Config:    cfg,
+		DryRun:    dryRun,
+		Backup:    backup,
 	}
 
-	// Process each dotfile from the reconciled state
-	var actions []DotfileAction
-	deployedCount := 0
-	skippedCount := 0
+	result, err := business.ApplyDotfiles(ctx, options)
+	if err != nil {
+		return DotfileApplyOutput{}, err
+	}
 
-	// Process both missing and managed items that may need deployment
-	allItems := append(result.Missing, result.Managed...)
-
-	for _, item := range allItems {
-		// Get source and destination from metadata
-		source, _ := item.Metadata["source"].(string)
-		destination, _ := item.Metadata["destination"].(string)
-
-		if source == "" || destination == "" {
-			continue
+	// Convert business result to command output format
+	actions := make([]DotfileAction, len(result.Actions))
+	for i, action := range result.Actions {
+		actions[i] = DotfileAction{
+			Source:      action.Source,
+			Destination: action.Destination,
+			Status:      action.Status,
+			Reason:      "", // Business module uses Action field differently
 		}
+	}
 
-		action, err := processDotfileForApply(ctx, configDir, homeDir, source, destination, dryRun, backup, format)
-		if err != nil {
-			return DotfileApplyOutput{}, errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "deploy", source, "failed to process dotfile")
-		}
-
-		actions = append(actions, action)
-
-		if action.Status == "deployed" || action.Status == "would-deploy" {
-			deployedCount++
-		} else {
-			skippedCount++
-		}
+	outputData := DotfileApplyOutput{
+		DryRun:   result.DryRun,
+		Deployed: result.Summary.Added + result.Summary.Updated,
+		Skipped:  result.Summary.Unchanged,
+		Actions:  actions,
 	}
 
 	// Output summary for table format
 	if format == OutputTable {
-		if dryRun {
-			fmt.Printf("📄 Dotfile summary: %d dotfiles would be deployed, %d would be skipped\n", deployedCount, skippedCount)
+		if result.TotalFiles == 0 {
+			fmt.Println("📄 No dotfiles configured")
 		} else {
-			fmt.Printf("📄 Dotfile summary: %d deployed, %d skipped\n", deployedCount, skippedCount)
+			if dryRun {
+				fmt.Printf("📄 Dotfile summary: %d dotfiles would be deployed, %d would be skipped\n", outputData.Deployed, outputData.Skipped)
+			} else {
+				fmt.Printf("📄 Dotfile summary: %d deployed, %d skipped\n", outputData.Deployed, outputData.Skipped)
+			}
 		}
-	}
-
-	// Prepare output
-	outputData := DotfileApplyOutput{
-		DryRun:   dryRun,
-		Deployed: deployedCount,
-		Skipped:  skippedCount,
-		Actions:  actions,
 	}
 
 	return outputData, nil
-}
-
-// processDotfileForApply handles the deployment of a single dotfile (from apply.go)
-func processDotfileForApply(ctx context.Context, configDir, homeDir, source, destination string, dryRun, backup bool, format OutputFormat) (DotfileAction, error) {
-	// Create dotfiles manager and file operations
-	manager := dotfiles.NewManager(homeDir, configDir)
-	fileOps := dotfiles.NewFileOperations(manager)
-
-	action := DotfileAction{
-		Source:      source,
-		Destination: destination,
-		Status:      "skipped",
-		Reason:      "",
-	}
-
-	// Validate paths
-	if err := manager.ValidatePaths(source, destination); err != nil {
-		action.Status = "error"
-		action.Reason = err.Error()
-		return action, nil
-	}
-
-	// Check if source is a directory (should have been expanded)
-	if manager.IsDirectory(manager.GetSourcePath(source)) {
-		action.Status = "error"
-		action.Reason = "unexpected directory (should have been expanded)"
-		return action, nil
-	}
-
-	// Check if destination exists and is a directory
-	destPath := manager.GetDestinationPath(destination)
-	if manager.FileExists(destPath) && manager.IsDirectory(destPath) {
-		action.Status = "error"
-		action.Reason = "destination is a directory, expected file"
-		return action, nil
-	}
-
-	// Check if file needs update
-	needsUpdate, err := fileOps.FileNeedsUpdate(ctx, source, destination)
-	if err != nil {
-		return action, errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "check", source, "failed to check if file needs update")
-	}
-
-	if !needsUpdate {
-		action.Status = "skipped"
-		action.Reason = "files are identical"
-		if format == OutputTable {
-			fmt.Printf("📄 Skipped: %s (files are identical)\n", source)
-		}
-		return action, nil
-	}
-
-	// Need to deploy
-	action.Status = "deployed"
-	action.Reason = "copying from source"
-
-	// Add backup indication if backup is requested and file exists
-	if backup && manager.FileExists(destPath) {
-		action.Reason = "copying from source (with backup)"
-	}
-
-	if dryRun {
-		action.Status = "would-deploy"
-		if format == OutputTable {
-			fmt.Printf("📄 Would deploy: %s -> %s\n", source, destination)
-		}
-		return action, nil
-	}
-
-	// Configure copy options
-	options := dotfiles.CopyOptions{
-		CreateBackup:      backup,
-		BackupSuffix:      ".backup",
-		OverwriteExisting: true,
-	}
-
-	// Copy file using dotfiles operations
-	if err := fileOps.CopyFile(ctx, source, destination, options); err != nil {
-		return action, errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", source, "failed to copy dotfile")
-	}
-
-	if format == OutputTable {
-		fmt.Printf("📄 Deployed: %s -> %s\n", source, destination)
-	}
-
-	return action, nil
 }
 
 // Shared functions from pkg_add.go and dot_add.go
