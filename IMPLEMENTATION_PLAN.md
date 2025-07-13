@@ -3,42 +3,42 @@
 ## Plan Summary and Progress Tracker
 
 ### Overall Goal
-Systematically address code review findings through phases that eliminate duplication, improve consistency, and enhance maintainability while preserving all public APIs and build system compatibility.
+Systematically address code review findings through pure refactoring that eliminates duplication, improves consistency, and enhances maintainability while preserving all public APIs, user experience, and build system compatibility. **No new features or UI changes.**
 
 ### Phase Overview
 - **Phase 1**: Foundation & Cleanup (Low Risk, High Impact) - **PLANNED**
-- **Phase 2**: Core Abstractions (Medium Risk, High Impact) - **PLANNED**
-- **Phase 3**: Structural Improvements (Medium Risk, Medium Impact) - **PLANNED**
-- **Phase 4**: Advanced Optimizations (High Risk, High Impact) - **PLANNED**
+- **Phase 2**: Pattern Extraction (Medium Risk, High Impact) - **PLANNED**
+- **Phase 3**: Code Consolidation (Medium Risk, Medium Impact) - **PLANNED**
+- **Phase 4**: Internal Architecture (Medium Risk, High Impact) - **PLANNED**
 
 ### Progress Checklist
 
 #### Phase 1: Foundation & Cleanup ⏸️ **NOT STARTED**
 - [ ] **P1.1**: Remove backup files and legacy artifacts
-- [ ] **P1.2**: Implement logging infrastructure
-- [ ] **P1.3**: Standardize package manager error handling
-- [ ] **P1.4**: Extract ManagerRegistry pattern
+- [ ] **P1.2**: Standardize package manager error handling
+- [ ] **P1.3**: Extract ManagerRegistry pattern
+- [ ] **P1.4**: Clean up TODO comments and naming
 - [ ] **P1.5**: Validation and testing
 
-#### Phase 2: Core Abstractions ⏸️ **NOT STARTED**
-- [ ] **P2.1**: Create CommandPipeline abstraction
-- [ ] **P2.2**: Extract PathResolver utility
-- [ ] **P2.3**: Centralize configuration management
-- [ ] **P2.4**: Standardize output rendering
+#### Phase 2: Pattern Extraction ⏸️ **NOT STARTED**
+- [ ] **P2.1**: Extract PathResolver utility
+- [ ] **P2.2**: Create CommandPipeline abstraction
+- [ ] **P2.3**: Consolidate output rendering patterns
+- [ ] **P2.4**: Centralize configuration loading
 - [ ] **P2.5**: Migration and validation
 
-#### Phase 3: Structural Improvements ⏸️ **NOT STARTED**
+#### Phase 3: Code Consolidation ⏸️ **NOT STARTED**
 - [ ] **P3.1**: Simplify dotfile provider complexity
 - [ ] **P3.2**: Consolidate interface hierarchies
-- [ ] **P3.3**: Enhance operations package
-- [ ] **P3.4**: Improve error context and suggestions
+- [ ] **P3.3**: Extract shared operations patterns
+- [ ] **P3.4**: Improve error consistency and context
 - [ ] **P3.5**: Optimization and validation
 
-#### Phase 4: Advanced Optimizations ⏸️ **NOT STARTED**
-- [ ] **P4.1**: Introduce service layer
-- [ ] **P4.2**: Add infrastructure abstractions
-- [ ] **P4.3**: Implement dependency injection
-- [ ] **P4.4**: Performance optimizations
+#### Phase 4: Internal Architecture ⏸️ **NOT STARTED**
+- [ ] **P4.1**: Extract business logic from commands
+- [ ] **P4.2**: Improve internal abstractions
+- [ ] **P4.3**: Optimize internal patterns
+- [ ] **P4.4**: Performance improvements
 - [ ] **P4.5**: Final validation and documentation
 
 ### Key Metrics Tracking
@@ -46,6 +46,7 @@ Systematically address code review findings through phases that eliminate duplic
 - **Test Coverage**: Maintain/improve current levels (commands: 3.8% → 25%+)
 - **Build Times**: Maintain current performance
 - **Interface Stability**: Zero breaking changes to public APIs
+- **User Experience**: Identical CLI behavior and output formats
 
 ### Risk Mitigation
 - All phases include comprehensive testing
@@ -110,56 +111,7 @@ find . -name "*.bak" -o -name "*_old*" -o -name "*_legacy*"
 - [ ] No backup files remain
 - [ ] Global variable coupling eliminated
 
-### P1.2: Implement Logging Infrastructure (Day 3-4)
-
-**Context**: Multiple TODO comments indicate missing logging mechanism affecting observability.
-
-**Tasks**:
-1. **Create logging interface**: `internal/logging/interface.go`
-2. **Implement default logger**: Simple structured logging with levels
-3. **Add logger to critical operations**: Address specific TODOs
-4. **Environment variable control**: `PLONK_LOG_LEVEL` and `PLONK_DEBUG`
-
-**Implementation Details**:
-```go
-// internal/logging/interface.go
-type Logger interface {
-    Debug(msg string, fields ...Field)
-    Info(msg string, fields ...Field)
-    Warn(msg string, fields ...Field)
-    Error(msg string, err error, fields ...Field)
-}
-
-type Field struct {
-    Key   string
-    Value interface{}
-}
-
-// Default implementation using structured format
-type DefaultLogger struct {
-    level Level
-    writer io.Writer
-}
-```
-
-**Files to Create**:
-- `internal/logging/interface.go` - Logger interface definition
-- `internal/logging/default.go` - Default implementation
-- `internal/logging/context.go` - Context integration
-
-**Files to Modify**:
-- `internal/commands/status.go` - Address TODOs (lines 131, 142, 153)
-- `internal/commands/shared.go` - Address TODOs (lines 266, 278, 289, 347)
-
-**Critical Note**: This logging interface might be used throughout later phases, so design must be stable.
-
-**Validation**:
-- [ ] All TODO comments resolved
-- [ ] Tests pass with debug logging enabled
-- [ ] No performance regression in build times
-- [ ] Logger can be disabled for production
-
-### P1.3: Standardize Package Manager Error Handling (Day 5-7)
+### P1.2: Standardize Package Manager Error Handling (Day 3-5)
 
 **Context**: Inconsistent error handling patterns across package managers (20+ `fmt.Errorf` in homebrew, mixed patterns elsewhere).
 
@@ -192,7 +144,7 @@ return errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages,
 - [ ] Error messages are user-friendly
 - [ ] Integration tests pass with better error context
 
-### P1.4: Extract ManagerRegistry Pattern (Day 8-10)
+### P1.3: Extract ManagerRegistry Pattern (Day 6-8)
 
 **Context**: Package manager creation boilerplate appears in 5+ locations, highest-impact duplication.
 
@@ -244,6 +196,45 @@ func (r *ManagerRegistry) CreateMultiProvider(ctx context.Context, lockAdapter L
 - [ ] No duplicate manager creation logic
 - [ ] Mocks update correctly: `just generate-mocks`
 
+### P1.4: Clean up TODO Comments and Naming (Day 9-10)
+
+**Context**: Multiple TODO comments and naming inconsistencies need cleanup without adding features.
+
+**Tasks**:
+1. **Remove or document TODO comments**: Address logging TODOs without implementing logging
+2. **Standardize function naming**: Fix `convertResultsTo*` vs `convert*Results` patterns
+3. **Clean up variable naming**: Consistent capitalization and patterns
+4. **Document deferred items**: Note future enhancement opportunities
+
+**Implementation Strategy**:
+```go
+// Before:
+// TODO: Add proper logging mechanism
+
+// After (Option 1 - Remove if not critical):
+[Remove comment entirely]
+
+// After (Option 2 - Document deferral):
+// Note: Structured logging deferred to future enhancement
+
+// Before:
+func convertResultsToDotfileAdd(results []operations.OperationResult) []DotfileAddOutput
+
+// After (standardized naming):
+func convertToDotfileAddOutput(results []operations.OperationResult) []DotfileAddOutput
+```
+
+**Files to Modify**:
+- `internal/commands/status.go` - Clean TODOs (lines 131, 142, 153)
+- `internal/commands/shared.go` - Clean TODOs and standardize naming
+- All command files - Standardize function naming patterns
+
+**Validation**:
+- [ ] No TODO comments for missing features remain
+- [ ] Function naming is consistent across files
+- [ ] Variable naming follows consistent patterns
+- [ ] Documentation reflects current state, not future plans
+
 ### P1.5: Phase 1 Validation and Testing (Day 11-12)
 
 **Tasks**:
@@ -262,11 +253,50 @@ func (r *ManagerRegistry) CreateMultiProvider(ctx context.Context, lockAdapter L
 
 ---
 
-## Phase 2: Core Abstractions (Week 3-4)
+## Phase 2: Pattern Extraction (Week 3-4)
 
-**Objective**: Extract common patterns into reusable abstractions that eliminate the majority of command-level duplication.
+**Objective**: Extract common patterns into reusable abstractions that eliminate command-level duplication without changing user experience.
 
-### P2.1: Create CommandPipeline Abstraction (Day 13-16)
+### P2.1: Extract PathResolver Utility (Day 13-14)
+
+**Context**: Dotfile path resolution logic duplicated 10+ times with complex expansion rules.
+
+**Tasks**:
+1. **Create PathResolver**: `internal/paths/resolver.go`
+2. **Centralize expansion logic**: Directory expansion, home resolution
+3. **Extract path validation**: Security checks and permissions
+4. **Replace scattered logic**: Update all path resolution calls
+
+**Implementation Details**:
+```go
+// internal/paths/resolver.go
+type PathResolver struct {
+    homeDir   string
+    configDir string
+}
+
+func NewPathResolver() (*PathResolver, error)
+func (p *PathResolver) ResolveDotfilePath(path string) (string, error)
+func (p *PathResolver) GenerateDestinationPath(resolvedPath, configDir string) (string, error)
+func (p *PathResolver) ValidatePath(path string) error
+func (p *PathResolver) ExpandDirectory(path string) ([]string, error)
+```
+
+**Files to Create**:
+- `internal/paths/resolver.go` - Path resolution implementation
+- `internal/paths/validator.go` - Path validation and security
+
+**Files to Modify**:
+- `internal/commands/shared.go` (lines 666-671, 953-993) - Replace path logic
+- Multiple dotfile operation functions throughout commands
+
+**Validation**:
+- [ ] All existing dotfile operations work identically
+- [ ] Path resolution is consistent across commands
+- [ ] Security validation prevents directory traversal
+- [ ] Performance is maintained or improved
+
+### P2.2: Create CommandPipeline Abstraction (Day 15-17)
 
 **Context**: Parse flags → Process → Render pattern duplicated across 8+ commands.
 
@@ -283,12 +313,11 @@ type CommandPipeline struct {
     flags    *SimpleFlags
     format   OutputFormat
     reporter operations.ProgressReporter
-    logger   logging.Logger
 }
 
 type ProcessorFunc func(ctx context.Context, args []string) ([]operations.OperationResult, error)
 
-func NewCommandPipeline(cmd *cobra.Command, itemType string, logger logging.Logger) (*CommandPipeline, error)
+func NewCommandPipeline(cmd *cobra.Command, itemType string) (*CommandPipeline, error)
 func (p *CommandPipeline) ExecuteWithResults(ctx context.Context, processor ProcessorFunc, args []string) error
 func (p *CommandPipeline) HandleOutput(results []operations.OperationResult, domain, operation string) error
 ```
@@ -311,134 +340,87 @@ func (p *CommandPipeline) HandleOutput(results []operations.OperationResult, dom
 - [ ] Error handling preserves exit codes
 - [ ] Progress reporting functions correctly
 
-### P2.2: Extract PathResolver Utility (Day 17-18)
+### P2.3: Consolidate Output Rendering Patterns (Day 18-19)
 
-**Context**: Dotfile path resolution logic duplicated 10+ times with complex expansion rules.
-
-**Tasks**:
-1. **Create PathResolver**: `internal/paths/resolver.go`
-2. **Centralize expansion logic**: Directory expansion, home resolution
-3. **Add path validation**: Security checks and permissions
-4. **Replace scattered logic**: Update all path resolution calls
-
-**Implementation Details**:
-```go
-// internal/paths/resolver.go
-type PathResolver struct {
-    homeDir   string
-    configDir string
-    logger    logging.Logger
-}
-
-func NewPathResolver(logger logging.Logger) (*PathResolver, error)
-func (p *PathResolver) ResolveDotfilePath(path string) (string, error)
-func (p *PathResolver) GenerateDestinationPath(resolvedPath, configDir string) (string, error)
-func (p *PathResolver) ValidatePath(path string) error
-func (p *PathResolver) ExpandDirectory(path string) ([]string, error)
-```
-
-**Files to Create**:
-- `internal/paths/resolver.go` - Path resolution implementation
-- `internal/paths/validator.go` - Path validation and security
-
-**Files to Modify**:
-- `internal/commands/shared.go` (lines 666-671, 953-993) - Replace path logic
-- Multiple dotfile operation functions throughout commands
-
-**Validation**:
-- [ ] All existing dotfile operations work identically
-- [ ] Path resolution is consistent across commands
-- [ ] Security validation prevents directory traversal
-- [ ] Performance is maintained or improved
-
-### P2.3: Centralize Configuration Management (Day 19-20)
-
-**Context**: Configuration loading inconsistency with multiple approaches and adapter proliferation.
+**Context**: Output formatting spread across multiple files with inconsistent patterns but identical schemas.
 
 **Tasks**:
-1. **Create ConfigManager**: Single configuration service
-2. **Consolidate loading mechanisms**: `LoadConfig` vs `GetOrCreateConfig`
-3. **Simplify adapter chain**: Reduce unnecessary indirection
-4. **Add configuration validation**: Centralized validation logic
-
-**Implementation Details**:
-```go
-// internal/config/manager.go
-type ConfigManager struct {
-    configDir string
-    logger    logging.Logger
-    cache     *ResolvedConfig // Optional caching
-}
-
-func NewConfigManager(configDir string, logger logging.Logger) *ConfigManager
-func (c *ConfigManager) Load() (*ResolvedConfig, error)
-func (c *ConfigManager) Save(config *ResolvedConfig) error
-func (c *ConfigManager) Validate(config *ResolvedConfig) error
-func (c *ConfigManager) GetOrCreate() (*ResolvedConfig, error)
-```
-
-**Files to Create**:
-- `internal/config/manager.go` - Centralized configuration management
-
-**Files to Modify**:
-- Simplify: `internal/config/adapters.go` - Reduce adapter complexity
-- Update: All commands using configuration loading
-- Remove: Duplicate configuration loading patterns
-
-**Critical Note**: Configuration interface changes may affect mock generation. Interface locations must be preserved for build system compatibility.
-
-**Validation**:
-- [ ] All commands use consistent configuration loading
-- [ ] Adapter complexity reduced without breaking functionality
-- [ ] Configuration validation is centralized
-- [ ] Mocks generate correctly: `just generate-mocks`
-
-### P2.4: Standardize Output Rendering (Day 21-22)
-
-**Context**: Output formatting spread across multiple files with inconsistent schemas.
-
-**Tasks**:
-1. **Create output package**: `internal/output/`
-2. **Implement unified renderer**: Single function for all output types
-3. **Standardize data structures**: Common result types
-4. **Migrate command outputs**: Gradual conversion
+1. **Extract common rendering patterns**: Consolidate table/json/yaml logic
+2. **Create output utilities**: Shared formatting functions
+3. **Standardize result structures**: Common patterns for similar data
+4. **Maintain output schemas**: Preserve existing JSON/YAML structures
 
 **Implementation Details**:
 ```go
 // internal/output/renderer.go
 type Renderer struct {
     format OutputFormat
-    logger logging.Logger
 }
 
-func NewRenderer(format OutputFormat, logger logging.Logger) *Renderer
-func (r *Renderer) Render(data interface{}) error
+func NewRenderer(format OutputFormat) *Renderer
 func (r *Renderer) RenderResults(results []operations.OperationResult, operation string) error
+func (r *Renderer) RenderData(data interface{}) error
 
-// Standard data contracts
-type RenderableData interface {
-    TableOutput() string
-    StructuredData() interface{}
-}
+// Consolidate common output patterns
+func RenderTable(data TableRenderer) string
+func RenderStructured(data interface{}, format OutputFormat) ([]byte, error)
 ```
 
 **Files to Create**:
-- `internal/output/renderer.go` - Unified output rendering
-- `internal/output/types.go` - Standard data structures
-- `internal/output/table.go` - Table formatting utilities
+- `internal/output/renderer.go` - Unified rendering utilities
+- `internal/output/table.go` - Table formatting helpers
 
 **Files to Modify**:
-- Consolidate: Various command output types into standard structures
-- Update: Commands to use unified renderer
-- Remove: Duplicate output formatting logic
+- Extract: Duplicate rendering logic from commands
+- Consolidate: Similar output types with identical structure
+- Preserve: Existing JSON/YAML schemas exactly
 
 **Validation**:
-- [ ] All output formats produce identical results
+- [ ] All output formats produce byte-identical results
 - [ ] JSON/YAML schemas remain stable for external tools
-- [ ] Table output maintains readability
-- [ ] Performance is maintained
+- [ ] Table output maintains exact formatting
+- [ ] Performance is maintained or improved
 
-### P2.5: Phase 2 Migration and Validation (Day 23-24)
+### P2.4: Centralize Configuration Loading (Day 20-21)
+
+**Context**: Configuration loading inconsistency with multiple approaches (`LoadConfig` vs `GetOrCreateConfig`).
+
+**Tasks**:
+1. **Extract configuration utilities**: Consolidate loading patterns
+2. **Simplify adapter chain**: Reduce unnecessary indirection
+3. **Standardize loading calls**: Consistent approach across commands
+4. **Preserve interface locations**: Maintain mock generation compatibility
+
+**Implementation Details**:
+```go
+// internal/config/loader.go
+type ConfigLoader struct {
+    configDir string
+}
+
+func NewConfigLoader(configDir string) *ConfigLoader
+func (c *ConfigLoader) Load() (*ResolvedConfig, error)
+func (c *ConfigLoader) GetOrCreate() (*ResolvedConfig, error)
+func (c *ConfigLoader) Validate(config *ResolvedConfig) error
+```
+
+**Files to Create**:
+- `internal/config/loader.go` - Centralized loading utilities
+
+**Files to Modify**:
+- Simplify: `internal/config/adapters.go` - Reduce adapter complexity
+- Update: All commands to use consistent loading
+- Preserve: Interface locations for mock generation
+
+**Critical Note**: Interface locations must be preserved for build system compatibility.
+
+**Validation**:
+- [ ] All commands use consistent configuration loading
+- [ ] Adapter complexity reduced without breaking functionality
+- [ ] Mocks generate correctly: `just generate-mocks`
+- [ ] Configuration behavior identical to before
+
+### P2.5: Phase 2 Migration and Validation (Day 22-24)
 
 **Tasks**:
 1. **Complete command migration**: Ensure all commands use new abstractions
@@ -455,9 +437,9 @@ type RenderableData interface {
 
 ---
 
-## Phase 3: Structural Improvements (Week 5-6)
+## Phase 3: Code Consolidation (Week 5-6)
 
-**Objective**: Address complex components and improve overall architecture quality.
+**Objective**: Address complex components and consolidate duplicated patterns without changing functionality.
 
 ### P3.1: Simplify Dotfile Provider Complexity (Day 25-27)
 
@@ -543,73 +525,65 @@ type ConfigService interface {
 - [ ] Adapter complexity reduced
 - [ ] All tests pass with consolidated interfaces
 
-### P3.3: Enhance Operations Package (Day 30-31)
+### P3.3: Extract Shared Operations Patterns (Day 30-31)
 
-**Context**: Operations package underutilized as shared services layer.
+**Context**: Operations package underutilized with repeated patterns across commands.
 
 **Tasks**:
-1. **Expand shared functionality**: Generic batch processing
-2. **Improve progress reporting**: More flexible and configurable
-3. **Add operation contexts**: Enhanced metadata and tracing
-4. **Standardize result handling**: Consistent success/failure processing
+1. **Extract batch processing patterns**: Consolidate common workflows
+2. **Improve progress reporting consistency**: Standardize reporter usage
+3. **Consolidate result handling**: Consistent success/failure processing
+4. **Remove operation pattern duplication**: Extract common command patterns
 
 **Implementation Details**:
 ```go
 // internal/operations/batch.go
 type BatchProcessor struct {
     reporter ProgressReporter
-    logger   logging.Logger
 }
 
 func (b *BatchProcessor) ProcessItems(ctx context.Context, items []string, processor ItemProcessor) []OperationResult
 
-// internal/operations/enhanced_reporter.go
-type EnhancedReporter struct {
-    operation string
-    itemType  string
-    logger    logging.Logger
-}
+// internal/operations/common.go
+func StandardOperationFlow(ctx context.Context, items []string, processor ItemProcessor) ([]OperationResult, error)
 ```
 
-**Files to Create**:
-- `internal/operations/batch.go` - Generic batch processing
-- `internal/operations/enhanced_reporter.go` - Improved progress reporting
-
 **Files to Modify**:
-- `internal/operations/reporter.go` - Enhance existing reporter
-- Commands using operations - Migrate to enhanced patterns
+- `internal/operations/reporter.go` - Standardize usage patterns
+- Commands using operations - Extract common patterns
+- Remove: Duplicate operation handling logic
 
 **Validation**:
-- [ ] Operations package provides comprehensive shared services
-- [ ] Progress reporting improved across all commands
-- [ ] Batch processing standardized
-- [ ] Error handling enhanced
+- [ ] Operations package eliminates duplication
+- [ ] Progress reporting consistent across all commands
+- [ ] Batch processing patterns consolidated
+- [ ] Command logic simplified
 
-### P3.4: Improve Error Context and Suggestions (Day 32-33)
+### P3.4: Improve Error Consistency and Context (Day 32-33)
 
-**Context**: Error enhancement features underutilized throughout codebase.
+**Context**: Error handling patterns inconsistent with underutilized enhancement features.
 
 **Tasks**:
-1. **Add error suggestions**: Actionable guidance for common failures
-2. **Enhance error context**: Rich metadata for debugging
-3. **Improve user messages**: User-friendly error explanations
-4. **Add error categories**: Better error classification
+1. **Standardize error patterns**: Consistent error creation across files
+2. **Enhance existing error context**: Better use of existing error metadata
+3. **Improve error message consistency**: Standardize similar error scenarios
+4. **Consolidate error handling patterns**: Remove duplicate error creation logic
 
-**Implementation Details**:
-- Add suggestion messages to common error scenarios
-- Enhance error metadata with operation context
-- Improve user-facing error messages
-- Add error recovery suggestions
+**Implementation Focus**:
+- Standardize error creation patterns across similar operations
+- Better utilize existing error enhancement features (suggestions, metadata)
+- Improve consistency of error messages for similar scenarios
+- Remove duplicate error handling logic
 
 **Files to Modify**:
-- All error creation sites throughout codebase
-- `internal/errors/types.go` - Enhance error types if needed
+- All files with error creation to ensure consistency
+- Focus on existing error types, not creating new ones
 
 **Validation**:
-- [ ] Error messages significantly improved
-- [ ] Users receive actionable guidance
-- [ ] Debug information enhanced
-- [ ] Error categorization improved
+- [ ] Error patterns consistent across codebase
+- [ ] Better utilization of existing error features
+- [ ] Error messages standardized for similar scenarios
+- [ ] Duplicate error handling eliminated
 
 ### P3.5: Phase 3 Optimization and Validation (Day 34-35)
 
@@ -627,153 +601,121 @@ type EnhancedReporter struct {
 
 ---
 
-## Phase 4: Advanced Optimizations (Week 7-8)
+## Phase 4: Internal Architecture (Week 7-8)
 
-**Objective**: Implement advanced architectural improvements for long-term maintainability.
+**Objective**: Improve internal architecture and extract business logic without changing external behavior.
 
-### P4.1: Introduce Service Layer (Day 36-38)
+### P4.1: Extract Business Logic from Commands (Day 36-38)
 
-**Context**: Business logic embedded in command layer violates clean architecture.
+**Context**: Business logic embedded in 1,300+ line `shared.go` file violates single responsibility.
 
 **Tasks**:
-1. **Extract business services**: `PackageService`, `DotfileService`
-2. **Move logic from shared.go**: 1,300+ lines of business logic
-3. **Implement service interfaces**: Clean contracts for business operations
-4. **Add service composition**: Combine services for complex operations
+1. **Extract business logic functions**: Move logic from shared.go to focused modules
+2. **Create domain-specific modules**: Package and dotfile business logic separation
+3. **Improve internal organization**: Better separation of concerns
+4. **Maintain command interfaces**: Commands remain as thin orchestration layer
 
 **Implementation Details**:
 ```go
-// internal/services/package_service.go
-type PackageService interface {
-    ApplyPackages(ctx context.Context, options ApplyOptions) (*ApplyResult, error)
-    AddPackage(ctx context.Context, pkg, manager string) (*AddResult, error)
-    RemovePackage(ctx context.Context, pkg, manager string) (*RemoveResult, error)
-}
+// internal/business/package_operations.go
+func ApplyPackages(ctx context.Context, options ApplyOptions) (*ApplyResult, error)
+func AddPackage(ctx context.Context, pkg, manager string) (*AddResult, error)
+func RemovePackage(ctx context.Context, pkg, manager string) (*RemoveResult, error)
 
-// internal/services/dotfile_service.go
-type DotfileService interface {
-    ApplyDotfiles(ctx context.Context, options ApplyOptions) (*ApplyResult, error)
-    AddDotfile(ctx context.Context, path string, options AddOptions) (*AddResult, error)
-}
+// internal/business/dotfile_operations.go
+func ApplyDotfiles(ctx context.Context, options ApplyOptions) (*ApplyResult, error)
+func AddDotfile(ctx context.Context, path string, options AddOptions) (*AddResult, error)
 ```
 
 **Files to Create**:
-- `internal/services/package_service.go` - Package business logic
-- `internal/services/dotfile_service.go` - Dotfile business logic
-- `internal/services/interfaces.go` - Service contracts
+- `internal/business/package_operations.go` - Package business logic
+- `internal/business/dotfile_operations.go` - Dotfile business logic
 
 **Files to Modify**:
-- `internal/commands/shared.go` - Extract business logic
-- All commands - Use services instead of direct business logic
+- `internal/commands/shared.go` - Extract business logic (reduce from 1,300+ lines)
+- All commands - Call business functions instead of shared.go
 
 **Validation**:
 - [ ] Business logic properly separated from commands
-- [ ] Services testable in isolation
 - [ ] Commands simplified to orchestration only
-- [ ] Clean architecture principles followed
+- [ ] shared.go significantly reduced in size
+- [ ] All functionality remains identical
 
-### P4.2: Add Infrastructure Abstractions (Day 39-40)
+### P4.2: Improve Internal Abstractions (Day 39-40)
 
-**Context**: Missing abstractions for file system and command execution impact testability.
-
-**Tasks**:
-1. **Create FileSystem interface**: Abstract file operations
-2. **Create CommandExecutor interface**: Abstract command execution
-3. **Implement test doubles**: Mock implementations for testing
-4. **Integrate with existing code**: Replace direct file system calls
-
-**Implementation Details**:
-```go
-// internal/infrastructure/filesystem.go
-type FileSystem interface {
-    Stat(path string) (os.FileInfo, error)
-    ReadFile(path string) ([]byte, error)
-    WriteFile(path string, data []byte, perm os.FileMode) error
-    Walk(root string, fn filepath.WalkFunc) error
-}
-
-// internal/infrastructure/executor.go
-type CommandExecutor interface {
-    Execute(ctx context.Context, name string, args ...string) error
-    Output(ctx context.Context, name string, args ...string) ([]byte, error)
-}
-```
-
-**Files to Create**:
-- `internal/infrastructure/filesystem.go` - File system abstraction
-- `internal/infrastructure/executor.go` - Command execution abstraction
-- `internal/infrastructure/mocks.go` - Test implementations
-
-**Files to Modify**:
-- Package managers - Use CommandExecutor
-- Dotfile operations - Use FileSystem interface
-- Services - Inject infrastructure dependencies
-
-**Validation**:
-- [ ] Infrastructure properly abstracted
-- [ ] Testing improved through mocks
-- [ ] No regression in functionality
-- [ ] Better isolation in unit tests
-
-### P4.3: Implement Dependency Injection (Day 41-42)
-
-**Context**: Missing service container for managing dependencies.
+**Context**: Internal interfaces could be better organized for testing and maintainability.
 
 **Tasks**:
-1. **Create service container**: Dependency management system
-2. **Implement constructor injection**: Services receive dependencies
-3. **Update command construction**: Commands receive services via injection
-4. **Add configuration-based setup**: Service configuration and wiring
+1. **Consolidate internal interfaces**: Better organization of existing abstractions
+2. **Improve testability**: Better structure for existing tests
+3. **Extract common patterns**: Internal utilities and helpers
+4. **Maintain interface locations**: Preserve mock generation compatibility
 
-**Implementation Details**:
-```go
-// internal/container/container.go
-type Container struct {
-    logger     logging.Logger
-    fileSystem infrastructure.FileSystem
-    executor   infrastructure.CommandExecutor
-    // ... other dependencies
-}
-
-func (c *Container) PackageService() services.PackageService
-func (c *Container) DotfileService() services.DotfileService
-```
-
-**Files to Create**:
-- `internal/container/container.go` - Service container
-- `internal/container/builder.go` - Container construction
+**Implementation Focus**:
+- Improve organization of existing internal interfaces
+- Better structure for existing testing patterns
+- Extract repeated internal utilities
+- No new external dependencies or abstractions
 
 **Files to Modify**:
-- `cmd/plonk/main.go` - Use container for setup
-- All commands - Receive services via injection
+- Reorganize existing internal interfaces
+- Improve existing test structures
+- Extract common internal utilities
 
 **Validation**:
-- [ ] Dependencies properly managed
-- [ ] Commands simplified through injection
-- [ ] Testing improved through controllable dependencies
-- [ ] Configuration-driven service setup
+- [ ] Internal organization improved
+- [ ] Testing structure improved
+- [ ] Interface locations preserved for mocks
+- [ ] No functional changes
 
-### P4.4: Performance Optimizations (Day 43-44)
+### P4.3: Optimize Internal Patterns (Day 41-42)
+
+**Context**: Internal patterns could be optimized for better performance and maintainability.
+
+**Tasks**:
+1. **Optimize existing patterns**: Improve performance of current implementations
+2. **Consolidate initialization**: Reduce repeated setup patterns
+3. **Improve internal efficiency**: Better memory usage and processing
+4. **Maintain external behavior**: No changes to user-facing functionality
+
+**Implementation Focus**:
+- Optimize existing initialization patterns
+- Improve memory usage in existing operations
+- Consolidate repeated setup/teardown patterns
+- Focus on internal efficiency improvements
+
+**Files to Modify**:
+- Optimize existing performance bottlenecks
+- Improve initialization patterns
+- Consolidate setup/teardown logic
+
+**Validation**:
+- [ ] Performance improved or maintained
+- [ ] Memory usage optimized
+- [ ] Setup patterns consolidated
+- [ ] External behavior unchanged
+
+### P4.4: Performance Improvements (Day 43-44)
 
 **Context**: Opportunities for performance improvements identified during refactoring.
 
 **Tasks**:
-1. **Implement caching**: Configuration and state caching
-2. **Add streaming operations**: Large directory handling
-3. **Optimize memory usage**: Efficient resource utilization
-4. **Add concurrent operations**: Where safe and beneficial
+1. **Optimize existing operations**: Improve performance of current functionality
+2. **Reduce redundant operations**: Eliminate unnecessary repeated work
+3. **Improve memory efficiency**: Better resource utilization in existing patterns
+4. **Maintain functionality**: No changes to external behavior
 
 **Implementation Areas**:
-- Configuration caching for repeated access
-- Streaming file discovery for large directories
-- Memory-efficient state reconciliation
-- Concurrent package manager operations where safe
+- Reduce redundant configuration loading
+- Optimize file system operations for large directories
+- Improve memory usage in state reconciliation
+- Eliminate unnecessary repeated operations
 
 **Validation**:
 - [ ] Performance improved measurably
 - [ ] Memory usage optimized
 - [ ] No regression in functionality
-- [ ] Concurrency safe where implemented
+- [ ] External behavior identical
 
 ### P4.5: Final Validation and Documentation (Day 45-48)
 
@@ -796,6 +738,12 @@ func (c *Container) DotfileService() services.DotfileService
 
 ## Implementation Notes and Considerations
 
+### Refactoring Principles
+- **No Feature Development**: Focus solely on code organization and duplication elimination
+- **Preserve User Experience**: CLI interface, output formats, and behavior must remain identical
+- **Internal Improvements Only**: All changes are internal implementation details
+- **Maintain Compatibility**: Build system, tests, and mock generation must continue working
+
 ### Mock Interface Preservation
 The justfile contains hardcoded paths for mock generation:
 ```bash
@@ -807,26 +755,28 @@ mockgen -source=internal/config/interfaces.go -destination=internal/config/mock_
 
 ### Testing Strategy
 - **Maintain existing tests**: All 123 tests must continue to pass
-- **Add tests for new abstractions**: New interfaces and implementations need test coverage
+- **Improve test organization**: Better structure for existing tests
 - **Improve command testing**: Current 3.8% coverage should improve to 25%+
-- **Integration testing**: Validate CLI behavior remains identical
+- **Integration testing**: Validate CLI behavior remains byte-identical
 
 ### Risk Mitigation
 - **Incremental changes**: Each task includes validation before proceeding
 - **Rollback capability**: Each phase can be rolled back independently
 - **Interface stability**: Public APIs preserved throughout
 - **Build system compatibility**: Continuous validation of build processes
+- **Output verification**: Automated testing that output formats remain identical
 
 ### Decision Points Requiring Validation
-1. **P2.1 CommandPipeline Interface**: Processor function signature affects all commands
-2. **P2.3 Configuration Interface Changes**: May affect mock generation locations
+1. **P2.2 CommandPipeline Interface**: Processor function signature affects all commands
+2. **P2.4 Configuration Interface Changes**: May affect mock generation locations
 3. **P3.2 Interface Consolidation**: Must preserve mockable interface locations
-4. **P4.1 Service Layer Design**: Business logic extraction strategy needs validation
+4. **P4.1 Business Logic Extraction**: Separation strategy needs validation
 
 ### Success Metrics
 - **Code Duplication**: Target 70% reduction from ~500 identified lines
 - **Test Coverage**: Commands from 3.8% to 25%+, Operations from 14.6% to 50%+
 - **Build Performance**: Maintain or improve current build times
-- **Error Quality**: Measurable improvement in error message actionability
+- **User Experience**: Zero changes to CLI behavior, output, or performance
+- **Maintainability**: Improved code organization and reduced complexity
 
-This implementation plan provides comprehensive guidance for systematic refactoring while preserving all external contracts and improving code quality significantly.
+This implementation plan provides comprehensive guidance for systematic refactoring while preserving all external contracts and user experience exactly.
