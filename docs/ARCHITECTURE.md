@@ -328,28 +328,48 @@ All long-running operations accept context for cancellation and timeout support.
 - Check `ctx.Done()` before and during long-running operations
 - Return `ctx.Err()` on cancellation
 
-### 4. Comprehensive Error Handling
+### 4. Adapter Architecture
+Adapters enable cross-package communication while preventing circular dependencies.
+
+**Purpose:**
+- Bridge package boundaries without direct imports
+- Enable type conversion between similar interfaces
+- Maintain clean separation of concerns
+
+**Pattern:**
+- Adapters translate between interfaces at package boundaries
+- Type aliases used for identical interfaces within same boundary
+- See `ADAPTER_ARCHITECTURE.md` for detailed guidelines
+
+**Current Adapters:**
+- `StatePackageConfigAdapter` - config → state for packages
+- `StateDotfileConfigAdapter` - config → state for dotfiles
+- `ConfigAdapter` - config types → state interfaces
+- `ManagerAdapter` - managers → state.ManagerInterface
+- `LockFileAdapter` - lock service → state interfaces
+
+### 5. Comprehensive Error Handling
 PackageManager methods return (result, error) following Go best practices with smart detection of expected conditions vs real errors.
 
 **Error Categories:**
 - Expected conditions (package not found) - handled gracefully
 - Real errors (network failures) - propagated with context
 
-### 5. Structured Errors
+### 6. Structured Errors
 PlonkError type provides user-friendly messages and debugging context.
 
 **Error Structure:**
 - Structured errors with codes, domains, and user-friendly messages
 - Compatible with standard Go error handling patterns
 
-### 6. Environment-Aware Configuration
+### 7. Environment-Aware Configuration
 Uses `PLONK_DIR` environment variable for config directory and `EDITOR` for editing.
 
 **Configuration Resolution:**
 1. `$PLONK_DIR/plonk.yaml` (if PLONK_DIR set)
 2. `~/.config/plonk/plonk.yaml` (default)
 
-### 7. Convention Over Configuration
+### 8. Convention Over Configuration
 Auto-discovery of dotfiles reduces configuration burden while maintaining customization through ignore patterns.
 
 **File Discovery Pattern:**

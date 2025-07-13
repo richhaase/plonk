@@ -95,6 +95,13 @@ Extensible architecture through well-defined interfaces:
 - Commands use dependency injection for testability
 - State reconciliation through provider abstractions
 
+### Adapter Architecture
+Adapters bridge package boundaries to prevent circular dependencies:
+- See `ADAPTER_ARCHITECTURE.md` for detailed guidelines
+- Use adapters for cross-package communication
+- Use type aliases for identical interfaces within same boundary
+- Keep adapters thin - translation only, no business logic
+
 ### Shared Runtime Context (Phase 4)
 Use the singleton pattern for expensive resources:
 - `runtime.GetSharedContext()` provides cached access to ManagerRegistry, Reconciler, Config
