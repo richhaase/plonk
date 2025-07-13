@@ -52,10 +52,10 @@ func (h *HomebrewManager) ListInstalled(ctx context.Context) ([]string, error) {
 		if _, ok := err.(*exec.ExitError); ok {
 			// For brew list, any non-zero exit usually indicates a real problem
 			// (brew list returns exit 0 even with no packages installed)
-			return nil, fmt.Errorf("failed to list homebrew packages: %w", err)
+			return nil, errors.Wrap(err, errors.ErrCommandExecution, errors.DomainPackages, "list", "failed to list homebrew packages")
 		}
 		// Non-exit errors (e.g., command not found, context cancellation)
-		return nil, fmt.Errorf("failed to execute brew list: %w", err)
+		return nil, errors.Wrap(err, errors.ErrCommandExecution, errors.DomainPackages, "list", "failed to execute brew list")
 	}
 
 	result := strings.TrimSpace(string(output))
@@ -94,15 +94,20 @@ func (h *HomebrewManager) Install(ctx context.Context, name string) error {
 
 			// Check for package not found
 			if strings.Contains(outputStr, "No available formula") || strings.Contains(outputStr, "No formulae found") {
-				return fmt.Errorf("package '%s' not found in homebrew repositories", name)
+				return errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "install",
+					fmt.Sprintf("package '%s' not found in homebrew repositories", name)).
+					WithSuggestionMessage(fmt.Sprintf("Search available packages: brew search %s", name))
 			}
 
 			// Other exit errors with more context
-			return fmt.Errorf("failed to install %s (exit code %d): %w\nOutput: %s", name, exitError.ExitCode(), err, outputStr)
+			return errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "install", name,
+				fmt.Sprintf("package installation failed (exit code %d)", exitError.ExitCode())).
+				WithSuggestionMessage(fmt.Sprintf("Check package availability: brew search %s", name))
 		}
 
 		// Non-exit errors (command not found, context cancellation, etc.)
-		return fmt.Errorf("failed to execute brew install for %s: %w\nOutput: %s", name, err, outputStr)
+		return errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "install", name,
+			"failed to execute brew install command")
 	}
 	return nil
 }
@@ -124,15 +129,19 @@ func (h *HomebrewManager) Uninstall(ctx context.Context, name string) error {
 
 			// Check for dependency issues
 			if strings.Contains(outputStr, "because it is required by") || strings.Contains(outputStr, "still has dependents") {
-				return fmt.Errorf("cannot uninstall %s: package has dependents that require it\nOutput: %s", name, outputStr)
+				return errors.NewError(errors.ErrPackageUninstall, errors.DomainPackages, "uninstall",
+					fmt.Sprintf("cannot uninstall %s: package has dependents that require it", name)).
+					WithSuggestionMessage(fmt.Sprintf("Force uninstall with: brew uninstall --ignore-dependencies %s", name))
 			}
 
 			// Other exit errors with more context
-			return fmt.Errorf("failed to uninstall %s (exit code %d): %w\nOutput: %s", name, exitError.ExitCode(), err, outputStr)
+			return errors.WrapWithItem(err, errors.ErrPackageUninstall, errors.DomainPackages, "uninstall", name,
+				fmt.Sprintf("package uninstallation failed (exit code %d)", exitError.ExitCode()))
 		}
 
 		// Non-exit errors (command not found, context cancellation, etc.)
-		return fmt.Errorf("failed to execute brew uninstall for %s: %w\nOutput: %s", name, err, outputStr)
+		return errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "uninstall", name,
+			"failed to execute brew uninstall command")
 	}
 	return nil
 }
@@ -147,7 +156,8 @@ func (h *HomebrewManager) IsInstalled(ctx context.Context, name string) (bool, e
 			return false, nil
 		}
 		// Real error (brew not found, permission issues, etc.)
-		return false, fmt.Errorf("failed to check package %s: %w", name, err)
+		return false, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "check", name,
+			"failed to check package installation status")
 	}
 	return true, nil
 }
@@ -164,10 +174,12 @@ func (h *HomebrewManager) Search(ctx context.Context, query string) ([]string, e
 				return []string{}, nil
 			}
 			// Other exit codes indicate real errors
-			return nil, fmt.Errorf("failed to search homebrew packages: %w", err)
+			return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "search", query,
+				"homebrew search command failed")
 		}
 		// Non-exit errors (e.g., command not found, context cancellation)
-		return nil, fmt.Errorf("failed to execute brew search: %w", err)
+		return nil, errors.Wrap(err, errors.ErrCommandExecution, errors.DomainPackages, "search",
+			"failed to execute brew search command")
 	}
 
 	result := strings.TrimSpace(string(output))
@@ -201,7 +213,8 @@ func (h *HomebrewManager) Info(ctx context.Context, name string) (*PackageInfo, 
 	// Check if package is installed first
 	installed, err := h.IsInstalled(ctx, name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check if package is installed: %w", err)
+		return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", name,
+			"failed to check package installation status")
 	}
 
 	var info *PackageInfo
@@ -209,13 +222,15 @@ func (h *HomebrewManager) Info(ctx context.Context, name string) (*PackageInfo, 
 		// Get info from installed package
 		info, err = h.getInstalledPackageInfo(ctx, name)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get installed package info: %w", err)
+			return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", name,
+				"failed to get installed package information")
 		}
 	} else {
 		// Get info from available package
 		info, err = h.getAvailablePackageInfo(ctx, name)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get available package info: %w", err)
+			return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", name,
+				"failed to get available package information")
 		}
 	}
 
@@ -229,12 +244,14 @@ func (h *HomebrewManager) getInstalledPackageInfo(ctx context.Context, name stri
 	cmd := exec.CommandContext(ctx, "brew", "info", name, "--json")
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get package info: %w", err)
+		return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", name,
+			"failed to get installed package info")
 	}
 
 	result := strings.TrimSpace(string(output))
 	if result == "" || result == "[]" {
-		return nil, fmt.Errorf("package '%s' not found", name)
+		return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
+			fmt.Sprintf("package '%s' not found", name))
 	}
 
 	// Parse JSON output - homebrew returns an array
@@ -263,15 +280,18 @@ func (h *HomebrewManager) getAvailablePackageInfo(ctx context.Context, name stri
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			if exitError.ExitCode() == 1 {
-				return nil, fmt.Errorf("package '%s' not found", name)
+				return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
+					fmt.Sprintf("package '%s' not found", name))
 			}
 		}
-		return nil, fmt.Errorf("failed to get package info: %w", err)
+		return nil, errors.Wrap(err, errors.ErrCommandExecution, errors.DomainPackages, "info",
+			"failed to get package info")
 	}
 
 	result := strings.TrimSpace(string(output))
 	if result == "" || result == "[]" {
-		return nil, fmt.Errorf("package '%s' not found", name)
+		return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
+			fmt.Sprintf("package '%s' not found", name))
 	}
 
 	// Parse JSON output
@@ -298,29 +318,34 @@ func (h *HomebrewManager) GetInstalledVersion(ctx context.Context, name string) 
 	// First check if package is installed
 	installed, err := h.IsInstalled(ctx, name)
 	if err != nil {
-		return "", fmt.Errorf("failed to check if package is installed: %w", err)
+		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
+			"failed to check package installation status")
 	}
 	if !installed {
-		return "", fmt.Errorf("package '%s' is not installed", name)
+		return "", errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "version",
+			fmt.Sprintf("package '%s' is not installed", name))
 	}
 
 	// Get version using brew list with --versions flag
 	cmd := exec.CommandContext(ctx, "brew", "list", "--versions", name)
 	output, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("failed to get package version: %w", err)
+		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
+			"failed to get package version information")
 	}
 
 	result := strings.TrimSpace(string(output))
 	if result == "" {
-		return "", fmt.Errorf("no version information found for package '%s'", name)
+		return "", errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "version",
+			fmt.Sprintf("no version information found for package '%s'", name))
 	}
 
 	// Parse output: "package_name version1 version2 ..."
 	// We want the latest (last) version
 	parts := strings.Fields(result)
 	if len(parts) < 2 {
-		return "", fmt.Errorf("unexpected version output format for package '%s': %s", name, result)
+		return "", errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "version",
+			fmt.Sprintf("unexpected version output format for package '%s': %s", name, result))
 	}
 
 	// Return the last version (most recent)

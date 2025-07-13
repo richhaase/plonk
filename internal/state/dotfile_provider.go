@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/dotfiles"
+	"github.com/richhaase/plonk/internal/errors"
 )
 
 // DotfileConfigLoader defines how to load dotfile configuration
@@ -69,7 +70,8 @@ func (d *DotfileProvider) GetConfiguredItems() ([]ConfigItem, error) {
 			// Expand directory to individual files
 			dirItems, err := d.expandConfigDirectory(source, destination)
 			if err != nil {
-				return nil, fmt.Errorf("failed to expand directory %s: %w", source, err)
+				return nil, errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "scan",
+					fmt.Sprintf("failed to expand directory %s", source))
 			}
 			items = append(items, dirItems...)
 		} else {
@@ -256,13 +258,15 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 				return nil
 			})
 			if err != nil {
-				return nil, fmt.Errorf("failed to walk directory %s: %w", destPath, err)
+				return nil, errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "scan",
+					fmt.Sprintf("failed to walk directory %s", destPath))
 			}
 		} else {
 			// Single file - calculate relative path
 			relPath, err := filepath.Rel(d.homeDir, destPath)
 			if err != nil {
-				return nil, fmt.Errorf("failed to get relative path for %s: %w", destPath, err)
+				return nil, errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "scan",
+					fmt.Sprintf("failed to get relative path for %s", destPath))
 			}
 
 			// Check if file should be ignored

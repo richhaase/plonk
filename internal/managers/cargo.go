@@ -169,22 +169,26 @@ func (c *CargoManager) GetInstalledVersion(ctx context.Context, name string) (st
 	// First check if package is installed
 	installed, err := c.IsInstalled(ctx, name)
 	if err != nil {
-		return "", fmt.Errorf("failed to check if package is installed: %w", err)
+		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
+			"failed to check package installation status")
 	}
 	if !installed {
-		return "", fmt.Errorf("package '%s' is not installed", name)
+		return "", errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "version",
+			fmt.Sprintf("package '%s' is not installed", name))
 	}
 
 	// Use cargo install --list to get version information
 	cmd := exec.CommandContext(ctx, "cargo", "install", "--list")
 	output, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("failed to get package version: %w", err)
+		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
+			"failed to get package version information")
 	}
 
 	result := strings.TrimSpace(string(output))
 	if result == "" {
-		return "", fmt.Errorf("no version information found for package '%s'", name)
+		return "", errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "version",
+			fmt.Sprintf("no version information found for package '%s'", name))
 	}
 
 	// Parse output to find the package
@@ -209,5 +213,6 @@ func (c *CargoManager) GetInstalledVersion(ctx context.Context, name string) (st
 		}
 	}
 
-	return "", fmt.Errorf("could not find version information for package '%s'", name)
+	return "", errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "version",
+		fmt.Sprintf("could not find version information for package '%s'", name))
 }
