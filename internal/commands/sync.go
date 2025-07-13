@@ -56,6 +56,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 	dotfilesOnly, _ := cmd.Flags().GetBool("dotfiles")
 
 	// Parse output format
+	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
 		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "sync", "output-format", "invalid output format")

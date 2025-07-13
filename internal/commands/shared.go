@@ -657,6 +657,7 @@ func loadOrCreateConfig(configDir string) (*config.Config, error) {
 // addDotfiles handles adding one or more dotfiles (from dot_add.go)
 func addDotfiles(cmd *cobra.Command, dotfilePaths []string, dryRun bool) error {
 	// Parse output format
+	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
 		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "dot-add", "output-format", "invalid output format")
@@ -1145,6 +1146,7 @@ func runDotList(cmd *cobra.Command, args []string) error {
 	// For now, create a proper implementation that delegates to the state reconciliation system
 
 	// Parse output format
+	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
 		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "dotfiles", "output-format", "invalid output format")

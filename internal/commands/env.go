@@ -44,6 +44,7 @@ func init() {
 
 func runEnv(cmd *cobra.Command, args []string) error {
 	// Parse output format
+	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
 		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "env", "output-format", "invalid output format")

@@ -10,8 +10,7 @@ import (
 )
 
 var (
-	outputFormat string
-	versionInfo  VersionInfo
+	versionInfo VersionInfo
 )
 
 // VersionInfo holds version information passed from main
@@ -42,7 +41,7 @@ using Homebrew and NPM package managers.`,
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&outputFormat, "output", "o", "table", "Output format (table|json|yaml)")
+	rootCmd.PersistentFlags().StringP("output", "o", "table", "Output format (table|json|yaml)")
 	rootCmd.Flags().BoolP("version", "v", false, "Show version information")
 
 	// Add output format completion
