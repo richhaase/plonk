@@ -11,8 +11,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/lock"
-	"github.com/richhaase/plonk/internal/managers"
+	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
 )
@@ -58,37 +57,28 @@ func runStatus(cmd *cobra.Command, args []string) error {
 
 	configDir := config.GetDefaultConfigDirectory()
 
-	// Load configuration (may fail if config is invalid)
-	loader := config.NewConfigLoader(configDir)
-	cfg, configLoadErr := loader.Load()
+	// Create RuntimeState - this encapsulates all config and state management
+	runtimeState := runtime.NewRuntimeState(configDir, homeDir)
+
+	// Load configuration (may fail if config is invalid, but RuntimeState handles this gracefully)
+	configLoadErr := runtimeState.LoadConfiguration()
 	if configLoadErr != nil {
-		// For invalid config, use empty config and continue
-		cfg = &config.Config{}
+		// RuntimeState will use defaults, so we can continue
+		// This maintains the same graceful degradation behavior
 	}
 
-	// Create unified state reconciler
-	reconciler := state.NewReconciler()
-
-	// Register package provider (multi-manager) - using lock file
+	// Reconcile all domains using RuntimeState
 	ctx := context.Background()
-	packageProvider, err := createPackageProvider(ctx, configDir)
-	if err != nil {
-		return err
-	}
-	reconciler.RegisterProvider("package", packageProvider)
-
-	// Register dotfile provider
-	dotfileProvider := createDotfileProvider(homeDir, configDir, cfg)
-	reconciler.RegisterProvider("dotfile", dotfileProvider)
-
-	// Reconcile all domains
-	summary, err := reconciler.ReconcileAll(ctx)
+	results, err := runtimeState.ReconcileAll(ctx)
 	if err != nil {
 		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainState, "reconcile", "failed to reconcile state")
 	}
 
-	// Check file existence and validity
-	configPath := filepath.Join(configDir, "plonk.yaml")
+	// Convert results to summary for compatibility with existing output logic
+	summary := convertResultsToSummary(results)
+
+	// Check file existence and validity using RuntimeState
+	configPath := runtimeState.GetConfigPath()
 	lockPath := filepath.Join(configDir, "plonk.lock")
 
 	configExists := false
@@ -117,22 +107,23 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	return RenderOutput(outputData, format)
 }
 
-// createPackageProvider creates a multi-manager package provider using lock file
-func createPackageProvider(ctx context.Context, configDir string) (*state.MultiManagerPackageProvider, error) {
-	// Create lock file adapter
-	lockService := lock.NewYAMLLockService(configDir)
-	lockAdapter := lock.NewLockFileAdapter(lockService)
+// convertResultsToSummary converts RuntimeState results to state.Summary for output compatibility
+func convertResultsToSummary(results map[string]state.Result) state.Summary {
+	summary := state.Summary{
+		TotalManaged:   0,
+		TotalMissing:   0,
+		TotalUntracked: 0,
+		Results:        make([]state.Result, 0, len(results)),
+	}
 
-	// Create package provider using registry
-	registry := managers.NewManagerRegistry()
-	return registry.CreateMultiProvider(ctx, lockAdapter)
-}
+	for _, result := range results {
+		summary.TotalManaged += len(result.Managed)
+		summary.TotalMissing += len(result.Missing)
+		summary.TotalUntracked += len(result.Untracked)
+		summary.Results = append(summary.Results, result)
+	}
 
-// createDotfileProvider creates a dotfile provider
-func createDotfileProvider(homeDir string, configDir string, cfg *config.Config) *state.DotfileProvider {
-	configAdapter := config.NewConfigAdapter(cfg)
-	dotfileConfigAdapter := config.NewStateDotfileConfigAdapter(configAdapter)
-	return state.NewDotfileProvider(homeDir, configDir, dotfileConfigAdapter)
+	return summary
 }
 
 // Removed - using config.ConfigAdapter instead

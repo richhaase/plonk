@@ -251,7 +251,7 @@ func (h *HomebrewManager) getInstalledPackageInfo(ctx context.Context, name stri
 	result := strings.TrimSpace(string(output))
 	if result == "" || result == "[]" {
 		return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
-			fmt.Sprintf("package '%s' not found", name))
+			fmt.Sprintf("package '%s' not found", name)).WithSuggestionMessage(fmt.Sprintf("Search available packages: brew search %s", name))
 	}
 
 	// Parse JSON output - homebrew returns an array
@@ -281,7 +281,7 @@ func (h *HomebrewManager) getAvailablePackageInfo(ctx context.Context, name stri
 		if exitError, ok := err.(*exec.ExitError); ok {
 			if exitError.ExitCode() == 1 {
 				return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
-					fmt.Sprintf("package '%s' not found", name))
+					fmt.Sprintf("package '%s' not found", name)).WithSuggestionMessage(fmt.Sprintf("Search available packages: brew search %s", name))
 			}
 		}
 		return nil, errors.Wrap(err, errors.ErrCommandExecution, errors.DomainPackages, "info",
@@ -291,7 +291,7 @@ func (h *HomebrewManager) getAvailablePackageInfo(ctx context.Context, name stri
 	result := strings.TrimSpace(string(output))
 	if result == "" || result == "[]" {
 		return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
-			fmt.Sprintf("package '%s' not found", name))
+			fmt.Sprintf("package '%s' not found", name)).WithSuggestionMessage(fmt.Sprintf("Search available packages: brew search %s", name))
 	}
 
 	// Parse JSON output

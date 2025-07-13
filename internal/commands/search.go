@@ -161,7 +161,7 @@ func searchWithDefaultManager(ctx context.Context, packageName string, defaultMa
 	// Search default manager first
 	defaultMgr, exists := availableManagers[defaultManager]
 	if !exists {
-		return SearchOutput{}, errors.NewError(errors.ErrManagerUnavailable, errors.DomainPackages, "check", fmt.Sprintf("default manager '%s' is not available", defaultManager))
+		return SearchOutput{}, errors.NewError(errors.ErrManagerUnavailable, errors.DomainPackages, "check", fmt.Sprintf("default manager '%s' is not available", defaultManager)).WithSuggestionMessage(getManagerInstallSuggestion(defaultManager))
 	}
 
 	results, err := defaultMgr.Search(ctx, packageName)

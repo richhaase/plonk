@@ -292,7 +292,7 @@ func (n *NpmManager) getInstalledPackageInfo(ctx context.Context, name string) (
 	result := strings.TrimSpace(string(output))
 	if result == "" || result == "{}" {
 		return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
-			fmt.Sprintf("installed package '%s' not found", name))
+			fmt.Sprintf("installed package '%s' not found", name)).WithSuggestionMessage(fmt.Sprintf("Search available packages: npm search %s", name))
 	}
 
 	// Parse JSON output to get version
@@ -329,7 +329,7 @@ func (n *NpmManager) getPackageView(ctx context.Context, name string) (*PackageI
 		if exitError, ok := err.(*exec.ExitError); ok {
 			if exitError.ExitCode() == 1 {
 				return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
-					fmt.Sprintf("package '%s' not found", name))
+					fmt.Sprintf("package '%s' not found", name)).WithSuggestionMessage(fmt.Sprintf("Search available packages: npm search %s", name))
 			}
 		}
 		return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", name,
@@ -339,7 +339,7 @@ func (n *NpmManager) getPackageView(ctx context.Context, name string) (*PackageI
 	result := strings.TrimSpace(string(output))
 	if result == "" || result == "{}" {
 		return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
-			fmt.Sprintf("package '%s' not found", name))
+			fmt.Sprintf("package '%s' not found", name)).WithSuggestionMessage(fmt.Sprintf("Search available packages: npm search %s", name))
 	}
 
 	// Parse JSON output

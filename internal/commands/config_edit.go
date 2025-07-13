@@ -115,7 +115,8 @@ func openEditor(editor, filepath string) error {
 	// Split editor command in case it has arguments
 	parts := strings.Fields(editor)
 	if len(parts) == 0 {
-		return fmt.Errorf("no editor specified")
+		return errors.NewError(errors.ErrInvalidInput, errors.DomainCommands, "edit",
+			"no editor specified").WithSuggestionMessage("Set EDITOR environment variable or specify editor with --editor flag")
 	}
 
 	cmd := exec.Command(parts[0], append(parts[1:], filepath)...)
@@ -131,7 +132,8 @@ func validateEditedConfig(configPath string) error {
 	// Read config file
 	content, err := os.ReadFile(configPath)
 	if err != nil {
-		return fmt.Errorf("failed to read config file: %w", err)
+		return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "validate",
+			"failed to read config file").WithMetadata("path", configPath)
 	}
 
 	// Validate configuration
@@ -151,7 +153,8 @@ func validateEditedConfig(configPath string) error {
 			}
 		}
 
-		return fmt.Errorf("%s", errorMsg.String())
+		return errors.NewError(errors.ErrConfigValidation, errors.DomainConfig, "validate",
+			"configuration validation failed").WithMetadata("path", configPath).WithMetadata("errorCount", len(result.Errors)).WithSuggestionMessage("Fix the errors shown above and try again")
 	}
 
 	// Show warnings if any

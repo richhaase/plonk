@@ -84,15 +84,25 @@ func installPackages(cmd *cobra.Command, packageNames []string, flags *SimpleFla
 		}
 	}
 
-	// Process packages sequentially
-	results := make([]operations.OperationResult, 0, len(packageNames))
+	// Create item processor for package installation
+	processor := operations.PackageProcessor(
+		func(ctx context.Context, packageName, mgr string) operations.OperationResult {
+			return installSinglePackage(configDir, lockService, packageName, mgr, flags.DryRun, flags.Force)
+		},
+		manager,
+	)
 
-	for _, packageName := range packageNames {
-		result := installSinglePackage(configDir, lockService, packageName, manager, flags.DryRun, flags.Force)
-		results = append(results, result)
+	// Configure batch processing options
+	options := operations.BatchProcessorOptions{
+		ItemType:               "package",
+		Operation:              "install",
+		ShowIndividualProgress: flags.Verbose || flags.DryRun, // Show progress in verbose or dry-run mode
+		Timeout:                5 * time.Minute,               // Install timeout
+		ContinueOnError:        nil,                           // Use default (true) - continue on individual failures
 	}
 
-	return results, nil
+	// Use standard batch workflow
+	return operations.StandardBatchWorkflow(context.Background(), packageNames, processor, options)
 }
 
 // installSinglePackage installs a single package
@@ -137,7 +147,7 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 	}
 	if !available {
 		result.Status = "failed"
-		result.Error = errors.NewError(errors.ErrManagerUnavailable, errors.DomainPackages, "install", fmt.Sprintf("package manager '%s' is not available", manager))
+		result.Error = errors.NewError(errors.ErrManagerUnavailable, errors.DomainPackages, "install", fmt.Sprintf("package manager '%s' is not available", manager)).WithSuggestionMessage(getManagerInstallSuggestion(manager))
 		return result
 	}
 
@@ -151,7 +161,7 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 	err = lockService.AddPackage(manager, packageName, version)
 	if err != nil {
 		result.Status = "failed"
-		result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainPackages, "install", packageName, "failed to add package to lock file")
+		result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainPackages, "install", packageName, "failed to add package to lock file").WithMetadata("manager", manager).WithMetadata("version", version)
 		return result
 	}
 
@@ -179,20 +189,14 @@ type PackageInstallSummary struct {
 	Failed  int `json:"failed" yaml:"failed"`
 }
 
-// calculatePackageSummary calculates summary from results
+// calculatePackageSummary calculates summary from results using generic operations summary
 func calculatePackageSummary(results []operations.OperationResult) PackageInstallSummary {
-	summary := PackageInstallSummary{}
-	for _, result := range results {
-		switch result.Status {
-		case "added", "would-add":
-			summary.Added++
-		case "skipped":
-			summary.Skipped++
-		case "failed":
-			summary.Failed++
-		}
+	genericSummary := operations.CalculateSummary(results)
+	return PackageInstallSummary{
+		Added:   genericSummary.Added,
+		Skipped: genericSummary.Skipped,
+		Failed:  genericSummary.Failed,
 	}
-	return summary
 }
 
 // TableOutput generates human-friendly output

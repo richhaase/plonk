@@ -261,36 +261,24 @@ func getMetadataString(result operations.OperationResult, key string) string {
 	return ""
 }
 
-// calculateUninstallSummary calculates summary from uninstall results
+// calculateUninstallSummary calculates summary from uninstall results using generic operations summary
 func calculateUninstallSummary(results []operations.OperationResult) PackageUninstallSummary {
-	summary := PackageUninstallSummary{}
-	for _, result := range results {
-		switch result.Status {
-		case "removed", "would-remove":
-			summary.Removed++
-		case "skipped":
-			summary.Skipped++
-		case "failed":
-			summary.Failed++
-		}
+	genericSummary := operations.CalculateSummary(results)
+	return PackageUninstallSummary{
+		Removed: genericSummary.Removed,
+		Skipped: genericSummary.Skipped,
+		Failed:  genericSummary.Failed,
 	}
-	return summary
 }
 
-// calculateDotfileRemovalSummary calculates summary from dotfile removal results
+// calculateDotfileRemovalSummary calculates summary from dotfile removal results using generic operations summary
 func calculateDotfileRemovalSummary(results []operations.OperationResult) DotfileRemovalSummary {
-	summary := DotfileRemovalSummary{}
-	for _, result := range results {
-		switch result.Status {
-		case "unlinked", "would-unlink":
-			summary.Removed++
-		case "skipped":
-			summary.Skipped++
-		case "failed":
-			summary.Failed++
-		}
+	genericSummary := operations.CalculateSummary(results)
+	return DotfileRemovalSummary{
+		Removed: genericSummary.Removed + genericSummary.Unlinked, // Both unlinked and removed count as removed for dotfiles
+		Skipped: genericSummary.Skipped,
+		Failed:  genericSummary.Failed,
 	}
-	return summary
 }
 
 // generateActionMessage generates a human-readable action message

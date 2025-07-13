@@ -132,7 +132,7 @@ func (c *CargoManager) Info(ctx context.Context, name string) (*PackageInfo, err
 
 	scanner := bufio.NewScanner(strings.NewReader(string(out)))
 	if !scanner.Scan() {
-		return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info", fmt.Sprintf("package '%s' not found", name))
+		return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info", fmt.Sprintf("package '%s' not found", name)).WithSuggestionMessage(fmt.Sprintf("Search available packages: cargo search %s", name))
 	}
 
 	line := scanner.Text()
@@ -143,7 +143,7 @@ func (c *CargoManager) Info(ctx context.Context, name string) (*PackageInfo, err
 
 	packageName := strings.TrimSpace(fields[0])
 	if packageName != name {
-		return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info", fmt.Sprintf("package '%s' not found", name))
+		return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info", fmt.Sprintf("package '%s' not found", name)).WithSuggestionMessage(fmt.Sprintf("Search available packages: cargo search %s", name))
 	}
 
 	var description string

@@ -6,6 +6,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
@@ -73,15 +74,24 @@ func uninstallPackages(cmd *cobra.Command, packageNames []string, flags *SimpleF
 	// Initialize lock file service
 	lockService := lock.NewYAMLLockService(configDir)
 
-	// Process packages sequentially
-	results := make([]operations.OperationResult, 0, len(packageNames))
+	// Create item processor for package uninstallation
+	processor := operations.SimpleProcessor(
+		func(ctx context.Context, packageName string) operations.OperationResult {
+			return uninstallSinglePackage(configDir, lockService, packageName, flags.DryRun, uninstallFlag)
+		},
+	)
 
-	for _, packageName := range packageNames {
-		result := uninstallSinglePackage(configDir, lockService, packageName, flags.DryRun, uninstallFlag)
-		results = append(results, result)
+	// Configure batch processing options
+	options := operations.BatchProcessorOptions{
+		ItemType:               "package",
+		Operation:              "uninstall",
+		ShowIndividualProgress: flags.Verbose || flags.DryRun, // Show progress in verbose or dry-run mode
+		Timeout:                3 * time.Minute,               // Uninstall timeout (shorter than install)
+		ContinueOnError:        nil,                           // Use default (true) - continue on individual failures
 	}
 
-	return results, nil
+	// Use standard batch workflow
+	return operations.StandardBatchWorkflow(context.Background(), packageNames, processor, options)
 }
 
 // uninstallSinglePackage removes a single package
@@ -96,7 +106,7 @@ func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService,
 
 	if !found {
 		result.Status = "skipped"
-		result.Error = errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "find", fmt.Sprintf("package '%s' not found in lock file", packageName))
+		result.Error = errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "find", fmt.Sprintf("package '%s' not found in lock file", packageName)).WithSuggestionMessage(getPackageNotFoundSuggestion(packageName))
 		return result
 	}
 
@@ -109,7 +119,7 @@ func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService,
 	err := lockService.RemovePackage(managerName, packageName)
 	if err != nil {
 		result.Status = "failed"
-		result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainPackages, "remove-lock", packageName, "failed to remove package from lock file")
+		result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainPackages, "remove-lock", packageName, "failed to remove package from lock file").WithMetadata("manager", managerName)
 		return result
 	}
 
@@ -118,7 +128,7 @@ func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService,
 		err := uninstallPackageFromSystem(managerName, packageName)
 		if err != nil {
 			result.Status = "partially-removed"
-			result.Error = errors.WrapWithItem(err, errors.ErrPackageUninstall, errors.DomainPackages, "uninstall", packageName, "removed from config but failed to uninstall")
+			result.Error = errors.WrapWithItem(err, errors.ErrPackageUninstall, errors.DomainPackages, "uninstall", packageName, "removed from config but failed to uninstall").WithMetadata("manager", managerName)
 			return result
 		}
 	}
@@ -158,7 +168,7 @@ func uninstallPackageFromSystem(managerName, packageName string) error {
 	}
 	if !available {
 		return errors.NewError(errors.ErrManagerUnavailable, errors.DomainPackages, "uninstall",
-			"manager '"+managerName+"' is not available")
+			"manager '"+managerName+"' is not available").WithSuggestionMessage(getManagerInstallSuggestion(managerName))
 	}
 
 	// Uninstall the package

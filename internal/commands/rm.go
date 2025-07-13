@@ -6,6 +6,7 @@ package commands
 import (
 	"context"
 	"os"
+	"time"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
@@ -60,14 +61,24 @@ func runRm(cmd *cobra.Command, args []string) error {
 		// Load config using LoadConfigWithDefaults for consistent zero-config behavior
 		cfg := config.LoadConfigWithDefaults(configDir)
 
-		// Process dotfiles
-		results := make([]operations.OperationResult, 0, len(args))
-		for _, dotfilePath := range args {
-			result := removeSingleDotfile(homeDir, configDir, cfg, dotfilePath, flags.DryRun)
-			results = append(results, result)
+		// Create item processor for dotfile removal
+		processor := operations.SimpleProcessor(
+			func(ctx context.Context, dotfilePath string) operations.OperationResult {
+				return removeSingleDotfile(homeDir, configDir, cfg, dotfilePath, flags.DryRun)
+			},
+		)
+
+		// Configure batch processing options
+		options := operations.BatchProcessorOptions{
+			ItemType:               "dotfile",
+			Operation:              "remove",
+			ShowIndividualProgress: flags.Verbose || flags.DryRun, // Show progress in verbose or dry-run mode
+			Timeout:                2 * time.Minute,               // Dotfile removal timeout
+			ContinueOnError:        nil,                           // Use default (true) - continue on individual failures
 		}
 
-		return results, nil
+		// Use standard batch workflow
+		return operations.StandardBatchWorkflow(context.Background(), args, processor, options)
 	}
 
 	// Execute the pipeline

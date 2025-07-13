@@ -629,6 +629,26 @@ func loadOrCreateConfig(configDir string) (*config.Config, error) {
 	return manager.LoadOrCreate()
 }
 
+// createPackageProvider creates a multi-manager package provider using lock file
+// TODO: Replace with RuntimeState in future refactoring
+func createPackageProvider(ctx context.Context, configDir string) (*state.MultiManagerPackageProvider, error) {
+	// Create lock file adapter
+	lockService := lock.NewYAMLLockService(configDir)
+	lockAdapter := lock.NewLockFileAdapter(lockService)
+
+	// Create package provider using registry
+	registry := managers.NewManagerRegistry()
+	return registry.CreateMultiProvider(ctx, lockAdapter)
+}
+
+// createDotfileProvider creates a dotfile provider
+// TODO: Replace with RuntimeState in future refactoring
+func createDotfileProvider(homeDir string, configDir string, cfg *config.Config) *state.DotfileProvider {
+	configAdapter := config.NewConfigAdapter(cfg)
+	dotfileConfigAdapter := config.NewStateDotfileConfigAdapter(configAdapter)
+	return state.NewDotfileProvider(homeDir, configDir, dotfileConfigAdapter)
+}
+
 // addSingleDotfile processes a single dotfile path and returns results for all files processed
 func addSingleDotfile(ctx context.Context, cfg *config.Config, homeDir, configDir, dotfilePath string, dryRun bool) []operations.OperationResult {
 	// Resolve and validate dotfile path
