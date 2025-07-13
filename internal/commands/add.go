@@ -204,7 +204,7 @@ func processPackages(cmd *cobra.Command, packageNames []string, flags *CommandFl
 			return results, err
 		}
 
-		result := addSinglePackageNew(opCtx, cfg, lockService, mgr, targetManager, packageName, flags.DryRun)
+		result := addSinglePackage(opCtx, cfg, lockService, mgr, targetManager, packageName, flags.DryRun)
 		results = append(results, result)
 	}
 
@@ -248,9 +248,8 @@ func processDotfiles(cmd *cobra.Command, dotfilePaths []string, flags *CommandFl
 	return results, nil
 }
 
-// addSinglePackageNew reuses the existing package addition logic
-// TODO: Remove "New" suffix when pkg_add.go is removed in later phase
-func addSinglePackageNew(ctx context.Context, cfg *config.Config, lockService *lock.YAMLLockService, mgr managers.PackageManager, targetManager string, packageName string, dryRun bool) operations.OperationResult {
+// addSinglePackage reuses the existing package addition logic
+func addSinglePackage(ctx context.Context, cfg *config.Config, lockService *lock.YAMLLockService, mgr managers.PackageManager, targetManager string, packageName string, dryRun bool) operations.OperationResult {
 	result := operations.OperationResult{
 		Name:    packageName,
 		Manager: targetManager,

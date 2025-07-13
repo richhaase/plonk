@@ -193,7 +193,7 @@ func removeSinglePackage(configDir string, lockService *lock.YAMLLockService, pa
 	}
 
 	// Find package in lock file
-	managerName, found := findPackageInLockFileNew(lockService, packageName)
+	managerName, found := findPackageInLockFile(lockService, packageName)
 	result.Manager = managerName
 
 	if !found {
@@ -273,9 +273,8 @@ func removeSingleDotfile(homeDir, configDir string, cfg *config.Config, dotfileP
 
 // Helper functions
 
-// findPackageInLockFileNew finds which manager manages a package (reuse existing logic)
-// TODO: Remove "New" suffix when pkg_remove.go is removed in later phase
-func findPackageInLockFileNew(lockService *lock.YAMLLockService, packageName string) (string, bool) {
+// findPackageInLockFile finds which manager manages a package (reuse existing logic)
+func findPackageInLockFile(lockService *lock.YAMLLockService, packageName string) (string, bool) {
 	managers := []string{"homebrew", "npm", "cargo"}
 
 	for _, manager := range managers {

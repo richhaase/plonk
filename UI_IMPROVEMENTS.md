@@ -15,11 +15,11 @@
 - ✅ `link/unlink`: Explicit dotfile operations
 - ✅ `dotfiles`: Dotfile-specific listing
 
-**Phase 3: Workflow Commands** 🚧 **PENDING**
-- ⏳ `sync`: Rename from `apply`
-- ⏳ `install`: Add + sync workflow
-- ⏳ Enhanced completion system
-- ⏳ Documentation updates
+**Phase 3: Workflow Commands** ✅ **COMPLETE** (Committed: e4e2296)
+- ✅ `sync`: Rename from `apply` with selective sync options
+- ✅ `install`: Add + sync workflow for one-command operations
+- ✅ Enhanced completion system with intelligent detection
+- ✅ Complete documentation overhaul (CLI.md, README.md)
 
 ## **🎯 CURRENT WORKING COMMANDS**
 
@@ -447,13 +447,13 @@ This migration maintains all existing functionality while dramatically improving
 - Zero-argument status (`plonk` → show status)
 - Backward compatibility maintained
 
-**🚧 REMAINING (Phase 3):**
-- `sync` command (rename from `apply`)
-- `install` command (add + sync workflow)
-- Enhanced completion system updates
-- Documentation updates
+**✅ ALL PHASES COMPLETE:**
+- ✅ CLI 2.0 migration fully implemented
+- ✅ Legacy commands removed (breaking change)
+- ✅ 50-60% typing reduction achieved
+- ✅ Documentation updated for new command structure
 
-**Current Status:** CLI 2.0 is **fully functional** for daily use with dramatic UX improvements! 🚀
+**Current Status:** CLI 2.0 is **production ready** with dramatic UX improvements! 🚀
 
 ## **Context Detection Edge Cases**
 
