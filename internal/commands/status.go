@@ -59,7 +59,8 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	configDir := config.GetDefaultConfigDirectory()
 
 	// Load configuration (may fail if config is invalid)
-	cfg, configLoadErr := config.LoadConfig(configDir)
+	loader := config.NewConfigLoader(configDir)
+	cfg, configLoadErr := loader.Load()
 	if configLoadErr != nil {
 		// For invalid config, use empty config and continue
 		cfg = &config.Config{}

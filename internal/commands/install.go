@@ -76,8 +76,8 @@ func installPackages(cmd *cobra.Command, packageNames []string, flags *SimpleFla
 	// Get manager - default to configured default or homebrew
 	manager := flags.Manager
 	if manager == "" {
-		cfg, err := config.LoadConfig(configDir)
-		if err == nil && cfg.DefaultManager != nil && *cfg.DefaultManager != "" {
+		cfg := config.LoadConfigWithDefaults(configDir)
+		if cfg.DefaultManager != nil && *cfg.DefaultManager != "" {
 			manager = *cfg.DefaultManager
 		} else {
 			manager = "homebrew" // fallback default

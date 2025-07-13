@@ -625,7 +625,8 @@ func completeDotfilePaths(cmd *cobra.Command, args []string, toComplete string) 
 
 // loadOrCreateConfig loads existing config or creates a new one
 func loadOrCreateConfig(configDir string) (*config.Config, error) {
-	return config.GetOrCreateConfig(configDir)
+	manager := config.NewConfigManager(configDir)
+	return manager.LoadOrCreate()
 }
 
 // addSingleDotfile processes a single dotfile path and returns results for all files processed
@@ -974,12 +975,8 @@ func runDotList(cmd *cobra.Command, args []string) error {
 		return errors.Wrap(err, errors.ErrFilePermission, errors.DomainCommands, "dotfiles", "failed to get home directory")
 	}
 
-	// Load configuration
-	cfg, err := config.LoadConfig(configDir)
-	if err != nil {
-		// Use empty config if not found
-		cfg = &config.Config{}
-	}
+	// Load configuration using LoadOrDefault for consistent zero-config behavior
+	cfg := config.LoadConfigWithDefaults(configDir)
 
 	// Use the same state reconciliation system as status command
 	reconciler := state.NewReconciler()
