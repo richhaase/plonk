@@ -79,13 +79,28 @@ func runDotList(cmd *cobra.Command, args []string) error {
 	// Build items list based on verbose flag
 	var filteredItems []state.Item
 
+	// Filter out directories - only show files
+	filterDirectories := func(items []state.Item) []state.Item {
+		var fileItems []state.Item
+		for _, item := range items {
+			// Check if this is a directory by looking at the path
+			if item.Path != "" {
+				if info, err := os.Stat(item.Path); err == nil && info.IsDir() {
+					continue // Skip directories
+				}
+			}
+			fileItems = append(fileItems, item)
+		}
+		return fileItems
+	}
+
 	// Always show missing first (needs action), then managed
-	filteredItems = append(filteredItems, result.Missing...)
-	filteredItems = append(filteredItems, result.Managed...)
+	filteredItems = append(filteredItems, filterDirectories(result.Missing)...)
+	filteredItems = append(filteredItems, filterDirectories(result.Managed)...)
 
 	// Only show untracked files if verbose flag is set
 	if verboseOutput {
-		filteredItems = append(filteredItems, result.Untracked...)
+		filteredItems = append(filteredItems, filterDirectories(result.Untracked)...)
 	}
 
 	// Sort items alphabetically by target path for consistent display

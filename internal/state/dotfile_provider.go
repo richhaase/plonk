@@ -95,6 +95,14 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 	// Get ignore patterns
 	ignorePatterns := d.configLoader.GetIgnorePatterns()
 
+	// Create skip context for home directory scanning (skip config dir only)
+	skipCtx := &SkipContext{
+		ConfigDir:         d.configDir,
+		FilesOnlyMode:     false, // Allow directories in general GetActualItems
+		SkipConfigDir:     true,  // Skip config directory when scanning home
+		AllowConfigAccess: false, // Don't allow config access in this context
+	}
+
 	// Get dotfiles from home directory
 	dotfiles, err := d.manager.ListDotfiles(d.homeDir)
 	if err != nil {
@@ -110,7 +118,7 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 			continue // Skip files we can't stat
 		}
 
-		if shouldSkipDotfile(dotfile, info, ignorePatterns) {
+		if shouldSkipDotfile(dotfile, info, ignorePatterns, skipCtx) {
 			continue // Skip ignored files
 		}
 
@@ -145,7 +153,7 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 				}
 
 				// Check if file should be ignored
-				if shouldSkipDotfile(homeRelPath, info, ignorePatterns) {
+				if shouldSkipDotfile(homeRelPath, info, ignorePatterns, skipCtx) {
 					return nil
 				}
 
@@ -221,7 +229,7 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 				}
 
 				// Check if file should be ignored
-				if shouldSkipDotfile(relPath, info, ignorePatterns) {
+				if shouldSkipDotfile(relPath, info, ignorePatterns, skipCtx) {
 					return nil
 				}
 
@@ -262,7 +270,7 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 			if err != nil {
 				continue // Skip files we can't stat
 			}
-			if shouldSkipDotfile(relPath, info, ignorePatterns) {
+			if shouldSkipDotfile(relPath, info, ignorePatterns, skipCtx) {
 				continue // Skip ignored files
 			}
 
@@ -345,10 +353,40 @@ func (d *DotfileProvider) expandConfigDirectory(sourceDir, destDir string) ([]Co
 	return items, nil
 }
 
-// shouldSkipDotfile determines if a file/directory should be skipped based on ignore patterns
-func shouldSkipDotfile(relPath string, info os.FileInfo, ignorePatterns []string) bool {
+// SkipContext provides context for filtering decisions
+type SkipContext struct {
+	ConfigDir         string
+	FilesOnlyMode     bool
+	SkipConfigDir     bool // When true, skip the config directory entirely (for home scanning)
+	AllowConfigAccess bool // When true, allow access to config directory (for config reading)
+}
+
+// shouldSkipDotfile determines if a file/directory should be skipped based on ignore patterns and context
+func shouldSkipDotfile(relPath string, info os.FileInfo, ignorePatterns []string, ctx *SkipContext) bool {
 	// Always skip plonk config file
 	if relPath == "plonk.yaml" {
+		return true
+	}
+
+	// Skip plonk config directory when scanning home directory
+	if ctx != nil && ctx.SkipConfigDir && ctx.ConfigDir != "" {
+		// Extract the relative path pattern from the config directory
+		// e.g., "/home/user/.config/plonk" -> ".config/plonk"
+		if strings.Contains(ctx.ConfigDir, "/.config/plonk") {
+			configPattern := ".config/plonk"
+			if relPath == configPattern || strings.HasPrefix(relPath, configPattern+"/") {
+				return true
+			}
+		}
+		// Also handle other config directory patterns
+		configBasename := filepath.Base(ctx.ConfigDir)
+		if strings.HasSuffix(relPath, configBasename) || strings.Contains(relPath, configBasename+"/") {
+			return true
+		}
+	}
+
+	// Skip directories when in files-only mode
+	if ctx != nil && ctx.FilesOnlyMode && info.IsDir() {
 		return true
 	}
 

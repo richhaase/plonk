@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 // MockDotfileConfigLoader implements DotfileConfigLoader for testing
@@ -437,3 +438,143 @@ func TestDotfileProvider_DestinationToName(t *testing.T) {
 		}
 	}
 }
+
+func TestShouldSkipDotfile(t *testing.T) {
+	// Create test FileInfo objects for directories and files
+	dirInfo := &mockFileInfo{name: "test-dir", isDir: true}
+	fileInfo := &mockFileInfo{name: "test-file", isDir: false}
+
+	tests := []struct {
+		name           string
+		relPath        string
+		info           os.FileInfo
+		ignorePatterns []string
+		ctx            *SkipContext
+		expected       bool
+		description    string
+	}{
+		{
+			name:        "skip plonk.yaml",
+			relPath:     "plonk.yaml",
+			info:        fileInfo,
+			ctx:         nil,
+			expected:    true,
+			description: "should always skip plonk.yaml",
+		},
+		{
+			name:        "skip config directory",
+			relPath:     ".config/plonk",
+			info:        dirInfo,
+			ctx:         &SkipContext{ConfigDir: "/home/user/.config/plonk", SkipConfigDir: true},
+			expected:    true,
+			description: "should skip plonk config directory",
+		},
+		{
+			name:        "skip config subdirectory",
+			relPath:     ".config/plonk/subdir",
+			info:        dirInfo,
+			ctx:         &SkipContext{ConfigDir: "/home/user/.config/plonk", SkipConfigDir: true},
+			expected:    true,
+			description: "should skip plonk config subdirectories",
+		},
+		{
+			name:        "skip config file",
+			relPath:     ".config/plonk/file.txt",
+			info:        fileInfo,
+			ctx:         &SkipContext{ConfigDir: "/home/user/.config/plonk", SkipConfigDir: true},
+			expected:    true,
+			description: "should skip files in plonk config directory",
+		},
+		{
+			name:        "don't skip similar named directory",
+			relPath:     ".config/plonk-backup",
+			info:        dirInfo,
+			ctx:         &SkipContext{ConfigDir: "/home/user/.config/plonk", SkipConfigDir: true},
+			expected:    false,
+			description: "should not skip directories with similar names",
+		},
+		{
+			name:        "allow config directory when not skipping",
+			relPath:     ".config/plonk",
+			info:        dirInfo,
+			ctx:         &SkipContext{ConfigDir: "/home/user/.config/plonk", SkipConfigDir: false, AllowConfigAccess: true},
+			expected:    false,
+			description: "should allow config directory when AllowConfigAccess is true",
+		},
+		{
+			name:        "skip directory in files-only mode",
+			relPath:     ".config/nvim",
+			info:        dirInfo,
+			ctx:         &SkipContext{FilesOnlyMode: true},
+			expected:    true,
+			description: "should skip directories when in files-only mode",
+		},
+		{
+			name:        "don't skip file in files-only mode",
+			relPath:     ".config/nvim/init.lua",
+			info:        fileInfo,
+			ctx:         &SkipContext{FilesOnlyMode: true},
+			expected:    false,
+			description: "should not skip files when in files-only mode",
+		},
+		{
+			name:           "skip by ignore pattern exact match",
+			relPath:        ".DS_Store",
+			info:           fileInfo,
+			ignorePatterns: []string{".DS_Store", "*.tmp"},
+			ctx:            nil,
+			expected:       true,
+			description:    "should skip files matching ignore patterns exactly",
+		},
+		{
+			name:           "skip by ignore pattern glob",
+			relPath:        "backup.tmp",
+			info:           fileInfo,
+			ignorePatterns: []string{".DS_Store", "*.tmp"},
+			ctx:            nil,
+			expected:       true,
+			description:    "should skip files matching ignore glob patterns",
+		},
+		{
+			name:           "don't skip unmatched file",
+			relPath:        ".zshrc",
+			info:           fileInfo,
+			ignorePatterns: []string{".DS_Store", "*.tmp"},
+			ctx:            nil,
+			expected:       false,
+			description:    "should not skip files that don't match any patterns",
+		},
+		{
+			name:           "combined context and ignore patterns",
+			relPath:        ".config/plonk/backup.tmp",
+			info:           fileInfo,
+			ignorePatterns: []string{"*.tmp"},
+			ctx:            &SkipContext{ConfigDir: "/home/user/.config/plonk", FilesOnlyMode: true, SkipConfigDir: true},
+			expected:       true,
+			description:    "should skip when matching config directory (even if ignore pattern would also match)",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := shouldSkipDotfile(test.relPath, test.info, test.ignorePatterns, test.ctx)
+			if result != test.expected {
+				t.Errorf("shouldSkipDotfile(%s) = %v, expected %v - %s",
+					test.relPath, result, test.expected, test.description)
+			}
+		})
+	}
+}
+
+// mockFileInfo implements os.FileInfo for testing
+type mockFileInfo struct {
+	name  string
+	isDir bool
+}
+
+func (m *mockFileInfo) Name() string       { return m.name }
+func (m *mockFileInfo) Size() int64        { return 0 }
+func (m *mockFileInfo) Mode() os.FileMode  { return 0644 }
+func (m *mockFileInfo) ModTime() time.Time { return time.Time{} }
+func (m *mockFileInfo) IsDir() bool        { return m.isDir }
+func (m *mockFileInfo) Sys() interface{}   { return nil }
