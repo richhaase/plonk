@@ -50,39 +50,19 @@ func init() {
 }
 
 func runInstall(cmd *cobra.Command, args []string) error {
-	// Parse flags
-	flags, err := ParseSimpleFlags(cmd)
-	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "install", "flags", "invalid flag combination")
-	}
-
-	// Parse output format
-	format, err := ParseOutputFormat(flags.Output)
-	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "install", "output-format", "invalid output format")
-	}
-
-	// Process packages
-	results, err := installPackages(cmd, args, flags)
+	// Create command pipeline
+	pipeline, err := NewCommandPipeline(cmd, "package")
 	if err != nil {
 		return err
 	}
 
-	// Show progress and summary
-	reporter := operations.NewProgressReporter("package", format == OutputTable)
-	for _, result := range results {
-		reporter.ShowItemProgress(result)
+	// Define the processor function
+	processor := func(ctx context.Context, args []string, flags *SimpleFlags) ([]operations.OperationResult, error) {
+		return installPackages(cmd, args, flags)
 	}
 
-	// Handle output based on format
-	if format == OutputTable {
-		reporter.ShowBatchSummary(results)
-	} else {
-		return renderPackageResults(results, format)
-	}
-
-	// Determine exit code
-	return operations.DetermineExitCode(results, errors.DomainCommands, "install")
+	// Execute the pipeline
+	return pipeline.ExecuteWithResults(context.Background(), processor, args)
 }
 
 // installPackages handles package installations
@@ -183,16 +163,6 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 func getPackageManager(manager string) (managers.PackageManager, error) {
 	registry := managers.NewManagerRegistry()
 	return registry.GetManager(manager)
-}
-
-// renderPackageResults renders package results in structured format
-func renderPackageResults(results []operations.OperationResult, format OutputFormat) error {
-	output := PackageInstallOutput{
-		TotalPackages: len(results),
-		Results:       results,
-		Summary:       calculatePackageSummary(results),
-	}
-	return RenderOutput(output, format)
 }
 
 // PackageInstallOutput represents the output for package installation

@@ -48,42 +48,21 @@ func init() {
 }
 
 func runUninstall(cmd *cobra.Command, args []string) error {
-	// Parse flags
-	flags, err := ParseSimpleFlags(cmd)
-	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "uninstall", "flags", "invalid flag combination")
-	}
-
-	// Get additional flags specific to uninstall
-	uninstallFlag, _ := cmd.Flags().GetBool("uninstall")
-
-	// Parse output format
-	format, err := ParseOutputFormat(flags.Output)
-	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "uninstall", "output-format", "invalid output format")
-	}
-
-	// Process packages
-	results, err := uninstallPackages(cmd, args, flags, uninstallFlag)
+	// Create command pipeline for uninstall operations
+	pipeline, err := NewCommandPipeline(cmd, "uninstall")
 	if err != nil {
 		return err
 	}
 
-	// Show progress and summary
-	reporter := operations.NewProgressReporterForOperation("remove", "package", format == OutputTable)
-	for _, result := range results {
-		reporter.ShowItemProgress(result)
+	// Define the processor function
+	processor := func(ctx context.Context, args []string, flags *SimpleFlags) ([]operations.OperationResult, error) {
+		// Get additional flags specific to uninstall
+		uninstallFlag, _ := cmd.Flags().GetBool("uninstall")
+		return uninstallPackages(cmd, args, flags, uninstallFlag)
 	}
 
-	// Handle output based on format
-	if format == OutputTable {
-		reporter.ShowBatchSummary(results)
-	} else {
-		return renderUninstallResults(results, format)
-	}
-
-	// Determine exit code
-	return operations.DetermineExitCode(results, errors.DomainCommands, "uninstall")
+	// Execute the pipeline
+	return pipeline.ExecuteWithResults(context.Background(), processor, args)
 }
 
 // uninstallPackages handles package uninstallations
@@ -186,16 +165,6 @@ func uninstallPackageFromSystem(managerName, packageName string) error {
 	return mgr.Uninstall(ctx, packageName)
 }
 
-// renderUninstallResults renders uninstall results in structured format
-func renderUninstallResults(results []operations.OperationResult, format OutputFormat) error {
-	output := PackageUninstallOutput{
-		TotalPackages: len(results),
-		Results:       results,
-		Summary:       calculateUninstallSummary(results),
-	}
-	return RenderOutput(output, format)
-}
-
 // PackageUninstallOutput represents the output for package uninstallation
 type PackageUninstallOutput struct {
 	TotalPackages int                          `json:"total_packages" yaml:"total_packages"`
@@ -208,22 +177,6 @@ type PackageUninstallSummary struct {
 	Removed int `json:"removed" yaml:"removed"`
 	Skipped int `json:"skipped" yaml:"skipped"`
 	Failed  int `json:"failed" yaml:"failed"`
-}
-
-// calculateUninstallSummary calculates summary from results
-func calculateUninstallSummary(results []operations.OperationResult) PackageUninstallSummary {
-	summary := PackageUninstallSummary{}
-	for _, result := range results {
-		switch result.Status {
-		case "removed", "would-remove":
-			summary.Removed++
-		case "skipped":
-			summary.Skipped++
-		case "failed":
-			summary.Failed++
-		}
-	}
-	return summary
 }
 
 // TableOutput generates human-friendly output

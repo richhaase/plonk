@@ -4,6 +4,12 @@
 package commands
 
 import (
+	"context"
+	"os"
+
+	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/operations"
 	"github.com/spf13/cobra"
 )
 
@@ -44,8 +50,74 @@ func init() {
 }
 
 func runAdd(cmd *cobra.Command, args []string) error {
-	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	// Create command pipeline for dotfiles
+	pipeline, err := NewSimpleCommandPipeline(cmd, "dotfile")
+	if err != nil {
+		return err
+	}
 
-	// Handle dotfiles using the existing dotfile addition logic
-	return addDotfiles(cmd, args, dryRun)
+	// Define the processor function
+	processor := func(ctx context.Context, args []string) (OutputData, error) {
+		dryRun, _ := cmd.Flags().GetBool("dry-run")
+		force, _ := cmd.Flags().GetBool("force")
+
+		// Process dotfiles and return results that can be rendered
+		results, err := addDotfilesProcessor(args, dryRun, force)
+		if err != nil {
+			return nil, err
+		}
+
+		// Convert to appropriate output format
+		if len(results) == 1 {
+			result := results[0]
+			return &DotfileAddOutput{
+				Source:      getMetadataString(result, "source"),
+				Destination: getMetadataString(result, "destination"),
+				Action:      mapStatusToAction(result.Status),
+				Path:        result.Name,
+			}, nil
+		} else {
+			return &DotfileBatchAddOutput{
+				TotalFiles: len(results),
+				AddedFiles: convertToDotfileAddOutput(results),
+				Errors:     extractErrorMessages(results),
+			}, nil
+		}
+	}
+
+	// Execute the pipeline
+	return pipeline.ExecuteWithData(context.Background(), processor, args)
+}
+
+// addDotfilesProcessor processes dotfile addition and returns operation results
+func addDotfilesProcessor(dotfilePaths []string, dryRun, force bool) ([]operations.OperationResult, error) {
+	// Get directories
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, errors.Wrap(err, errors.ErrFilePermission, errors.DomainCommands, "add", "failed to get home directory")
+	}
+
+	configDir := config.GetDefaultConfigDirectory()
+
+	// Load config for ignore patterns
+	cfg, err := loadOrCreateConfig(configDir)
+	if err != nil {
+		return nil, err
+	}
+
+	// Process dotfiles and collect results
+	return addSingleDotfiles(dotfilePaths, homeDir, configDir, cfg, dryRun, force)
+}
+
+// addSingleDotfiles processes multiple dotfile paths and returns results
+func addSingleDotfiles(dotfilePaths []string, homeDir, configDir string, cfg *config.Config, dryRun, force bool) ([]operations.OperationResult, error) {
+	var results []operations.OperationResult
+
+	for _, dotfilePath := range dotfilePaths {
+		// Process each dotfile (can result in multiple files for directories)
+		dotfileResults := addSingleDotfile(context.Background(), cfg, homeDir, configDir, dotfilePath, dryRun)
+		results = append(results, dotfileResults...)
+	}
+
+	return results, nil
 }

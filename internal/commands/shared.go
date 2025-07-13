@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/dotfiles"
@@ -17,6 +16,7 @@ import (
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/operations"
+	"github.com/richhaase/plonk/internal/paths"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
 )
@@ -628,84 +628,6 @@ func loadOrCreateConfig(configDir string) (*config.Config, error) {
 	return config.GetOrCreateConfig(configDir)
 }
 
-// addDotfiles handles adding one or more dotfiles (from dot_add.go)
-func addDotfiles(cmd *cobra.Command, dotfilePaths []string, dryRun bool) error {
-	// Parse output format
-	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := ParseOutputFormat(outputFormat)
-	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "dot-add", "output-format", "invalid output format")
-	}
-
-	// Get directories
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return errors.Wrap(err, errors.ErrFilePermission, errors.DomainCommands, "dot-add", "failed to get home directory")
-	}
-
-	configDir := config.GetDefaultConfigDirectory()
-
-	// Load config for ignore patterns
-	cfg, err := loadOrCreateConfig(configDir)
-	if err != nil {
-		return err
-	}
-
-	// Create operation context with timeout
-	opCtx, cancel := operations.CreateOperationContext(5 * time.Minute)
-	defer cancel()
-
-	// Process dotfiles sequentially
-	var results []operations.OperationResult
-	reporter := operations.NewProgressReporter("dotfile", format == OutputTable)
-
-	for _, dotfilePath := range dotfilePaths {
-		// Check for cancellation
-		if err := operations.CheckCancellation(opCtx, errors.DomainDotfiles, "add-multiple"); err != nil {
-			return err
-		}
-
-		// Process each dotfile (can result in multiple files for directories)
-		dotfileResults := addSingleDotfile(opCtx, cfg, homeDir, configDir, dotfilePath, dryRun)
-
-		// Show progress for each file processed
-		for _, result := range dotfileResults {
-			results = append(results, result)
-			reporter.ShowItemProgress(result)
-		}
-	}
-
-	// Handle output based on format
-	if format == OutputTable {
-		// Show summary for table output
-		reporter.ShowBatchSummary(results)
-	} else {
-		// For structured output, create appropriate response
-		if len(dotfilePaths) == 1 && len(results) == 1 {
-			// Single dotfile/file - use existing DotfileAddOutput format for compatibility
-			result := results[0]
-			output := DotfileAddOutput{
-				Source:      result.Metadata["source"].(string),
-				Destination: result.Metadata["destination"].(string),
-				Action:      mapStatusToAction(result.Status),
-				Path:        result.Name,
-			}
-			return RenderOutput(output, format)
-		} else {
-			// Multiple dotfiles/files - use batch output
-			batchOutput := DotfileBatchAddOutput{
-				TotalFiles: len(results),
-				AddedFiles: convertToDotfileAddOutput(results),
-				Errors:     extractErrorMessages(results),
-			}
-			return RenderOutput(batchOutput, format)
-		}
-	}
-
-	// Determine exit code
-	return operations.DetermineExitCode(results, errors.DomainDotfiles, "add-multiple")
-}
-
 // addSingleDotfile processes a single dotfile path and returns results for all files processed
 func addSingleDotfile(ctx context.Context, cfg *config.Config, homeDir, configDir, dotfilePath string, dryRun bool) []operations.OperationResult {
 	// Resolve and validate dotfile path
@@ -806,55 +728,45 @@ func addDirectoryFilesNew(ctx context.Context, cfg *config.Config, dirPath, home
 	var results []operations.OperationResult
 	ignorePatterns := cfg.Resolve().GetIgnorePatterns()
 
-	// Walk the directory tree
-	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			results = append(results, operations.OperationResult{
-				Name:   path,
-				Status: "failed",
-				Error:  errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "walk", "failed to walk directory"),
-			})
-			return nil // Continue with other files
-		}
+	// Use PathResolver to expand directory
+	resolver := paths.NewPathResolver(homeDir, configDir)
+	validator := paths.NewPathValidator(homeDir, configDir, ignorePatterns)
 
-		// Only process files, but DON'T skip directories (let Walk traverse them)
-		if !info.IsDir() {
-			// Check for cancellation
-			if ctx.Err() != nil {
-				return ctx.Err()
-			}
-
-			// Get relative path from the base directory being added
-			relPath, err := filepath.Rel(dirPath, path)
-			if err != nil {
-				results = append(results, operations.OperationResult{
-					Name:   path,
-					Status: "failed",
-					Error:  errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "relative-path", "failed to get relative path"),
-				})
-				return nil
-			}
-
-			// Check if file should be skipped
-			if shouldSkipDotfile(relPath, info, ignorePatterns) {
-				return nil
-			}
-
-			// Process each file individually
-			result := addSingleFileNew(ctx, cfg, path, homeDir, configDir, dryRun)
-			results = append(results, result)
-		}
-
-		return nil
-	})
-
+	entries, err := resolver.ExpandDirectory(dirPath)
 	if err != nil {
-		// If walk failed completely, return a single error result
 		return []operations.OperationResult{{
 			Name:   dirPath,
 			Status: "failed",
-			Error:  errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "walk", "failed to walk directory"),
+			Error:  err,
 		}}
+	}
+
+	// Process each file found in the directory
+	for _, entry := range entries {
+		// Check for cancellation
+		if ctx.Err() != nil {
+			break
+		}
+
+		// Get file info for skip checking
+		info, err := os.Stat(entry.FullPath)
+		if err != nil {
+			results = append(results, operations.OperationResult{
+				Name:   entry.FullPath,
+				Status: "failed",
+				Error:  errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "stat", "failed to get file info"),
+			})
+			continue
+		}
+
+		// Check if file should be skipped
+		if validator.ShouldSkipPath(entry.RelativePath, info) {
+			continue
+		}
+
+		// Process each file individually
+		result := addSingleFileNew(ctx, cfg, entry.FullPath, homeDir, configDir, dryRun)
+		results = append(results, result)
 	}
 
 	return results
@@ -926,94 +838,23 @@ func extractErrorMessages(results []operations.OperationResult) []string {
 
 // resolveDotfilePath resolves relative paths and validates the dotfile path
 func resolveDotfilePath(path, homeDir string) (string, error) {
-	var resolvedPath string
-
-	// Handle different path types
-	if strings.HasPrefix(path, "~/") {
-		// Expand ~ to home directory
-		resolvedPath = filepath.Join(homeDir, path[2:])
-	} else if filepath.IsAbs(path) {
-		// Already absolute path
-		resolvedPath = path
-	} else {
-		// Relative path - try to resolve relative to current working directory first
-		absPath, err := filepath.Abs(path)
-		if err != nil {
-			return "", errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "resolve", "failed to resolve path")
-		}
-
-		if _, err := os.Stat(absPath); err == nil {
-			// File exists relative to current working directory
-			resolvedPath = absPath
-		} else {
-			// Fall back to home directory
-			homeRelativePath := filepath.Join(homeDir, path)
-			if _, err := os.Stat(homeRelativePath); err == nil {
-				// File exists relative to home directory
-				resolvedPath = homeRelativePath
-			} else {
-				// Neither location has the file, use the current working directory path
-				// so the error message will be more intuitive
-				resolvedPath = absPath
-			}
-		}
-	}
-
-	// Ensure it's within the home directory
-	if !strings.HasPrefix(resolvedPath, homeDir) {
-		return "", errors.NewError(errors.ErrInvalidInput, errors.DomainDotfiles, "validate", fmt.Sprintf("dotfile must be within home directory: %s", resolvedPath))
-	}
-
-	return resolvedPath, nil
+	// Create a path resolver instance
+	resolver := paths.NewPathResolver(homeDir, config.GetDefaultConfigDirectory())
+	return resolver.ResolveDotfilePath(path)
 }
 
 // generatePaths generates source and destination paths for the dotfile
 func generatePaths(resolvedPath, homeDir string) (string, string) {
-	// Get relative path from home directory
-	relPath, err := filepath.Rel(homeDir, resolvedPath)
+	// Create a path resolver instance
+	resolver := paths.NewPathResolver(homeDir, config.GetDefaultConfigDirectory())
+	source, destination, err := resolver.GeneratePaths(resolvedPath)
 	if err != nil {
-		// Fallback to just the filename
-		relPath = filepath.Base(resolvedPath)
+		// Fallback to manual generation if there's an error
+		relPath := filepath.Base(resolvedPath)
+		destination = "~/" + relPath
+		source = config.TargetToSource(destination)
 	}
-
-	// Generate destination (always relative to home with ~ prefix)
-	destination := "~/" + relPath
-
-	// Generate source path using our naming convention
-	source := targetToSource(destination)
-
 	return source, destination
-}
-
-// targetToSource converts a target path to source path using our convention
-func targetToSource(target string) string {
-	// Use the config package implementation
-	return config.TargetToSource(target)
-}
-
-// shouldSkipDotfile uses the existing function from config package
-func shouldSkipDotfile(relPath string, info os.FileInfo, ignorePatterns []string) bool {
-	// Always skip plonk config file
-	if relPath == "plonk.yaml" {
-		return true
-	}
-
-	// Check against configured ignore patterns
-	for _, pattern := range ignorePatterns {
-		// Check exact match for file/directory name
-		if pattern == info.Name() || pattern == relPath {
-			return true
-		}
-		// Check glob pattern match
-		if matched, _ := filepath.Match(pattern, info.Name()); matched {
-			return true
-		}
-		if matched, _ := filepath.Match(pattern, relPath); matched {
-			return true
-		}
-	}
-
-	return false
 }
 
 // Shared output types from dot_add.go
