@@ -6,35 +6,21 @@ package state
 import (
 	"context"
 	"fmt"
+
+	"github.com/richhaase/plonk/internal/interfaces"
 )
 
-// Provider defines the interface for any state provider (packages, dotfiles, etc.)
-type Provider interface {
-	// Domain returns the domain name (e.g., "package", "dotfile")
-	Domain() string
+// Provider is an alias for the unified interface to maintain backward compatibility.
+// Deprecated: Use interfaces.Provider directly.
+type Provider = interfaces.Provider
 
-	// GetConfiguredItems returns items defined in configuration
-	GetConfiguredItems() ([]ConfigItem, error)
+// ConfigItem is an alias for the unified type to maintain backward compatibility.
+// Deprecated: Use interfaces.ConfigItem directly.
+type ConfigItem = interfaces.ConfigItem
 
-	// GetActualItems returns items currently present in the system
-	GetActualItems(ctx context.Context) ([]ActualItem, error)
-
-	// CreateItem creates an Item from configured and actual data
-	CreateItem(name string, state ItemState, configured *ConfigItem, actual *ActualItem) Item
-}
-
-// ConfigItem represents an item as defined in configuration
-type ConfigItem struct {
-	Name     string
-	Metadata map[string]interface{}
-}
-
-// ActualItem represents an item as it exists in the system
-type ActualItem struct {
-	Name     string
-	Path     string
-	Metadata map[string]interface{}
-}
+// ActualItem is an alias for the unified type to maintain backward compatibility.
+// Deprecated: Use interfaces.ActualItem directly.
+type ActualItem = interfaces.ActualItem
 
 // Reconciler performs state reconciliation for any provider
 type Reconciler struct {

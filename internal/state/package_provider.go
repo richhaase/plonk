@@ -6,26 +6,21 @@ package state
 import (
 	"context"
 	"fmt"
+
+	"github.com/richhaase/plonk/internal/interfaces"
 )
 
-// PackageManager defines the interface for package managers (from managers package)
-type PackageManager interface {
-	IsAvailable(ctx context.Context) (bool, error)
-	ListInstalled(ctx context.Context) ([]string, error)
-	Install(ctx context.Context, name string) error
-	Uninstall(ctx context.Context, name string) error
-	IsInstalled(ctx context.Context, name string) (bool, error)
-}
+// PackageManager is an alias for the unified interface to maintain backward compatibility.
+// Deprecated: Use interfaces.PackageManager directly.
+type PackageManager = interfaces.PackageManager
 
-// PackageConfigLoader defines how to load package configuration
-type PackageConfigLoader interface {
-	GetPackagesForManager(managerName string) ([]PackageConfigItem, error)
-}
+// PackageConfigLoader is an alias for the unified interface to maintain backward compatibility.
+// Deprecated: Use interfaces.PackageConfigLoader directly.
+type PackageConfigLoader = interfaces.PackageConfigLoader
 
-// PackageConfigItem represents a package from configuration
-type PackageConfigItem struct {
-	Name string
-}
+// PackageConfigItem is an alias for the unified type to maintain backward compatibility.
+// Deprecated: Use interfaces.PackageConfigItem directly.
+type PackageConfigItem = interfaces.PackageConfigItem
 
 // PackageProvider implements the Provider interface for package management
 type PackageProvider struct {

@@ -3,37 +3,16 @@
 
 package managers
 
-import "context"
+import "github.com/richhaase/plonk/internal/interfaces"
 
-// PackageManager defines the interface for package managers.
-// Package managers handle availability checking, listing, installing, and uninstalling packages.
-// All methods accept a context for cancellation and timeout support.
-type PackageManager interface {
-	IsAvailable(ctx context.Context) (bool, error)
-	ListInstalled(ctx context.Context) ([]string, error)
-	Install(ctx context.Context, name string) error
-	Uninstall(ctx context.Context, name string) error
-	IsInstalled(ctx context.Context, name string) (bool, error)
-	Search(ctx context.Context, query string) ([]string, error)
-	Info(ctx context.Context, name string) (*PackageInfo, error)
-	GetInstalledVersion(ctx context.Context, name string) (string, error)
-}
+// PackageManager is an alias for the unified interface to maintain backward compatibility.
+// Deprecated: Use interfaces.PackageManager directly.
+type PackageManager = interfaces.PackageManager
 
-// SearchResult represents the result of a search operation
-type SearchResult struct {
-	Package string `json:"package"`
-	Manager string `json:"manager"`
-	Found   bool   `json:"found"`
-}
+// PackageInfo is an alias for the unified type to maintain backward compatibility.
+// Deprecated: Use interfaces.PackageInfo directly.
+type PackageInfo = interfaces.PackageInfo
 
-// PackageInfo represents detailed information about a package
-type PackageInfo struct {
-	Name          string   `json:"name"`
-	Version       string   `json:"version,omitempty"`
-	Description   string   `json:"description,omitempty"`
-	Homepage      string   `json:"homepage,omitempty"`
-	Dependencies  []string `json:"dependencies,omitempty"`
-	InstalledSize string   `json:"installed_size,omitempty"`
-	Manager       string   `json:"manager"`
-	Installed     bool     `json:"installed"`
-}
+// SearchResult is an alias for the unified type to maintain backward compatibility.
+// Deprecated: Use interfaces.SearchResult directly.
+type SearchResult = interfaces.SearchResult

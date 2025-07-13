@@ -8,6 +8,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/richhaase/plonk/internal/mocks"
 	"go.uber.org/mock/gomock"
 )
 
@@ -15,8 +16,8 @@ func TestNewPackageProvider(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	manager := NewMockPackageManager(ctrl)
-	configLoader := NewMockPackageConfigLoader(ctrl)
+	manager := mocks.NewMockPackageManager(ctrl)
+	configLoader := mocks.NewMockPackageConfigLoader(ctrl)
 
 	provider := NewPackageProvider("homebrew", manager, configLoader)
 
@@ -40,8 +41,8 @@ func TestPackageProvider_Domain(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	manager := NewMockPackageManager(ctrl)
-	configLoader := NewMockPackageConfigLoader(ctrl)
+	manager := mocks.NewMockPackageManager(ctrl)
+	configLoader := mocks.NewMockPackageConfigLoader(ctrl)
 	provider := NewPackageProvider("homebrew", manager, configLoader)
 
 	domain := provider.Domain()
@@ -54,8 +55,8 @@ func TestPackageProvider_GetConfiguredItems_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	manager := NewMockPackageManager(ctrl)
-	configLoader := NewMockPackageConfigLoader(ctrl)
+	manager := mocks.NewMockPackageManager(ctrl)
+	configLoader := mocks.NewMockPackageConfigLoader(ctrl)
 
 	// Set up expectations
 	configLoader.EXPECT().GetPackagesForManager("homebrew").Return([]PackageConfigItem{
@@ -100,8 +101,8 @@ func TestPackageProvider_GetConfiguredItems_Error(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	manager := NewMockPackageManager(ctrl)
-	configLoader := NewMockPackageConfigLoader(ctrl)
+	manager := mocks.NewMockPackageManager(ctrl)
+	configLoader := mocks.NewMockPackageConfigLoader(ctrl)
 
 	configLoader.EXPECT().GetPackagesForManager("homebrew").Return(nil, errors.New("config load failed"))
 
@@ -117,8 +118,8 @@ func TestPackageProvider_GetActualItems_ManagerNotAvailable(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	manager := NewMockPackageManager(ctrl)
-	configLoader := NewMockPackageConfigLoader(ctrl)
+	manager := mocks.NewMockPackageManager(ctrl)
+	configLoader := mocks.NewMockPackageConfigLoader(ctrl)
 
 	manager.EXPECT().IsAvailable(gomock.Any()).Return(false, nil)
 
@@ -138,8 +139,8 @@ func TestPackageProvider_GetActualItems_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	manager := NewMockPackageManager(ctrl)
-	configLoader := NewMockPackageConfigLoader(ctrl)
+	manager := mocks.NewMockPackageManager(ctrl)
+	configLoader := mocks.NewMockPackageConfigLoader(ctrl)
 
 	manager.EXPECT().IsAvailable(gomock.Any()).Return(true, nil)
 	manager.EXPECT().ListInstalled(gomock.Any()).Return([]string{"git", "curl", "wget"}, nil)
@@ -180,8 +181,8 @@ func TestPackageProvider_GetActualItems_ListError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	manager := NewMockPackageManager(ctrl)
-	configLoader := NewMockPackageConfigLoader(ctrl)
+	manager := mocks.NewMockPackageManager(ctrl)
+	configLoader := mocks.NewMockPackageConfigLoader(ctrl)
 
 	manager.EXPECT().IsAvailable(gomock.Any()).Return(true, nil)
 	manager.EXPECT().ListInstalled(gomock.Any()).Return(nil, errors.New("list failed"))
@@ -198,8 +199,8 @@ func TestPackageProvider_CreateItem(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	manager := NewMockPackageManager(ctrl)
-	configLoader := NewMockPackageConfigLoader(ctrl)
+	manager := mocks.NewMockPackageManager(ctrl)
+	configLoader := mocks.NewMockPackageConfigLoader(ctrl)
 	provider := NewPackageProvider("npm", manager, configLoader)
 
 	tests := []struct {
@@ -290,8 +291,8 @@ func TestPackageProvider_ContextCancellation(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		manager := NewMockPackageManager(ctrl)
-		configLoader := NewMockPackageConfigLoader(ctrl)
+		manager := mocks.NewMockPackageManager(ctrl)
+		configLoader := mocks.NewMockPackageConfigLoader(ctrl)
 		provider := NewPackageProvider("homebrew", manager, configLoader)
 
 		ctx, cancel := context.WithCancel(context.Background())

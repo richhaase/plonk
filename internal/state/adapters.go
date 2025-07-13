@@ -6,6 +6,8 @@ package state
 import (
 	"context"
 	"fmt"
+
+	"github.com/richhaase/plonk/internal/interfaces"
 )
 
 // ConfigAdapter adapts existing config types to the new state interfaces
@@ -69,23 +71,21 @@ func (c *ConfigAdapter) GetPackagesForManager(managerName string) ([]PackageConf
 }
 
 // ManagerAdapter adapts existing package manager types to the new state interface
+// Since ManagerInterface is now an alias for PackageManager, this is essentially a pass-through wrapper.
 type ManagerAdapter struct {
 	manager ManagerInterface
 }
 
 // ManagerInterface defines the methods needed from package managers
-type ManagerInterface interface {
-	IsAvailable(ctx context.Context) (bool, error)
-	ListInstalled(ctx context.Context) ([]string, error)
-	Install(ctx context.Context, name string) error
-	Uninstall(ctx context.Context, name string) error
-	IsInstalled(ctx context.Context, name string) (bool, error)
-}
+// This is an alias for the unified PackageManager interface to maintain backward compatibility.
+type ManagerInterface = interfaces.PackageManager
 
 // NewManagerAdapter creates a new manager adapter
 func NewManagerAdapter(manager ManagerInterface) *ManagerAdapter {
 	return &ManagerAdapter{manager: manager}
 }
+
+// Forward all methods to the underlying manager (since they have the same interface)
 
 // IsAvailable implements PackageManager
 func (m *ManagerAdapter) IsAvailable(ctx context.Context) (bool, error) {
@@ -110,4 +110,19 @@ func (m *ManagerAdapter) Uninstall(ctx context.Context, name string) error {
 // IsInstalled implements PackageManager
 func (m *ManagerAdapter) IsInstalled(ctx context.Context, name string) (bool, error) {
 	return m.manager.IsInstalled(ctx, name)
+}
+
+// Search implements PackageManager
+func (m *ManagerAdapter) Search(ctx context.Context, query string) ([]string, error) {
+	return m.manager.Search(ctx, query)
+}
+
+// Info implements PackageManager
+func (m *ManagerAdapter) Info(ctx context.Context, name string) (*interfaces.PackageInfo, error) {
+	return m.manager.Info(ctx, name)
+}
+
+// GetInstalledVersion implements PackageManager
+func (m *ManagerAdapter) GetInstalledVersion(ctx context.Context, name string) (string, error) {
+	return m.manager.GetInstalledVersion(ctx, name)
 }
