@@ -4,6 +4,7 @@
 package commands
 
 import (
+	"github.com/richhaase/plonk/internal/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -39,7 +40,18 @@ func init() {
 }
 
 func runDotfiles(cmd *cobra.Command, args []string) error {
-	// Delegate to the existing dotfile list implementation
-	// This reuses the dot list command logic but with a cleaner interface
-	return runDotList(cmd, args)
+	// Parse flags and delegate to the shared implementation
+	flags, err := ParseUnifiedFlags(cmd)
+	if err != nil {
+		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "dotfiles", "flags", "invalid flag combination")
+	}
+
+	// Parse output format
+	format, err := ParseOutputFormat(flags.Output)
+	if err != nil {
+		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "dotfiles", "output-format", "invalid output format")
+	}
+
+	// Call the shared dotfile list implementation
+	return runDotfileList(cmd, flags, format)
 }

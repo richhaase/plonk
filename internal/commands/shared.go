@@ -150,6 +150,99 @@ func (d DotfileApplyOutput) StructuredData() any {
 	return d
 }
 
+// DotfileListOutput represents the output structure for dotfile listing operations
+type DotfileListOutput struct {
+	Summary  DotfileListSummary `json:"summary" yaml:"summary"`
+	Dotfiles []DotfileInfo      `json:"dotfiles" yaml:"dotfiles"`
+}
+
+// DotfileListSummary provides summary information for dotfile listing
+type DotfileListSummary struct {
+	Total     int  `json:"total" yaml:"total"`
+	Managed   int  `json:"managed" yaml:"managed"`
+	Missing   int  `json:"missing" yaml:"missing"`
+	Untracked int  `json:"untracked" yaml:"untracked"`
+	Verbose   bool `json:"verbose" yaml:"verbose"`
+}
+
+// DotfileInfo represents information about a single dotfile
+type DotfileInfo struct {
+	Name   string `json:"name" yaml:"name"`
+	State  string `json:"state" yaml:"state"`
+	Target string `json:"target" yaml:"target"`
+	Source string `json:"source" yaml:"source"`
+}
+
+// TableOutput generates human-friendly table output for dotfile listing
+func (d DotfileListOutput) TableOutput() string {
+	output := "Dotfiles Summary\n================\n"
+
+	if d.Summary.Total == 0 {
+		return output + "No dotfiles found\n"
+	}
+
+	// Summary line
+	output += fmt.Sprintf("Total: %d files", d.Summary.Total)
+	if !d.Summary.Verbose {
+		if d.Summary.Managed > 0 {
+			output += fmt.Sprintf(" | ✓ Managed: %d", d.Summary.Managed)
+		}
+		if d.Summary.Missing > 0 {
+			output += fmt.Sprintf(" | ⚠ Missing: %d", d.Summary.Missing)
+		}
+		if d.Summary.Untracked > 0 {
+			output += fmt.Sprintf(" | ? Untracked: %d", d.Summary.Untracked)
+		}
+	}
+	output += "\n\n"
+
+	if len(d.Dotfiles) == 0 {
+		return output + "No dotfiles to display\n"
+	}
+
+	// Table headers
+	output += "  Status Target                                    Source\n"
+	output += "  ------ ----------------------------------------- --------------------------------------\n"
+
+	// Table rows
+	for _, dotfile := range d.Dotfiles {
+		var statusIcon string
+		switch dotfile.State {
+		case "managed":
+			statusIcon = "✓"
+		case "missing":
+			statusIcon = "⚠"
+		case "untracked":
+			statusIcon = "?"
+		default:
+			statusIcon = "-"
+		}
+
+		target := dotfile.Target
+		if target == "" {
+			target = "-"
+		}
+		source := dotfile.Source
+		if source == "" {
+			source = "-"
+		}
+
+		output += fmt.Sprintf("  %-6s %-41s %s\n", statusIcon, target, source)
+	}
+
+	// Show untracked hint if not verbose
+	if !d.Summary.Verbose && d.Summary.Untracked > 0 {
+		output += fmt.Sprintf("\n%d untracked files (use --verbose to show details)\n", d.Summary.Untracked)
+	}
+
+	return output
+}
+
+// StructuredData returns the structured data for serialization
+func (d DotfileListOutput) StructuredData() any {
+	return d
+}
+
 // Shared functions from the original commands
 
 // applyPackages applies package configuration and returns the result (from apply.go)
@@ -1136,7 +1229,102 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 }
 
 func runDotList(cmd *cobra.Command, args []string) error {
-	// This would need to be implemented based on the original dot_list.go logic
-	// For now, return an error indicating it's not implemented
-	return fmt.Errorf("runDotList function needs to be implemented")
+	// TODO: This should use the proper dotfiles layer, not implement business logic here
+	// For now, create a proper implementation that delegates to the state reconciliation system
+
+	// Parse output format
+	format, err := ParseOutputFormat(outputFormat)
+	if err != nil {
+		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "dotfiles", "output-format", "invalid output format")
+	}
+
+	// Get directories and use the existing state reconciliation system
+	configDir := config.GetDefaultConfigDirectory()
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return errors.Wrap(err, errors.ErrFilePermission, errors.DomainCommands, "dotfiles", "failed to get home directory")
+	}
+
+	// Load configuration
+	cfg, err := config.LoadConfig(configDir)
+	if err != nil {
+		// Use empty config if not found
+		cfg = &config.Config{}
+	}
+
+	// Use the same state reconciliation system as status command
+	reconciler := state.NewReconciler()
+	dotfileProvider := createDotfileProvider(homeDir, configDir, cfg)
+	reconciler.RegisterProvider("dotfile", dotfileProvider)
+
+	ctx := context.Background()
+	domainResult, err := reconciler.ReconcileProvider(ctx, "dotfile")
+	if err != nil {
+		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainState, "reconcile", "failed to reconcile dotfiles")
+	}
+
+	// Parse filter flags
+	showManaged, _ := cmd.Flags().GetBool("managed")
+	showMissing, _ := cmd.Flags().GetBool("missing")
+	showUntracked, _ := cmd.Flags().GetBool("untracked")
+	verbose, _ := cmd.Flags().GetBool("verbose")
+
+	// Filter based on flags
+	var items []state.Item
+	if showManaged {
+		items = domainResult.Managed
+	} else if showMissing {
+		items = domainResult.Missing
+	} else if showUntracked {
+		items = domainResult.Untracked
+	} else {
+		// Default: show managed + missing, optionally untracked
+		items = append(items, domainResult.Managed...)
+		items = append(items, domainResult.Missing...)
+		if verbose {
+			items = append(items, domainResult.Untracked...)
+		}
+	}
+
+	// Convert to output format using existing dotfiles types
+	output := DotfileListOutput{
+		Summary: DotfileListSummary{
+			Total:     len(items),
+			Managed:   len(domainResult.Managed),
+			Missing:   len(domainResult.Missing),
+			Untracked: len(domainResult.Untracked),
+			Verbose:   verbose,
+		},
+		Dotfiles: convertStateItemsToDotfileInfo(items),
+	}
+
+	return RenderOutput(output, format)
+}
+
+// convertStateItemsToDotfileInfo converts state.Item to DotfileInfo for display
+func convertStateItemsToDotfileInfo(items []state.Item) []DotfileInfo {
+	result := make([]DotfileInfo, len(items))
+	for i, item := range items {
+		// Map state.Item fields to DotfileInfo
+		target := item.Path
+		source := item.Name
+
+		// Extract additional info from metadata if available
+		if item.Metadata != nil {
+			if t, ok := item.Metadata["target"].(string); ok && t != "" {
+				target = t
+			}
+			if s, ok := item.Metadata["source"].(string); ok && s != "" {
+				source = s
+			}
+		}
+
+		result[i] = DotfileInfo{
+			Name:   item.Name,
+			State:  item.State.String(),
+			Target: target,
+			Source: source,
+		}
+	}
+	return result
 }

@@ -190,9 +190,9 @@ func runPackageList(cmd *cobra.Command, flags *CommandFlags, format OutputFormat
 	return runPkgList(cmd, []string{})
 }
 
-// runDotfileList shows dotfiles only (reuses existing logic)
+// runDotfileList shows dotfiles only (delegates to existing implementation)
 func runDotfileList(cmd *cobra.Command, flags *CommandFlags, format OutputFormat) error {
-	// Delegate to the existing dotfile list implementation
+	// Delegate to the shared dotfile listing implementation
 	return runDotList(cmd, []string{})
 }
 
