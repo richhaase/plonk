@@ -41,7 +41,7 @@ func init() {
 
 func runDotfiles(cmd *cobra.Command, args []string) error {
 	// Parse flags and delegate to the shared implementation
-	flags, err := ParseUnifiedFlags(cmd)
+	flags, err := ParseSimpleFlags(cmd)
 	if err != nil {
 		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "dotfiles", "flags", "invalid flag combination")
 	}

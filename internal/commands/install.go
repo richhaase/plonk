@@ -4,44 +4,33 @@
 package commands
 
 import (
+	"context"
 	"fmt"
+	"time"
 
+	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/lock"
+	"github.com/richhaase/plonk/internal/managers"
+	"github.com/richhaase/plonk/internal/operations"
 	"github.com/spf13/cobra"
 )
 
 var installCmd = &cobra.Command{
-	Use:   "install <items...>",
-	Short: "Add and sync items immediately",
-	Long: `Add packages or dotfiles and apply changes in one command.
+	Use:   "install <packages...>",
+	Short: "Install packages to plonk management",
+	Long: `Install packages and add them to your lock file for management.
 
-This is a convenience command that combines 'plonk add' and 'plonk sync':
-1. First, it adds the specified items to your configuration (like 'plonk add')
-2. Then, it immediately syncs all pending changes (like 'plonk sync')
-
-This is perfect for quickly installing new tools and getting them ready to use.
-
-Packages (detected automatically):
-  plonk install htop                    # Add htop and sync all changes
-  plonk install git neovim ripgrep      # Add multiple packages and sync
-  plonk install git --brew              # Add git via Homebrew and sync
-
-Dotfiles (detected automatically):
-  plonk install ~/.zshrc                # Add dotfile and sync all changes
-  plonk install ~/.zshrc ~/.vimrc       # Add multiple dotfiles and sync
-
-Mixed operations:
-  plonk install git ~/.vimrc            # Add package + dotfile and sync
-  plonk install --dry-run git ~/.zshrc  # Preview add + sync operations
-
-Force type interpretation:
-  plonk install config --package       # Force 'config' as package
+This command adds packages to your lock file so they can be managed by plonk.
+Use specific manager flags to control which package manager to use.
 
 Examples:
-  plonk install ripgrep                 # Add ripgrep to config and install it
-  plonk install ~/.config/nvim/         # Add nvim config and deploy it
-  plonk install git ~/.gitconfig        # Add both package and dotfile, then sync
-  plonk install --dry-run htop          # Preview what would be added and synced`,
+  plonk install htop                      # Install htop using default manager
+  plonk install git neovim ripgrep        # Install multiple packages
+  plonk install git --brew                # Install git specifically with Homebrew
+  plonk install lodash --npm              # Install lodash with npm global packages
+  plonk install ripgrep --cargo           # Install ripgrep with cargo packages
+  plonk install --dry-run htop neovim     # Preview what would be installed`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: runInstall,
 }
@@ -55,112 +44,214 @@ func init() {
 	installCmd.Flags().Bool("cargo", false, "Use Cargo package manager")
 	installCmd.MarkFlagsMutuallyExclusive("brew", "npm", "cargo")
 
-	// Type override flags (mutually exclusive)
-	installCmd.Flags().Bool("package", false, "Force all items to be treated as packages")
-	installCmd.Flags().Bool("dotfile", false, "Force all items to be treated as dotfiles")
-	installCmd.MarkFlagsMutuallyExclusive("package", "dotfile")
-
-	// Behavior flags
-	installCmd.Flags().BoolP("dry-run", "n", false, "Show what would be added and synced without making changes")
-	installCmd.Flags().Bool("backup", false, "Create backups before overwriting existing dotfiles")
-	installCmd.Flags().BoolP("force", "f", false, "Force addition even if already managed")
-
-	// Add intelligent completion (same as add command)
-	installCmd.ValidArgsFunction = completeAddItems
+	// Common flags
+	installCmd.Flags().BoolP("dry-run", "n", false, "Show what would be installed without making changes")
+	installCmd.Flags().BoolP("force", "f", false, "Force installation even if already managed")
 }
 
 func runInstall(cmd *cobra.Command, args []string) error {
 	// Parse flags
-	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	flags, err := ParseSimpleFlags(cmd)
+	if err != nil {
+		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "install", "flags", "invalid flag combination")
+	}
 
 	// Parse output format
-	format, err := ParseOutputFormat(outputFormat)
+	format, err := ParseOutputFormat(flags.Output)
 	if err != nil {
 		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "install", "output-format", "invalid output format")
 	}
 
-	// Step 1: Add items to configuration (reuse add command logic)
-	if format == OutputTable {
-		if dryRun {
-			fmt.Println("Step 1: Adding items to configuration (dry run)")
-			fmt.Println("===============================================")
-		} else {
-			fmt.Println("Step 1: Adding items to configuration")
-			fmt.Println("=====================================")
-		}
-	}
-
-	err = runAdd(cmd, args)
+	// Process packages
+	results, err := installPackages(cmd, args, flags)
 	if err != nil {
-		return errors.Wrap(err, errors.ErrCommandExecution, errors.DomainCommands, "install", "failed to add items")
+		return err
 	}
 
+	// Show progress and summary
+	reporter := operations.NewProgressReporter("package", format == OutputTable)
+	for _, result := range results {
+		reporter.ShowItemProgress(result)
+	}
+
+	// Handle output based on format
 	if format == OutputTable {
-		fmt.Println()
-		if dryRun {
-			fmt.Println("Step 2: Syncing all changes (dry run)")
-			fmt.Println("=====================================")
+		reporter.ShowBatchSummary(results)
+	} else {
+		return renderPackageResults(results, format)
+	}
+
+	// Determine exit code
+	return operations.DetermineExitCode(results, errors.DomainCommands, "install")
+}
+
+// installPackages handles package installations
+func installPackages(cmd *cobra.Command, packageNames []string, flags *SimpleFlags) ([]operations.OperationResult, error) {
+	// Get directories
+	configDir := config.GetDefaultConfigDirectory()
+
+	// Initialize lock file service
+	lockService := lock.NewYAMLLockService(configDir)
+
+	// Get manager - default to configured default or homebrew
+	manager := flags.Manager
+	if manager == "" {
+		cfg, err := config.LoadConfig(configDir)
+		if err == nil && cfg.DefaultManager != nil && *cfg.DefaultManager != "" {
+			manager = *cfg.DefaultManager
 		} else {
-			fmt.Println("Step 2: Syncing all changes")
-			fmt.Println("===========================")
+			manager = "homebrew" // fallback default
 		}
 	}
 
-	// Step 2: Sync all changes (reuse sync command logic)
-	// Create a new command instance for sync to avoid flag conflicts
-	syncCmd := &cobra.Command{}
+	// Process packages sequentially
+	results := make([]operations.OperationResult, 0, len(packageNames))
 
-	// Copy relevant flags from install to sync
+	for _, packageName := range packageNames {
+		result := installSinglePackage(configDir, lockService, packageName, manager, flags.DryRun, flags.Force)
+		results = append(results, result)
+	}
+
+	return results, nil
+}
+
+// installSinglePackage installs a single package
+func installSinglePackage(configDir string, lockService *lock.YAMLLockService, packageName, manager string, dryRun, force bool) operations.OperationResult {
+	result := operations.OperationResult{
+		Name:    packageName,
+		Manager: manager,
+	}
+
+	// Check if already managed
+	if lockService.HasPackage(manager, packageName) {
+		if !force {
+			result.Status = "skipped"
+			result.AlreadyManaged = true
+			return result
+		}
+	}
+
 	if dryRun {
-		syncCmd.Flags().Bool("dry-run", true, "")
-		syncCmd.Flags().Set("dry-run", "true")
+		result.Status = "would-add"
+		return result
 	}
 
-	if backup, _ := cmd.Flags().GetBool("backup"); backup {
-		syncCmd.Flags().Bool("backup", true, "")
-		syncCmd.Flags().Set("backup", "true")
-	}
-
-	err = runSync(syncCmd, []string{})
+	// Get package manager instance
+	pkgManager, err := getPackageManager(manager)
 	if err != nil {
-		return errors.Wrap(err, errors.ErrCommandExecution, errors.DomainCommands, "install", "failed to sync changes")
+		result.Status = "failed"
+		result.Error = errors.WrapWithItem(err, errors.ErrManagerUnavailable, errors.DomainPackages, "install", packageName, "failed to get package manager")
+		return result
 	}
 
-	// For structured output, we could create a combined result
-	if format != OutputTable {
-		installOutput := InstallOutput{
-			DryRun:  dryRun,
-			Items:   args,
-			Status:  "completed",
-			Message: "Items added to configuration and changes synced",
-		}
+	// Create context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 
-		if dryRun {
-			installOutput.Status = "would-complete"
-			installOutput.Message = "Items would be added to configuration and changes would be synced"
-		}
-
-		return RenderOutput(installOutput, format)
+	// Check if manager is available
+	available, err := pkgManager.IsAvailable(ctx)
+	if err != nil {
+		result.Status = "failed"
+		result.Error = errors.WrapWithItem(err, errors.ErrManagerUnavailable, errors.DomainPackages, "install", packageName, "failed to check manager availability")
+		return result
+	}
+	if !available {
+		result.Status = "failed"
+		result.Error = errors.NewError(errors.ErrManagerUnavailable, errors.DomainPackages, "install", fmt.Sprintf("package manager '%s' is not available", manager))
+		return result
 	}
 
-	return nil
+	// Get package version if installed
+	version, err := pkgManager.GetInstalledVersion(ctx, packageName)
+	if err == nil && version != "" {
+		result.Version = version
+	}
+
+	// Add to lock file
+	err = lockService.AddPackage(manager, packageName, version)
+	if err != nil {
+		result.Status = "failed"
+		result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainPackages, "install", packageName, "failed to add package to lock file")
+		return result
+	}
+
+	result.Status = "added"
+	return result
 }
 
-// InstallOutput represents the output structure for install command
-type InstallOutput struct {
-	DryRun  bool     `json:"dry_run" yaml:"dry_run"`
-	Items   []string `json:"items" yaml:"items"`
-	Status  string   `json:"status" yaml:"status"`
-	Message string   `json:"message" yaml:"message"`
+// getPackageManager returns the appropriate package manager instance
+func getPackageManager(manager string) (managers.PackageManager, error) {
+	switch manager {
+	case "homebrew":
+		return managers.NewHomebrewManager(), nil
+	case "npm":
+		return managers.NewNpmManager(), nil
+	case "cargo":
+		return managers.NewCargoManager(), nil
+	default:
+		return nil, fmt.Errorf("unsupported package manager: %s", manager)
+	}
 }
 
-// TableOutput generates human-friendly table output for install
-func (i InstallOutput) TableOutput() string {
-	// Table output is handled inline in the command
-	return ""
+// renderPackageResults renders package results in structured format
+func renderPackageResults(results []operations.OperationResult, format OutputFormat) error {
+	output := PackageInstallOutput{
+		TotalPackages: len(results),
+		Results:       results,
+		Summary:       calculatePackageSummary(results),
+	}
+	return RenderOutput(output, format)
+}
+
+// PackageInstallOutput represents the output for package installation
+type PackageInstallOutput struct {
+	TotalPackages int                          `json:"total_packages" yaml:"total_packages"`
+	Results       []operations.OperationResult `json:"results" yaml:"results"`
+	Summary       PackageInstallSummary        `json:"summary" yaml:"summary"`
+}
+
+// PackageInstallSummary provides summary for package installation
+type PackageInstallSummary struct {
+	Added   int `json:"added" yaml:"added"`
+	Skipped int `json:"skipped" yaml:"skipped"`
+	Failed  int `json:"failed" yaml:"failed"`
+}
+
+// calculatePackageSummary calculates summary from results
+func calculatePackageSummary(results []operations.OperationResult) PackageInstallSummary {
+	summary := PackageInstallSummary{}
+	for _, result := range results {
+		switch result.Status {
+		case "added", "would-add":
+			summary.Added++
+		case "skipped":
+			summary.Skipped++
+		case "failed":
+			summary.Failed++
+		}
+	}
+	return summary
+}
+
+// TableOutput generates human-friendly output
+func (p PackageInstallOutput) TableOutput() string {
+	output := "Package Installation\n===================\n\n"
+
+	if p.Summary.Added > 0 {
+		output += fmt.Sprintf("📦 Added %d packages\n", p.Summary.Added)
+	}
+	if p.Summary.Skipped > 0 {
+		output += fmt.Sprintf("⏭️ %d skipped\n", p.Summary.Skipped)
+	}
+	if p.Summary.Failed > 0 {
+		output += fmt.Sprintf("❌ %d failed\n", p.Summary.Failed)
+	}
+
+	output += fmt.Sprintf("\nTotal: %d packages processed\n", p.TotalPackages)
+	return output
 }
 
 // StructuredData returns the structured data for serialization
-func (i InstallOutput) StructuredData() any {
-	return i
+func (p PackageInstallOutput) StructuredData() any {
+	return p
 }

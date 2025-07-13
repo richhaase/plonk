@@ -582,94 +582,6 @@ func processDotfileForApply(ctx context.Context, configDir, homeDir, source, des
 
 // Shared functions from pkg_add.go and dot_add.go
 
-// completePackageNames provides package name completion based on available managers
-func completePackageNames(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	ctx := context.Background()
-
-	// Get manager preference from flag or config
-	targetManager, _ := cmd.Flags().GetString("manager")
-	if targetManager == "" {
-		configDir := config.GetDefaultConfigDirectory()
-		cfg, err := config.LoadConfig(configDir)
-		if err == nil {
-			targetManager = cfg.Resolve().GetDefaultManager()
-		} else {
-			targetManager = "homebrew" // fallback
-		}
-	}
-
-	// Get manager instance
-	mgr := getManagerInstance(targetManager)
-	if mgr == nil {
-		return nil, cobra.ShellCompDirectiveNoFileComp
-	}
-
-	// Check if manager is available
-	available, err := mgr.IsAvailable(ctx)
-	if err != nil || !available {
-		return nil, cobra.ShellCompDirectiveNoFileComp
-	}
-
-	// For now, return some common packages based on manager type
-	// This could be enhanced to use actual search functionality
-	suggestions := getCommonPackages(targetManager, toComplete)
-
-	return suggestions, cobra.ShellCompDirectiveNoFileComp
-}
-
-// getManagerInstance returns a manager instance for the given name
-func getManagerInstance(managerName string) managers.PackageManager {
-	switch managerName {
-	case "homebrew":
-		return managers.NewHomebrewManager()
-	case "npm":
-		return managers.NewNpmManager()
-	case "cargo":
-		return managers.NewCargoManager()
-	default:
-		return nil
-	}
-}
-
-// getCommonPackages returns common package suggestions for the given manager
-func getCommonPackages(managerName, prefix string) []string {
-	var packages []string
-
-	switch managerName {
-	case "homebrew":
-		packages = []string{
-			"git", "curl", "wget", "htop", "ripgrep", "fzf", "neovim", "tmux",
-			"jq", "tree", "bat", "exa", "fd", "zsh", "fish", "nodejs", "python",
-			"go", "rust", "docker", "kubectl", "helm", "terraform", "awscli",
-		}
-	case "npm":
-		packages = []string{
-			"typescript", "eslint", "prettier", "jest", "webpack", "babel",
-			"react", "vue", "angular", "express", "lodash", "axios", "moment",
-			"chalk", "commander", "inquirer", "yargs", "cross-env", "nodemon",
-		}
-	case "cargo":
-		packages = []string{
-			"ripgrep", "bat", "exa", "fd-find", "tokei", "hyperfine", "dust",
-			"bandwhich", "bottom", "starship", "zoxide", "delta", "gitui",
-		}
-	}
-
-	// Filter packages that start with the prefix
-	if prefix == "" {
-		return packages
-	}
-
-	var filtered []string
-	for _, pkg := range packages {
-		if strings.HasPrefix(pkg, prefix) {
-			filtered = append(filtered, pkg)
-		}
-	}
-
-	return filtered
-}
-
 // completeDotfilePaths provides file path completion for dotfiles
 func completeDotfilePaths(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	_, err := os.UserHomeDir()
@@ -1327,4 +1239,86 @@ func convertStateItemsToDotfileInfo(items []state.Item) []DotfileInfo {
 		}
 	}
 	return result
+}
+
+// removeSingleDotfile removes a single dotfile
+func removeSingleDotfile(homeDir, configDir string, cfg *config.Config, dotfilePath string, dryRun bool) operations.OperationResult {
+	result := operations.OperationResult{
+		Name: dotfilePath,
+	}
+
+	// Resolve dotfile path
+	resolvedPath, err := resolveDotfilePath(dotfilePath, homeDir)
+	if err != nil {
+		result.Status = "failed"
+		result.Error = errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainDotfiles, "resolve", dotfilePath, "failed to resolve dotfile path")
+		return result
+	}
+
+	// Check if file is managed (has a symlink)
+	if !isSymlink(resolvedPath) {
+		result.Status = "skipped"
+		result.Error = errors.NewError(errors.ErrFileNotFound, errors.DomainDotfiles, "check", fmt.Sprintf("dotfile '%s' is not a managed symlink", dotfilePath))
+		return result
+	}
+
+	if dryRun {
+		result.Status = "would-unlink"
+		return result
+	}
+
+	// Remove the symlink
+	err = os.Remove(resolvedPath)
+	if err != nil {
+		result.Status = "failed"
+		result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "unlink", dotfilePath, "failed to remove symlink")
+		return result
+	}
+
+	result.Status = "unlinked"
+	result.Metadata = map[string]interface{}{
+		"source":      dotfilePath,
+		"destination": resolvedPath,
+	}
+	return result
+}
+
+// isSymlink checks if a path is a symbolic link
+func isSymlink(path string) bool {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return false
+	}
+	return info.Mode()&os.ModeSymlink != 0
+}
+
+// SimpleFlags represents basic command flags without detection logic
+type SimpleFlags struct {
+	Manager string
+	DryRun  bool
+	Force   bool
+	Verbose bool
+	Output  string
+}
+
+// ParseSimpleFlags parses basic flags for package commands
+func ParseSimpleFlags(cmd *cobra.Command) (*SimpleFlags, error) {
+	flags := &SimpleFlags{}
+
+	// Parse manager flags with precedence
+	if brew, _ := cmd.Flags().GetBool("brew"); brew {
+		flags.Manager = "homebrew"
+	} else if npm, _ := cmd.Flags().GetBool("npm"); npm {
+		flags.Manager = "npm"
+	} else if cargo, _ := cmd.Flags().GetBool("cargo"); cargo {
+		flags.Manager = "cargo"
+	}
+
+	// Parse common flags
+	flags.DryRun, _ = cmd.Flags().GetBool("dry-run")
+	flags.Force, _ = cmd.Flags().GetBool("force")
+	flags.Verbose, _ = cmd.Flags().GetBool("verbose")
+	flags.Output, _ = cmd.Flags().GetString("output")
+
+	return flags, nil
 }
