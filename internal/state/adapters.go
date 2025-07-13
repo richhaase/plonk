@@ -10,7 +10,17 @@ import (
 	"github.com/richhaase/plonk/internal/interfaces"
 )
 
-// ConfigAdapter adapts existing config types to the new state interfaces
+// Compile-time interface compliance checks
+var _ DotfileConfigLoader = (*ConfigAdapter)(nil)
+var _ PackageConfigLoader = (*ConfigAdapter)(nil)
+var _ ManagerInterface = (*ManagerAdapter)(nil)
+
+// ConfigAdapter bridges generic configuration implementations to the state package's
+// specific interfaces (DotfileConfigLoader and PackageConfigLoader). This adapter
+// allows the state package to work with any configuration source that implements
+// the minimal ConfigInterface, without creating dependencies on specific config packages.
+//
+// Bridge: Generic ConfigInterface → state.DotfileConfigLoader + state.PackageConfigLoader
 type ConfigAdapter struct {
 	config ConfigInterface
 }
@@ -70,8 +80,15 @@ func (c *ConfigAdapter) GetPackagesForManager(managerName string) ([]PackageConf
 	return items, nil
 }
 
-// ManagerAdapter adapts existing package manager types to the new state interface
-// Since ManagerInterface is now an alias for PackageManager, this is essentially a pass-through wrapper.
+// ManagerAdapter provides backward compatibility for code that expects the state
+// package's ManagerInterface. Since ManagerInterface is now an alias for
+// interfaces.PackageManager after consolidation, this adapter serves as a
+// pass-through wrapper to maintain existing API contracts while the codebase
+// transitions to use the unified interface directly.
+//
+// Bridge: interfaces.PackageManager → state.ManagerInterface (alias)
+//
+// TODO: This adapter can be removed once all code directly uses interfaces.PackageManager
 type ManagerAdapter struct {
 	manager ManagerInterface
 }

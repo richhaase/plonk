@@ -5,7 +5,15 @@ package lock
 
 import "github.com/richhaase/plonk/internal/state"
 
-// LockFileAdapter adapts the lock file service to the PackageConfigLoader interface
+// Compile-time interface compliance check
+var _ state.PackageConfigLoader = (*LockFileAdapter)(nil)
+
+// LockFileAdapter bridges the lock package's LockService to the state package's
+// PackageConfigLoader interface. This adapter enables the state package to treat
+// the lock file as another source of package configuration, alongside the main
+// config file. It prevents circular dependencies between the lock and state packages.
+//
+// Bridge: lock.LockService → state.PackageConfigLoader
 type LockFileAdapter struct {
 	lockService LockService
 }

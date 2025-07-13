@@ -7,7 +7,16 @@ import (
 	"github.com/richhaase/plonk/internal/state"
 )
 
-// StatePackageConfigAdapter adapts ConfigAdapter to work with state.PackageConfigLoader
+// Compile-time interface compliance checks
+var _ state.PackageConfigLoader = (*StatePackageConfigAdapter)(nil)
+var _ state.DotfileConfigLoader = (*StateDotfileConfigAdapter)(nil)
+
+// StatePackageConfigAdapter bridges the config package's ConfigAdapter to the state
+// package's PackageConfigLoader interface. This adapter prevents circular dependencies
+// between the config and state packages, allowing the state package to consume
+// configuration data without directly importing the config package.
+//
+// Bridge: config.ConfigAdapter → state.PackageConfigLoader
 type StatePackageConfigAdapter struct {
 	configAdapter *ConfigAdapter
 }
@@ -33,7 +42,12 @@ func (s *StatePackageConfigAdapter) GetPackagesForManager(managerName string) ([
 	return stateItems, nil
 }
 
-// StateDotfileConfigAdapter adapts ConfigAdapter to work with state.DotfileConfigLoader
+// StateDotfileConfigAdapter bridges the config package's ConfigAdapter to the state
+// package's DotfileConfigLoader interface. This adapter prevents circular dependencies
+// between the config and state packages, allowing the state package to consume
+// dotfile configuration without directly importing the config package.
+//
+// Bridge: config.ConfigAdapter → state.DotfileConfigLoader
 type StateDotfileConfigAdapter struct {
 	configAdapter *ConfigAdapter
 }
