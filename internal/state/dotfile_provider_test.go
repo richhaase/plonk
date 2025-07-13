@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 )
 
 // MockDotfileConfigLoader implements DotfileConfigLoader for testing
@@ -439,6 +438,9 @@ func TestDotfileProvider_DestinationToName(t *testing.T) {
 	}
 }
 
+// TestShouldSkipDotfile has been moved to internal/dotfiles/filter_test.go
+// as the functionality is now in the Filter class
+/*
 func TestShouldSkipDotfile(t *testing.T) {
 	// Create test FileInfo objects for directories and files
 	dirInfo := &mockFileInfo{name: "test-dir", isDir: true}
@@ -565,16 +567,4 @@ func TestShouldSkipDotfile(t *testing.T) {
 		})
 	}
 }
-
-// mockFileInfo implements os.FileInfo for testing
-type mockFileInfo struct {
-	name  string
-	isDir bool
-}
-
-func (m *mockFileInfo) Name() string       { return m.name }
-func (m *mockFileInfo) Size() int64        { return 0 }
-func (m *mockFileInfo) Mode() os.FileMode  { return 0644 }
-func (m *mockFileInfo) ModTime() time.Time { return time.Time{} }
-func (m *mockFileInfo) IsDir() bool        { return m.isDir }
-func (m *mockFileInfo) Sys() interface{}   { return nil }
+*/

@@ -7,8 +7,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/errors"
@@ -92,209 +90,124 @@ func (d *DotfileProvider) GetConfiguredItems() ([]ConfigItem, error) {
 
 // GetActualItems returns dotfiles currently present in the home directory
 func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, error) {
+	// Create filter with ignore patterns
+	filter := dotfiles.NewFilter(
+		d.configLoader.GetIgnorePatterns(),
+		d.configDir,
+		true, // Skip config directory when scanning home
+	)
+
+	// Create scanner
+	scanner := dotfiles.NewScanner(d.homeDir, filter)
+
+	// Create expander
+	expander := dotfiles.NewExpander(
+		d.homeDir,
+		d.configLoader.GetExpandDirectories(),
+		scanner,
+	)
+
 	var items []ActualItem
 
-	// Get ignore patterns
-	ignorePatterns := d.configLoader.GetIgnorePatterns()
-
-	// Create skip context for home directory scanning (skip config dir only)
-	skipCtx := &SkipContext{
-		ConfigDir:         d.configDir,
-		FilesOnlyMode:     false, // Allow directories in general GetActualItems
-		SkipConfigDir:     true,  // Skip config directory when scanning home
-		AllowConfigAccess: false, // Don't allow config access in this context
-	}
-
-	// Get dotfiles from home directory
-	dotfiles, err := d.manager.ListDotfiles(d.homeDir)
+	// Step 1: Scan home directory for dotfiles
+	scanResults, err := scanner.ScanDotfiles(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, dotfile := range dotfiles {
-		fullPath := filepath.Join(d.homeDir, dotfile)
-
-		// Check if file should be ignored
-		info, err := os.Stat(fullPath)
-		if err != nil {
-			continue // Skip files we can't stat
-		}
-
-		if shouldSkipDotfile(dotfile, info, ignorePatterns, skipCtx) {
-			continue // Skip ignored files
-		}
-
-		// For directories, check if we should expand them
-		expandDirs := d.configLoader.GetExpandDirectories()
-		if info.IsDir() && shouldExpandDirectory(dotfile, expandDirs) {
-			// Expand directory to show individual files (limited depth)
-			err := filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
-				if err != nil {
-					// Skip directories we can't access but continue processing
-					return nil
-				}
-
-				// Skip the root directory itself
-				if path == fullPath {
-					return nil
-				}
-
-				// Limit depth to avoid huge expansions
-				relPath, err := filepath.Rel(fullPath, path)
-				if err != nil {
-					return nil
-				}
-				if strings.Count(relPath, string(os.PathSeparator)) > 2 {
-					return nil
-				}
-
-				// Calculate relative path from home directory
-				homeRelPath, err := filepath.Rel(d.homeDir, path)
-				if err != nil {
-					return nil
-				}
-
-				// Check if file should be ignored
-				if shouldSkipDotfile(homeRelPath, info, ignorePatterns, skipCtx) {
-					return nil
-				}
-
-				// Only add if not already in items (avoid duplicates)
-				found := false
-				for _, item := range items {
-					if item.Name == homeRelPath {
-						found = true
-						break
-					}
-				}
-
-				if !found {
-					items = append(items, ActualItem{
-						Name: homeRelPath,
-						Path: path,
-						Metadata: map[string]interface{}{
-							"path": path,
-						},
-					})
-				}
-
-				return nil
-			})
+	// Process scan results
+	for _, result := range scanResults {
+		// Check if directory should be expanded
+		if result.Info.IsDir() && expander.ShouldExpandDirectory(result.Name) {
+			// Expand directory
+			expandedResults, err := expander.ExpandDirectory(ctx, result.Path, result.Name)
 			if err != nil {
-				// If we can't walk the directory, fall back to showing it as a single item
+				// Fall back to showing directory as single item
 				items = append(items, ActualItem{
-					Name: dotfile,
-					Path: fullPath,
-					Metadata: map[string]interface{}{
-						"path": fullPath,
-					},
+					Name:     result.Name,
+					Path:     result.Path,
+					Metadata: result.Metadata,
+				})
+				continue
+			}
+
+			// Add expanded results
+			for _, expanded := range expandedResults {
+				items = append(items, ActualItem{
+					Name:     expanded.Name,
+					Path:     expanded.Path,
+					Metadata: expanded.Metadata,
 				})
 			}
 		} else {
 			// Single file or unexpanded directory
+			// Mark as seen in expander to avoid duplicates later
+			expander.CheckDuplicate(result.Name)
 			items = append(items, ActualItem{
-				Name: dotfile,
-				Path: fullPath,
-				Metadata: map[string]interface{}{
-					"path": fullPath,
-				},
+				Name:     result.Name,
+				Path:     result.Path,
+				Metadata: result.Metadata,
 			})
 		}
 	}
 
-	// Also check configured destinations to find files in subdirectories
+	// Step 2: Check configured destinations
 	targets := d.configLoader.GetDotfileTargets()
 	for _, destination := range targets {
 		destPath := d.manager.ExpandPath(destination)
 
-		// Check if destination exists
+		// Skip if destination doesn't exist
 		if !d.manager.FileExists(destPath) {
 			continue
 		}
 
-		// If it's a directory, walk it to find individual files
-		if d.manager.IsDirectory(destPath) {
-			err := filepath.Walk(destPath, func(path string, info os.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-
-				// Skip directories
-				if info.IsDir() {
-					return nil
-				}
-
-				// Calculate relative path to create a proper name
-				relPath, err := filepath.Rel(d.homeDir, path)
-				if err != nil {
-					return err
-				}
-
-				// Check if file should be ignored
-				if shouldSkipDotfile(relPath, info, ignorePatterns, skipCtx) {
-					return nil
-				}
-
-				// Only add if not already in items (avoid duplicates)
-				name := relPath
-				found := false
-				for _, item := range items {
-					if item.Name == name {
-						found = true
-						break
-					}
-				}
-
-				if !found {
-					items = append(items, ActualItem{
-						Name: name,
-						Path: path,
-						Metadata: map[string]interface{}{
-							"path": path,
-						},
-					})
-				}
-
-				return nil
-			})
+		// For single files, check if we've already seen them
+		if !d.manager.IsDirectory(destPath) {
+			relPath, err := expander.CalculateRelativePath(destPath)
 			if err != nil {
-				return nil, errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "scan",
-					fmt.Sprintf("failed to walk directory %s", destPath))
-			}
-		} else {
-			// Single file - calculate relative path
-			relPath, err := filepath.Rel(d.homeDir, destPath)
-			if err != nil {
-				return nil, errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "scan",
-					fmt.Sprintf("failed to get relative path for %s", destPath))
+				continue
 			}
 
-			// Check if file should be ignored
+			// Skip if already processed
+			if expander.CheckDuplicate(relPath) {
+				continue
+			}
+
 			info, err := os.Stat(destPath)
 			if err != nil {
-				continue // Skip files we can't stat
-			}
-			if shouldSkipDotfile(relPath, info, ignorePatterns, skipCtx) {
-				continue // Skip ignored files
+				continue
 			}
 
-			// Only add if not already in items (avoid duplicates)
-			name := relPath
-			found := false
-			for _, item := range items {
-				if item.Name == name {
-					found = true
-					break
+			// Apply filter
+			if filter.ShouldSkip(relPath, info) {
+				continue
+			}
+
+			items = append(items, ActualItem{
+				Name: relPath,
+				Path: destPath,
+				Metadata: map[string]interface{}{
+					"path": destPath,
+				},
+			})
+		} else {
+			// For directories, expand them
+			destResults, err := expander.ExpandConfiguredDestination(ctx, d.manager, destPath)
+			if err != nil {
+				continue
+			}
+
+			// Add results (duplicates are already filtered by expander)
+			for _, result := range destResults {
+				// Apply filter
+				if filter.ShouldSkip(result.Name, result.Info) {
+					continue
 				}
-			}
 
-			if !found {
 				items = append(items, ActualItem{
-					Name: name,
-					Path: destPath,
-					Metadata: map[string]interface{}{
-						"path": destPath,
-					},
+					Name:     result.Name,
+					Path:     result.Path,
+					Metadata: result.Metadata,
 				})
 			}
 		}
@@ -355,69 +268,4 @@ func (d *DotfileProvider) expandConfigDirectory(sourceDir, destDir string) ([]Co
 	}
 
 	return items, nil
-}
-
-// SkipContext provides context for filtering decisions
-type SkipContext struct {
-	ConfigDir         string
-	FilesOnlyMode     bool
-	SkipConfigDir     bool // When true, skip the config directory entirely (for home scanning)
-	AllowConfigAccess bool // When true, allow access to config directory (for config reading)
-}
-
-// shouldSkipDotfile determines if a file/directory should be skipped based on ignore patterns and context
-func shouldSkipDotfile(relPath string, info os.FileInfo, ignorePatterns []string, ctx *SkipContext) bool {
-	// Always skip plonk config file
-	if relPath == "plonk.yaml" {
-		return true
-	}
-
-	// Skip plonk config directory when scanning home directory
-	if ctx != nil && ctx.SkipConfigDir && ctx.ConfigDir != "" {
-		// Extract the relative path pattern from the config directory
-		// e.g., "/home/user/.config/plonk" -> ".config/plonk"
-		if strings.Contains(ctx.ConfigDir, "/.config/plonk") {
-			configPattern := ".config/plonk"
-			if relPath == configPattern || strings.HasPrefix(relPath, configPattern+"/") {
-				return true
-			}
-		}
-		// Also handle other config directory patterns
-		configBasename := filepath.Base(ctx.ConfigDir)
-		if strings.HasSuffix(relPath, configBasename) || strings.Contains(relPath, configBasename+"/") {
-			return true
-		}
-	}
-
-	// Skip directories when in files-only mode
-	if ctx != nil && ctx.FilesOnlyMode && info.IsDir() {
-		return true
-	}
-
-	// Check against configured ignore patterns
-	for _, pattern := range ignorePatterns {
-		// Check exact match for file/directory name
-		if pattern == info.Name() || pattern == relPath {
-			return true
-		}
-		// Check glob pattern match
-		if matched, _ := filepath.Match(pattern, info.Name()); matched {
-			return true
-		}
-		if matched, _ := filepath.Match(pattern, relPath); matched {
-			return true
-		}
-	}
-
-	return false
-}
-
-// shouldExpandDirectory determines if a directory should be expanded to show its contents
-func shouldExpandDirectory(dirname string, expandDirs []string) bool {
-	for _, dir := range expandDirs {
-		if dirname == dir {
-			return true
-		}
-	}
-	return false
 }
