@@ -31,6 +31,12 @@ using Homebrew and NPM package managers.`,
 			fmt.Printf("plonk %s\n", formatVersion())
 			return nil
 		}
+
+		// No arguments = show status
+		if len(args) == 0 {
+			return runStatus(cmd, args)
+		}
+
 		return cmd.Help()
 	},
 }
