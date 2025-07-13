@@ -181,20 +181,25 @@ type PackageUninstallSummary struct {
 
 // TableOutput generates human-friendly output
 func (p PackageUninstallOutput) TableOutput() string {
-	output := "Package Uninstallation\n=====================\n\n"
+	tb := NewTableBuilder()
+
+	tb.AddTitle("Package Uninstallation")
+	tb.AddNewline()
 
 	if p.Summary.Removed > 0 {
-		output += fmt.Sprintf("📦 Removed %d packages\n", p.Summary.Removed)
+		tb.AddLine("%s Removed %d packages", IconPackage, p.Summary.Removed)
 	}
 	if p.Summary.Skipped > 0 {
-		output += fmt.Sprintf("⏭️ %d skipped\n", p.Summary.Skipped)
+		tb.AddLine("⏭️ %d skipped", p.Summary.Skipped)
 	}
 	if p.Summary.Failed > 0 {
-		output += fmt.Sprintf("❌ %d failed\n", p.Summary.Failed)
+		tb.AddLine("%s %d failed", IconUnhealthy, p.Summary.Failed)
 	}
 
-	output += fmt.Sprintf("\nTotal: %d packages processed\n", p.TotalPackages)
-	return output
+	tb.AddNewline()
+	tb.AddLine("Total: %d packages processed", p.TotalPackages)
+
+	return tb.Build()
 }
 
 // StructuredData returns the structured data for serialization

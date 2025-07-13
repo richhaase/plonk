@@ -122,32 +122,23 @@ type BatchAddOutput struct {
 
 // Enhanced table output methods
 func (a EnhancedAddOutput) TableOutput() string {
-	var output strings.Builder
+	tb := NewTableBuilder()
 
 	// Header
-	output.WriteString("Package Add\n")
-	output.WriteString("===========\n")
+	tb.AddTitle("Package Add")
 
 	// Actions
-	for _, action := range a.Actions {
-		if strings.Contains(action, "error") || strings.Contains(action, "failed") {
-			output.WriteString("✗ " + action + "\n")
-		} else if strings.Contains(action, "already") {
-			output.WriteString("• " + action + "\n")
-		} else {
-			output.WriteString("✓ " + action + "\n")
-		}
-	}
+	tb.AddActionList(a.Actions)
 
 	// Error if present
 	if a.Error != "" {
-		output.WriteString("✗ Error: " + a.Error + "\n")
+		tb.AddLine("%s Error: %s", IconError, a.Error)
 	}
 
 	// Summary
-	output.WriteString("\n")
+	tb.AddNewline()
 	if a.Error != "" {
-		output.WriteString("Summary: Failed to add " + a.Package + "\n")
+		tb.AddLine("Summary: Failed to add %s", a.Package)
 	} else {
 		summary := "Summary: "
 		if a.ConfigAdded {
@@ -166,39 +157,30 @@ func (a EnhancedAddOutput) TableOutput() string {
 			summary += " (already installed)"
 		}
 
-		output.WriteString(summary + "\n")
+		tb.AddLine("%s", summary)
 	}
 
-	return output.String()
+	return tb.Build()
 }
 
 func (r EnhancedRemoveOutput) TableOutput() string {
-	var output strings.Builder
+	tb := NewTableBuilder()
 
 	// Header
-	output.WriteString("Package Remove\n")
-	output.WriteString("==============\n")
+	tb.AddTitle("Package Remove")
 
 	// Actions
-	for _, action := range r.Actions {
-		if strings.Contains(action, "error") || strings.Contains(action, "failed") {
-			output.WriteString("✗ " + action + "\n")
-		} else if strings.Contains(action, "not found") || strings.Contains(action, "already") {
-			output.WriteString("• " + action + "\n")
-		} else {
-			output.WriteString("✓ " + action + "\n")
-		}
-	}
+	tb.AddActionList(r.Actions)
 
 	// Error if present
 	if r.Error != "" {
-		output.WriteString("✗ Error: " + r.Error + "\n")
+		tb.AddLine("%s Error: %s", IconError, r.Error)
 	}
 
 	// Summary
-	output.WriteString("\n")
+	tb.AddNewline()
 	if r.Error != "" {
-		output.WriteString("Summary: Failed to remove " + r.Package + "\n")
+		tb.AddLine("Summary: Failed to remove %s", r.Package)
 	} else {
 		summary := "Summary: "
 		parts := []string{}
@@ -214,51 +196,44 @@ func (r EnhancedRemoveOutput) TableOutput() string {
 			summary += strings.Join(parts, " and ")
 		}
 
-		output.WriteString(summary + "\n")
+		tb.AddLine("%s", summary)
 	}
 
-	return output.String()
+	return tb.Build()
 }
 
 func (b BatchAddOutput) TableOutput() string {
-	var output strings.Builder
+	tb := NewTableBuilder()
 
 	// Header
-	output.WriteString("Package Add\n")
-	output.WriteString("===========\n")
+	tb.AddTitle("Package Add")
 
 	// Individual package actions
 	for _, pkg := range b.Packages {
-		for _, action := range pkg.Actions {
-			if strings.Contains(action, "error") || strings.Contains(action, "failed") {
-				output.WriteString("✗ " + action + "\n")
-			} else if strings.Contains(action, "already") {
-				output.WriteString("• " + action + "\n")
-			} else {
-				output.WriteString("✓ " + action + "\n")
-			}
-		}
+		tb.AddActionList(pkg.Actions)
 	}
 
 	// Summary
-	output.WriteString("\n")
-	summary := fmt.Sprintf("Summary: %d packages processed", b.TotalPackages)
+	tb.AddNewline()
+	counts := map[string]int{
+		"packages processed": b.TotalPackages,
+	}
 	if b.AddedToConfig > 0 {
-		summary += fmt.Sprintf(" | %d added to config", b.AddedToConfig)
+		counts["added to config"] = b.AddedToConfig
 	}
 	if b.Installed > 0 {
-		summary += fmt.Sprintf(" | %d installed", b.Installed)
+		counts["installed"] = b.Installed
 	}
 	if b.AlreadyConfigured > 0 {
-		summary += fmt.Sprintf(" | %d already configured", b.AlreadyConfigured)
+		counts["already configured"] = b.AlreadyConfigured
 	}
 	if b.Errors > 0 {
-		summary += fmt.Sprintf(" | %d errors", b.Errors)
+		counts["errors"] = b.Errors
 	}
 
-	output.WriteString(summary + "\n")
+	tb.AddSummaryLine("Summary:", counts)
 
-	return output.String()
+	return tb.Build()
 }
 
 func (a EnhancedAddOutput) StructuredData() any {
@@ -332,18 +307,18 @@ func (r RemoveOutput) StructuredData() any {
 
 // TableOutput generates human-friendly table output
 func (p PackageListOutput) TableOutput() string {
-	var output strings.Builder
+	tb := NewTableBuilder()
 
 	// Header with summary
-	output.WriteString("Package Summary\n")
-	output.WriteString("===============\n")
-	output.WriteString(fmt.Sprintf("Total: %d packages | ✓ Managed: %d | ⚠ Missing: %d | ? Untracked: %d\n\n",
-		p.TotalCount, p.ManagedCount, p.MissingCount, p.UntrackedCount))
+	tb.AddTitle("Package Summary")
+	tb.AddLine("Total: %d packages | %s Managed: %d | %s Missing: %d | %s Untracked: %d",
+		p.TotalCount, IconSuccess, p.ManagedCount, IconWarning, p.MissingCount, IconUnknown, p.UntrackedCount)
+	tb.AddNewline()
 
 	// If no packages, show simple message
 	if p.TotalCount == 0 {
-		output.WriteString("No packages found\n")
-		return output.String()
+		tb.AddLine("No packages found")
+		return tb.Build()
 	}
 
 	// Collect items to show based on verbose mode
@@ -362,43 +337,24 @@ func (p PackageListOutput) TableOutput() string {
 	// If we have items to show, create the table
 	if len(itemsToShow) > 0 {
 		// Table header
-		output.WriteString("  Status Package                        Manager   \n")
-		output.WriteString("  ------ ------------------------------ ----------\n")
+		tb.AddLine("  Status Package                        Manager   ")
+		tb.AddLine("  ------ ------------------------------ ----------")
 
 		// Table rows
 		for _, item := range itemsToShow {
-			var statusIcon string
-			switch item.State {
-			case "managed":
-				statusIcon = "✓"
-			case "missing":
-				statusIcon = "⚠"
-			case "untracked":
-				statusIcon = "?"
-			default:
-				statusIcon = "-"
-			}
-
-			output.WriteString(fmt.Sprintf("  %-6s %-30s %-10s\n",
-				statusIcon, truncateString(item.Name, 30), item.Manager))
+			statusIcon := GetStatusIcon(item.State)
+			tb.AddLine("  %-6s %-30s %-10s",
+				statusIcon, TruncateString(item.Name, 30), item.Manager)
 		}
-		output.WriteString("\n")
+		tb.AddNewline()
 	}
 
 	// Show untracked count hint if not in verbose mode
 	if !p.Verbose && p.UntrackedCount > 0 {
-		output.WriteString(fmt.Sprintf("%d untracked packages (use --verbose to show details)\n", p.UntrackedCount))
+		tb.AddLine("%d untracked packages (use --verbose to show details)", p.UntrackedCount)
 	}
 
-	return output.String()
-}
-
-// Helper function to truncate strings to a specified length
-func truncateString(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen-3] + "..."
+	return tb.Build()
 }
 
 // StructuredData returns the structured data for serialization

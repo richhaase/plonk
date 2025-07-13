@@ -197,20 +197,25 @@ func calculatePackageSummary(results []operations.OperationResult) PackageInstal
 
 // TableOutput generates human-friendly output
 func (p PackageInstallOutput) TableOutput() string {
-	output := "Package Installation\n===================\n\n"
+	tb := NewTableBuilder()
+
+	tb.AddTitle("Package Installation")
+	tb.AddNewline()
 
 	if p.Summary.Added > 0 {
-		output += fmt.Sprintf("📦 Added %d packages\n", p.Summary.Added)
+		tb.AddLine("%s Added %d packages", IconPackage, p.Summary.Added)
 	}
 	if p.Summary.Skipped > 0 {
-		output += fmt.Sprintf("⏭️ %d skipped\n", p.Summary.Skipped)
+		tb.AddLine("⏭️ %d skipped", p.Summary.Skipped)
 	}
 	if p.Summary.Failed > 0 {
-		output += fmt.Sprintf("❌ %d failed\n", p.Summary.Failed)
+		tb.AddLine("%s %d failed", IconUnhealthy, p.Summary.Failed)
 	}
 
-	output += fmt.Sprintf("\nTotal: %d packages processed\n", p.TotalPackages)
-	return output
+	tb.AddNewline()
+	tb.AddLine("Total: %d packages processed", p.TotalPackages)
+
+	return tb.Build()
 }
 
 // StructuredData returns the structured data for serialization
