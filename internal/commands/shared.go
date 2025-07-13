@@ -10,13 +10,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/richhaase/plonk/internal/business"
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/paths"
 	"github.com/richhaase/plonk/internal/runtime"
+	"github.com/richhaase/plonk/internal/services"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
 )
@@ -250,13 +250,13 @@ func applyPackages(configDir string, cfg *config.Config, dryRun bool, format Out
 	ctx := context.Background()
 
 	// Use business module for package operations
-	options := business.PackageApplyOptions{
+	options := services.PackageApplyOptions{
 		ConfigDir: configDir,
 		Config:    cfg,
 		DryRun:    dryRun,
 	}
 
-	result, err := business.ApplyPackages(ctx, options)
+	result, err := services.ApplyPackages(ctx, options)
 	if err != nil {
 		return ApplyOutput{}, err
 	}
@@ -310,7 +310,7 @@ func applyDotfiles(configDir, homeDir string, cfg *config.Config, dryRun, backup
 	ctx := context.Background()
 
 	// Use business module for dotfile operations
-	options := business.DotfileApplyOptions{
+	options := services.DotfileApplyOptions{
 		ConfigDir: configDir,
 		HomeDir:   homeDir,
 		Config:    cfg,
@@ -318,7 +318,7 @@ func applyDotfiles(configDir, homeDir string, cfg *config.Config, dryRun, backup
 		Backup:    backup,
 	}
 
-	result, err := business.ApplyDotfiles(ctx, options)
+	result, err := services.ApplyDotfiles(ctx, options)
 	if err != nil {
 		return DotfileApplyOutput{}, err
 	}

@@ -215,3 +215,13 @@ docs/                   # Technical documentation
 - **Architecture**: `docs/ARCHITECTURE.md` for technical deep-dive
 - **CLI Reference**: `docs/CLI.md` for complete command documentation
 - **Development Setup**: `docs/DEVELOPMENT.md` for contributing guidelines
+
+## Code Review Memories
+
+### Updated Code Review (2024-03-02)
+- Perform a critical code review of the plonk project
+- Project is very young (only a week old) with a largely fixed interface as of yesterday
+- Multiple refactors to enhance UX have occurred, with code potentially renamed multiple times
+- Do not assume the architecture is correct
+- Look for opportunities to extract common functionality
+- Primary goal: Determine necessary code refinements to ensure well-structured, clearly designed code with clear responsibility boundaries
