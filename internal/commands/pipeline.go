@@ -187,6 +187,16 @@ func (p *CommandPipeline) renderOperationResults(results []operations.OperationR
 		}
 	}
 
+	// For dotfile removal operations
+	if p.itemType == "dotfile-remove" {
+		output := DotfileRemovalOutput{
+			TotalFiles: len(results),
+			Results:    results,
+			Summary:    calculateDotfileRemovalSummary(results),
+		}
+		return RenderOutput(output, p.format)
+	}
+
 	// For other operations, use generic rendering
 	return p.renderGenericResults(results)
 }
@@ -257,6 +267,22 @@ func calculateUninstallSummary(results []operations.OperationResult) PackageUnin
 	for _, result := range results {
 		switch result.Status {
 		case "removed", "would-remove":
+			summary.Removed++
+		case "skipped":
+			summary.Skipped++
+		case "failed":
+			summary.Failed++
+		}
+	}
+	return summary
+}
+
+// calculateDotfileRemovalSummary calculates summary from dotfile removal results
+func calculateDotfileRemovalSummary(results []operations.OperationResult) DotfileRemovalSummary {
+	summary := DotfileRemovalSummary{}
+	for _, result := range results {
+		switch result.Status {
+		case "unlinked", "would-unlink":
 			summary.Removed++
 		case "skipped":
 			summary.Skipped++

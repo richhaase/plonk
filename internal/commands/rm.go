@@ -4,7 +4,7 @@
 package commands
 
 import (
-	"fmt"
+	"context"
 	"os"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -41,63 +41,37 @@ func init() {
 }
 
 func runRm(cmd *cobra.Command, args []string) error {
-	dryRun, _ := cmd.Flags().GetBool("dry-run")
-
-	// Get directories
-	homeDir, err := os.UserHomeDir()
+	// Create command pipeline for dotfile removal
+	pipeline, err := NewCommandPipeline(cmd, "dotfile-remove")
 	if err != nil {
-		return errors.Wrap(err, errors.ErrFilePermission, errors.DomainCommands, "rm", "failed to get home directory")
+		return err
 	}
 
-	configDir := config.GetDefaultConfigDirectory()
+	// Define the processor function
+	processor := func(ctx context.Context, args []string, flags *SimpleFlags) ([]operations.OperationResult, error) {
+		// Get directories
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return nil, errors.Wrap(err, errors.ErrFilePermission, errors.DomainCommands, "rm", "failed to get home directory")
+		}
 
-	// Load config
-	cfg, err := config.LoadConfig(configDir)
-	if err != nil {
-		// If config doesn't exist, we can't remove dotfiles
-		return errors.Wrap(err, errors.ErrConfigNotFound, errors.DomainConfig, "load", "failed to load configuration")
+		configDir := config.GetDefaultConfigDirectory()
+
+		// Load config using LoadConfigWithDefaults for consistent zero-config behavior
+		cfg := config.LoadConfigWithDefaults(configDir)
+
+		// Process dotfiles
+		results := make([]operations.OperationResult, 0, len(args))
+		for _, dotfilePath := range args {
+			result := removeSingleDotfile(homeDir, configDir, cfg, dotfilePath, flags.DryRun)
+			results = append(results, result)
+		}
+
+		return results, nil
 	}
 
-	// Parse output format
-	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := ParseOutputFormat(outputFormat)
-	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "rm", "output-format", "invalid output format")
-	}
-
-	// Process dotfiles sequentially
-	results := make([]operations.OperationResult, 0, len(args))
-	reporter := operations.NewProgressReporterForOperation("remove", "dotfile", format == OutputTable)
-
-	for _, dotfilePath := range args {
-		result := removeSingleDotfile(homeDir, configDir, cfg, dotfilePath, dryRun)
-		results = append(results, result)
-
-		// Show progress immediately
-		reporter.ShowItemProgress(result)
-	}
-
-	// Handle output based on format
-	if format == OutputTable {
-		// Show summary for table output
-		reporter.ShowBatchSummary(results)
-	} else {
-		// For structured output, create appropriate response
-		return renderDotfileRemovalResults(results, format)
-	}
-
-	// Determine exit code
-	return operations.DetermineExitCode(results, errors.DomainDotfiles, "rm")
-}
-
-// renderDotfileRemovalResults renders results in structured format
-func renderDotfileRemovalResults(results []operations.OperationResult, format OutputFormat) error {
-	output := DotfileRemovalOutput{
-		TotalFiles: len(results),
-		Results:    results,
-		Summary:    calculateDotfileRemovalSummary(results),
-	}
-	return RenderOutput(output, format)
+	// Execute the pipeline
+	return pipeline.ExecuteWithResults(context.Background(), processor, args)
 }
 
 // DotfileRemovalOutput represents the output for dotfile removal
@@ -114,38 +88,27 @@ type DotfileRemovalSummary struct {
 	Failed  int `json:"failed" yaml:"failed"`
 }
 
-// calculateDotfileRemovalSummary calculates summary from results
-func calculateDotfileRemovalSummary(results []operations.OperationResult) DotfileRemovalSummary {
-	summary := DotfileRemovalSummary{}
-	for _, result := range results {
-		switch result.Status {
-		case "unlinked", "would-unlink":
-			summary.Removed++
-		case "skipped":
-			summary.Skipped++
-		case "failed":
-			summary.Failed++
-		}
-	}
-	return summary
-}
-
 // TableOutput generates human-friendly output
 func (d DotfileRemovalOutput) TableOutput() string {
-	output := "Dotfile Removal\n===============\n\n"
+	tb := NewTableBuilder()
+
+	tb.AddTitle("Dotfile Removal")
+	tb.AddNewline()
 
 	if d.Summary.Removed > 0 {
-		output += fmt.Sprintf("📄 Removed %d dotfiles\n", d.Summary.Removed)
+		tb.AddLine("📄 Removed %d dotfiles", d.Summary.Removed)
 	}
 	if d.Summary.Skipped > 0 {
-		output += fmt.Sprintf("⏭️ %d skipped\n", d.Summary.Skipped)
+		tb.AddLine("⏭️ %d skipped", d.Summary.Skipped)
 	}
 	if d.Summary.Failed > 0 {
-		output += fmt.Sprintf("❌ %d failed\n", d.Summary.Failed)
+		tb.AddLine("%s %d failed", IconUnhealthy, d.Summary.Failed)
 	}
 
-	output += fmt.Sprintf("\nTotal: %d dotfiles processed\n", d.TotalFiles)
-	return output
+	tb.AddNewline()
+	tb.AddLine("Total: %d dotfiles processed", d.TotalFiles)
+
+	return tb.Build()
 }
 
 // StructuredData returns the structured data for serialization

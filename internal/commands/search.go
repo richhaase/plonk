@@ -151,11 +151,7 @@ func findInstalledPackage(ctx context.Context, packageName string, managers map[
 // getDefaultManager gets the default manager from configuration
 func getDefaultManager() (string, error) {
 	configDir := config.GetDefaultConfigDirectory()
-	cfg, err := config.LoadConfig(configDir)
-	if err != nil {
-		// If config doesn't exist or is invalid, we don't have a default manager
-		return "", nil
-	}
+	cfg := config.LoadConfigWithDefaults(configDir)
 
 	return cfg.Resolve().GetDefaultManager(), nil
 }

@@ -112,10 +112,7 @@ func runSmartOverview(cmd *cobra.Command, flags *SimpleFlags, format OutputForma
 	reconciler.RegisterProvider("package", packageProvider)
 
 	// Register dotfile provider
-	cfg, _ := config.LoadConfig(configDir)
-	if cfg == nil {
-		cfg = &config.Config{}
-	}
+	cfg := config.LoadConfigWithDefaults(configDir)
 	dotfileProvider := createDotfileProvider(homeDir, configDir, cfg)
 	reconciler.RegisterProvider("dotfile", dotfileProvider)
 

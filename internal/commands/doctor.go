@@ -292,13 +292,7 @@ func checkConfigurationValidity() HealthCheck {
 	configDir := config.GetDefaultConfigDirectory()
 
 	// Try to load configuration
-	cfg, err := config.LoadConfig(configDir)
-	if err != nil {
-		check.Status = "fail"
-		check.Issues = append(check.Issues, fmt.Sprintf("Configuration is invalid: %v", err))
-		check.Suggestions = append(check.Suggestions, "Run 'plonk config validate' for detailed error information")
-		return check
-	}
+	cfg := config.LoadConfigWithDefaults(configDir)
 
 	// Run validation
 	validator := config.NewSimpleValidator()

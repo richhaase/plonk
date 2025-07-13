@@ -50,11 +50,7 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 	configPath := getConfigPath(configDir)
 
 	// Load configuration (this handles missing files gracefully due to zero-config)
-	cfg, err := config.LoadConfig(configDir)
-	if err != nil {
-		// Handle validation errors
-		return errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "load", "failed to load configuration")
-	}
+	cfg := config.LoadConfigWithDefaults(configDir)
 
 	// Build output data with resolved config (merges defaults with user config)
 	resolvedConfig := cfg.Resolve()

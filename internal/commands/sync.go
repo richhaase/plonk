@@ -71,10 +71,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 	configDir := config.GetDefaultConfigDirectory()
 
 	// Load configuration
-	cfg, err := config.LoadConfig(configDir)
-	if err != nil {
-		return errors.Wrap(err, errors.ErrConfigNotFound, errors.DomainConfig, "load", "failed to load configuration")
-	}
+	cfg := config.LoadConfigWithDefaults(configDir)
 
 	var packageResult, dotfileResult interface{}
 
