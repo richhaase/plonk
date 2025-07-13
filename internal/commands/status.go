@@ -22,16 +22,17 @@ import (
 var statusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Display overall plonk status",
-	Long: `Display the complete status of your plonk-managed environment.
+	Long: `Display a compact overview of your plonk-managed environment.
 
 Shows:
-- Configuration file status
-- Package management state (managed/missing/untracked)
-- Dotfile management state (managed/missing/untracked)
-- List of all managed items
+- Overall health status
+- Configuration and lock file status
+- Summary of managed and untracked items
+
+For detailed lists, use 'plonk dot list' or 'plonk pkg list'.
 
 Examples:
-  plonk status           # Show overall status
+  plonk status           # Show compact status
   plonk status -o json   # Show as JSON
   plonk status -o yaml   # Show as YAML`,
 	RunE: runStatus,
@@ -214,11 +215,17 @@ type ManagedItem struct {
 
 // TableOutput generates human-friendly table output for status
 func (s StatusOutput) TableOutput() string {
-	output := "Plonk Status\n"
-	output += "============\n\n"
+	// Determine overall health status
+	healthStatus := "✅ Healthy"
+	if s.StateSummary.TotalMissing > 0 {
+		healthStatus = "⚠️ Issues"
+	}
+	if !s.ConfigValid && s.ConfigExists {
+		healthStatus = "❌ Error"
+	}
 
 	// Configuration status
-	configStatus := "ℹ️ using defaults"
+	configStatus := "ℹ️ defaults"
 	if s.ConfigExists {
 		if s.ConfigValid {
 			configStatus = "✅ valid"
@@ -227,91 +234,18 @@ func (s StatusOutput) TableOutput() string {
 		}
 	}
 
-	lockStatus := "ℹ️ using defaults"
+	// Lock status
+	lockStatus := "ℹ️ defaults"
 	if s.LockExists {
 		lockStatus = "✅ exists"
 	}
 
-	output += fmt.Sprintf("📁 Config: %s (%s)\n", s.ConfigPath, configStatus)
-	output += fmt.Sprintf("🔒 Lock:   %s (%s)\n\n", s.LockPath, lockStatus)
-
-	// Overall state summary
+	// Build compact output
 	summary := s.StateSummary
-	output += "Overall State:\n"
-	if summary.TotalManaged > 0 {
-		output += fmt.Sprintf("  ✅ %d managed items\n", summary.TotalManaged)
-	}
-	if summary.TotalMissing > 0 {
-		output += fmt.Sprintf("  ❌ %d missing items\n", summary.TotalMissing)
-	}
-	if summary.TotalUntracked > 0 {
-		output += fmt.Sprintf("  🔍 %d untracked items\n", summary.TotalUntracked)
-	}
-
-	// Domain-specific details
-	if len(summary.Results) > 0 {
-		output += "\nDomain Details:\n"
-		for _, result := range summary.Results {
-			if result.IsEmpty() {
-				continue
-			}
-
-			domainName := result.Domain
-			if result.Manager != "" {
-				domainName = fmt.Sprintf("%s (%s)", result.Domain, result.Manager)
-			}
-
-			output += fmt.Sprintf("  %s: ", domainName)
-			parts := []string{}
-			if len(result.Managed) > 0 {
-				parts = append(parts, fmt.Sprintf("%d managed", len(result.Managed)))
-			}
-			if len(result.Missing) > 0 {
-				parts = append(parts, fmt.Sprintf("%d missing", len(result.Missing)))
-			}
-			if len(result.Untracked) > 0 {
-				parts = append(parts, fmt.Sprintf("%d untracked", len(result.Untracked)))
-			}
-
-			for i, part := range parts {
-				if i > 0 {
-					output += ", "
-				}
-				output += part
-			}
-			output += "\n"
-		}
-	}
-
-	// Currently managed items
-	output += "\nCurrently Managing:\n"
-	hasItems := false
-	for _, result := range summary.Results {
-		if len(result.Managed) > 0 {
-			hasItems = true
-			emoji := "📦"
-			if result.Domain == "dotfile" {
-				emoji = "📄"
-			}
-
-			domainLabel := result.Domain
-			if result.Manager != "" {
-				domainLabel = result.Manager
-			}
-
-			itemNames := make([]string, len(result.Managed))
-			for i, item := range result.Managed {
-				itemNames[i] = item.Name
-			}
-
-			output += fmt.Sprintf("  %s %s: %s\n", emoji, domainLabel,
-				joinWithLimit(itemNames, ", ", 5))
-		}
-	}
-
-	if !hasItems {
-		output += "  No items currently managed\n"
-	}
+	output := fmt.Sprintf("Plonk Status: %s\n", healthStatus)
+	output += fmt.Sprintf("Config: %s | Lock: %s | Managing: %d items |\n",
+		configStatus, lockStatus, summary.TotalManaged)
+	output += fmt.Sprintf("Available: %d untracked\n", summary.TotalUntracked)
 
 	return output
 }
@@ -366,17 +300,4 @@ func extractManagedItems(results []state.Result) []ManagedItem {
 		}
 	}
 	return items
-}
-
-// joinWithLimit joins strings with a separator, truncating if too many
-func joinWithLimit(items []string, sep string, limit int) string {
-	if len(items) <= limit {
-		return fmt.Sprintf("%s", items)
-	}
-
-	truncated := make([]string, limit)
-	copy(truncated, items[:limit])
-	result := fmt.Sprintf("%s", truncated)
-	result += fmt.Sprintf(" (and %d more)", len(items)-limit)
-	return result
 }
