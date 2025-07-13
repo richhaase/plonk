@@ -11,6 +11,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/operations"
+	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/spf13/cobra"
 )
 
@@ -34,6 +35,8 @@ type SimpleProcessorFunc func(ctx context.Context, args []string) (OutputData, e
 
 // NewCommandPipeline creates a new command pipeline for the given command
 func NewCommandPipeline(cmd *cobra.Command, itemType string) (*CommandPipeline, error) {
+	runtime.Debug(runtime.DomainCommand, "Creating pipeline for command: %s", cmd.Name())
+
 	// Parse flags first
 	flags, err := ParseSimpleFlags(cmd)
 	if err != nil {

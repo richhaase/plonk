@@ -109,7 +109,9 @@ func (sc *SharedContext) ConfigWithDefaults() *config.Config {
 // ManagerRegistry returns the cached manager registry, creating it lazily if needed
 func (sc *SharedContext) ManagerRegistry() *managers.ManagerRegistry {
 	sc.registryOnce.Do(func() {
+		Debug(DomainManager, "Creating new manager registry")
 		sc.registry = managers.NewManagerRegistry()
+		DebugVerbose(DomainManager, "Manager registry initialized")
 	})
 	return sc.registry
 }
@@ -136,6 +138,7 @@ func (sc *SharedContext) IsManagerAvailable(ctx context.Context, managerName str
 	sc.managerMutex.RUnlock()
 
 	// Cache miss or expired, check availability
+	Debug(DomainManager, "Checking availability for manager: %s", managerName)
 	registry := sc.ManagerRegistry()
 	manager, err := registry.GetManager(managerName)
 	if err != nil {
