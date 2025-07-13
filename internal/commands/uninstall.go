@@ -163,17 +163,10 @@ func findPackageInLockFile(lockService *lock.YAMLLockService, packageName string
 
 // uninstallPackageFromSystem uninstalls a package using the appropriate manager
 func uninstallPackageFromSystem(managerName, packageName string) error {
-	var mgr managers.PackageManager
-
-	switch managerName {
-	case "homebrew":
-		mgr = managers.NewHomebrewManager()
-	case "npm":
-		mgr = managers.NewNpmManager()
-	case "cargo":
-		mgr = managers.NewCargoManager()
-	default:
-		return fmt.Errorf("unsupported package manager: %s", managerName)
+	registry := managers.NewManagerRegistry()
+	mgr, err := registry.GetManager(managerName)
+	if err != nil {
+		return err
 	}
 
 	ctx := context.Background()
@@ -181,10 +174,12 @@ func uninstallPackageFromSystem(managerName, packageName string) error {
 	// Check if manager is available
 	available, err := mgr.IsAvailable(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to check manager availability: %w", err)
+		return errors.Wrap(err, errors.ErrManagerUnavailable, errors.DomainPackages, "uninstall",
+			"failed to check manager availability")
 	}
 	if !available {
-		return fmt.Errorf("manager '%s' is not available", managerName)
+		return errors.NewError(errors.ErrManagerUnavailable, errors.DomainPackages, "uninstall",
+			"manager '"+managerName+"' is not available")
 	}
 
 	// Uninstall the package

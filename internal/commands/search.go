@@ -110,13 +110,20 @@ func performPackageSearch(ctx context.Context, packageName string) (SearchOutput
 
 // getAvailableManagers returns a map of available package managers
 func getAvailableManagers(ctx context.Context) (map[string]managers.PackageManager, error) {
-	allManagers := map[string]managers.PackageManager{
-		"homebrew": managers.NewHomebrewManager(),
-		"npm":      managers.NewNpmManager(),
-	}
-
+	registry := managers.NewManagerRegistry()
 	availableManagers := make(map[string]managers.PackageManager)
-	for name, manager := range allManagers {
+
+	for _, name := range registry.GetAllManagerNames() {
+		// Skip cargo for search since it doesn't support search well
+		if name == "cargo" {
+			continue
+		}
+
+		manager, err := registry.GetManager(name)
+		if err != nil {
+			continue // Skip unsupported managers
+		}
+
 		if available, err := manager.IsAvailable(ctx); err != nil {
 			return nil, errors.WrapWithItem(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", name, "failed to check manager availability")
 		} else if available {

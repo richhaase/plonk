@@ -118,46 +118,13 @@ func runStatus(cmd *cobra.Command, args []string) error {
 
 // createPackageProvider creates a multi-manager package provider using lock file
 func createPackageProvider(ctx context.Context, configDir string) (*state.MultiManagerPackageProvider, error) {
-	provider := state.NewMultiManagerPackageProvider()
-
 	// Create lock file adapter
 	lockService := lock.NewYAMLLockService(configDir)
 	lockAdapter := lock.NewLockFileAdapter(lockService)
 
-	// Add Homebrew manager
-	homebrewManager := managers.NewHomebrewManager()
-	available, err := homebrewManager.IsAvailable(ctx)
-	if err != nil {
-		// Log the error but continue without this manager
-		// TODO: Add proper logging mechanism
-	} else if available {
-		managerAdapter := state.NewManagerAdapter(homebrewManager)
-		provider.AddManager("homebrew", managerAdapter, lockAdapter)
-	}
-
-	// Add NPM manager
-	npmManager := managers.NewNpmManager()
-	available, err = npmManager.IsAvailable(ctx)
-	if err != nil {
-		// Log the error but continue without this manager
-		// TODO: Add proper logging mechanism
-	} else if available {
-		managerAdapter := state.NewManagerAdapter(npmManager)
-		provider.AddManager("npm", managerAdapter, lockAdapter)
-	}
-
-	// Add Cargo manager
-	cargoManager := managers.NewCargoManager()
-	available, err = cargoManager.IsAvailable(ctx)
-	if err != nil {
-		// Log the error but continue without this manager
-		// TODO: Add proper logging mechanism
-	} else if available {
-		managerAdapter := state.NewManagerAdapter(cargoManager)
-		provider.AddManager("cargo", managerAdapter, lockAdapter)
-	}
-
-	return provider, nil
+	// Create package provider using registry
+	registry := managers.NewManagerRegistry()
+	return registry.CreateMultiProvider(ctx, lockAdapter)
 }
 
 // createDotfileProvider creates a dotfile provider

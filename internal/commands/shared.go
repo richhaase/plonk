@@ -252,44 +252,17 @@ func applyPackages(configDir string, cfg *config.Config, dryRun bool, format Out
 
 	// Register package provider (multi-manager) - using lock file
 	ctx := context.Background()
-	packageProvider := state.NewMultiManagerPackageProvider()
 
 	// Create lock file adapter
 	lockService := lock.NewYAMLLockService(configDir)
 	lockAdapter := lock.NewLockFileAdapter(lockService)
 
-	// Add Homebrew manager
-	homebrewManager := managers.NewHomebrewManager()
-	available, err := homebrewManager.IsAvailable(ctx)
+	// Create package provider using registry
+	registry := managers.NewManagerRegistry()
+	packageProvider, err := registry.CreateMultiProvider(ctx, lockAdapter)
 	if err != nil {
-		// Log the error but continue without this manager
-		// TODO: Add proper logging mechanism
-		// For now, silently skip problematic managers
-	} else if available {
-		managerAdapter := state.NewManagerAdapter(homebrewManager)
-		packageProvider.AddManager("homebrew", managerAdapter, lockAdapter)
-	}
-
-	// Add NPM manager
-	npmManager := managers.NewNpmManager()
-	available, err = npmManager.IsAvailable(ctx)
-	if err != nil {
-		// Log the error but continue without this manager
-		// TODO: Add proper logging mechanism
-	} else if available {
-		managerAdapter := state.NewManagerAdapter(npmManager)
-		packageProvider.AddManager("npm", managerAdapter, lockAdapter)
-	}
-
-	// Add Cargo manager
-	cargoManager := managers.NewCargoManager()
-	available, err = cargoManager.IsAvailable(ctx)
-	if err != nil {
-		// Log the error but continue without this manager
-		// TODO: Add proper logging mechanism
-	} else if available {
-		managerAdapter := state.NewManagerAdapter(cargoManager)
-		packageProvider.AddManager("cargo", managerAdapter, lockAdapter)
+		return ApplyOutput{}, errors.Wrap(err, errors.ErrProviderNotFound, errors.DomainPackages, "apply",
+			"failed to create package provider")
 	}
 
 	reconciler.RegisterProvider("package", packageProvider)
@@ -326,10 +299,12 @@ func applyPackages(configDir string, cfg *config.Config, dryRun bool, format Out
 	}
 
 	// Process each manager that has missing packages
-	managerInstances := map[string]managers.PackageManager{
-		"homebrew": managers.NewHomebrewManager(),
-		"npm":      managers.NewNpmManager(),
-		"cargo":    managers.NewCargoManager(),
+	managerInstances := make(map[string]managers.PackageManager)
+	for _, name := range registry.GetAllManagerNames() {
+		manager, err := registry.GetManager(name)
+		if err == nil {
+			managerInstances[name] = manager
+		}
 	}
 
 	for managerName, missingItems := range missingByManager {

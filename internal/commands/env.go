@@ -131,15 +131,9 @@ func getManagerInfo(ctx context.Context, managerName string) ManagerInfo {
 		Available: false,
 	}
 
-	var manager managers.PackageManager
-	var err error
-
-	switch managerName {
-	case "homebrew":
-		manager = managers.NewHomebrewManager()
-	case "npm":
-		manager = managers.NewNpmManager()
-	default:
+	registry := managers.NewManagerRegistry()
+	manager, err := registry.GetManager(managerName)
+	if err != nil {
 		info.Error = "unknown manager"
 		return info
 	}

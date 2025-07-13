@@ -181,16 +181,8 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 
 // getPackageManager returns the appropriate package manager instance
 func getPackageManager(manager string) (managers.PackageManager, error) {
-	switch manager {
-	case "homebrew":
-		return managers.NewHomebrewManager(), nil
-	case "npm":
-		return managers.NewNpmManager(), nil
-	case "cargo":
-		return managers.NewCargoManager(), nil
-	default:
-		return nil, fmt.Errorf("unsupported package manager: %s", manager)
-	}
+	registry := managers.NewManagerRegistry()
+	return registry.GetManager(manager)
 }
 
 // renderPackageResults renders package results in structured format

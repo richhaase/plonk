@@ -343,13 +343,16 @@ func checkPackageManagerAvailability(ctx context.Context) HealthCheck {
 		Message:  "Package managers are available",
 	}
 
-	managers := map[string]managers.PackageManager{
-		"homebrew": managers.NewHomebrewManager(),
-		"npm":      managers.NewNpmManager(),
+	registry := managers.NewManagerRegistry()
+	managerMap := make(map[string]managers.PackageManager)
+	for _, name := range registry.GetAllManagerNames() {
+		if manager, err := registry.GetManager(name); err == nil {
+			managerMap[name] = manager
+		}
 	}
 
 	availableCount := 0
-	for name, manager := range managers {
+	for name, manager := range managerMap {
 		available, err := manager.IsAvailable(ctx)
 		if err != nil {
 			check.Issues = append(check.Issues, fmt.Sprintf("%s: %v", name, err))
@@ -367,7 +370,7 @@ func checkPackageManagerAvailability(ctx context.Context) HealthCheck {
 		check.Issues = append(check.Issues, "No package managers are available")
 		check.Suggestions = append(check.Suggestions, "Install Homebrew or NPM to manage packages")
 		check.Message = "No package managers available"
-	} else if availableCount < len(managers) {
+	} else if availableCount < len(managerMap) {
 		if check.Status == "pass" {
 			check.Status = "warn"
 		}
@@ -387,12 +390,15 @@ func checkPackageManagerFunctionality(ctx context.Context) HealthCheck {
 		Message:  "Package managers are functional",
 	}
 
-	managers := map[string]managers.PackageManager{
-		"homebrew": managers.NewHomebrewManager(),
-		"npm":      managers.NewNpmManager(),
+	registry := managers.NewManagerRegistry()
+	managerMap := make(map[string]managers.PackageManager)
+	for _, name := range registry.GetAllManagerNames() {
+		if manager, err := registry.GetManager(name); err == nil {
+			managerMap[name] = manager
+		}
 	}
 
-	for name, manager := range managers {
+	for name, manager := range managerMap {
 		available, err := manager.IsAvailable(ctx)
 		if err != nil || !available {
 			continue // Skip unavailable managers
