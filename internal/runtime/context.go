@@ -109,9 +109,9 @@ func (sc *SharedContext) ConfigWithDefaults() *config.Config {
 // ManagerRegistry returns the cached manager registry, creating it lazily if needed
 func (sc *SharedContext) ManagerRegistry() *managers.ManagerRegistry {
 	sc.registryOnce.Do(func() {
-		Debug(DomainManager, "Creating new manager registry")
+		Info(DomainManager, "Creating new manager registry")
 		sc.registry = managers.NewManagerRegistry()
-		DebugVerbose(DomainManager, "Manager registry initialized")
+		Debug(DomainManager, "Manager registry initialized")
 	})
 	return sc.registry
 }
