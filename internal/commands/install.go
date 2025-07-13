@@ -13,6 +13,7 @@ import (
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/operations"
+	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/spf13/cobra"
 )
 
@@ -76,7 +77,8 @@ func installPackages(cmd *cobra.Command, packageNames []string, flags *SimpleFla
 	// Get manager - default to configured default or homebrew
 	manager := flags.Manager
 	if manager == "" {
-		cfg := config.LoadConfigWithDefaults(configDir)
+		sharedCtx := runtime.GetSharedContext()
+		cfg := sharedCtx.ConfigWithDefaults()
 		if cfg.DefaultManager != nil && *cfg.DefaultManager != "" {
 			manager = *cfg.DefaultManager
 		} else {
@@ -171,7 +173,8 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 
 // getPackageManager returns the appropriate package manager instance
 func getPackageManager(manager string) (managers.PackageManager, error) {
-	registry := managers.NewManagerRegistry()
+	sharedCtx := runtime.GetSharedContext()
+	registry := sharedCtx.ManagerRegistry()
 	return registry.GetManager(manager)
 }
 

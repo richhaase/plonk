@@ -11,8 +11,8 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
-	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/operations"
+	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/spf13/cobra"
 )
 
@@ -152,7 +152,8 @@ func findPackageInLockFile(lockService *lock.YAMLLockService, packageName string
 
 // uninstallPackageFromSystem uninstalls a package using the appropriate manager
 func uninstallPackageFromSystem(managerName, packageName string) error {
-	registry := managers.NewManagerRegistry()
+	sharedCtx := runtime.GetSharedContext()
+	registry := sharedCtx.ManagerRegistry()
 	mgr, err := registry.GetManager(managerName)
 	if err != nil {
 		return err

@@ -12,6 +12,7 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/managers"
+	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/spf13/cobra"
 )
 
@@ -110,7 +111,8 @@ func performPackageSearch(ctx context.Context, packageName string) (SearchOutput
 
 // getAvailableManagers returns a map of available package managers
 func getAvailableManagers(ctx context.Context) (map[string]managers.PackageManager, error) {
-	registry := managers.NewManagerRegistry()
+	sharedCtx := runtime.GetSharedContext()
+	registry := sharedCtx.ManagerRegistry()
 	availableManagers := make(map[string]managers.PackageManager)
 
 	for _, name := range registry.GetAllManagerNames() {

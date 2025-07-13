@@ -6,13 +6,12 @@ package commands
 import (
 	"context"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/state"
+	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/spf13/cobra"
 )
 
@@ -93,15 +92,13 @@ func runLs(cmd *cobra.Command, args []string) error {
 
 // runSmartOverview provides a unified view of packages and dotfiles
 func runSmartOverview(cmd *cobra.Command, flags *SimpleFlags, format OutputFormat, showAll bool) error {
-	// Get directories
-	configDir := config.GetDefaultConfigDirectory()
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return errors.Wrap(err, errors.ErrFilePermission, errors.DomainCommands, "ls", "failed to get home directory")
-	}
+	// Get directories from shared context
+	sharedCtx := runtime.GetSharedContext()
+	configDir := sharedCtx.ConfigDir()
+	homeDir := sharedCtx.HomeDir()
 
-	// Create unified state reconciler
-	reconciler := state.NewReconciler()
+	// Get reconciler from shared context
+	reconciler := sharedCtx.Reconciler()
 
 	// Register package provider
 	ctx := context.Background()

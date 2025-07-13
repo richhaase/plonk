@@ -5,12 +5,11 @@ package commands
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/operations"
+	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/spf13/cobra"
 )
 
@@ -50,13 +49,10 @@ func runRm(cmd *cobra.Command, args []string) error {
 
 	// Define the processor function
 	processor := func(ctx context.Context, args []string, flags *SimpleFlags) ([]operations.OperationResult, error) {
-		// Get directories
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return nil, errors.Wrap(err, errors.ErrFilePermission, errors.DomainCommands, "rm", "failed to get home directory")
-		}
-
-		configDir := config.GetDefaultConfigDirectory()
+		// Get directories from shared context
+		sharedCtx := runtime.GetSharedContext()
+		homeDir := sharedCtx.HomeDir()
+		configDir := sharedCtx.ConfigDir()
 
 		// Load config using LoadConfigWithDefaults for consistent zero-config behavior
 		cfg := config.LoadConfigWithDefaults(configDir)

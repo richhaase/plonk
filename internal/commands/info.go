@@ -7,10 +7,10 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/managers"
+	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/spf13/cobra"
 )
 
@@ -47,9 +47,10 @@ func runInfo(cmd *cobra.Command, args []string) error {
 
 	packageName := args[0]
 
-	// Create context with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	// Get context from shared context pool
+	sharedCtx := runtime.GetSharedContext()
+	ctx, cancel := sharedCtx.AcquireContext()
+	defer sharedCtx.ReleaseContext(ctx, cancel)
 
 	// Perform info lookup
 	infoResult, err := performPackageInfo(ctx, packageName)

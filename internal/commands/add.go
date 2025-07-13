@@ -5,11 +5,10 @@ package commands
 
 import (
 	"context"
-	"os"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/operations"
+	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/spf13/cobra"
 )
 
@@ -91,13 +90,10 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 // addDotfilesProcessor processes dotfile addition and returns operation results
 func addDotfilesProcessor(dotfilePaths []string, dryRun, force bool) ([]operations.OperationResult, error) {
-	// Get directories
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, errors.Wrap(err, errors.ErrFilePermission, errors.DomainCommands, "add", "failed to get home directory")
-	}
-
-	configDir := config.GetDefaultConfigDirectory()
+	// Get directories from shared context
+	sharedCtx := runtime.GetSharedContext()
+	homeDir := sharedCtx.HomeDir()
+	configDir := sharedCtx.ConfigDir()
 
 	// Load config for ignore patterns
 	cfg, err := loadOrCreateConfig(configDir)

@@ -14,9 +14,9 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
-	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/paths"
+	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
 )
@@ -361,10 +361,9 @@ func applyDotfiles(configDir, homeDir string, cfg *config.Config, dryRun, backup
 
 // completeDotfilePaths provides file path completion for dotfiles
 func completeDotfilePaths(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	_, err := os.UserHomeDir()
-	if err != nil {
-		return nil, cobra.ShellCompDirectiveDefault
-	}
+	// Get home directory from shared context (no error handling needed)
+	sharedCtx := runtime.GetSharedContext()
+	_ = sharedCtx.HomeDir()
 
 	// Define common dotfile suggestions
 	commonDotfiles := []string{
@@ -439,8 +438,9 @@ func createPackageProvider(ctx context.Context, configDir string) (*state.MultiM
 	lockService := lock.NewYAMLLockService(configDir)
 	lockAdapter := lock.NewLockFileAdapter(lockService)
 
-	// Create package provider using registry
-	registry := managers.NewManagerRegistry()
+	// Create package provider using shared registry
+	sharedCtx := runtime.GetSharedContext()
+	registry := sharedCtx.ManagerRegistry()
 	return registry.CreateMultiProvider(ctx, lockAdapter)
 }
 
@@ -791,18 +791,16 @@ func runDotList(cmd *cobra.Command, args []string) error {
 		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "dotfiles", "output-format", "invalid output format")
 	}
 
-	// Get directories and use the existing state reconciliation system
-	configDir := config.GetDefaultConfigDirectory()
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return errors.Wrap(err, errors.ErrFilePermission, errors.DomainCommands, "dotfiles", "failed to get home directory")
-	}
+	// Get directories from shared context
+	sharedCtx := runtime.GetSharedContext()
+	configDir := sharedCtx.ConfigDir()
+	homeDir := sharedCtx.HomeDir()
 
-	// Load configuration using LoadOrDefault for consistent zero-config behavior
-	cfg := config.LoadConfigWithDefaults(configDir)
+	// Load configuration using shared context cache
+	cfg := sharedCtx.ConfigWithDefaults()
 
-	// Use the same state reconciliation system as status command
-	reconciler := state.NewReconciler()
+	// Use the shared reconciler
+	reconciler := sharedCtx.Reconciler()
 	dotfileProvider := createDotfileProvider(homeDir, configDir, cfg)
 	reconciler.RegisterProvider("dotfile", dotfileProvider)
 

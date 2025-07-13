@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/richhaase/plonk/internal/state"
@@ -49,13 +48,10 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "status", "output-format", "invalid output format")
 	}
 
-	// Get directories
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return errors.Wrap(err, errors.ErrFilePermission, errors.DomainCommands, "status", "failed to get home directory")
-	}
-
-	configDir := config.GetDefaultConfigDirectory()
+	// Get directories from shared context
+	sharedCtx := runtime.GetSharedContext()
+	homeDir := sharedCtx.HomeDir()
+	configDir := sharedCtx.ConfigDir()
 
 	// Create RuntimeState - this encapsulates all config and state management
 	runtimeState := runtime.NewRuntimeState(configDir, homeDir)
