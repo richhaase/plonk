@@ -17,6 +17,7 @@ Plonk manages your development environment by tracking packages and dotfiles aut
 - **Unified management**: Packages (Homebrew, NPM, Cargo) and dotfiles tracked automatically
 - **State reconciliation**: Automatically detects and applies missing configurations
 - **Auto-discovery**: Finds dotfiles automatically with configurable ignore patterns
+- **Shell completion**: Tab completion for commands, package names, and file paths
 - **Optional customization**: Create configuration only when you need to customize defaults
 - **AI-friendly**: Structured output formats and clear command syntax
 - **Cross-platform**: Works on macOS, Linux, and Windows
@@ -78,6 +79,26 @@ plonk doctor
 ```bash
 plonk init    # Creates helpful config template
 ```
+
+### Shell Completion
+
+Enable tab completion for enhanced productivity:
+
+```bash
+# Bash
+source <(plonk completion bash)
+
+# Zsh
+source <(plonk completion zsh)
+
+# Fish
+plonk completion fish > ~/.config/fish/completions/plonk.fish
+
+# PowerShell
+plonk completion powershell | Out-String | Invoke-Expression
+```
+
+For permanent installation, see the [CLI Reference](docs/CLI.md#shell-completion).
 
 ## Configuration
 

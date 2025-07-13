@@ -666,6 +666,120 @@ Always validate before applying:
 plonk config validate && plonk apply
 ```
 
+## Shell Completion
+
+Plonk provides intelligent tab completion for enhanced productivity across all major shells.
+
+### Installation
+
+**Temporary (current session only):**
+```bash
+# Bash
+source <(plonk completion bash)
+
+# Zsh
+source <(plonk completion zsh)
+
+# Fish
+plonk completion fish | source
+
+# PowerShell
+plonk completion powershell | Out-String | Invoke-Expression
+```
+
+**Permanent installation:**
+
+#### Bash
+```bash
+# Linux
+plonk completion bash | sudo tee /etc/bash_completion.d/plonk
+
+# macOS with Homebrew
+plonk completion bash > $(brew --prefix)/etc/bash_completion.d/plonk
+
+# Manual (add to ~/.bashrc)
+echo 'source <(plonk completion bash)' >> ~/.bashrc
+```
+
+#### Zsh
+```bash
+# Create completion directory if needed
+mkdir -p ~/.local/share/zsh/site-functions
+
+# Install completion
+plonk completion zsh > ~/.local/share/zsh/site-functions/_plonk
+
+# Add to ~/.zshrc if not present
+echo 'fpath=(~/.local/share/zsh/site-functions $fpath)' >> ~/.zshrc
+echo 'autoload -U compinit && compinit' >> ~/.zshrc
+```
+
+#### Fish
+```bash
+# Fish auto-discovers completions
+plonk completion fish > ~/.config/fish/completions/plonk.fish
+```
+
+#### PowerShell
+```powershell
+# Save to profile for persistence
+plonk completion powershell >> $PROFILE
+```
+
+### Completion Features
+
+**Command and subcommand completion:**
+```bash
+plonk <TAB>          # status, apply, pkg, dot, config, etc.
+plonk pkg <TAB>      # add, list, remove
+plonk dot <TAB>      # add, list
+```
+
+**Package name completion:**
+```bash
+plonk pkg add <TAB>              # git, curl, htop, ripgrep, etc.
+plonk pkg add ri<TAB>            # ripgrep
+plonk pkg add --manager npm <TAB> # typescript, eslint, prettier, etc.
+```
+
+**Dotfile path completion:**
+```bash
+plonk dot add <TAB>      # ~/.zshrc, ~/.vimrc, ~/.config/, etc.
+plonk dot add ~/.<TAB>   # ~/.zshrc, ~/.bashrc, ~/.gitconfig, etc.
+plonk dot add ~/.c<TAB>  # ~/.config/, falls back to system completion
+```
+
+**Flag and option completion:**
+```bash
+plonk status --output <TAB>      # table, json, yaml
+plonk pkg add --manager <TAB>    # homebrew, npm, cargo
+plonk apply --<TAB>              # dry-run, backup
+```
+
+**Manager-aware suggestions:**
+- **Homebrew**: Development tools, system utilities, CLI apps
+- **NPM**: JavaScript packages, build tools, frameworks
+- **Cargo**: Rust command-line tools and utilities
+
+### Verification
+
+Test that completion is working:
+```bash
+plonk pkg add <TAB><TAB>     # Should show package suggestions
+plonk dot add ~/.<TAB>       # Should show dotfile suggestions
+plonk --output <TAB>         # Should show: table, json, yaml
+```
+
+### Debugging Completion
+
+If completion isn't working, you can test it directly:
+```bash
+# Test completion manually
+plonk __complete pkg add ""
+plonk __complete dot add "~/"
+plonk __complete status --output ""
+```
+
 ## See Also
 
 - [CONFIGURATION.md](CONFIGURATION.md) - Configuration file format
