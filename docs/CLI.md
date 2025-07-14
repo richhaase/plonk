@@ -20,7 +20,7 @@ Complete command-line interface reference for plonk. All commands support struct
 | `rm` | Remove packages/dotfiles | Intelligent removal |
 | `ls` | List managed items | Smart overview |
 | `sync` | Apply configuration | Automated deployment |
-| `install` | Add and sync items | One-command setup |
+| `install` | Install packages | One-command package installation |
 | `link` | Link dotfiles explicitly | Dotfile deployment |
 | `unlink` | Unlink dotfiles explicitly | Dotfile removal |
 | `dotfiles` | List dotfiles specifically | Dotfile overview |
@@ -206,6 +206,66 @@ Plonk Sync
 Summary: All changes applied successfully
 ```
 
+### `plonk install <packages...>`
+
+Install packages on your system and add them to plonk management.
+
+**Usage:**
+```bash
+plonk install <packages...> [--brew] [--npm] [--cargo] [--dry-run] [--force]
+```
+
+**Options:**
+- `--brew` - Use Homebrew package manager
+- `--npm` - Use NPM package manager
+- `--cargo` - Use Cargo package manager
+- `--dry-run, -n` - Show what would be installed without making changes
+- `--force, -f` - Force installation even if already managed
+
+**Behavior:**
+- Installs packages using the specified package manager
+- Adds packages to the lock file for management
+- Continues processing all packages even if some fail
+- Uses the default manager from config or Homebrew as fallback
+
+**Examples:**
+```bash
+plonk install htop                      # Install htop using default manager
+plonk install git neovim ripgrep        # Install multiple packages
+plonk install git --brew                # Install git specifically with Homebrew
+plonk install lodash --npm              # Install lodash with npm global packages
+plonk install ripgrep --cargo           # Install ripgrep with cargo packages
+plonk install --dry-run htop neovim     # Preview what would be installed
+```
+
+### `plonk uninstall <packages...>`
+
+Uninstall packages from your system and remove them from plonk management.
+
+**Usage:**
+```bash
+plonk uninstall <packages...> [--brew] [--npm] [--cargo] [--dry-run] [--force]
+```
+
+**Options:**
+- `--brew` - Use Homebrew package manager
+- `--npm` - Use NPM package manager
+- `--cargo` - Use Cargo package manager
+- `--dry-run, -n` - Show what would be removed without making changes
+- `--force, -f` - Force removal even if not managed
+
+**Behavior:**
+- Uninstalls packages from the system using the appropriate package manager
+- Removes packages from the lock file
+- Continues processing all packages even if some fail
+- Automatically detects which manager manages each package
+
+**Examples:**
+```bash
+plonk uninstall htop                    # Uninstall htop and remove from lock file
+plonk uninstall git neovim              # Uninstall multiple packages
+plonk uninstall --dry-run htop          # Preview what would be uninstalled
+```
 
 ### `plonk dotfiles`
 
@@ -380,7 +440,7 @@ The new CLI provides significant typing reduction and improved ergonomics:
 - **Intelligent detection**: No need to specify pkg/dot - plonk detects automatically
 - **Mixed operations**: Add packages and dotfiles in single command
 - **Unix-style**: Familiar commands like `ls`, `rm`, `add`
-- **Workflow shortcuts**: `install` combines add + sync
+- **Workflow shortcuts**: `install` installs packages and adds to management
 - **Zero-argument status**: Just type `plonk` for status (like git)
 
 ## Error Handling

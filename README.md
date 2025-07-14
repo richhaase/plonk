@@ -26,7 +26,7 @@ Plonk manages your development environment by tracking packages and dotfiles aut
 - **Unix-style commands**: Familiar `add`, `rm`, `ls`, `sync` commands
 - **Smart operations**: Mixed package/dotfile operations in single commands
 - **Zero-argument status**: Just type `plonk` for system overview (like git)
-- **One-command workflows**: `plonk install` = add + sync
+- **One-command workflows**: `plonk install` = install package + add to management
 
 ## Quick Start
 
@@ -71,7 +71,7 @@ plonk add git ~/.vimrc   # Mixed operations
 # Apply all changes
 plonk sync
 
-# One-command install and sync
+# One-command install (installs package and adds to management)
 plonk install htop
 
 # Get help
@@ -175,9 +175,9 @@ plonk config edit    # Edit configuration file
 ```bash
 plonk status           # Check what needs attention (or just 'plonk')
 plonk sync             # Install missing packages, sync dotfiles
-plonk install <pkg>    # Install and manage packages
+plonk install <pkg>    # Install packages and add to management
 plonk add <dotfile>    # Add dotfiles to management
-plonk uninstall <pkg>  # Remove packages from management
+plonk uninstall <pkg>  # Uninstall packages and remove from management
 plonk rm <dotfile>     # Remove dotfiles from management
 plonk doctor           # Health check when something seems wrong
 ```
@@ -191,10 +191,9 @@ plonk status                                      # Check system state (explicit
 plonk sync                                        # Apply all changes
 
 # Package management
-plonk install git neovim ripgrep                 # Install packages
+plonk install git neovim ripgrep                 # Install packages and add to management
 plonk install typescript --npm                   # Install with specific manager
-plonk uninstall htop                             # Remove from management only
-plonk uninstall htop --uninstall                 # Remove from management AND system
+plonk uninstall htop                             # Uninstall package and remove from management
 
 # Dotfile management
 plonk add ~/.vimrc ~/.zshrc ~/.gitconfig         # Add dotfiles to management
