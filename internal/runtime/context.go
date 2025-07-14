@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/state"
 )
@@ -185,4 +186,80 @@ func (sc *SharedContext) InvalidateConfig() {
 	sc.configOnce = sync.Once{}
 	sc.config = nil
 	sc.configErr = nil
+}
+
+// CreateDotfileProvider creates a dotfile provider using cached configuration
+func (sc *SharedContext) CreateDotfileProvider() (*state.DotfileProvider, error) {
+	cfg := sc.ConfigWithDefaults()
+	configAdapter := config.NewConfigAdapter(cfg)
+	dotfileConfigAdapter := config.NewStateDotfileConfigAdapter(configAdapter)
+	return state.NewDotfileProvider(sc.homeDir, sc.configDir, dotfileConfigAdapter), nil
+}
+
+// CreatePackageProvider creates a multi-manager package provider using lock file
+func (sc *SharedContext) CreatePackageProvider(ctx context.Context) (*state.MultiManagerPackageProvider, error) {
+	// Create lock file adapter
+	lockService := lock.NewYAMLLockService(sc.configDir)
+	lockAdapter := lock.NewLockFileAdapter(lockService)
+
+	// Create package provider using registry
+	registry := sc.ManagerRegistry()
+	return registry.CreateMultiProvider(ctx, lockAdapter)
+}
+
+// ReconcileDotfiles reconciles dotfile state
+func (sc *SharedContext) ReconcileDotfiles(ctx context.Context) (state.Result, error) {
+	provider, err := sc.CreateDotfileProvider()
+	if err != nil {
+		return state.Result{}, err
+	}
+
+	reconciler := sc.Reconciler()
+	reconciler.RegisterProvider("dotfile", provider)
+	return reconciler.ReconcileProvider(ctx, "dotfile")
+}
+
+// ReconcilePackages reconciles package state
+func (sc *SharedContext) ReconcilePackages(ctx context.Context) (state.Result, error) {
+	provider, err := sc.CreatePackageProvider(ctx)
+	if err != nil {
+		return state.Result{}, err
+	}
+
+	reconciler := sc.Reconciler()
+	reconciler.RegisterProvider("package", provider)
+	return reconciler.ReconcileProvider(ctx, "package")
+}
+
+// ReconcileAll reconciles all domains
+func (sc *SharedContext) ReconcileAll(ctx context.Context) (map[string]state.Result, error) {
+	results := make(map[string]state.Result)
+
+	// Reconcile dotfiles
+	dotfileResult, err := sc.ReconcileDotfiles(ctx)
+	if err != nil {
+		return nil, err
+	}
+	results["dotfile"] = dotfileResult
+
+	// Reconcile packages
+	packageResult, err := sc.ReconcilePackages(ctx)
+	if err != nil {
+		return nil, err
+	}
+	results["package"] = packageResult
+
+	return results, nil
+}
+
+// SaveConfiguration saves configuration using ConfigManager
+func (sc *SharedContext) SaveConfiguration(cfg *config.Config) error {
+	manager := config.NewConfigManager(sc.configDir)
+	return manager.Save(cfg)
+}
+
+// ValidateConfiguration validates the current configuration
+func (sc *SharedContext) ValidateConfiguration() error {
+	_, err := config.LoadConfig(sc.configDir)
+	return err
 }

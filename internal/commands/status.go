@@ -48,24 +48,16 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "status", "output-format", "invalid output format")
 	}
 
-	// Get directories from shared context
+	// Get shared context
 	sharedCtx := runtime.GetSharedContext()
-	homeDir := sharedCtx.HomeDir()
 	configDir := sharedCtx.ConfigDir()
 
-	// Create RuntimeState - this encapsulates all config and state management
-	runtimeState := runtime.NewRuntimeState(configDir, homeDir)
+	// Load configuration (may fail if config is invalid, but we handle this gracefully)
+	_, configLoadErr := sharedCtx.Config()
 
-	// Load configuration (may fail if config is invalid, but RuntimeState handles this gracefully)
-	configLoadErr := runtimeState.LoadConfiguration()
-	if configLoadErr != nil {
-		// RuntimeState will use defaults, so we can continue
-		// This maintains the same graceful degradation behavior
-	}
-
-	// Reconcile all domains using RuntimeState
+	// Reconcile all domains using SharedContext
 	ctx := context.Background()
-	results, err := runtimeState.ReconcileAll(ctx)
+	results, err := sharedCtx.ReconcileAll(ctx)
 	if err != nil {
 		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainState, "reconcile", "failed to reconcile state")
 	}
@@ -73,8 +65,8 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	// Convert results to summary for compatibility with existing output logic
 	summary := convertResultsToSummary(results)
 
-	// Check file existence and validity using RuntimeState
-	configPath := runtimeState.GetConfigPath()
+	// Check file existence and validity
+	configPath := filepath.Join(configDir, "plonk.yaml")
 	lockPath := filepath.Join(configDir, "plonk.lock")
 
 	configExists := false
@@ -103,7 +95,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	return RenderOutput(outputData, format)
 }
 
-// convertResultsToSummary converts RuntimeState results to state.Summary for output compatibility
+// convertResultsToSummary converts reconciliation results to state.Summary for output compatibility
 func convertResultsToSummary(results map[string]state.Result) state.Summary {
 	summary := state.Summary{
 		TotalManaged:   0,

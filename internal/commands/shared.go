@@ -12,7 +12,6 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/paths"
 	"github.com/richhaase/plonk/internal/runtime"
@@ -432,24 +431,18 @@ func loadOrCreateConfig(configDir string) (*config.Config, error) {
 }
 
 // createPackageProvider creates a multi-manager package provider using lock file
-// TODO: Replace with RuntimeState in future refactoring
 func createPackageProvider(ctx context.Context, configDir string) (*state.MultiManagerPackageProvider, error) {
-	// Create lock file adapter
-	lockService := lock.NewYAMLLockService(configDir)
-	lockAdapter := lock.NewLockFileAdapter(lockService)
-
-	// Create package provider using shared registry
+	// Use SharedContext to create provider
 	sharedCtx := runtime.GetSharedContext()
-	registry := sharedCtx.ManagerRegistry()
-	return registry.CreateMultiProvider(ctx, lockAdapter)
+	return sharedCtx.CreatePackageProvider(ctx)
 }
 
 // createDotfileProvider creates a dotfile provider
-// TODO: Replace with RuntimeState in future refactoring
 func createDotfileProvider(homeDir string, configDir string, cfg *config.Config) *state.DotfileProvider {
-	configAdapter := config.NewConfigAdapter(cfg)
-	dotfileConfigAdapter := config.NewStateDotfileConfigAdapter(configAdapter)
-	return state.NewDotfileProvider(homeDir, configDir, dotfileConfigAdapter)
+	// Use SharedContext to create provider
+	sharedCtx := runtime.GetSharedContext()
+	provider, _ := sharedCtx.CreateDotfileProvider()
+	return provider
 }
 
 // addSingleDotfile processes a single dotfile path and returns results for all files processed
