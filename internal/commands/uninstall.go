@@ -18,17 +18,16 @@ import (
 
 var uninstallCmd = &cobra.Command{
 	Use:   "uninstall <packages...>",
-	Short: "Remove packages from plonk management",
-	Long: `Remove packages from your lock file and optionally uninstall them from your system.
+	Short: "Uninstall packages and remove from plonk management",
+	Long: `Uninstall packages from your system and remove them from your lock file.
 
-This command removes packages from plonk management. By default, it only removes
-them from the lock file. Use --uninstall to also remove them from your system.
+This command uninstalls packages from your system using the appropriate package
+manager and removes them from plonk management.
 
 Examples:
-  plonk uninstall htop                    # Remove from lock file only
-  plonk uninstall htop --uninstall        # Remove from lock file and uninstall
-  plonk uninstall git neovim --uninstall  # Remove multiple packages and uninstall
-  plonk uninstall --dry-run htop          # Preview what would be removed`,
+  plonk uninstall htop                    # Uninstall htop and remove from lock file
+  plonk uninstall git neovim              # Uninstall multiple packages
+  plonk uninstall --dry-run htop          # Preview what would be uninstalled`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: runUninstall,
 }
@@ -44,7 +43,6 @@ func init() {
 
 	// Common flags
 	uninstallCmd.Flags().BoolP("dry-run", "n", false, "Show what would be removed without making changes")
-	uninstallCmd.Flags().Bool("uninstall", false, "Also uninstall packages from the system")
 	uninstallCmd.Flags().BoolP("force", "f", false, "Force removal even if not managed")
 }
 
@@ -57,9 +55,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 
 	// Define the processor function
 	processor := func(ctx context.Context, args []string, flags *SimpleFlags) ([]operations.OperationResult, error) {
-		// Get additional flags specific to uninstall
-		uninstallFlag, _ := cmd.Flags().GetBool("uninstall")
-		return uninstallPackages(cmd, args, flags, uninstallFlag)
+		return uninstallPackages(cmd, args, flags)
 	}
 
 	// Execute the pipeline
@@ -67,7 +63,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 }
 
 // uninstallPackages handles package uninstallations
-func uninstallPackages(cmd *cobra.Command, packageNames []string, flags *SimpleFlags, uninstallFlag bool) ([]operations.OperationResult, error) {
+func uninstallPackages(cmd *cobra.Command, packageNames []string, flags *SimpleFlags) ([]operations.OperationResult, error) {
 	// Get directories
 	configDir := config.GetDefaultConfigDirectory()
 
@@ -77,7 +73,7 @@ func uninstallPackages(cmd *cobra.Command, packageNames []string, flags *SimpleF
 	// Create item processor for package uninstallation
 	processor := operations.SimpleProcessor(
 		func(ctx context.Context, packageName string) operations.OperationResult {
-			return uninstallSinglePackage(configDir, lockService, packageName, flags.DryRun, uninstallFlag)
+			return uninstallSinglePackage(configDir, lockService, packageName, flags.DryRun)
 		},
 	)
 
@@ -95,7 +91,7 @@ func uninstallPackages(cmd *cobra.Command, packageNames []string, flags *SimpleF
 }
 
 // uninstallSinglePackage removes a single package
-func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService, packageName string, dryRun bool, uninstall bool) operations.OperationResult {
+func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService, packageName string, dryRun bool) operations.OperationResult {
 	result := operations.OperationResult{
 		Name: packageName,
 	}
@@ -115,22 +111,20 @@ func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService,
 		return result
 	}
 
-	// Remove from lock file
-	err := lockService.RemovePackage(managerName, packageName)
+	// Uninstall from system first
+	err := uninstallPackageFromSystem(managerName, packageName)
 	if err != nil {
 		result.Status = "failed"
-		result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainPackages, "remove-lock", packageName, "failed to remove package from lock file").WithMetadata("manager", managerName)
+		result.Error = errors.WrapWithItem(err, errors.ErrPackageUninstall, errors.DomainPackages, "uninstall", packageName, "failed to uninstall package").WithMetadata("manager", managerName)
 		return result
 	}
 
-	// Uninstall if requested
-	if uninstall {
-		err := uninstallPackageFromSystem(managerName, packageName)
-		if err != nil {
-			result.Status = "partially-removed"
-			result.Error = errors.WrapWithItem(err, errors.ErrPackageUninstall, errors.DomainPackages, "uninstall", packageName, "removed from config but failed to uninstall").WithMetadata("manager", managerName)
-			return result
-		}
+	// Remove from lock file after successful uninstall
+	err = lockService.RemovePackage(managerName, packageName)
+	if err != nil {
+		result.Status = "partially-removed"
+		result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainPackages, "remove-lock", packageName, "uninstalled but failed to remove from lock file").WithMetadata("manager", managerName)
+		return result
 	}
 
 	result.Status = "removed"

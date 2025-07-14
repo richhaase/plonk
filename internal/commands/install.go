@@ -19,11 +19,12 @@ import (
 
 var installCmd = &cobra.Command{
 	Use:   "install <packages...>",
-	Short: "Install packages to plonk management",
-	Long: `Install packages and add them to your lock file for management.
+	Short: "Install packages and add them to plonk management",
+	Long: `Install packages on your system and add them to your lock file for management.
 
-This command adds packages to your lock file so they can be managed by plonk.
-Use specific manager flags to control which package manager to use.
+This command installs packages using the specified package manager and adds them
+to your lock file so they can be managed by plonk. Use specific manager flags
+to control which package manager to use.
 
 Examples:
   plonk install htop                      # Install htop using default manager
@@ -153,7 +154,15 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 		return result
 	}
 
-	// Get package version if installed
+	// Install the package
+	err = pkgManager.Install(ctx, packageName)
+	if err != nil {
+		result.Status = "failed"
+		result.Error = errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "install", packageName, "failed to install package").WithMetadata("manager", manager)
+		return result
+	}
+
+	// Get package version after installation
 	version, err := pkgManager.GetInstalledVersion(ctx, packageName)
 	if err == nil && version != "" {
 		result.Version = version
