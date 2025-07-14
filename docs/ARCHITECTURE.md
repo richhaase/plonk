@@ -329,17 +329,34 @@ All long-running operations accept context for cancellation and timeout support.
 - Return `ctx.Err()` on cancellation
 
 ### 4. Adapter Architecture
-Adapters enable cross-package communication while preventing circular dependencies.
+Adapters enable cross-package communication while preventing circular dependencies. They are a fundamental part of plonk's architecture, not technical debt.
 
 **Purpose:**
 - Bridge package boundaries without direct imports
+- Prevent circular dependencies between packages
 - Enable type conversion between similar interfaces
 - Maintain clean separation of concerns
 
-**Pattern:**
-- Adapters translate between interfaces at package boundaries
-- Type aliases used for identical interfaces within same boundary
-- See `ADAPTER_ARCHITECTURE.md` for detailed guidelines
+**When to Use Adapters vs Type Aliases:**
+- **Adapters**: When interfaces differ or cross-package communication needed
+- **Type Aliases**: When interfaces are identical within same package boundary
+
+**Implementation Pattern:**
+```go
+type SourceTargetAdapter struct {
+    source SourceInterface
+}
+
+func (a *SourceTargetAdapter) TargetMethod() error {
+    return a.source.SourceMethod() // Translate and delegate
+}
+```
+
+**Best Practices:**
+- Keep adapters thin - translation only, no business logic
+- Always document why an adapter exists
+- Add compile-time interface checks: `var _ TargetInterface = (*Adapter)(nil)`
+- Test adapter translations thoroughly
 
 **Current Adapters:**
 - `StatePackageConfigAdapter` - config → state for packages
