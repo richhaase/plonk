@@ -8,6 +8,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/richhaase/plonk/internal/mocks"
 	"go.uber.org/mock/gomock"
 )
 
@@ -32,7 +33,7 @@ func TestReconciler_RegisterProvider(t *testing.T) {
 	defer ctrl.Finish()
 
 	reconciler := NewReconciler()
-	provider := NewMockProvider(ctrl)
+	provider := mocks.NewMockProvider(ctrl)
 
 	reconciler.RegisterProvider("test", provider)
 
@@ -80,7 +81,7 @@ func TestReconciler_ReconcileProvider_ConfigError(t *testing.T) {
 	defer ctrl.Finish()
 
 	reconciler := NewReconciler()
-	provider := NewMockProvider(ctrl)
+	provider := mocks.NewMockProvider(ctrl)
 	configError := errors.New("config load failed")
 
 	provider.EXPECT().GetConfiguredItems().Return(nil, configError)
@@ -102,7 +103,7 @@ func TestReconciler_ReconcileProvider_ActualError(t *testing.T) {
 	defer ctrl.Finish()
 
 	reconciler := NewReconciler()
-	provider := NewMockProvider(ctrl)
+	provider := mocks.NewMockProvider(ctrl)
 	actualError := errors.New("actual items load failed")
 
 	provider.EXPECT().GetConfiguredItems().Return([]ConfigItem{}, nil)
@@ -125,7 +126,7 @@ func TestReconciler_ReconcileProvider_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	reconciler := NewReconciler()
-	provider := NewMockProvider(ctrl)
+	provider := mocks.NewMockProvider(ctrl)
 
 	configItems := []ConfigItem{
 		{Name: "item1", Metadata: map[string]interface{}{"config": "data1"}},
@@ -236,7 +237,7 @@ func TestReconciler_ReconcileAll_MultipleProviders(t *testing.T) {
 	reconciler := NewReconciler()
 
 	// Set up first provider
-	provider1 := NewMockProvider(ctrl)
+	provider1 := mocks.NewMockProvider(ctrl)
 	provider1.EXPECT().GetConfiguredItems().Return([]ConfigItem{
 		{Name: "git", Metadata: map[string]interface{}{"manager": "homebrew"}},
 		{Name: "curl", Metadata: map[string]interface{}{"manager": "homebrew"}},
@@ -257,7 +258,7 @@ func TestReconciler_ReconcileAll_MultipleProviders(t *testing.T) {
 	})
 
 	// Set up second provider
-	provider2 := NewMockProvider(ctrl)
+	provider2 := mocks.NewMockProvider(ctrl)
 	provider2.EXPECT().GetConfiguredItems().Return([]ConfigItem{
 		{Name: "vimrc", Metadata: map[string]interface{}{"destination": "~/.vimrc"}},
 	}, nil)
@@ -308,7 +309,7 @@ func TestReconciler_ReconcileAll_ProviderError(t *testing.T) {
 	defer ctrl.Finish()
 
 	reconciler := NewReconciler()
-	provider := NewMockProvider(ctrl)
+	provider := mocks.NewMockProvider(ctrl)
 	configError := errors.New("config load failed")
 
 	provider.EXPECT().GetConfiguredItems().Return(nil, configError)
@@ -331,7 +332,7 @@ func TestReconciler_ContextCancellation(t *testing.T) {
 		defer ctrl.Finish()
 
 		reconciler := NewReconciler()
-		provider := NewMockProvider(ctrl)
+		provider := mocks.NewMockProvider(ctrl)
 
 		provider.EXPECT().GetConfiguredItems().Return([]ConfigItem{}, nil).MaxTimes(1)
 		// Context check happens after GetConfiguredItems, so GetActualItems may not be called
