@@ -267,7 +267,16 @@ just test       # unit tests
 
 ### Error Handling
 
-Plonk uses a structured error system for consistent error handling across all commands.
+Plonk implements a comprehensive structured error system that provides consistent error handling across all commands and operations.
+
+#### Core Features
+
+- **Structured Error Types** - All errors use `PlonkError` with standardized fields
+- **Error Codes** - Specific codes for different error categories
+- **Domain Classification** - Errors grouped by functional domain
+- **User-Friendly Messages** - Clear, actionable error messages
+- **Debug Mode Support** - Detailed technical information when needed
+- **Context Preservation** - Original error causes maintained through wrapping
 
 #### Error Creation Patterns
 
@@ -429,6 +438,10 @@ func TestCommandErrorHandling(t *testing.T) {
 
 The error handling system automatically maps error codes to exit codes:
 
+- `0` - Success
+- `1` - User error (config, input validation)
+- `2` - System error (permissions, unavailable managers)
+
 ```go
 // In HandleError function
 switch plonkErr.Code {
@@ -442,6 +455,19 @@ default:
     return 1  // Default to user error
 }
 ```
+
+#### User Experience
+
+- **Table Format** - Human-readable error messages with troubleshooting steps
+- **JSON Format** - Structured error data for programmatic handling
+- **Debug Mode** - Technical details via `PLONK_DEBUG=1` environment variable
+
+#### Integration
+
+- All commands use consistent error handling patterns
+- Error messages include actionable guidance
+- Automatic exit code determination based on error type
+- Compatible with standard Go error handling (`errors.Is`, `errors.As`)
 
 ## Contributing
 

@@ -217,6 +217,36 @@ docs/                   # Technical documentation
 - Test both success and failure scenarios
 - Verify correct interface usage in tests
 
+## Quick Navigation for Common Tasks
+
+### Adding a Package Manager
+1. **Interface location**: `internal/managers/common.go:PackageManager`
+2. **Implementation template**: `internal/managers/homebrew.go`
+3. **Registration**: Add to command layer in `internal/commands/`
+
+### Adding a Command
+1. **Command template**: `internal/commands/status.go`
+2. **Registration**: `internal/commands/root.go:rootCmd.AddCommand()`
+3. **Output formatting**: Use `internal/commands/output.go`
+4. **Error handling**: Use `internal/errors/types.go:PlonkError`
+
+### Understanding State Reconciliation
+1. **Entry point**: `internal/state/reconciler.go:GetState()`
+2. **Provider interface**: `internal/state/reconciler.go:Provider`
+3. **State types**: `internal/state/types.go:ItemState`
+4. **Package provider**: `internal/state/package_provider.go`
+5. **Dotfile provider**: `internal/state/dotfile_provider.go`
+
+### Configuration Management
+1. **Interface definitions**: `internal/config/interfaces.go`
+2. **YAML implementation**: `internal/config/yaml_config.go`
+3. **Validation**: `internal/config/simple_validator.go`
+
+### Error Handling Implementation
+1. **Error types**: `internal/errors/types.go:PlonkError`
+2. **Error codes**: `internal/errors/types.go:ErrorCode`
+3. **Error domains**: `internal/errors/types.go:Domain`
+
 ## References
 
 - **Session History**: See `DEVELOPMENT_HISTORY.md` for detailed development sessions

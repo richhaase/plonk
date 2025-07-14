@@ -409,8 +409,44 @@ cp ~/.config/plonk/plonk.yaml ~/.config/plonk/plonk.yaml.backup
 plonk config validate && plonk sync --dry-run
 ```
 
+## Technical Details
+
+### Configuration Layer Implementation
+
+The configuration system is built on a flexible interface-based architecture:
+
+**Core Interfaces:**
+- `ConfigReader` - Load configuration from various sources
+- `ConfigWriter` - Save configuration back to storage
+- `ConfigValidator` - Validate configuration correctness
+- `DotfileConfigReader` - Domain-specific dotfile config access
+- `PackageConfigReader` - Domain-specific package config access
+
+**Implementation:**
+- `YAMLConfigService` - YAML file implementation of all interfaces
+- `ConfigAdapter` - Bridges Config struct to domain interfaces
+- State adapters for type conversion between packages
+
+**Features:**
+- Flexible YAML unmarshaling (simple strings or complex objects)
+- Validation with custom rules and timeout settings
+- Environment variable support (`PLONK_DIR` for config directory)
+- Auto-discovery of dotfiles with configurable ignore patterns
+
+### Legacy Package Configuration
+
+While packages are now managed via the lock file, the configuration system still supports legacy package definitions for backward compatibility:
+
+```yaml
+# Legacy format (deprecated but still supported)
+homebrew: [git, neovim, firefox]
+npm: [typescript, prettier]
+```
+
+New installations should use the lock file exclusively for package management.
+
 ## See Also
 
 - [CLI.md](CLI.md) - Configuration commands
-- [ARCHITECTURE.md](ARCHITECTURE.md) - Configuration architecture
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture
 - [DEVELOPMENT.md](DEVELOPMENT.md) - Contributing configuration changes

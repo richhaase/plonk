@@ -58,41 +58,7 @@ internal/
 
 ### 1. Configuration Layer (`internal/config/`)
 
-**Interfaces:**
-- `ConfigReader` - Load configuration from various sources
-- `ConfigWriter` - Save configuration back to storage
-- `ConfigValidator` - Validate configuration correctness
-- `DotfileConfigReader` - Domain-specific dotfile config access
-- `PackageConfigReader` - Domain-specific package config access
-
-**Implementation:**
-- `YAMLConfigService` - YAML file implementation of all interfaces
-- `ConfigAdapter` - Bridges Config struct to domain interfaces
-- State adapters for type conversion between packages
-
-**Features:**
-- Flexible YAML unmarshaling (simple strings or complex objects)
-- Validation with custom rules and timeout settings
-- Environment variable support (`PLONK_DIR` for config directory)
-- Auto-discovery of dotfiles with configurable ignore patterns
-
-**Configuration Example:**
-```yaml
-default_manager: homebrew
-operation_timeout: 600  # 10 minutes
-package_timeout: 300    # 5 minutes
-dotfile_timeout: 60     # 1 minute
-
-ignore_patterns:
-  - .DS_Store
-  - .git
-  - "*.backup"
-  - "*.tmp"
-  - "*.swp"
-
-homebrew: [git, neovim, firefox]
-npm: [typescript, prettier]
-```
+Provides flexible configuration management with YAML file support, validation, and environment variable integration. See the [Configuration Guide](CONFIGURATION.md) for detailed configuration options and technical implementation details.
 
 ### 2. State Management (`internal/state/`)
 
@@ -207,77 +173,7 @@ npm: [typescript, prettier]
 
 ### 9. Error Handling (`internal/errors/`)
 
-**Structured Error System:**
-Plonk implements a comprehensive structured error system that provides consistent error handling across all commands and operations.
-
-**Core Features:**
-- **Structured Error Types** - All errors use `PlonkError` with standardized fields
-- **Error Codes** - Specific codes for different error categories
-- **Domain Classification** - Errors grouped by functional domain
-- **User-Friendly Messages** - Clear, actionable error messages
-- **Debug Mode Support** - Detailed technical information when needed
-- **Context Preservation** - Original error causes maintained through wrapping
-
-**Error Codes:**
-```go
-// Configuration errors
-ErrConfigNotFound      // Configuration file missing
-ErrConfigParseFailure  // Configuration syntax error
-ErrConfigValidation    // Configuration validation failed
-
-// Package management errors
-ErrPackageInstall      // Package installation failed
-ErrManagerUnavailable  // Package manager not available
-
-// File operation errors
-ErrFileIO             // General file I/O error
-ErrFilePermission     // Permission denied
-ErrFileNotFound       // File not found
-
-// User input errors
-ErrInvalidInput       // Invalid command arguments
-
-// System errors
-ErrInternal           // Internal system error
-ErrReconciliation     // State reconciliation failed
-```
-
-**Error Domains:**
-```go
-DomainConfig          // Configuration-related operations
-DomainPackages        // Package management operations
-DomainDotfiles        // Dotfile operations
-DomainCommands        // Command-level operations
-DomainState           // State reconciliation
-```
-
-**Error Creation Patterns:**
-```go
-// Create new structured error
-errors.NewError(code, domain, operation, message)
-
-// Wrap existing error with context
-errors.Wrap(err, code, domain, operation, message)
-
-// Wrap with item context (package name, file path, etc.)
-errors.WrapWithItem(err, code, domain, operation, item, message)
-```
-
-**Exit Code Mapping:**
-- `0` - Success
-- `1` - User error (config, input validation)
-- `2` - System error (permissions, unavailable managers)
-
-**User Experience:**
-- **Table Format** - Human-readable error messages with troubleshooting steps
-- **JSON Format** - Structured error data for programmatic handling
-- **Debug Mode** - Technical details via `PLONK_DEBUG=1` environment variable
-
-**Integration:**
-- All commands use consistent error handling patterns
-- Error messages include actionable guidance
-- Automatic exit code determination based on error type
-- Compatible with standard Go error handling (`errors.Is`, `errors.As`)
+Plonk uses a structured error system for consistent error handling across all operations. See the [Development Guide](DEVELOPMENT.md#error-handling) for detailed error handling patterns and implementation guidelines.
 
 ## Data Flow
 
