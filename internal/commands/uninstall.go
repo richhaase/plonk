@@ -81,9 +81,9 @@ func uninstallPackages(cmd *cobra.Command, packageNames []string, flags *SimpleF
 	options := operations.BatchProcessorOptions{
 		ItemType:               "package",
 		Operation:              "uninstall",
-		ShowIndividualProgress: flags.Verbose || flags.DryRun, // Show progress in verbose or dry-run mode
-		Timeout:                3 * time.Minute,               // Uninstall timeout (shorter than install)
-		ContinueOnError:        nil,                           // Use default (true) - continue on individual failures
+		ShowIndividualProgress: false,           // Don't show progress here, let pipeline handle it
+		Timeout:                3 * time.Minute, // Uninstall timeout (shorter than install)
+		ContinueOnError:        nil,             // Use default (true) - continue on individual failures
 	}
 
 	// Use standard batch workflow
