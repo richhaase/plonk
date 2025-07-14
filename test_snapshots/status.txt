@@ -1,3 +1,0 @@
-Plonk Status: ✅ Healthy
-Config: ✅ valid | Lock: ✅ exists | Managing: 67 items |
-Available: 198 untracked
