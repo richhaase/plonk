@@ -5,8 +5,10 @@ package commands
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/spf13/cobra"
@@ -55,26 +57,36 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	force, _ := cmd.Flags().GetBool("force")
+
+	// Variable to capture results for error checking
+	var capturedResults []operations.OperationResult
+
 	// Define the processor function
 	processor := func(ctx context.Context, args []string) (OutputData, error) {
-		dryRun, _ := cmd.Flags().GetBool("dry-run")
-		force, _ := cmd.Flags().GetBool("force")
-
 		// Process dotfiles and return results that can be rendered
 		results, err := addDotfilesProcessor(args, dryRun, force)
 		if err != nil {
 			return nil, err
 		}
 
+		// Capture results for later error checking
+		capturedResults = results
+
 		// Convert to appropriate output format
 		if len(results) == 1 {
 			result := results[0]
-			return &DotfileAddOutput{
+			output := &DotfileAddOutput{
 				Source:      getMetadataString(result, "source"),
 				Destination: getMetadataString(result, "destination"),
 				Action:      mapStatusToAction(result.Status),
 				Path:        result.Name,
-			}, nil
+			}
+			if result.Error != nil {
+				output.Error = result.Error.Error()
+			}
+			return output, nil
 		} else {
 			return &DotfileBatchAddOutput{
 				TotalFiles: len(results),
@@ -85,7 +97,33 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Execute the pipeline
-	return pipeline.ExecuteWithData(context.Background(), processor, args)
+	err = pipeline.ExecuteWithData(context.Background(), processor, args)
+	if err != nil {
+		return err
+	}
+
+	// Check if all operations failed and return appropriate error
+	// This is done after rendering to ensure output is shown
+	if len(capturedResults) > 0 {
+		allFailed := true
+		for _, result := range capturedResults {
+			if result.Status != "failed" {
+				allFailed = false
+				break
+			}
+		}
+
+		if allFailed {
+			return errors.NewError(
+				errors.ErrFileNotFound,
+				errors.DomainDotfiles,
+				"add-multiple",
+				fmt.Sprintf("failed to process %d item(s)", len(capturedResults)),
+			)
+		}
+	}
+
+	return nil
 }
 
 // addDotfilesProcessor processes dotfile addition and returns operation results

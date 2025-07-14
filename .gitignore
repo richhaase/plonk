@@ -42,3 +42,8 @@ bin/
 # Security reports (if generated locally)
 security-*.json
 *.sarif
+
+# UI/UX comparison test results
+tests/ux-comparison/results/
+tests/ux-comparison/baseline.json
+tests/ux-comparison/scenarios.yaml

@@ -689,6 +689,7 @@ type DotfileAddOutput struct {
 	Destination string `json:"destination" yaml:"destination"`
 	Action      string `json:"action" yaml:"action"`
 	Path        string `json:"path" yaml:"path"`
+	Error       string `json:"error,omitempty" yaml:"error,omitempty"`
 }
 
 // DotfileBatchAddOutput represents the output structure for batch dotfile add operations
@@ -700,6 +701,14 @@ type DotfileBatchAddOutput struct {
 
 // TableOutput generates human-friendly table output for dotfile add
 func (d DotfileAddOutput) TableOutput() string {
+	output := "Dotfile Add\n===========\n\n"
+
+	// Handle failed action
+	if d.Action == "failed" {
+		output += fmt.Sprintf("✗ %s - %s\n", d.Path, d.Error)
+		return output
+	}
+
 	var actionText string
 	if d.Action == "updated" {
 		actionText = "Updated existing dotfile in plonk configuration"
@@ -707,7 +716,6 @@ func (d DotfileAddOutput) TableOutput() string {
 		actionText = "Added dotfile to plonk configuration"
 	}
 
-	output := "Dotfile Add\n===========\n\n"
 	output += fmt.Sprintf("✅ %s\n", actionText)
 	output += fmt.Sprintf("   Source: %s\n", d.Source)
 	output += fmt.Sprintf("   Destination: %s\n", d.Destination)
