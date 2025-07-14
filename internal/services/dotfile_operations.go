@@ -320,66 +320,6 @@ func AddDirectoryFiles(ctx context.Context, options AddDirectoryOptions) []opera
 	return results
 }
 
-// RemoveDotfileOptions configures dotfile removal
-type RemoveDotfileOptions struct {
-	HomeDir     string
-	ConfigDir   string
-	Config      *config.Config
-	DotfilePath string
-	DryRun      bool
-}
-
-// RemoveSingleDotfile removes a single dotfile from management
-func RemoveSingleDotfile(options RemoveDotfileOptions) operations.OperationResult {
-	result := operations.OperationResult{
-		Name: options.DotfilePath,
-	}
-
-	resolvedPath, err := ResolveDotfilePath(options.DotfilePath, options.HomeDir)
-	if err != nil {
-		result.Status = "failed"
-		result.Error = errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "remove", "failed to resolve dotfile path")
-		return result
-	}
-
-	// Generate destination path in config
-	_, destPath := GeneratePaths(resolvedPath, options.HomeDir)
-	configFilePath := filepath.Join(options.ConfigDir, destPath)
-
-	// Check if file exists in config
-	if _, err := os.Stat(configFilePath); os.IsNotExist(err) {
-		result.Status = "not-found"
-		result.Error = errors.NewError(errors.ErrFileNotFound, errors.DomainDotfiles, "remove", "dotfile not found in configuration")
-		return result
-	}
-
-	if options.DryRun {
-		result.Status = "would-remove"
-		return result
-	}
-
-	// Remove the file from config directory
-	err = os.Remove(configFilePath)
-	if err != nil {
-		result.Status = "failed"
-		result.Error = errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "remove", "failed to remove dotfile from configuration")
-		return result
-	}
-
-	// Check if destination is a symlink and remove it
-	if IsSymlink(resolvedPath) {
-		err = os.Remove(resolvedPath)
-		if err != nil {
-			result.Status = "partially-removed"
-			result.Error = errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "remove", "removed from config but failed to remove symlink")
-			return result
-		}
-	}
-
-	result.Status = "removed"
-	return result
-}
-
 // dotfileConfigAdapter adapts config.Config to DotfileConfigLoader interface
 type dotfileConfigAdapter struct {
 	cfg *config.Config
@@ -479,13 +419,4 @@ func CopyFileWithAttributes(src, dst string) error {
 	}
 
 	return nil
-}
-
-// IsSymlink checks if a path is a symbolic link
-func IsSymlink(path string) bool {
-	info, err := os.Lstat(path)
-	if err != nil {
-		return false
-	}
-	return info.Mode()&os.ModeSymlink != 0
 }
