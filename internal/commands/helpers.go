@@ -16,8 +16,3 @@ func getManagerInstallSuggestion(manager string) string {
 		return "Install the required package manager or change the default manager with 'plonk config edit'"
 	}
 }
-
-// getPackageNotFoundSuggestion returns suggestions when a package is not found in lock file
-func getPackageNotFoundSuggestion(packageName string) string {
-	return "List managed packages with 'plonk list' or add the package first with 'plonk install " + packageName + "'"
-}

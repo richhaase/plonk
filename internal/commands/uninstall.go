@@ -73,7 +73,7 @@ func uninstallPackages(cmd *cobra.Command, packageNames []string, flags *SimpleF
 	// Create item processor for package uninstallation
 	processor := operations.SimpleProcessor(
 		func(ctx context.Context, packageName string) operations.OperationResult {
-			return uninstallSinglePackage(configDir, lockService, packageName, flags.DryRun)
+			return uninstallSinglePackage(configDir, lockService, packageName, flags.DryRun, flags.Manager)
 		},
 	)
 
@@ -91,40 +91,64 @@ func uninstallPackages(cmd *cobra.Command, packageNames []string, flags *SimpleF
 }
 
 // uninstallSinglePackage removes a single package
-func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService, packageName string, dryRun bool) operations.OperationResult {
+func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService, packageName string, dryRun bool, managerFlag string) operations.OperationResult {
 	result := operations.OperationResult{
 		Name: packageName,
 	}
 
 	// Find package in lock file
 	managerName, found := findPackageInLockFile(lockService, packageName)
-	result.Manager = managerName
+	wasManaged := found
 
+	// If not in lock file, we need to detect which manager to use
 	if !found {
-		result.Status = "skipped"
-		result.Error = errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "find", fmt.Sprintf("package '%s' not found in lock file", packageName)).WithSuggestionMessage(getPackageNotFoundSuggestion(packageName))
-		return result
+		// If manager flag is provided, use it
+		if managerFlag != "" {
+			managerName = managerFlag
+		} else {
+			// Try to detect which manager has the package installed
+			detectedManager, err := detectInstalledPackageManager(packageName)
+			if err != nil {
+				result.Status = "skipped"
+				result.Error = errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "detect", fmt.Sprintf("package '%s' not found in any package manager", packageName))
+				return result
+			}
+			managerName = detectedManager
+		}
 	}
+
+	result.Manager = managerName
 
 	if dryRun {
 		result.Status = "would-remove"
 		return result
 	}
 
-	// Uninstall from system first
+	// Attempt to uninstall from system
 	err := uninstallPackageFromSystem(managerName, packageName)
 	if err != nil {
+		// If package wasn't installed but was in lock file, we should still remove it from lock
+		if wasManaged {
+			lockErr := lockService.RemovePackage(managerName, packageName)
+			if lockErr == nil {
+				result.Status = "removed"
+				result.Error = errors.WrapWithItem(err, errors.ErrPackageUninstall, errors.DomainPackages, "uninstall", packageName, "package not installed, removed from lock file")
+				return result
+			}
+		}
 		result.Status = "failed"
 		result.Error = errors.WrapWithItem(err, errors.ErrPackageUninstall, errors.DomainPackages, "uninstall", packageName, "failed to uninstall package").WithMetadata("manager", managerName)
 		return result
 	}
 
-	// Remove from lock file after successful uninstall
-	err = lockService.RemovePackage(managerName, packageName)
-	if err != nil {
-		result.Status = "partially-removed"
-		result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainPackages, "remove-lock", packageName, "uninstalled but failed to remove from lock file").WithMetadata("manager", managerName)
-		return result
+	// Remove from lock file if it was managed
+	if wasManaged {
+		err = lockService.RemovePackage(managerName, packageName)
+		if err != nil {
+			result.Status = "partially-removed"
+			result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainPackages, "remove-lock", packageName, "uninstalled but failed to remove from lock file").WithMetadata("manager", managerName)
+			return result
+		}
 	}
 
 	result.Status = "removed"
@@ -142,6 +166,40 @@ func findPackageInLockFile(lockService *lock.YAMLLockService, packageName string
 	}
 
 	return "", false
+}
+
+// detectInstalledPackageManager tries to detect which package manager has the package installed
+func detectInstalledPackageManager(packageName string) (string, error) {
+	sharedCtx := runtime.GetSharedContext()
+	registry := sharedCtx.ManagerRegistry()
+	ctx := context.Background()
+
+	// Try each manager to see if package is installed
+	managers := []string{"homebrew", "npm", "cargo"}
+	for _, managerName := range managers {
+		mgr, err := registry.GetManager(managerName)
+		if err != nil {
+			continue
+		}
+
+		// Check if manager is available
+		available, err := mgr.IsAvailable(ctx)
+		if err != nil || !available {
+			continue
+		}
+
+		// Check if package is installed
+		installed, err := mgr.IsInstalled(ctx, packageName)
+		if err != nil {
+			continue
+		}
+
+		if installed {
+			return managerName, nil
+		}
+	}
+
+	return "", errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "detect", "package not found in any available package manager")
 }
 
 // uninstallPackageFromSystem uninstalls a package using the appropriate manager
