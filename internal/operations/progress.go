@@ -65,7 +65,7 @@ func (r *DefaultProgressReporter) ShowItemProgress(result OperationResult) {
 	case "unlinked":
 		fmt.Printf("✓ %s - unlinked\n", result.Name)
 	case "skipped":
-		if r.Operation == "remove" {
+		if r.Operation == "remove" || r.Operation == "uninstall" {
 			fmt.Printf("✗ %s - not managed\n", result.Name)
 		} else {
 			fmt.Printf("✗ %s - already managed\n", result.Name)

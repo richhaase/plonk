@@ -51,8 +51,9 @@ func NewCommandPipeline(cmd *cobra.Command, itemType string) (*CommandPipeline, 
 			cmd.Name(), "output-format", "invalid output format")
 	}
 
-	// Create progress reporter
-	reporter := operations.NewProgressReporter(itemType, format == OutputTable)
+	// Create progress reporter with operation name derived from command
+	operation := cmd.Name() // Use command name as operation (e.g., "install", "uninstall", "add", "rm")
+	reporter := operations.NewProgressReporterForOperation(operation, itemType, format == OutputTable)
 
 	return &CommandPipeline{
 		cmd:      cmd,
@@ -73,8 +74,9 @@ func NewSimpleCommandPipeline(cmd *cobra.Command, itemType string) (*CommandPipe
 			cmd.Name(), "output-format", "invalid output format")
 	}
 
-	// Create progress reporter
-	reporter := operations.NewProgressReporter(itemType, format == OutputTable)
+	// Create progress reporter with operation name derived from command
+	operation := cmd.Name() // Use command name as operation (e.g., "install", "uninstall", "add", "rm")
+	reporter := operations.NewProgressReporterForOperation(operation, itemType, format == OutputTable)
 
 	return &CommandPipeline{
 		cmd:      cmd,
