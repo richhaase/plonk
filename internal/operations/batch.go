@@ -83,8 +83,10 @@ func (b *GenericBatchProcessor) ProcessItems(ctx context.Context, items []string
 		}
 	}
 
-	// Show batch summary
-	b.reporter.ShowBatchSummary(results)
+	// Show batch summary only if individual progress was shown
+	if b.options.ShowIndividualProgress {
+		b.reporter.ShowBatchSummary(results)
+	}
 
 	return results, ctxWithTimeout.Err()
 }

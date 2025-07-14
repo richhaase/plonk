@@ -16,11 +16,11 @@ import (
 var rmCmd = &cobra.Command{
 	Use:   "rm <files...>",
 	Short: "Remove dotfiles from plonk management",
-	Long: `Remove dotfiles from plonk management and unlink them.
+	Long: `Remove dotfiles from plonk management completely.
 
-This command removes dotfiles from your plonk configuration and unlinks them
-from your home directory. The source files in your plonk configuration
-directory will remain available for re-linking later.
+This command unlinks dotfiles from your home directory and removes them from
+your plonk configuration directory. The dotfiles will no longer be managed by
+plonk and cannot be re-linked without adding them again.
 
 Examples:
   plonk rm ~/.zshrc                    # Remove single file
@@ -68,9 +68,9 @@ func runRm(cmd *cobra.Command, args []string) error {
 		options := operations.BatchProcessorOptions{
 			ItemType:               "dotfile",
 			Operation:              "remove",
-			ShowIndividualProgress: flags.Verbose || flags.DryRun, // Show progress in verbose or dry-run mode
-			Timeout:                2 * time.Minute,               // Dotfile removal timeout
-			ContinueOnError:        nil,                           // Use default (true) - continue on individual failures
+			ShowIndividualProgress: false,           // Don't show progress here, ExecuteWithResults will do it
+			Timeout:                2 * time.Minute, // Dotfile removal timeout
+			ContinueOnError:        nil,             // Use default (true) - continue on individual failures
 		}
 
 		// Use standard batch workflow
@@ -99,17 +99,81 @@ type DotfileRemovalSummary struct {
 func (d DotfileRemovalOutput) TableOutput() string {
 	tb := NewTableBuilder()
 
+	// For single file operations, show inline result
+	if d.TotalFiles == 1 && len(d.Results) == 1 {
+		result := d.Results[0]
+		switch result.Status {
+		case "removed":
+			tb.AddLine("✅ Removed dotfile from plonk management")
+			tb.AddLine("   File: %s", result.Name)
+			if source, ok := result.Metadata["source"].(string); ok {
+				tb.AddLine("   Source: %s (removed from config)", source)
+			}
+		case "would-remove":
+			tb.AddLine("🔍 Would remove dotfile from plonk management (dry-run)")
+			tb.AddLine("   File: %s", result.Name)
+			if source, ok := result.Metadata["source"].(string); ok {
+				tb.AddLine("   Source: %s", source)
+			}
+		case "skipped":
+			tb.AddLine("⏭️ Skipped: %s", result.Name)
+			if result.Error != nil {
+				tb.AddLine("   Reason: %s", result.Error.Error())
+			}
+		case "failed":
+			tb.AddLine("%s Failed: %s", IconUnhealthy, result.Name)
+			if result.Error != nil {
+				tb.AddLine("   Error: %s", result.Error.Error())
+			}
+		}
+		return tb.Build()
+	}
+
+	// For batch operations, show summary
 	tb.AddTitle("Dotfile Removal")
 	tb.AddNewline()
 
-	if d.Summary.Removed > 0 {
-		tb.AddLine("📄 Removed %d dotfiles", d.Summary.Removed)
+	// Check if this is a dry run
+	isDryRun := false
+	wouldRemoveCount := 0
+	for _, result := range d.Results {
+		if result.Status == "would-remove" {
+			isDryRun = true
+			wouldRemoveCount++
+		}
 	}
+
+	if isDryRun {
+		if wouldRemoveCount > 0 {
+			tb.AddLine("🔍 Would remove %d dotfiles (dry-run)", wouldRemoveCount)
+		}
+	} else {
+		if d.Summary.Removed > 0 {
+			tb.AddLine("📄 Removed %d dotfiles", d.Summary.Removed)
+		}
+	}
+
 	if d.Summary.Skipped > 0 {
 		tb.AddLine("⏭️ %d skipped", d.Summary.Skipped)
 	}
 	if d.Summary.Failed > 0 {
 		tb.AddLine("%s %d failed", IconUnhealthy, d.Summary.Failed)
+	}
+
+	tb.AddNewline()
+
+	// Show individual files
+	for _, result := range d.Results {
+		switch result.Status {
+		case "removed":
+			tb.AddLine("   ✓ %s", result.Name)
+		case "would-remove":
+			tb.AddLine("   - %s", result.Name)
+		case "skipped":
+			tb.AddLine("   ⏭ %s (not managed)", result.Name)
+		case "failed":
+			tb.AddLine("   ✗ %s", result.Name)
+		}
 	}
 
 	tb.AddNewline()

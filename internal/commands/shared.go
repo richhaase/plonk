@@ -615,10 +615,8 @@ func copyFileWithAttributes(src, dst string) error {
 // mapStatusToAction converts operation status to legacy action string
 func mapStatusToAction(status string) string {
 	switch status {
-	case "added", "would-add":
-		return "added"
-	case "updated", "would-update":
-		return "updated"
+	case "added", "updated", "would-add", "would-update":
+		return status
 	default:
 		return "failed"
 	}
@@ -703,21 +701,37 @@ func (d DotfileAddOutput) TableOutput() string {
 	}
 
 	var actionText string
-	if d.Action == "updated" {
+	var isDryRun bool
+	switch d.Action {
+	case "would-add":
+		actionText = "Would add dotfile to plonk configuration"
+		isDryRun = true
+	case "would-update":
+		actionText = "Would update existing dotfile in plonk configuration"
+		isDryRun = true
+	case "updated":
 		actionText = "Updated existing dotfile in plonk configuration"
-	} else {
+	case "added":
 		actionText = "Added dotfile to plonk configuration"
+	default:
+		actionText = d.Action
 	}
 
-	output += fmt.Sprintf("✅ %s\n", actionText)
+	if isDryRun {
+		output += fmt.Sprintf("🔍 %s (dry-run)\n", actionText)
+	} else {
+		output += fmt.Sprintf("✅ %s\n", actionText)
+	}
 	output += fmt.Sprintf("   Source: %s\n", d.Source)
 	output += fmt.Sprintf("   Destination: %s\n", d.Destination)
 	output += fmt.Sprintf("   Original: %s\n", d.Path)
 
-	if d.Action == "updated" {
-		output += "\nThe system file has been copied to your plonk config directory, overwriting the previous version\n"
-	} else {
-		output += "\nThe dotfile has been copied to your plonk config directory\n"
+	if !isDryRun {
+		if d.Action == "updated" {
+			output += "\nThe system file has been copied to your plonk config directory, overwriting the previous version\n"
+		} else {
+			output += "\nThe dotfile has been copied to your plonk config directory\n"
+		}
 	}
 	return output
 }
@@ -732,27 +746,51 @@ func (d DotfileBatchAddOutput) TableOutput() string {
 	output := fmt.Sprintf("Dotfile Directory Add\n=====================\n\n")
 
 	// Count added vs updated
-	var addedCount, updatedCount int
+	var addedCount, updatedCount, wouldAddCount, wouldUpdateCount int
 	for _, file := range d.AddedFiles {
-		if file.Action == "updated" {
+		switch file.Action {
+		case "updated":
 			updatedCount++
-		} else {
+		case "added":
 			addedCount++
+		case "would-update":
+			wouldUpdateCount++
+		case "would-add":
+			wouldAddCount++
 		}
 	}
 
-	if addedCount > 0 && updatedCount > 0 {
-		output += fmt.Sprintf("✅ Processed %d files (%d added, %d updated)\n\n", d.TotalFiles, addedCount, updatedCount)
-	} else if updatedCount > 0 {
-		output += fmt.Sprintf("✅ Updated %d files in plonk configuration\n\n", d.TotalFiles)
+	isDryRun := wouldAddCount > 0 || wouldUpdateCount > 0
+
+	if isDryRun {
+		if wouldAddCount > 0 && wouldUpdateCount > 0 {
+			output += fmt.Sprintf("🔍 Would process %d files (%d add, %d update) - dry-run\n\n", d.TotalFiles, wouldAddCount, wouldUpdateCount)
+		} else if wouldUpdateCount > 0 {
+			output += fmt.Sprintf("🔍 Would update %d files in plonk configuration - dry-run\n\n", d.TotalFiles)
+		} else {
+			output += fmt.Sprintf("🔍 Would add %d files to plonk configuration - dry-run\n\n", d.TotalFiles)
+		}
 	} else {
-		output += fmt.Sprintf("✅ Added %d files to plonk configuration\n\n", d.TotalFiles)
+		if addedCount > 0 && updatedCount > 0 {
+			output += fmt.Sprintf("✅ Processed %d files (%d added, %d updated)\n\n", d.TotalFiles, addedCount, updatedCount)
+		} else if updatedCount > 0 {
+			output += fmt.Sprintf("✅ Updated %d files in plonk configuration\n\n", d.TotalFiles)
+		} else {
+			output += fmt.Sprintf("✅ Added %d files to plonk configuration\n\n", d.TotalFiles)
+		}
 	}
 
 	for _, file := range d.AddedFiles {
-		actionIndicator := "+"
-		if file.Action == "updated" {
+		var actionIndicator string
+		switch file.Action {
+		case "updated":
 			actionIndicator = "↻"
+		case "added":
+			actionIndicator = "+"
+		case "would-update":
+			actionIndicator = "↻"
+		case "would-add":
+			actionIndicator = "+"
 		}
 		output += fmt.Sprintf("   %s %s → %s\n", actionIndicator, file.Destination, file.Source)
 	}
@@ -764,7 +802,9 @@ func (d DotfileBatchAddOutput) TableOutput() string {
 		}
 	}
 
-	output += "\nAll files have been copied to your plonk config directory\n"
+	if !isDryRun {
+		output += "\nAll files have been copied to your plonk config directory\n"
+	}
 	return output
 }
 
@@ -894,16 +934,26 @@ func removeSingleDotfile(homeDir, configDir string, cfg *config.Config, dotfileP
 	// Check if file is managed (has a symlink)
 	if !isSymlink(resolvedPath) {
 		result.Status = "skipped"
-		result.Error = errors.NewError(errors.ErrFileNotFound, errors.DomainDotfiles, "check", fmt.Sprintf("dotfile '%s' is not a managed symlink", dotfilePath))
+		result.Error = errors.NewError(errors.ErrFileNotFound, errors.DomainDotfiles, "check", fmt.Sprintf("dotfile '%s' is not managed by plonk", dotfilePath))
 		return result
 	}
+
+	// Get the source file path in config directory
+	_, destination := generatePaths(resolvedPath, homeDir)
+	source := config.TargetToSource(destination)
+	sourcePath := filepath.Join(configDir, source)
 
 	if dryRun {
-		result.Status = "would-unlink"
+		result.Status = "would-remove"
+		result.Metadata = map[string]interface{}{
+			"source":      source,
+			"destination": destination,
+			"path":        resolvedPath,
+		}
 		return result
 	}
 
-	// Remove the symlink
+	// Remove the symlink first
 	err = os.Remove(resolvedPath)
 	if err != nil {
 		result.Status = "failed"
@@ -911,10 +961,26 @@ func removeSingleDotfile(homeDir, configDir string, cfg *config.Config, dotfileP
 		return result
 	}
 
-	result.Status = "unlinked"
+	// Remove the source file from config directory
+	if err := os.Remove(sourcePath); err != nil {
+		// If we can't remove the source file, the symlink is already gone
+		// so we report partial success
+		result.Status = "removed"
+		result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "remove-source", source, "symlink removed but failed to remove source file from config")
+		result.Metadata = map[string]interface{}{
+			"source":      source,
+			"destination": destination,
+			"path":        resolvedPath,
+			"partial":     true,
+		}
+		return result
+	}
+
+	result.Status = "removed"
 	result.Metadata = map[string]interface{}{
-		"source":      dotfilePath,
-		"destination": resolvedPath,
+		"source":      source,
+		"destination": destination,
+		"path":        resolvedPath,
 	}
 	return result
 }

@@ -97,13 +97,18 @@ func (p *CommandPipeline) ExecuteWithResults(ctx context.Context, processor Proc
 		return err
 	}
 
-	// Show progress for each result
-	for _, result := range results {
-		p.reporter.ShowItemProgress(result)
-	}
-
 	// Handle output based on format
 	if p.format == OutputTable {
+		// For table format, only show custom output for specific item types
+		// that have specialized output formats
+		if p.itemType == "dotfile-remove" || p.itemType == "dotfile" {
+			// These have custom table outputs, render them
+			return p.renderOperationResults(results)
+		}
+		// Otherwise show progress for each result
+		for _, result := range results {
+			p.reporter.ShowItemProgress(result)
+		}
 		p.reporter.ShowBatchSummary(results)
 	} else {
 		// Render structured output
