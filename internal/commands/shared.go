@@ -931,17 +931,17 @@ func removeSingleDotfile(homeDir, configDir string, cfg *config.Config, dotfileP
 		return result
 	}
 
-	// Check if file is managed (has a symlink)
-	if !isSymlink(resolvedPath) {
-		result.Status = "skipped"
-		result.Error = errors.NewError(errors.ErrFileNotFound, errors.DomainDotfiles, "check", fmt.Sprintf("dotfile '%s' is not managed by plonk", dotfilePath))
-		return result
-	}
-
 	// Get the source file path in config directory
 	_, destination := generatePaths(resolvedPath, homeDir)
 	source := config.TargetToSource(destination)
 	sourcePath := filepath.Join(configDir, source)
+
+	// Check if file is managed (has corresponding file in config directory)
+	if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
+		result.Status = "skipped"
+		result.Error = errors.NewError(errors.ErrFileNotFound, errors.DomainDotfiles, "check", fmt.Sprintf("dotfile '%s' is not managed by plonk", dotfilePath))
+		return result
+	}
 
 	if dryRun {
 		result.Status = "would-remove"
@@ -953,20 +953,22 @@ func removeSingleDotfile(homeDir, configDir string, cfg *config.Config, dotfileP
 		return result
 	}
 
-	// Remove the symlink first
-	err = os.Remove(resolvedPath)
-	if err != nil {
-		result.Status = "failed"
-		result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "unlink", dotfilePath, "failed to remove symlink")
-		return result
+	// Remove the deployed file first (if it exists)
+	if _, err := os.Stat(resolvedPath); err == nil {
+		err = os.Remove(resolvedPath)
+		if err != nil {
+			result.Status = "failed"
+			result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "remove", dotfilePath, "failed to remove deployed dotfile")
+			return result
+		}
 	}
 
 	// Remove the source file from config directory
 	if err := os.Remove(sourcePath); err != nil {
-		// If we can't remove the source file, the symlink is already gone
+		// If we can't remove the source file, the deployed file is already gone
 		// so we report partial success
 		result.Status = "removed"
-		result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "remove-source", source, "symlink removed but failed to remove source file from config")
+		result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "remove-source", source, "deployed file removed but failed to remove source file from config")
 		result.Metadata = map[string]interface{}{
 			"source":      source,
 			"destination": destination,
@@ -983,15 +985,6 @@ func removeSingleDotfile(homeDir, configDir string, cfg *config.Config, dotfileP
 		"path":        resolvedPath,
 	}
 	return result
-}
-
-// isSymlink checks if a path is a symbolic link
-func isSymlink(path string) bool {
-	info, err := os.Lstat(path)
-	if err != nil {
-		return false
-	}
-	return info.Mode()&os.ModeSymlink != 0
 }
 
 // SimpleFlags represents basic command flags without detection logic
