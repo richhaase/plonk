@@ -217,7 +217,7 @@ Install packages on your system and add them to plonk management.
 
 **Usage:**
 ```bash
-plonk install <packages...> [--brew] [--npm] [--cargo] [--pip] [--dry-run] [--force]
+plonk install <packages...> [--brew] [--npm] [--cargo] [--pip] [--gem] [--apt] [--go] [--dry-run] [--force]
 ```
 
 **Options:**
@@ -226,6 +226,7 @@ plonk install <packages...> [--brew] [--npm] [--cargo] [--pip] [--dry-run] [--fo
 - `--cargo` - Use Cargo package manager
 - `--pip` - Use pip package manager
 - `--gem` - Use gem package manager
+- `--apt` - Use APT package manager (Linux)
 - `--go` - Use go install package manager
 - `--dry-run, -n` - Show what would be installed without making changes
 - `--force, -f` - Force installation even if already managed
@@ -245,6 +246,7 @@ plonk install lodash --npm              # Install lodash with npm global package
 plonk install ripgrep --cargo           # Install ripgrep with cargo packages
 plonk install black flake8 --pip        # Install Python tools with pip
 plonk install bundler rubocop --gem     # Install Ruby tools with gem
+plonk install htop curl --apt           # Install system tools with APT (Linux)
 plonk install gopls golangci-lint --go  # Install Go tools with go install
 plonk install --dry-run htop neovim     # Preview what would be installed
 ```
@@ -255,7 +257,7 @@ Uninstall packages from your system and remove them from plonk management.
 
 **Usage:**
 ```bash
-plonk uninstall <packages...> [--brew] [--npm] [--cargo] [--pip] [--gem] [--go] [--dry-run] [--force]
+plonk uninstall <packages...> [--brew] [--npm] [--cargo] [--pip] [--gem] [--apt] [--go] [--dry-run] [--force]
 ```
 
 **Options:**
@@ -264,6 +266,7 @@ plonk uninstall <packages...> [--brew] [--npm] [--cargo] [--pip] [--gem] [--go] 
 - `--cargo` - Use Cargo package manager
 - `--pip` - Use pip package manager
 - `--gem` - Use gem package manager
+- `--apt` - Use APT package manager (Linux)
 - `--go` - Use go install package manager
 - `--dry-run, -n` - Show what would be removed without making changes
 - `--force, -f` - Force removal even if not managed
@@ -601,6 +604,27 @@ plonk install --go golang.org/x/tools/gopls@latest     # Install gopls
 plonk install --go github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 plonk install --go mvdan.cc/gofumpt@v0.8.0            # Specific version
 plonk uninstall --go gopls                             # Remove by binary name
+```
+
+### APT/Debian Package Behavior
+Plonk's APT support manages system packages on Debian-based Linux distributions:
+**System Integration:**
+- Linux-only support (automatically detects non-Linux systems)
+- Requires root/sudo privileges for install/uninstall operations
+- Integrates with system package database
+- Handles package dependencies automatically
+
+**Package Management:**
+- Uses `apt install` and `apt remove` for package operations
+- Supports package search via `apt search`
+- Provides detailed package information including dependencies and size
+- Handles repository-based packages only
+
+**Examples:**
+```bash
+plonk install htop curl vim --apt                    # Install system utilities
+plonk install build-essential git --apt              # Install development tools
+plonk uninstall --apt htop                           # Remove system package
 ```
 
 ### Ruby/gem Environment Behavior
