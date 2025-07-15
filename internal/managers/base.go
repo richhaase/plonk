@@ -225,6 +225,11 @@ func (b *BaseManager) handleInstallError(err error, output []byte, packageName s
 				fmt.Sprintf("failed to build package '%s'", packageName)).
 				WithSuggestionMessage("Package may have build dependencies or compatibility issues")
 
+		case ErrorTypeDependency:
+			return errors.NewError(errors.ErrPackageInstall, errors.DomainPackages, "install",
+				fmt.Sprintf("dependency conflict installing package '%s'", packageName)).
+				WithSuggestionMessage("Check for package conflicts and dependency requirements")
+
 		default:
 			// Only treat non-zero exit codes as errors
 			if execErr.ExitCode() != 0 {
@@ -263,6 +268,11 @@ func (b *BaseManager) handleUninstallError(err error, output []byte, packageName
 			return errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "uninstall",
 				"package manager database is locked").
 				WithSuggestionMessage("Wait for other package manager processes to complete")
+
+		case ErrorTypeDependency:
+			return errors.NewError(errors.ErrPackageUninstall, errors.DomainPackages, "uninstall",
+				fmt.Sprintf("cannot uninstall package '%s' due to dependency conflicts", packageName)).
+				WithSuggestionMessage("Check for packages that depend on this one")
 
 		default:
 			// Only treat non-zero exit codes as errors

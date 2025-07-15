@@ -25,6 +25,8 @@ const (
 	ErrorTypeNetwork ErrorType = "network"
 	// ErrorTypeBuild indicates build/compilation failures
 	ErrorTypeBuild ErrorType = "build"
+	// ErrorTypeDependency indicates dependency conflicts or issues
+	ErrorTypeDependency ErrorType = "dependency"
 	// ErrorTypeUnknown indicates an unrecognized error
 	ErrorTypeUnknown ErrorType = "unknown"
 )
