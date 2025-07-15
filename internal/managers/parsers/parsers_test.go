@@ -65,59 +65,82 @@ func TestParseJSON(t *testing.T) {
 }
 
 func TestParseLines(t *testing.T) {
+	parser := &SimpleLineParser{
+		SkipPatterns: []string{"WARNING", "---"},
+	}
+
 	tests := []struct {
 		name   string
 		output []byte
-		parser LineParser
 		want   []string
 	}{
 		{
-			name: "simple line parser",
-			output: []byte(`package1 1.0.0
-package2 2.0.0
-package3 3.0.0`),
-			parser: &SimpleLineParser{},
-			want:   []string{"package1", "package2", "package3"},
+			name: "simple package list",
+			output: []byte(`package1
+package2
+package3`),
+			want: []string{"package1", "package2", "package3"},
 		},
 		{
-			name: "line parser with skip patterns",
-			output: []byte(`Installed packages:
--------------------
-package1 1.0.0
-package2 2.0.0
-Total: 2 packages`),
-			parser: &SimpleLineParser{
-				SkipPatterns: []string{"---", "Installed", "Total"},
-			},
+			name: "list with warnings",
+			output: []byte(`WARNING: something
+package1
+---
+package2`),
 			want: []string{"package1", "package2"},
 		},
 		{
-			name: "column parser",
-			output: []byte(`package1|1.0.0|description1
-package2|2.0.0|description2`),
-			parser: &ColumnLineParser{
-				Column:    0,
-				Delimiter: "|",
-			},
-			want: []string{"package1", "package2"},
+			name:   "empty output",
+			output: []byte(``),
+			want:   nil,
 		},
 		{
-			name: "column parser extracting version",
-			output: []byte(`package1 :: 1.0.0
-package2 :: 2.0.0`),
-			parser: &ColumnLineParser{
-				Column:    1,
-				Delimiter: "::",
-			},
-			want: []string{"1.0.0", "2.0.0"},
+			name: "whitespace handling",
+			output: []byte(`  package1
+   package2
+package3`),
+			want: []string{"package1", "package2", "package3"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ParseLines(tt.output, tt.parser)
+			got := ParseLines(tt.output, parser)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ParseLines() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseSimpleList(t *testing.T) {
+	tests := []struct {
+		name   string
+		output []byte
+		want   []string
+	}{
+		{
+			name:   "simple list",
+			output: []byte("pkg1\npkg2\npkg3"),
+			want:   []string{"pkg1", "pkg2", "pkg3"},
+		},
+		{
+			name:   "list with empty lines",
+			output: []byte("pkg1\n\npkg2\n\n"),
+			want:   []string{"pkg1", "pkg2"},
+		},
+		{
+			name:   "mixed case",
+			output: []byte("Package1\nPACKAGE2"),
+			want:   []string{"package1", "package2"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ParseSimpleList(tt.output)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ParseSimpleList() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -135,18 +158,16 @@ func TestParseTableOutput(t *testing.T) {
 			output: []byte(`Package    Version
 ---------- -------
 requests   2.28.0
-flask      2.2.0
-numpy      1.21.0`),
+Flask      2.2.0`),
 			skipHeaders: 2,
-			want:        []string{"requests", "flask", "numpy"},
+			want:        []string{"requests", "flask"},
 		},
 		{
-			name: "table with extra spaces",
-			output: []byte(`Name         Version    Location
------------  ---------  ---------
-package1     1.0.0      /usr/lib
-package2     2.0.0      /usr/local`),
-			skipHeaders: 2,
+			name: "table with extra columns",
+			output: []byte(`Name       Version    Description
+package1   1.0.0      First package
+package2   2.0.0      Second package`),
+			skipHeaders: 1,
 			want:        []string{"package1", "package2"},
 		},
 		{
@@ -360,6 +381,314 @@ func TestColumnLineParser(t *testing.T) {
 			got := tt.parser.ParseLine(tt.line)
 			if got != tt.want {
 				t.Errorf("ParseLine() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestExtractKeyValue(t *testing.T) {
+	tests := []struct {
+		name   string
+		output []byte
+		key    string
+		want   string
+	}{
+		{
+			name:   "simple key-value",
+			output: []byte("Version: 1.2.3\nName: test"),
+			key:    "Version",
+			want:   "1.2.3",
+		},
+		{
+			name:   "key with quotes",
+			output: []byte(`Homepage: "https://example.com"`),
+			key:    "Homepage",
+			want:   "https://example.com",
+		},
+		{
+			name:   "key not found",
+			output: []byte("Name: test"),
+			key:    "Version",
+			want:   "",
+		},
+		{
+			name:   "key with spaces in value",
+			output: []byte("Summary: This is a test package"),
+			key:    "Summary",
+			want:   "This is a test package",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExtractKeyValue(tt.output, tt.key)
+			if got != tt.want {
+				t.Errorf("ExtractKeyValue() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseDependencies(t *testing.T) {
+	tests := []struct {
+		name string
+		deps string
+		want []string
+	}{
+		{
+			name: "simple comma-separated",
+			deps: "libfoo, libbar, libbaz",
+			want: []string{"libfoo", "libbar", "libbaz"},
+		},
+		{
+			name: "with version constraints",
+			deps: "requests (>= 2.0), flask (< 3.0), numpy",
+			want: []string{"requests", "flask", "numpy"},
+		},
+		{
+			name: "mixed constraints",
+			deps: "gem1 [>= 1.0], gem2 ~> 2.0, gem3",
+			want: []string{"gem1", "gem2", "gem3"},
+		},
+		{
+			name: "empty string",
+			deps: "",
+			want: []string{},
+		},
+		{
+			name: "single dependency",
+			deps: "single-dep",
+			want: []string{"single-dep"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ParseDependencies(tt.deps)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ParseDependencies() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestExtractVersionFromPackageHeader(t *testing.T) {
+	tests := []struct {
+		name        string
+		header      string
+		packageName string
+		want        string
+	}{
+		{
+			name:        "cargo style with v prefix",
+			header:      "serde v1.0.136:",
+			packageName: "serde",
+			want:        "1.0.136",
+		},
+		{
+			name:        "npm style with @",
+			header:      "typescript@4.5.0",
+			packageName: "typescript",
+			want:        "4.5.0",
+		},
+		{
+			name:        "space separated",
+			header:      "package 2.1.0",
+			packageName: "package",
+			want:        "2.1.0",
+		},
+		{
+			name:        "with parentheses",
+			header:      "rails (7.0.4)",
+			packageName: "rails",
+			want:        "7.0.4",
+		},
+		{
+			name:        "wrong package name",
+			header:      "other v1.0.0",
+			packageName: "package",
+			want:        "",
+		},
+		{
+			name:        "no version",
+			header:      "package",
+			packageName: "package",
+			want:        "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExtractVersionFromPackageHeader(tt.header, tt.packageName)
+			if got != tt.want {
+				t.Errorf("ExtractVersionFromPackageHeader() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseIndentedList(t *testing.T) {
+	tests := []struct {
+		name   string
+		output []byte
+		indent string
+		want   []string
+	}{
+		{
+			name: "gem dependency style",
+			output: []byte(`Gem rails-7.0.4
+  actioncable (= 7.0.4)
+  actionmailbox (= 7.0.4)
+  actionmailer (= 7.0.4)`),
+			indent: "  ",
+			want:   []string{"actioncable", "actionmailbox", "actionmailer"},
+		},
+		{
+			name: "no indented items",
+			output: []byte(`Header
+No indents here
+Still no indents`),
+			indent: "  ",
+			want:   nil,
+		},
+		{
+			name: "mixed indentation",
+			output: []byte(`Header
+  item1
+    sub-item (ignored)
+  item2 (with info)
+Not indented`),
+			indent: "  ",
+			want:   []string{"item1", "item2"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ParseIndentedList(tt.output, tt.indent)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ParseIndentedList() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCleanVersionString(t *testing.T) {
+	tests := []struct {
+		name    string
+		version string
+		want    string
+	}{
+		{
+			name:    "with v prefix",
+			version: "v1.2.3",
+			want:    "1.2.3",
+		},
+		{
+			name:    "with quotes",
+			version: `"2.0.0"`,
+			want:    "2.0.0",
+		},
+		{
+			name:    "with build info",
+			version: "1.0.0 (built from source)",
+			want:    "1.0.0",
+		},
+		{
+			name:    "with trailing comma",
+			version: "3.1.4,",
+			want:    "3.1.4",
+		},
+		{
+			name:    "complex case",
+			version: `v"1.2.3-beta" (custom build),`,
+			want:    "1.2.3-beta",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := CleanVersionString(tt.version)
+			if got != tt.want {
+				t.Errorf("CleanVersionString() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseKeyValuePairs(t *testing.T) {
+	output := []byte(`Name: requests
+Version: 2.28.0
+Summary: Python HTTP library
+Homepage: https://requests.readthedocs.io
+License: Apache 2.0`)
+
+	keys := []string{"Name", "Version", "Summary", "Homepage", "License"}
+	got := ParseKeyValuePairs(output, keys)
+
+	want := map[string]string{
+		"Name":     "requests",
+		"Version":  "2.28.0",
+		"Summary":  "Python HTTP library",
+		"Homepage": "https://requests.readthedocs.io",
+		"License":  "Apache 2.0",
+	}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("ParseKeyValuePairs() = %v, want %v", got, want)
+	}
+
+	// Test with missing keys
+	keys2 := []string{"Name", "NotFound", "Version"}
+	got2 := ParseKeyValuePairs(output, keys2)
+	want2 := map[string]string{
+		"Name":    "requests",
+		"Version": "2.28.0",
+	}
+
+	if !reflect.DeepEqual(got2, want2) {
+		t.Errorf("ParseKeyValuePairs() with missing keys = %v, want %v", got2, want2)
+	}
+}
+
+func TestCleanJSONValue(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+		want  string
+	}{
+		{
+			name:  "with double quotes",
+			value: `"value"`,
+			want:  "value",
+		},
+		{
+			name:  "with single quotes",
+			value: `'value'`,
+			want:  "value",
+		},
+		{
+			name:  "with trailing comma",
+			value: `"value",`,
+			want:  "value",
+		},
+		{
+			name:  "complex case",
+			value: `"quoted value",`,
+			want:  "quoted value",
+		},
+		{
+			name:  "no quotes",
+			value: "plain",
+			want:  "plain",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := CleanJSONValue(tt.value)
+			if got != tt.want {
+				t.Errorf("CleanJSONValue() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -605,11 +605,19 @@ results, err := manager.Search(ctx, query)
    - Total savings: ~280 lines of code
    - Pattern: `NewXManager()` and `NewXManagerWithExecutor()` call shared `newXManager()`
 
-### Remaining High Priority Items
-1. **Documentation**: Create ADDING_PACKAGE_MANAGER.md guide
-2. **Parser Utilities**: Extract common parsing patterns (version extraction, dependency parsing)
+### Completed High Priority Items (Latest Session)
+1. **Constructor Duplication Fixed**: All managers now use private helper pattern ✅
+2. **Documentation Created**: ADDING_PACKAGE_MANAGER.md guide complete ✅
+3. **Parser Utilities Extracted**: Common parsing patterns added to parsers package ✅
+   - `ExtractKeyValue()` for "Key: Value" format parsing
+   - `ParseKeyValuePairs()` for batch key-value extraction
+   - `ParseDependencies()` handles comma-separated lists with version constraints
+   - `ParseIndentedList()` for gem-style dependency lists
+   - `ExtractVersionFromPackageHeader()` for "package v1.2.3:" patterns
+   - `CleanVersionString()` removes common version prefixes/suffixes
+   - `CleanJSONValue()` removes quotes and trailing commas
 
 ### Low Priority/Future Considerations
-- Version parsing utilities (when adding new managers)
-- Additional capability discovery methods
+- Additional capability discovery methods (SupportsUpgrade, etc.)
 - Hook system for install/uninstall customization
+- Performance optimizations for large package lists

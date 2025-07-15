@@ -172,12 +172,166 @@ func ExtractVersion(output []byte, prefix string) string {
 	return ""
 }
 
+// ExtractKeyValue extracts a value for a key in "Key: Value" format.
+// This is more robust than ExtractVersion for general key-value parsing.
+func ExtractKeyValue(output []byte, key string) string {
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, key+":") {
+			value := strings.TrimSpace(strings.TrimPrefix(line, key+":"))
+			// Clean up quotes if present
+			value = strings.Trim(value, `"'`)
+			return value
+		}
+	}
+	return ""
+}
+
+// ParseKeyValuePairs parses multiple key-value pairs from output.
+// Useful for commands like apt show, pip show, gem specification, etc.
+func ParseKeyValuePairs(output []byte, keys []string) map[string]string {
+	result := make(map[string]string)
+	for _, key := range keys {
+		if value := ExtractKeyValue(output, key); value != "" {
+			result[key] = value
+		}
+	}
+	return result
+}
+
+// ParseDependencies extracts dependency lists from various formats.
+// Handles comma-separated lists and removes version constraints.
+func ParseDependencies(deps string) []string {
+	if deps == "" {
+		return []string{}
+	}
+
+	var result []string
+	// Split by comma for most package managers
+	parts := strings.Split(deps, ",")
+	for _, dep := range parts {
+		dep = strings.TrimSpace(dep)
+		// Remove version constraints like (>= 1.0), [1.0], ~> 1.0
+		if idx := strings.IndexAny(dep, "([{<>=~"); idx > 0 {
+			dep = strings.TrimSpace(dep[:idx])
+		}
+		if dep != "" {
+			result = append(result, dep)
+		}
+	}
+	return result
+}
+
+// ParseIndentedList parses lists where items are indented (like gem dependencies).
+func ParseIndentedList(output []byte, indent string) []string {
+	var result []string
+	lines := strings.Split(string(output), "\n")
+
+	for _, line := range lines {
+		// Check indentation before trimming
+		if strings.HasPrefix(line, indent) && len(line) > len(indent) {
+			// Make sure it's exactly the indent we want (not deeper)
+			remainder := line[len(indent):]
+			if !strings.HasPrefix(remainder, " ") && !strings.HasPrefix(remainder, "\t") {
+				item := strings.TrimSpace(remainder)
+				// Extract just the package name if there's additional info
+				if idx := strings.IndexAny(item, " \t("); idx > 0 {
+					item = item[:idx]
+				}
+				if item != "" {
+					result = append(result, item)
+				}
+			}
+		}
+	}
+
+	return result
+}
+
+// ExtractVersionFromPackageHeader extracts version from headers like "package v1.2.3:" or "package@1.2.3".
+func ExtractVersionFromPackageHeader(header string, packageName string) string {
+	// Check if header starts with package name
+	if !strings.HasPrefix(header, packageName) {
+		return ""
+	}
+
+	// Look for version patterns
+	remainder := strings.TrimPrefix(header, packageName)
+	remainder = strings.TrimSpace(remainder)
+
+	// Handle "v1.2.3" or "@1.2.3"
+	if strings.HasPrefix(remainder, "v") || strings.HasPrefix(remainder, "@") {
+		version := strings.TrimPrefix(remainder, "v")
+		version = strings.TrimPrefix(version, "@")
+		version = strings.TrimSpace(version)
+
+		// Remove trailing characters like ":" or additional info
+		if idx := strings.IndexAny(version, ":, "); idx > 0 {
+			version = version[:idx]
+		}
+
+		return version
+	}
+
+	// Handle space separated "package 2.1.0"
+	if remainder != "" && !strings.HasPrefix(remainder, "(") {
+		// Take the first word as version
+		parts := strings.Fields(remainder)
+		if len(parts) > 0 {
+			// Check if it looks like a version (starts with digit)
+			if len(parts[0]) > 0 && parts[0][0] >= '0' && parts[0][0] <= '9' {
+				return parts[0]
+			}
+		}
+	}
+
+	// Handle parentheses format like "package (1.2.3)"
+	if strings.HasPrefix(remainder, "(") {
+		if endIdx := strings.Index(remainder, ")"); endIdx > 1 {
+			return strings.TrimSpace(remainder[1:endIdx])
+		}
+	}
+
+	return ""
+}
+
+// CleanVersionString removes common version prefixes and suffixes.
+func CleanVersionString(version string) string {
+	// Remove trailing comma first
+	version = strings.TrimSuffix(version, ",")
+	// Remove build info after space or parentheses
+	if idx := strings.IndexAny(version, " \t("); idx > 0 {
+		version = version[:idx]
+	}
+	// Remove outer quotes
+	version = strings.Trim(version, `"'`)
+	// Remove v prefix if present
+	if strings.HasPrefix(version, "v") {
+		version = strings.TrimPrefix(version, "v")
+		// Remove quotes again if they were after the v
+		version = strings.Trim(version, `"'`)
+	}
+	// Remove trailing punctuation
+	version = strings.TrimSuffix(version, ":")
+	return version
+}
+
 // NormalizePackageName normalizes package names according to common rules
 func NormalizePackageName(name string) string {
 	normalized := strings.ToLower(name)
 	// Common normalizations
 	normalized = strings.ReplaceAll(normalized, "-", "_") // Python style
 	return normalized
+}
+
+// CleanJSONValue removes quotes and trailing commas from a JSON value extracted from text.
+func CleanJSONValue(value string) string {
+	// First trim the trailing comma if present
+	value = strings.TrimSuffix(value, ",")
+	// Then remove quotes
+	value = strings.Trim(value, `"'`)
+	return value
 }
 
 // Common JSON extractors for different package manager formats
