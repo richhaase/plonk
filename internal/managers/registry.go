@@ -26,6 +26,7 @@ func NewManagerRegistry() *ManagerRegistry {
 			"npm":      func() PackageManager { return NewNpmManager() },
 			"cargo":    func() PackageManager { return NewCargoManager() },
 			"pip":      func() PackageManager { return NewPipManager() },
+			"gem":      func() PackageManager { return NewGemManager() },
 		},
 	}
 }

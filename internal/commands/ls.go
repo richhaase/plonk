@@ -32,7 +32,8 @@ Examples:
   plonk ls --brew             # Show only Homebrew packages
   plonk ls --npm              # Show only NPM packages
   plonk ls --cargo            # Show only Cargo packages
-  plonk ls --pip              # Show only pip packages`,
+  plonk ls --pip              # Show only pip packages
+  plonk ls --gem              # Show only gem packages`,
 	RunE: runLs,
 	Args: cobra.NoArgs,
 }
@@ -50,7 +51,8 @@ func init() {
 	lsCmd.Flags().Bool("npm", false, "Show NPM packages only")
 	lsCmd.Flags().Bool("cargo", false, "Show Cargo packages only")
 	lsCmd.Flags().Bool("pip", false, "Show pip packages only")
-	lsCmd.MarkFlagsMutuallyExclusive("brew", "npm", "cargo", "pip")
+	lsCmd.Flags().Bool("gem", false, "Show gem packages only")
+	lsCmd.MarkFlagsMutuallyExclusive("brew", "npm", "cargo", "pip", "gem")
 
 	// Detail flags
 	lsCmd.Flags().BoolP("verbose", "v", false, "Show detailed information")

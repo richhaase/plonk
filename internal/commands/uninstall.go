@@ -40,7 +40,8 @@ func init() {
 	uninstallCmd.Flags().Bool("npm", false, "Use NPM package manager")
 	uninstallCmd.Flags().Bool("cargo", false, "Use Cargo package manager")
 	uninstallCmd.Flags().Bool("pip", false, "Use pip package manager")
-	uninstallCmd.MarkFlagsMutuallyExclusive("brew", "npm", "cargo", "pip")
+	uninstallCmd.Flags().Bool("gem", false, "Use gem package manager")
+	uninstallCmd.MarkFlagsMutuallyExclusive("brew", "npm", "cargo", "pip", "gem")
 
 	// Common flags
 	uninstallCmd.Flags().BoolP("dry-run", "n", false, "Show what would be removed without making changes")
