@@ -19,37 +19,16 @@ type HomebrewManager struct {
 
 // NewHomebrewManager creates a new homebrew manager with the default executor.
 func NewHomebrewManager() *HomebrewManager {
-	config := ManagerConfig{
-		BinaryName:  "brew",
-		VersionArgs: []string{"--version"},
-		ListArgs: func() []string {
-			return []string{"list"}
-		},
-		InstallArgs: func(pkg string) []string {
-			return []string{"install", pkg}
-		},
-		UninstallArgs: func(pkg string) []string {
-			return []string{"uninstall", pkg}
-		},
-	}
-
-	// Add homebrew-specific error patterns
-	errorMatcher := NewCommonErrorMatcher()
-	errorMatcher.AddPattern(ErrorTypeNotFound, "No available formula", "No formulae found")
-	errorMatcher.AddPattern(ErrorTypeAlreadyInstalled, "already installed")
-	errorMatcher.AddPattern(ErrorTypeNotInstalled, "No such keg", "not installed")
-	errorMatcher.AddPattern(ErrorTypeDependency, "because it is required by", "still has dependents")
-
-	base := NewBaseManager(config)
-	base.ErrorMatcher = errorMatcher
-
-	return &HomebrewManager{
-		BaseManager: base,
-	}
+	return newHomebrewManager(nil)
 }
 
 // NewHomebrewManagerWithExecutor creates a new homebrew manager with a custom executor for testing.
 func NewHomebrewManagerWithExecutor(exec executor.CommandExecutor) *HomebrewManager {
+	return newHomebrewManager(exec)
+}
+
+// newHomebrewManager creates a homebrew manager with the given executor.
+func newHomebrewManager(exec executor.CommandExecutor) *HomebrewManager {
 	config := ManagerConfig{
 		BinaryName:  "brew",
 		VersionArgs: []string{"--version"},
@@ -71,7 +50,12 @@ func NewHomebrewManagerWithExecutor(exec executor.CommandExecutor) *HomebrewMana
 	errorMatcher.AddPattern(ErrorTypeNotInstalled, "No such keg", "not installed")
 	errorMatcher.AddPattern(ErrorTypeDependency, "because it is required by", "still has dependents")
 
-	base := NewBaseManagerWithExecutor(config, exec)
+	var base *BaseManager
+	if exec == nil {
+		base = NewBaseManager(config)
+	} else {
+		base = NewBaseManagerWithExecutor(config, exec)
+	}
 	base.ErrorMatcher = errorMatcher
 
 	return &HomebrewManager{

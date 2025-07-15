@@ -20,39 +20,16 @@ type PipManager struct {
 
 // NewPipManager creates a new pip manager with the default executor.
 func NewPipManager() *PipManager {
-	config := ManagerConfig{
-		BinaryName:       "pip",
-		FallbackBinaries: []string{"pip3"},
-		VersionArgs:      []string{"--version"},
-		ListArgs: func() []string {
-			return []string{"list", "--user", "--format=json"}
-		},
-		InstallArgs: func(pkg string) []string {
-			return []string{"install", "--user", pkg}
-		},
-		UninstallArgs: func(pkg string) []string {
-			return []string{"uninstall", "-y", pkg}
-		},
-		PreferJSON: false, // We already include --format=json in ListArgs
-	}
-
-	// Add pip-specific error patterns
-	errorMatcher := NewCommonErrorMatcher()
-	errorMatcher.AddPattern(ErrorTypeNotFound, "Could not find", "No matching distribution", "ERROR: No matching distribution")
-	errorMatcher.AddPattern(ErrorTypeAlreadyInstalled, "Requirement already satisfied", "already satisfied")
-	errorMatcher.AddPattern(ErrorTypeNotInstalled, "WARNING: Skipping", "not installed", "Cannot uninstall")
-	errorMatcher.AddPattern(ErrorTypePermission, "Permission denied", "access is denied")
-
-	base := NewBaseManager(config)
-	base.ErrorMatcher = errorMatcher
-
-	return &PipManager{
-		BaseManager: base,
-	}
+	return newPipManager(nil)
 }
 
 // NewPipManagerWithExecutor creates a new pip manager with a custom executor for testing.
 func NewPipManagerWithExecutor(exec executor.CommandExecutor) *PipManager {
+	return newPipManager(exec)
+}
+
+// newPipManager creates a pip manager with the given executor.
+func newPipManager(exec executor.CommandExecutor) *PipManager {
 	config := ManagerConfig{
 		BinaryName:       "pip",
 		FallbackBinaries: []string{"pip3"},
@@ -76,7 +53,12 @@ func NewPipManagerWithExecutor(exec executor.CommandExecutor) *PipManager {
 	errorMatcher.AddPattern(ErrorTypeNotInstalled, "WARNING: Skipping", "not installed", "Cannot uninstall")
 	errorMatcher.AddPattern(ErrorTypePermission, "Permission denied", "access is denied")
 
-	base := NewBaseManagerWithExecutor(config, exec)
+	var base *BaseManager
+	if exec == nil {
+		base = NewBaseManager(config)
+	} else {
+		base = NewBaseManagerWithExecutor(config, exec)
+	}
 	base.ErrorMatcher = errorMatcher
 
 	return &PipManager{

@@ -20,36 +20,16 @@ type CargoManager struct {
 
 // NewCargoManager creates a new cargo manager with the default executor.
 func NewCargoManager() *CargoManager {
-	config := ManagerConfig{
-		BinaryName:  "cargo",
-		VersionArgs: []string{"--version"},
-		ListArgs: func() []string {
-			return []string{"install", "--list"}
-		},
-		InstallArgs: func(pkg string) []string {
-			return []string{"install", pkg}
-		},
-		UninstallArgs: func(pkg string) []string {
-			return []string{"uninstall", pkg}
-		},
-	}
-
-	// Add cargo-specific error patterns
-	errorMatcher := NewCommonErrorMatcher()
-	errorMatcher.AddPattern(ErrorTypeNotFound, "no crates found", "could not find")
-	errorMatcher.AddPattern(ErrorTypeAlreadyInstalled, "binary `", "` already exists")
-	errorMatcher.AddPattern(ErrorTypeNotInstalled, "not installed")
-
-	base := NewBaseManager(config)
-	base.ErrorMatcher = errorMatcher
-
-	return &CargoManager{
-		BaseManager: base,
-	}
+	return newCargoManager(nil)
 }
 
 // NewCargoManagerWithExecutor creates a new cargo manager with a custom executor for testing.
 func NewCargoManagerWithExecutor(exec executor.CommandExecutor) *CargoManager {
+	return newCargoManager(exec)
+}
+
+// newCargoManager creates a cargo manager with the given executor.
+func newCargoManager(exec executor.CommandExecutor) *CargoManager {
 	config := ManagerConfig{
 		BinaryName:  "cargo",
 		VersionArgs: []string{"--version"},
@@ -70,7 +50,12 @@ func NewCargoManagerWithExecutor(exec executor.CommandExecutor) *CargoManager {
 	errorMatcher.AddPattern(ErrorTypeAlreadyInstalled, "binary `", "` already exists")
 	errorMatcher.AddPattern(ErrorTypeNotInstalled, "not installed")
 
-	base := NewBaseManagerWithExecutor(config, exec)
+	var base *BaseManager
+	if exec == nil {
+		base = NewBaseManager(config)
+	} else {
+		base = NewBaseManagerWithExecutor(config, exec)
+	}
 	base.ErrorMatcher = errorMatcher
 
 	return &CargoManager{

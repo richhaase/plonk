@@ -20,40 +20,16 @@ type AptManager struct {
 
 // NewAptManager creates a new apt manager with the default executor.
 func NewAptManager() *AptManager {
-	config := ManagerConfig{
-		BinaryName:  "apt",
-		VersionArgs: []string{"--version"},
-		ListArgs: func() []string {
-			return []string{"list", "--installed"}
-		},
-		InstallArgs: func(pkg string) []string {
-			return []string{"install", "-y", pkg}
-		},
-		UninstallArgs: func(pkg string) []string {
-			return []string{"remove", "-y", pkg}
-		},
-		PreferJSON: false,
-	}
-
-	// Add apt-specific error patterns
-	errorMatcher := NewCommonErrorMatcher()
-	errorMatcher.AddPattern(ErrorTypeNotFound, "Unable to locate package", "E: Package", "has no installation candidate")
-	errorMatcher.AddPattern(ErrorTypeAlreadyInstalled, "is already the newest version", "already installed")
-	errorMatcher.AddPattern(ErrorTypeNotInstalled, "is not installed")
-	errorMatcher.AddPattern(ErrorTypePermission, "Permission denied", "you don't have enough privileges")
-	errorMatcher.AddPattern(ErrorTypeLocked, "Could not get lock", "dpkg: error", "database is locked")
-	errorMatcher.AddPattern(ErrorTypeDependency, "Depends:", "but it is not installable", "Broken packages")
-
-	base := NewBaseManager(config)
-	base.ErrorMatcher = errorMatcher
-
-	return &AptManager{
-		BaseManager: base,
-	}
+	return newAptManager(nil)
 }
 
 // NewAptManagerWithExecutor creates a new apt manager with a custom executor for testing.
 func NewAptManagerWithExecutor(exec executor.CommandExecutor) *AptManager {
+	return newAptManager(exec)
+}
+
+// newAptManager creates an apt manager with the given executor.
+func newAptManager(exec executor.CommandExecutor) *AptManager {
 	config := ManagerConfig{
 		BinaryName:  "apt",
 		VersionArgs: []string{"--version"},
@@ -78,7 +54,12 @@ func NewAptManagerWithExecutor(exec executor.CommandExecutor) *AptManager {
 	errorMatcher.AddPattern(ErrorTypeLocked, "Could not get lock", "dpkg: error", "database is locked")
 	errorMatcher.AddPattern(ErrorTypeDependency, "Depends:", "but it is not installable", "Broken packages")
 
-	base := NewBaseManagerWithExecutor(config, exec)
+	var base *BaseManager
+	if exec == nil {
+		base = NewBaseManager(config)
+	} else {
+		base = NewBaseManagerWithExecutor(config, exec)
+	}
 	base.ErrorMatcher = errorMatcher
 
 	return &AptManager{

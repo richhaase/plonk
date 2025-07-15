@@ -22,39 +22,16 @@ type GoInstallManager struct {
 
 // NewGoInstallManager creates a new go install manager with the default executor.
 func NewGoInstallManager() *GoInstallManager {
-	config := ManagerConfig{
-		BinaryName:  "go",
-		VersionArgs: []string{"version"},
-		ListArgs: func() []string {
-			return []string{"env", "GOBIN"}
-		},
-		InstallArgs: func(pkg string) []string {
-			modulePath, version := parseModulePath(pkg)
-			moduleSpec := fmt.Sprintf("%s@%s", modulePath, version)
-			return []string{"install", moduleSpec}
-		},
-		UninstallArgs: func(pkg string) []string {
-			// go doesn't have uninstall, we'll handle this manually
-			return []string{"version", "-m"}
-		},
-	}
-
-	// Add go-specific error patterns
-	errorMatcher := NewCommonErrorMatcher()
-	errorMatcher.AddPattern(ErrorTypeNotFound, "cannot find module", "no matching versions", "malformed module path")
-	errorMatcher.AddPattern(ErrorTypeNetwork, "connection", "timeout")
-	errorMatcher.AddPattern(ErrorTypeBuild, "build failed", "compilation")
-
-	base := NewBaseManager(config)
-	base.ErrorMatcher = errorMatcher
-
-	return &GoInstallManager{
-		BaseManager: base,
-	}
+	return newGoInstallManager(nil)
 }
 
 // NewGoInstallManagerWithExecutor creates a new go install manager with a custom executor for testing.
 func NewGoInstallManagerWithExecutor(exec executor.CommandExecutor) *GoInstallManager {
+	return newGoInstallManager(exec)
+}
+
+// newGoInstallManager creates a go install manager with the given executor.
+func newGoInstallManager(exec executor.CommandExecutor) *GoInstallManager {
 	config := ManagerConfig{
 		BinaryName:  "go",
 		VersionArgs: []string{"version"},
@@ -78,7 +55,12 @@ func NewGoInstallManagerWithExecutor(exec executor.CommandExecutor) *GoInstallMa
 	errorMatcher.AddPattern(ErrorTypeNetwork, "connection", "timeout")
 	errorMatcher.AddPattern(ErrorTypeBuild, "build failed", "compilation")
 
-	base := NewBaseManagerWithExecutor(config, exec)
+	var base *BaseManager
+	if exec == nil {
+		base = NewBaseManager(config)
+	} else {
+		base = NewBaseManagerWithExecutor(config, exec)
+	}
 	base.ErrorMatcher = errorMatcher
 
 	return &GoInstallManager{

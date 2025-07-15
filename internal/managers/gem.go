@@ -19,37 +19,16 @@ type GemManager struct {
 
 // NewGemManager creates a new gem manager with the default executor.
 func NewGemManager() *GemManager {
-	config := ManagerConfig{
-		BinaryName:  "gem",
-		VersionArgs: []string{"--version"},
-		ListArgs: func() []string {
-			return []string{"list", "--local", "--no-versions"}
-		},
-		InstallArgs: func(pkg string) []string {
-			return []string{"install", pkg, "--user-install"}
-		},
-		UninstallArgs: func(pkg string) []string {
-			return []string{"uninstall", pkg, "-x", "-a", "-I"}
-		},
-	}
-
-	// Add gem-specific error patterns
-	errorMatcher := NewCommonErrorMatcher()
-	errorMatcher.AddPattern(ErrorTypeNotFound, "Could not find a valid gem", "ERROR:  Could not find")
-	errorMatcher.AddPattern(ErrorTypeAlreadyInstalled, "already installed")
-	errorMatcher.AddPattern(ErrorTypeNotInstalled, "is not installed")
-	errorMatcher.AddPattern(ErrorTypePermission, "Errno::EACCES", "Gem::FilePermissionError")
-
-	base := NewBaseManager(config)
-	base.ErrorMatcher = errorMatcher
-
-	return &GemManager{
-		BaseManager: base,
-	}
+	return newGemManager(nil)
 }
 
 // NewGemManagerWithExecutor creates a new gem manager with a custom executor for testing.
 func NewGemManagerWithExecutor(exec executor.CommandExecutor) *GemManager {
+	return newGemManager(exec)
+}
+
+// newGemManager creates a gem manager with the given executor.
+func newGemManager(exec executor.CommandExecutor) *GemManager {
 	config := ManagerConfig{
 		BinaryName:  "gem",
 		VersionArgs: []string{"--version"},
@@ -71,7 +50,12 @@ func NewGemManagerWithExecutor(exec executor.CommandExecutor) *GemManager {
 	errorMatcher.AddPattern(ErrorTypeNotInstalled, "is not installed")
 	errorMatcher.AddPattern(ErrorTypePermission, "Errno::EACCES", "Gem::FilePermissionError")
 
-	base := NewBaseManagerWithExecutor(config, exec)
+	var base *BaseManager
+	if exec == nil {
+		base = NewBaseManager(config)
+	} else {
+		base = NewBaseManagerWithExecutor(config, exec)
+	}
 	base.ErrorMatcher = errorMatcher
 
 	return &GemManager{

@@ -21,36 +21,16 @@ type NpmManager struct {
 
 // NewNpmManager creates a new NPM manager with the default executor.
 func NewNpmManager() *NpmManager {
-	config := ManagerConfig{
-		BinaryName:  "npm",
-		VersionArgs: []string{"--version"},
-		ListArgs: func() []string {
-			return []string{"list", "-g", "--depth=0", "--parseable"}
-		},
-		InstallArgs: func(pkg string) []string {
-			return []string{"install", "-g", pkg}
-		},
-		UninstallArgs: func(pkg string) []string {
-			return []string{"uninstall", "-g", pkg}
-		},
-	}
-
-	// Add npm-specific error patterns
-	errorMatcher := NewCommonErrorMatcher()
-	errorMatcher.AddPattern(ErrorTypeNotFound, "404", "E404", "Not found")
-	errorMatcher.AddPattern(ErrorTypePermission, "EACCES")
-	errorMatcher.AddPattern(ErrorTypeNotInstalled, "ENOENT", "cannot remove")
-
-	base := NewBaseManager(config)
-	base.ErrorMatcher = errorMatcher
-
-	return &NpmManager{
-		BaseManager: base,
-	}
+	return newNpmManager(nil)
 }
 
 // NewNpmManagerWithExecutor creates a new NPM manager with a custom executor for testing.
 func NewNpmManagerWithExecutor(exec executor.CommandExecutor) *NpmManager {
+	return newNpmManager(exec)
+}
+
+// newNpmManager creates an NPM manager with the given executor.
+func newNpmManager(exec executor.CommandExecutor) *NpmManager {
 	config := ManagerConfig{
 		BinaryName:  "npm",
 		VersionArgs: []string{"--version"},
@@ -71,7 +51,12 @@ func NewNpmManagerWithExecutor(exec executor.CommandExecutor) *NpmManager {
 	errorMatcher.AddPattern(ErrorTypePermission, "EACCES")
 	errorMatcher.AddPattern(ErrorTypeNotInstalled, "ENOENT", "cannot remove")
 
-	base := NewBaseManagerWithExecutor(config, exec)
+	var base *BaseManager
+	if exec == nil {
+		base = NewBaseManager(config)
+	} else {
+		base = NewBaseManagerWithExecutor(config, exec)
+	}
 	base.ErrorMatcher = errorMatcher
 
 	return &NpmManager{
