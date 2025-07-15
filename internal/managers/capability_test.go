@@ -54,10 +54,10 @@ func TestPackageManagerCapabilities(t *testing.T) {
 			searchErrorCode: errors.ErrOperationNotSupported,
 		},
 		{
-			name:            "pip does not support search",
+			name:            "pip supports search",
 			manager:         func() PackageManager { return NewPipManager() },
-			supportsSearch:  false,
-			searchErrorCode: errors.ErrOperationNotSupported,
+			supportsSearch:  true,
+			searchErrorCode: "",
 		},
 	}
 

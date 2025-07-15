@@ -541,9 +541,10 @@ After completing the major refactoring and cleanup, here's an analysis of remain
 ## Search Method Standardization - COMPLETED
 
 ### Problem Addressed
-- Go and Pip don't support search operations but had to implement the method
+- Go doesn't support search operations but had to implement the method
 - Inconsistent error handling (ErrUnsupported vs ErrCommandExecution)
 - No way for callers to know which operations are supported without trying them
+- Some package managers (like pip) may have search disabled by the package repository
 
 ### Solution Implemented
 Added capability discovery pattern using `PackageManagerCapabilities` interface:
@@ -559,9 +560,10 @@ type PackageManagerCapabilities interface {
 1. **Updated PackageManager interface** to embed PackageManagerCapabilities
 2. **Added ErrOperationNotSupported** error code for clear semantics
 3. **BaseManager implements SupportsSearch()** returning true by default
-4. **Go and Pip override** to return false and provide helpful error messages
-5. **Created comprehensive tests** for capability discovery
-6. **Documented usage patterns** in CAPABILITY_USAGE_EXAMPLE.md
+4. **Go overrides** to return false since it has no search command
+5. **Pip implements search** with handling for when PyPI disables the XMLRPC API
+6. **Created comprehensive tests** for capability discovery
+7. **Documented usage patterns** in CAPABILITY_USAGE_EXAMPLE.md
 
 ### Benefits Achieved
 - **Better UX**: Users know upfront what's supported

@@ -258,18 +258,59 @@ func (p *PipManager) IsInstalled(ctx context.Context, name string) (bool, error)
 	return false, nil
 }
 
-// SupportsSearch returns false as pip search command has been deprecated and removed.
+// SupportsSearch returns true as pip has a search command.
 func (p *PipManager) SupportsSearch() bool {
-	return false
+	return true
 }
 
-// Search searches for packages in PyPI.
+// Search searches for packages in PyPI using pip search.
 func (p *PipManager) Search(ctx context.Context, query string) ([]string, error) {
-	// pip search is deprecated and removed from recent pip versions
-	return nil, errors.NewError(errors.ErrOperationNotSupported, errors.DomainPackages, "search",
-		"pip search command has been removed").
-		WithItem("pip").
-		WithSuggestionMessage(fmt.Sprintf("Visit https://pypi.org/search/?q=%s to search for packages", query))
+	pipCmd := p.GetBinary()
+	output, err := p.Executor.Execute(ctx, pipCmd, "search", query)
+	if err != nil {
+		// Check if search command is not available (some pip versions/configurations)
+		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() != 0 {
+			outputStr := string(output)
+			if strings.Contains(outputStr, "ERROR") && strings.Contains(outputStr, "XMLRPC") {
+				// PyPI disabled XMLRPC search API, return helpful message
+				return nil, errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "search",
+					"PyPI search API is currently disabled").
+					WithSuggestionMessage(fmt.Sprintf("Visit https://pypi.org/search/?q=%s to search for packages", query))
+			}
+		}
+		return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "search", query,
+			"failed to search pip packages")
+	}
+
+	return p.parseSearchOutput(output), nil
+}
+
+// parseSearchOutput parses pip search output
+func (p *PipManager) parseSearchOutput(output []byte) []string {
+	result := strings.TrimSpace(string(output))
+	if result == "" {
+		return []string{}
+	}
+
+	var packages []string
+	lines := strings.Split(result, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		// pip search format: "package-name (version) - Description"
+		// Extract just the package name
+		if parenIndex := strings.Index(line, " ("); parenIndex > 0 {
+			packageName := strings.TrimSpace(line[:parenIndex])
+			if packageName != "" {
+				packages = append(packages, packageName)
+			}
+		}
+	}
+
+	return packages
 }
 
 // Info retrieves detailed information about a package.

@@ -11,7 +11,7 @@ Currently, all methods in the `PackageManager` interface are required, but not a
 ### Current State
 
 - **Go Install**: Search returns `ErrUnsupported` (go has no search command)
-- **Pip**: Search returns `ErrCommandExecution` (pip search is deprecated)
+- **Pip**: Search is supported but may fail if PyPI disables the XMLRPC API
 - **Others**: All other operations are universally supported
 
 ## Proposed Solution
@@ -101,12 +101,12 @@ This approach provides:
 1. Add `PackageManagerCapabilities` interface to `internal/interfaces/`
 2. Update `PackageManager` interface to embed it
 3. Add `SupportsSearch()` method to `BaseManager` (default: true)
-4. Override in managers that don't support search (Go, Pip)
+4. Override in managers that don't support search (Go)
 
 ### Phase 2: Update Managers
 
 1. Go Install: `SupportsSearch() = false`, Search returns standard error
-2. Pip: `SupportsSearch() = false`, Search returns standard error
+2. Pip: `SupportsSearch() = true`, implements search with XMLRPC API error handling
 3. Others: `SupportsSearch() = true`, no changes needed
 
 ### Phase 3: Update Command Layer
