@@ -25,6 +25,22 @@ This document tracks the package managers currently supported by plonk and those
 - **Commands**: `cargo install`, `cargo uninstall`, `cargo install --list`
 - **Platform**: Cross-platform
 
+### 4. pip (Python)
+- **Type**: Language package manager
+- **Scope**: User installations (`pip install --user`)
+- **Primary Use**: Python CLI tools and utilities (black, flake8, pytest, etc.)
+- **Commands**: `pip install --user`, `pip uninstall`, `pip list --user`
+- **Platform**: Cross-platform
+- **Special Behavior**: Works with any Python version in PATH (system, pyenv, conda, etc.)
+
+### 5. gem (Ruby)
+- **Type**: Language package manager
+- **Scope**: User/global installations (prefers `--user-install`)
+- **Primary Use**: Ruby CLI tools (bundler, rails, rubocop, pry, etc.)
+- **Commands**: `gem install`, `gem uninstall`, `gem list`
+- **Platform**: Cross-platform
+- **Special Behavior**: Only tracks gems that provide executables
+
 ## Package Managers Under Consideration
 
 ### System Package Managers
@@ -65,39 +81,29 @@ This document tracks the package managers currently supported by plonk and those
 ### Language/Development Package Managers
 
 #### High Priority
-1. **pip (Python)**
-   - Most requested language package manager
-   - Global tools: black, flake8, pipx, poetry
-   - Challenge: Multiple Python versions (pyenv, system, conda)
-
-2. **gem (Ruby)**
-   - Ruby packages and tools
-   - Global tools: bundler, rails, rubocop
-   - Similar challenges to pip with version managers (rbenv, rvm)
-
-3. **go install**
+1. **go install**
    - Go modules and tools
    - Global tools: gopls, golangci-lint
    - Simpler than most - single binary installations
 
 #### Medium Priority
-4. **composer (PHP)**
+2. **composer (PHP)**
    - PHP package manager
    - Global tools: phpcs, phpstan
    - Less commonly used globally
 
-5. **pipx**
+3. **pipx**
    - Python application installer
    - Specifically designed for global CLI tools
    - Isolates each tool in its own virtual environment
-   - Could be alternative/addition to pip
+   - Better alternative to pip for CLI tools
 
-6. **yarn**
+4. **yarn**
    - Alternative to npm
    - Some developers prefer it
    - Global package support similar to npm
 
-7. **pnpm**
+5. **pnpm**
    - Another npm alternative
    - Growing popularity
    - Global package support
@@ -154,10 +160,10 @@ This document tracks the package managers currently supported by plonk and those
 ## Recommendations
 
 ### Next Package Managers to Implement
-1. **pip** - Most requested, wide developer usage
-2. **apt** - Enable Linux support
-3. **go install** - Simple implementation, growing ecosystem
-4. **gem** - Ruby developer support
+1. **apt** - Enable Linux support
+2. **go install** - Simple implementation, growing ecosystem
+3. **dnf/yum** - Enterprise Linux support
+4. **pipx** - Better Python tool isolation
 
 ### Future Considerations
 - Windows support (Chocolatey or winget)
