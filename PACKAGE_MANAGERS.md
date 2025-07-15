@@ -49,22 +49,25 @@ This document tracks the package managers currently supported by plonk and those
 - **Platform**: Cross-platform
 - **Special Behavior**: Extracts binary name from module path, no built-in uninstall
 
+### 7. apt (Advanced Package Tool)
+- **Type**: System package manager
+- **Scope**: System-wide packages (requires sudo for install/uninstall)
+- **Primary Use**: System utilities, libraries, and applications on Debian-based Linux
+- **Commands**: `apt-get install`, `apt-get remove`, `apt-mark showmanual`, `apt-cache search`
+- **Platform**: Linux (Debian, Ubuntu, and derivatives)
+- **Special Behavior**: Requires sudo for modifications, tracks manually installed packages only
+
 ## Package Managers Under Consideration
 
 ### System Package Managers
 
 #### High Priority
-1. **apt (Advanced Package Tool)**
-   - Debian/Ubuntu systems
-   - Most common Linux package manager
-   - Would enable Linux support
-
-2. **dnf/yum**
+1. **dnf/yum**
    - Fedora/RHEL/CentOS systems
    - Major enterprise Linux distributions
    - Similar interface to apt
 
-3. **pacman**
+2. **pacman**
    - Arch Linux
    - Popular among developers
    - AUR support could be interesting
@@ -162,10 +165,9 @@ This document tracks the package managers currently supported by plonk and those
 ## Recommendations
 
 ### Next Package Managers to Implement
-1. **apt** - Enable Linux support
-2. **dnf/yum** - Enterprise Linux support
-3. **pipx** - Better Python tool isolation
-4. **composer** - PHP global tools
+1. **dnf/yum** - Enterprise Linux support (Fedora, RHEL, CentOS)
+2. **pipx** - Better Python tool isolation
+3. **composer** - PHP global tools
 
 ### Future Considerations
 - Windows support (Chocolatey or winget)

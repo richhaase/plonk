@@ -22,6 +22,7 @@ type ManagerRegistry struct {
 func NewManagerRegistry() *ManagerRegistry {
 	return &ManagerRegistry{
 		managers: map[string]ManagerFactory{
+			"apt":      func() PackageManager { return NewAptManager() },
 			"homebrew": func() PackageManager { return NewHomebrewManager() },
 			"npm":      func() PackageManager { return NewNpmManager() },
 			"cargo":    func() PackageManager { return NewCargoManager() },
