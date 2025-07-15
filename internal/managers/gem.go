@@ -6,58 +6,94 @@ package managers
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/interfaces"
+	"github.com/richhaase/plonk/internal/executor"
 )
 
-// GemManager manages Ruby gems.
-type GemManager struct{}
+// GemManager manages Ruby gems using BaseManager for common functionality.
+type GemManager struct {
+	*BaseManager
+}
 
-// NewGemManager creates a new gem manager.
+// NewGemManager creates a new gem manager with the default executor.
 func NewGemManager() *GemManager {
-	return &GemManager{}
-}
-
-// IsAvailable checks if gem is installed and accessible.
-func (g *GemManager) IsAvailable(ctx context.Context) (bool, error) {
-	_, err := exec.LookPath("gem")
-	if err != nil {
-		// Binary not found in PATH - this is not an error condition
-		return false, nil
+	config := ManagerConfig{
+		BinaryName:  "gem",
+		VersionArgs: []string{"--version"},
+		ListArgs: func() []string {
+			return []string{"list", "--local", "--no-versions"}
+		},
+		InstallArgs: func(pkg string) []string {
+			return []string{"install", pkg, "--user-install"}
+		},
+		UninstallArgs: func(pkg string) []string {
+			return []string{"uninstall", pkg, "-x", "-a", "-I"}
+		},
 	}
 
-	// Verify gem is actually functional by running a simple command
-	cmd := exec.CommandContext(ctx, "gem", "--version")
-	err = cmd.Run()
-	if err != nil {
-		// If the command fails due to context cancellation, return the context error
-		if ctx.Err() != nil {
-			return false, ctx.Err()
-		}
-		// gem exists but is not functional - this is an error
-		return false, errors.Wrap(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", "gem binary found but not functional")
-	}
+	// Add gem-specific error patterns
+	errorMatcher := NewCommonErrorMatcher()
+	errorMatcher.AddPattern(ErrorTypeNotFound, "Could not find a valid gem", "ERROR:  Could not find")
+	errorMatcher.AddPattern(ErrorTypeAlreadyInstalled, "already installed")
+	errorMatcher.AddPattern(ErrorTypeNotInstalled, "is not installed")
+	errorMatcher.AddPattern(ErrorTypePermission, "Errno::EACCES", "Gem::FilePermissionError")
 
-	return true, nil
+	base := NewBaseManager(config)
+	base.ErrorMatcher = errorMatcher
+
+	return &GemManager{
+		BaseManager: base,
+	}
 }
 
-// ListInstalled lists all installed gems that provide executables.
+// NewGemManagerWithExecutor creates a new gem manager with a custom executor for testing.
+func NewGemManagerWithExecutor(exec executor.CommandExecutor) *GemManager {
+	config := ManagerConfig{
+		BinaryName:  "gem",
+		VersionArgs: []string{"--version"},
+		ListArgs: func() []string {
+			return []string{"list", "--local", "--no-versions"}
+		},
+		InstallArgs: func(pkg string) []string {
+			return []string{"install", pkg, "--user-install"}
+		},
+		UninstallArgs: func(pkg string) []string {
+			return []string{"uninstall", pkg, "-x", "-a", "-I"}
+		},
+	}
+
+	// Add gem-specific error patterns
+	errorMatcher := NewCommonErrorMatcher()
+	errorMatcher.AddPattern(ErrorTypeNotFound, "Could not find a valid gem", "ERROR:  Could not find")
+	errorMatcher.AddPattern(ErrorTypeAlreadyInstalled, "already installed")
+	errorMatcher.AddPattern(ErrorTypeNotInstalled, "is not installed")
+	errorMatcher.AddPattern(ErrorTypePermission, "Errno::EACCES", "Gem::FilePermissionError")
+
+	base := NewBaseManagerWithExecutor(config, exec)
+	base.ErrorMatcher = errorMatcher
+
+	return &GemManager{
+		BaseManager: base,
+	}
+}
+
+// ListInstalled lists all installed gems.
 func (g *GemManager) ListInstalled(ctx context.Context) ([]string, error) {
-	// Get all installed gems
-	cmd := exec.CommandContext(ctx, "gem", "list", "--local", "--no-versions")
-	output, err := cmd.Output()
+	output, err := g.ExecuteList(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.ErrCommandExecution, errors.DomainPackages, "list",
-			"failed to execute gem list command")
+		return nil, err
 	}
 
+	return g.parseListOutput(output), nil
+}
+
+// parseListOutput parses gem list output
+func (g *GemManager) parseListOutput(output []byte) []string {
 	result := strings.TrimSpace(string(output))
 	if result == "" {
-		// No gems installed - this is normal, not an error
-		return []string{}, nil
+		return []string{}
 	}
 
 	// Parse output to get gem names
@@ -66,82 +102,34 @@ func (g *GemManager) ListInstalled(ctx context.Context) ([]string, error) {
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line != "" && !strings.HasPrefix(line, "***") {
-			// Check if this gem provides executables
-			if g.hasExecutables(ctx, line) {
-				gems = append(gems, line)
-			}
+			gems = append(gems, line)
 		}
 	}
 
-	return gems, nil
-}
-
-// hasExecutables checks if a gem provides executable files
-func (g *GemManager) hasExecutables(ctx context.Context, gemName string) bool {
-	// Use a short timeout for this check since we're doing it for many gems
-	checkCtx, cancel := context.WithTimeout(ctx, 2*1000*1000*1000) // 2 seconds
-	defer cancel()
-
-	cmd := exec.CommandContext(checkCtx, "gem", "contents", gemName, "--executables")
-	output, err := cmd.Output()
-	if err != nil {
-		// If there's an error, assume no executables
-		return false
-	}
-
-	// If there's any output, the gem has executables
-	return strings.TrimSpace(string(output)) != ""
+	return gems
 }
 
 // Install installs a Ruby gem.
 func (g *GemManager) Install(ctx context.Context, name string) error {
-	// Try to install with --user-install first for better permissions handling
-	cmd := exec.CommandContext(ctx, "gem", "install", name, "--user-install")
-	output, err := cmd.CombinedOutput()
+	// First try with --user-install
+	args := g.Config.InstallArgs(name)
+	output, err := g.Executor.ExecuteCombined(ctx, g.GetBinary(), args...)
 	if err != nil {
 		outputStr := string(output)
 
-		// Check for specific error conditions
-		if exitError, ok := err.(*exec.ExitError); ok {
-			// Check for gem not found
-			if strings.Contains(outputStr, "Could not find a valid gem") ||
-				strings.Contains(outputStr, "ERROR:  Could not find") {
-				return errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "install",
-					fmt.Sprintf("gem '%s' not found", name)).
-					WithSuggestionMessage(fmt.Sprintf("Search available gems: gem search %s", name))
-			}
-
-			// Check for already installed
-			if strings.Contains(outputStr, "already installed") {
-				// Gem is already installed - this is typically fine
+		// Check if we should retry without --user-install
+		if strings.Contains(outputStr, "--user-install") || strings.Contains(outputStr, "Use --user-install") {
+			// Try without --user-install
+			output2, err2 := g.Executor.ExecuteCombined(ctx, g.GetBinary(), "install", name)
+			if err2 == nil {
 				return nil
 			}
-
-			// Check for permission errors or --user-install issues
-			if strings.Contains(outputStr, "Permission denied") ||
-				strings.Contains(outputStr, "Errno::EACCES") {
-				return errors.NewError(errors.ErrFilePermission, errors.DomainPackages, "install",
-					fmt.Sprintf("permission denied installing %s", name)).
-					WithSuggestionMessage("Try without --user-install or check Ruby installation")
-			}
-
-			// If --user-install failed for other reasons, try without it
-			if strings.Contains(outputStr, "--user-install") {
-				cmd = exec.CommandContext(ctx, "gem", "install", name)
-				_, err = cmd.CombinedOutput()
-				if err == nil {
-					return nil
-				}
-			}
-
-			// Other exit errors with more context
-			return errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "install", name,
-				fmt.Sprintf("gem installation failed (exit code %d)", exitError.ExitCode()))
+			// If this also fails, handle the new error
+			return g.handleInstallError(err2, output2, name)
 		}
 
-		// Non-exit errors (command not found, context cancellation, etc.)
-		return errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "install", name,
-			"failed to execute gem install command")
+		// Handle the original error
+		return g.handleInstallError(err, output, name)
 	}
 
 	return nil
@@ -149,46 +137,12 @@ func (g *GemManager) Install(ctx context.Context, name string) error {
 
 // Uninstall removes a Ruby gem.
 func (g *GemManager) Uninstall(ctx context.Context, name string) error {
-	// Use -x to remove executables and -a to remove all versions
-	cmd := exec.CommandContext(ctx, "gem", "uninstall", name, "-x", "-a", "-I")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		outputStr := string(output)
-
-		// Check for specific error conditions
-		if exitError, ok := err.(*exec.ExitError); ok {
-			// Check for "not installed" condition
-			if strings.Contains(outputStr, "is not installed") ||
-				strings.Contains(outputStr, "ERROR:  While executing gem") {
-				// Gem is not installed - this is typically fine for uninstall
-				return nil
-			}
-
-			// Check for permission errors
-			if strings.Contains(outputStr, "Permission denied") ||
-				strings.Contains(outputStr, "Errno::EACCES") {
-				return errors.NewError(errors.ErrFilePermission, errors.DomainPackages, "uninstall",
-					fmt.Sprintf("permission denied uninstalling %s", name)).
-					WithSuggestionMessage("Try with elevated permissions or check gem installation")
-			}
-
-			// Other exit errors with more context
-			return errors.WrapWithItem(err, errors.ErrPackageUninstall, errors.DomainPackages, "uninstall", name,
-				fmt.Sprintf("gem uninstallation failed (exit code %d)", exitError.ExitCode()))
-		}
-
-		// Non-exit errors (command not found, context cancellation, etc.)
-		return errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "uninstall", name,
-			"failed to execute gem uninstall command")
-	}
-
-	return nil
+	return g.ExecuteUninstall(ctx, name)
 }
 
 // IsInstalled checks if a specific gem is installed.
 func (g *GemManager) IsInstalled(ctx context.Context, name string) (bool, error) {
-	cmd := exec.CommandContext(ctx, "gem", "list", "--local", name)
-	output, err := cmd.Output()
+	output, err := g.Executor.Execute(ctx, g.GetBinary(), "list", "--local", name)
 	if err != nil {
 		return false, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "check", name,
 			"failed to check gem installation status")
@@ -202,13 +156,12 @@ func (g *GemManager) IsInstalled(ctx context.Context, name string) (bool, error)
 
 // Search searches for gems in RubyGems.org.
 func (g *GemManager) Search(ctx context.Context, query string) ([]string, error) {
-	cmd := exec.CommandContext(ctx, "gem", "search", query)
-	output, err := cmd.Output()
+	output, err := g.Executor.Execute(ctx, g.GetBinary(), "search", query)
 	if err != nil {
 		// Check if this is a real error vs expected conditions
-		if exitError, ok := err.(*exec.ExitError); ok {
+		if execErr, ok := err.(interface{ ExitCode() int }); ok {
 			// For gem search, exit code 1 usually means no results found
-			if exitError.ExitCode() == 1 {
+			if execErr.ExitCode() == 1 {
 				return []string{}, nil
 			}
 			// Other exit codes indicate real errors
@@ -220,10 +173,14 @@ func (g *GemManager) Search(ctx context.Context, query string) ([]string, error)
 			"failed to execute gem search command")
 	}
 
+	return g.parseSearchOutput(output), nil
+}
+
+// parseSearchOutput parses gem search output
+func (g *GemManager) parseSearchOutput(output []byte) []string {
 	result := strings.TrimSpace(string(output))
 	if result == "" {
-		// No gems found - this is normal, not an error
-		return []string{}, nil
+		return []string{}
 	}
 
 	// Parse output to extract gem names
@@ -240,11 +197,11 @@ func (g *GemManager) Search(ctx context.Context, query string) ([]string, error)
 		}
 	}
 
-	return gems, nil
+	return gems
 }
 
 // Info retrieves detailed information about a gem.
-func (g *GemManager) Info(ctx context.Context, name string) (*interfaces.PackageInfo, error) {
+func (g *GemManager) Info(ctx context.Context, name string) (*PackageInfo, error) {
 	// Check if gem is installed first
 	installed, err := g.IsInstalled(ctx, name)
 	if err != nil {
@@ -253,25 +210,33 @@ func (g *GemManager) Info(ctx context.Context, name string) (*interfaces.Package
 	}
 
 	// Get gem specification
-	cmd := exec.CommandContext(ctx, "gem", "specification", name)
-	output, err := cmd.Output()
+	output, err := g.Executor.Execute(ctx, g.GetBinary(), "specification", name)
 	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			if exitError.ExitCode() == 1 {
-				return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
-					fmt.Sprintf("gem '%s' not found", name)).
-					WithSuggestionMessage(fmt.Sprintf("Search available gems: gem search %s", name))
-			}
+		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() == 1 {
+			return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
+				fmt.Sprintf("gem '%s' not found", name)).
+				WithSuggestionMessage(fmt.Sprintf("Search available gems: gem search %s", name))
 		}
 		return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", name,
 			"failed to get gem info")
 	}
 
-	// Parse gem specification output (YAML format)
-	info := &interfaces.PackageInfo{
-		Name:      name,
-		Manager:   "gem",
-		Installed: installed,
+	info := g.parseInfoOutput(output, name)
+	info.Manager = "gem"
+	info.Installed = installed
+
+	// Get dependencies if installed
+	if installed {
+		info.Dependencies = g.getDependencies(ctx, name)
+	}
+
+	return info, nil
+}
+
+// parseInfoOutput parses gem specification output (YAML format)
+func (g *GemManager) parseInfoOutput(output []byte, name string) *PackageInfo {
+	info := &PackageInfo{
+		Name: name,
 	}
 
 	lines := strings.Split(string(output), "\n")
@@ -290,19 +255,12 @@ func (g *GemManager) Info(ctx context.Context, name string) (*interfaces.Package
 		}
 	}
 
-	// Get dependencies if installed
-	if installed {
-		deps := g.getDependencies(ctx, name)
-		info.Dependencies = deps
-	}
-
-	return info, nil
+	return info
 }
 
 // getDependencies gets the dependencies of an installed gem
 func (g *GemManager) getDependencies(ctx context.Context, name string) []string {
-	cmd := exec.CommandContext(ctx, "gem", "dependency", name)
-	output, err := cmd.Output()
+	output, err := g.Executor.Execute(ctx, g.GetBinary(), "dependency", name)
 	if err != nil {
 		return []string{}
 	}
@@ -310,12 +268,11 @@ func (g *GemManager) getDependencies(ctx context.Context, name string) []string 
 	var dependencies []string
 	lines := strings.Split(string(output), "\n")
 	for _, line := range lines {
-		line = strings.TrimSpace(line)
 		// Skip the gem itself and empty lines
 		if line == "" || strings.HasPrefix(line, "Gem "+name) {
 			continue
 		}
-		// Dependencies are listed with indentation
+		// Dependencies are listed with indentation (check before trimming)
 		if strings.HasPrefix(line, "  ") {
 			// Extract dependency name (format: "  gemname (>= version)")
 			depLine := strings.TrimSpace(line)
@@ -343,13 +300,23 @@ func (g *GemManager) GetInstalledVersion(ctx context.Context, name string) (stri
 	}
 
 	// Get version using gem list with specific gem
-	cmd := exec.CommandContext(ctx, "gem", "list", "--local", name)
-	output, err := cmd.Output()
+	output, err := g.Executor.Execute(ctx, g.GetBinary(), "list", "--local", name)
 	if err != nil {
 		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
 			"failed to get gem version information")
 	}
 
+	version := g.extractVersion(output, name)
+	if version == "" {
+		return "", errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "version",
+			fmt.Sprintf("could not extract version for gem '%s' from output", name))
+	}
+
+	return version, nil
+}
+
+// extractVersion extracts version from gem list output
+func (g *GemManager) extractVersion(output []byte, name string) string {
 	result := strings.TrimSpace(string(output))
 	// Parse version from output like "gemname (1.2.3)" or "gemname (1.2.3, 1.2.2)"
 	if idx := strings.Index(result, "("); idx > 0 && idx < len(result)-1 {
@@ -358,12 +325,10 @@ func (g *GemManager) GetInstalledVersion(ctx context.Context, name string) (stri
 			versions := versionPart[:endIdx]
 			// If multiple versions, return the first (latest)
 			if commaIdx := strings.Index(versions, ","); commaIdx > 0 {
-				return strings.TrimSpace(versions[:commaIdx]), nil
+				return strings.TrimSpace(versions[:commaIdx])
 			}
-			return strings.TrimSpace(versions), nil
+			return strings.TrimSpace(versions)
 		}
 	}
-
-	return "", errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "version",
-		fmt.Sprintf("could not extract version for gem '%s' from output", name))
+	return ""
 }

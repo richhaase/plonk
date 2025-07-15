@@ -5,459 +5,693 @@ package managers
 
 import (
 	"context"
+	"errors"
 	"runtime"
-	"strings"
 	"testing"
-	"time"
 
-	"github.com/richhaase/plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/mocks"
+	"go.uber.org/mock/gomock"
 )
 
 func TestAptManager_IsAvailable(t *testing.T) {
-	manager := NewAptManager()
-	ctx := context.Background()
-
-	// This test will check actual apt availability on the system
-	available, err := manager.IsAvailable(ctx)
-	if err != nil {
-		t.Logf("IsAvailable returned error: %v", err)
+	tests := []struct {
+		name           string
+		setupMocks     func(*mocks.MockCommandExecutor)
+		expectedResult bool
+		expectedError  bool
+	}{
+		{
+			name: "available and functional on Linux",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				if runtime.GOOS == "linux" {
+					m.EXPECT().LookPath("apt").Return("/usr/bin/apt", nil)
+					m.EXPECT().Execute(gomock.Any(), "apt", "--version").Return([]byte("apt 2.4.8"), nil)
+				}
+			},
+			expectedResult: runtime.GOOS == "linux",
+			expectedError:  false,
+		},
+		{
+			name: "not available on non-Linux",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				// No mocks needed for non-Linux
+			},
+			expectedResult: false,
+			expectedError:  false,
+		},
+		{
+			name: "not in PATH on Linux",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				if runtime.GOOS == "linux" {
+					m.EXPECT().LookPath("apt").Return("", errors.New("not found"))
+				}
+			},
+			expectedResult: false,
+			expectedError:  false,
+		},
 	}
 
-	// APT should only be available on Linux
-	if runtime.GOOS != "linux" {
-		if available {
-			t.Error("APT should not be available on non-Linux systems")
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockExecutor := mocks.NewMockCommandExecutor(ctrl)
+			tt.setupMocks(mockExecutor)
+
+			manager := NewAptManagerWithExecutor(mockExecutor)
+			result, err := manager.IsAvailable(context.Background())
+
+			if tt.expectedError && err == nil {
+				t.Error("Expected error but got none")
+			}
+			if !tt.expectedError && err != nil {
+				t.Errorf("Expected no error but got: %v", err)
+			}
+			if result != tt.expectedResult {
+				t.Errorf("Expected result %v but got %v", tt.expectedResult, result)
+			}
+		})
 	}
-
-	t.Logf("apt available: %v (OS: %s)", available, runtime.GOOS)
-}
-
-func TestAptManager_ContextCancellation(t *testing.T) {
-	manager := NewAptManager()
-
-	// Skip these tests on non-Linux systems
-	if runtime.GOOS != "linux" {
-		t.Skip("Skipping APT tests on non-Linux system")
-	}
-
-	// First check if apt is available - if not, skip context tests
-	ctx := context.Background()
-	available, err := manager.IsAvailable(ctx)
-	if err != nil {
-		t.Fatalf("Failed to check if apt is available: %v", err)
-	}
-	if !available {
-		t.Skip("apt not available, skipping context cancellation tests")
-	}
-
-	t.Run("ListInstalled_ContextCancellation", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel() // Cancel immediately
-
-		_, err := manager.ListInstalled(ctx)
-		if err == nil {
-			t.Error("Expected error when context is canceled")
-		}
-		if !containsContextError(err) {
-			t.Errorf("Expected context cancellation error, got %v", err)
-		}
-	})
-
-	t.Run("ListInstalled_ContextTimeout", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
-		defer cancel()
-
-		time.Sleep(10 * time.Millisecond) // Ensure timeout
-
-		_, err := manager.ListInstalled(ctx)
-		if err == nil {
-			t.Error("Expected error when context times out")
-		}
-		if !containsContextError(err) {
-			t.Errorf("Expected context timeout error, got %v", err)
-		}
-	})
-
-	t.Run("Install_ContextCancellation", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel() // Cancel immediately
-
-		err := manager.Install(ctx, "curl")
-		if err == nil {
-			t.Error("Expected error when context is canceled")
-		}
-		if !containsContextError(err) {
-			t.Errorf("Expected context cancellation error, got %v", err)
-		}
-	})
-
-	t.Run("Uninstall_ContextCancellation", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel() // Cancel immediately
-
-		err := manager.Uninstall(ctx, "curl")
-		if err == nil {
-			t.Error("Expected error when context is canceled")
-		}
-		if !containsContextError(err) {
-			t.Errorf("Expected context cancellation error, got %v", err)
-		}
-	})
-
-	t.Run("IsInstalled_ContextCancellation", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel() // Cancel immediately
-
-		_, err := manager.IsInstalled(ctx, "curl")
-		if err == nil {
-			t.Error("Expected error when context is canceled")
-		}
-		if !containsContextError(err) {
-			t.Errorf("Expected context cancellation error, got %v", err)
-		}
-	})
-
-	t.Run("Search_ContextCancellation", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel() // Cancel immediately
-
-		_, err := manager.Search(ctx, "curl")
-		if err == nil {
-			t.Error("Expected error when context is canceled")
-		}
-		if !containsContextError(err) {
-			t.Errorf("Expected context cancellation error, got %v", err)
-		}
-	})
-
-	t.Run("Info_ContextCancellation", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel() // Cancel immediately
-
-		_, err := manager.Info(ctx, "curl")
-		if err == nil {
-			t.Error("Expected error when context is canceled")
-		}
-		if !containsContextError(err) {
-			t.Errorf("Expected context cancellation error, got %v", err)
-		}
-	})
-
-	t.Run("GetInstalledVersion_ContextCancellation", func(t *testing.T) {
-		ctx, cancel := context.WithCancel(context.Background())
-		cancel() // Cancel immediately
-
-		_, err := manager.GetInstalledVersion(ctx, "curl")
-		if err == nil {
-			t.Error("Expected error when context is canceled")
-		}
-		if !containsContextError(err) {
-			t.Errorf("Expected context cancellation error, got %v", err)
-		}
-	})
-}
-
-func TestAptManager_PermissionErrors(t *testing.T) {
-	manager := NewAptManager()
-	ctx := context.Background()
-
-	// Skip these tests on non-Linux systems
-	if runtime.GOOS != "linux" {
-		t.Skip("Skipping APT tests on non-Linux system")
-	}
-
-	// Check if apt is available
-	available, err := manager.IsAvailable(ctx)
-	if err != nil {
-		t.Fatalf("Failed to check if apt is available: %v", err)
-	}
-	if !available {
-		t.Skip("apt not available, skipping permission tests")
-	}
-
-	// Check if we're running as root - if so, skip permission tests
-	if isRunningAsRoot() {
-		t.Skip("Running as root, skipping permission tests")
-	}
-
-	t.Run("Install_PermissionDenied", func(t *testing.T) {
-		// Try to install a package without sudo - should fail with permission error
-		err := manager.Install(ctx, "this-package-does-not-exist-12345")
-		if err == nil {
-			t.Error("Expected permission error when installing without sudo")
-			return
-		}
-
-		plonkErr, ok := err.(*errors.PlonkError)
-		if !ok {
-			t.Errorf("Expected PlonkError, got %T", err)
-			return
-		}
-		if plonkErr.Code != errors.ErrFilePermission {
-			t.Errorf("Expected ErrFilePermission, got %v", plonkErr.Code)
-		}
-		if !strings.Contains(err.Error(), "sudo") {
-			t.Errorf("Expected 'sudo' in error message, got %v", err)
-		}
-	})
-
-	t.Run("Uninstall_PermissionDenied", func(t *testing.T) {
-		// Try to uninstall a package without sudo - should fail with permission error
-		err := manager.Uninstall(ctx, "this-package-does-not-exist-12345")
-		if err == nil {
-			t.Error("Expected permission error when uninstalling without sudo")
-			return
-		}
-
-		plonkErr, ok := err.(*errors.PlonkError)
-		if !ok {
-			t.Errorf("Expected PlonkError, got %T", err)
-			return
-		}
-		if plonkErr.Code != errors.ErrFilePermission {
-			t.Errorf("Expected ErrFilePermission, got %v", plonkErr.Code)
-		}
-		if !strings.Contains(err.Error(), "sudo") {
-			t.Errorf("Expected 'sudo' in error message, got %v", err)
-		}
-	})
 }
 
 func TestAptManager_ListInstalled(t *testing.T) {
-	manager := NewAptManager()
-	ctx := context.Background()
-
-	// Skip these tests on non-Linux systems
-	if runtime.GOOS != "linux" {
-		t.Skip("Skipping APT tests on non-Linux system")
+	tests := []struct {
+		name           string
+		setupMocks     func(*mocks.MockCommandExecutor)
+		expectedResult []string
+		expectedError  bool
+	}{
+		{
+			name: "successful list with packages",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				output := `Listing... Done
+curl/stable,now 7.68.0-1ubuntu2.18 amd64 [installed]
+git/stable,now 1:2.25.1-1ubuntu3.10 amd64 [installed]
+vim/stable,now 2:8.1.2269-1ubuntu5.15 amd64 [installed]`
+				m.EXPECT().Execute(gomock.Any(), "apt", "list", "--installed").Return([]byte(output), nil)
+			},
+			expectedResult: []string{"curl", "git", "vim"},
+			expectedError:  false,
+		},
+		{
+			name: "empty list",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				m.EXPECT().Execute(gomock.Any(), "apt", "list", "--installed").Return([]byte("Listing... Done"), nil)
+			},
+			expectedResult: []string{},
+			expectedError:  false,
+		},
+		{
+			name: "command fails",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				m.EXPECT().Execute(gomock.Any(), "apt", "list", "--installed").Return(nil, errors.New("command failed"))
+			},
+			expectedResult: nil,
+			expectedError:  true,
+		},
 	}
 
-	// Check if apt is available
-	available, err := manager.IsAvailable(ctx)
-	if err != nil {
-		t.Fatalf("Failed to check if apt is available: %v", err)
-	}
-	if !available {
-		t.Skip("apt not available, skipping list tests")
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-	packages, err := manager.ListInstalled(ctx)
-	if err != nil {
-		t.Errorf("ListInstalled() error = %v", err)
-		return
-	}
+			mockExecutor := mocks.NewMockCommandExecutor(ctrl)
+			tt.setupMocks(mockExecutor)
 
-	t.Logf("Found %d installed packages", len(packages))
+			manager := NewAptManagerWithExecutor(mockExecutor)
+			result, err := manager.ListInstalled(context.Background())
 
-	// On a Debian-based system, there should be at least some packages
-	if len(packages) == 0 {
-		t.Log("Warning: No packages found - this might be unexpected on a real system")
-	}
-
-	// Show a sample of packages
-	for i, pkg := range packages {
-		if i < 5 {
-			t.Logf("  - %s", pkg)
-		}
+			if tt.expectedError && err == nil {
+				t.Error("Expected error but got none")
+			}
+			if !tt.expectedError && err != nil {
+				t.Errorf("Expected no error but got: %v", err)
+			}
+			if !stringSlicesEqual(result, tt.expectedResult) {
+				t.Errorf("Expected result %v but got %v", tt.expectedResult, result)
+			}
+		})
 	}
 }
 
-func TestAptManager_Search(t *testing.T) {
-	manager := NewAptManager()
-	ctx := context.Background()
-
-	// Skip these tests on non-Linux systems
-	if runtime.GOOS != "linux" {
-		t.Skip("Skipping APT tests on non-Linux system")
+func TestAptManager_Install(t *testing.T) {
+	tests := []struct {
+		name        string
+		packageName string
+		setupMocks  func(*mocks.MockCommandExecutor)
+		expectError bool
+	}{
+		{
+			name:        "successful install",
+			packageName: "curl",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				m.EXPECT().ExecuteCombined(gomock.Any(), "apt", "install", "-y", "curl").Return([]byte("Setting up curl"), nil)
+			},
+			expectError: false,
+		},
+		{
+			name:        "package already installed",
+			packageName: "curl",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				execErr := &mockExitError{code: 0}
+				m.EXPECT().ExecuteCombined(gomock.Any(), "apt", "install", "-y", "curl").Return([]byte("curl is already the newest version"), execErr)
+			},
+			expectError: false, // already installed should not be an error
+		},
+		{
+			name:        "package not found",
+			packageName: "nonexistent",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				execErr := &mockExitError{code: 100}
+				m.EXPECT().ExecuteCombined(gomock.Any(), "apt", "install", "-y", "nonexistent").Return([]byte("Unable to locate package nonexistent"), execErr)
+			},
+			expectError: true,
+		},
+		{
+			name:        "permission denied",
+			packageName: "curl",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				execErr := &mockExitError{code: 1}
+				m.EXPECT().ExecuteCombined(gomock.Any(), "apt", "install", "-y", "curl").Return([]byte("Permission denied"), execErr)
+			},
+			expectError: true,
+		},
+		{
+			name:        "database locked",
+			packageName: "curl",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				execErr := &mockExitError{code: 1}
+				m.EXPECT().ExecuteCombined(gomock.Any(), "apt", "install", "-y", "curl").Return([]byte("Could not get lock /var/lib/dpkg/lock"), execErr)
+			},
+			expectError: true,
+		},
+		{
+			name:        "broken dependencies",
+			packageName: "broken-package",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				execErr := &mockExitError{code: 1}
+				m.EXPECT().ExecuteCombined(gomock.Any(), "apt", "install", "-y", "broken-package").Return([]byte("Depends: libfoo but it is not installable"), execErr)
+			},
+			expectError: true,
+		},
 	}
 
-	// Check if apt is available
-	available, err := manager.IsAvailable(ctx)
-	if err != nil {
-		t.Fatalf("Failed to check if apt is available: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockExecutor := mocks.NewMockCommandExecutor(ctrl)
+			tt.setupMocks(mockExecutor)
+
+			manager := NewAptManagerWithExecutor(mockExecutor)
+			err := manager.Install(context.Background(), tt.packageName)
+
+			if tt.expectError && err == nil {
+				t.Error("Expected error but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Expected no error but got: %v", err)
+			}
+		})
 	}
-	if !available {
-		t.Skip("apt not available, skipping search tests")
+}
+
+func TestAptManager_Uninstall(t *testing.T) {
+	tests := []struct {
+		name        string
+		packageName string
+		setupMocks  func(*mocks.MockCommandExecutor)
+		expectError bool
+	}{
+		{
+			name:        "successful uninstall",
+			packageName: "curl",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				m.EXPECT().ExecuteCombined(gomock.Any(), "apt", "remove", "-y", "curl").Return([]byte("Removing curl"), nil)
+			},
+			expectError: false,
+		},
+		{
+			name:        "package not installed",
+			packageName: "nonexistent",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				execErr := &mockExitError{code: 0}
+				m.EXPECT().ExecuteCombined(gomock.Any(), "apt", "remove", "-y", "nonexistent").Return([]byte("nonexistent is not installed"), execErr)
+			},
+			expectError: false, // not installed should not be an error for uninstall
+		},
+		{
+			name:        "dependency conflict",
+			packageName: "libssl",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				execErr := &mockExitError{code: 1}
+				m.EXPECT().ExecuteCombined(gomock.Any(), "apt", "remove", "-y", "libssl").Return([]byte("Broken packages"), execErr)
+			},
+			expectError: true,
+		},
 	}
 
-	// Search for a common package
-	results, err := manager.Search(ctx, "curl")
-	if err != nil {
-		t.Errorf("Search() error = %v", err)
-		return
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-	t.Logf("Found %d packages matching 'curl'", len(results))
+			mockExecutor := mocks.NewMockCommandExecutor(ctrl)
+			tt.setupMocks(mockExecutor)
 
-	// Should find at least the curl package itself
-	foundCurl := false
-	for _, pkg := range results {
-		if pkg == "curl" {
-			foundCurl = true
-			break
-		}
-		// Show first few results
-		if len(results) < 10 {
-			t.Logf("  - %s", pkg)
-		}
-	}
+			manager := NewAptManagerWithExecutor(mockExecutor)
+			err := manager.Uninstall(context.Background(), tt.packageName)
 
-	if !foundCurl && len(results) > 0 {
-		t.Log("Warning: 'curl' package not found in search results")
+			if tt.expectError && err == nil {
+				t.Error("Expected error but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Expected no error but got: %v", err)
+			}
+		})
 	}
 }
 
 func TestAptManager_IsInstalled(t *testing.T) {
-	manager := NewAptManager()
-	ctx := context.Background()
-
-	// Skip these tests on non-Linux systems
-	if runtime.GOOS != "linux" {
-		t.Skip("Skipping APT tests on non-Linux system")
+	tests := []struct {
+		name           string
+		packageName    string
+		setupMocks     func(*mocks.MockCommandExecutor)
+		expectedResult bool
+		expectedError  bool
+	}{
+		{
+			name:        "package is installed",
+			packageName: "curl",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				output := `curl/stable,now 7.68.0-1ubuntu2.18 amd64 [installed]
+git/stable,now 1:2.25.1-1ubuntu3.10 amd64 [installed]`
+				m.EXPECT().Execute(gomock.Any(), "apt", "list", "--installed").Return([]byte(output), nil)
+			},
+			expectedResult: true,
+			expectedError:  false,
+		},
+		{
+			name:        "package is not installed",
+			packageName: "nonexistent",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				output := `curl/stable,now 7.68.0-1ubuntu2.18 amd64 [installed]
+git/stable,now 1:2.25.1-1ubuntu3.10 amd64 [installed]`
+				m.EXPECT().Execute(gomock.Any(), "apt", "list", "--installed").Return([]byte(output), nil)
+			},
+			expectedResult: false,
+			expectedError:  false,
+		},
+		{
+			name:        "list command fails",
+			packageName: "curl",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				m.EXPECT().Execute(gomock.Any(), "apt", "list", "--installed").Return(nil, errors.New("command failed"))
+			},
+			expectedResult: false,
+			expectedError:  true,
+		},
 	}
 
-	// Check if apt is available
-	available, err := manager.IsAvailable(ctx)
-	if err != nil {
-		t.Fatalf("Failed to check if apt is available: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockExecutor := mocks.NewMockCommandExecutor(ctrl)
+			tt.setupMocks(mockExecutor)
+
+			manager := NewAptManagerWithExecutor(mockExecutor)
+			result, err := manager.IsInstalled(context.Background(), tt.packageName)
+
+			if tt.expectedError && err == nil {
+				t.Error("Expected error but got none")
+			}
+			if !tt.expectedError && err != nil {
+				t.Errorf("Expected no error but got: %v", err)
+			}
+			if result != tt.expectedResult {
+				t.Errorf("Expected result %v but got %v", tt.expectedResult, result)
+			}
+		})
 	}
-	if !available {
-		t.Skip("apt not available, skipping IsInstalled tests")
+}
+
+func TestAptManager_Search(t *testing.T) {
+	tests := []struct {
+		name           string
+		query          string
+		setupMocks     func(*mocks.MockCommandExecutor)
+		expectedResult []string
+		expectedError  bool
+	}{
+		{
+			name:  "successful search with results",
+			query: "curl",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				output := `curl/stable 7.68.0-1ubuntu2.18 amd64
+  command line tool for transferring data with URL syntax
+
+curlftpfs/stable 0.9.2-9build1 amd64
+  filesystem to access FTP hosts based on FUSE and cURL`
+				m.EXPECT().Execute(gomock.Any(), "apt", "search", "curl").Return([]byte(output), nil)
+			},
+			expectedResult: []string{"curl", "curlftpfs"},
+			expectedError:  false,
+		},
+		{
+			name:  "search with no results",
+			query: "nonexistent",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				m.EXPECT().Execute(gomock.Any(), "apt", "search", "nonexistent").Return([]byte(""), nil)
+			},
+			expectedResult: []string{},
+			expectedError:  false,
+		},
+		{
+			name:  "search command fails",
+			query: "test",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				m.EXPECT().Execute(gomock.Any(), "apt", "search", "test").Return(nil, errors.New("command failed"))
+			},
+			expectedResult: nil,
+			expectedError:  true,
+		},
 	}
 
-	// Check a package that's likely to be installed on most systems
-	installed, err := manager.IsInstalled(ctx, "apt")
-	if err != nil {
-		t.Errorf("IsInstalled() error = %v", err)
-		return
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-	if !installed {
-		t.Log("Warning: 'apt' package not installed - this is unusual for a Debian-based system")
-	}
+			mockExecutor := mocks.NewMockCommandExecutor(ctrl)
+			tt.setupMocks(mockExecutor)
 
-	// Check a package that definitely doesn't exist
-	installed, err = manager.IsInstalled(ctx, "this-package-definitely-does-not-exist-12345")
-	if err != nil {
-		t.Errorf("IsInstalled() error = %v", err)
-		return
-	}
+			manager := NewAptManagerWithExecutor(mockExecutor)
+			result, err := manager.Search(context.Background(), tt.query)
 
-	if installed {
-		t.Error("Non-existent package should not be installed")
+			if tt.expectedError && err == nil {
+				t.Error("Expected error but got none")
+			}
+			if !tt.expectedError && err != nil {
+				t.Errorf("Expected no error but got: %v", err)
+			}
+			if !stringSlicesEqual(result, tt.expectedResult) {
+				t.Errorf("Expected result %v but got %v", tt.expectedResult, result)
+			}
+		})
 	}
 }
 
 func TestAptManager_Info(t *testing.T) {
-	manager := NewAptManager()
-	ctx := context.Background()
-
-	// Skip these tests on non-Linux systems
-	if runtime.GOOS != "linux" {
-		t.Skip("Skipping APT tests on non-Linux system")
+	tests := []struct {
+		name           string
+		packageName    string
+		setupMocks     func(*mocks.MockCommandExecutor)
+		expectedResult *PackageInfo
+		expectedError  bool
+	}{
+		{
+			name:        "successful info for installed package",
+			packageName: "curl",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				infoOutput := `Package: curl
+Version: 7.68.0-1ubuntu2.18
+Description: command line tool for transferring data with URL syntax
+Homepage: https://curl.haxx.se/
+Depends: libc6 (>= 2.17), libcurl4 (= 7.68.0-1ubuntu2.18)
+Installed-Size: 411`
+				m.EXPECT().Execute(gomock.Any(), "apt", "show", "curl").Return([]byte(infoOutput), nil)
+				listOutput := `curl/stable,now 7.68.0-1ubuntu2.18 amd64 [installed]`
+				m.EXPECT().Execute(gomock.Any(), "apt", "list", "--installed").Return([]byte(listOutput), nil)
+			},
+			expectedResult: &PackageInfo{
+				Name:          "curl",
+				Version:       "7.68.0-1ubuntu2.18",
+				Description:   "command line tool for transferring data with URL syntax",
+				Homepage:      "https://curl.haxx.se/",
+				Dependencies:  []string{"libc6", "libcurl4"},
+				InstalledSize: "411",
+				Manager:       "apt",
+				Installed:     true,
+			},
+			expectedError: false,
+		},
+		{
+			name:        "package not found",
+			packageName: "nonexistent",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				execErr := &mockExitError{code: 100}
+				m.EXPECT().Execute(gomock.Any(), "apt", "show", "nonexistent").Return(nil, execErr)
+			},
+			expectedResult: nil,
+			expectedError:  true,
+		},
 	}
 
-	// Check if apt is available
-	available, err := manager.IsAvailable(ctx)
-	if err != nil {
-		t.Fatalf("Failed to check if apt is available: %v", err)
-	}
-	if !available {
-		t.Skip("apt not available, skipping info tests")
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
 
-	// Get info for a common package
-	info, err := manager.Info(ctx, "curl")
-	if err != nil {
-		// It's okay if curl info is not available
-		t.Logf("Info() error = %v (this is okay if curl is not in the package cache)", err)
-		return
-	}
+			mockExecutor := mocks.NewMockCommandExecutor(ctrl)
+			tt.setupMocks(mockExecutor)
 
-	if info.Name != "curl" {
-		t.Errorf("Info().Name = %v, want curl", info.Name)
-	}
-	if info.Manager != "apt" {
-		t.Errorf("Info().Manager = %v, want apt", info.Manager)
-	}
+			manager := NewAptManagerWithExecutor(mockExecutor)
+			result, err := manager.Info(context.Background(), tt.packageName)
 
-	t.Logf("Package info: %+v", info)
-}
-
-func TestAptManager_PackageNotFound(t *testing.T) {
-	manager := NewAptManager()
-	ctx := context.Background()
-
-	// Skip these tests on non-Linux systems
-	if runtime.GOOS != "linux" {
-		t.Skip("Skipping APT tests on non-Linux system")
-	}
-
-	// Check if apt is available
-	available, err := manager.IsAvailable(ctx)
-	if err != nil {
-		t.Fatalf("Failed to check if apt is available: %v", err)
-	}
-	if !available {
-		t.Skip("apt not available, skipping package not found tests")
-	}
-
-	// Try to get info for non-existent package
-	_, err = manager.Info(ctx, "this-package-definitely-does-not-exist-12345")
-	if err == nil {
-		t.Error("Expected error when getting info for non-existent package")
-		return
-	}
-
-	plonkErr, ok := err.(*errors.PlonkError)
-	if !ok {
-		t.Errorf("Expected PlonkError, got %T", err)
-		return
-	}
-	if plonkErr.Code != errors.ErrPackageNotFound {
-		t.Errorf("Expected ErrPackageNotFound, got %v", plonkErr.Code)
-	}
-}
-
-func TestAptManager_GetInstalledVersionNotInstalled(t *testing.T) {
-	manager := NewAptManager()
-	ctx := context.Background()
-
-	// Skip these tests on non-Linux systems
-	if runtime.GOOS != "linux" {
-		t.Skip("Skipping APT tests on non-Linux system")
-	}
-
-	// Check if apt is available
-	available, err := manager.IsAvailable(ctx)
-	if err != nil {
-		t.Fatalf("Failed to check if apt is available: %v", err)
-	}
-	if !available {
-		t.Skip("apt not available, skipping version tests")
-	}
-
-	// Try to get version for non-installed package
-	_, err = manager.GetInstalledVersion(ctx, "this-package-definitely-does-not-exist-12345")
-	if err == nil {
-		t.Error("Expected error when getting version for non-installed package")
-		return
-	}
-
-	plonkErr, ok := err.(*errors.PlonkError)
-	if !ok {
-		t.Errorf("Expected PlonkError, got %T", err)
-		return
-	}
-	if plonkErr.Code != errors.ErrPackageNotFound {
-		t.Errorf("Expected ErrPackageNotFound, got %v", plonkErr.Code)
+			if tt.expectedError && err == nil {
+				t.Error("Expected error but got none")
+			}
+			if !tt.expectedError && err != nil {
+				t.Errorf("Expected no error but got: %v", err)
+			}
+			if !equalPackageInfo(result, tt.expectedResult) {
+				t.Errorf("Expected result %+v but got %+v", tt.expectedResult, result)
+			}
+		})
 	}
 }
 
-// Helper function to check if running as root
-func isRunningAsRoot() bool {
-	// This is a simple check - in production you might use os.Geteuid() == 0
-	// but that's not available on all platforms
-	return false // For testing, assume not root unless we know otherwise
+func TestAptManager_GetInstalledVersion(t *testing.T) {
+	tests := []struct {
+		name           string
+		packageName    string
+		setupMocks     func(*mocks.MockCommandExecutor)
+		expectedResult string
+		expectedError  bool
+	}{
+		{
+			name:        "successful version retrieval",
+			packageName: "curl",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				listOutput := `curl/stable,now 7.68.0-1ubuntu2.18 amd64 [installed]`
+				m.EXPECT().Execute(gomock.Any(), "apt", "list", "--installed").Return([]byte(listOutput), nil)
+				infoOutput := `Package: curl
+Version: 7.68.0-1ubuntu2.18
+Description: command line tool for transferring data with URL syntax`
+				m.EXPECT().Execute(gomock.Any(), "apt", "show", "curl").Return([]byte(infoOutput), nil)
+			},
+			expectedResult: "7.68.0-1ubuntu2.18",
+			expectedError:  false,
+		},
+		{
+			name:        "package not installed",
+			packageName: "nonexistent",
+			setupMocks: func(m *mocks.MockCommandExecutor) {
+				m.EXPECT().Execute(gomock.Any(), "apt", "list", "--installed").Return([]byte(""), nil)
+			},
+			expectedResult: "",
+			expectedError:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockExecutor := mocks.NewMockCommandExecutor(ctrl)
+			tt.setupMocks(mockExecutor)
+
+			manager := NewAptManagerWithExecutor(mockExecutor)
+			result, err := manager.GetInstalledVersion(context.Background(), tt.packageName)
+
+			if tt.expectedError && err == nil {
+				t.Error("Expected error but got none")
+			}
+			if !tt.expectedError && err != nil {
+				t.Errorf("Expected no error but got: %v", err)
+			}
+			if result != tt.expectedResult {
+				t.Errorf("Expected result %v but got %v", tt.expectedResult, result)
+			}
+		})
+	}
 }
+
+func TestAptManager_parseListOutput(t *testing.T) {
+	tests := []struct {
+		name           string
+		output         []byte
+		expectedResult []string
+	}{
+		{
+			name: "normal output",
+			output: []byte(`Listing... Done
+curl/stable,now 7.68.0-1ubuntu2.18 amd64 [installed]
+git/stable,now 1:2.25.1-1ubuntu3.10 amd64 [installed]
+vim/stable,now 2:8.1.2269-1ubuntu5.15 amd64 [installed]`),
+			expectedResult: []string{"curl", "git", "vim"},
+		},
+		{
+			name:           "empty output",
+			output:         []byte("Listing... Done"),
+			expectedResult: []string{},
+		},
+		{
+			name: "output with warnings",
+			output: []byte(`WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+Listing... Done
+curl/stable,now 7.68.0-1ubuntu2.18 amd64 [installed]`),
+			expectedResult: []string{"curl"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			manager := NewAptManager()
+			result := manager.parseListOutput(tt.output)
+
+			if !stringSlicesEqual(result, tt.expectedResult) {
+				t.Errorf("Expected result %v but got %v", tt.expectedResult, result)
+			}
+		})
+	}
+}
+
+func TestAptManager_parseSearchOutput(t *testing.T) {
+	tests := []struct {
+		name           string
+		output         []byte
+		expectedResult []string
+	}{
+		{
+			name: "normal output",
+			output: []byte(`curl/stable 7.68.0-1ubuntu2.18 amd64
+  command line tool for transferring data with URL syntax
+
+curlftpfs/stable 0.9.2-9build1 amd64
+  filesystem to access FTP hosts based on FUSE and cURL`),
+			expectedResult: []string{"curl", "curlftpfs"},
+		},
+		{
+			name:           "no results",
+			output:         []byte("No packages found"),
+			expectedResult: []string{},
+		},
+		{
+			name:           "empty output",
+			output:         []byte(""),
+			expectedResult: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			manager := NewAptManager()
+			result := manager.parseSearchOutput(tt.output)
+
+			if !stringSlicesEqual(result, tt.expectedResult) {
+				t.Errorf("Expected result %v but got %v", tt.expectedResult, result)
+			}
+		})
+	}
+}
+
+func TestAptManager_parseInfoOutput(t *testing.T) {
+	tests := []struct {
+		name           string
+		output         []byte
+		packageName    string
+		expectedResult *PackageInfo
+	}{
+		{
+			name: "normal output",
+			output: []byte(`Package: curl
+Version: 7.68.0-1ubuntu2.18
+Description: command line tool for transferring data with URL syntax
+Homepage: https://curl.haxx.se/
+Depends: libc6 (>= 2.17), libcurl4 (= 7.68.0-1ubuntu2.18)
+Installed-Size: 411`),
+			packageName: "curl",
+			expectedResult: &PackageInfo{
+				Name:          "curl",
+				Version:       "7.68.0-1ubuntu2.18",
+				Description:   "command line tool for transferring data with URL syntax",
+				Homepage:      "https://curl.haxx.se/",
+				Dependencies:  []string{"libc6", "libcurl4"},
+				InstalledSize: "411",
+			},
+		},
+		{
+			name: "minimal output",
+			output: []byte(`Package: curl
+Version: 7.68.0-1ubuntu2.18`),
+			packageName: "curl",
+			expectedResult: &PackageInfo{
+				Name:    "curl",
+				Version: "7.68.0-1ubuntu2.18",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			manager := NewAptManager()
+			result := manager.parseInfoOutput(tt.output, tt.packageName)
+
+			if !equalPackageInfo(result, tt.expectedResult) {
+				t.Errorf("Expected result %+v but got %+v", tt.expectedResult, result)
+			}
+		})
+	}
+}
+
+func TestAptManager_extractVersion(t *testing.T) {
+	tests := []struct {
+		name           string
+		output         []byte
+		expectedResult string
+	}{
+		{
+			name: "normal output",
+			output: []byte(`Package: curl
+Version: 7.68.0-1ubuntu2.18
+Description: command line tool for transferring data with URL syntax`),
+			expectedResult: "7.68.0-1ubuntu2.18",
+		},
+		{
+			name: "no version",
+			output: []byte(`Package: curl
+Description: command line tool for transferring data with URL syntax`),
+			expectedResult: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			manager := NewAptManager()
+			result := manager.extractVersion(tt.output)
+
+			if result != tt.expectedResult {
+				t.Errorf("Expected result %v but got %v", tt.expectedResult, result)
+			}
+		})
+	}
+}
+
+// Helper functions (defined in base_test.go and homebrew_refactored_test.go)

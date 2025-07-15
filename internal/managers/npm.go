@@ -5,55 +5,90 @@ package managers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"os/exec"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/executor"
+	"github.com/richhaase/plonk/internal/managers/parsers"
 )
 
-// NpmManager manages NPM packages.
-type NpmManager struct{}
-
-// NewNpmManager creates a new NPM manager.
-func NewNpmManager() *NpmManager {
-	return &NpmManager{}
+// NpmManager manages NPM packages using BaseManager for common functionality.
+type NpmManager struct {
+	*BaseManager
 }
 
-// IsAvailable checks if NPM is installed and accessible.
-func (n *NpmManager) IsAvailable(ctx context.Context) (bool, error) {
-	_, err := exec.LookPath("npm")
-	if err != nil {
-		// Binary not found in PATH - this is not an error condition
-		return false, nil
+// NewNpmManager creates a new NPM manager with the default executor.
+func NewNpmManager() *NpmManager {
+	config := ManagerConfig{
+		BinaryName:  "npm",
+		VersionArgs: []string{"--version"},
+		ListArgs: func() []string {
+			return []string{"list", "-g", "--depth=0", "--parseable"}
+		},
+		InstallArgs: func(pkg string) []string {
+			return []string{"install", "-g", pkg}
+		},
+		UninstallArgs: func(pkg string) []string {
+			return []string{"uninstall", "-g", pkg}
+		},
 	}
 
-	// Verify npm is actually functional by running a simple command
-	cmd := exec.CommandContext(ctx, "npm", "--version")
-	err = cmd.Run()
-	if err != nil {
-		// If the command fails due to context cancellation, return the context error
-		if ctx.Err() != nil {
-			return false, ctx.Err()
-		}
-		// npm exists but is not functional - this is an error
-		return false, errors.Wrap(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", "npm binary found but not functional")
+	// Add npm-specific error patterns
+	errorMatcher := NewCommonErrorMatcher()
+	errorMatcher.AddPattern(ErrorTypeNotFound, "404", "E404", "Not found")
+	errorMatcher.AddPattern(ErrorTypePermission, "EACCES")
+	errorMatcher.AddPattern(ErrorTypeNotInstalled, "ENOENT", "cannot remove")
+
+	base := NewBaseManager(config)
+	base.ErrorMatcher = errorMatcher
+
+	return &NpmManager{
+		BaseManager: base,
+	}
+}
+
+// NewNpmManagerWithExecutor creates a new NPM manager with a custom executor for testing.
+func NewNpmManagerWithExecutor(exec executor.CommandExecutor) *NpmManager {
+	config := ManagerConfig{
+		BinaryName:  "npm",
+		VersionArgs: []string{"--version"},
+		ListArgs: func() []string {
+			return []string{"list", "-g", "--depth=0", "--parseable"}
+		},
+		InstallArgs: func(pkg string) []string {
+			return []string{"install", "-g", pkg}
+		},
+		UninstallArgs: func(pkg string) []string {
+			return []string{"uninstall", "-g", pkg}
+		},
 	}
 
-	return true, nil
+	// Add npm-specific error patterns
+	errorMatcher := NewCommonErrorMatcher()
+	errorMatcher.AddPattern(ErrorTypeNotFound, "404", "E404", "Not found")
+	errorMatcher.AddPattern(ErrorTypePermission, "EACCES")
+	errorMatcher.AddPattern(ErrorTypeNotInstalled, "ENOENT", "cannot remove")
+
+	base := NewBaseManagerWithExecutor(config, exec)
+	base.ErrorMatcher = errorMatcher
+
+	return &NpmManager{
+		BaseManager: base,
+	}
 }
 
 // ListInstalled lists all globally installed NPM packages.
 func (n *NpmManager) ListInstalled(ctx context.Context) ([]string, error) {
-	cmd := exec.CommandContext(ctx, "npm", "list", "-g", "--depth=0", "--parseable")
-	output, err := cmd.Output()
+	// Call the binary directly to handle npm's unique exit code behavior
+	output, err := n.Executor.Execute(ctx, n.GetBinary(), n.Config.ListArgs()...)
 	if err != nil {
-		// Check if this is a real error vs expected conditions
-		if exitError, ok := err.(*exec.ExitError); ok {
-			// npm list can return non-zero exit codes even when working correctly
-			// (e.g., when there are peer dependency warnings)
+		// npm list can return non-zero exit codes even when working correctly
+		// (e.g., when there are peer dependency warnings)
+		if execErr, ok := err.(interface{ ExitCode() int }); ok {
 			// Only treat it as an error if the exit code indicates a real failure
-			if exitError.ExitCode() > 1 {
+			if execErr.ExitCode() > 1 {
 				return nil, errors.Wrap(err, errors.ErrCommandExecution, errors.DomainPackages, "list",
 					"npm list command failed with severe error")
 			}
@@ -65,10 +100,14 @@ func (n *NpmManager) ListInstalled(ctx context.Context) ([]string, error) {
 		}
 	}
 
+	return n.parseListOutput(output), nil
+}
+
+// parseListOutput parses npm list output to extract package names
+func (n *NpmManager) parseListOutput(output []byte) []string {
 	result := strings.TrimSpace(string(output))
 	if result == "" {
-		// No packages installed - this is normal, not an error
-		return []string{}, nil
+		return []string{}
 	}
 
 	// Parse output to extract package names
@@ -87,105 +126,24 @@ func (n *NpmManager) ListInstalled(ctx context.Context) ([]string, error) {
 		}
 	}
 
-	return packages, nil
+	return packages
 }
 
 // Install installs a global NPM package.
 func (n *NpmManager) Install(ctx context.Context, name string) error {
-	cmd := exec.CommandContext(ctx, "npm", "install", "-g", name)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		outputStr := string(output)
-
-		// Check for specific error conditions
-		if exitError, ok := err.(*exec.ExitError); ok {
-			// NPM often returns exit code 1 for warnings, check actual content
-			if exitError.ExitCode() == 1 {
-				// Check for "already installed" warnings
-				if strings.Contains(outputStr, "already installed") || strings.Contains(outputStr, "up to date") {
-					// Package is already installed - this is typically fine
-					return nil
-				}
-
-				// Check for package not found
-				if strings.Contains(outputStr, "404") || strings.Contains(outputStr, "Not found") || strings.Contains(outputStr, "E404") {
-					return errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "install",
-						fmt.Sprintf("package '%s' not found in npm registry", name)).
-						WithSuggestionMessage(fmt.Sprintf("Search available packages: npm search %s", name))
-				}
-
-				// Check for permission errors
-				if strings.Contains(outputStr, "EACCES") || strings.Contains(outputStr, "permission denied") {
-					return errors.NewError(errors.ErrFilePermission, errors.DomainPackages, "install",
-						fmt.Sprintf("permission denied installing %s", name)).
-						WithSuggestionMessage("Try running with sudo or fix npm permissions")
-				}
-			}
-
-			// Other exit errors with more context
-			return errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "install", name,
-				fmt.Sprintf("package installation failed (exit code %d)", exitError.ExitCode()))
-		}
-
-		// Non-exit errors (command not found, context cancellation, etc.)
-		return errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "install", name,
-			"failed to execute npm install command")
-	}
-
-	return nil
+	return n.ExecuteInstall(ctx, name)
 }
 
 // Uninstall removes a global NPM package.
 func (n *NpmManager) Uninstall(ctx context.Context, name string) error {
-	cmd := exec.CommandContext(ctx, "npm", "uninstall", "-g", name)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		outputStr := string(output)
-
-		// Check for specific error conditions
-		if exitError, ok := err.(*exec.ExitError); ok {
-			// NPM often returns exit code 1 for warnings, check actual content
-			if exitError.ExitCode() == 1 {
-				// Check for "not installed" warnings
-				if strings.Contains(outputStr, "not installed") || strings.Contains(outputStr, "up to date") {
-					// Package is not installed - this is typically fine for uninstall
-					return nil
-				}
-
-				// Check for permission errors
-				if strings.Contains(outputStr, "EACCES") || strings.Contains(outputStr, "permission denied") {
-					return errors.NewError(errors.ErrFilePermission, errors.DomainPackages, "uninstall",
-						fmt.Sprintf("permission denied uninstalling %s", name)).
-						WithSuggestionMessage("Try running with sudo or fix npm permissions")
-				}
-
-				// Check for dependency issues (less common in npm global packages)
-				if strings.Contains(outputStr, "ENOENT") || strings.Contains(outputStr, "cannot remove") {
-					return errors.NewError(errors.ErrPackageUninstall, errors.DomainPackages, "uninstall",
-						fmt.Sprintf("cannot uninstall %s: package files may be corrupted or missing", name)).
-						WithSuggestionMessage(fmt.Sprintf("Try reinstalling first: npm install -g %s", name))
-				}
-			}
-
-			// Other exit errors with more context
-			return errors.WrapWithItem(err, errors.ErrPackageUninstall, errors.DomainPackages, "uninstall", name,
-				fmt.Sprintf("package uninstallation failed (exit code %d)", exitError.ExitCode()))
-		}
-
-		// Non-exit errors (command not found, context cancellation, etc.)
-		return errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "uninstall", name,
-			"failed to execute npm uninstall command")
-	}
-
-	return nil
+	return n.ExecuteUninstall(ctx, name)
 }
 
 // IsInstalled checks if a specific package is installed globally.
 func (n *NpmManager) IsInstalled(ctx context.Context, name string) (bool, error) {
-	cmd := exec.CommandContext(ctx, "npm", "list", "-g", name)
-	err := cmd.Run()
+	_, err := n.Executor.Execute(ctx, n.GetBinary(), "list", "-g", name)
 	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok && exitError.ExitCode() == 1 {
+		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() == 1 {
 			// Package not found - this is not an error condition
 			return false, nil
 		}
@@ -198,13 +156,12 @@ func (n *NpmManager) IsInstalled(ctx context.Context, name string) (bool, error)
 
 // Search searches for packages in NPM registry.
 func (n *NpmManager) Search(ctx context.Context, query string) ([]string, error) {
-	cmd := exec.CommandContext(ctx, "npm", "search", query, "--json")
-	output, err := cmd.Output()
+	output, err := n.Executor.Execute(ctx, n.GetBinary(), "search", query, "--json")
 	if err != nil {
 		// Check if this is a real error vs expected conditions
-		if exitError, ok := err.(*exec.ExitError); ok {
+		if execErr, ok := err.(interface{ ExitCode() int }); ok {
 			// For npm search, exit code 1 usually means no results found
-			if exitError.ExitCode() == 1 {
+			if execErr.ExitCode() == 1 {
 				return []string{}, nil
 			}
 			// Other exit codes indicate real errors
@@ -216,13 +173,31 @@ func (n *NpmManager) Search(ctx context.Context, query string) ([]string, error)
 			"failed to execute npm search command")
 	}
 
+	return n.parseSearchOutput(output), nil
+}
+
+// parseSearchOutput parses npm search JSON output
+func (n *NpmManager) parseSearchOutput(output []byte) []string {
 	result := strings.TrimSpace(string(output))
 	if result == "" || result == "[]" {
-		// No packages found - this is normal, not an error
-		return []string{}, nil
+		return []string{}
 	}
 
-	// Parse JSON output to extract package names
+	// Try to parse as JSON array
+	var searchResults []struct {
+		Name string `json:"name"`
+	}
+	if err := json.Unmarshal(output, &searchResults); err == nil {
+		packages := make([]string, 0, len(searchResults))
+		for _, pkg := range searchResults {
+			if pkg.Name != "" {
+				packages = append(packages, pkg.Name)
+			}
+		}
+		return packages
+	}
+
+	// Fallback to line parsing if JSON fails
 	var packages []string
 	lines := strings.Split(result, "\n")
 	for _, line := range lines {
@@ -232,21 +207,16 @@ func (n *NpmManager) Search(ctx context.Context, query string) ([]string, error)
 			parts := strings.Split(line, `"name":`)
 			if len(parts) > 1 {
 				namepart := strings.TrimSpace(parts[1])
-				if strings.HasPrefix(namepart, `"`) && strings.Contains(namepart, `"`) {
-					// Extract the name between quotes
-					namepart = namepart[1:] // Remove leading quote
-					if idx := strings.Index(namepart, `"`); idx > 0 {
-						packageName := namepart[:idx]
-						if packageName != "" {
-							packages = append(packages, packageName)
-						}
-					}
+				// Clean up quotes and commas
+				namepart = strings.Trim(namepart, ` "',`)
+				if namepart != "" {
+					packages = append(packages, namepart)
 				}
 			}
 		}
 	}
 
-	return packages, nil
+	return packages
 }
 
 // Info retrieves detailed information about a package from NPM.
@@ -258,113 +228,73 @@ func (n *NpmManager) Info(ctx context.Context, name string) (*PackageInfo, error
 			"failed to check package installation status")
 	}
 
-	var info *PackageInfo
-	if installed {
-		// Get info from installed package
-		info, err = n.getInstalledPackageInfo(ctx, name)
-		if err != nil {
-			return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", name,
-				"failed to get installed package information")
-		}
-	} else {
-		// Get info from available package
-		info, err = n.getAvailablePackageInfo(ctx, name)
-		if err != nil {
-			return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", name,
-				"failed to get available package information")
-		}
-	}
-
-	info.Manager = "npm"
-	info.Installed = installed
-	return info, nil
-}
-
-// getInstalledPackageInfo gets information about an installed package
-func (n *NpmManager) getInstalledPackageInfo(ctx context.Context, name string) (*PackageInfo, error) {
-	cmd := exec.CommandContext(ctx, "npm", "list", "-g", name, "--json")
-	output, err := cmd.Output()
+	// Always use npm view for info (works for both installed and available packages)
+	output, err := n.Executor.Execute(ctx, n.GetBinary(), "view", name, "--json")
 	if err != nil {
-		return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", name,
-			"failed to get installed package info")
-	}
-
-	result := strings.TrimSpace(string(output))
-	if result == "" || result == "{}" {
-		return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
-			fmt.Sprintf("installed package '%s' not found", name)).WithSuggestionMessage(fmt.Sprintf("Search available packages: npm search %s", name))
-	}
-
-	// Parse JSON output to get version
-	info := &PackageInfo{Name: name}
-	lines := strings.Split(result, "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.Contains(line, `"version":`) {
-			info.Version = n.extractJSONValue(line, "version")
-		}
-	}
-
-	// Get additional info from npm view for installed packages
-	viewInfo, err := n.getPackageView(ctx, name)
-	if err == nil {
-		info.Description = viewInfo.Description
-		info.Homepage = viewInfo.Homepage
-		info.Dependencies = viewInfo.Dependencies
-	}
-
-	return info, nil
-}
-
-// getAvailablePackageInfo gets information about an available (but not installed) package
-func (n *NpmManager) getAvailablePackageInfo(ctx context.Context, name string) (*PackageInfo, error) {
-	return n.getPackageView(ctx, name)
-}
-
-// getPackageView gets package information using npm view
-func (n *NpmManager) getPackageView(ctx context.Context, name string) (*PackageInfo, error) {
-	cmd := exec.CommandContext(ctx, "npm", "view", name, "--json")
-	output, err := cmd.Output()
-	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			if exitError.ExitCode() == 1 {
-				return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
-					fmt.Sprintf("package '%s' not found", name)).WithSuggestionMessage(fmt.Sprintf("Search available packages: npm search %s", name))
-			}
+		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() == 1 {
+			return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
+				fmt.Sprintf("package '%s' not found", name)).
+				WithSuggestionMessage(fmt.Sprintf("Search available packages: npm search %s", name))
 		}
 		return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", name,
 			"failed to get package info")
 	}
 
-	result := strings.TrimSpace(string(output))
-	if result == "" || result == "{}" {
-		return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
-			fmt.Sprintf("package '%s' not found", name)).WithSuggestionMessage(fmt.Sprintf("Search available packages: npm search %s", name))
-	}
-
-	// Parse JSON output
-	info := &PackageInfo{Name: name}
-	lines := strings.Split(result, "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.Contains(line, `"name":`) {
-			info.Name = n.extractJSONValue(line, "name")
-		} else if strings.Contains(line, `"version":`) {
-			info.Version = n.extractJSONValue(line, "version")
-		} else if strings.Contains(line, `"description":`) {
-			info.Description = n.extractJSONValue(line, "description")
-		} else if strings.Contains(line, `"homepage":`) {
-			info.Homepage = n.extractJSONValue(line, "homepage")
-		} else if strings.Contains(line, `"dependencies":`) {
-			// Dependencies are in a nested object, we'll parse them separately
-			info.Dependencies = n.extractDependencies(result)
-		}
-	}
+	info := n.parseInfoOutput(output, name)
+	info.Manager = "npm"
+	info.Installed = installed
 
 	return info, nil
 }
 
-// extractDependencies extracts dependencies from the npm view JSON output
+// parseInfoOutput parses npm view JSON output
+func (n *NpmManager) parseInfoOutput(output []byte, name string) *PackageInfo {
+	info := &PackageInfo{Name: name}
+
+	// Try to parse as JSON
+	var viewResult struct {
+		Name         string            `json:"name"`
+		Version      string            `json:"version"`
+		Description  string            `json:"description"`
+		Homepage     string            `json:"homepage"`
+		Dependencies map[string]string `json:"dependencies"`
+	}
+
+	if err := json.Unmarshal(output, &viewResult); err == nil {
+		info.Name = viewResult.Name
+		info.Version = viewResult.Version
+		info.Description = viewResult.Description
+		info.Homepage = viewResult.Homepage
+
+		// Convert dependencies map to slice
+		for depName := range viewResult.Dependencies {
+			info.Dependencies = append(info.Dependencies, depName)
+		}
+		return info
+	}
+
+	// Fallback to manual parsing if JSON fails
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.Contains(line, `"name":`) {
+			info.Name = cleanJSONValue(parsers.ExtractVersion([]byte(line), `"name":`))
+		} else if strings.Contains(line, `"version":`) {
+			info.Version = cleanJSONValue(parsers.ExtractVersion([]byte(line), `"version":`))
+		} else if strings.Contains(line, `"description":`) {
+			info.Description = cleanJSONValue(parsers.ExtractVersion([]byte(line), `"description":`))
+		} else if strings.Contains(line, `"homepage":`) {
+			info.Homepage = cleanJSONValue(parsers.ExtractVersion([]byte(line), `"homepage":`))
+		}
+	}
+
+	// Extract dependencies separately as they're nested
+	info.Dependencies = n.extractDependencies(string(output))
+
+	return info
+}
+
+// extractDependencies extracts dependencies from npm view JSON output
 func (n *NpmManager) extractDependencies(jsonOutput string) []string {
 	var dependencies []string
 	lines := strings.Split(jsonOutput, "\n")
@@ -410,46 +340,38 @@ func (n *NpmManager) GetInstalledVersion(ctx context.Context, name string) (stri
 	}
 
 	// Get version using npm list with specific package
-	cmd := exec.CommandContext(ctx, "npm", "list", "-g", name, "--depth=0", "--json")
-	output, err := cmd.Output()
+	output, err := n.Executor.Execute(ctx, n.GetBinary(), "list", "-g", name, "--depth=0", "--json")
 	if err != nil {
 		// Try alternative approach if JSON fails
 		return n.getVersionFromLS(ctx, name)
 	}
 
-	result := strings.TrimSpace(string(output))
-	if result == "" {
-		return "", errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "version",
-			fmt.Sprintf("no version information found for package '%s'", name))
+	// Try to parse JSON output
+	var listResult struct {
+		Dependencies map[string]struct {
+			Version string `json:"version"`
+		} `json:"dependencies"`
 	}
 
-	// Parse JSON to extract version
-	lines := strings.Split(result, "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.Contains(line, `"`+name+`":`) && strings.Contains(line, `"version":`) {
-			version := n.extractJSONValue(line, "version")
-			if version != "" {
-				return version, nil
-			}
-		}
-		// Also check for direct version field after package name
-		if strings.Contains(line, `"version":`) {
-			version := n.extractJSONValue(line, "version")
-			if version != "" {
-				return version, nil
-			}
+	if err := json.Unmarshal(output, &listResult); err == nil {
+		if dep, ok := listResult.Dependencies[name]; ok && dep.Version != "" {
+			return dep.Version, nil
 		}
 	}
 
-	// Fallback to ls approach
+	// Fallback to manual parsing
+	version := parsers.ExtractVersion(output, `"version":`)
+	if version != "" {
+		return cleanJSONValue(version), nil
+	}
+
+	// Final fallback to ls approach
 	return n.getVersionFromLS(ctx, name)
 }
 
 // getVersionFromLS gets version using npm ls command as fallback
 func (n *NpmManager) getVersionFromLS(ctx context.Context, name string) (string, error) {
-	cmd := exec.CommandContext(ctx, "npm", "ls", "-g", name, "--depth=0")
-	output, err := cmd.Output()
+	output, err := n.Executor.Execute(ctx, n.GetBinary(), "ls", "-g", name, "--depth=0")
 	if err != nil {
 		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
 			"failed to get package version information")
@@ -478,24 +400,9 @@ func (n *NpmManager) getVersionFromLS(ctx context.Context, name string) (string,
 		fmt.Sprintf("could not extract version for package '%s' from npm output", name))
 }
 
-// extractJSONValue extracts a value from a JSON line
-func (n *NpmManager) extractJSONValue(line, key string) string {
-	keyPattern := `"` + key + `":`
-	if !strings.Contains(line, keyPattern) {
-		return ""
-	}
-
-	parts := strings.Split(line, keyPattern)
-	if len(parts) < 2 {
-		return ""
-	}
-
-	valuepart := strings.TrimSpace(parts[1])
-	if strings.HasPrefix(valuepart, `"`) {
-		valuepart = valuepart[1:] // Remove leading quote
-		if idx := strings.Index(valuepart, `"`); idx > 0 {
-			return valuepart[:idx]
-		}
-	}
-	return ""
+// cleanJSONValue removes quotes and commas from a JSON value
+func cleanJSONValue(value string) string {
+	value = strings.Trim(value, `"`)
+	value = strings.TrimSuffix(value, ",")
+	return value
 }
