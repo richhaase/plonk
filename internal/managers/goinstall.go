@@ -300,12 +300,17 @@ func (g *GoInstallManager) IsInstalled(ctx context.Context, name string) (bool, 
 	return g.isGoBinary(ctx, binaryPath), nil
 }
 
+// SupportsSearch returns false as Go doesn't have a built-in package search command.
+func (g *GoInstallManager) SupportsSearch() bool {
+	return false
+}
+
 // Search searches for Go modules.
 func (g *GoInstallManager) Search(ctx context.Context, query string) ([]string, error) {
 	// Go doesn't have a built-in search command
-	// Return a helpful message
-	return []string{}, errors.NewError(errors.ErrUnsupported, errors.DomainPackages, "search",
+	return nil, errors.NewError(errors.ErrOperationNotSupported, errors.DomainPackages, "search",
 		"go does not have a built-in search command").
+		WithItem("go").
 		WithSuggestionMessage(fmt.Sprintf("Search for Go packages at https://pkg.go.dev/search?q=%s", query))
 }
 

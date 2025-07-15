@@ -534,6 +534,49 @@ After completing the major refactoring and cleanup, here's an analysis of remain
 
 ### Action Plan
 
-1. **Immediate**: Complete pip.go migration to BaseManager
-2. **Next Priority**: Review Search method standardization for better API design
+1. **Immediate**: Complete pip.go migration to BaseManager ✅ COMPLETED
+2. **Next Priority**: Review Search method standardization for better API design ✅ COMPLETED
 3. **Future**: Consider version parsing utilities when adding new managers
+
+## Search Method Standardization - COMPLETED
+
+### Problem Addressed
+- Go and Pip don't support search operations but had to implement the method
+- Inconsistent error handling (ErrUnsupported vs ErrCommandExecution)
+- No way for callers to know which operations are supported without trying them
+
+### Solution Implemented
+Added capability discovery pattern using `PackageManagerCapabilities` interface:
+
+```go
+type PackageManagerCapabilities interface {
+    SupportsSearch() bool
+    // Future: SupportsUpgrade() bool, etc.
+}
+```
+
+### Changes Made
+1. **Updated PackageManager interface** to embed PackageManagerCapabilities
+2. **Added ErrOperationNotSupported** error code for clear semantics
+3. **BaseManager implements SupportsSearch()** returning true by default
+4. **Go and Pip override** to return false and provide helpful error messages
+5. **Created comprehensive tests** for capability discovery
+6. **Documented usage patterns** in CAPABILITY_USAGE_EXAMPLE.md
+
+### Benefits Achieved
+- **Better UX**: Users know upfront what's supported
+- **Cleaner code**: No try-and-fail patterns needed
+- **Future-proof**: Easy to add more optional operations
+- **Type-safe**: Compile-time interface checking
+- **Backward compatible**: Existing code continues to work
+
+### Example Usage
+```go
+if !manager.SupportsSearch() {
+    // Show appropriate UI or get suggestion from Search() error
+    _, err := manager.Search(ctx, query)
+    return err  // Contains helpful suggestion
+}
+// Safe to call Search
+results, err := manager.Search(ctx, query)
+```

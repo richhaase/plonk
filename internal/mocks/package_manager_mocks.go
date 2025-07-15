@@ -17,6 +17,44 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
+// MockPackageManagerCapabilities is a mock of PackageManagerCapabilities interface.
+type MockPackageManagerCapabilities struct {
+	ctrl     *gomock.Controller
+	recorder *MockPackageManagerCapabilitiesMockRecorder
+	isgomock struct{}
+}
+
+// MockPackageManagerCapabilitiesMockRecorder is the mock recorder for MockPackageManagerCapabilities.
+type MockPackageManagerCapabilitiesMockRecorder struct {
+	mock *MockPackageManagerCapabilities
+}
+
+// NewMockPackageManagerCapabilities creates a new mock instance.
+func NewMockPackageManagerCapabilities(ctrl *gomock.Controller) *MockPackageManagerCapabilities {
+	mock := &MockPackageManagerCapabilities{ctrl: ctrl}
+	mock.recorder = &MockPackageManagerCapabilitiesMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockPackageManagerCapabilities) EXPECT() *MockPackageManagerCapabilitiesMockRecorder {
+	return m.recorder
+}
+
+// SupportsSearch mocks base method.
+func (m *MockPackageManagerCapabilities) SupportsSearch() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SupportsSearch")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// SupportsSearch indicates an expected call of SupportsSearch.
+func (mr *MockPackageManagerCapabilitiesMockRecorder) SupportsSearch() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SupportsSearch", reflect.TypeOf((*MockPackageManagerCapabilities)(nil).SupportsSearch))
+}
+
 // MockPackageManager is a mock of PackageManager interface.
 type MockPackageManager struct {
 	ctrl     *gomock.Controller
@@ -143,6 +181,20 @@ func (m *MockPackageManager) Search(ctx context.Context, query string) ([]string
 func (mr *MockPackageManagerMockRecorder) Search(ctx, query any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Search", reflect.TypeOf((*MockPackageManager)(nil).Search), ctx, query)
+}
+
+// SupportsSearch mocks base method.
+func (m *MockPackageManager) SupportsSearch() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SupportsSearch")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// SupportsSearch indicates an expected call of SupportsSearch.
+func (mr *MockPackageManagerMockRecorder) SupportsSearch() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SupportsSearch", reflect.TypeOf((*MockPackageManager)(nil).SupportsSearch))
 }
 
 // Uninstall mocks base method.

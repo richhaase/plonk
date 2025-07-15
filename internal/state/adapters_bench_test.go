@@ -41,6 +41,9 @@ func (m *mockDirectManager) Info(ctx context.Context, name string) (*interfaces.
 func (m *mockDirectManager) GetInstalledVersion(ctx context.Context, name string) (string, error) {
 	return "1.0.0", nil
 }
+func (m *mockDirectManager) SupportsSearch() bool {
+	return true
+}
 
 // BenchmarkDirectCall tests calling the manager directly
 func BenchmarkDirectCall(b *testing.B) {

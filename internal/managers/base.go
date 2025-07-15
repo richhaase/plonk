@@ -294,3 +294,9 @@ func (b *BaseManager) handleUninstallError(err error, output []byte, packageName
 func (b *BaseManager) wrapCommandError(err error, operation, message string) error {
 	return errors.Wrap(err, errors.ErrCommandExecution, errors.DomainPackages, operation, message)
 }
+
+// SupportsSearch returns true by default as most package managers support search.
+// Managers that don't support search (like Go, Pip) should override this method.
+func (b *BaseManager) SupportsSearch() bool {
+	return true
+}

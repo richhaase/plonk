@@ -258,18 +258,17 @@ func (p *PipManager) IsInstalled(ctx context.Context, name string) (bool, error)
 	return false, nil
 }
 
-// Search searches for packages in PyPI.
-func (p *PipManager) Search(ctx context.Context, query string) ([]string, error) {
-	// pip search is deprecated, use PyPI API instead
-	return p.searchPyPI(ctx, query)
+// SupportsSearch returns false as pip search command has been deprecated and removed.
+func (p *PipManager) SupportsSearch() bool {
+	return false
 }
 
-// searchPyPI searches PyPI using the JSON API
-func (p *PipManager) searchPyPI(ctx context.Context, query string) ([]string, error) {
-	// For now, return a helpful message about pip search deprecation
-	// In a full implementation, this would use the PyPI JSON API
-	return nil, errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "search",
-		"pip search is deprecated").
+// Search searches for packages in PyPI.
+func (p *PipManager) Search(ctx context.Context, query string) ([]string, error) {
+	// pip search is deprecated and removed from recent pip versions
+	return nil, errors.NewError(errors.ErrOperationNotSupported, errors.DomainPackages, "search",
+		"pip search command has been removed").
+		WithItem("pip").
 		WithSuggestionMessage(fmt.Sprintf("Visit https://pypi.org/search/?q=%s to search for packages", query))
 }
 
