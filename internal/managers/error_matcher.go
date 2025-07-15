@@ -21,6 +21,10 @@ const (
 	ErrorTypeAlreadyInstalled ErrorType = "already_installed"
 	// ErrorTypeNotInstalled indicates package is not installed (for uninstall)
 	ErrorTypeNotInstalled ErrorType = "not_installed"
+	// ErrorTypeNetwork indicates network connectivity issues
+	ErrorTypeNetwork ErrorType = "network"
+	// ErrorTypeBuild indicates build/compilation failures
+	ErrorTypeBuild ErrorType = "build"
 	// ErrorTypeUnknown indicates an unrecognized error
 	ErrorTypeUnknown ErrorType = "unknown"
 )

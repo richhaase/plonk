@@ -215,6 +215,16 @@ func (b *BaseManager) handleInstallError(err error, output []byte, packageName s
 				"package manager database is locked").
 				WithSuggestionMessage("Wait for other package manager processes to complete")
 
+		case ErrorTypeNetwork:
+			return errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "install",
+				"network error during installation").
+				WithSuggestionMessage("Check internet connection and proxy settings")
+
+		case ErrorTypeBuild:
+			return errors.NewError(errors.ErrPackageInstall, errors.DomainPackages, "install",
+				fmt.Sprintf("failed to build package '%s'", packageName)).
+				WithSuggestionMessage("Package may have build dependencies or compatibility issues")
+
 		default:
 			// Only treat non-zero exit codes as errors
 			if execErr.ExitCode() != 0 {

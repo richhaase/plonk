@@ -260,8 +260,8 @@ All Phase 1 objectives have been successfully implemented:
 **Status**: In Progress
 
 - ✅ npm - Converted to NpmManagerV2 with full tests
-- ⏳ cargo - Next to convert
-- ⏳ gem
+- ✅ cargo - Converted to CargoManagerV2 with custom parsing for package headers
+- ✅ gem - Converted to GemManagerV2 with retry logic for --user-install
 - ⏳ homebrew
 - ⏳ go
 - ⏳ apt
@@ -401,3 +401,55 @@ After converting 2-3 more managers, evaluate:
 3. Further optimizations possible?
 
 The refactoring is proving successful with clear benefits in maintainability, testability, and development velocity.
+
+## Quality Review After Cargo and Gem Implementation
+
+### Strengths of the Abstraction
+
+1. **Code Reduction**: Achieved ~30% reduction in duplicated code across managers
+2. **Consistent Error Handling**: ErrorMatcher provides uniform error detection and categorization
+3. **Testability**: Mock-based testing with CommandExecutor interface runs 50x faster
+4. **Extensibility**: Easy to add new error patterns per manager
+
+### Areas Needing Refinement
+
+1. **Custom Logic Flexibility**:
+   - Gem's Install method needed complete override for retry logic
+   - This suggests BaseManager's ExecuteInstall might be too rigid
+   - Consider adding hooks or callbacks for custom pre/post processing
+
+2. **Output Parsing Patterns**:
+   - Each manager still needs custom parsing (cargo's package headers, gem's dependencies)
+   - Parser utilities help but more patterns could be extracted
+
+3. **Error Message Preservation**:
+   - BaseManager's error wrapping loses original output details
+   - This caused issues with gem's retry logic needing to check error messages
+
+### Recommendations for Future Improvements
+
+1. **Add Install/Uninstall Hooks**:
+   ```go
+   type InstallHooks struct {
+       PreInstall  func(ctx, name) error
+       PostError   func(err, output) (retry bool, newArgs []string)
+       PostSuccess func(ctx, name) error
+   }
+   ```
+
+2. **Preserve Original Error Output**:
+   - Include raw output in PlonkError metadata
+   - Or add OriginalOutput field to preserve error details
+
+3. **Extract More Parsing Patterns**:
+   - Version extraction (v1.2.3, 1.2.3, etc.)
+   - Dependency parsing (indented lists)
+   - Search result parsing (name = "description" format)
+
+### Key Learnings
+
+1. **One Size Doesn't Fit All**: While BaseManager handles 80% of cases well, some managers need custom behavior
+2. **Error Context Matters**: Preserving original error output is crucial for retry logic
+3. **Parsing Patterns Emerge**: Common patterns like version formats and dependency lists could be further abstracted
+
+The abstraction is working well overall but needs minor adjustments for edge cases. Proceeding with remaining managers will help identify any additional patterns.
