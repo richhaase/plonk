@@ -31,7 +31,8 @@ Examples:
   plonk ls -a                 # Include untracked items in overview
   plonk ls --brew             # Show only Homebrew packages
   plonk ls --npm              # Show only NPM packages
-  plonk ls --cargo            # Show only Cargo packages`,
+  plonk ls --cargo            # Show only Cargo packages
+  plonk ls --pip              # Show only pip packages`,
 	RunE: runLs,
 	Args: cobra.NoArgs,
 }
@@ -48,7 +49,8 @@ func init() {
 	lsCmd.Flags().Bool("brew", false, "Show Homebrew packages only")
 	lsCmd.Flags().Bool("npm", false, "Show NPM packages only")
 	lsCmd.Flags().Bool("cargo", false, "Show Cargo packages only")
-	lsCmd.MarkFlagsMutuallyExclusive("brew", "npm", "cargo")
+	lsCmd.Flags().Bool("pip", false, "Show pip packages only")
+	lsCmd.MarkFlagsMutuallyExclusive("brew", "npm", "cargo", "pip")
 
 	// Detail flags
 	lsCmd.Flags().BoolP("verbose", "v", false, "Show detailed information")

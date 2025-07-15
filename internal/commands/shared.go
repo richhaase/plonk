@@ -1007,6 +1007,8 @@ func ParseSimpleFlags(cmd *cobra.Command) (*SimpleFlags, error) {
 		flags.Manager = "npm"
 	} else if cargo, _ := cmd.Flags().GetBool("cargo"); cargo {
 		flags.Manager = "cargo"
+	} else if pip, _ := cmd.Flags().GetBool("pip"); pip {
+		flags.Manager = "pip"
 	}
 
 	// Parse common flags

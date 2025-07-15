@@ -25,6 +25,7 @@ func NewManagerRegistry() *ManagerRegistry {
 			"homebrew": func() PackageManager { return NewHomebrewManager() },
 			"npm":      func() PackageManager { return NewNpmManager() },
 			"cargo":    func() PackageManager { return NewCargoManager() },
+			"pip":      func() PackageManager { return NewPipManager() },
 		},
 	}
 }

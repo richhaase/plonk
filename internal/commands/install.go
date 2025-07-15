@@ -32,6 +32,7 @@ Examples:
   plonk install git --brew                # Install git specifically with Homebrew
   plonk install lodash --npm              # Install lodash with npm global packages
   plonk install ripgrep --cargo           # Install ripgrep with cargo packages
+  plonk install black flake8 --pip        # Install Python tools with pip
   plonk install --dry-run htop neovim     # Preview what would be installed`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: runInstall,
@@ -44,7 +45,8 @@ func init() {
 	installCmd.Flags().Bool("brew", false, "Use Homebrew package manager")
 	installCmd.Flags().Bool("npm", false, "Use NPM package manager")
 	installCmd.Flags().Bool("cargo", false, "Use Cargo package manager")
-	installCmd.MarkFlagsMutuallyExclusive("brew", "npm", "cargo")
+	installCmd.Flags().Bool("pip", false, "Use pip package manager")
+	installCmd.MarkFlagsMutuallyExclusive("brew", "npm", "cargo", "pip")
 
 	// Common flags
 	installCmd.Flags().BoolP("dry-run", "n", false, "Show what would be installed without making changes")
