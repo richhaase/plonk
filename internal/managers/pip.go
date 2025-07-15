@@ -13,81 +13,85 @@ import (
 	"github.com/richhaase/plonk/internal/executor"
 )
 
-// PipManager manages Python packages via pip using CommandExecutor for testability.
+// PipManager manages Python packages via pip using BaseManager for common functionality.
 type PipManager struct {
-	executor     executor.CommandExecutor
-	pipCommand   string // Cached pip command (pip or pip3)
-	errorMatcher *ErrorMatcher
+	*BaseManager
 }
 
 // NewPipManager creates a new pip manager with the default executor.
 func NewPipManager() *PipManager {
+	config := ManagerConfig{
+		BinaryName:       "pip",
+		FallbackBinaries: []string{"pip3"},
+		VersionArgs:      []string{"--version"},
+		ListArgs: func() []string {
+			return []string{"list", "--user", "--format=json"}
+		},
+		InstallArgs: func(pkg string) []string {
+			return []string{"install", "--user", pkg}
+		},
+		UninstallArgs: func(pkg string) []string {
+			return []string{"uninstall", "-y", pkg}
+		},
+		PreferJSON: false, // We already include --format=json in ListArgs
+	}
+
+	// Add pip-specific error patterns
+	errorMatcher := NewCommonErrorMatcher()
+	errorMatcher.AddPattern(ErrorTypeNotFound, "Could not find", "No matching distribution", "ERROR: No matching distribution")
+	errorMatcher.AddPattern(ErrorTypeAlreadyInstalled, "Requirement already satisfied", "already satisfied")
+	errorMatcher.AddPattern(ErrorTypeNotInstalled, "WARNING: Skipping", "not installed", "Cannot uninstall")
+	errorMatcher.AddPattern(ErrorTypePermission, "Permission denied", "access is denied")
+
+	base := NewBaseManager(config)
+	base.ErrorMatcher = errorMatcher
+
 	return &PipManager{
-		executor:     &executor.RealCommandExecutor{},
-		errorMatcher: NewCommonErrorMatcher(),
+		BaseManager: base,
 	}
 }
 
 // NewPipManagerWithExecutor creates a new pip manager with a custom executor for testing.
 func NewPipManagerWithExecutor(exec executor.CommandExecutor) *PipManager {
+	config := ManagerConfig{
+		BinaryName:       "pip",
+		FallbackBinaries: []string{"pip3"},
+		VersionArgs:      []string{"--version"},
+		ListArgs: func() []string {
+			return []string{"list", "--user", "--format=json"}
+		},
+		InstallArgs: func(pkg string) []string {
+			return []string{"install", "--user", pkg}
+		},
+		UninstallArgs: func(pkg string) []string {
+			return []string{"uninstall", "-y", pkg}
+		},
+		PreferJSON: false, // We already include --format=json in ListArgs
+	}
+
+	// Add pip-specific error patterns
+	errorMatcher := NewCommonErrorMatcher()
+	errorMatcher.AddPattern(ErrorTypeNotFound, "Could not find", "No matching distribution", "ERROR: No matching distribution")
+	errorMatcher.AddPattern(ErrorTypeAlreadyInstalled, "Requirement already satisfied", "already satisfied")
+	errorMatcher.AddPattern(ErrorTypeNotInstalled, "WARNING: Skipping", "not installed", "Cannot uninstall")
+	errorMatcher.AddPattern(ErrorTypePermission, "Permission denied", "access is denied")
+
+	base := NewBaseManagerWithExecutor(config, exec)
+	base.ErrorMatcher = errorMatcher
+
 	return &PipManager{
-		executor:     exec,
-		errorMatcher: NewCommonErrorMatcher(),
+		BaseManager: base,
 	}
 }
 
-// IsAvailable checks if pip is installed and accessible.
-func (p *PipManager) IsAvailable(ctx context.Context) (bool, error) {
-	// Check pip first
-	_, err := p.executor.LookPath("pip")
-	if err == nil {
-		// Verify pip is functional
-		_, verifyErr := p.executor.Execute(ctx, "pip", "--version")
-		if verifyErr == nil {
-			p.pipCommand = "pip"
-			return true, nil
-		}
-		// If the command fails due to context cancellation, return the context error
-		if ctx.Err() != nil {
-			return false, ctx.Err()
-		}
-		// Also check if the error itself is a context error
-		if verifyErr == context.Canceled || verifyErr == context.DeadlineExceeded {
-			return false, verifyErr
-		}
-		// pip exists but is not functional - continue to try pip3
-	}
-
-	// Try pip3 as fallback
-	_, err = p.executor.LookPath("pip3")
-	if err != nil {
-		// Neither pip nor pip3 found in PATH - this is not an error condition
-		return false, nil
-	}
-
-	// Verify pip3 is functional
-	_, err = p.executor.Execute(ctx, "pip3", "--version")
-	if err != nil {
-		// If the command fails due to context cancellation, return the context error
-		if ctx.Err() != nil {
-			return false, ctx.Err()
-		}
-		// Also check if the error itself is a context error
-		if err == context.Canceled || err == context.DeadlineExceeded {
-			return false, err
-		}
-		// pip3 exists but is not functional - this is an error
-		return false, errors.Wrap(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", "pip binary found but not functional")
-	}
-
-	p.pipCommand = "pip3"
-	return true, nil
-}
+// IsAvailable inherits from BaseManager which handles pip/pip3 fallback
 
 // ListInstalled lists all user-installed pip packages.
 func (p *PipManager) ListInstalled(ctx context.Context) ([]string, error) {
-	pipCmd := p.getPipCommand()
-	output, err := p.executor.Execute(ctx, pipCmd, "list", "--user", "--format=json")
+	pipCmd := p.GetBinary()
+	args := p.Config.ListArgs()
+
+	output, err := p.Executor.Execute(ctx, pipCmd, args...)
 	if err != nil {
 		// Check if --user flag is not supported (some pip installations)
 		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() != 0 {
@@ -101,6 +105,11 @@ func (p *PipManager) ListInstalled(ctx context.Context) ([]string, error) {
 			"failed to execute pip list command")
 	}
 
+	return p.parseListOutput(output)
+}
+
+// parseListOutput parses pip list JSON output
+func (p *PipManager) parseListOutput(output []byte) ([]string, error) {
 	result := strings.TrimSpace(string(output))
 	if result == "" || result == "[]" {
 		// No packages installed - this is normal, not an error
@@ -114,7 +123,7 @@ func (p *PipManager) ListInstalled(ctx context.Context) ([]string, error) {
 	}
 	if err := json.Unmarshal([]byte(result), &packages); err != nil {
 		// Fallback to plain text parsing if JSON fails
-		return p.listInstalledFallback(ctx)
+		return p.parseListOutputPlainText(output), nil
 	}
 
 	// Extract package names
@@ -128,22 +137,11 @@ func (p *PipManager) ListInstalled(ctx context.Context) ([]string, error) {
 	return names, nil
 }
 
-// listInstalledFallback lists packages without JSON format (for older pip versions)
-func (p *PipManager) listInstalledFallback(ctx context.Context) ([]string, error) {
-	pipCmd := p.getPipCommand()
-	output, err := p.executor.Execute(ctx, pipCmd, "list", "--user")
-	if err != nil {
-		// Try without --user flag as last resort
-		output, err = p.executor.Execute(ctx, pipCmd, "list")
-		if err != nil {
-			return nil, errors.Wrap(err, errors.ErrCommandExecution, errors.DomainPackages, "list",
-				"failed to execute pip list command")
-		}
-	}
-
+// parseListOutputPlainText parses non-JSON pip list output
+func (p *PipManager) parseListOutputPlainText(output []byte) []string {
 	result := strings.TrimSpace(string(output))
 	if result == "" {
-		return []string{}, nil
+		return []string{}
 	}
 
 	// Parse plain text output (skip header lines)
@@ -164,25 +162,43 @@ func (p *PipManager) listInstalledFallback(ctx context.Context) ([]string, error
 		}
 	}
 
-	return packages, nil
+	return packages
 }
 
-// Install installs a pip package for the user.
+// listInstalledFallback lists packages without JSON format (for older pip versions)
+func (p *PipManager) listInstalledFallback(ctx context.Context) ([]string, error) {
+	pipCmd := p.GetBinary()
+	output, err := p.Executor.Execute(ctx, pipCmd, "list", "--user")
+	if err != nil {
+		// Try without --user flag as last resort
+		output, err = p.Executor.Execute(ctx, pipCmd, "list")
+		if err != nil {
+			return nil, errors.Wrap(err, errors.ErrCommandExecution, errors.DomainPackages, "list",
+				"failed to execute pip list command")
+		}
+	}
+
+	return p.parseListOutputPlainText(output), nil
+}
+
+// Install installs a pip package for the user with custom retry logic for --user flag issues.
 func (p *PipManager) Install(ctx context.Context, name string) error {
-	pipCmd := p.getPipCommand()
-	output, err := p.executor.ExecuteCombined(ctx, pipCmd, "install", "--user", name)
+	pipCmd := p.GetBinary()
+	args := p.Config.InstallArgs(name)
+
+	output, err := p.Executor.ExecuteCombined(ctx, pipCmd, args...)
 	if err != nil {
 		outputStr := string(output)
 
 		// Check for specific error conditions using ErrorMatcher
 		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() != 0 {
-			errorType := p.errorMatcher.MatchError(outputStr)
+			errorType := p.ErrorMatcher.MatchError(outputStr)
 
 			switch errorType {
 			case ErrorTypeNotFound:
 				return errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "install",
-					fmt.Sprintf("package '%s' not found in PyPI", name)).
-					WithSuggestionMessage(fmt.Sprintf("Search available packages: pip search %s (or check https://pypi.org)", name))
+					fmt.Sprintf("package '%s' not found", name)).
+					WithSuggestionMessage(fmt.Sprintf("Search available packages or check the package name"))
 
 			case ErrorTypeAlreadyInstalled:
 				// Package is already installed - this is typically fine
@@ -191,14 +207,14 @@ func (p *PipManager) Install(ctx context.Context, name string) error {
 			case ErrorTypePermission:
 				return errors.NewError(errors.ErrFilePermission, errors.DomainPackages, "install",
 					fmt.Sprintf("permission denied installing %s", name)).
-					WithSuggestionMessage("Try using --user flag or fix pip permissions")
+					WithSuggestionMessage("Try with elevated permissions or check file permissions")
 
 			default:
 				// Check for --user flag issues
 				if strings.Contains(outputStr, "--user") && strings.Contains(outputStr, "error") {
 					// Try without --user flag
-					_, err = p.executor.ExecuteCombined(ctx, pipCmd, "install", name)
-					if err == nil {
+					_, retryErr := p.Executor.ExecuteCombined(ctx, pipCmd, "install", name)
+					if retryErr == nil {
 						return nil
 					}
 				}
@@ -219,44 +235,7 @@ func (p *PipManager) Install(ctx context.Context, name string) error {
 
 // Uninstall removes a pip package.
 func (p *PipManager) Uninstall(ctx context.Context, name string) error {
-	pipCmd := p.getPipCommand()
-	output, err := p.executor.ExecuteCombined(ctx, pipCmd, "uninstall", "-y", name)
-	if err != nil {
-		outputStr := string(output)
-
-		// Check for specific error conditions using ErrorMatcher
-		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() != 0 {
-			errorType := p.errorMatcher.MatchError(outputStr)
-
-			switch errorType {
-			case ErrorTypeNotInstalled:
-				// Package is not installed - this is typically fine for uninstall
-				return nil
-
-			case ErrorTypePermission:
-				return errors.NewError(errors.ErrFilePermission, errors.DomainPackages, "uninstall",
-					fmt.Sprintf("permission denied uninstalling %s", name)).
-					WithSuggestionMessage("Try with elevated permissions or check file ownership")
-
-			default:
-				// Check for special "Cannot uninstall" case
-				if strings.Contains(outputStr, "Cannot uninstall") {
-					// Package is not installed - this is typically fine for uninstall
-					return nil
-				}
-
-				// Other exit errors with more context
-				return errors.WrapWithItem(err, errors.ErrPackageUninstall, errors.DomainPackages, "uninstall", name,
-					fmt.Sprintf("package uninstallation failed (exit code %d)", execErr.ExitCode()))
-			}
-		}
-
-		// Non-exit errors (command not found, context cancellation, etc.)
-		return errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "uninstall", name,
-			"failed to execute pip uninstall command")
-	}
-
-	return nil
+	return p.ExecuteUninstall(ctx, name)
 }
 
 // IsInstalled checks if a specific package is installed.
@@ -303,8 +282,8 @@ func (p *PipManager) Info(ctx context.Context, name string) (*PackageInfo, error
 			"failed to check package installation status")
 	}
 
-	pipCmd := p.getPipCommand()
-	output, err := p.executor.Execute(ctx, pipCmd, "show", name)
+	pipCmd := p.GetBinary()
+	output, err := p.Executor.Execute(ctx, pipCmd, "show", name)
 	if err != nil {
 		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() != 0 {
 			outputStr := string(output)
@@ -318,11 +297,17 @@ func (p *PipManager) Info(ctx context.Context, name string) (*PackageInfo, error
 			"failed to get package info")
 	}
 
-	// Parse pip show output
+	info := p.parseInfoOutput(output, name)
+	info.Manager = "pip"
+	info.Installed = installed
+
+	return info, nil
+}
+
+// parseInfoOutput parses pip show output
+func (p *PipManager) parseInfoOutput(output []byte, name string) *PackageInfo {
 	info := &PackageInfo{
-		Name:      name,
-		Manager:   "pip",
-		Installed: installed,
+		Name: name,
 	}
 
 	lines := strings.Split(string(output), "\n")
@@ -348,7 +333,7 @@ func (p *PipManager) Info(ctx context.Context, name string) (*PackageInfo, error
 		}
 	}
 
-	return info, nil
+	return info
 }
 
 // GetInstalledVersion retrieves the installed version of a pip package
@@ -365,44 +350,35 @@ func (p *PipManager) GetInstalledVersion(ctx context.Context, name string) (stri
 	}
 
 	// Get version using pip show
-	pipCmd := p.getPipCommand()
-	output, err := p.executor.Execute(ctx, pipCmd, "show", name)
+	pipCmd := p.GetBinary()
+	output, err := p.Executor.Execute(ctx, pipCmd, "show", name)
 	if err != nil {
 		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
 			"failed to get package version information")
 	}
 
-	// Parse version from output
+	version := p.extractVersion(output)
+	if version == "" {
+		return "", errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "version",
+			fmt.Sprintf("could not extract version for package '%s' from pip output", name))
+	}
+
+	return version, nil
+}
+
+// extractVersion extracts version from pip show output
+func (p *PipManager) extractVersion(output []byte) string {
 	lines := strings.Split(string(output), "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "Version:") {
 			version := strings.TrimSpace(strings.TrimPrefix(line, "Version:"))
 			if version != "" {
-				return version, nil
+				return version
 			}
 		}
 	}
-
-	return "", errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "version",
-		fmt.Sprintf("could not extract version for package '%s' from pip output", name))
-}
-
-// getPipCommand returns the appropriate pip command (pip or pip3)
-func (p *PipManager) getPipCommand() string {
-	// Use cached value if available
-	if p.pipCommand != "" {
-		return p.pipCommand
-	}
-
-	// Try pip first
-	if _, err := p.executor.LookPath("pip"); err == nil {
-		p.pipCommand = "pip"
-		return p.pipCommand
-	}
-	// Fall back to pip3
-	p.pipCommand = "pip3"
-	return p.pipCommand
+	return ""
 }
 
 // normalizeName normalizes a package name according to pip's rules
