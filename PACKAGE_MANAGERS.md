@@ -41,6 +41,14 @@ This document tracks the package managers currently supported by plonk and those
 - **Platform**: Cross-platform
 - **Special Behavior**: Only tracks gems that provide executables
 
+### 6. go (Go)
+- **Type**: Language package manager
+- **Scope**: GOBIN installations (`go install`)
+- **Primary Use**: Go CLI tools (gopls, golangci-lint, gofumpt, etc.)
+- **Commands**: `go install`, manual removal from GOBIN
+- **Platform**: Cross-platform
+- **Special Behavior**: Extracts binary name from module path, no built-in uninstall
+
 ## Package Managers Under Consideration
 
 ### System Package Managers
@@ -81,29 +89,23 @@ This document tracks the package managers currently supported by plonk and those
 ### Language/Development Package Managers
 
 #### High Priority
-1. **go install**
-   - Go modules and tools
-   - Global tools: gopls, golangci-lint
-   - Simpler than most - single binary installations
-
-#### Medium Priority
-2. **composer (PHP)**
+1. **composer (PHP)**
    - PHP package manager
    - Global tools: phpcs, phpstan
    - Less commonly used globally
 
-3. **pipx**
+2. **pipx**
    - Python application installer
    - Specifically designed for global CLI tools
    - Isolates each tool in its own virtual environment
    - Better alternative to pip for CLI tools
 
-4. **yarn**
+3. **yarn**
    - Alternative to npm
    - Some developers prefer it
    - Global package support similar to npm
 
-5. **pnpm**
+4. **pnpm**
    - Another npm alternative
    - Growing popularity
    - Global package support
@@ -161,9 +163,9 @@ This document tracks the package managers currently supported by plonk and those
 
 ### Next Package Managers to Implement
 1. **apt** - Enable Linux support
-2. **go install** - Simple implementation, growing ecosystem
-3. **dnf/yum** - Enterprise Linux support
-4. **pipx** - Better Python tool isolation
+2. **dnf/yum** - Enterprise Linux support
+3. **pipx** - Better Python tool isolation
+4. **composer** - PHP global tools
 
 ### Future Considerations
 - Windows support (Chocolatey or winget)

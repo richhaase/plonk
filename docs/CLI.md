@@ -225,6 +225,8 @@ plonk install <packages...> [--brew] [--npm] [--cargo] [--pip] [--dry-run] [--fo
 - `--npm` - Use NPM package manager
 - `--cargo` - Use Cargo package manager
 - `--pip` - Use pip package manager
+- `--gem` - Use gem package manager
+- `--go` - Use go install package manager
 - `--dry-run, -n` - Show what would be installed without making changes
 - `--force, -f` - Force installation even if already managed
 
@@ -242,6 +244,8 @@ plonk install git --brew                # Install git specifically with Homebrew
 plonk install lodash --npm              # Install lodash with npm global packages
 plonk install ripgrep --cargo           # Install ripgrep with cargo packages
 plonk install black flake8 --pip        # Install Python tools with pip
+plonk install bundler rubocop --gem     # Install Ruby tools with gem
+plonk install gopls golangci-lint --go  # Install Go tools with go install
 plonk install --dry-run htop neovim     # Preview what would be installed
 ```
 
@@ -251,7 +255,7 @@ Uninstall packages from your system and remove them from plonk management.
 
 **Usage:**
 ```bash
-plonk uninstall <packages...> [--brew] [--npm] [--cargo] [--pip] [--dry-run] [--force]
+plonk uninstall <packages...> [--brew] [--npm] [--cargo] [--pip] [--gem] [--go] [--dry-run] [--force]
 ```
 
 **Options:**
@@ -259,6 +263,8 @@ plonk uninstall <packages...> [--brew] [--npm] [--cargo] [--pip] [--dry-run] [--
 - `--npm` - Use NPM package manager
 - `--cargo` - Use Cargo package manager
 - `--pip` - Use pip package manager
+- `--gem` - Use gem package manager
+- `--go` - Use go install package manager
 - `--dry-run, -n` - Show what would be removed without making changes
 - `--force, -f` - Force removal even if not managed
 
@@ -573,6 +579,47 @@ plonk config validate && plonk sync
 ```
 
 ## Package Manager Behavior
+
+### Go/go install Behavior
+
+Plonk's Go support uses `go install` to manage Go-based CLI tools:
+
+**Module Path Handling:**
+- Install with full module paths: `plonk install --go golang.org/x/tools/gopls@latest`
+- Plonk automatically extracts the binary name (e.g., `gopls`) for tracking
+- Supports version specifications: `@latest`, `@v1.2.3`, `@master`
+- Handles `/cmd/toolname` patterns correctly
+
+**Binary Location:**
+- Installs to `$GOBIN` if set, otherwise `$GOPATH/bin`
+- Detects and warns if GOBIN is not in PATH
+- Only tracks Go binaries (verified with `go version -m`)
+
+**Examples:**
+```bash
+plonk install --go golang.org/x/tools/gopls@latest     # Install gopls
+plonk install --go github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+plonk install --go mvdan.cc/gofumpt@v0.8.0            # Specific version
+plonk uninstall --go gopls                             # Remove by binary name
+```
+
+### Ruby/gem Environment Behavior
+
+Plonk's gem support focuses on Ruby gems that provide executable tools:
+
+**Executable Detection:**
+- Only tracks gems that provide CLI executables (filters with `gem contents --executables`)
+- Ignores library-only gems without executables
+- Handles multiple gem versions (uses latest)
+
+**Installation Preferences:**
+- Prefers `--user-install` for better permissions
+- Falls back to system install if user install fails
+- Uses `-I` flag for non-interactive uninstall
+
+**Environment Switching:**
+- Works with rbenv, rvm, system Ruby
+- State reconciliation handles Ruby version switches naturally
 
 ### Python/pip Environment Behavior
 

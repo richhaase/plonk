@@ -6,6 +6,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -34,6 +35,7 @@ Examples:
   plonk install ripgrep --cargo           # Install ripgrep with cargo packages
   plonk install black flake8 --pip        # Install Python tools with pip
   plonk install bundler rubocop --gem     # Install Ruby tools with gem
+  plonk install gopls --go                # Install Go tools with go install
   plonk install --dry-run htop neovim     # Preview what would be installed`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: runInstall,
@@ -48,7 +50,8 @@ func init() {
 	installCmd.Flags().Bool("cargo", false, "Use Cargo package manager")
 	installCmd.Flags().Bool("pip", false, "Use pip package manager")
 	installCmd.Flags().Bool("gem", false, "Use gem package manager")
-	installCmd.MarkFlagsMutuallyExclusive("brew", "npm", "cargo", "pip", "gem")
+	installCmd.Flags().Bool("go", false, "Use go install package manager")
+	installCmd.MarkFlagsMutuallyExclusive("brew", "npm", "cargo", "pip", "gem", "go")
 
 	// Common flags
 	installCmd.Flags().BoolP("dry-run", "n", false, "Show what would be installed without making changes")
@@ -119,8 +122,14 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 		Manager: manager,
 	}
 
+	// For Go packages, we need to check with the binary name
+	checkPackageName := packageName
+	if manager == "go" {
+		checkPackageName = extractBinaryNameFromPath(packageName)
+	}
+
 	// Check if already managed
-	if lockService.HasPackage(manager, packageName) {
+	if lockService.HasPackage(manager, checkPackageName) {
 		if !force {
 			result.Status = "skipped"
 			result.AlreadyManaged = true
@@ -166,14 +175,21 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 		return result
 	}
 
+	// For Go packages, we need to determine the actual binary name
+	lockPackageName := packageName
+	if manager == "go" {
+		// Extract binary name from module path
+		lockPackageName = extractBinaryNameFromPath(packageName)
+	}
+
 	// Get package version after installation
-	version, err := pkgManager.GetInstalledVersion(ctx, packageName)
+	version, err := pkgManager.GetInstalledVersion(ctx, lockPackageName)
 	if err == nil && version != "" {
 		result.Version = version
 	}
 
 	// Add to lock file
-	err = lockService.AddPackage(manager, packageName, version)
+	err = lockService.AddPackage(manager, lockPackageName, version)
 	if err != nil {
 		result.Status = "failed"
 		result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainPackages, "install", packageName, "failed to add package to lock file").WithMetadata("manager", manager).WithMetadata("version", version)
@@ -182,6 +198,24 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 
 	result.Status = "added"
 	return result
+}
+
+// extractBinaryNameFromPath extracts the binary name from a Go module path
+func extractBinaryNameFromPath(modulePath string) string {
+	// Remove version specification if present
+	modulePath = strings.Split(modulePath, "@")[0]
+
+	// Extract the last component of the path
+	parts := strings.Split(modulePath, "/")
+	binaryName := parts[len(parts)-1]
+
+	// Handle special case of .../cmd/toolname pattern
+	if len(parts) >= 2 && parts[len(parts)-2] == "cmd" {
+		return binaryName
+	}
+
+	// For simple cases, the binary name is usually the last component
+	return binaryName
 }
 
 // getPackageManager returns the appropriate package manager instance
