@@ -160,7 +160,7 @@ func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService,
 
 // findPackageInLockFile finds which manager manages a package
 func findPackageInLockFile(lockService *lock.YAMLLockService, packageName string) (string, bool) {
-	managers := []string{"homebrew", "npm", "cargo"}
+	managers := []string{"homebrew", "npm", "cargo", "pip", "gem", "go", "apt"}
 
 	for _, manager := range managers {
 		if lockService.HasPackage(manager, packageName) {
@@ -178,7 +178,7 @@ func detectInstalledPackageManager(packageName string) (string, error) {
 	ctx := context.Background()
 
 	// Try each manager to see if package is installed
-	managers := []string{"homebrew", "npm", "cargo"}
+	managers := []string{"homebrew", "npm", "cargo", "pip", "gem", "go", "apt"}
 	for _, managerName := range managers {
 		mgr, err := registry.GetManager(managerName)
 		if err != nil {
