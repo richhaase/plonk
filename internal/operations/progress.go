@@ -98,7 +98,7 @@ func (r *DefaultProgressReporter) ShowBatchSummary(results []OperationResult) {
 	// Generate operation-appropriate summary message
 	var summaryMsg string
 	switch r.Operation {
-	case "remove":
+	case "remove", "uninstall", "rm":
 		if r.ItemType == "dotfile" && summary.FilesProcessed > 0 {
 			summaryMsg = fmt.Sprintf("\nSummary: %d removed, %d unlinked, %d skipped, %d failed (%d total files)\n",
 				summary.Removed, summary.Unlinked, summary.Skipped, summary.Failed, summary.FilesProcessed)
@@ -106,7 +106,7 @@ func (r *DefaultProgressReporter) ShowBatchSummary(results []OperationResult) {
 			summaryMsg = fmt.Sprintf("\nSummary: %d removed, %d unlinked, %d skipped, %d failed\n",
 				summary.Removed, summary.Unlinked, summary.Skipped, summary.Failed)
 		}
-	default: // "add" or other operations
+	default: // "add", "install" or other operations
 		if r.ItemType == "dotfile" && summary.FilesProcessed > 0 {
 			summaryMsg = fmt.Sprintf("\nSummary: %d added, %d updated, %d skipped, %d failed (%d total files)\n",
 				summary.Added, summary.Updated, summary.Skipped, summary.Failed, summary.FilesProcessed)
