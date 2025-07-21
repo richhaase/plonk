@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/constants"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
@@ -90,7 +91,7 @@ func installPackages(cmd *cobra.Command, packageNames []string, flags *SimpleFla
 		if cfg.DefaultManager != nil && *cfg.DefaultManager != "" {
 			manager = *cfg.DefaultManager
 		} else {
-			manager = "homebrew" // fallback default
+			manager = constants.DefaultManager // fallback default
 		}
 	}
 

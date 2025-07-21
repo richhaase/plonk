@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/constants"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
@@ -627,9 +628,8 @@ func getPackageCountFromLockFile(configDir string) int {
 	lockService := lock.NewYAMLLockService(configDir)
 
 	totalCount := 0
-	managers := []string{"homebrew", "npm", "cargo"}
 
-	for _, manager := range managers {
+	for _, manager := range constants.SupportedManagers {
 		packages, err := lockService.GetPackages(manager)
 		if err == nil {
 			totalCount += len(packages)

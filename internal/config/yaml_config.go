@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/richhaase/plonk/internal/constants"
 	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/errors"
 	"gopkg.in/yaml.v3"
@@ -456,12 +457,13 @@ func (c *ConfigAdapter) GetDotfileTargets() map[string]string {
 // NOTE: Packages are now managed by the lock file, so this always returns empty
 func (c *ConfigAdapter) GetPackagesForManager(managerName string) ([]PackageConfigItem, error) {
 	// Validate manager name
-	switch managerName {
-	case "homebrew", "npm", "cargo":
-		// Return empty slice - packages are now in lock file
-		return []PackageConfigItem{}, nil
-	default:
-		return nil, errors.NewError(errors.ErrInvalidInput, errors.DomainConfig, "get-packages",
-			fmt.Sprintf("unknown package manager: %s", managerName)).WithItem(managerName)
+	for _, supported := range constants.SupportedManagers {
+		if managerName == supported {
+			// Return empty slice - packages are now in lock file
+			return []PackageConfigItem{}, nil
+		}
 	}
+
+	return nil, errors.NewError(errors.ErrInvalidInput, errors.DomainConfig, "get-packages",
+		fmt.Sprintf("unknown package manager: %s", managerName)).WithItem(managerName)
 }
