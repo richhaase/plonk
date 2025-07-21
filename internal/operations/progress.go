@@ -66,9 +66,9 @@ func (r *DefaultProgressReporter) ShowItemProgress(result OperationResult) {
 		fmt.Printf("✓ %s - unlinked\n", result.Name)
 	case "skipped":
 		if r.Operation == "remove" || r.Operation == "uninstall" {
-			fmt.Printf("✗ %s - not managed\n", result.Name)
+			fmt.Printf("⚠ %s - not managed\n", result.Name)
 		} else {
-			fmt.Printf("✗ %s - already managed\n", result.Name)
+			fmt.Printf("ℹ %s - already managed\n", result.Name)
 		}
 	case "failed":
 		fmt.Printf("✗ %s - %s\n", result.Name, FormatErrorWithSuggestion(result.Error, result.Name, r.ItemType))
