@@ -199,6 +199,35 @@ func (s *YAMLLockService) HasPackage(manager, name string) bool {
 	return false
 }
 
+// PackageLocation represents where a package is installed
+type PackageLocation struct {
+	Manager string
+	Entry   PackageEntry
+}
+
+// FindPackage returns all locations where a package is installed
+func (s *YAMLLockService) FindPackage(name string) []PackageLocation {
+	lock, err := s.Load()
+	if err != nil {
+		return nil
+	}
+
+	var locations []PackageLocation
+
+	for manager, packages := range lock.Packages {
+		for _, pkg := range packages {
+			if pkg.Name == name {
+				locations = append(locations, PackageLocation{
+					Manager: manager,
+					Entry:   pkg,
+				})
+			}
+		}
+	}
+
+	return locations
+}
+
 // GetLockPath returns the path to the lock file
 func (s *YAMLLockService) GetLockPath() string {
 	return s.lockPath

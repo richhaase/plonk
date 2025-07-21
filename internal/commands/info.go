@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/spf13/cobra"
@@ -63,6 +65,13 @@ func runInfo(cmd *cobra.Command, args []string) error {
 
 // performPackageInfo performs the info lookup according to the specified behavior
 func performPackageInfo(ctx context.Context, packageName string) (InfoOutput, error) {
+	// Get config directory and initialize lock service
+	configDir := config.GetDefaultConfigDirectory()
+	lockService := lock.NewYAMLLockService(configDir)
+
+	// Check lock file first to see if package is managed
+	packageLocations := lockService.FindPackage(packageName)
+
 	// Get available managers
 	availableManagers, err := getAvailableManagers(ctx)
 	if err != nil {
@@ -78,7 +87,31 @@ func performPackageInfo(ctx context.Context, packageName string) (InfoOutput, er
 		}, nil
 	}
 
-	// Check if package is installed and get info from the installing manager
+	// If package is in lock file, use info from lock file
+	if len(packageLocations) > 0 {
+		// Use the first location found (TODO: handle multiple installations)
+		location := packageLocations[0]
+
+		// Build message that mentions if there are multiple installations
+		message := fmt.Sprintf("Package '%s' is installed via %s", packageName, location.Manager)
+		if len(packageLocations) > 1 {
+			message += fmt.Sprintf(" (and %d other manager(s))", len(packageLocations)-1)
+		}
+
+		return InfoOutput{
+			Package: packageName,
+			Status:  "installed",
+			Message: message,
+			PackageInfo: &managers.PackageInfo{
+				Name:      packageName,
+				Version:   location.Entry.Version,
+				Manager:   location.Manager,
+				Installed: true,
+			},
+		}, nil
+	}
+
+	// Otherwise, check if package is installed and get info from the installing manager
 	installedManager, packageInfo, err := findInstalledPackageInfo(ctx, packageName, availableManagers)
 	if err != nil {
 		return InfoOutput{}, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", packageName,
