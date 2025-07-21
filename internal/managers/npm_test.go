@@ -376,22 +376,49 @@ func TestNpmManager_GetInstalledVersion(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:        "get version with ls fallback",
+			name:        "json command fails",
 			packageName: "eslint",
 			mockSetup: func(m *mocks.MockCommandExecutor) {
 				// Check if installed
 				m.EXPECT().Execute(gomock.Any(), "npm", "list", "-g", "eslint").
 					Return([]byte("eslint@8.0.0"), nil)
-				// JSON fails
+				// JSON command fails
 				m.EXPECT().Execute(gomock.Any(), "npm", "list", "-g", "eslint", "--depth=0", "--json").
-					Return(nil, fmt.Errorf("json parse error"))
-				// Fallback to ls
-				m.EXPECT().Execute(gomock.Any(), "npm", "ls", "-g", "eslint", "--depth=0").
-					Return([]byte(`/usr/local/lib
-└── eslint@8.0.0`), nil)
+					Return(nil, fmt.Errorf("npm error"))
 			},
-			want:    "8.0.0",
-			wantErr: false,
+			want:        "",
+			wantErr:     true,
+			wantErrCode: errors.ErrCommandExecution,
+		},
+		{
+			name:        "json parse error",
+			packageName: "eslint",
+			mockSetup: func(m *mocks.MockCommandExecutor) {
+				// Check if installed
+				m.EXPECT().Execute(gomock.Any(), "npm", "list", "-g", "eslint").
+					Return([]byte("eslint@8.0.0"), nil)
+				// JSON command returns invalid JSON
+				m.EXPECT().Execute(gomock.Any(), "npm", "list", "-g", "eslint", "--depth=0", "--json").
+					Return([]byte("invalid json"), nil)
+			},
+			want:        "",
+			wantErr:     true,
+			wantErrCode: errors.ErrCommandExecution,
+		},
+		{
+			name:        "package not in json output",
+			packageName: "missing",
+			mockSetup: func(m *mocks.MockCommandExecutor) {
+				// Check if installed
+				m.EXPECT().Execute(gomock.Any(), "npm", "list", "-g", "missing").
+					Return([]byte("missing@1.0.0"), nil)
+				// JSON doesn't contain the package
+				m.EXPECT().Execute(gomock.Any(), "npm", "list", "-g", "missing", "--depth=0", "--json").
+					Return([]byte(`{"dependencies":{}}`), nil)
+			},
+			want:        "",
+			wantErr:     true,
+			wantErrCode: errors.ErrCommandExecution,
 		},
 		{
 			name:        "package not installed",

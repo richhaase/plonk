@@ -331,62 +331,28 @@ func (n *NpmManager) GetInstalledVersion(ctx context.Context, name string) (stri
 	// Get version using npm list with specific package
 	output, err := n.Executor.Execute(ctx, n.GetBinary(), "list", "-g", name, "--depth=0", "--json")
 	if err != nil {
-		// Try alternative approach if JSON fails
-		return n.getVersionFromLS(ctx, name)
+		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
+			"failed to get package version information")
 	}
 
-	// Try to parse JSON output
+	// Parse JSON output
 	var listResult struct {
 		Dependencies map[string]struct {
 			Version string `json:"version"`
 		} `json:"dependencies"`
 	}
 
-	if err := json.Unmarshal(output, &listResult); err == nil {
-		if dep, ok := listResult.Dependencies[name]; ok && dep.Version != "" {
-			return dep.Version, nil
-		}
-	}
-
-	// Fallback to manual parsing
-	version := parsers.ExtractVersion(output, `"version":`)
-	if version != "" {
-		return cleanJSONValue(version), nil
-	}
-
-	// Final fallback to ls approach
-	return n.getVersionFromLS(ctx, name)
-}
-
-// getVersionFromLS gets version using npm ls command as fallback
-func (n *NpmManager) getVersionFromLS(ctx context.Context, name string) (string, error) {
-	output, err := n.Executor.Execute(ctx, n.GetBinary(), "ls", "-g", name, "--depth=0")
-	if err != nil {
+	if err := json.Unmarshal(output, &listResult); err != nil {
 		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
-			"failed to get package version information")
+			"failed to parse npm JSON output")
 	}
 
-	result := strings.TrimSpace(string(output))
-	lines := strings.Split(result, "\n")
-
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		// Look for lines like "├── packagename@version" or "└── packagename@version"
-		if strings.Contains(line, name+"@") {
-			parts := strings.Split(line, "@")
-			if len(parts) >= 2 {
-				version := strings.TrimSpace(parts[len(parts)-1])
-				// Clean up any extra characters that might be in the version
-				if idx := strings.Index(version, " "); idx > 0 {
-					version = version[:idx]
-				}
-				return version, nil
-			}
-		}
+	if dep, ok := listResult.Dependencies[name]; ok && dep.Version != "" {
+		return dep.Version, nil
 	}
 
 	return "", errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "version",
-		fmt.Sprintf("could not extract version for package '%s' from npm output", name))
+		fmt.Sprintf("package '%s' not found in npm list output", name))
 }
 
 // cleanJSONValue removes quotes and commas from a JSON value
