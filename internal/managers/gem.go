@@ -49,6 +49,7 @@ func newGemManager(exec executor.CommandExecutor) *GemManager {
 	errorMatcher.AddPattern(ErrorTypeAlreadyInstalled, "already installed")
 	errorMatcher.AddPattern(ErrorTypeNotInstalled, "is not installed")
 	errorMatcher.AddPattern(ErrorTypePermission, "Errno::EACCES", "Gem::FilePermissionError")
+	errorMatcher.AddPattern(ErrorTypeDependency, "requires Ruby version", "ruby version is")
 
 	var base *BaseManager
 	if exec == nil {
@@ -109,14 +110,54 @@ func (g *GemManager) Install(ctx context.Context, name string) error {
 				return nil
 			}
 			// If this also fails, handle the new error
-			return g.handleInstallError(err2, output2, name)
+			return g.handleGemInstallError(err2, output2, name)
 		}
 
 		// Handle the original error
-		return g.handleInstallError(err, output, name)
+		return g.handleGemInstallError(err, output, name)
 	}
 
 	return nil
+}
+
+// handleGemInstallError provides gem-specific error handling with better messages
+func (g *GemManager) handleGemInstallError(err error, output []byte, packageName string) error {
+	outputStr := string(output)
+
+	// Check for Ruby version mismatch
+	if strings.Contains(outputStr, "requires Ruby version") {
+		// Extract version requirements from error message
+		var suggestion string
+		if idx := strings.Index(outputStr, "Try installing it with"); idx > 0 {
+			// Extract the suggested command
+			cmdStart := idx + len("Try installing it with")
+			if cmdEnd := strings.Index(outputStr[cmdStart:], "\n"); cmdEnd > 0 {
+				suggestion = strings.TrimSpace(outputStr[cmdStart : cmdStart+cmdEnd])
+			}
+		}
+
+		msg := fmt.Sprintf("gem '%s' requires a different Ruby version", packageName)
+		baseErr := errors.NewError(errors.ErrPackageInstall, errors.DomainPackages, "install", msg).
+			WithItem(packageName)
+
+		if suggestion != "" {
+			return baseErr.WithSuggestionMessage(fmt.Sprintf("Try: %s", suggestion))
+		}
+
+		// Extract current Ruby version
+		if idx := strings.Index(outputStr, "The current ruby version is"); idx > 0 {
+			versionStart := idx + len("The current ruby version is")
+			if versionEnd := strings.Index(outputStr[versionStart:], "."); versionEnd > 0 {
+				currentVersion := strings.TrimSpace(outputStr[versionStart : versionStart+versionEnd+10])
+				return baseErr.WithSuggestionMessage(fmt.Sprintf("Your Ruby version is %s. Check gem requirements or use rbenv/rvm to switch Ruby versions", currentVersion))
+			}
+		}
+
+		return baseErr.WithSuggestionMessage("Check Ruby version requirements or use rbenv/rvm to manage Ruby versions")
+	}
+
+	// Fall back to base error handling
+	return g.handleInstallError(err, output, packageName)
 }
 
 // Uninstall removes a Ruby gem.

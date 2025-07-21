@@ -6,6 +6,8 @@ package operations
 import (
 	"fmt"
 	"strings"
+
+	"github.com/richhaase/plonk/internal/errors"
 )
 
 // DefaultProgressReporter provides a standard implementation of progress reporting
@@ -136,6 +138,13 @@ func (r *DefaultProgressReporter) ShowBatchSummary(results []OperationResult) {
 func FormatErrorWithSuggestion(err error, itemName string, itemType string) string {
 	if err == nil {
 		return ""
+	}
+
+	// Check if it's a PlonkError with suggestions
+	if plonkErr, ok := err.(*errors.PlonkError); ok {
+		msg := plonkErr.UserMessage()
+		// UserMessage already includes suggestions
+		return msg
 	}
 
 	msg := err.Error()

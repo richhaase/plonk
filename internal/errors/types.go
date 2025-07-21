@@ -146,7 +146,11 @@ func (e *PlonkError) UserMessage() string {
 	case ErrPackageNotFound:
 		message = fmt.Sprintf("Package not found: %s", e.Item)
 	case ErrPackageInstall:
-		message = fmt.Sprintf("Failed to install package: %s", e.Item)
+		if e.Message != "" {
+			message = e.Message
+		} else {
+			message = fmt.Sprintf("Failed to install package: %s", e.Item)
+		}
 	case ErrManagerUnavailable:
 		message = fmt.Sprintf("Package manager '%s' is not available", e.Item)
 	case ErrProviderNotFound:

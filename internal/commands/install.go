@@ -107,9 +107,9 @@ func installPackages(cmd *cobra.Command, packageNames []string, flags *SimpleFla
 	options := operations.BatchProcessorOptions{
 		ItemType:               "package",
 		Operation:              "install",
-		ShowIndividualProgress: flags.Verbose || flags.DryRun, // Show progress in verbose or dry-run mode
-		Timeout:                5 * time.Minute,               // Install timeout
-		ContinueOnError:        nil,                           // Use default (true) - continue on individual failures
+		ShowIndividualProgress: true,            // Always show progress for better error visibility
+		Timeout:                5 * time.Minute, // Install timeout
+		ContinueOnError:        nil,             // Use default (true) - continue on individual failures
 	}
 
 	// Use standard batch workflow
@@ -172,7 +172,12 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 	err = pkgManager.Install(ctx, packageName)
 	if err != nil {
 		result.Status = "failed"
-		result.Error = errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "install", packageName, "failed to install package").WithMetadata("manager", manager)
+		// Don't wrap PlonkErrors as they already have proper context and suggestions
+		if _, ok := err.(*errors.PlonkError); ok {
+			result.Error = err
+		} else {
+			result.Error = errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "install", packageName, "failed to install package").WithMetadata("manager", manager)
+		}
 		return result
 	}
 
