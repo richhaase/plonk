@@ -33,7 +33,7 @@ func TestCompleteUserExperience(t *testing.T) {
 		"gem":   {"bundler", "rake", "xxx-does-not-exist-xxx"},
 		"brew":  {"jq", "curl", "xxx-does-not-exist-xxx"},
 		"apt":   {"jq", "curl", "xxx-does-not-exist-xxx"},
-		"go":    {"golang.org/x/tools/cmd/goimports@latest", "gofmt", "xxx-does-not-exist-xxx"},
+		"go":    {"github.com/josharian/impl@latest", "gofmt", "xxx-does-not-exist-xxx"},
 	}
 
 	t.Run("InitialSetup", func(t *testing.T) {
