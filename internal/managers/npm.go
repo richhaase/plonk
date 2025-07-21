@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/errors"
@@ -35,7 +36,7 @@ func newNpmManager(exec executor.CommandExecutor) *NpmManager {
 		BinaryName:  "npm",
 		VersionArgs: []string{"--version"},
 		ListArgs: func() []string {
-			return []string{"list", "-g", "--depth=0", "--parseable"}
+			return []string{"list", "-g", "--depth=0", "--json"}
 		},
 		InstallArgs: func(pkg string) []string {
 			return []string{"install", "-g", pkg}
@@ -88,28 +89,31 @@ func (n *NpmManager) ListInstalled(ctx context.Context) ([]string, error) {
 	return n.parseListOutput(output), nil
 }
 
-// parseListOutput parses npm list output to extract package names
+// parseListOutput parses npm list JSON output to extract package names
 func (n *NpmManager) parseListOutput(output []byte) []string {
 	result := strings.TrimSpace(string(output))
 	if result == "" {
 		return []string{}
 	}
 
-	// Parse output to extract package names
-	var packages []string
-	lines := strings.Split(result, "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line != "" && strings.Contains(line, "/") {
-			parts := strings.Split(line, "/")
-			if len(parts) > 0 {
-				pkg := parts[len(parts)-1]
-				if pkg != "" && pkg != "lib" {
-					packages = append(packages, pkg)
-				}
-			}
-		}
+	// Parse JSON output
+	var listResult struct {
+		Dependencies map[string]interface{} `json:"dependencies"`
 	}
+
+	if err := json.Unmarshal(output, &listResult); err != nil {
+		// If JSON parsing fails, return empty list
+		return []string{}
+	}
+
+	// Extract package names from dependencies
+	packages := make([]string, 0, len(listResult.Dependencies))
+	for pkgName := range listResult.Dependencies {
+		packages = append(packages, pkgName)
+	}
+
+	// Sort packages for consistent output
+	sort.Strings(packages)
 
 	return packages
 }

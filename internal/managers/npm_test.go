@@ -34,20 +34,29 @@ func TestNpmManager_ListInstalled(t *testing.T) {
 		{
 			name: "successful list with packages",
 			mockSetup: func(m *mocks.MockCommandExecutor) {
-				m.EXPECT().Execute(gomock.Any(), "npm", "list", "-g", "--depth=0", "--parseable").
-					Return([]byte(`/usr/local/lib
-/usr/local/lib/node_modules/typescript
-/usr/local/lib/node_modules/eslint
-/usr/local/lib/node_modules/@angular/cli`), nil)
+				m.EXPECT().Execute(gomock.Any(), "npm", "list", "-g", "--depth=0", "--json").
+					Return([]byte(`{
+  "dependencies": {
+    "typescript": {
+      "version": "5.0.0"
+    },
+    "eslint": {
+      "version": "8.0.0"
+    },
+    "@angular/cli": {
+      "version": "16.0.0"
+    }
+  }
+}`), nil)
 			},
-			want:    []string{"typescript", "eslint", "cli"},
+			want:    []string{"@angular/cli", "eslint", "typescript"},
 			wantErr: false,
 		},
 		{
 			name: "empty package list",
 			mockSetup: func(m *mocks.MockCommandExecutor) {
-				m.EXPECT().Execute(gomock.Any(), "npm", "list", "-g", "--depth=0", "--parseable").
-					Return([]byte(""), nil)
+				m.EXPECT().Execute(gomock.Any(), "npm", "list", "-g", "--depth=0", "--json").
+					Return([]byte(`{"dependencies":{}}`), nil)
 			},
 			want:    []string{},
 			wantErr: false,
@@ -56,8 +65,14 @@ func TestNpmManager_ListInstalled(t *testing.T) {
 			name: "list with warnings (exit code 1)",
 			mockSetup: func(m *mocks.MockCommandExecutor) {
 				// npm list returns exit code 1 with output for warnings
-				m.EXPECT().Execute(gomock.Any(), "npm", "list", "-g", "--depth=0", "--parseable").
-					Return([]byte(`/usr/local/lib/node_modules/typescript`), &mockExitError{code: 1})
+				m.EXPECT().Execute(gomock.Any(), "npm", "list", "-g", "--depth=0", "--json").
+					Return([]byte(`{
+  "dependencies": {
+    "typescript": {
+      "version": "5.0.0"
+    }
+  }
+}`), &mockExitError{code: 1})
 			},
 			want:    []string{"typescript"},
 			wantErr: false,
@@ -65,11 +80,20 @@ func TestNpmManager_ListInstalled(t *testing.T) {
 		{
 			name: "list with severe error (exit code 2)",
 			mockSetup: func(m *mocks.MockCommandExecutor) {
-				m.EXPECT().Execute(gomock.Any(), "npm", "list", "-g", "--depth=0", "--parseable").
+				m.EXPECT().Execute(gomock.Any(), "npm", "list", "-g", "--depth=0", "--json").
 					Return(nil, &mockExitError{code: 2})
 			},
 			want:    nil,
 			wantErr: true,
+		},
+		{
+			name: "invalid JSON output",
+			mockSetup: func(m *mocks.MockCommandExecutor) {
+				m.EXPECT().Execute(gomock.Any(), "npm", "list", "-g", "--depth=0", "--json").
+					Return([]byte(`invalid json`), nil)
+			},
+			want:    []string{},
+			wantErr: false,
 		},
 	}
 
