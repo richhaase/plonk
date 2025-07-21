@@ -15,3 +15,7 @@
 - [ ] Fix Bug #7: Improve unavailable manager error messages (moved to end as it benefits from OS-awareness)
 - [ ] Improve handling of packages installed via multiple managers
 - [ ] Improve integration tests to be more robust and catch edge cases
+- [ ] Fix failing Go manager integration tests (binary name vs module path)
+- [ ] Fix failing Cargo manager integration tests (uninstall command)
+- [ ] Fix failing Gem manager integration tests (bundler installation)
+- [ ] Fix failing search command integration test (Go manager search)
