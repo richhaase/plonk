@@ -146,7 +146,12 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 	pkgManager, err := getPackageManager(manager)
 	if err != nil {
 		result.Status = "failed"
-		result.Error = errors.WrapWithItem(err, errors.ErrManagerUnavailable, errors.DomainPackages, "install", packageName, "failed to get package manager")
+		// Don't wrap the error if it's already a PlonkError with proper context
+		if _, ok := err.(*errors.PlonkError); ok {
+			result.Error = err
+		} else {
+			result.Error = errors.WrapWithItem(err, errors.ErrManagerUnavailable, errors.DomainPackages, "install", packageName, "failed to get package manager")
+		}
 		return result
 	}
 

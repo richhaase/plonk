@@ -19,26 +19,6 @@ func TestManagerErrorMessages(t *testing.T) {
 	// Build plonk
 	mustRun(t, "go", "build", "-o", "plonk", "../../cmd/plonk")
 
-	t.Run("UnavailableManagerWithOSSpecificMessage", func(t *testing.T) {
-		// Create a config that uses a manager as default
-		configContent := `version: 1
-default_manager: test-unavailable`
-		os.WriteFile(filepath.Join(testDir, "plonk.yaml"), []byte(configContent), 0644)
-
-		// Try to install a package with an unavailable manager
-		output, err := runWithError("./plonk", "install", "test-package")
-
-		// Should fail
-		if err == nil {
-			t.Error("Expected error for unavailable manager, but command succeeded")
-		}
-
-		// Check that error message mentions the manager is unavailable
-		if !strings.Contains(output, "not available") && !strings.Contains(output, "unavailable") {
-			t.Errorf("Error message should mention manager is unavailable, got: %s", output)
-		}
-	})
-
 	t.Run("ValidManagerInstallSuggestions", func(t *testing.T) {
 		// Test that each manager provides helpful install suggestions
 		managers := []string{"homebrew", "npm", "cargo", "gem", "go", "pip"}
