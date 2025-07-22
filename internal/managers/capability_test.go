@@ -18,12 +18,6 @@ func TestPackageManagerCapabilities(t *testing.T) {
 		searchErrorCode errors.ErrorCode
 	}{
 		{
-			name:            "apt supports search",
-			manager:         func() PackageManager { return NewAptManager() },
-			supportsSearch:  true,
-			searchErrorCode: "", // No error expected for apt search with valid query
-		},
-		{
 			name:            "cargo supports search",
 			manager:         func() PackageManager { return NewCargoManager() },
 			supportsSearch:  true,
@@ -98,7 +92,6 @@ func TestCapabilityDiscoveryPattern(t *testing.T) {
 		name    string
 		manager PackageManager
 	}{
-		{"apt", NewAptManager()},
 		{"cargo", NewCargoManager()},
 		{"gem", NewGemManager()},
 		{"homebrew", NewHomebrewManager()},
