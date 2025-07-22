@@ -6,6 +6,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -100,9 +101,23 @@ func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService,
 		Name: packageName,
 	}
 
+	// For Go packages, we need to check with the binary name
+	checkPackageName := packageName
+	if managerFlag == "go" {
+		checkPackageName = extractBinaryNameFromPath(packageName)
+	}
+
 	// Find package in lock file
-	managerName, found := findPackageInLockFile(lockService, packageName)
+	managerName, found := findPackageInLockFile(lockService, checkPackageName)
 	wasManaged := found
+
+	// If we found it and it's a go package, we might need to check with binary name
+	if !found && managerFlag == "" && strings.Contains(packageName, "/") {
+		// This might be a Go module path, try with binary name
+		checkPackageName = extractBinaryNameFromPath(packageName)
+		managerName, found = findPackageInLockFile(lockService, checkPackageName)
+		wasManaged = found
+	}
 
 	// If not in lock file, we need to detect which manager to use
 	if !found {
@@ -133,7 +148,7 @@ func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService,
 	if err != nil {
 		// If package wasn't installed but was in lock file, we should still remove it from lock
 		if wasManaged {
-			lockErr := lockService.RemovePackage(managerName, packageName)
+			lockErr := lockService.RemovePackage(managerName, checkPackageName)
 			if lockErr == nil {
 				result.Status = "removed"
 				result.Error = errors.WrapWithItem(err, errors.ErrPackageUninstall, errors.DomainPackages, "uninstall", packageName, "package not installed, removed from lock file")
@@ -147,7 +162,7 @@ func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService,
 
 	// Remove from lock file if it was managed
 	if wasManaged {
-		err = lockService.RemovePackage(managerName, packageName)
+		err = lockService.RemovePackage(managerName, checkPackageName)
 		if err != nil {
 			result.Status = "partially-removed"
 			result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainPackages, "remove-lock", packageName, "uninstalled but failed to remove from lock file").WithMetadata("manager", managerName)

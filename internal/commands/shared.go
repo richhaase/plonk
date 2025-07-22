@@ -1164,3 +1164,21 @@ func ParseSimpleFlags(cmd *cobra.Command) (*SimpleFlags, error) {
 
 	return flags, nil
 }
+
+// extractBinaryNameFromPath extracts the binary name from a Go module path
+func extractBinaryNameFromPath(modulePath string) string {
+	// Remove version specification if present
+	modulePath = strings.Split(modulePath, "@")[0]
+
+	// Extract the last component of the path
+	parts := strings.Split(modulePath, "/")
+	binaryName := parts[len(parts)-1]
+
+	// Handle special case of .../cmd/toolname pattern
+	if len(parts) >= 2 && parts[len(parts)-2] == "cmd" {
+		return binaryName
+	}
+
+	// For simple cases, the binary name is usually the last component
+	return binaryName
+}

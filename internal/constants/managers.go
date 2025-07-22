@@ -5,7 +5,6 @@ package constants
 
 // SupportedManagers contains all package managers supported by plonk
 var SupportedManagers = []string{
-	"apt",
 	"cargo",
 	"gem",
 	"go",

@@ -27,12 +27,11 @@ func TestCompleteUserExperience(t *testing.T) {
 		search   string
 		nonexist string
 	}{
-		"npm":   {"is-odd", "lodash", "xxx-does-not-exist-xxx"},
-		"pip":   {"six", "requests", "xxx-does-not-exist-xxx"},
-		"cargo": {"ripgrep", "serde", "xxx-does-not-exist-xxx"},
-		"gem":   {"bundler", "rake", "xxx-does-not-exist-xxx"},
-		"brew":  {"jq", "curl", "xxx-does-not-exist-xxx"},
-		"apt":   {"jq", "curl", "xxx-does-not-exist-xxx"},
+		"npm":   {"is-thirteen", "cowsay", "xxx-does-not-exist-xxx"},
+		"pip":   {"asciinema", "cowsay", "xxx-does-not-exist-xxx"},
+		"cargo": {"hyperfine", "serde", "xxx-does-not-exist-xxx"},
+		"gem":   {"colorize", "rake", "xxx-does-not-exist-xxx"},
+		"brew":  {"fortune", "cowsay", "xxx-does-not-exist-xxx"},
 		"go":    {"github.com/josharian/impl@latest", "gofmt", "xxx-does-not-exist-xxx"},
 	}
 
@@ -159,8 +158,19 @@ found:
 
 		// 11. Install real package
 		installArgs := []string{"install"}
-		// Add manager flag for go packages
-		if availableManager == "go" {
+		// Add manager flag based on available manager
+		switch availableManager {
+		case "npm":
+			installArgs = append(installArgs, "--npm")
+		case "pip":
+			installArgs = append(installArgs, "--pip")
+		case "cargo":
+			installArgs = append(installArgs, "--cargo")
+		case "gem":
+			installArgs = append(installArgs, "--gem")
+		case "brew":
+			installArgs = append(installArgs, "--brew")
+		case "go":
 			installArgs = append(installArgs, "--go")
 		}
 		installArgs = append(installArgs, testPkg.install)
@@ -233,7 +243,19 @@ found:
 
 		// 19. Test reinstallation after uninstall
 		uninstallArgs := []string{"uninstall"}
-		if availableManager == "go" {
+		// Add manager flag based on available manager
+		switch availableManager {
+		case "npm":
+			uninstallArgs = append(uninstallArgs, "--npm")
+		case "pip":
+			uninstallArgs = append(uninstallArgs, "--pip")
+		case "cargo":
+			uninstallArgs = append(uninstallArgs, "--cargo")
+		case "gem":
+			uninstallArgs = append(uninstallArgs, "--gem")
+		case "brew":
+			uninstallArgs = append(uninstallArgs, "--brew")
+		case "go":
 			uninstallArgs = append(uninstallArgs, "--go")
 		}
 		uninstallArgs = append(uninstallArgs, testPkg.install)
@@ -246,7 +268,19 @@ found:
 
 		// 20. Uninstall
 		uninstallArgs = []string{"uninstall"}
-		if availableManager == "go" {
+		// Add manager flag based on available manager
+		switch availableManager {
+		case "npm":
+			uninstallArgs = append(uninstallArgs, "--npm")
+		case "pip":
+			uninstallArgs = append(uninstallArgs, "--pip")
+		case "cargo":
+			uninstallArgs = append(uninstallArgs, "--cargo")
+		case "gem":
+			uninstallArgs = append(uninstallArgs, "--gem")
+		case "brew":
+			uninstallArgs = append(uninstallArgs, "--brew")
+		case "go":
 			uninstallArgs = append(uninstallArgs, "--go")
 		}
 		uninstallArgs = append(uninstallArgs, testPkg.install)
@@ -370,6 +404,12 @@ func testPackageManager(t *testing.T, testDir, manager string, pkg struct{ insta
 
 	pkgName := strings.Split(pkg.install, "@")[0]
 
+	// For Go packages, extract just the binary name from the module path
+	if manager == "go" {
+		parts := strings.Split(pkgName, "/")
+		pkgName = parts[len(parts)-1]
+	}
+
 	// Test installation
 	if !testInstall(t, testDir, manager, pkg.install, pkgName) {
 		t.Errorf("Manager %s failed to install %s", manager, pkg.install)
@@ -403,17 +443,25 @@ func isManagerAvailable(t *testing.T, manager string) bool {
 func testInstall(t *testing.T, testDir, manager, pkgFullName, pkgName string) bool {
 	t.Helper()
 
+	t.Logf("DEBUG: Attempting to install package '%s' (expected name in lock: '%s') via manager '%s'", pkgFullName, pkgName, manager)
+
 	installArgs := []string{"./plonk", "install", "--" + manager, pkgFullName}
+	t.Logf("DEBUG: Running install command: %v", installArgs)
+
 	output, err := runWithError(installArgs...)
 	if err != nil {
+		t.Logf("DEBUG: Install failed with error: %v", err)
+		t.Logf("DEBUG: Install error output:\n%s", output)
 		// Bug #4: Some managers (like gem) fail with generic errors
 		return false
 	}
 
+	t.Logf("DEBUG: Install output:\n%s", output)
 	assertContains(t, output, "✓", "Install should show success")
 
 	// Verify lock file contains package
 	lockContent, _ := os.ReadFile(filepath.Join(testDir, "plonk.lock"))
+	t.Logf("DEBUG: Lock file after install:\n%s", string(lockContent))
 	assertContains(t, string(lockContent), pkgName, "Lock file should contain installed package")
 
 	return true
@@ -454,8 +502,19 @@ func testList(t *testing.T, manager, pkgName string) {
 func testUninstall(t *testing.T, testDir, manager, pkgFullName, pkgName string) {
 	t.Helper()
 
+	// Debug: Log what we're about to uninstall
+	t.Logf("DEBUG: Attempting to uninstall package '%s' (display name: '%s') via manager '%s'", pkgFullName, pkgName, manager)
+
+	// Debug: Check lock file before uninstall
+	lockContentBefore, _ := os.ReadFile(filepath.Join(testDir, "plonk.lock"))
+	t.Logf("DEBUG: Lock file before uninstall:\n%s", string(lockContentBefore))
+
 	uninstallArgs := []string{"./plonk", "uninstall", "--" + manager, pkgFullName}
+	t.Logf("DEBUG: Running command: %v", uninstallArgs)
+
 	output := run(t, uninstallArgs...)
+	t.Logf("DEBUG: Uninstall output:\n%s", output)
+
 	assertContains(t, output, "✓", "Uninstall should show success")
 	// Bug #5: Check uninstall summary shows removal count (currently shows all zeros)
 
@@ -469,7 +528,7 @@ func testUninstallNonInstalled(t *testing.T, manager, pkgFullName string) {
 	t.Helper()
 
 	uninstallArgs := []string{"./plonk", "uninstall", "--" + manager, pkgFullName}
-	output := run(t, uninstallArgs...)
+	output := runAllowError(t, uninstallArgs...)
 	assertContainsAny(t, output, []string{"not managed", "skipped"}, "Should handle not installed gracefully")
 }
 

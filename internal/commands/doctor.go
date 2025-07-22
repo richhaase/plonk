@@ -339,6 +339,20 @@ func checkPackageManagerAvailability(ctx context.Context) HealthCheck {
 		Message:  "Package managers are available",
 	}
 
+	// Get OS support information
+	osSupport := getOSPackageManagerSupport()
+
+	// Get current configuration to check default manager
+	configDir := config.GetDefaultConfigDirectory()
+	cfg := config.LoadConfigWithDefaults(configDir)
+	defaultManager := ""
+	if cfg != nil && cfg.DefaultManager != nil {
+		defaultManager = *cfg.DefaultManager
+	}
+	if defaultManager == "" {
+		defaultManager = constants.DefaultManager
+	}
+
 	sharedCtx := plonkruntime.GetSharedContext()
 	registry := sharedCtx.ManagerRegistry()
 	managerMap := make(map[string]managers.PackageManager)
@@ -349,7 +363,15 @@ func checkPackageManagerAvailability(ctx context.Context) HealthCheck {
 	}
 
 	availableCount := 0
+	defaultManagerAvailable := false
+
 	for name, manager := range managerMap {
+		// Check OS support first
+		if supported, exists := osSupport[name]; exists && !supported {
+			check.Details = append(check.Details, fmt.Sprintf("%s: ⚪ Not supported on %s", name, runtime.GOOS))
+			continue
+		}
+
 		available, err := manager.IsAvailable(ctx)
 		if err != nil {
 			check.Issues = append(check.Issues, fmt.Sprintf("%s: %v", name, err))
@@ -357,22 +379,41 @@ func checkPackageManagerAvailability(ctx context.Context) HealthCheck {
 		} else if available {
 			availableCount++
 			check.Details = append(check.Details, fmt.Sprintf("%s: ✅ Available", name))
+			if name == defaultManager {
+				defaultManagerAvailable = true
+			}
 		} else {
-			check.Details = append(check.Details, fmt.Sprintf("%s: ❌ Not available", name))
+			// Only a problem if it's the default manager
+			if name == defaultManager {
+				check.Status = "fail"
+				check.Issues = append(check.Issues,
+					fmt.Sprintf("Default package manager '%s' is not installed", name))
+				check.Suggestions = append(check.Suggestions,
+					getManagerInstallSuggestion(name))
+				defaultManagerAvailable = false
+			} else {
+				check.Details = append(check.Details,
+					fmt.Sprintf("%s: ⬜ Not installed (optional)", name))
+			}
 		}
 	}
 
-	if availableCount == 0 {
+	// Update message based on findings
+	if !defaultManagerAvailable && defaultManager != "" {
 		check.Status = "fail"
-		check.Issues = append(check.Issues, "No package managers are available")
-		check.Suggestions = append(check.Suggestions, "Install Homebrew or NPM to manage packages")
+		check.Message = "Default package manager is not available"
+	} else if availableCount == 0 {
+		check.Status = "fail"
 		check.Message = "No package managers available"
-	} else if availableCount < len(managerMap) {
-		if check.Status == "pass" {
-			check.Status = "warn"
+		check.Issues = append(check.Issues, "No package managers are available")
+		check.Suggestions = append(check.Suggestions,
+			"Install at least one package manager or change default with 'plonk config edit'")
+	} else {
+		// Reset to pass if we have at least one manager and default is available
+		if check.Status != "warn" {
+			check.Status = "pass"
 		}
-		check.Suggestions = append(check.Suggestions, "Consider installing additional package managers for better compatibility")
-		check.Message = "Some package managers are not available"
+		check.Message = "Package managers are available"
 	}
 
 	return check
