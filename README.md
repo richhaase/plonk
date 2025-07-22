@@ -17,7 +17,7 @@ Plonk manages your development environment by tracking packages and dotfiles aut
 **Key features:**
 - **Zero-config**: Works immediately with sensible defaults - no setup required
 - **Intelligent detection**: Automatically recognizes packages vs dotfiles
-- **Unified management**: Packages (Homebrew, NPM, Cargo) and dotfiles in one tool
+- **Unified management**: Packages (Homebrew, NPM, Cargo, Pip, Gem, APT, Go Install) and dotfiles in one tool
 - **State reconciliation**: Compares desired vs actual state and applies changes
 - **Auto-discovery**: Finds dotfiles automatically with configurable ignore patterns
 - **Shell completion**: Tab completion for commands, package names, and file paths
@@ -141,8 +141,12 @@ plonk status
 plonk install git neovim ripgrep htop
 
 # Install packages with specific manager
-plonk install typescript --npm
-plonk install ripgrep --cargo
+plonk install typescript --npm       # NPM packages
+plonk install ripgrep --cargo        # Rust/Cargo packages
+plonk install black --pip            # Python/Pip packages
+plonk install bundler --gem          # Ruby/Gem packages
+plonk install htop --apt             # APT packages (Linux)
+plonk install golangci-lint --go     # Go packages
 
 # Add dotfiles to management
 plonk add ~/.vimrc ~/.zshrc ~/.gitconfig
@@ -195,6 +199,10 @@ plonk sync                                        # Apply all changes
 # Package management
 plonk install git neovim ripgrep                 # Install packages and add to management
 plonk install typescript --npm                   # Install with specific manager
+plonk install black --pip                        # Python packages
+plonk install bundler --gem                      # Ruby packages
+plonk install htop --apt                         # APT packages (Linux)
+plonk install golangci-lint --go                 # Go packages
 plonk uninstall htop                             # Uninstall package and remove from management
 
 # Dotfile management
@@ -239,7 +247,7 @@ plonk status --output table  # default
 - **Go 1.24.4+** (for building)
 - **Just** (command runner)
 - **Git** (version management)
-- **Package managers**: Homebrew (macOS), NPM (optional)
+- **Package managers**: Homebrew (macOS), NPM, Cargo (Rust), Pip (Python), Gem (Ruby), APT (Linux), Go Install
 - **Platform support**: macOS, Linux, Windows
 - **Architecture support**: AMD64, ARM64
 

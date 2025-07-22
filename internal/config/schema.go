@@ -6,6 +6,8 @@ package config
 import (
 	"encoding/json"
 	"strings"
+
+	"github.com/richhaase/plonk/internal/constants"
 )
 
 // SchemaProperty represents a JSON schema property
@@ -43,7 +45,7 @@ func GenerateConfigSchema() *Schema {
 	schema.Properties["default_manager"] = &SchemaProperty{
 		Type:        "string",
 		Description: "Default package manager to use when none is specified",
-		Examples:    []interface{}{"homebrew", "npm", "cargo"},
+		Examples:    stringSliceToInterface(constants.SupportedManagers),
 	}
 
 	schema.Properties["operation_timeout"] = &SchemaProperty{
@@ -97,9 +99,7 @@ func (s *Schema) ToJSON() ([]byte, error) {
 // GetConfigFieldDocumentation returns human-readable documentation for config fields
 func GetConfigFieldDocumentation() map[string]string {
 	return map[string]string{
-		"default_manager": `The default package manager to use when installing packages without specifying a manager.
-Supported values: "homebrew", "npm", "cargo"
-Example: default_manager: "homebrew"`,
+		"default_manager": `The default package manager to use when installing packages without specifying a manager.`,
 
 		"operation_timeout": `Timeout in seconds for general operations.
 Set to 0 for unlimited timeout, or 1-3600 seconds.
@@ -141,9 +141,8 @@ func ValidateAgainstSchema(cfg *Config) []string {
 
 	// Validate default_manager
 	if cfg.DefaultManager != nil {
-		validManagers := []string{"homebrew", "npm", "cargo"}
-		if !contains(validManagers, *cfg.DefaultManager) {
-			errors = append(errors, "default_manager must be one of: "+strings.Join(validManagers, ", "))
+		if !contains(constants.SupportedManagers, *cfg.DefaultManager) {
+			errors = append(errors, "default_manager must be one of: "+strings.Join(constants.SupportedManagers, ", "))
 		}
 	}
 
@@ -169,4 +168,13 @@ func contains(slice []string, item string) bool {
 		}
 	}
 	return false
+}
+
+// stringSliceToInterface converts []string to []interface{}
+func stringSliceToInterface(slice []string) []interface{} {
+	result := make([]interface{}, len(slice))
+	for i, s := range slice {
+		result[i] = s
+	}
+	return result
 }

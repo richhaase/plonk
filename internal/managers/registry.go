@@ -6,6 +6,7 @@ package managers
 import (
 	"context"
 
+	"github.com/richhaase/plonk/internal/constants"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/state"
 )
@@ -25,6 +26,9 @@ func NewManagerRegistry() *ManagerRegistry {
 			"homebrew": func() PackageManager { return NewHomebrewManager() },
 			"npm":      func() PackageManager { return NewNpmManager() },
 			"cargo":    func() PackageManager { return NewCargoManager() },
+			"pip":      func() PackageManager { return NewPipManager() },
+			"gem":      func() PackageManager { return NewGemManager() },
+			"go":       func() PackageManager { return NewGoInstallManager() },
 		},
 	}
 }
@@ -34,7 +38,7 @@ func (r *ManagerRegistry) GetManager(name string) (PackageManager, error) {
 	factory, exists := r.managers[name]
 	if !exists {
 		return nil, errors.NewError(errors.ErrInvalidInput, errors.DomainPackages, "get-manager",
-			"unsupported package manager: "+name)
+			"unsupported package manager: "+name).WithSuggestionMessage("Check available managers with 'plonk doctor' or change default with 'plonk config edit'")
 	}
 	return factory(), nil
 }
@@ -53,10 +57,9 @@ func (r *ManagerRegistry) GetAvailableManagers(ctx context.Context) []string {
 
 // GetAllManagerNames returns all supported manager names regardless of availability
 func (r *ManagerRegistry) GetAllManagerNames() []string {
-	names := make([]string, 0, len(r.managers))
-	for name := range r.managers {
-		names = append(names, name)
-	}
+	// Return a copy to prevent external modification
+	names := make([]string, len(constants.SupportedManagers))
+	copy(names, constants.SupportedManagers)
 	return names
 }
 

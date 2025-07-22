@@ -816,9 +816,150 @@ func (d DotfileBatchAddOutput) StructuredData() any {
 // Shared functions for pkg and dot list operations
 // Note: runPkgList implementation deferred pending requirements clarification
 func runPkgList(cmd *cobra.Command, args []string) error {
-	// This would need to be implemented based on the original pkg_list.go logic
-	// For now, return an error indicating it's not implemented
-	return fmt.Errorf("runPkgList function needs to be implemented")
+	// Parse output format
+	outputFormat, _ := cmd.Flags().GetString("output")
+	format, err := ParseOutputFormat(outputFormat)
+	if err != nil {
+		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "packages", "output-format", "invalid output format")
+	}
+
+	// Get directories from shared context
+	sharedCtx := runtime.GetSharedContext()
+	configDir := sharedCtx.ConfigDir()
+
+	// Get reconciler from shared context
+	reconciler := sharedCtx.Reconciler()
+
+	// Register package provider
+	ctx := context.Background()
+	packageProvider, err := createPackageProvider(ctx, configDir)
+	if err != nil {
+		return err
+	}
+	reconciler.RegisterProvider("package", packageProvider)
+
+	// Get specific manager if flag is set
+	flags, err := ParseSimpleFlags(cmd)
+	if err != nil {
+		return err
+	}
+
+	// Reconcile packages
+	domainResult, err := reconciler.ReconcileProvider(ctx, "package")
+	if err != nil {
+		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainState, "reconcile", "failed to reconcile package state")
+	}
+
+	// If a specific manager is requested, filter results
+	if flags.Manager != "" {
+		filteredManaged := make([]state.Item, 0)
+		filteredMissing := make([]state.Item, 0)
+		filteredUntracked := make([]state.Item, 0)
+
+		for _, item := range domainResult.Managed {
+			if item.Manager == flags.Manager {
+				filteredManaged = append(filteredManaged, item)
+			}
+		}
+		for _, item := range domainResult.Missing {
+			if item.Manager == flags.Manager {
+				filteredMissing = append(filteredMissing, item)
+			}
+		}
+		for _, item := range domainResult.Untracked {
+			if item.Manager == flags.Manager {
+				filteredUntracked = append(filteredUntracked, item)
+			}
+		}
+
+		domainResult.Managed = filteredManaged
+		domainResult.Missing = filteredMissing
+		domainResult.Untracked = filteredUntracked
+	}
+
+	// Prepare manager groups
+	managerGroups := make(map[string]*EnhancedManagerOutput)
+
+	// Add managed packages
+	for _, item := range domainResult.Managed {
+		if _, exists := managerGroups[item.Manager]; !exists {
+			managerGroups[item.Manager] = &EnhancedManagerOutput{
+				Name:           item.Manager,
+				ManagedCount:   0,
+				MissingCount:   0,
+				UntrackedCount: 0,
+				Packages:       []EnhancedPackageOutput{},
+			}
+		}
+		managerGroups[item.Manager].ManagedCount++
+		managerGroups[item.Manager].Packages = append(managerGroups[item.Manager].Packages, EnhancedPackageOutput{
+			Name:    item.Name,
+			State:   "managed",
+			Manager: item.Manager,
+		})
+	}
+
+	// Add missing packages
+	for _, item := range domainResult.Missing {
+		if _, exists := managerGroups[item.Manager]; !exists {
+			managerGroups[item.Manager] = &EnhancedManagerOutput{
+				Name:           item.Manager,
+				ManagedCount:   0,
+				MissingCount:   0,
+				UntrackedCount: 0,
+				Packages:       []EnhancedPackageOutput{},
+			}
+		}
+		managerGroups[item.Manager].MissingCount++
+		managerGroups[item.Manager].Packages = append(managerGroups[item.Manager].Packages, EnhancedPackageOutput{
+			Name:    item.Name,
+			State:   "missing",
+			Manager: item.Manager,
+		})
+	}
+
+	// Add untracked packages if verbose
+	if flags.Verbose {
+		for _, item := range domainResult.Untracked {
+			if _, exists := managerGroups[item.Manager]; !exists {
+				managerGroups[item.Manager] = &EnhancedManagerOutput{
+					Name:           item.Manager,
+					ManagedCount:   0,
+					MissingCount:   0,
+					UntrackedCount: 0,
+					Packages:       []EnhancedPackageOutput{},
+				}
+			}
+			managerGroups[item.Manager].UntrackedCount++
+			managerGroups[item.Manager].Packages = append(managerGroups[item.Manager].Packages, EnhancedPackageOutput{
+				Name:    item.Name,
+				State:   "untracked",
+				Manager: item.Manager,
+			})
+		}
+	}
+
+	// Convert to slice
+	managers := make([]EnhancedManagerOutput, 0, len(managerGroups))
+	items := []EnhancedPackageOutput{}
+
+	for _, mgr := range managerGroups {
+		managers = append(managers, *mgr)
+		items = append(items, mgr.Packages...)
+	}
+
+	// Create output structure
+	output := PackageListOutput{
+		ManagedCount:   len(domainResult.Managed),
+		MissingCount:   len(domainResult.Missing),
+		UntrackedCount: len(domainResult.Untracked),
+		TotalCount:     len(domainResult.Managed) + len(domainResult.Missing) + len(domainResult.Untracked),
+		Managers:       managers,
+		Verbose:        flags.Verbose,
+		Items:          items,
+	}
+
+	return RenderOutput(output, format)
 }
 
 func runDotList(cmd *cobra.Command, args []string) error {
@@ -1007,6 +1148,12 @@ func ParseSimpleFlags(cmd *cobra.Command) (*SimpleFlags, error) {
 		flags.Manager = "npm"
 	} else if cargo, _ := cmd.Flags().GetBool("cargo"); cargo {
 		flags.Manager = "cargo"
+	} else if pip, _ := cmd.Flags().GetBool("pip"); pip {
+		flags.Manager = "pip"
+	} else if gem, _ := cmd.Flags().GetBool("gem"); gem {
+		flags.Manager = "gem"
+	} else if goFlag, _ := cmd.Flags().GetBool("go"); goFlag {
+		flags.Manager = "go"
 	}
 
 	// Parse common flags
@@ -1016,4 +1163,22 @@ func ParseSimpleFlags(cmd *cobra.Command) (*SimpleFlags, error) {
 	flags.Output, _ = cmd.Flags().GetString("output")
 
 	return flags, nil
+}
+
+// extractBinaryNameFromPath extracts the binary name from a Go module path
+func extractBinaryNameFromPath(modulePath string) string {
+	// Remove version specification if present
+	modulePath = strings.Split(modulePath, "@")[0]
+
+	// Extract the last component of the path
+	parts := strings.Split(modulePath, "/")
+	binaryName := parts[len(parts)-1]
+
+	// Handle special case of .../cmd/toolname pattern
+	if len(parts) >= 2 && parts[len(parts)-2] == "cmd" {
+		return binaryName
+	}
+
+	// For simple cases, the binary name is usually the last component
+	return binaryName
 }

@@ -8,15 +8,13 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/richhaase/plonk/internal/constants"
 	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/errors"
 	"gopkg.in/yaml.v3"
 )
 
-const (
-	lockFileName   = "plonk.lock"
-	currentVersion = 1
-)
+// Use constants from the centralized constants package
 
 // YAMLLockService implements LockService using YAML storage
 type YAMLLockService struct {
@@ -26,7 +24,7 @@ type YAMLLockService struct {
 // NewYAMLLockService creates a new YAML-based lock service
 func NewYAMLLockService(configDir string) *YAMLLockService {
 	return &YAMLLockService{
-		lockPath: filepath.Join(configDir, lockFileName),
+		lockPath: filepath.Join(configDir, constants.LockFileName),
 	}
 }
 
@@ -35,7 +33,7 @@ func (s *YAMLLockService) Load() (*LockFile, error) {
 	// If lock file doesn't exist, return empty lock file
 	if _, err := os.Stat(s.lockPath); os.IsNotExist(err) {
 		return &LockFile{
-			Version:  currentVersion,
+			Version:  constants.LockFileVersion,
 			Packages: make(map[string][]PackageEntry),
 		}, nil
 	}
@@ -70,7 +68,7 @@ func (s *YAMLLockService) Save(lock *LockFile) error {
 
 	// Ensure version is set
 	if lock.Version == 0 {
-		lock.Version = currentVersion
+		lock.Version = constants.LockFileVersion
 	}
 
 	// Marshal to YAML
@@ -197,6 +195,35 @@ func (s *YAMLLockService) HasPackage(manager, name string) bool {
 	}
 
 	return false
+}
+
+// PackageLocation represents where a package is installed
+type PackageLocation struct {
+	Manager string
+	Entry   PackageEntry
+}
+
+// FindPackage returns all locations where a package is installed
+func (s *YAMLLockService) FindPackage(name string) []PackageLocation {
+	lock, err := s.Load()
+	if err != nil {
+		return nil
+	}
+
+	var locations []PackageLocation
+
+	for manager, packages := range lock.Packages {
+		for _, pkg := range packages {
+			if pkg.Name == name {
+				locations = append(locations, PackageLocation{
+					Manager: manager,
+					Entry:   pkg,
+				})
+			}
+		}
+	}
+
+	return locations
 }
 
 // GetLockPath returns the path to the lock file

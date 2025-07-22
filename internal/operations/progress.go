@@ -6,6 +6,8 @@ package operations
 import (
 	"fmt"
 	"strings"
+
+	"github.com/richhaase/plonk/internal/errors"
 )
 
 // DefaultProgressReporter provides a standard implementation of progress reporting
@@ -66,9 +68,9 @@ func (r *DefaultProgressReporter) ShowItemProgress(result OperationResult) {
 		fmt.Printf("✓ %s - unlinked\n", result.Name)
 	case "skipped":
 		if r.Operation == "remove" || r.Operation == "uninstall" {
-			fmt.Printf("✗ %s - not managed\n", result.Name)
+			fmt.Printf("⚠ %s - not managed\n", result.Name)
 		} else {
-			fmt.Printf("✗ %s - already managed\n", result.Name)
+			fmt.Printf("ℹ %s - already managed\n", result.Name)
 		}
 	case "failed":
 		fmt.Printf("✗ %s - %s\n", result.Name, FormatErrorWithSuggestion(result.Error, result.Name, r.ItemType))
@@ -98,7 +100,7 @@ func (r *DefaultProgressReporter) ShowBatchSummary(results []OperationResult) {
 	// Generate operation-appropriate summary message
 	var summaryMsg string
 	switch r.Operation {
-	case "remove":
+	case "remove", "uninstall", "rm":
 		if r.ItemType == "dotfile" && summary.FilesProcessed > 0 {
 			summaryMsg = fmt.Sprintf("\nSummary: %d removed, %d unlinked, %d skipped, %d failed (%d total files)\n",
 				summary.Removed, summary.Unlinked, summary.Skipped, summary.Failed, summary.FilesProcessed)
@@ -106,7 +108,7 @@ func (r *DefaultProgressReporter) ShowBatchSummary(results []OperationResult) {
 			summaryMsg = fmt.Sprintf("\nSummary: %d removed, %d unlinked, %d skipped, %d failed\n",
 				summary.Removed, summary.Unlinked, summary.Skipped, summary.Failed)
 		}
-	default: // "add" or other operations
+	default: // "add", "install" or other operations
 		if r.ItemType == "dotfile" && summary.FilesProcessed > 0 {
 			summaryMsg = fmt.Sprintf("\nSummary: %d added, %d updated, %d skipped, %d failed (%d total files)\n",
 				summary.Added, summary.Updated, summary.Skipped, summary.Failed, summary.FilesProcessed)
@@ -136,6 +138,13 @@ func (r *DefaultProgressReporter) ShowBatchSummary(results []OperationResult) {
 func FormatErrorWithSuggestion(err error, itemName string, itemType string) string {
 	if err == nil {
 		return ""
+	}
+
+	// Check if it's a PlonkError with suggestions
+	if plonkErr, ok := err.(*errors.PlonkError); ok {
+		msg := plonkErr.UserMessage()
+		// UserMessage already includes suggestions
+		return msg
 	}
 
 	msg := err.Error()

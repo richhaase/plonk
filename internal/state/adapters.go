@@ -143,3 +143,8 @@ func (m *ManagerAdapter) Info(ctx context.Context, name string) (*interfaces.Pac
 func (m *ManagerAdapter) GetInstalledVersion(ctx context.Context, name string) (string, error) {
 	return m.manager.GetInstalledVersion(ctx, name)
 }
+
+// SupportsSearch implements PackageManagerCapabilities
+func (m *ManagerAdapter) SupportsSearch() bool {
+	return m.manager.SupportsSearch()
+}

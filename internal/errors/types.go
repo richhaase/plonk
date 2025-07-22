@@ -41,9 +41,10 @@ const (
 	ErrItemRetrieval    ErrorCode = "ITEM_RETRIEVAL"
 
 	// General errors
-	ErrInvalidInput ErrorCode = "INVALID_INPUT"
-	ErrInternal     ErrorCode = "INTERNAL"
-	ErrUnsupported  ErrorCode = "UNSUPPORTED"
+	ErrInvalidInput          ErrorCode = "INVALID_INPUT"
+	ErrInternal              ErrorCode = "INTERNAL"
+	ErrUnsupported           ErrorCode = "UNSUPPORTED"
+	ErrOperationNotSupported ErrorCode = "OPERATION_NOT_SUPPORTED"
 )
 
 // Domain represents the subsystem where the error occurred
@@ -145,11 +146,21 @@ func (e *PlonkError) UserMessage() string {
 	case ErrPackageNotFound:
 		message = fmt.Sprintf("Package not found: %s", e.Item)
 	case ErrPackageInstall:
-		message = fmt.Sprintf("Failed to install package: %s", e.Item)
+		if e.Message != "" {
+			message = e.Message
+		} else {
+			message = fmt.Sprintf("Failed to install package: %s", e.Item)
+		}
 	case ErrManagerUnavailable:
 		message = fmt.Sprintf("Package manager '%s' is not available", e.Item)
 	case ErrProviderNotFound:
 		message = fmt.Sprintf("No provider found for domain: %s", e.Item)
+	case ErrOperationNotSupported:
+		if e.Item != "" {
+			message = fmt.Sprintf("Operation '%s' is not supported by %s", e.Operation, e.Item)
+		} else {
+			message = fmt.Sprintf("Operation '%s' is not supported", e.Operation)
+		}
 	default:
 		message = e.Message
 	}

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/constants"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
@@ -32,6 +33,9 @@ Examples:
   plonk install git --brew                # Install git specifically with Homebrew
   plonk install lodash --npm              # Install lodash with npm global packages
   plonk install ripgrep --cargo           # Install ripgrep with cargo packages
+  plonk install black flake8 --pip        # Install Python tools with pip
+  plonk install bundler rubocop --gem     # Install Ruby tools with gem
+  plonk install gopls --go                # Install Go tools with go install
   plonk install --dry-run htop neovim     # Preview what would be installed`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: runInstall,
@@ -44,7 +48,10 @@ func init() {
 	installCmd.Flags().Bool("brew", false, "Use Homebrew package manager")
 	installCmd.Flags().Bool("npm", false, "Use NPM package manager")
 	installCmd.Flags().Bool("cargo", false, "Use Cargo package manager")
-	installCmd.MarkFlagsMutuallyExclusive("brew", "npm", "cargo")
+	installCmd.Flags().Bool("pip", false, "Use pip package manager")
+	installCmd.Flags().Bool("gem", false, "Use gem package manager")
+	installCmd.Flags().Bool("go", false, "Use go install package manager")
+	installCmd.MarkFlagsMutuallyExclusive("brew", "npm", "cargo", "pip", "gem", "go")
 
 	// Common flags
 	installCmd.Flags().BoolP("dry-run", "n", false, "Show what would be installed without making changes")
@@ -83,7 +90,7 @@ func installPackages(cmd *cobra.Command, packageNames []string, flags *SimpleFla
 		if cfg.DefaultManager != nil && *cfg.DefaultManager != "" {
 			manager = *cfg.DefaultManager
 		} else {
-			manager = "homebrew" // fallback default
+			manager = constants.DefaultManager // fallback default
 		}
 	}
 
@@ -99,9 +106,9 @@ func installPackages(cmd *cobra.Command, packageNames []string, flags *SimpleFla
 	options := operations.BatchProcessorOptions{
 		ItemType:               "package",
 		Operation:              "install",
-		ShowIndividualProgress: flags.Verbose || flags.DryRun, // Show progress in verbose or dry-run mode
-		Timeout:                5 * time.Minute,               // Install timeout
-		ContinueOnError:        nil,                           // Use default (true) - continue on individual failures
+		ShowIndividualProgress: true,            // Always show progress for better error visibility
+		Timeout:                5 * time.Minute, // Install timeout
+		ContinueOnError:        nil,             // Use default (true) - continue on individual failures
 	}
 
 	// Use standard batch workflow
@@ -115,8 +122,14 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 		Manager: manager,
 	}
 
+	// For Go packages, we need to check with the binary name
+	checkPackageName := packageName
+	if manager == "go" {
+		checkPackageName = extractBinaryNameFromPath(packageName)
+	}
+
 	// Check if already managed
-	if lockService.HasPackage(manager, packageName) {
+	if lockService.HasPackage(manager, checkPackageName) {
 		if !force {
 			result.Status = "skipped"
 			result.AlreadyManaged = true
@@ -133,7 +146,12 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 	pkgManager, err := getPackageManager(manager)
 	if err != nil {
 		result.Status = "failed"
-		result.Error = errors.WrapWithItem(err, errors.ErrManagerUnavailable, errors.DomainPackages, "install", packageName, "failed to get package manager")
+		// Don't wrap the error if it's already a PlonkError with proper context
+		if _, ok := err.(*errors.PlonkError); ok {
+			result.Error = err
+		} else {
+			result.Error = errors.WrapWithItem(err, errors.ErrManagerUnavailable, errors.DomainPackages, "install", packageName, "failed to get package manager")
+		}
 		return result
 	}
 
@@ -158,18 +176,30 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 	err = pkgManager.Install(ctx, packageName)
 	if err != nil {
 		result.Status = "failed"
-		result.Error = errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "install", packageName, "failed to install package").WithMetadata("manager", manager)
+		// Don't wrap PlonkErrors as they already have proper context and suggestions
+		if _, ok := err.(*errors.PlonkError); ok {
+			result.Error = err
+		} else {
+			result.Error = errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "install", packageName, "failed to install package").WithMetadata("manager", manager)
+		}
 		return result
 	}
 
+	// For Go packages, we need to determine the actual binary name
+	lockPackageName := packageName
+	if manager == "go" {
+		// Extract binary name from module path
+		lockPackageName = extractBinaryNameFromPath(packageName)
+	}
+
 	// Get package version after installation
-	version, err := pkgManager.GetInstalledVersion(ctx, packageName)
+	version, err := pkgManager.GetInstalledVersion(ctx, lockPackageName)
 	if err == nil && version != "" {
 		result.Version = version
 	}
 
 	// Add to lock file
-	err = lockService.AddPackage(manager, packageName, version)
+	err = lockService.AddPackage(manager, lockPackageName, version)
 	if err != nil {
 		result.Status = "failed"
 		result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainPackages, "install", packageName, "failed to add package to lock file").WithMetadata("manager", manager).WithMetadata("version", version)

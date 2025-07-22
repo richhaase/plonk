@@ -131,7 +131,7 @@ plonk ls [--packages] [--dotfiles] [--manager manager] [--verbose] [--output for
 **Filtering Options:**
 - `--packages` - Show packages only
 - `--dotfiles` - Show dotfiles only
-- `--manager` - Filter by package manager (homebrew, npm, cargo)
+- `--manager` - Filter by package manager (homebrew, npm, cargo, pip)
 - `--verbose` - Show all items including untracked
 
 **Behavior:**
@@ -152,6 +152,8 @@ Packages (25):
   ✓      neovim                         homebrew   0.9.5
   ⚠      htop                           homebrew   -
   ✓      typescript                     npm        5.3.3
+  ✓      black                          pip        25.1.0
+  ✓      flake8                         pip        7.3.0
 
 Dotfiles (18):
   Status Target                         Source
@@ -169,6 +171,9 @@ Package Summary: 30 total | ✓ 25 managed | ⚠ 3 missing | ? 2 untracked
 # Specific manager
 $ plonk ls --manager homebrew
 Homebrew packages: 20 total | ✓ 18 managed | ⚠ 2 missing
+
+$ plonk ls --manager pip
+pip packages: 5 total | ✓ 5 managed | ⚠ 0 missing
 ```
 
 ## Workflow Commands
@@ -212,13 +217,17 @@ Install packages on your system and add them to plonk management.
 
 **Usage:**
 ```bash
-plonk install <packages...> [--brew] [--npm] [--cargo] [--dry-run] [--force]
+plonk install <packages...> [--brew] [--npm] [--cargo] [--pip] [--gem] [--apt] [--go] [--dry-run] [--force]
 ```
 
 **Options:**
 - `--brew` - Use Homebrew package manager
 - `--npm` - Use NPM package manager
 - `--cargo` - Use Cargo package manager
+- `--pip` - Use pip package manager
+- `--gem` - Use gem package manager
+- `--apt` - Use APT package manager (Linux)
+- `--go` - Use go install package manager
 - `--dry-run, -n` - Show what would be installed without making changes
 - `--force, -f` - Force installation even if already managed
 
@@ -235,6 +244,10 @@ plonk install git neovim ripgrep        # Install multiple packages
 plonk install git --brew                # Install git specifically with Homebrew
 plonk install lodash --npm              # Install lodash with npm global packages
 plonk install ripgrep --cargo           # Install ripgrep with cargo packages
+plonk install black flake8 --pip        # Install Python tools with pip
+plonk install bundler rubocop --gem     # Install Ruby tools with gem
+plonk install htop curl --apt           # Install system tools with APT (Linux)
+plonk install gopls golangci-lint --go  # Install Go tools with go install
 plonk install --dry-run htop neovim     # Preview what would be installed
 ```
 
@@ -244,13 +257,17 @@ Uninstall packages from your system and remove them from plonk management.
 
 **Usage:**
 ```bash
-plonk uninstall <packages...> [--brew] [--npm] [--cargo] [--dry-run] [--force]
+plonk uninstall <packages...> [--brew] [--npm] [--cargo] [--pip] [--gem] [--apt] [--go] [--dry-run] [--force]
 ```
 
 **Options:**
 - `--brew` - Use Homebrew package manager
 - `--npm` - Use NPM package manager
 - `--cargo` - Use Cargo package manager
+- `--pip` - Use pip package manager
+- `--gem` - Use gem package manager
+- `--apt` - Use APT package manager (Linux)
+- `--go` - Use go install package manager
 - `--dry-run, -n` - Show what would be removed without making changes
 - `--force, -f` - Force removal even if not managed
 
@@ -264,6 +281,7 @@ plonk uninstall <packages...> [--brew] [--npm] [--cargo] [--dry-run] [--force]
 ```bash
 plonk uninstall htop                    # Uninstall htop and remove from lock file
 plonk uninstall git neovim              # Uninstall multiple packages
+plonk uninstall black --pip             # Uninstall pip package (manager flag required)
 plonk uninstall --dry-run htop          # Preview what would be uninstalled
 ```
 
@@ -563,6 +581,123 @@ Always validate before applying:
 plonk config validate && plonk sync
 ```
 
+## Package Manager Behavior
+
+### Go/go install Behavior
+
+Plonk's Go support uses `go install` to manage Go-based CLI tools:
+
+**Module Path Handling:**
+- Install with full module paths: `plonk install --go golang.org/x/tools/gopls@latest`
+- Plonk automatically extracts the binary name (e.g., `gopls`) for tracking
+- Supports version specifications: `@latest`, `@v1.2.3`, `@master`
+- Handles `/cmd/toolname` patterns correctly
+
+**Binary Location:**
+- Installs to `$GOBIN` if set, otherwise `$GOPATH/bin`
+- Detects and warns if GOBIN is not in PATH
+- Only tracks Go binaries (verified with `go version -m`)
+
+**Examples:**
+```bash
+plonk install --go golang.org/x/tools/gopls@latest     # Install gopls
+plonk install --go github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+plonk install --go mvdan.cc/gofumpt@v0.8.0            # Specific version
+plonk uninstall --go gopls                             # Remove by binary name
+```
+
+### APT/Debian Package Behavior
+Plonk's APT support manages system packages on Debian-based Linux distributions:
+**System Integration:**
+- Linux-only support (automatically detects non-Linux systems)
+- Requires root/sudo privileges for install/uninstall operations
+- Integrates with system package database
+- Handles package dependencies automatically
+
+**Package Management:**
+- Uses `apt install` and `apt remove` for package operations
+- Supports package search via `apt search`
+- Provides detailed package information including dependencies and size
+- Handles repository-based packages only
+
+**Examples:**
+```bash
+plonk install htop curl vim --apt                    # Install system utilities
+plonk install build-essential git --apt              # Install development tools
+plonk uninstall --apt htop                           # Remove system package
+```
+
+### Ruby/gem Environment Behavior
+
+Plonk's gem support focuses on Ruby gems that provide executable tools:
+
+**Executable Detection:**
+- Only tracks gems that provide CLI executables (filters with `gem contents --executables`)
+- Ignores library-only gems without executables
+- Handles multiple gem versions (uses latest)
+
+**Installation Preferences:**
+- Prefers `--user-install` for better permissions
+- Falls back to system install if user install fails
+- Uses `-I` flag for non-interactive uninstall
+
+**Environment Switching:**
+- Works with rbenv, rvm, system Ruby
+- State reconciliation handles Ruby version switches naturally
+
+### Python/pip Environment Behavior
+
+Plonk's pip support is designed to work seamlessly with different Python environments:
+
+**Environment Detection:**
+- Uses whatever `pip` or `pip3` is currently in your PATH
+- Works with system Python, pyenv, conda, virtualenv, etc.
+- No special configuration needed for different Python versions
+
+**State Reconciliation with Environment Switches:**
+```bash
+# With Python 3.11 active (via pyenv)
+$ plonk install black --pip          # Installs to Python 3.11
+$ plonk status                       # Shows black as installed
+
+# Switch to Python 3.12
+$ pyenv global 3.12
+$ plonk status                       # Shows black as missing (not in 3.12)
+$ plonk sync                         # Installs black to Python 3.12
+```
+
+**Installation Scope:**
+- Uses `pip install --user` for user-wide installations
+- Avoids system-wide installations that require sudo
+- Ignores packages in virtual environments (project-specific)
+
+**Package Name Normalization:**
+- pip normalizes package names (e.g., `Django` → `django`, `python-dateutil` → `python_dateutil`)
+- Plonk handles this automatically in all operations
+- Both forms are accepted in commands
+
+### Manager-Specific Notes
+
+**Homebrew:**
+- System-wide package manager for macOS and Linux
+- Requires Homebrew to be installed separately
+- Default manager if no preference specified
+
+**npm:**
+- Installs packages globally with `npm install -g`
+- Works with any Node.js installation
+- Tracks JavaScript CLI tools and utilities
+
+**Cargo:**
+- Installs Rust packages with `cargo install`
+- Binary installations only (not library crates)
+- Works with any Rust toolchain installation
+
+**pip:**
+- Installs Python packages with `pip install --user`
+- Tracks user-wide Python tools (black, flake8, etc.)
+- Environment-aware - follows active Python version
+
 ## Shell Completion
 
 Plonk provides intelligent tab completion for enhanced productivity across all major shells.
@@ -660,6 +795,7 @@ plonk sync --<TAB>           # dry-run, backup, packages, dotfiles
 - **Homebrew**: Development tools, system utilities, CLI apps
 - **NPM**: JavaScript packages, build tools, frameworks
 - **Cargo**: Rust command-line tools and utilities
+- **pip**: Python tools, linters, formatters, CLI utilities
 
 ### Verification
 

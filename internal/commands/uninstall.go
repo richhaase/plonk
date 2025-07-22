@@ -6,9 +6,11 @@ package commands
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/constants"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/operations"
@@ -39,7 +41,10 @@ func init() {
 	uninstallCmd.Flags().Bool("brew", false, "Use Homebrew package manager")
 	uninstallCmd.Flags().Bool("npm", false, "Use NPM package manager")
 	uninstallCmd.Flags().Bool("cargo", false, "Use Cargo package manager")
-	uninstallCmd.MarkFlagsMutuallyExclusive("brew", "npm", "cargo")
+	uninstallCmd.Flags().Bool("pip", false, "Use pip package manager")
+	uninstallCmd.Flags().Bool("gem", false, "Use gem package manager")
+	uninstallCmd.Flags().Bool("go", false, "Use go install package manager")
+	uninstallCmd.MarkFlagsMutuallyExclusive("brew", "npm", "cargo", "pip", "gem", "go")
 
 	// Common flags
 	uninstallCmd.Flags().BoolP("dry-run", "n", false, "Show what would be removed without making changes")
@@ -96,9 +101,23 @@ func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService,
 		Name: packageName,
 	}
 
+	// For Go packages, we need to check with the binary name
+	checkPackageName := packageName
+	if managerFlag == "go" {
+		checkPackageName = extractBinaryNameFromPath(packageName)
+	}
+
 	// Find package in lock file
-	managerName, found := findPackageInLockFile(lockService, packageName)
+	managerName, found := findPackageInLockFile(lockService, checkPackageName)
 	wasManaged := found
+
+	// If we found it and it's a go package, we might need to check with binary name
+	if !found && managerFlag == "" && strings.Contains(packageName, "/") {
+		// This might be a Go module path, try with binary name
+		checkPackageName = extractBinaryNameFromPath(packageName)
+		managerName, found = findPackageInLockFile(lockService, checkPackageName)
+		wasManaged = found
+	}
 
 	// If not in lock file, we need to detect which manager to use
 	if !found {
@@ -129,7 +148,7 @@ func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService,
 	if err != nil {
 		// If package wasn't installed but was in lock file, we should still remove it from lock
 		if wasManaged {
-			lockErr := lockService.RemovePackage(managerName, packageName)
+			lockErr := lockService.RemovePackage(managerName, checkPackageName)
 			if lockErr == nil {
 				result.Status = "removed"
 				result.Error = errors.WrapWithItem(err, errors.ErrPackageUninstall, errors.DomainPackages, "uninstall", packageName, "package not installed, removed from lock file")
@@ -143,7 +162,7 @@ func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService,
 
 	// Remove from lock file if it was managed
 	if wasManaged {
-		err = lockService.RemovePackage(managerName, packageName)
+		err = lockService.RemovePackage(managerName, checkPackageName)
 		if err != nil {
 			result.Status = "partially-removed"
 			result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainPackages, "remove-lock", packageName, "uninstalled but failed to remove from lock file").WithMetadata("manager", managerName)
@@ -157,9 +176,7 @@ func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService,
 
 // findPackageInLockFile finds which manager manages a package
 func findPackageInLockFile(lockService *lock.YAMLLockService, packageName string) (string, bool) {
-	managers := []string{"homebrew", "npm", "cargo"}
-
-	for _, manager := range managers {
+	for _, manager := range constants.SupportedManagers {
 		if lockService.HasPackage(manager, packageName) {
 			return manager, true
 		}
@@ -175,8 +192,7 @@ func detectInstalledPackageManager(packageName string) (string, error) {
 	ctx := context.Background()
 
 	// Try each manager to see if package is installed
-	managers := []string{"homebrew", "npm", "cargo"}
-	for _, managerName := range managers {
+	for _, managerName := range constants.SupportedManagers {
 		mgr, err := registry.GetManager(managerName)
 		if err != nil {
 			continue

@@ -2,59 +2,194 @@
 
 ## Overview
 
-Plonk manages packages and dotfiles through unified state reconciliation. It compares desired state (configuration) with actual state (system) and reconciles differences.
+Plonk manages packages and dotfiles through a clean domain architecture with a central runtime orchestrator. The architecture enforces strict domain boundaries where domains are isolated from each other and all coordination flows through the runtime layer.
 
 ## Core Principles
 
-1. **State Reconciliation** - All operations reconcile configured vs actual state
-2. **Provider Pattern** - Extensible architecture for different domains
-3. **Interface-Based Design** - Loose coupling through well-defined interfaces
-4. **Context-Aware Operations** - Cancellable operations with configurable timeouts
-5. **Structured Error Handling** - User-friendly errors with actionable guidance
+1. **Clean Domain Boundaries** - Domains are completely isolated from each other
+2. **Runtime Orchestration** - All cross-domain coordination happens through Runtime
+3. **State Reconciliation** - Runtime unifies configured state with actual system state
+4. **Interface-Based Design** - Loose coupling through well-defined interfaces
+5. **Context-Aware Operations** - Cancellable operations with configurable timeouts
+6. **Structured Error Handling** - User-friendly errors with actionable guidance
 
-## Component Architecture
+## Target Architecture
 
-### Directory Structure
+### Clean Domain Structure
+
+The architecture consists of 6 components: 1 UI layer (CLI) and 5 isolated domains, with Runtime as the central orchestrator:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         CLI (UI)                            │
+│              Handles user interaction                       │
+│              Requests actions from Runtime                  │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                        Runtime                              │
+│         Central orchestrator and state unifier              │
+│         The ONLY component that knows about domains         │
+└──────┬──────────┬──────────┬──────────┬────────────────────┘
+       │          │          │          │
+       ▼          ▼          ▼          ▼
+┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
+│  Config  │ │   Lock   │ │ Package  │ │ Dotfiles │
+│  Domain  │ │  Domain  │ │  Domain  │ │  Domain  │
+└──────────┘ └──────────┘ └──────────┘ └──────────┘
+```
+
+### Domain Responsibilities
+
+1. **CLI (UI Layer)**
+   - Parse command-line arguments
+   - Call Runtime methods for all operations
+   - Format and display results to users
+   - NO business logic or direct domain access
+
+2. **Runtime (Orchestrator)**
+   - Receive requests from CLI
+   - Coordinate operations across domains
+   - Unify state from Config and system state
+   - Handle all cross-domain workflows
+   - Manage transaction-like operations
+
+3. **Config Domain**
+   - Read/write configuration files
+   - Merge defaults with file values
+   - Return fully resolved configuration
+   - Validate configuration structure
+
+4. **Lock Domain**
+   - Read/write lock files
+   - Manage lock file format
+   - Track installed packages and versions
+   - NO knowledge of packages or config
+
+5. **Package Domain**
+   - Interact with package managers (brew, npm, etc.)
+   - Install/uninstall packages
+   - Query package information
+   - NO knowledge of config or lock files
+
+6. **Dotfiles Domain**
+   - Manage dotfile operations
+   - Copy/link/backup files
+   - Handle path resolution
+   - NO knowledge of other domains
+
+### Current Directory Structure (To Be Refactored)
 
 ```
 internal/
-├── commands/    # CLI command implementations using CommandPipeline
-├── config/      # Configuration with interfaces and validation
-├── dotfiles/    # File operations and path management
-├── errors/      # Structured error types and handling
-├── interfaces/  # Unified interface definitions (Phase 4)
-├── managers/    # Package manager implementations
-├── operations/  # Shared utilities for batch operations
-├── runtime/     # Shared context and logging system (Phase 4)
-├── services/    # Application service layer orchestration
-├── state/       # State reconciliation engine
-└── testing/     # Test helpers and utilities (Phase 4)
+├── commands/    # Will become thin CLI layer
+├── config/      # Will become Config domain
+├── dotfiles/    # Will become Dotfiles domain
+├── errors/      # Shared error types
+├── interfaces/  # Domain interfaces
+├── managers/    # Will become Package domain
+├── operations/  # Will be absorbed into domains
+├── runtime/     # Will become the orchestrator
+├── services/    # Will be absorbed into Runtime
+├── state/       # Will be absorbed into Runtime
+└── testing/     # Test utilities
 ```
 
-### Component Relationships
+## Key Architectural Rules
+
+1. **No Cross-Domain Dependencies**
+   - Config domain cannot import Lock, Package, or Dotfiles
+   - Lock domain cannot import Config, Package, or Dotfiles
+   - Package domain cannot import Config, Lock, or Dotfiles
+   - Dotfiles domain cannot import Config, Lock, or Package
+
+2. **Runtime is the Only Orchestrator**
+   - Only Runtime can import multiple domains
+   - All cross-domain operations go through Runtime
+   - Domains return data, Runtime coordinates
+
+3. **CLI is a Thin Layer**
+   - NO business logic in commands
+   - Commands only parse args and call Runtime
+   - All validation happens in Runtime or domains
+
+4. **Config Handles Its Own Defaults**
+   - Config domain merges defaults internally
+   - Runtime receives fully resolved configuration
+   - No default handling in Runtime or CLI
+
+5. **Domains are Self-Contained**
+   - Each domain fully encapsulates its responsibilities
+   - Domains expose simple interfaces
+   - Implementation details are hidden
+
+## Refactoring Phases
+
+The architecture refactoring will be implemented in 5 phases:
+
+### Phase 1: Extract Business Logic from Commands
+- Move 600+ lines of business logic from `shared.go` into appropriate domains
+- Commands should only handle CLI parsing and display
+
+### Phase 2: Fix Domain Boundary Violations
+- Remove circular dependencies between packages
+- Ensure domains don't import each other
+- All cross-domain communication goes through interfaces
+
+### Phase 3: Centralize Lock File Management
+- Create dedicated Lock domain
+- Move all lock file operations from commands/state
+- Define clean lock file interface
+
+### Phase 4: Centralize State Management in Runtime
+- Runtime becomes the sole orchestrator
+- Move state reconciliation logic to Runtime
+- Unify config and system state in Runtime
+
+### Phase 5: Clean Architecture Layers
+- Finalize thin CLI layer
+- Ensure all domains are isolated
+- Runtime handles all orchestration
+- Remove legacy service/state layers
+
+## Example: Install Command Flow
+
+Here's how the `plonk install --npm express` command will work in the new architecture:
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Commands  │────▶│   Services  │────▶│    State    │
-│     (CLI)   │     │(Application)│     │ (Reconciler)│
-└─────────────┘     └─────────────┘     └─────────────┘
-                            │                    │
-                            ▼                    ▼
-                    ┌─────────────┐     ┌─────────────┐
-                    │  Providers  │────▶│  Managers   │
-                    │  (Package,  │     │ (Homebrew,  │
-                    │  Dotfile)   │     │    NPM)     │
-                    └─────────────┘     └─────────────┘
-                            │                    │
-                            ▼                    ▼
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Config    │     │  Dotfiles   │     │   Errors    │
-│ (Interfaces)│     │   (File     │     │ (Structured │
-└─────────────┘     │ Operations) │     │  Messages)  │
-                    └─────────────┘     └─────────────┘
+1. CLI Layer (commands/install.go)
+   - Parse flags to determine package manager (npm)
+   - Parse package names (express)
+   - Call: runtime.InstallPackages("npm", ["express"])
+
+2. Runtime Layer (runtime/install.go)
+   - Load config: cfg = configDomain.Load()
+   - Check if npm is enabled in config
+   - Call: packageDomain.Install("npm", ["express"])
+   - Update lock file: lockDomain.AddPackages("npm", [...]）
+   - Return results to CLI
+
+3. Package Domain (package/install.go)
+   - Find npm manager implementation
+   - Execute: npm install -g express
+   - Return: [{name: "express", version: "4.18.0", status: "success"}]
+
+4. Lock Domain (lock/write.go)
+   - Read existing lock file
+   - Add new package entry
+   - Write updated lock file
+
+5. CLI Layer (commands/install.go)
+   - Format results as table/json/yaml
+   - Display to user
 ```
 
-## Key Components
+Note how each domain handles only its responsibility and Runtime coordinates the workflow.
+
+## Current Architecture (Being Refactored)
+
+The following sections describe the current implementation, which is being refactored to match the target architecture above.
 
 ### 1. Configuration Layer (`internal/config/`)
 
@@ -85,8 +220,13 @@ Provides flexible configuration management with YAML file support, validation, a
 - All methods accept context for cancellation and timeout support
 
 **Implementations:**
-- `HomebrewManager` - Homebrew packages and casks
-- `NpmManager` - Global NPM packages
+- `HomebrewManager` - Homebrew packages and casks (macOS/Linux)
+- `NpmManager` - Global NPM packages (Node.js)
+- `CargoManager` - Cargo packages (Rust ecosystem)
+- `PipManager` - Pip packages (Python ecosystem)
+- `GemManager` - Gem packages (Ruby ecosystem)
+- `AptManager` - APT packages (Debian/Ubuntu Linux)
+- `GoInstallManager` - Go Install packages (Go ecosystem)
 
 **Features:**
 - Context support for cancellation and timeout
@@ -94,6 +234,16 @@ Provides flexible configuration management with YAML file support, validation, a
 - Differentiation between expected conditions and real errors
 - Context-aware error messages with actionable suggestions
 - Graceful handling of unavailable managers
+- BaseManager pattern for 90% code reuse across implementations
+- Mock-based unit testing with 100% test coverage
+- Capability discovery for optional operations (search, etc.)
+
+**Architecture Quality:**
+- **BaseManager Pattern**: Extracted common functionality reducing code duplication by ~86%
+- **ErrorMatcher System**: Consistent error detection across all package managers
+- **CommandExecutor Interface**: Dependency injection enabling comprehensive unit testing
+- **Parser Utilities**: Common parsing patterns for output processing
+- **Capability Discovery**: Runtime detection of optional package manager features
 
 ### 4. Runtime Infrastructure (`internal/runtime/`) - Phase 4
 

@@ -3,26 +3,32 @@
 
 package interfaces
 
-import "io"
+import (
+	"io"
+)
+
+// Forward declare Config to avoid circular dependencies
+// The actual Config struct is in internal/config package
+type Config interface{}
 
 // ConfigReader provides read operations for configuration
 type ConfigReader interface {
-	LoadConfig(configDir string) (interface{}, error)
-	LoadConfigFromFile(filePath string) (interface{}, error)
-	LoadConfigFromReader(reader io.Reader) (interface{}, error)
+	LoadConfig(configDir string) (Config, error)
+	LoadConfigFromFile(filePath string) (Config, error)
+	LoadConfigFromReader(reader io.Reader) (Config, error)
 }
 
 // ConfigWriter provides write operations for configuration
 type ConfigWriter interface {
-	SaveConfig(config interface{}, configDir string) error
-	SaveConfigToFile(config interface{}, filePath string) error
-	SaveConfigToWriter(config interface{}, writer io.Writer) error
+	SaveConfig(configDir string, config Config) error
+	SaveConfigToFile(filePath string, config Config) error
+	SaveConfigToWriter(writer io.Writer, config Config) error
 }
 
 // ConfigValidator provides validation for configuration
 type ConfigValidator interface {
-	ValidateConfig(config interface{}) error
-	ValidateConfigFromFile(filePath string) error
+	ValidateConfig(config Config) error
+	ValidateConfigFromReader(reader io.Reader) error
 }
 
 // DomainConfigLoader provides domain-specific configuration loading
