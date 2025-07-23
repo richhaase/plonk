@@ -1,5 +1,22 @@
 # Command Pipeline Dismantling Plan
 
+## Status Update
+
+**Last Updated:** Phase 1.2 Complete (runPkgList refactored)
+
+### Progress Summary:
+- ✅ Phase 0: Call chain analysis complete
+- ✅ Phase 1.1: runStatus() reviewed (already direct)
+- ✅ Phase 1.2: runPkgList() refactored to eliminate conversion layer
+- 🔄 Phase 1.3: runDotList() ready to start
+- ⏳ Phase 2: Complex commands pending
+- ⏳ Phase 3: Final cleanup pending
+
+### Key Achievements:
+- Successfully eliminated the conversion layer in runPkgList()
+- Established pattern for wrapping raw domain objects for OutputData interface
+- Maintained 100% test compatibility while simplifying code
+
 ## 1. Overview & Goal (Revised)
 
 **The Problem:** While the top-level command pipeline has been removed, individual commands (e.g., `runStatus`, `runPkgList`, `runDotList`, `add.go`, `install.go`) may still contain excessive layers of abstraction and indirection before reaching the core business logic in `internal/core` or `internal/services`. This contributes to cognitive load and makes the code harder to understand and maintain.
@@ -39,18 +56,21 @@ See `PHASE_0_CALL_CHAIN_ANALYSIS.md` for detailed analysis. All commands have be
 
 Start with commands that have relatively straightforward logic.
 
-1.  **Target: `runStatus()` (from `status.go`)**
+1.  **Target: `runStatus()` (from `status.go`)** ✅ COMPLETE
     *   **Current State:** Already fairly direct - minimal changes needed
-    *   **Action:** Review for any minor improvements, but this is already a good example of direct calls
-    *   **Verification:** Run `just test` and `just test-ux`. Manually run `plonk status`.
+    *   **Action:** Reviewed and confirmed it already follows the direct call pattern
+    *   **Result:** No changes needed - already a good example of direct calls
+    *   **Verification:** All tests pass (`just test`, `just test-ux`)
 
-2.  **Target: `runPkgList()` (from `shared.go`)**
-    *   **Current State:** Has `convertToPackageInfo()` conversion layer
-    *   **Action:**
-        - Remove `convertToPackageInfo()` function
-        - Have `RunE` pass raw data from `provider.GetCurrentState()` directly to `RenderOutput()`
-        - Update `RenderOutput()` to handle the raw provider data
-    *   **Verification:** Run `just test` and `just test-ux`. Manually run `plonk ls --packages`.
+2.  **Target: `runPkgList()` (from `shared.go`)** ✅ COMPLETE
+    *   **Current State:** Had conversion layer with `EnhancedPackageOutput` and `PackageListOutput`
+    *   **Actions Taken:**
+        - Removed old `runPkgListOld()` function with conversion layers
+        - Created `packageListResultWrapper` to wrap `state.Result` and implement `OutputData`
+        - Eliminated intermediate data structures (`EnhancedPackageOutput`, `PackageListOutput`)
+        - Function now passes raw `state.Result` directly to `RenderOutput()`
+    *   **Result:** Direct data flow from reconciler to output formatter
+    *   **Verification:** All tests pass, manually tested `plonk ls --packages`
 
 3.  **Target: `runDotList()` (from `shared.go`)**
     *   **Current State:** Has `convertToDotfileInfo()` conversion layer
