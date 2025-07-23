@@ -99,6 +99,11 @@ test:
     go test ./...
     @echo "✅ Unit tests passed!"
 
+test-clear-cache:
+    @echo "Clearing test cache..."
+    @go clean -testcache
+    @echo "✅ Cache cleared!"
+
 # Run tests with coverage
 test-coverage:
     @echo "Running unit tests with coverage..."
@@ -113,7 +118,7 @@ test-coverage-ci:
     @echo "✅ Unit tests passed with coverage!"
 
 # Complete UX validation - ensures all commands work as expected
-test-ux:
+test-ux: test-clear-cache
     @echo "Running complete UX integration tests..."
     @go test -tags=integration ./tests/integration -run TestCompleteUserExperience -v -timeout 10m
     @echo "✅ UX integration tests passed!"

@@ -111,7 +111,7 @@ The codebase's complexity presents several risks. Here is how we will mitigate t
 - ✅ Phase 1: Migrate Low-Dependency Functions - COMPLETE
 - ⏳ Phase 2: Migrate Core Business Logic - IN PROGRESS
   - ✅ Phase 2.1: Dotfile Core Logic - COMPLETE
-  - ⏳ Phase 2.2: Package Core Logic - NOT STARTED
+  - ✅ Phase 2.2: Package Core Logic - COMPLETE (minimal migration needed)
   - ⏳ Phase 2.3: State and Config Logic - NOT STARTED
 - ⏳ Phase 3: Final Cleanup - NOT STARTED
 
@@ -151,3 +151,4 @@ The codebase's complexity presents several risks. Here is how we will mitigate t
 | resolveDotfilePath() | shared.go:377-382 | core/dotfiles.go | ✅ Moved |
 | generatePaths() | shared.go:384-396 | core/dotfiles.go | ✅ Moved |
 | removeSingleDotfile() | shared.go:649-651 | Wrapper to core.RemoveSingleDotfile | ✅ Replaced |
+| extractBinaryNameFromPath() | shared.go:540-542 | Wrapper to core.ExtractBinaryNameFromPath | ✅ Replaced |
