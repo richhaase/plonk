@@ -246,3 +246,95 @@ func RemoveSingleDotfile(homeDir, configDir string, cfg *config.Config, dotfileP
 	}
 	return result
 }
+
+// ProcessDotfileForApplyOptions configures individual dotfile processing
+type ProcessDotfileForApplyOptions struct {
+	ConfigDir   string
+	HomeDir     string
+	Source      string
+	Destination string
+	DryRun      bool
+	Backup      bool
+}
+
+// ProcessDotfileForApplyResult represents an action taken on a dotfile
+type ProcessDotfileForApplyResult struct {
+	Source      string `json:"source" yaml:"source"`
+	Destination string `json:"destination" yaml:"destination"`
+	Action      string `json:"action" yaml:"action"`
+	Status      string `json:"status" yaml:"status"`
+	Error       string `json:"error,omitempty" yaml:"error,omitempty"`
+}
+
+// ProcessDotfileForApply processes a single dotfile for apply operations
+func ProcessDotfileForApply(ctx context.Context, options ProcessDotfileForApplyOptions) (ProcessDotfileForApplyResult, error) {
+	// Resolve paths
+	resolver := paths.NewPathResolver(options.HomeDir, options.ConfigDir)
+
+	sourcePath := filepath.Join(options.ConfigDir, options.Source)
+	destinationPath, err := resolver.ResolveDotfilePath(options.Destination)
+	if err != nil {
+		return ProcessDotfileForApplyResult{}, errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "apply",
+			"failed to resolve destination path")
+	}
+
+	// Check if source exists
+	if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
+		return ProcessDotfileForApplyResult{
+			Source:      options.Source,
+			Destination: options.Destination,
+			Action:      "error",
+			Status:      "failed",
+			Error:       "source file does not exist",
+		}, nil
+	}
+
+	// Check if destination already exists
+	destExists := false
+	if _, err := os.Stat(destinationPath); err == nil {
+		destExists = true
+	}
+
+	action := ProcessDotfileForApplyResult{
+		Source:      options.Source,
+		Destination: options.Destination,
+	}
+
+	if options.DryRun {
+		if destExists {
+			action.Action = "would-update"
+			action.Status = "would-update"
+		} else {
+			action.Action = "would-add"
+			action.Status = "would-add"
+		}
+		return action, nil
+	}
+
+	// Create file operations handler
+	manager := dotfiles.NewManager(options.HomeDir, options.ConfigDir)
+	fileOps := dotfiles.NewFileOperations(manager)
+
+	// Configure copy options
+	copyOptions := dotfiles.DefaultCopyOptions()
+	copyOptions.CreateBackup = options.Backup
+
+	// Perform the copy
+	err = fileOps.CopyFile(ctx, options.Source, options.Destination, copyOptions)
+	if err != nil {
+		action.Action = "error"
+		action.Status = "failed"
+		action.Error = err.Error()
+		return action, nil
+	}
+
+	if destExists {
+		action.Action = "update"
+		action.Status = "updated"
+	} else {
+		action.Action = "add"
+		action.Status = "added"
+	}
+
+	return action, nil
+}

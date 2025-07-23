@@ -5,14 +5,10 @@ package services
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/dotfiles"
+	"github.com/richhaase/plonk/internal/core"
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/operations"
-	"github.com/richhaase/plonk/internal/paths"
 	"github.com/richhaase/plonk/internal/state"
 )
 
@@ -51,15 +47,6 @@ type DotfileSummary struct {
 	Failed    int `json:"failed" yaml:"failed"`
 }
 
-// AddDotfileOptions configures dotfile addition operations
-type AddDotfileOptions struct {
-	Config      *config.Config
-	HomeDir     string
-	ConfigDir   string
-	DotfilePath string
-	DryRun      bool
-}
-
 // ApplyDotfiles applies dotfile configuration and returns the result
 func ApplyDotfiles(ctx context.Context, options DotfileApplyOptions) (DotfileApplyResult, error) {
 	// Create dotfile provider
@@ -77,7 +64,7 @@ func ApplyDotfiles(ctx context.Context, options DotfileApplyOptions) (DotfileApp
 
 	// Process each configured dotfile
 	for _, item := range configuredItems {
-		action, err := ProcessDotfileForApply(ctx, ProcessDotfileOptions{
+		result, err := core.ProcessDotfileForApply(ctx, core.ProcessDotfileForApplyOptions{
 			ConfigDir:   options.ConfigDir,
 			HomeDir:     options.HomeDir,
 			Source:      item.Name,
@@ -86,14 +73,18 @@ func ApplyDotfiles(ctx context.Context, options DotfileApplyOptions) (DotfileApp
 			Backup:      options.Backup,
 		})
 
+		action := DotfileAction{
+			Source:      result.Source,
+			Destination: result.Destination,
+			Action:      result.Action,
+			Status:      result.Status,
+			Error:       result.Error,
+		}
+
 		if err != nil {
-			action = DotfileAction{
-				Source:      item.Name,
-				Destination: item.Metadata["destination"].(string),
-				Action:      "error",
-				Status:      "failed",
-				Error:       err.Error(),
-			}
+			action.Action = "error"
+			action.Status = "failed"
+			action.Error = err.Error()
 			summary.Failed++
 		} else {
 			switch action.Status {
@@ -118,213 +109,6 @@ func ApplyDotfiles(ctx context.Context, options DotfileApplyOptions) (DotfileApp
 		Actions:    actions,
 		Summary:    summary,
 	}, nil
-}
-
-// ProcessDotfileOptions configures individual dotfile processing
-type ProcessDotfileOptions struct {
-	ConfigDir   string
-	HomeDir     string
-	Source      string
-	Destination string
-	DryRun      bool
-	Backup      bool
-}
-
-// ProcessDotfileForApply processes a single dotfile for apply operations
-func ProcessDotfileForApply(ctx context.Context, options ProcessDotfileOptions) (DotfileAction, error) {
-	// Resolve paths
-	resolver := paths.NewPathResolver(options.HomeDir, options.ConfigDir)
-
-	sourcePath := filepath.Join(options.ConfigDir, options.Source)
-	destinationPath, err := resolver.ResolveDotfilePath(options.Destination)
-	if err != nil {
-		return DotfileAction{}, errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "apply",
-			"failed to resolve destination path")
-	}
-
-	// Check if source exists
-	if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
-		return DotfileAction{
-			Source:      options.Source,
-			Destination: options.Destination,
-			Action:      "error",
-			Status:      "failed",
-			Error:       "source file does not exist",
-		}, nil
-	}
-
-	// Check if destination already exists
-	destExists := false
-	if _, err := os.Stat(destinationPath); err == nil {
-		destExists = true
-	}
-
-	action := DotfileAction{
-		Source:      options.Source,
-		Destination: options.Destination,
-	}
-
-	if options.DryRun {
-		if destExists {
-			action.Action = "would-update"
-			action.Status = "would-update"
-		} else {
-			action.Action = "would-add"
-			action.Status = "would-add"
-		}
-		return action, nil
-	}
-
-	// Create file operations handler
-	manager := dotfiles.NewManager(options.HomeDir, options.ConfigDir)
-	fileOps := dotfiles.NewFileOperations(manager)
-
-	// Configure copy options
-	copyOptions := dotfiles.DefaultCopyOptions()
-	copyOptions.CreateBackup = options.Backup
-
-	// Perform the copy
-	err = fileOps.CopyFile(ctx, options.Source, options.Destination, copyOptions)
-	if err != nil {
-		action.Action = "error"
-		action.Status = "failed"
-		action.Error = err.Error()
-		return action, nil
-	}
-
-	if destExists {
-		action.Action = "update"
-		action.Status = "updated"
-	} else {
-		action.Action = "add"
-		action.Status = "added"
-	}
-
-	return action, nil
-}
-
-// AddSingleDotfile adds a single dotfile to configuration
-func AddSingleDotfile(ctx context.Context, options AddDotfileOptions) []operations.OperationResult {
-	resolver := paths.NewPathResolver(options.HomeDir, options.ConfigDir)
-	resolvedPath, err := resolver.ResolveDotfilePath(options.DotfilePath)
-	if err != nil {
-		return []operations.OperationResult{{
-			Name:   options.DotfilePath,
-			Status: "failed",
-			Error:  errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "add", "failed to resolve dotfile path"),
-		}}
-	}
-
-	// Check if path exists
-	info, err := os.Stat(resolvedPath)
-	if err != nil {
-		return []operations.OperationResult{{
-			Name:   options.DotfilePath,
-			Status: "failed",
-			Error:  errors.Wrap(err, errors.ErrFileNotFound, errors.DomainDotfiles, "add", "dotfile does not exist"),
-		}}
-	}
-
-	if info.IsDir() {
-		// Handle directory
-		return AddDirectoryFiles(ctx, AddDirectoryOptions{
-			Config:    options.Config,
-			DirPath:   resolvedPath,
-			HomeDir:   options.HomeDir,
-			ConfigDir: options.ConfigDir,
-			DryRun:    options.DryRun,
-		})
-	} else {
-		// Handle single file
-		result := AddSingleFile(ctx, AddSingleFileOptions{
-			Config:    options.Config,
-			FilePath:  resolvedPath,
-			HomeDir:   options.HomeDir,
-			ConfigDir: options.ConfigDir,
-			DryRun:    options.DryRun,
-		})
-		return []operations.OperationResult{result}
-	}
-}
-
-// AddSingleFileOptions configures single file addition
-type AddSingleFileOptions struct {
-	Config    *config.Config
-	FilePath  string
-	HomeDir   string
-	ConfigDir string
-	DryRun    bool
-}
-
-// AddSingleFile adds a single file to dotfile management
-func AddSingleFile(ctx context.Context, options AddSingleFileOptions) operations.OperationResult {
-	result := operations.OperationResult{
-		Name: options.FilePath,
-	}
-
-	// Generate source and destination paths
-	resolver := paths.NewPathResolver(options.HomeDir, options.ConfigDir)
-	sourcePath, _, err := resolver.GeneratePaths(options.FilePath)
-	if err != nil {
-		result.Status = "failed"
-		result.Error = errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "add", "failed to generate paths")
-		return result
-	}
-
-	if options.DryRun {
-		result.Status = "would-add"
-		return result
-	}
-
-	// Copy file with attributes
-	// sourcePath is the relative path within the config directory
-	targetPath := filepath.Join(options.ConfigDir, sourcePath)
-	if err = dotfiles.CopyFileWithAttributes(options.FilePath, targetPath); err != nil {
-		result.Status = "failed"
-		result.Error = errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "add", "failed to copy file")
-		return result
-	}
-
-	result.Status = "added"
-	return result
-}
-
-// AddDirectoryOptions configures directory addition
-type AddDirectoryOptions struct {
-	Config    *config.Config
-	DirPath   string
-	HomeDir   string
-	ConfigDir string
-	DryRun    bool
-}
-
-// AddDirectoryFiles adds all files in a directory to dotfile management
-func AddDirectoryFiles(ctx context.Context, options AddDirectoryOptions) []operations.OperationResult {
-	var results []operations.OperationResult
-
-	resolver := paths.NewPathResolver(options.HomeDir, options.ConfigDir)
-
-	files, err := resolver.ExpandDirectory(options.DirPath)
-	if err != nil {
-		return []operations.OperationResult{{
-			Name:   options.DirPath,
-			Status: "failed",
-			Error:  errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "add", "failed to expand directory"),
-		}}
-	}
-
-	for _, file := range files {
-		result := AddSingleFile(ctx, AddSingleFileOptions{
-			Config:    options.Config,
-			FilePath:  file.FullPath,
-			HomeDir:   options.HomeDir,
-			ConfigDir: options.ConfigDir,
-			DryRun:    options.DryRun,
-		})
-		results = append(results, result)
-	}
-
-	return results
 }
 
 // dotfileConfigAdapter adapts config.Config to DotfileConfigLoader interface

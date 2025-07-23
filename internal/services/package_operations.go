@@ -8,8 +8,6 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/lock"
-	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/richhaase/plonk/internal/state"
 )
@@ -144,13 +142,4 @@ func ApplyPackages(ctx context.Context, options PackageApplyOptions) (PackageApp
 		TotalWouldInstall: totalWouldInstall,
 		Managers:          managerResults,
 	}, nil
-}
-
-// CreatePackageProvider creates a multi-manager package provider
-func CreatePackageProvider(ctx context.Context, configDir string) (*state.MultiManagerPackageProvider, error) {
-	lockService := lock.NewYAMLLockService(configDir)
-	lockAdapter := lock.NewLockFileAdapter(lockService)
-
-	registry := managers.NewManagerRegistry()
-	return registry.CreateMultiProvider(ctx, lockAdapter)
 }
