@@ -128,3 +128,31 @@ func (c *NewConfig) GetExpandDirectories() []string {
 func (c *NewConfig) GetIgnorePatterns() []string {
 	return c.IgnorePatterns
 }
+
+// applyDefaults applies default values to a config
+func applyDefaults(cfg *NewConfig) {
+	if cfg.DefaultManager == "" {
+		cfg.DefaultManager = defaultConfig.DefaultManager
+	}
+	if cfg.OperationTimeout == 0 {
+		cfg.OperationTimeout = defaultConfig.OperationTimeout
+	}
+	if cfg.PackageTimeout == 0 {
+		cfg.PackageTimeout = defaultConfig.PackageTimeout
+	}
+	if cfg.DotfileTimeout == 0 {
+		cfg.DotfileTimeout = defaultConfig.DotfileTimeout
+	}
+	if len(cfg.ExpandDirectories) == 0 {
+		cfg.ExpandDirectories = defaultConfig.ExpandDirectories
+	}
+	if len(cfg.IgnorePatterns) == 0 {
+		cfg.IgnorePatterns = defaultConfig.IgnorePatterns
+	}
+}
+
+// validateConfig validates a config using the validator
+func validateConfig(cfg *NewConfig) error {
+	validate := validator.New()
+	return validate.Struct(cfg)
+}

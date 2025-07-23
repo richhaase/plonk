@@ -312,9 +312,8 @@ func TestLoadNewFromPath_PermissionError(t *testing.T) {
 	}
 }
 
-// TestNewConfig_DefaultsMatch is temporarily commented out for Phase 0 isolation.
-// This test will be re-enabled in Phase 1 to verify compatibility with the old system.
-/*
+// TestNewConfig_DefaultsMatch verifies our defaults match the current system's defaults
+// Re-enabled in Phase 1 now that we have the compatibility layer
 func TestNewConfig_DefaultsMatch(t *testing.T) {
 	// Ensure our defaults match the current system's defaults
 	expected := GetDefaults()
@@ -339,4 +338,3 @@ func TestNewConfig_DefaultsMatch(t *testing.T) {
 		t.Errorf("Ignore patterns mismatch: got %v, want %v", actual.IgnorePatterns, expected.IgnorePatterns)
 	}
 }
-*/

@@ -11,6 +11,10 @@ import (
 	"github.com/richhaase/plonk/internal/interfaces"
 )
 
+// ConfigReader is now an alias to the unified interfaces package.
+// Note: The signatures differ (interface{} vs *Config), so we'll need an adapter temporarily.
+// type ConfigReader = interfaces.ConfigReader
+
 // ConfigReader provides methods for loading configuration from various sources
 type ConfigReader interface {
 	// LoadConfig loads configuration from a directory containing plonk.yaml
