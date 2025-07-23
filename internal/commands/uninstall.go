@@ -54,47 +54,73 @@ func init() {
 }
 
 func runUninstall(cmd *cobra.Command, args []string) error {
-	// Create command pipeline for uninstall operations
-	pipeline, err := NewCommandPipeline(cmd, "uninstall")
+	// Parse output format
+	outputFormat, _ := cmd.Flags().GetString("output")
+	format, err := ParseOutputFormat(outputFormat)
+	if err != nil {
+		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "uninstall", "output-format", "invalid output format")
+	}
+
+	// Get flags
+	flags, err := cli.ParseSimpleFlags(cmd)
 	if err != nil {
 		return err
 	}
 
-	// Define the processor function
-	processor := func(ctx context.Context, args []string, flags *cli.SimpleFlags) ([]operations.OperationResult, error) {
-		return uninstallPackages(cmd, args, flags)
-	}
-
-	// Execute the pipeline
-	return pipeline.ExecuteWithResults(context.Background(), processor, args)
-}
-
-// uninstallPackages handles package uninstallations
-func uninstallPackages(cmd *cobra.Command, packageNames []string, flags *cli.SimpleFlags) ([]operations.OperationResult, error) {
 	// Get directories
 	configDir := config.GetDefaultConfigDirectory()
 
 	// Initialize lock file service
 	lockService := lock.NewYAMLLockService(configDir)
 
-	// Create item processor for package uninstallation
-	processor := operations.SimpleProcessor(
-		func(ctx context.Context, packageName string) operations.OperationResult {
-			return uninstallSinglePackage(configDir, lockService, packageName, flags.DryRun, flags.Manager)
-		},
-	)
+	// Process each package directly
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
 
-	// Configure batch processing options
-	options := operations.BatchProcessorOptions{
-		ItemType:               "package",
-		Operation:              "uninstall",
-		ShowIndividualProgress: false,           // Don't show progress here, let pipeline handle it
-		Timeout:                3 * time.Minute, // Uninstall timeout (shorter than install)
-		ContinueOnError:        nil,             // Use default (true) - continue on individual failures
+	var results []operations.OperationResult
+
+	// Show header for progress tracking
+	reporter := operations.NewProgressReporterForOperation("uninstall", "package", true)
+
+	for _, packageName := range args {
+		// Check if context was canceled
+		if ctx.Err() != nil {
+			break
+		}
+
+		// Uninstall single package directly
+		result := uninstallSinglePackage(configDir, lockService, packageName, flags.DryRun, flags.Manager)
+
+		// Show individual progress
+		reporter.ShowItemProgress(result)
+
+		// Collect result
+		results = append(results, result)
 	}
 
-	// Use standard batch workflow
-	return operations.StandardBatchWorkflow(context.Background(), packageNames, processor, options)
+	// Show batch summary
+	reporter.ShowBatchSummary(results)
+
+	// Create output data
+	summary := calculateUninstallSummary(results)
+	outputData := PackageUninstallOutput{
+		TotalPackages: len(results),
+		Results:       results,
+		Summary:       summary,
+	}
+
+	// Render output
+	if err := RenderOutput(outputData, format); err != nil {
+		return err
+	}
+
+	// Determine exit code based on results
+	exitErr := operations.DetermineExitCode(results, errors.DomainPackages, "uninstall")
+	if exitErr != nil {
+		return exitErr
+	}
+
+	return nil
 }
 
 // uninstallSinglePackage removes a single package
