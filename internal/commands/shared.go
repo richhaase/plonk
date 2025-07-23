@@ -305,10 +305,8 @@ func (w *packageListResultWrapper) StructuredData() any {
 	return w.Result
 }
 
+// Simplified runDotList that passes raw data to RenderOutput
 func runDotList(cmd *cobra.Command, args []string) error {
-	// Note: Full dotfiles layer integration deferred to maintain current functionality
-	// Current implementation delegates to the state reconciliation system
-
 	// Parse output format
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
@@ -341,62 +339,196 @@ func runDotList(cmd *cobra.Command, args []string) error {
 	showUntracked, _ := cmd.Flags().GetBool("untracked")
 	verbose, _ := cmd.Flags().GetBool("verbose")
 
+	// Apply filters to the result
+	filteredResult := state.Result{
+		Domain:    domainResult.Domain,
+		Manager:   domainResult.Manager,
+		Managed:   domainResult.Managed,
+		Missing:   domainResult.Missing,
+		Untracked: domainResult.Untracked,
+	}
+
 	// Filter based on flags
-	var items []state.Item
 	if showManaged {
-		items = domainResult.Managed
+		filteredResult.Missing = []state.Item{}
+		filteredResult.Untracked = []state.Item{}
 	} else if showMissing {
-		items = domainResult.Missing
+		filteredResult.Managed = []state.Item{}
+		filteredResult.Untracked = []state.Item{}
 	} else if showUntracked {
-		items = domainResult.Untracked
-	} else {
-		// Default: show managed + missing, optionally untracked
-		items = append(items, domainResult.Managed...)
-		items = append(items, domainResult.Missing...)
-		if verbose {
-			items = append(items, domainResult.Untracked...)
-		}
+		filteredResult.Managed = []state.Item{}
+		filteredResult.Missing = []state.Item{}
+	} else if !verbose {
+		// Default: show managed + missing, hide untracked unless verbose
+		filteredResult.Untracked = []state.Item{}
 	}
 
-	// Convert to output format using existing dotfiles types
-	output := DotfileListOutput{
-		Summary: DotfileListSummary{
-			Total:     len(items),
-			Managed:   len(domainResult.Managed),
-			Missing:   len(domainResult.Missing),
-			Untracked: len(domainResult.Untracked),
-			Verbose:   verbose,
-		},
-		Dotfiles: convertToDotfileInfo(items),
+	// Wrap result to implement OutputData interface
+	outputWrapper := &dotfileListResultWrapper{
+		Result:  filteredResult,
+		Verbose: verbose,
 	}
 
-	return RenderOutput(output, format)
+	// Pass raw data directly to RenderOutput
+	return RenderOutput(outputWrapper, format)
 }
 
-// convertToDotfileInfo converts state.Item to DotfileInfo for display
-func convertToDotfileInfo(items []state.Item) []DotfileInfo {
-	result := make([]DotfileInfo, len(items))
-	for i, item := range items {
-		// Map state.Item fields to DotfileInfo
-		target := item.Path
-		source := item.Name
+// dotfileListResultWrapper wraps state.Result to implement OutputData
+type dotfileListResultWrapper struct {
+	Result  state.Result
+	Verbose bool
+}
 
-		// Extract additional info from metadata if available
-		if item.Metadata != nil {
-			if t, ok := item.Metadata["target"].(string); ok && t != "" {
-				target = t
-			}
-			if s, ok := item.Metadata["source"].(string); ok && s != "" {
-				source = s
-			}
-		}
+// TableOutput generates human-friendly table output
+func (w *dotfileListResultWrapper) TableOutput() string {
+	tb := NewTableBuilder()
 
-		result[i] = DotfileInfo{
-			Name:   item.Name,
-			State:  item.State.String(),
-			Target: target,
-			Source: source,
+	// Calculate totals
+	totalItems := len(w.Result.Managed) + len(w.Result.Missing)
+	if w.Verbose {
+		totalItems += len(w.Result.Untracked)
+	}
+
+	// Header
+	tb.AddTitle("Dotfiles Summary")
+	summaryLine := fmt.Sprintf("Total: %d files", totalItems)
+	if len(w.Result.Managed) > 0 {
+		summaryLine += fmt.Sprintf(" | %s Managed: %d", IconSuccess, len(w.Result.Managed))
+	}
+	if len(w.Result.Missing) > 0 {
+		summaryLine += fmt.Sprintf(" | %s Missing: %d", IconWarning, len(w.Result.Missing))
+	}
+	if len(w.Result.Untracked) > 0 && w.Verbose {
+		summaryLine += fmt.Sprintf(" | %s Untracked: %d", IconUnknown, len(w.Result.Untracked))
+	}
+	tb.AddLine("%s", summaryLine)
+	tb.AddNewline()
+
+	// If no dotfiles, show simple message
+	if totalItems == 0 {
+		tb.AddLine("No dotfiles found")
+		return tb.Build()
+	}
+
+	// Collect all items with their states
+	type itemWithState struct {
+		item  state.Item
+		state string
+	}
+	var items []itemWithState
+
+	// Add managed items
+	for _, item := range w.Result.Managed {
+		items = append(items, itemWithState{item: item, state: "managed"})
+	}
+	// Add missing items
+	for _, item := range w.Result.Missing {
+		items = append(items, itemWithState{item: item, state: "missing"})
+	}
+	// Add untracked items if verbose
+	if w.Verbose {
+		for _, item := range w.Result.Untracked {
+			items = append(items, itemWithState{item: item, state: "untracked"})
 		}
 	}
-	return result
+
+	// If we have items to show, create the table
+	if len(items) > 0 {
+		// Table header
+		tb.AddLine("  Status Target                                    Source")
+		tb.AddLine("  ------ ----------------------------------------- --------------------------------------")
+
+		// Table rows
+		for _, i := range items {
+			statusIcon := GetStatusIcon(i.state)
+
+			// Extract target and source from item
+			target := i.item.Path
+			source := i.item.Name
+
+			// Check metadata for more specific values
+			if i.item.Metadata != nil {
+				if t, ok := i.item.Metadata["target"].(string); ok && t != "" {
+					target = t
+				}
+				if s, ok := i.item.Metadata["source"].(string); ok && s != "" {
+					source = s
+				}
+			}
+
+			// Default to dash if empty
+			if target == "" {
+				target = "-"
+			}
+			if source == "" {
+				source = "-"
+			}
+
+			tb.AddLine("  %-6s %-41s %s",
+				statusIcon, TruncateString(target, 41), TruncateString(source, 38))
+		}
+		tb.AddNewline()
+	}
+
+	// Show untracked hint if not verbose
+	if !w.Verbose && len(w.Result.Untracked) > 0 {
+		tb.AddLine("%d untracked files (use --verbose to show details)", len(w.Result.Untracked))
+	}
+
+	return tb.Build()
+}
+
+// StructuredData returns the structured format that matches the old output
+func (w *dotfileListResultWrapper) StructuredData() any {
+	// Calculate total based on what's being shown
+	total := len(w.Result.Managed) + len(w.Result.Missing)
+	if w.Verbose {
+		total += len(w.Result.Untracked)
+	}
+
+	// Build dotfiles list
+	var dotfiles []map[string]string
+
+	// Helper to add items
+	addItems := func(items []state.Item, stateStr string) {
+		for _, item := range items {
+			target := item.Path
+			source := item.Name
+
+			if item.Metadata != nil {
+				if t, ok := item.Metadata["target"].(string); ok && t != "" {
+					target = t
+				}
+				if s, ok := item.Metadata["source"].(string); ok && s != "" {
+					source = s
+				}
+			}
+
+			dotfiles = append(dotfiles, map[string]string{
+				"name":   item.Name,
+				"state":  stateStr,
+				"target": target,
+				"source": source,
+			})
+		}
+	}
+
+	// Add all items
+	addItems(w.Result.Managed, "managed")
+	addItems(w.Result.Missing, "missing")
+	if w.Verbose {
+		addItems(w.Result.Untracked, "untracked")
+	}
+
+	// Return in the expected format
+	return map[string]any{
+		"summary": map[string]any{
+			"total":     total,
+			"managed":   len(w.Result.Managed),
+			"missing":   len(w.Result.Missing),
+			"untracked": len(w.Result.Untracked),
+			"verbose":   w.Verbose,
+		},
+		"dotfiles": dotfiles,
+	}
 }
