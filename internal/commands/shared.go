@@ -219,23 +219,17 @@ func completeDotfilePaths(cmd *cobra.Command, args []string, toComplete string) 
 
 // loadOrCreateConfig loads existing config or creates a new one
 func loadOrCreateConfig(configDir string) (*config.Config, error) {
-	manager := config.NewConfigManager(configDir)
-	return manager.LoadOrCreate()
+	return core.LoadOrCreateConfig(configDir)
 }
 
 // createPackageProvider creates a multi-manager package provider using lock file
 func createPackageProvider(ctx context.Context, configDir string) (*state.MultiManagerPackageProvider, error) {
-	// Use SharedContext to create provider
-	sharedCtx := runtime.GetSharedContext()
-	return sharedCtx.CreatePackageProvider(ctx)
+	return core.CreatePackageProvider(ctx, configDir)
 }
 
 // createDotfileProvider creates a dotfile provider
 func createDotfileProvider(homeDir string, configDir string, cfg *config.Config) *state.DotfileProvider {
-	// Use SharedContext to create provider
-	sharedCtx := runtime.GetSharedContext()
-	provider, _ := sharedCtx.CreateDotfileProvider()
-	return provider
+	return core.CreateDotfileProvider(homeDir, configDir, cfg)
 }
 
 // addSingleDotfile processes a single dotfile path and returns results for all files processed
