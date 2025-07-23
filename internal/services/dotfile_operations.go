@@ -340,14 +340,14 @@ func (d *dotfileConfigAdapter) GetDotfileTargets() map[string]string {
 
 func (d *dotfileConfigAdapter) GetIgnorePatterns() []string {
 	if d.cfg != nil {
-		return d.cfg.IgnorePatterns
+		return d.cfg.GetIgnorePatterns()
 	}
 	return []string{}
 }
 
 func (d *dotfileConfigAdapter) GetExpandDirectories() []string {
-	if d.cfg != nil && d.cfg.ExpandDirectories != nil {
-		return *d.cfg.ExpandDirectories
+	if d.cfg != nil {
+		return d.cfg.GetExpandDirectories()
 	}
 	return []string{}
 }

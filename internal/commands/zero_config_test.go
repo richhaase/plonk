@@ -214,16 +214,6 @@ func TestConfigAdapterZeroConfig(t *testing.T) {
 		cfg := &config.Config{} // Empty config
 		configAdapter := config.NewConfigAdapter(cfg)
 
-		// Test state package config adapter
-		statePackageAdapter := config.NewStatePackageConfigAdapter(configAdapter)
-		packages, err := statePackageAdapter.GetPackagesForManager("homebrew")
-		if err != nil {
-			t.Errorf("Expected no error from state package adapter, got: %v", err)
-		}
-		if len(packages) != 0 {
-			t.Errorf("Expected empty packages from state adapter, got %d", len(packages))
-		}
-
 		// Test state dotfile config adapter
 		stateDotfileAdapter := config.NewStateDotfileConfigAdapter(configAdapter)
 

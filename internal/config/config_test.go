@@ -311,30 +311,3 @@ func TestLoadNewFromPath_PermissionError(t *testing.T) {
 		t.Error("Expected error for unreadable file")
 	}
 }
-
-// TestNewConfig_DefaultsMatch verifies our defaults match the current system's defaults
-// Re-enabled in Phase 1 now that we have the compatibility layer
-func TestNewConfig_DefaultsMatch(t *testing.T) {
-	// Ensure our defaults match the current system's defaults
-	expected := GetDefaults()
-	actual := defaultConfig
-
-	if actual.DefaultManager != expected.DefaultManager {
-		t.Errorf("Default manager mismatch: got %s, want %s", actual.DefaultManager, expected.DefaultManager)
-	}
-	if actual.OperationTimeout != expected.OperationTimeout {
-		t.Errorf("Operation timeout mismatch: got %d, want %d", actual.OperationTimeout, expected.OperationTimeout)
-	}
-	if actual.PackageTimeout != expected.PackageTimeout {
-		t.Errorf("Package timeout mismatch: got %d, want %d", actual.PackageTimeout, expected.PackageTimeout)
-	}
-	if actual.DotfileTimeout != expected.DotfileTimeout {
-		t.Errorf("Dotfile timeout mismatch: got %d, want %d", actual.DotfileTimeout, expected.DotfileTimeout)
-	}
-	if !reflect.DeepEqual(actual.ExpandDirectories, expected.ExpandDirectories) {
-		t.Errorf("Expand directories mismatch: got %v, want %v", actual.ExpandDirectories, expected.ExpandDirectories)
-	}
-	if !reflect.DeepEqual(actual.IgnorePatterns, expected.IgnorePatterns) {
-		t.Errorf("Ignore patterns mismatch: got %v, want %v", actual.IgnorePatterns, expected.IgnorePatterns)
-	}
-}

@@ -150,9 +150,3 @@ func applyDefaults(cfg *NewConfig) {
 		cfg.IgnorePatterns = defaultConfig.IgnorePatterns
 	}
 }
-
-// validateConfig validates a config using the validator
-func validateConfig(cfg *NewConfig) error {
-	validate := validator.New()
-	return validate.Struct(cfg)
-}
