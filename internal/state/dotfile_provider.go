@@ -17,7 +17,7 @@ import (
 // DotfileConfigLoader is now an alias to the unified interfaces package
 type DotfileConfigLoader = interfaces.DotfileConfigLoader
 
-// DotfileProvider implements the Provider interface for dotfile management
+// DotfileProvider manages dotfile state reconciliation
 type DotfileProvider struct {
 	homeDir      string
 	configDir    string

@@ -22,7 +22,7 @@ type PackageConfigLoader = interfaces.PackageConfigLoader
 // Deprecated: Use interfaces.PackageConfigItem directly.
 type PackageConfigItem = interfaces.PackageConfigItem
 
-// PackageProvider implements the Provider interface for package management
+// PackageProvider manages package state for a single package manager
 type PackageProvider struct {
 	managerName  string
 	manager      PackageManager

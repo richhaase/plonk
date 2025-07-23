@@ -5,24 +5,6 @@
 // This package consolidates common interfaces to reduce duplication and improve maintainability.
 package interfaces
 
-import "context"
-
-// Provider defines the universal state provider interface for all domains.
-// Implementations handle state reconciliation for packages, dotfiles, etc.
-type Provider interface {
-	// Domain returns the domain name (e.g., "package", "dotfile")
-	Domain() string
-
-	// GetConfiguredItems returns items defined in configuration
-	GetConfiguredItems() ([]ConfigItem, error)
-
-	// GetActualItems returns items currently present in the system
-	GetActualItems(ctx context.Context) ([]ActualItem, error)
-
-	// CreateItem creates an Item from configured and actual data
-	CreateItem(name string, state ItemState, configured *ConfigItem, actual *ActualItem) Item
-}
-
 // ConfigItem represents an item as defined in configuration
 type ConfigItem struct {
 	Name     string
