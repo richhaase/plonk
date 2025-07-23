@@ -108,13 +108,32 @@ The codebase's complexity presents several risks. Here is how we will mitigate t
 
 ### Phase Status
 - ✅ Phase 0: Preparation - COMPLETE
-- ⏳ Phase 1: Migrate Low-Dependency Functions - NOT STARTED
+- 🚧 Phase 1: Migrate Low-Dependency Functions - IN PROGRESS
 - ⏳ Phase 2: Migrate Core Business Logic - NOT STARTED
 - ⏳ Phase 3: Final Cleanup - NOT STARTED
 
-### Functions Moved
+### Types/Functions Moved
 (This section will be updated as functions are moved from shared.go)
 
-| Function | Original Location | New Location | Status |
-| -------- | ---------------- | ------------ | ------ |
-| (none yet) | | | |
+| Type/Function | Original Location | New Location | Status |
+| ------------- | ---------------- | ------------ | ------ |
+| ApplyOutput struct | shared.go:26-33 | ui/formatters.go | ✅ Moved |
+| ManagerApplyResult struct | shared.go:36-40 | ui/formatters.go | ✅ Moved |
+| PackageApplyResult struct | shared.go:43-47 | ui/formatters.go | ✅ Moved |
+| ApplyOutput.TableOutput() | shared.go:68-71 | ui/formatters.go | ✅ Moved |
+| ApplyOutput.StructuredData() | shared.go:74-76 | ui/formatters.go | ✅ Moved |
+| DotfileApplyOutput struct | shared.go:50-55 | ui/formatters.go | ✅ Moved |
+| DotfileAction struct | shared.go:58-63 | ui/formatters.go | ✅ Moved |
+| DotfileApplyOutput.TableOutput() | shared.go:79-145 | ui/formatters.go | ✅ Moved |
+| DotfileApplyOutput.StructuredData() | shared.go:148-150 | ui/formatters.go | ✅ Moved |
+| DotfileListOutput struct | shared.go:153-156 | ui/formatters.go | ✅ Moved |
+| DotfileListSummary struct | shared.go:159-165 | ui/formatters.go | ✅ Moved |
+| DotfileInfo struct | shared.go:168-173 | ui/formatters.go | ✅ Moved |
+| DotfileListOutput.TableOutput() | shared.go:176-238 | ui/formatters.go | ✅ Moved |
+| DotfileListOutput.StructuredData() | shared.go:241-243 | ui/formatters.go | ✅ Moved |
+| DotfileAddOutput struct | shared.go:678-684 | ui/formatters.go | ✅ Moved |
+| DotfileBatchAddOutput struct | shared.go:687-691 | ui/formatters.go | ✅ Moved |
+| DotfileAddOutput.TableOutput() | shared.go:694-737 | ui/formatters.go | ✅ Moved |
+| DotfileAddOutput.StructuredData() | shared.go:740-742 | ui/formatters.go | ✅ Moved |
+| DotfileBatchAddOutput.TableOutput() | shared.go:745-809 | ui/formatters.go | ✅ Moved |
+| DotfileBatchAddOutput.StructuredData() | shared.go:812-814 | ui/formatters.go | ✅ Moved |
