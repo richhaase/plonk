@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/cli"
-	"github.com/richhaase/plonk/internal/core"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/richhaase/plonk/internal/state"
@@ -49,20 +48,8 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "packages", "output-format", "invalid output format")
 	}
 
-	// Get directories from shared context
+	// Get shared context
 	sharedCtx := runtime.GetSharedContext()
-	configDir := sharedCtx.ConfigDir()
-
-	// Get reconciler from shared context
-	reconciler := sharedCtx.Reconciler()
-
-	// Register package provider
-	ctx := context.Background()
-	packageProvider, err := core.CreatePackageProvider(ctx, configDir)
-	if err != nil {
-		return err
-	}
-	reconciler.RegisterProvider("package", packageProvider)
 
 	// Get specific manager if flag is set
 	flags, err := cli.ParseSimpleFlags(cmd)
@@ -70,8 +57,9 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Reconcile packages
-	domainResult, err := reconciler.ReconcileProvider(ctx, "package")
+	// Reconcile packages directly
+	ctx := context.Background()
+	domainResult, err := sharedCtx.ReconcilePackages(ctx)
 	if err != nil {
 		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainState, "reconcile", "failed to reconcile package state")
 	}
@@ -198,21 +186,12 @@ func runDotList(cmd *cobra.Command, args []string) error {
 		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "dotfiles", "output-format", "invalid output format")
 	}
 
-	// Get directories from shared context
+	// Get shared context
 	sharedCtx := runtime.GetSharedContext()
-	configDir := sharedCtx.ConfigDir()
-	homeDir := sharedCtx.HomeDir()
 
-	// Load configuration using shared context cache
-	cfg := sharedCtx.ConfigWithDefaults()
-
-	// Use the shared reconciler
-	reconciler := sharedCtx.Reconciler()
-	dotfileProvider := core.CreateDotfileProvider(homeDir, configDir, cfg)
-	reconciler.RegisterProvider("dotfile", dotfileProvider)
-
+	// Reconcile dotfiles directly
 	ctx := context.Background()
-	domainResult, err := reconciler.ReconcileProvider(ctx, "dotfile")
+	domainResult, err := sharedCtx.ReconcileDotfiles(ctx)
 	if err != nil {
 		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainState, "reconcile", "failed to reconcile dotfiles")
 	}

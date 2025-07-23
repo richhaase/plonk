@@ -10,10 +10,9 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/cli"
-	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/core"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/runtime"
+	"github.com/richhaase/plonk/internal/types"
 	"github.com/spf13/cobra"
 )
 
@@ -100,29 +99,27 @@ func runLs(cmd *cobra.Command, args []string) error {
 
 // runSmartOverview provides a unified view of packages and dotfiles
 func runSmartOverview(cmd *cobra.Command, flags *cli.SimpleFlags, format OutputFormat, showAll bool) error {
-	// Get directories from shared context
+	// Get shared context
 	sharedCtx := runtime.GetSharedContext()
-	configDir := sharedCtx.ConfigDir()
-	homeDir := sharedCtx.HomeDir()
 
-	// Get reconciler from shared context
-	reconciler := sharedCtx.Reconciler()
-
-	// Register package provider
+	// Reconcile all domains directly
 	ctx := context.Background()
-	packageProvider, err := core.CreatePackageProvider(ctx, configDir)
+	results, err := sharedCtx.ReconcileAll(ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainState, "reconcile", "failed to reconcile state")
 	}
-	reconciler.RegisterProvider("package", packageProvider)
 
-	// Register dotfile provider
-	cfg := config.LoadConfigWithDefaults(configDir)
-	dotfileProvider := core.CreateDotfileProvider(homeDir, configDir, cfg)
-	reconciler.RegisterProvider("dotfile", dotfileProvider)
+	// Convert results to summary
+	summary := &types.Summary{
+		TotalManaged:   0,
+		TotalMissing:   0,
+		TotalUntracked: 0,
+		Results:        make([]types.Result, 0),
+	}
 
-	// Reconcile all domains
-	summary, err := reconciler.ReconcileAll(ctx)
+	for _, result := range results {
+		result.AddToSummary(summary)
+	}
 	if err != nil {
 		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainState, "reconcile", "failed to reconcile state")
 	}

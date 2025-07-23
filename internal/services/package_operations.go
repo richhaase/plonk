@@ -10,6 +10,7 @@ import (
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
+	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/richhaase/plonk/internal/state"
 )
 
@@ -46,25 +47,11 @@ type PackageResult struct {
 
 // ApplyPackages applies package configuration and returns the result
 func ApplyPackages(ctx context.Context, options PackageApplyOptions) (PackageApplyResult, error) {
-	// Create unified state reconciler
-	reconciler := state.NewReconciler()
-
-	// Create lock file adapter
-	lockService := lock.NewYAMLLockService(options.ConfigDir)
-	lockAdapter := lock.NewLockFileAdapter(lockService)
-
-	// Create package provider using registry
-	registry := managers.NewManagerRegistry()
-	packageProvider, err := registry.CreateMultiProvider(ctx, lockAdapter)
-	if err != nil {
-		return PackageApplyResult{}, errors.Wrap(err, errors.ErrProviderNotFound, errors.DomainPackages, "apply",
-			"failed to create package provider")
-	}
-
-	reconciler.RegisterProvider("package", packageProvider)
+	// Use shared context for reconciliation
+	sharedCtx := runtime.GetSharedContext()
 
 	// Reconcile package domain to find missing packages
-	result, err := reconciler.ReconcileProvider(ctx, "package")
+	result, err := sharedCtx.ReconcilePackages(ctx)
 	if err != nil {
 		return PackageApplyResult{}, errors.Wrap(err, errors.ErrReconciliation, errors.DomainPackages, "reconcile", "failed to reconcile package state")
 	}
@@ -81,6 +68,9 @@ func ApplyPackages(ctx context.Context, options PackageApplyOptions) (PackageApp
 	totalInstalled := 0
 	totalFailed := 0
 	totalWouldInstall := 0
+
+	// Get manager registry from shared context
+	registry := sharedCtx.ManagerRegistry()
 
 	// Process each manager's missing packages
 	for managerName, packages := range missingByManager {

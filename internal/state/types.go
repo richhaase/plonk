@@ -35,3 +35,11 @@ type Result = types.Result
 // Summary is an alias for the unified type to maintain backward compatibility.
 // Deprecated: Use types.Summary directly.
 type Summary = types.Summary
+
+// ConfigItem is an alias for the unified type to maintain backward compatibility.
+// Deprecated: Use interfaces.ConfigItem directly.
+type ConfigItem = interfaces.ConfigItem
+
+// ActualItem is an alias for the unified type to maintain backward compatibility.
+// Deprecated: Use interfaces.ActualItem directly.
+type ActualItem = interfaces.ActualItem

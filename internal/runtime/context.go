@@ -31,9 +31,6 @@ type SharedContext struct {
 	registry     *managers.ManagerRegistry
 	registryOnce sync.Once
 
-	reconciler     *state.Reconciler
-	reconcilerOnce sync.Once
-
 	// Manager availability cache
 	managerCache    map[string]bool
 	managerCacheTS  time.Time
@@ -115,14 +112,6 @@ func (sc *SharedContext) ManagerRegistry() *managers.ManagerRegistry {
 		Debug(DomainManager, "Manager registry initialized")
 	})
 	return sc.registry
-}
-
-// Reconciler returns the cached reconciler, creating it lazily if needed
-func (sc *SharedContext) Reconciler() *state.Reconciler {
-	sc.reconcilerOnce.Do(func() {
-		sc.reconciler = state.NewReconciler()
-	})
-	return sc.reconciler
 }
 
 // IsManagerAvailable checks if a manager is available, using cached results when possible
