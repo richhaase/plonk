@@ -137,3 +137,6 @@ The codebase's complexity presents several risks. Here is how we will mitigate t
 | DotfileAddOutput.StructuredData() | shared.go:740-742 | ui/formatters.go | ✅ Moved |
 | DotfileBatchAddOutput.TableOutput() | shared.go:745-809 | ui/formatters.go | ✅ Moved |
 | DotfileBatchAddOutput.StructuredData() | shared.go:812-814 | ui/formatters.go | ✅ Moved |
+| extractErrorMessages() | shared.go:439-447 | ui/formatters.go | ✅ Moved |
+| mapStatusToAction() | shared.go:411-418 | ui/formatters.go | ✅ Moved |
+| convertToDotfileAddOutput() | shared.go:421-436 | ui/formatters.go | ✅ Moved |

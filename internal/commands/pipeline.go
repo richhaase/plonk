@@ -12,6 +12,7 @@ import (
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/runtime"
+	"github.com/richhaase/plonk/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -182,7 +183,7 @@ func (p *CommandPipeline) renderOperationResults(results []operations.OperationR
 			output := DotfileAddOutput{
 				Source:      getMetadataString(result, "source"),
 				Destination: getMetadataString(result, "destination"),
-				Action:      mapStatusToAction(result.Status),
+				Action:      ui.MapStatusToAction(result.Status),
 				Path:        result.Name,
 			}
 			return RenderOutput(output, p.format)
@@ -190,8 +191,8 @@ func (p *CommandPipeline) renderOperationResults(results []operations.OperationR
 			// Multiple dotfiles/files - use batch output
 			batchOutput := DotfileBatchAddOutput{
 				TotalFiles: len(results),
-				AddedFiles: convertToDotfileAddOutput(results),
-				Errors:     extractErrorMessages(results),
+				AddedFiles: ui.ConvertToDotfileAddOutput(results),
+				Errors:     ui.ExtractErrorMessages(results),
 			}
 			return RenderOutput(batchOutput, p.format)
 		}

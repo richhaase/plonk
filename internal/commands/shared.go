@@ -407,45 +407,6 @@ func copyFileWithAttributes(src, dst string) error {
 	return os.Chtimes(dst, srcInfo.ModTime(), srcInfo.ModTime())
 }
 
-// mapStatusToAction converts operation status to legacy action string
-func mapStatusToAction(status string) string {
-	switch status {
-	case "added", "updated", "would-add", "would-update":
-		return status
-	default:
-		return "failed"
-	}
-}
-
-// convertToDotfileAddOutput converts OperationResult to DotfileAddOutput for structured output
-func convertToDotfileAddOutput(results []operations.OperationResult) []DotfileAddOutput {
-	outputs := make([]DotfileAddOutput, 0, len(results))
-	for _, result := range results {
-		if result.Status == "failed" {
-			continue // Skip failed results, they're handled in errors
-		}
-
-		outputs = append(outputs, DotfileAddOutput{
-			Source:      result.Metadata["source"].(string),
-			Destination: result.Metadata["destination"].(string),
-			Action:      mapStatusToAction(result.Status),
-			Path:        result.Name,
-		})
-	}
-	return outputs
-}
-
-// extractErrorMessages extracts error messages from failed results
-func extractErrorMessages(results []operations.OperationResult) []string {
-	var errors []string
-	for _, result := range results {
-		if result.Status == "failed" && result.Error != nil {
-			errors = append(errors, fmt.Sprintf("failed to add %s: %v", result.Name, result.Error))
-		}
-	}
-	return errors
-}
-
 // resolveDotfilePath resolves relative paths and validates the dotfile path
 func resolveDotfilePath(path, homeDir string) (string, error) {
 	// Create a path resolver instance

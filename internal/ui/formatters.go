@@ -3,7 +3,11 @@
 
 package ui
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/richhaase/plonk/internal/operations"
+)
 
 // ApplyOutput represents the output structure for package apply operations
 type ApplyOutput struct {
@@ -360,4 +364,43 @@ func (d DotfileBatchAddOutput) TableOutput() string {
 // StructuredData returns the structured data for serialization
 func (d DotfileBatchAddOutput) StructuredData() any {
 	return d
+}
+
+// ExtractErrorMessages extracts error messages from failed results
+func ExtractErrorMessages(results []operations.OperationResult) []string {
+	var errors []string
+	for _, result := range results {
+		if result.Status == "failed" && result.Error != nil {
+			errors = append(errors, fmt.Sprintf("failed to add %s: %v", result.Name, result.Error))
+		}
+	}
+	return errors
+}
+
+// MapStatusToAction converts operation status to legacy action string
+func MapStatusToAction(status string) string {
+	switch status {
+	case "added", "updated", "would-add", "would-update":
+		return status
+	default:
+		return "failed"
+	}
+}
+
+// ConvertToDotfileAddOutput converts OperationResult to DotfileAddOutput for structured output
+func ConvertToDotfileAddOutput(results []operations.OperationResult) []DotfileAddOutput {
+	outputs := make([]DotfileAddOutput, 0, len(results))
+	for _, result := range results {
+		if result.Status == "failed" {
+			continue // Skip failed results, they're handled in errors
+		}
+
+		outputs = append(outputs, DotfileAddOutput{
+			Source:      result.Metadata["source"].(string),
+			Destination: result.Metadata["destination"].(string),
+			Action:      MapStatusToAction(result.Status),
+			Path:        result.Name,
+		})
+	}
+	return outputs
 }
