@@ -76,8 +76,7 @@ func (r *ManagerRegistry) CreateMultiProvider(ctx context.Context, configLoader 
 			continue
 		}
 		if available {
-			managerAdapter := state.NewManagerAdapter(manager)
-			packageProvider.AddManager(name, managerAdapter, configLoader)
+			packageProvider.AddManager(name, manager, configLoader)
 		}
 	}
 
