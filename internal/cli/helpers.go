@@ -5,5 +5,15 @@
 // such as argument parsing, confirmation prompts, and command helpers.
 package cli
 
-// This file will contain CLI-specific helper functions
-// currently in internal/commands/shared.go
+import "github.com/richhaase/plonk/internal/operations"
+
+// GetMetadataString safely extracts string metadata from operation results
+func GetMetadataString(result operations.OperationResult, key string) string {
+	if result.Metadata == nil {
+		return ""
+	}
+	if value, ok := result.Metadata[key].(string); ok {
+		return value
+	}
+	return ""
+}

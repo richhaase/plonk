@@ -108,7 +108,7 @@ The codebase's complexity presents several risks. Here is how we will mitigate t
 
 ### Phase Status
 - ✅ Phase 0: Preparation - COMPLETE
-- 🚧 Phase 1: Migrate Low-Dependency Functions - IN PROGRESS
+- ✅ Phase 1: Migrate Low-Dependency Functions - COMPLETE
 - ⏳ Phase 2: Migrate Core Business Logic - NOT STARTED
 - ⏳ Phase 3: Final Cleanup - NOT STARTED
 
@@ -140,3 +140,4 @@ The codebase's complexity presents several risks. Here is how we will mitigate t
 | extractErrorMessages() | shared.go:439-447 | ui/formatters.go | ✅ Moved |
 | mapStatusToAction() | shared.go:411-418 | ui/formatters.go | ✅ Moved |
 | convertToDotfileAddOutput() | shared.go:421-436 | ui/formatters.go | ✅ Moved |
+| getMetadataString() | pipeline.go:265-273 | cli/helpers.go | ✅ Moved |

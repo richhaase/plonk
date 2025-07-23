@@ -7,6 +7,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/richhaase/plonk/internal/cli"
 	"github.com/richhaase/plonk/internal/operations"
 	"github.com/spf13/cobra"
 )
@@ -185,26 +186,26 @@ func TestGetMetadataString(t *testing.T) {
 	}
 
 	// Test valid string metadata
-	manager := getMetadataString(result, "manager")
+	manager := cli.GetMetadataString(result, "manager")
 	if manager != "homebrew" {
 		t.Errorf("expected 'homebrew', got '%s'", manager)
 	}
 
 	// Test non-string metadata
-	number := getMetadataString(result, "number")
+	number := cli.GetMetadataString(result, "number")
 	if number != "" {
 		t.Errorf("expected empty string for non-string metadata, got '%s'", number)
 	}
 
 	// Test missing metadata
-	missing := getMetadataString(result, "missing")
+	missing := cli.GetMetadataString(result, "missing")
 	if missing != "" {
 		t.Errorf("expected empty string for missing metadata, got '%s'", missing)
 	}
 
 	// Test nil metadata
 	result.Metadata = nil
-	nilMeta := getMetadataString(result, "manager")
+	nilMeta := cli.GetMetadataString(result, "manager")
 	if nilMeta != "" {
 		t.Errorf("expected empty string for nil metadata, got '%s'", nilMeta)
 	}

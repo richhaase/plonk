@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/richhaase/plonk/internal/cli"
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/operations"
@@ -79,8 +80,8 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		if len(results) == 1 {
 			result := results[0]
 			output := &DotfileAddOutput{
-				Source:      getMetadataString(result, "source"),
-				Destination: getMetadataString(result, "destination"),
+				Source:      cli.GetMetadataString(result, "source"),
+				Destination: cli.GetMetadataString(result, "destination"),
 				Action:      ui.MapStatusToAction(result.Status),
 				Path:        result.Name,
 			}

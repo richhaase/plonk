@@ -9,6 +9,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/richhaase/plonk/internal/cli"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/runtime"
@@ -181,8 +182,8 @@ func (p *CommandPipeline) renderOperationResults(results []operations.OperationR
 			// Single dotfile/file - use existing DotfileAddOutput format
 			result := results[0]
 			output := DotfileAddOutput{
-				Source:      getMetadataString(result, "source"),
-				Destination: getMetadataString(result, "destination"),
+				Source:      cli.GetMetadataString(result, "source"),
+				Destination: cli.GetMetadataString(result, "destination"),
 				Action:      ui.MapStatusToAction(result.Status),
 				Path:        result.Name,
 			}
@@ -259,17 +260,6 @@ func countStatus(results []operations.OperationResult, statuses ...string) int {
 		}
 	}
 	return count
-}
-
-// getMetadataString safely extracts string metadata
-func getMetadataString(result operations.OperationResult, key string) string {
-	if result.Metadata == nil {
-		return ""
-	}
-	if value, ok := result.Metadata[key].(string); ok {
-		return value
-	}
-	return ""
 }
 
 // calculateUninstallSummary calculates summary from uninstall results using generic operations summary
