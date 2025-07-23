@@ -112,15 +112,6 @@ func (m *Manager) DestinationToName(destination string) string {
 	return destination
 }
 
-// ExpandPath expands ~ to home directory
-// Deprecated: Use ResolvePath for proper validation and error handling
-func (m *Manager) ExpandPath(path string) string {
-	if strings.HasPrefix(path, "~/") {
-		return filepath.Join(m.homeDir, path[2:])
-	}
-	return path
-}
-
 // ResolvePath resolves a dotfile path using PathResolver with full validation
 func (m *Manager) ResolvePath(path string) (string, error) {
 	return m.pathResolver.ResolveDotfilePath(path)
@@ -133,7 +124,12 @@ func (m *Manager) GetSourcePath(source string) string {
 
 // GetDestinationPath returns the full destination path for a dotfile
 func (m *Manager) GetDestinationPath(destination string) string {
-	return m.ExpandPath(destination)
+	// For backward compatibility with state files,
+	// we need to keep expanding without validation
+	if strings.HasPrefix(destination, "~/") {
+		return filepath.Join(m.homeDir, destination[2:])
+	}
+	return destination
 }
 
 // FileExists checks if a file exists at the given path

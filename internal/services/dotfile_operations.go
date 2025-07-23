@@ -7,7 +7,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/dotfiles"
@@ -264,7 +263,13 @@ func AddSingleFile(ctx context.Context, options AddSingleFileOptions) operations
 	}
 
 	// Generate source and destination paths
-	_, destPath := GeneratePaths(options.FilePath, options.HomeDir)
+	resolver := paths.NewPathResolver(options.HomeDir, options.ConfigDir)
+	_, destPath, err := resolver.GeneratePaths(options.FilePath)
+	if err != nil {
+		// Fallback to simple relative path
+		relPath, _ := filepath.Rel(options.HomeDir, options.FilePath)
+		destPath = relPath
+	}
 
 	if options.DryRun {
 		result.Status = "would-add"
@@ -272,8 +277,7 @@ func AddSingleFile(ctx context.Context, options AddSingleFileOptions) operations
 	}
 
 	// Copy file with attributes
-	err := CopyFileWithAttributes(options.FilePath, filepath.Join(options.ConfigDir, destPath))
-	if err != nil {
+	if err = CopyFileWithAttributes(options.FilePath, filepath.Join(options.ConfigDir, destPath)); err != nil {
 		result.Status = "failed"
 		result.Error = errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "add", "failed to copy file")
 		return result
@@ -349,37 +353,6 @@ func (d *dotfileConfigAdapter) GetExpandDirectories() []string {
 // CreateDotfileProvider creates a dotfile provider
 func CreateDotfileProvider(homeDir string, configDir string, cfg *config.Config) *state.DotfileProvider {
 	return state.NewDotfileProvider(homeDir, configDir, &dotfileConfigAdapter{cfg: cfg})
-}
-
-// GeneratePaths generates source and destination paths for a dotfile
-func GeneratePaths(resolvedPath, homeDir string) (string, string) {
-	// Calculate relative path from home directory
-	relPath, err := filepath.Rel(homeDir, resolvedPath)
-	if err != nil {
-		// If we can't make it relative, use the base name
-		relPath = filepath.Base(resolvedPath)
-	}
-
-	// Remove leading dot from filename for storage
-	destPath := relPath
-	if strings.HasPrefix(filepath.Base(destPath), ".") {
-		dir := filepath.Dir(destPath)
-		base := filepath.Base(destPath)[1:] // Remove leading dot
-		if dir == "." {
-			destPath = base
-		} else {
-			destPath = filepath.Join(dir, base)
-		}
-	}
-
-	// For config directory storage, we want to maintain the structure
-	// but without the leading home path
-	if strings.HasPrefix(relPath, ".config/") {
-		// Store .config files in a config/ subdirectory
-		destPath = "config/" + relPath[8:] // Remove ".config/" and add "config/"
-	}
-
-	return relPath, destPath
 }
 
 // CopyFileWithAttributes copies a file preserving attributes

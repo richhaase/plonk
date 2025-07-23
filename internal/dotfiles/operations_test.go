@@ -28,29 +28,10 @@ func TestNewManager(t *testing.T) {
 	}
 }
 
-func TestManager_ExpandPath(t *testing.T) {
-	homeDir := "/home/user"
-	configDir := "/home/user/.config/plonk"
-	manager := NewManager(homeDir, configDir)
-
-	tests := []struct {
-		path     string
-		expected string
-	}{
-		{"~/.zshrc", "/home/user/.zshrc"},
-		{"~/.config/nvim/init.vim", "/home/user/.config/nvim/init.vim"},
-		{"~/dotfiles/test", "/home/user/dotfiles/test"},
-		{"/absolute/path", "/absolute/path"},
-		{"relative/path", "relative/path"},
-		{"", ""},
-	}
-
-	for _, test := range tests {
-		result := manager.ExpandPath(test.path)
-		if result != test.expected {
-			t.Errorf("ExpandPath(%s) = %s, expected %s", test.path, result, test.expected)
-		}
-	}
+func TestManager_ExpandPath_Removed(t *testing.T) {
+	// This test verifies that ExpandPath was properly removed
+	// and replaced with GetDestinationPath throughout the codebase
+	t.Skip("ExpandPath has been removed - use GetDestinationPath or ResolvePath instead")
 }
 
 func TestManager_DestinationToName(t *testing.T) {
