@@ -18,12 +18,6 @@ type OperationResult struct {
 	Metadata       map[string]interface{} `json:"metadata,omitempty"`        // Additional operation-specific data
 }
 
-// ProgressReporter defines the interface for reporting progress during batch operations
-type ProgressReporter interface {
-	ShowItemProgress(result OperationResult)
-	ShowBatchSummary(results []OperationResult)
-}
-
 // ResultSummary provides aggregate information about a batch operation
 type ResultSummary struct {
 	Total          int `json:"total"`
