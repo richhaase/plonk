@@ -173,3 +173,92 @@ internal/
 The plonk codebase is a cautionary tale of over-engineering. It prioritizes theoretical "clean architecture" principles over practical maintainability. For a tool that manages dotfiles and packages, this level of complexity is unjustifiable and actively harmful to development velocity and code quality.
 
 The architecture must be simplified dramatically to make the codebase maintainable and accessible to both human developers and AI agents.
+
+## Completed Refactoring Work
+
+### Path Resolution Consolidation (Completed)
+
+Successfully consolidated 4 different path resolution implementations into a single `PathResolver` implementation:
+
+**Before:**
+- `commands/shared.go:resolveDotfilePath()` - wrapper around PathResolver
+- `services/dotfile_operations.go:ResolveDotfilePath()` - no validation, security issues
+- `dotfiles/operations.go:ExpandPath()` - simple tilde expansion only
+- `paths/resolver.go:ResolveDotfilePath()` - full implementation with validation
+
+**After:**
+- Single implementation: `paths/resolver.go:ResolveDotfilePath()`
+- All other code uses PathResolver directly or through minimal wrappers
+- Removed ~70 lines of duplicate code
+- Fixed security issues (paths outside home directory now rejected)
+- Improved error messages for users
+
+**Key Changes:**
+1. Broke circular dependency between `paths` and `config` packages by moving utility functions
+2. Removed `dotfiles.Manager.ExpandPath()` method
+3. Removed `services.ResolveDotfilePath()` and `services.GeneratePaths()` functions
+4. Updated all callers to use PathResolver
+5. Maintained backward compatibility for state files while improving security
+
+## Learnings for Future Refactoring
+
+### 1. Start Small and Focused
+- Begin with clearly scoped, isolated improvements (like path resolution)
+- Each refactor should be completable in a few hours
+- Avoid trying to fix everything at once
+
+### 2. Behavior-Driven Refactoring
+- Write comprehensive behavior tests BEFORE refactoring
+- Document current behavior of all implementations
+- Ensure no user-visible behavior changes (unless fixing bugs)
+- Use tests to catch regressions early
+
+### 3. Circular Dependencies
+- Often caused by poor domain boundaries
+- Can be broken by:
+  - Moving shared utilities to appropriate packages
+  - Creating focused interfaces at the right level
+  - Questioning whether the dependency is really needed
+
+### 4. Incremental Migration Strategy
+- Each step must leave code in working, committable state
+- Run tests after every change
+- Use deprecation markers for gradual migration
+- Delete old code immediately after migration (no compatibility layers)
+
+### 5. AI Agent Considerations
+- Reduce the number of files needed to understand a feature
+- Use clear, consistent naming throughout the codebase
+- Avoid abstraction layers that don't add value
+- Keep related logic together in the same package
+
+### 6. Common Pitfalls to Avoid
+- Don't maintain backward compatibility internally (only for user-facing behavior)
+- Don't create adapters to work around poor design
+- Don't add interfaces "for future flexibility" - YAGNI
+- Don't scatter validation logic across multiple layers
+
+## Next Refactoring Targets
+
+Based on this success, the following areas are good candidates for similar consolidation:
+
+1. **File Operations Consolidation**
+   - Multiple implementations of copy/move/delete operations
+   - Could be consolidated into a single `FileOperations` service
+
+2. **Configuration Simplification**
+   - Remove nullable pointers from Config struct
+   - Consolidate Config/ResolvedConfig/ConfigDefaults
+   - Use standard library for YAML handling
+
+3. **Command Pipeline Removal**
+   - Replace pipeline abstraction with direct function calls
+   - Reduce 9-layer call chains to 2-3 layers
+   - Improve error handling clarity
+
+4. **State Management Simplification**
+   - Remove generic Provider interface
+   - Implement direct, specific state operations
+   - Simplify reconciliation logic
+
+Each of these should follow the same pattern: identify duplicates, write behavior tests, consolidate incrementally, and delete old code immediately.
