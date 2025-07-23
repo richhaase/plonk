@@ -6,10 +6,6 @@
 // used by both package and dotfile multiple add operations.
 package operations
 
-import (
-	"context"
-)
-
 // OperationResult represents the result of a single operation (package install, dotfile add, etc.)
 type OperationResult struct {
 	Name           string                 `json:"name"`                      // Package name or file path
@@ -20,11 +16,6 @@ type OperationResult struct {
 	AlreadyManaged bool                   `json:"already_managed,omitempty"` // Whether item was already managed
 	FilesProcessed int                    `json:"files_processed,omitempty"` // Number of files processed (for directories)
 	Metadata       map[string]interface{} `json:"metadata,omitempty"`        // Additional operation-specific data
-}
-
-// BatchProcessor defines the interface for processing multiple items in batch
-type BatchProcessor interface {
-	ProcessItems(ctx context.Context, items []string) ([]OperationResult, error)
 }
 
 // ProgressReporter defines the interface for reporting progress during batch operations
