@@ -11,19 +11,22 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/paths"
 )
 
 // Manager handles dotfile operations and path management
 type Manager struct {
-	homeDir   string
-	configDir string
+	homeDir      string
+	configDir    string
+	pathResolver *paths.PathResolver
 }
 
 // NewManager creates a new dotfile manager
 func NewManager(homeDir, configDir string) *Manager {
 	return &Manager{
-		homeDir:   homeDir,
-		configDir: configDir,
+		homeDir:      homeDir,
+		configDir:    configDir,
+		pathResolver: paths.NewPathResolver(homeDir, configDir),
 	}
 }
 

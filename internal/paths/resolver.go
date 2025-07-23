@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
 )
 
@@ -37,8 +36,23 @@ func NewPathResolverFromDefaults() (*PathResolver, error) {
 			"HOME environment variable not set")
 	}
 
-	configDir := config.GetDefaultConfigDirectory()
+	configDir := getDefaultConfigDirectory()
 	return NewPathResolver(homeDir, configDir), nil
+}
+
+// getDefaultConfigDirectory returns the default config directory, checking PLONK_DIR environment variable first
+func getDefaultConfigDirectory() string {
+	// Check for PLONK_DIR environment variable
+	if envDir := os.Getenv("PLONK_DIR"); envDir != "" {
+		// Expand ~ if present
+		if strings.HasPrefix(envDir, "~/") {
+			return filepath.Join(os.Getenv("HOME"), envDir[2:])
+		}
+		return envDir
+	}
+
+	// Default location
+	return filepath.Join(os.Getenv("HOME"), ".config", "plonk")
 }
 
 // ResolveDotfilePath resolves a dotfile path to an absolute path within the home directory
@@ -106,7 +120,20 @@ func (p *PathResolver) GenerateDestinationPath(resolvedPath string) (string, err
 
 // GenerateSourcePath converts a destination path to a source path using plonk's naming convention
 func (p *PathResolver) GenerateSourcePath(destination string) string {
-	return config.TargetToSource(destination)
+	return targetToSource(destination)
+}
+
+// targetToSource converts a target path to a source path following plonk conventions
+func targetToSource(target string) string {
+	// Remove ~/. prefix if present
+	if len(target) > 3 && target[:3] == "~/." {
+		return target[3:]
+	}
+	// Remove ~/ prefix if present (shouldn't happen with our convention)
+	if len(target) > 2 && target[:2] == "~/" {
+		return target[2:]
+	}
+	return target
 }
 
 // GeneratePaths generates both source and destination paths for a resolved dotfile path

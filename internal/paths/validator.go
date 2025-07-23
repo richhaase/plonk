@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
 )
 
@@ -30,8 +29,15 @@ func NewPathValidator(homeDir, configDir string, ignorePatterns []string) *PathV
 
 // NewPathValidatorFromDefaults creates a path validator with default ignore patterns
 func NewPathValidatorFromDefaults(homeDir, configDir string) *PathValidator {
-	defaults := config.GetDefaults()
-	return NewPathValidator(homeDir, configDir, defaults.IgnorePatterns)
+	defaultIgnorePatterns := []string{
+		".DS_Store",
+		".git",
+		"*.backup",
+		"*.tmp",
+		"*.swp",
+		"plonk.lock",
+	}
+	return NewPathValidator(homeDir, configDir, defaultIgnorePatterns)
 }
 
 // ValidateSecure performs security validation on a path
