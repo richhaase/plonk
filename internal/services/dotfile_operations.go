@@ -206,7 +206,8 @@ func ProcessDotfileForApply(ctx context.Context, options ProcessDotfileOptions) 
 
 // AddSingleDotfile adds a single dotfile to configuration
 func AddSingleDotfile(ctx context.Context, options AddDotfileOptions) []operations.OperationResult {
-	resolvedPath, err := ResolveDotfilePath(options.DotfilePath, options.HomeDir)
+	resolver := paths.NewPathResolver(options.HomeDir, options.ConfigDir)
+	resolvedPath, err := resolver.ResolveDotfilePath(options.DotfilePath)
 	if err != nil {
 		return []operations.OperationResult{{
 			Name:   options.DotfilePath,
@@ -348,17 +349,6 @@ func (d *dotfileConfigAdapter) GetExpandDirectories() []string {
 // CreateDotfileProvider creates a dotfile provider
 func CreateDotfileProvider(homeDir string, configDir string, cfg *config.Config) *state.DotfileProvider {
 	return state.NewDotfileProvider(homeDir, configDir, &dotfileConfigAdapter{cfg: cfg})
-}
-
-// ResolveDotfilePath resolves a dotfile path relative to home directory
-func ResolveDotfilePath(path, homeDir string) (string, error) {
-	if strings.HasPrefix(path, "~/") {
-		return filepath.Join(homeDir, path[2:]), nil
-	}
-	if !filepath.IsAbs(path) {
-		return filepath.Join(homeDir, path), nil
-	}
-	return path, nil
 }
 
 // GeneratePaths generates source and destination paths for a dotfile
