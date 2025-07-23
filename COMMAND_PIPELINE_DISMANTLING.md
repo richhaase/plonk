@@ -2,19 +2,26 @@
 
 ## Status Update
 
-**Last Updated:** Phase 1 Complete (All simple commands refactored)
+**Last Updated:** Phase 2.1-2.3 Complete (add.go, install.go, sync.go refactored)
 
 ### Progress Summary:
 - ✅ Phase 0: Call chain analysis complete
 - ✅ Phase 1.1: runStatus() reviewed (already direct)
 - ✅ Phase 1.2: runPkgList() refactored to eliminate conversion layer
 - ✅ Phase 1.3: runDotList() refactored to eliminate conversion layer
-- ⏳ Phase 2: Complex commands pending (ready to start)
+- ✅ Phase 2.1: add.go refactored to eliminate command pipeline
+- ✅ Phase 2.2: install.go refactored to eliminate batch processing
+- ✅ Phase 2.3: sync.go refactored to call services directly
+- ⏳ Phase 2.4: rm.go pending
+- ⏳ Phase 2.5: uninstall.go pending
 - ⏳ Phase 3: Final cleanup pending
 
 ### Key Achievements:
 - Successfully eliminated conversion layers in both runPkgList() and runDotList()
 - Established consistent pattern for wrapping raw domain objects for OutputData interface
+- Removed all command pipeline abstractions (NewSimpleCommandPipeline, NewCommandPipeline)
+- Eliminated operations.BatchProcess and processor patterns
+- Commands now make direct calls to core business logic
 - Maintained 100% test compatibility while simplifying code
 - Reduced shared.go from ~600 to 534 lines
 
@@ -100,33 +107,58 @@ Tackle commands with more involved logic, such as `add`, `install`, `sync`, `rem
 
 **Key Difference from Phase 1**: These commands use `operations.BatchProcess` and processor patterns that need to be eliminated, requiring more significant restructuring.
 
-1.  **Target: `add.go`**
-    *   **Current State:** Uses `addSingleDotfiles()` wrapper and `operations.BatchProcess()`
-    *   **Action:**
-        - Remove `addSingleDotfiles()` wrapper function
-        - Eliminate `operations.BatchProcess()` usage
-        - Have `RunE` directly iterate and call `core.AddSingleDotfile()` or `core.AddDirectoryFiles()`
-        - Handle error collection and result aggregation directly in `RunE`
-    *   **Verification:** Run `just test` and `just test-ux`. Manually test `plonk add`.
+1.  **Target: `add.go`** ✅ COMPLETE
+    *   **Current State:** Used `NewSimpleCommandPipeline` and wrapper functions
+    *   **Actions Taken:**
+        - Removed `NewSimpleCommandPipeline` usage
+        - Eliminated `addSingleDotfiles()` and `addPackages()` wrapper functions
+        - `runAdd()` now directly iterates and calls `core.AddSingleDotfile()` or `core.AddDirectoryFiles()`
+        - Direct result collection and error handling in `runAdd()`
+        - Progress reporter retained for user feedback
+    *   **Result:** Reduced add.go from 160 to 137 lines, direct execution flow
+    *   **Verification:** All tests pass, manually tested `plonk add`
 
-2.  **Target: `install.go`**
-    *   **Current State:** Uses `operations.PackageProcessor()` and `installSinglePackage()` wrapper
-    *   **Action:**
-        - Remove `operations.PackageProcessor()` and `operations.BatchProcess()`
-        - Remove `installSinglePackage()` wrapper
-        - Have `RunE` directly iterate over packages
-        - Call `lockService` and `packageManager.Install()` directly
-        - Handle results and error collection in `RunE`
-    *   **Verification:** Run `just test` and `just test-ux`. Manually test `plonk install`.
+2.  **Target: `install.go`** ✅ COMPLETE
+    *   **Current State:** Used `NewCommandPipeline` and `operations.StandardBatchWorkflow`
+    *   **Actions Taken:**
+        - Removed `NewCommandPipeline` and `operations.StandardBatchWorkflow` usage
+        - Eliminated `operations.PackageProcessor` abstraction
+        - Kept `installSinglePackage()` as it contains significant business logic
+        - `runInstall()` directly iterates over packages and calls `installSinglePackage()`
+        - Progress reporter retained for individual and batch feedback
+    *   **Result:** Direct execution flow, eliminated unnecessary abstractions
+    *   **Verification:** All tests pass, manually tested `plonk install`
 
-3.  **Target: `sync.go`**
-    *   **Current State:** Most complex with multiple wrapper layers
-    *   **Action:**
-        - Remove `syncPackages()`, `syncDotfiles()`, `applyPackages()`, and `applyDotfiles()` functions
-        - Have `RunE` directly call `services.ApplyPackages()` and equivalent dotfile services
-        - Handle the orchestration and result combination directly in `RunE`
-        - Eliminate intermediate result transformations
-    *   **Verification:** Run `just test` and `just test-ux`. Manually test `plonk sync`.
+3.  **Target: `sync.go`** ✅ COMPLETE
+    *   **Current State:** Most complex with `syncPackages()` and `syncDotfiles()` wrappers
+    *   **Actions Taken:**
+        - Removed `syncPackages()` and `syncDotfiles()` wrapper functions
+        - Eliminated calls through `applyPackages()` and `applyDotfiles()` in shared.go
+        - `runSync()` now directly calls `services.ApplyPackages()` and `services.ApplyDotfiles()`
+        - Data conversion handled inline within `runSync()`
+        - Combined output structure maintained for backward compatibility
+    *   **Result:** Increased sync.go to 206 lines (from inline conversion), but flow is much clearer
+    *   **Verification:** All tests pass, manually tested `plonk sync`
+
+### Phase 2 Progress Summary
+
+With the completion of add.go, install.go, and sync.go refactoring, we've established clear patterns:
+
+**Patterns Established:**
+1. **Direct Service Calls**: Commands call `services.*` or `core.*` directly without intermediate wrappers
+2. **Inline Data Conversion**: Result conversion happens directly in the command rather than through separate functions
+3. **Progress Reporting**: Retained `operations.ProgressReporter` for user feedback (it adds value without abstraction)
+4. **Business Logic Location**: Functions with significant logic (like `installSinglePackage`) are kept when they encapsulate real business rules
+
+**Key Observations:**
+- Some commands increased in line count due to inline conversion, but the flow is much clearer
+- The elimination of wrapper functions makes debugging and tracing execution significantly easier
+- All tests continue to pass without modification, validating our approach
+- The pattern scales well from simple commands (add) to complex ones (sync)
+
+**Remaining Work:**
+- rm.go and uninstall.go follow similar patterns to what we've already refactored
+- After completing these, Phase 3 cleanup should significantly reduce shared.go
 
 4.  **Target: `rm.go`**
     *   **Current State:** Uses `operations.SimpleProcessor()` and closure pattern

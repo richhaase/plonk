@@ -8,11 +8,9 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/cli"
-	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/core"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/runtime"
-	"github.com/richhaase/plonk/internal/services"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/richhaase/plonk/internal/ui"
 	"github.com/spf13/cobra"
@@ -33,120 +31,6 @@ type DotfileListSummary = ui.DotfileListSummary
 type DotfileInfo = ui.DotfileInfo
 
 // TableOutput and StructuredData methods moved to internal/ui/formatters.go
-
-// Shared functions from the original commands
-
-// applyPackages applies package configuration and returns the result (refactored to use business module)
-func applyPackages(configDir string, cfg *config.Config, dryRun bool, format OutputFormat) (ApplyOutput, error) {
-	ctx := context.Background()
-
-	// Use business module for package operations
-	options := services.PackageApplyOptions{
-		ConfigDir: configDir,
-		Config:    cfg,
-		DryRun:    dryRun,
-	}
-
-	result, err := services.ApplyPackages(ctx, options)
-	if err != nil {
-		return ApplyOutput{}, err
-	}
-
-	// Convert business result to command output format
-	outputData := ApplyOutput{
-		DryRun:            result.DryRun,
-		TotalMissing:      result.TotalMissing,
-		TotalInstalled:    result.TotalInstalled,
-		TotalFailed:       result.TotalFailed,
-		TotalWouldInstall: result.TotalWouldInstall,
-		Managers:          make([]ManagerApplyResult, len(result.Managers)),
-	}
-
-	// Convert manager results
-	for i, mgr := range result.Managers {
-		packages := make([]PackageApplyResult, len(mgr.Packages))
-		for j, pkg := range mgr.Packages {
-			packages[j] = PackageApplyResult{
-				Name:   pkg.Name,
-				Status: pkg.Status,
-				Error:  pkg.Error,
-			}
-		}
-		outputData.Managers[i] = ManagerApplyResult{
-			Name:         mgr.Name,
-			MissingCount: mgr.MissingCount,
-			Packages:     packages,
-		}
-	}
-
-	// Output summary for table format
-	if format == OutputTable {
-		if result.TotalMissing == 0 {
-			fmt.Println("📦 All packages up to date")
-		} else {
-			if dryRun {
-				fmt.Printf("📦 Package summary: %d packages would be installed\n", outputData.TotalWouldInstall)
-			} else {
-				fmt.Printf("📦 Package summary: %d installed, %d failed\n", outputData.TotalInstalled, outputData.TotalFailed)
-			}
-		}
-		fmt.Println()
-	}
-
-	return outputData, nil
-}
-
-// applyDotfiles applies dotfile configuration and returns the result (refactored to use business module)
-func applyDotfiles(configDir, homeDir string, cfg *config.Config, dryRun, backup bool, format OutputFormat) (DotfileApplyOutput, error) {
-	ctx := context.Background()
-
-	// Use business module for dotfile operations
-	options := services.DotfileApplyOptions{
-		ConfigDir: configDir,
-		HomeDir:   homeDir,
-		Config:    cfg,
-		DryRun:    dryRun,
-		Backup:    backup,
-	}
-
-	result, err := services.ApplyDotfiles(ctx, options)
-	if err != nil {
-		return DotfileApplyOutput{}, err
-	}
-
-	// Convert business result to command output format
-	actions := make([]DotfileAction, len(result.Actions))
-	for i, action := range result.Actions {
-		actions[i] = DotfileAction{
-			Source:      action.Source,
-			Destination: action.Destination,
-			Status:      action.Status,
-			Reason:      "", // Business module uses Action field differently
-		}
-	}
-
-	outputData := DotfileApplyOutput{
-		DryRun:   result.DryRun,
-		Deployed: result.Summary.Added + result.Summary.Updated,
-		Skipped:  result.Summary.Unchanged,
-		Actions:  actions,
-	}
-
-	// Output summary for table format
-	if format == OutputTable {
-		if result.TotalFiles == 0 {
-			fmt.Println("📄 No dotfiles configured")
-		} else {
-			if dryRun {
-				fmt.Printf("📄 Dotfile summary: %d dotfiles would be deployed, %d would be skipped\n", outputData.Deployed, outputData.Skipped)
-			} else {
-				fmt.Printf("📄 Dotfile summary: %d deployed, %d skipped\n", outputData.Deployed, outputData.Skipped)
-			}
-		}
-	}
-
-	return outputData, nil
-}
 
 // Shared output types from dot_add.go (moved to internal/ui/formatters.go)
 type DotfileAddOutput = ui.DotfileAddOutput

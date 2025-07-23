@@ -4,11 +4,13 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/runtime"
+	"github.com/richhaase/plonk/internal/services"
 	"github.com/spf13/cobra"
 )
 
@@ -70,45 +72,135 @@ func runSync(cmd *cobra.Command, args []string) error {
 	// Load configuration
 	cfg := config.LoadConfigWithDefaults(configDir)
 
-	var packageResult, dotfileResult interface{}
+	ctx := context.Background()
+	var packageOutput *ApplyOutput
+	var dotfileOutput *DotfileApplyOutput
 
 	// Sync packages (unless dotfiles-only)
 	if !dotfilesOnly {
-		packageResult, err = syncPackages(configDir, cfg, dryRun, format)
+		// Call services.ApplyPackages directly
+		options := services.PackageApplyOptions{
+			ConfigDir: configDir,
+			Config:    cfg,
+			DryRun:    dryRun,
+		}
+
+		result, err := services.ApplyPackages(ctx, options)
 		if err != nil {
 			return err
+		}
+
+		// Convert to command output format
+		pkgOutput := ApplyOutput{
+			DryRun:            result.DryRun,
+			TotalMissing:      result.TotalMissing,
+			TotalInstalled:    result.TotalInstalled,
+			TotalFailed:       result.TotalFailed,
+			TotalWouldInstall: result.TotalWouldInstall,
+			Managers:          make([]ManagerApplyResult, len(result.Managers)),
+		}
+
+		// Convert manager results
+		for i, mgr := range result.Managers {
+			packages := make([]PackageApplyResult, len(mgr.Packages))
+			for j, pkg := range mgr.Packages {
+				packages[j] = PackageApplyResult{
+					Name:   pkg.Name,
+					Status: pkg.Status,
+					Error:  pkg.Error,
+				}
+			}
+			pkgOutput.Managers[i] = ManagerApplyResult{
+				Name:         mgr.Name,
+				MissingCount: mgr.MissingCount,
+				Packages:     packages,
+			}
+		}
+
+		packageOutput = &pkgOutput
+
+		// Print summary for table format
+		if format == OutputTable {
+			if result.TotalMissing == 0 {
+				fmt.Println("📦 All packages up to date")
+			} else {
+				if dryRun {
+					fmt.Printf("📦 Package summary: %d packages would be installed\n", pkgOutput.TotalWouldInstall)
+				} else {
+					fmt.Printf("📦 Package summary: %d installed, %d failed\n", pkgOutput.TotalInstalled, pkgOutput.TotalFailed)
+				}
+			}
+			fmt.Println()
 		}
 	}
 
 	// Sync dotfiles (unless packages-only)
 	if !packagesOnly {
-		dotfileResult, err = syncDotfiles(configDir, homeDir, cfg, dryRun, backup, format)
+		// Call services.ApplyDotfiles directly
+		options := services.DotfileApplyOptions{
+			ConfigDir: configDir,
+			HomeDir:   homeDir,
+			Config:    cfg,
+			DryRun:    dryRun,
+			Backup:    backup,
+		}
+
+		result, err := services.ApplyDotfiles(ctx, options)
 		if err != nil {
 			return err
 		}
+
+		// Convert to command output format
+		actions := make([]DotfileAction, len(result.Actions))
+		for i, action := range result.Actions {
+			actions[i] = DotfileAction{
+				Source:      action.Source,
+				Destination: action.Destination,
+				Status:      action.Status,
+				Reason:      "", // Business module uses Action field differently
+			}
+		}
+
+		dotOutput := DotfileApplyOutput{
+			DryRun:   result.DryRun,
+			Deployed: result.Summary.Added + result.Summary.Updated,
+			Skipped:  result.Summary.Unchanged,
+			Actions:  actions,
+		}
+
+		dotfileOutput = &dotOutput
+
+		// Print summary for table format
+		if format == OutputTable {
+			if result.TotalFiles == 0 {
+				fmt.Println("📄 No dotfiles configured")
+			} else {
+				if dryRun {
+					fmt.Printf("📄 Dotfile summary: %d dotfiles would be deployed, %d would be skipped\n", dotOutput.Deployed, dotOutput.Skipped)
+				} else {
+					fmt.Printf("📄 Dotfile summary: %d deployed, %d skipped\n", dotOutput.Deployed, dotOutput.Skipped)
+				}
+			}
+		}
 	}
 
-	// Prepare combined output
+	// Prepare combined output - handle nil pointers
+	var pkgInterface, dotInterface interface{}
+	if packageOutput != nil {
+		pkgInterface = *packageOutput
+	}
+	if dotfileOutput != nil {
+		dotInterface = *dotfileOutput
+	}
+
 	outputData := CombinedSyncOutput{
 		DryRun:   dryRun,
-		Packages: packageResult,
-		Dotfiles: dotfileResult,
+		Packages: pkgInterface,
+		Dotfiles: dotInterface,
 		Scope:    getSyncScope(packagesOnly, dotfilesOnly),
 	}
 
 	return RenderOutput(outputData, format)
-}
-
-// syncPackages handles package synchronization (reuses apply logic)
-func syncPackages(configDir string, cfg *config.Config, dryRun bool, format OutputFormat) (ApplyOutput, error) {
-	// Reuse the existing package apply logic from apply.go
-	return applyPackages(configDir, cfg, dryRun, format)
-}
-
-// syncDotfiles handles dotfile synchronization (reuses apply logic)
-func syncDotfiles(configDir, homeDir string, cfg *config.Config, dryRun, backup bool, format OutputFormat) (DotfileApplyOutput, error) {
-	// Reuse the existing dotfile apply logic from apply.go
-	return applyDotfiles(configDir, homeDir, cfg, dryRun, backup, format)
 }
 
 // getSyncScope returns a description of what's being synced
