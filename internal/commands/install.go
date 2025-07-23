@@ -61,23 +61,19 @@ func init() {
 }
 
 func runInstall(cmd *cobra.Command, args []string) error {
-	// Create command pipeline
-	pipeline, err := NewCommandPipeline(cmd, "package")
+	// Parse output format
+	outputFormat, _ := cmd.Flags().GetString("output")
+	format, err := ParseOutputFormat(outputFormat)
+	if err != nil {
+		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "install", "output-format", "invalid output format")
+	}
+
+	// Get flags
+	flags, err := cli.ParseSimpleFlags(cmd)
 	if err != nil {
 		return err
 	}
 
-	// Define the processor function
-	processor := func(ctx context.Context, args []string, flags *cli.SimpleFlags) ([]operations.OperationResult, error) {
-		return installPackages(cmd, args, flags)
-	}
-
-	// Execute the pipeline
-	return pipeline.ExecuteWithResults(context.Background(), processor, args)
-}
-
-// installPackages handles package installations
-func installPackages(cmd *cobra.Command, packageNames []string, flags *cli.SimpleFlags) ([]operations.OperationResult, error) {
 	// Get directories
 	configDir := config.GetDefaultConfigDirectory()
 
@@ -96,25 +92,54 @@ func installPackages(cmd *cobra.Command, packageNames []string, flags *cli.Simpl
 		}
 	}
 
-	// Create item processor for package installation
-	processor := operations.PackageProcessor(
-		func(ctx context.Context, packageName, mgr string) operations.OperationResult {
-			return installSinglePackage(configDir, lockService, packageName, mgr, flags.DryRun, flags.Force)
-		},
-		manager,
-	)
+	// Process each package directly
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 
-	// Configure batch processing options
-	options := operations.BatchProcessorOptions{
-		ItemType:               "package",
-		Operation:              "install",
-		ShowIndividualProgress: true,            // Always show progress for better error visibility
-		Timeout:                5 * time.Minute, // Install timeout
-		ContinueOnError:        nil,             // Use default (true) - continue on individual failures
+	var results []operations.OperationResult
+
+	// Show header for progress tracking
+	reporter := operations.NewProgressReporterForOperation("install", "package", true)
+
+	for _, packageName := range args {
+		// Check if context was canceled
+		if ctx.Err() != nil {
+			break
+		}
+
+		// Install single package directly
+		result := installSinglePackage(configDir, lockService, packageName, manager, flags.DryRun, flags.Force)
+
+		// Show individual progress
+		reporter.ShowItemProgress(result)
+
+		// Collect result
+		results = append(results, result)
 	}
 
-	// Use standard batch workflow
-	return operations.StandardBatchWorkflow(context.Background(), packageNames, processor, options)
+	// Show batch summary
+	reporter.ShowBatchSummary(results)
+
+	// Create output data
+	summary := calculatePackageSummary(results)
+	outputData := PackageInstallOutput{
+		TotalPackages: len(results),
+		Results:       results,
+		Summary:       summary,
+	}
+
+	// Render output
+	if err := RenderOutput(outputData, format); err != nil {
+		return err
+	}
+
+	// Determine exit code based on results
+	exitErr := operations.DetermineExitCode(results, errors.DomainPackages, "install")
+	if exitErr != nil {
+		return exitErr
+	}
+
+	return nil
 }
 
 // installSinglePackage installs a single package
