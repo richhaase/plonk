@@ -286,6 +286,16 @@ type PackageUninstallSummary struct {
 	Failed  int `json:"failed" yaml:"failed"`
 }
 
+// calculateUninstallSummary calculates summary from uninstall results using generic operations summary
+func calculateUninstallSummary(results []operations.OperationResult) PackageUninstallSummary {
+	genericSummary := operations.CalculateSummary(results)
+	return PackageUninstallSummary{
+		Removed: genericSummary.Removed,
+		Skipped: genericSummary.Skipped,
+		Failed:  genericSummary.Failed,
+	}
+}
+
 // TableOutput generates human-friendly output
 func (p PackageUninstallOutput) TableOutput() string {
 	tb := NewTableBuilder()
