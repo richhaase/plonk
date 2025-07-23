@@ -155,7 +155,8 @@ type DotfileBatchAddOutput = ui.DotfileBatchAddOutput
 // TableOutput and StructuredData methods moved to internal/ui/formatters.go
 
 // Shared functions for pkg and dot list operations
-// Note: runPkgList implementation deferred pending requirements clarification
+
+// Simplified runPkgList that passes raw data to RenderOutput
 func runPkgList(cmd *cobra.Command, args []string) error {
 	// Parse output format
 	outputFormat, _ := cmd.Flags().GetString("output")
@@ -218,89 +219,90 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 		domainResult.Untracked = filteredUntracked
 	}
 
-	// Prepare manager groups
-	managerGroups := make(map[string]*EnhancedManagerOutput)
+	// For non-verbose mode, clear untracked items
+	if !flags.Verbose {
+		domainResult.Untracked = []state.Item{}
+	}
 
-	// Add managed packages
-	for _, item := range domainResult.Managed {
-		if _, exists := managerGroups[item.Manager]; !exists {
-			managerGroups[item.Manager] = &EnhancedManagerOutput{
-				Name:           item.Manager,
-				ManagedCount:   0,
-				MissingCount:   0,
-				UntrackedCount: 0,
-				Packages:       []EnhancedPackageOutput{},
-			}
+	// Wrap result to implement OutputData interface
+	outputWrapper := &packageListResultWrapper{
+		Result: domainResult,
+	}
+
+	// Pass raw data directly to RenderOutput
+	return RenderOutput(outputWrapper, format)
+}
+
+// packageListResultWrapper wraps state.Result to implement OutputData
+type packageListResultWrapper struct {
+	Result state.Result
+}
+
+// TableOutput generates human-friendly table output
+func (w *packageListResultWrapper) TableOutput() string {
+	tb := NewTableBuilder()
+
+	// Header with summary
+	totalCount := len(w.Result.Managed) + len(w.Result.Missing) + len(w.Result.Untracked)
+	tb.AddTitle("Package Summary")
+	tb.AddLine("Total: %d packages | %s Managed: %d | %s Missing: %d | %s Untracked: %d",
+		totalCount, IconSuccess, len(w.Result.Managed),
+		IconWarning, len(w.Result.Missing),
+		IconUnknown, len(w.Result.Untracked))
+	tb.AddNewline()
+
+	// If no packages, show simple message
+	if totalCount == 0 {
+		tb.AddLine("No packages found")
+		return tb.Build()
+	}
+
+	// Collect all items with their states
+	type itemWithState struct {
+		item  state.Item
+		state string
+	}
+	var items []itemWithState
+
+	// Add managed items
+	for _, item := range w.Result.Managed {
+		items = append(items, itemWithState{item: item, state: "managed"})
+	}
+	// Add missing items
+	for _, item := range w.Result.Missing {
+		items = append(items, itemWithState{item: item, state: "missing"})
+	}
+	// Add untracked items if they exist (verbose mode)
+	for _, item := range w.Result.Untracked {
+		items = append(items, itemWithState{item: item, state: "untracked"})
+	}
+
+	// If we have items to show, create the table
+	if len(items) > 0 {
+		// Table header
+		tb.AddLine("  Status Package                        Manager   ")
+		tb.AddLine("  ------ ------------------------------ ----------")
+
+		// Table rows
+		for _, i := range items {
+			statusIcon := GetStatusIcon(i.state)
+			tb.AddLine("  %-6s %-30s %-10s",
+				statusIcon, TruncateString(i.item.Name, 30), i.item.Manager)
 		}
-		managerGroups[item.Manager].ManagedCount++
-		managerGroups[item.Manager].Packages = append(managerGroups[item.Manager].Packages, EnhancedPackageOutput{
-			Name:    item.Name,
-			State:   "managed",
-			Manager: item.Manager,
-		})
+		tb.AddNewline()
 	}
 
-	// Add missing packages
-	for _, item := range domainResult.Missing {
-		if _, exists := managerGroups[item.Manager]; !exists {
-			managerGroups[item.Manager] = &EnhancedManagerOutput{
-				Name:           item.Manager,
-				ManagedCount:   0,
-				MissingCount:   0,
-				UntrackedCount: 0,
-				Packages:       []EnhancedPackageOutput{},
-			}
-		}
-		managerGroups[item.Manager].MissingCount++
-		managerGroups[item.Manager].Packages = append(managerGroups[item.Manager].Packages, EnhancedPackageOutput{
-			Name:    item.Name,
-			State:   "missing",
-			Manager: item.Manager,
-		})
+	// Show untracked count hint if untracked items were hidden
+	if len(w.Result.Untracked) == 0 && totalCount > len(w.Result.Managed)+len(w.Result.Missing) {
+		tb.AddLine("Untracked packages hidden (use --verbose to show)")
 	}
 
-	// Add untracked packages if verbose
-	if flags.Verbose {
-		for _, item := range domainResult.Untracked {
-			if _, exists := managerGroups[item.Manager]; !exists {
-				managerGroups[item.Manager] = &EnhancedManagerOutput{
-					Name:           item.Manager,
-					ManagedCount:   0,
-					MissingCount:   0,
-					UntrackedCount: 0,
-					Packages:       []EnhancedPackageOutput{},
-				}
-			}
-			managerGroups[item.Manager].UntrackedCount++
-			managerGroups[item.Manager].Packages = append(managerGroups[item.Manager].Packages, EnhancedPackageOutput{
-				Name:    item.Name,
-				State:   "untracked",
-				Manager: item.Manager,
-			})
-		}
-	}
+	return tb.Build()
+}
 
-	// Convert to slice
-	managers := make([]EnhancedManagerOutput, 0, len(managerGroups))
-	items := []EnhancedPackageOutput{}
-
-	for _, mgr := range managerGroups {
-		managers = append(managers, *mgr)
-		items = append(items, mgr.Packages...)
-	}
-
-	// Create output structure
-	output := PackageListOutput{
-		ManagedCount:   len(domainResult.Managed),
-		MissingCount:   len(domainResult.Missing),
-		UntrackedCount: len(domainResult.Untracked),
-		TotalCount:     len(domainResult.Managed) + len(domainResult.Missing) + len(domainResult.Untracked),
-		Managers:       managers,
-		Verbose:        flags.Verbose,
-		Items:          items,
-	}
-
-	return RenderOutput(output, format)
+// StructuredData returns the raw result for JSON/YAML output
+func (w *packageListResultWrapper) StructuredData() any {
+	return w.Result
 }
 
 func runDotList(cmd *cobra.Command, args []string) error {
