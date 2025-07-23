@@ -10,6 +10,7 @@ import (
 	"github.com/richhaase/plonk/internal/cli"
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/core"
+	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/spf13/cobra"
@@ -43,44 +44,75 @@ func init() {
 }
 
 func runRm(cmd *cobra.Command, args []string) error {
-	// Create command pipeline for dotfile removal
-	pipeline, err := NewCommandPipeline(cmd, "dotfile-remove")
+	// Parse output format
+	outputFormat, _ := cmd.Flags().GetString("output")
+	format, err := ParseOutputFormat(outputFormat)
+	if err != nil {
+		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "rm", "output-format", "invalid output format")
+	}
+
+	// Get flags
+	flags, err := cli.ParseSimpleFlags(cmd)
 	if err != nil {
 		return err
 	}
 
-	// Define the processor function
-	processor := func(ctx context.Context, args []string, flags *cli.SimpleFlags) ([]operations.OperationResult, error) {
-		// Get directories from shared context
-		sharedCtx := runtime.GetSharedContext()
-		homeDir := sharedCtx.HomeDir()
-		configDir := sharedCtx.ConfigDir()
+	// Get directories from shared context
+	sharedCtx := runtime.GetSharedContext()
+	homeDir := sharedCtx.HomeDir()
+	configDir := sharedCtx.ConfigDir()
 
-		// Load config using LoadConfigWithDefaults for consistent zero-config behavior
-		cfg := config.LoadConfigWithDefaults(configDir)
+	// Load config using LoadConfigWithDefaults for consistent zero-config behavior
+	cfg := config.LoadConfigWithDefaults(configDir)
 
-		// Create item processor for dotfile removal
-		processor := operations.SimpleProcessor(
-			func(ctx context.Context, dotfilePath string) operations.OperationResult {
-				return core.RemoveSingleDotfile(homeDir, configDir, cfg, dotfilePath, flags.DryRun)
-			},
-		)
+	// Process each dotfile directly
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
 
-		// Configure batch processing options
-		options := operations.BatchProcessorOptions{
-			ItemType:               "dotfile",
-			Operation:              "remove",
-			ShowIndividualProgress: false,           // Don't show progress here, ExecuteWithResults will do it
-			Timeout:                2 * time.Minute, // Dotfile removal timeout
-			ContinueOnError:        nil,             // Use default (true) - continue on individual failures
+	var results []operations.OperationResult
+
+	// Show header for progress tracking
+	reporter := operations.NewProgressReporterForOperation("remove", "dotfile", true)
+
+	for _, dotfilePath := range args {
+		// Check if context was canceled
+		if ctx.Err() != nil {
+			break
 		}
 
-		// Use standard batch workflow
-		return operations.StandardBatchWorkflow(context.Background(), args, processor, options)
+		// Remove single dotfile directly
+		result := core.RemoveSingleDotfile(homeDir, configDir, cfg, dotfilePath, flags.DryRun)
+
+		// Show individual progress
+		reporter.ShowItemProgress(result)
+
+		// Collect result
+		results = append(results, result)
 	}
 
-	// Execute the pipeline
-	return pipeline.ExecuteWithResults(context.Background(), processor, args)
+	// Show batch summary
+	reporter.ShowBatchSummary(results)
+
+	// Create output data
+	summary := calculateRemovalSummary(results)
+	outputData := DotfileRemovalOutput{
+		TotalFiles: len(results),
+		Results:    results,
+		Summary:    summary,
+	}
+
+	// Render output
+	if err := RenderOutput(outputData, format); err != nil {
+		return err
+	}
+
+	// Determine exit code based on results
+	exitErr := operations.DetermineExitCode(results, errors.DomainDotfiles, "remove")
+	if exitErr != nil {
+		return exitErr
+	}
+
+	return nil
 }
 
 // DotfileRemovalOutput represents the output for dotfile removal
@@ -95,6 +127,16 @@ type DotfileRemovalSummary struct {
 	Removed int `json:"removed" yaml:"removed"`
 	Skipped int `json:"skipped" yaml:"skipped"`
 	Failed  int `json:"failed" yaml:"failed"`
+}
+
+// calculateRemovalSummary calculates summary from results using generic operations summary
+func calculateRemovalSummary(results []operations.OperationResult) DotfileRemovalSummary {
+	genericSummary := operations.CalculateSummary(results)
+	return DotfileRemovalSummary{
+		Removed: genericSummary.Added, // In removal context, "added" means "removed"
+		Skipped: genericSummary.Skipped,
+		Failed:  genericSummary.Failed,
+	}
 }
 
 // TableOutput generates human-friendly output
