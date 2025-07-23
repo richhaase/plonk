@@ -84,11 +84,11 @@ func reconcileDotfileItems(provider *state.DotfileProvider, configured []interfa
 	for _, configItem := range configured {
 		if actualItem, exists := actualSet[configItem.Name]; exists {
 			// Item is managed (in config AND present)
-			item := createDotfileItem(configItem.Name, interfaces.StateManaged, &configItem, actualItem, provider)
+			item := provider.CreateItem(configItem.Name, interfaces.StateManaged, &configItem, actualItem)
 			result.Managed = append(result.Managed, item)
 		} else {
 			// Item is missing (in config BUT not present)
-			item := createDotfileItem(configItem.Name, interfaces.StateMissing, &configItem, nil, provider)
+			item := provider.CreateItem(configItem.Name, interfaces.StateMissing, &configItem, nil)
 			result.Missing = append(result.Missing, item)
 		}
 	}
@@ -97,49 +97,12 @@ func reconcileDotfileItems(provider *state.DotfileProvider, configured []interfa
 	for _, actualItem := range actual {
 		if _, exists := configuredSet[actualItem.Name]; !exists {
 			// Item is untracked (present BUT not in config)
-			item := createDotfileItem(actualItem.Name, interfaces.StateUntracked, nil, &actualItem, provider)
+			item := provider.CreateItem(actualItem.Name, interfaces.StateUntracked, nil, &actualItem)
 			result.Untracked = append(result.Untracked, item)
 		}
 	}
 
 	return result
-}
-
-// createDotfileItem creates a dotfile item directly without factory method
-func createDotfileItem(name string, state interfaces.ItemState, configured *interfaces.ConfigItem, actual *interfaces.ActualItem, provider *state.DotfileProvider) interfaces.Item {
-	item := interfaces.Item{
-		Name:     name,
-		State:    state,
-		Domain:   "dotfile",
-		Metadata: make(map[string]interface{}),
-	}
-
-	// Set path from actual or infer from configured
-	if actual != nil {
-		item.Path = actual.Path
-		for k, v := range actual.Metadata {
-			item.Metadata[k] = v
-		}
-	}
-
-	// Add configured metadata
-	if configured != nil {
-		for k, v := range configured.Metadata {
-			item.Metadata[k] = v
-		}
-
-		// If no path set and we have destination, use that
-		if item.Path == "" {
-			if dest, ok := configured.Metadata["destination"].(string); ok {
-				// Use provider's manager to get destination path
-				if path, err := provider.GetManager().GetDestinationPath(dest); err == nil {
-					item.Path = path
-				}
-			}
-		}
-	}
-
-	return item
 }
 
 // reconcilePackageItems performs the core reconciliation logic for packages
@@ -166,11 +129,11 @@ func reconcilePackageItems(provider *state.MultiManagerPackageProvider, configur
 	for _, configItem := range configured {
 		if actualItem, exists := actualSet[configItem.Name]; exists {
 			// Item is managed (in config AND present)
-			item := createPackageItem(configItem.Name, interfaces.StateManaged, &configItem, actualItem)
+			item := provider.CreateItem(configItem.Name, interfaces.StateManaged, &configItem, actualItem)
 			result.Managed = append(result.Managed, item)
 		} else {
 			// Item is missing (in config BUT not present)
-			item := createPackageItem(configItem.Name, interfaces.StateMissing, &configItem, nil)
+			item := provider.CreateItem(configItem.Name, interfaces.StateMissing, &configItem, nil)
 			result.Missing = append(result.Missing, item)
 		}
 	}
@@ -179,44 +142,12 @@ func reconcilePackageItems(provider *state.MultiManagerPackageProvider, configur
 	for _, actualItem := range actual {
 		if _, exists := configuredSet[actualItem.Name]; !exists {
 			// Item is untracked (present BUT not in config)
-			item := createPackageItem(actualItem.Name, interfaces.StateUntracked, nil, &actualItem)
+			item := provider.CreateItem(actualItem.Name, interfaces.StateUntracked, nil, &actualItem)
 			result.Untracked = append(result.Untracked, item)
 		}
 	}
 
 	return result
-}
-
-// createPackageItem creates a package item directly without factory method
-func createPackageItem(name string, state interfaces.ItemState, configured *interfaces.ConfigItem, actual *interfaces.ActualItem) interfaces.Item {
-	item := interfaces.Item{
-		Name:     name,
-		State:    state,
-		Domain:   "package",
-		Metadata: make(map[string]interface{}),
-	}
-
-	// Set manager from actual
-	if actual != nil {
-		for k, v := range actual.Metadata {
-			item.Metadata[k] = v
-			// Extract manager from metadata
-			if k == "manager" {
-				if manager, ok := v.(string); ok {
-					item.Manager = manager
-				}
-			}
-		}
-	}
-
-	// Add configured metadata
-	if configured != nil {
-		for k, v := range configured.Metadata {
-			item.Metadata[k] = v
-		}
-	}
-
-	return item
 }
 
 // SimplifiedReconcileAll reconciles all domains without using the generic Reconciler
