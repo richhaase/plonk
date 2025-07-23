@@ -2,20 +2,21 @@
 
 ## Status Update
 
-**Last Updated:** Phase 1.2 Complete (runPkgList refactored)
+**Last Updated:** Phase 1 Complete (All simple commands refactored)
 
 ### Progress Summary:
 - ✅ Phase 0: Call chain analysis complete
 - ✅ Phase 1.1: runStatus() reviewed (already direct)
 - ✅ Phase 1.2: runPkgList() refactored to eliminate conversion layer
-- 🔄 Phase 1.3: runDotList() ready to start
-- ⏳ Phase 2: Complex commands pending
+- ✅ Phase 1.3: runDotList() refactored to eliminate conversion layer
+- ⏳ Phase 2: Complex commands pending (ready to start)
 - ⏳ Phase 3: Final cleanup pending
 
 ### Key Achievements:
-- Successfully eliminated the conversion layer in runPkgList()
-- Established pattern for wrapping raw domain objects for OutputData interface
+- Successfully eliminated conversion layers in both runPkgList() and runDotList()
+- Established consistent pattern for wrapping raw domain objects for OutputData interface
 - Maintained 100% test compatibility while simplifying code
+- Reduced shared.go from ~600 to 534 lines
 
 ## 1. Overview & Goal (Revised)
 
@@ -72,17 +73,32 @@ Start with commands that have relatively straightforward logic.
     *   **Result:** Direct data flow from reconciler to output formatter
     *   **Verification:** All tests pass, manually tested `plonk ls --packages`
 
-3.  **Target: `runDotList()` (from `shared.go`)**
-    *   **Current State:** Has `convertToDotfileInfo()` conversion layer
-    *   **Action:**
-        - Remove `convertToDotfileInfo()` function
-        - Have `RunE` pass raw data from provider directly to `RenderOutput()`
-        - Update `RenderOutput()` to handle the raw provider data
-    *   **Verification:** Run `just test` and `just test-ux`. Manually run `plonk ls --dotfiles`.
+3.  **Target: `runDotList()` (from `shared.go`)** ✅ COMPLETE
+    *   **Current State:** Had `convertToDotfileInfo()` conversion layer
+    *   **Actions Taken:**
+        - Removed `convertToDotfileInfo()` function
+        - Created `dotfileListResultWrapper` to wrap `state.Result` and implement `OutputData`
+        - Eliminated intermediate `DotfileListOutput` structure
+        - Function now passes raw `state.Result` directly to `RenderOutput()`
+        - Maintained backward compatibility for structured output (JSON/YAML)
+    *   **Result:** Direct data flow from reconciler to output formatter
+    *   **Verification:** All tests pass, manually tested `plonk ls --dotfiles`
+
+### Lessons Learned from Phase 1
+
+The successful completion of Phase 1 has validated our approach and established patterns for Phase 2:
+
+1. **Pattern Success**: The wrapper pattern (`state.Result` → thin wrapper → `OutputData`) works well
+2. **No Data Loss**: Raw domain objects contain all necessary information for display
+3. **Backward Compatibility**: Structured output (JSON/YAML) can be maintained while simplifying code
+4. **Test Stability**: All tests continue to pass without modification
+5. **Code Clarity**: Direct data flow is much easier to understand than conversion layers
 
 ### Phase 2: Refactor Complex Commands
 
 Tackle commands with more involved logic, such as `add`, `install`, `sync`, `remove`.
+
+**Key Difference from Phase 1**: These commands use `operations.BatchProcess` and processor patterns that need to be eliminated, requiring more significant restructuring.
 
 1.  **Target: `add.go`**
     *   **Current State:** Uses `addSingleDotfiles()` wrapper and `operations.BatchProcess()`
