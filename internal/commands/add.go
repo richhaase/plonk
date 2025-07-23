@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/cli"
-	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/core"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/operations"
@@ -54,83 +53,18 @@ func init() {
 }
 
 func runAdd(cmd *cobra.Command, args []string) error {
-	// Create command pipeline for dotfiles
-	pipeline, err := NewSimpleCommandPipeline(cmd, "dotfile")
+	// Parse output format
+	outputFormat, _ := cmd.Flags().GetString("output")
+	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return err
+		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "add", "output-format", "invalid output format")
 	}
 
+	// Get flags
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
-	force, _ := cmd.Flags().GetBool("force")
+	// TODO: force flag is defined but not currently used in core.AddSingleDotfile
+	// force, _ := cmd.Flags().GetBool("force")
 
-	// Variable to capture results for error checking
-	var capturedResults []operations.OperationResult
-
-	// Define the processor function
-	processor := func(ctx context.Context, args []string) (OutputData, error) {
-		// Process dotfiles and return results that can be rendered
-		results, err := addDotfilesProcessor(args, dryRun, force)
-		if err != nil {
-			return nil, err
-		}
-
-		// Capture results for later error checking
-		capturedResults = results
-
-		// Convert to appropriate output format
-		if len(results) == 1 {
-			result := results[0]
-			output := &DotfileAddOutput{
-				Source:      cli.GetMetadataString(result, "source"),
-				Destination: cli.GetMetadataString(result, "destination"),
-				Action:      ui.MapStatusToAction(result.Status),
-				Path:        result.Name,
-			}
-			if result.Error != nil {
-				output.Error = result.Error.Error()
-			}
-			return output, nil
-		} else {
-			return &DotfileBatchAddOutput{
-				TotalFiles: len(results),
-				AddedFiles: ui.ConvertToDotfileAddOutput(results),
-				Errors:     ui.ExtractErrorMessages(results),
-			}, nil
-		}
-	}
-
-	// Execute the pipeline
-	err = pipeline.ExecuteWithData(context.Background(), processor, args)
-	if err != nil {
-		return err
-	}
-
-	// Check if all operations failed and return appropriate error
-	// This is done after rendering to ensure output is shown
-	if len(capturedResults) > 0 {
-		allFailed := true
-		for _, result := range capturedResults {
-			if result.Status != "failed" {
-				allFailed = false
-				break
-			}
-		}
-
-		if allFailed {
-			return errors.NewError(
-				errors.ErrFileNotFound,
-				errors.DomainDotfiles,
-				"add-multiple",
-				fmt.Sprintf("failed to process %d item(s)", len(capturedResults)),
-			)
-		}
-	}
-
-	return nil
-}
-
-// addDotfilesProcessor processes dotfile addition and returns operation results
-func addDotfilesProcessor(dotfilePaths []string, dryRun, force bool) ([]operations.OperationResult, error) {
 	// Get directories from shared context
 	sharedCtx := runtime.GetSharedContext()
 	homeDir := sharedCtx.HomeDir()
@@ -139,22 +73,65 @@ func addDotfilesProcessor(dotfilePaths []string, dryRun, force bool) ([]operatio
 	// Load config for ignore patterns
 	cfg, err := core.LoadOrCreateConfig(configDir)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	// Process dotfiles and collect results
-	return addSingleDotfiles(dotfilePaths, homeDir, configDir, cfg, dryRun, force)
-}
-
-// addSingleDotfiles processes multiple dotfile paths and returns results
-func addSingleDotfiles(dotfilePaths []string, homeDir, configDir string, cfg *config.Config, dryRun, force bool) ([]operations.OperationResult, error) {
+	// Process each dotfile directly
+	ctx := context.Background()
 	var results []operations.OperationResult
 
-	for _, dotfilePath := range dotfilePaths {
-		// Process each dotfile (can result in multiple files for directories)
-		dotfileResults := core.AddSingleDotfile(context.Background(), cfg, homeDir, configDir, dotfilePath, dryRun)
+	for _, dotfilePath := range args {
+		// Call core business logic directly
+		dotfileResults := core.AddSingleDotfile(ctx, cfg, homeDir, configDir, dotfilePath, dryRun)
 		results = append(results, dotfileResults...)
 	}
 
-	return results, nil
+	// Create output data based on number of results
+	var outputData OutputData
+	if len(results) == 1 {
+		// Single file output
+		result := results[0]
+		output := &DotfileAddOutput{
+			Source:      cli.GetMetadataString(result, "source"),
+			Destination: cli.GetMetadataString(result, "destination"),
+			Action:      ui.MapStatusToAction(result.Status),
+			Path:        result.Name,
+		}
+		if result.Error != nil {
+			output.Error = result.Error.Error()
+		}
+		outputData = output
+	} else {
+		// Batch output
+		outputData = &DotfileBatchAddOutput{
+			TotalFiles: len(results),
+			AddedFiles: ui.ConvertToDotfileAddOutput(results),
+			Errors:     ui.ExtractErrorMessages(results),
+		}
+	}
+
+	// Render output
+	if err := RenderOutput(outputData, format); err != nil {
+		return err
+	}
+
+	// Check if all operations failed and return appropriate error
+	allFailed := true
+	for _, result := range results {
+		if result.Status != "failed" {
+			allFailed = false
+			break
+		}
+	}
+
+	if allFailed && len(results) > 0 {
+		return errors.NewError(
+			errors.ErrFileNotFound,
+			errors.DomainDotfiles,
+			"add-multiple",
+			fmt.Sprintf("failed to process %d item(s)", len(results)),
+		)
+	}
+
+	return nil
 }
