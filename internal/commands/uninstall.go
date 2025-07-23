@@ -9,8 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/richhaase/plonk/internal/cli"
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/constants"
+	"github.com/richhaase/plonk/internal/core"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/operations"
@@ -59,7 +61,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	}
 
 	// Define the processor function
-	processor := func(ctx context.Context, args []string, flags *SimpleFlags) ([]operations.OperationResult, error) {
+	processor := func(ctx context.Context, args []string, flags *cli.SimpleFlags) ([]operations.OperationResult, error) {
 		return uninstallPackages(cmd, args, flags)
 	}
 
@@ -68,7 +70,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 }
 
 // uninstallPackages handles package uninstallations
-func uninstallPackages(cmd *cobra.Command, packageNames []string, flags *SimpleFlags) ([]operations.OperationResult, error) {
+func uninstallPackages(cmd *cobra.Command, packageNames []string, flags *cli.SimpleFlags) ([]operations.OperationResult, error) {
 	// Get directories
 	configDir := config.GetDefaultConfigDirectory()
 
@@ -104,7 +106,7 @@ func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService,
 	// For Go packages, we need to check with the binary name
 	checkPackageName := packageName
 	if managerFlag == "go" {
-		checkPackageName = extractBinaryNameFromPath(packageName)
+		checkPackageName = core.ExtractBinaryNameFromPath(packageName)
 	}
 
 	// Find package in lock file
@@ -114,7 +116,7 @@ func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService,
 	// If we found it and it's a go package, we might need to check with binary name
 	if !found && managerFlag == "" && strings.Contains(packageName, "/") {
 		// This might be a Go module path, try with binary name
-		checkPackageName = extractBinaryNameFromPath(packageName)
+		checkPackageName = core.ExtractBinaryNameFromPath(packageName)
 		managerName, found = findPackageInLockFile(lockService, checkPackageName)
 		wasManaged = found
 	}

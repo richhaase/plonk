@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/richhaase/plonk/internal/cli"
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/constants"
+	"github.com/richhaase/plonk/internal/core"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
@@ -66,7 +68,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	// Define the processor function
-	processor := func(ctx context.Context, args []string, flags *SimpleFlags) ([]operations.OperationResult, error) {
+	processor := func(ctx context.Context, args []string, flags *cli.SimpleFlags) ([]operations.OperationResult, error) {
 		return installPackages(cmd, args, flags)
 	}
 
@@ -75,7 +77,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 }
 
 // installPackages handles package installations
-func installPackages(cmd *cobra.Command, packageNames []string, flags *SimpleFlags) ([]operations.OperationResult, error) {
+func installPackages(cmd *cobra.Command, packageNames []string, flags *cli.SimpleFlags) ([]operations.OperationResult, error) {
 	// Get directories
 	configDir := config.GetDefaultConfigDirectory()
 
@@ -125,7 +127,7 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 	// For Go packages, we need to check with the binary name
 	checkPackageName := packageName
 	if manager == "go" {
-		checkPackageName = extractBinaryNameFromPath(packageName)
+		checkPackageName = core.ExtractBinaryNameFromPath(packageName)
 	}
 
 	// Check if already managed
@@ -189,7 +191,7 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 	lockPackageName := packageName
 	if manager == "go" {
 		// Extract binary name from module path
-		lockPackageName = extractBinaryNameFromPath(packageName)
+		lockPackageName = core.ExtractBinaryNameFromPath(packageName)
 	}
 
 	// Get package version after installation

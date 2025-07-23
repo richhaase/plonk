@@ -9,6 +9,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/cli"
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/core"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/runtime"
@@ -49,7 +50,7 @@ func init() {
 	addCmd.Flags().BoolP("force", "f", false, "Force addition even if already managed")
 
 	// Add file path completion
-	addCmd.ValidArgsFunction = completeDotfilePaths
+	addCmd.ValidArgsFunction = cli.CompleteDotfilePaths
 }
 
 func runAdd(cmd *cobra.Command, args []string) error {
@@ -136,7 +137,7 @@ func addDotfilesProcessor(dotfilePaths []string, dryRun, force bool) ([]operatio
 	configDir := sharedCtx.ConfigDir()
 
 	// Load config for ignore patterns
-	cfg, err := loadOrCreateConfig(configDir)
+	cfg, err := core.LoadOrCreateConfig(configDir)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +152,7 @@ func addSingleDotfiles(dotfilePaths []string, homeDir, configDir string, cfg *co
 
 	for _, dotfilePath := range dotfilePaths {
 		// Process each dotfile (can result in multiple files for directories)
-		dotfileResults := addSingleDotfile(context.Background(), cfg, homeDir, configDir, dotfilePath, dryRun)
+		dotfileResults := core.AddSingleDotfile(context.Background(), cfg, homeDir, configDir, dotfilePath, dryRun)
 		results = append(results, dotfileResults...)
 	}
 

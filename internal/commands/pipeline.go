@@ -22,7 +22,7 @@ import (
 type CommandPipeline struct {
 	cmd      *cobra.Command
 	itemType string
-	flags    *SimpleFlags
+	flags    *cli.SimpleFlags
 	format   OutputFormat
 	reporter *operations.DefaultProgressReporter
 }
@@ -30,7 +30,7 @@ type CommandPipeline struct {
 // ProcessorFunc defines the business logic processor function signature
 // Context is provided for cancellation, args are the command arguments
 // Returns operation results that can be rendered in multiple formats
-type ProcessorFunc func(ctx context.Context, args []string, flags *SimpleFlags) ([]operations.OperationResult, error)
+type ProcessorFunc func(ctx context.Context, args []string, flags *cli.SimpleFlags) ([]operations.OperationResult, error)
 
 // SimpleProcessorFunc defines a simpler processor that doesn't need flags
 type SimpleProcessorFunc func(ctx context.Context, args []string) (OutputData, error)
@@ -40,7 +40,7 @@ func NewCommandPipeline(cmd *cobra.Command, itemType string) (*CommandPipeline, 
 	runtime.Info(runtime.DomainCommand, "Creating pipeline for command: %s", cmd.Name())
 
 	// Parse flags first
-	flags, err := ParseSimpleFlags(cmd)
+	flags, err := cli.ParseSimpleFlags(cmd)
 	if err != nil {
 		return nil, errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands,
 			cmd.Name(), "flags", "invalid flag combination")
@@ -66,7 +66,7 @@ func NewCommandPipeline(cmd *cobra.Command, itemType string) (*CommandPipeline, 
 	}, nil
 }
 
-// NewSimpleCommandPipeline creates a pipeline that doesn't use SimpleFlags
+// NewSimpleCommandPipeline creates a pipeline that doesn't use cli.SimpleFlags
 func NewSimpleCommandPipeline(cmd *cobra.Command, itemType string) (*CommandPipeline, error) {
 	// Parse output format directly from command
 	outputFormat, _ := cmd.Flags().GetString("output")
@@ -140,7 +140,7 @@ func (p *CommandPipeline) ExecuteWithData(ctx context.Context, processor SimpleP
 }
 
 // GetFlags returns the parsed flags for processors that need them
-func (p *CommandPipeline) GetFlags() *SimpleFlags {
+func (p *CommandPipeline) GetFlags() *cli.SimpleFlags {
 	return p.flags
 }
 

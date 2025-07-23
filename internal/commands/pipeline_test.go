@@ -79,7 +79,7 @@ func TestCommandPipeline_ExecuteWithResults(t *testing.T) {
 	}
 
 	// Create a test processor that returns successful results
-	processor := func(ctx context.Context, args []string, flags *SimpleFlags) ([]operations.OperationResult, error) {
+	processor := func(ctx context.Context, args []string, flags *cli.SimpleFlags) ([]operations.OperationResult, error) {
 		return []operations.OperationResult{
 			{
 				Name:   "test-package",

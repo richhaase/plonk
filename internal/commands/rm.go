@@ -7,7 +7,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/richhaase/plonk/internal/cli"
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/core"
 	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/spf13/cobra"
@@ -37,7 +39,7 @@ func init() {
 	rmCmd.Flags().BoolP("force", "f", false, "Force removal even if not managed")
 
 	// Add file path completion
-	rmCmd.ValidArgsFunction = completeDotfilePaths
+	rmCmd.ValidArgsFunction = cli.CompleteDotfilePaths
 }
 
 func runRm(cmd *cobra.Command, args []string) error {
@@ -48,7 +50,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 	}
 
 	// Define the processor function
-	processor := func(ctx context.Context, args []string, flags *SimpleFlags) ([]operations.OperationResult, error) {
+	processor := func(ctx context.Context, args []string, flags *cli.SimpleFlags) ([]operations.OperationResult, error) {
 		// Get directories from shared context
 		sharedCtx := runtime.GetSharedContext()
 		homeDir := sharedCtx.HomeDir()
@@ -60,7 +62,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 		// Create item processor for dotfile removal
 		processor := operations.SimpleProcessor(
 			func(ctx context.Context, dotfilePath string) operations.OperationResult {
-				return removeSingleDotfile(homeDir, configDir, cfg, dotfilePath, flags.DryRun)
+				return core.RemoveSingleDotfile(homeDir, configDir, cfg, dotfilePath, flags.DryRun)
 			},
 		)
 
