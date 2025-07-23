@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/richhaase/plonk/internal/paths"
 )
 
 func TestLoadConfig_BasicStructure(t *testing.T) {
@@ -107,7 +109,7 @@ func TestSourceToTarget(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := sourceToTarget(test.source)
+		result := paths.SourceToTarget(test.source)
 		if result != test.expected {
 			t.Errorf("sourceToTarget(%s) = %s, expected %s", test.source, result, test.expected)
 		}

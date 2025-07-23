@@ -264,11 +264,11 @@ func AddSingleFile(ctx context.Context, options AddSingleFileOptions) operations
 
 	// Generate source and destination paths
 	resolver := paths.NewPathResolver(options.HomeDir, options.ConfigDir)
-	_, destPath, err := resolver.GeneratePaths(options.FilePath)
+	sourcePath, _, err := resolver.GeneratePaths(options.FilePath)
 	if err != nil {
-		// Fallback to simple relative path
-		relPath, _ := filepath.Rel(options.HomeDir, options.FilePath)
-		destPath = relPath
+		result.Status = "failed"
+		result.Error = errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "add", "failed to generate paths")
+		return result
 	}
 
 	if options.DryRun {
@@ -277,7 +277,9 @@ func AddSingleFile(ctx context.Context, options AddSingleFileOptions) operations
 	}
 
 	// Copy file with attributes
-	if err = CopyFileWithAttributes(options.FilePath, filepath.Join(options.ConfigDir, destPath)); err != nil {
+	// sourcePath is the relative path within the config directory
+	targetPath := filepath.Join(options.ConfigDir, sourcePath)
+	if err = dotfiles.CopyFileWithAttributes(options.FilePath, targetPath); err != nil {
 		result.Status = "failed"
 		result.Error = errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "add", "failed to copy file")
 		return result
@@ -353,33 +355,4 @@ func (d *dotfileConfigAdapter) GetExpandDirectories() []string {
 // CreateDotfileProvider creates a dotfile provider
 func CreateDotfileProvider(homeDir string, configDir string, cfg *config.Config) *state.DotfileProvider {
 	return state.NewDotfileProvider(homeDir, configDir, &dotfileConfigAdapter{cfg: cfg})
-}
-
-// CopyFileWithAttributes copies a file preserving attributes
-func CopyFileWithAttributes(src, dst string) error {
-	// Create destination directory if it doesn't exist
-	destDir := filepath.Dir(dst)
-	if err := os.MkdirAll(destDir, 0755); err != nil {
-		return errors.Wrap(err, errors.ErrDirectoryCreate, errors.DomainDotfiles, "copy", "failed to create destination directory")
-	}
-
-	// Get source file info
-	srcInfo, err := os.Stat(src)
-	if err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", "failed to stat source file")
-	}
-
-	// Read source file
-	data, err := os.ReadFile(src)
-	if err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", "failed to read source file")
-	}
-
-	// Write to destination with same permissions
-	err = os.WriteFile(dst, data, srcInfo.Mode())
-	if err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", "failed to write destination file")
-	}
-
-	return nil
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/richhaase/plonk/internal/constants"
 	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/paths"
 	"gopkg.in/yaml.v3"
 )
 
@@ -164,90 +165,17 @@ func loadConfigFile(path string, config *Config) error {
 	return nil
 }
 
-// shouldSkipDotfile determines if a file/directory should be skipped during auto-discovery
-func shouldSkipDotfile(relPath string, info os.FileInfo, ignorePatterns []string) bool {
-	// Always skip plonk config file
-	if relPath == "plonk.yaml" {
-		return true
-	}
-
-	// Check against configured ignore patterns
-	for _, pattern := range ignorePatterns {
-		// Check exact match for file/directory name
-		if pattern == info.Name() || pattern == relPath {
-			return true
-		}
-
-		// Check glob pattern match
-		if matched, _ := filepath.Match(pattern, info.Name()); matched {
-			return true
-		}
-		if matched, _ := filepath.Match(pattern, relPath); matched {
-			return true
-		}
-
-		// Handle directory patterns like .git/
-		if strings.HasSuffix(pattern, "/") && info.IsDir() {
-			dirPattern := strings.TrimSuffix(pattern, "/")
-			if dirPattern == info.Name() || dirPattern == relPath {
-				return true
-			}
-		}
-
-		// Handle prefix patterns for directories
-		if strings.HasPrefix(relPath, pattern+"/") {
-			return true
-		}
-	}
-
-	return false
-}
-
-// sourceToTarget converts a source path to target path using our convention
-// Prepends ~/. to make all files/directories hidden
-// Examples:
-//
-//	config/nvim/ -> ~/.config/nvim/
-//	zshrc -> ~/.zshrc
-//	editorconfig -> ~/.editorconfig
-func sourceToTarget(source string) string {
-	return "~/." + source
-}
-
-// TargetToSource converts a target path to source path using our convention
-// Removes the ~/. prefix
-// Examples:
-//
-//	~/.config/nvim/ -> config/nvim/
-//	~/.zshrc -> zshrc
-//	~/.editorconfig -> editorconfig
+// TargetToSource is now provided by the paths package
 func TargetToSource(target string) string {
-	// Remove ~/. prefix if present
-	if len(target) > 3 && target[:3] == "~/." {
-		return target[3:]
-	}
-	// Remove ~/ prefix if present (shouldn't happen with our convention)
-	if len(target) > 2 && target[:2] == "~/" {
-		return target[2:]
-	}
-	return target
+	return paths.TargetToSource(target)
 }
 
 // Legacy timeout methods removed - use ResolvedConfig.Get*Timeout() instead
 
 // GetDefaultConfigDirectory returns the default config directory, checking PLONK_DIR environment variable first
 func GetDefaultConfigDirectory() string {
-	// Check for PLONK_DIR environment variable
-	if envDir := os.Getenv("PLONK_DIR"); envDir != "" {
-		// Expand ~ if present
-		if strings.HasPrefix(envDir, "~/") {
-			return filepath.Join(os.Getenv("HOME"), envDir[2:])
-		}
-		return envDir
-	}
-
-	// Default location
-	return filepath.Join(os.Getenv("HOME"), ".config", "plonk")
+	// Delegate to the centralized path resolution in paths package
+	return paths.GetDefaultConfigDirectory()
 }
 
 // YAMLConfigService implements all configuration interfaces for YAML-based configuration
@@ -410,45 +338,23 @@ func NewConfigAdapter(config *Config) *ConfigAdapter {
 
 // GetDotfileTargets returns a map of source -> destination paths for dotfiles
 func (c *ConfigAdapter) GetDotfileTargets() map[string]string {
-	result := make(map[string]string)
+	// Use PathResolver to expand config directory and generate paths
+	resolver, err := paths.NewPathResolverFromDefaults()
+	if err != nil {
+		// Handle error, log it, and return empty map
+		return make(map[string]string)
+	}
 
-	// Auto-discover dotfiles from configured directory
-	configDir := GetDefaultConfigDirectory()
+	// Get ignore patterns from resolved config
 	resolvedConfig := c.config.Resolve()
 	ignorePatterns := resolvedConfig.GetIgnorePatterns()
 
-	// Walk the directory to find all files
-	_ = filepath.Walk(configDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil // Skip files we can't read
-		}
-
-		// Get relative path from config dir
-		relPath, err := filepath.Rel(configDir, path)
-		if err != nil {
-			return nil
-		}
-
-		// Skip certain files and directories
-		if shouldSkipDotfile(relPath, info, ignorePatterns) {
-			if info.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-
-		// Skip directories themselves (we'll get the files inside)
-		if info.IsDir() {
-			return nil
-		}
-
-		// Add to results with proper mapping
-		source := relPath
-		target := sourceToTarget(source)
-		result[source] = target
-
-		return nil
-	})
+	// Delegate to PathResolver for directory expansion and path mapping
+	result, err := resolver.ExpandConfigDirectory(ignorePatterns)
+	if err != nil {
+		// Handle error, log it, and return empty map
+		return make(map[string]string)
+	}
 
 	return result
 }

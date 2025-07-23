@@ -36,12 +36,22 @@ func NewPathResolverFromDefaults() (*PathResolver, error) {
 			"HOME environment variable not set")
 	}
 
-	configDir := getDefaultConfigDirectory()
+	configDir := GetDefaultConfigDirectory()
 	return NewPathResolver(homeDir, configDir), nil
 }
 
-// getDefaultConfigDirectory returns the default config directory, checking PLONK_DIR environment variable first
-func getDefaultConfigDirectory() string {
+// ConfigDir returns the config directory path
+func (p *PathResolver) ConfigDir() string {
+	return p.configDir
+}
+
+// HomeDir returns the home directory path
+func (p *PathResolver) HomeDir() string {
+	return p.homeDir
+}
+
+// GetDefaultConfigDirectory returns the default config directory, checking PLONK_DIR environment variable first
+func GetDefaultConfigDirectory() string {
 	// Check for PLONK_DIR environment variable
 	if envDir := os.Getenv("PLONK_DIR"); envDir != "" {
 		// Expand ~ if present
@@ -249,4 +259,82 @@ type DirectoryEntry struct {
 	RelativePath string // Path relative to the expanded directory
 	FullPath     string // Full absolute path to the file
 	ParentDir    string // Original directory path that was expanded
+}
+
+// ExpandConfigDirectory walks the config directory and returns all files suitable for dotfile management
+// This excludes the plonk.yaml config file and respects the provided ignore patterns
+func (p *PathResolver) ExpandConfigDirectory(ignorePatterns []string) (map[string]string, error) {
+	result := make(map[string]string)
+	validator := NewPathValidator(p.homeDir, p.configDir, ignorePatterns)
+
+	err := filepath.Walk(p.configDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Skip files we can't read
+		}
+
+		// Get relative path from config dir
+		relPath, err := filepath.Rel(p.configDir, path)
+		if err != nil {
+			return nil
+		}
+
+		// Always skip plonk config file
+		if relPath == "plonk.yaml" {
+			return nil
+		}
+
+		// Skip files based on ignore patterns
+		if validator.ShouldSkipPath(relPath, info) {
+			if info.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		// Skip directories themselves (we'll get the files inside)
+		if info.IsDir() {
+			return nil
+		}
+
+		// Add to results with proper mapping
+		source := relPath
+		target := SourceToTarget(source)
+		result[source] = target
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "expand",
+			"failed to walk config directory")
+	}
+
+	return result, nil
+}
+
+// SourceToTarget converts a source path to target path using plonk's convention
+// Prepends ~/. to make all files/directories hidden
+// Examples:
+//
+//	config/nvim/ -> ~/.config/nvim/
+//	zshrc -> ~/.zshrc
+//	editorconfig -> ~/.editorconfig
+func SourceToTarget(source string) string {
+	return "~/." + source
+}
+
+// TargetToSource converts a target path to source path using plonk's convention
+// Removes the ~/. prefix
+// Examples:
+//
+//	~/.config/nvim/ -> config/nvim/
+//	~/.zshrc -> zshrc
+//	~/.editorconfig -> editorconfig
+func TargetToSource(target string) string {
+	// Remove ~/. prefix if present
+	if len(target) > 3 && target[:3] == "~/." {
+		return target[3:]
+	}
+	// Handle case where there's no prefix (shouldn't happen in normal use)
+	return target
 }

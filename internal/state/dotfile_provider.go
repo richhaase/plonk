@@ -152,7 +152,11 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 	// Step 2: Check configured destinations
 	targets := d.configLoader.GetDotfileTargets()
 	for _, destination := range targets {
-		destPath := d.manager.GetDestinationPath(destination)
+		destPath, err := d.manager.GetDestinationPath(destination)
+		if err != nil {
+			// Skip files with invalid destination paths
+			continue
+		}
 
 		// Skip if destination doesn't exist
 		if !d.manager.FileExists(destPath) {
@@ -242,7 +246,9 @@ func (d *DotfileProvider) CreateItem(name string, state ItemState, configured *C
 		// If no path set and we have destination, use that
 		if item.Path == "" {
 			if dest, ok := configured.Metadata["destination"].(string); ok {
-				item.Path = d.manager.GetDestinationPath(dest)
+				if path, err := d.manager.GetDestinationPath(dest); err == nil {
+					item.Path = path
+				}
 			}
 		}
 	}

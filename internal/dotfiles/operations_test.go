@@ -94,11 +94,15 @@ func TestManager_GetDestinationPath(t *testing.T) {
 		{"~/.zshrc", "/home/user/.zshrc"},
 		{"~/.config/nvim/", "/home/user/.config/nvim"},
 		{"/absolute/path", "/absolute/path"},
-		{"relative/path", "relative/path"},
+		{"relative/path", "/home/user/relative/path"},
 	}
 
 	for _, test := range tests {
-		result := manager.GetDestinationPath(test.destination)
+		result, err := manager.GetDestinationPath(test.destination)
+		if err != nil {
+			t.Errorf("GetDestinationPath(%s) returned error: %v", test.destination, err)
+			continue
+		}
 		if result != test.expected {
 			t.Errorf("GetDestinationPath(%s) = %s, expected %s", test.destination, result, test.expected)
 		}

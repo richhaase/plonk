@@ -106,7 +106,10 @@ func TestFileOperations_CopyFile(t *testing.T) {
 
 			if !test.expectError {
 				// Verify file was copied correctly
-				destPath := manager.GetDestinationPath(test.destination)
+				destPath, err := manager.GetDestinationPath(test.destination)
+				if err != nil {
+					t.Fatalf("Failed to get destination path: %v", err)
+				}
 				content, err := os.ReadFile(destPath)
 				if err != nil {
 					t.Errorf("Failed to read destination file: %v", err)

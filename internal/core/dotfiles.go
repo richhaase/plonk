@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/paths"
@@ -20,7 +21,8 @@ import (
 // AddSingleDotfile processes a single dotfile path and returns results for all files processed
 func AddSingleDotfile(ctx context.Context, cfg *config.Config, homeDir, configDir, dotfilePath string, dryRun bool) []operations.OperationResult {
 	// Resolve and validate dotfile path
-	resolvedPath, err := ResolveDotfilePath(dotfilePath, homeDir)
+	resolver := paths.NewPathResolver(homeDir, configDir)
+	resolvedPath, err := resolver.ResolveDotfilePath(dotfilePath)
 	if err != nil {
 		return []operations.OperationResult{{
 			Name:   dotfilePath,
@@ -58,17 +60,24 @@ func AddSingleDotfile(ctx context.Context, cfg *config.Config, homeDir, configDi
 
 // AddSingleFile processes a single file and returns an OperationResult
 func AddSingleFile(ctx context.Context, cfg *config.Config, filePath, homeDir, configDir string, dryRun bool) operations.OperationResult {
-	// Generate source and destination paths
-	source, destination := GeneratePaths(filePath, homeDir)
-
 	result := operations.OperationResult{
 		Name: filePath,
-		Metadata: map[string]interface{}{
-			"source":      source,
-			"destination": destination,
-		},
-		FilesProcessed: 1,
 	}
+
+	// Generate source and destination paths
+	resolver := paths.NewPathResolver(homeDir, configDir)
+	source, destination, err := resolver.GeneratePaths(filePath)
+	if err != nil {
+		result.Status = "failed"
+		result.Error = errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "add", "failed to generate paths")
+		return result
+	}
+
+	result.Metadata = map[string]interface{}{
+		"source":      source,
+		"destination": destination,
+	}
+	result.FilesProcessed = 1
 
 	// Check if already managed by checking if source file exists in config dir
 	adapter := config.NewConfigAdapter(cfg)
@@ -103,7 +112,7 @@ func AddSingleFile(ctx context.Context, cfg *config.Config, filePath, homeDir, c
 	}
 
 	// Copy file with attribute preservation
-	if err := CopyFileWithAttributes(filePath, sourcePath); err != nil {
+	if err := dotfiles.CopyFileWithAttributes(filePath, sourcePath); err != nil {
 		result.Status = "failed"
 		result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", source, "failed to copy dotfile")
 		return result
@@ -168,7 +177,8 @@ func RemoveSingleDotfile(homeDir, configDir string, cfg *config.Config, dotfileP
 	}
 
 	// Resolve dotfile path
-	resolvedPath, err := ResolveDotfilePath(dotfilePath, homeDir)
+	resolver := paths.NewPathResolver(homeDir, config.GetDefaultConfigDirectory())
+	resolvedPath, err := resolver.ResolveDotfilePath(dotfilePath)
 	if err != nil {
 		result.Status = "failed"
 		result.Error = errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainDotfiles, "resolve", dotfilePath, "failed to resolve dotfile path")
@@ -176,7 +186,13 @@ func RemoveSingleDotfile(homeDir, configDir string, cfg *config.Config, dotfileP
 	}
 
 	// Get the source file path in config directory
-	_, destination := GeneratePaths(resolvedPath, homeDir)
+	resolver2 := paths.NewPathResolver(homeDir, config.GetDefaultConfigDirectory())
+	_, destination, err := resolver2.GeneratePaths(resolvedPath)
+	if err != nil {
+		result.Status = "failed"
+		result.Error = errors.WrapWithItem(err, errors.ErrPathValidation, errors.DomainDotfiles, "resolve", dotfilePath, "failed to generate paths")
+		return result
+	}
 	source := config.TargetToSource(destination)
 	sourcePath := filepath.Join(configDir, source)
 
@@ -229,48 +245,4 @@ func RemoveSingleDotfile(homeDir, configDir string, cfg *config.Config, dotfileP
 		"path":        resolvedPath,
 	}
 	return result
-}
-
-// CopyFileWithAttributes copies a file while preserving permissions and timestamps
-func CopyFileWithAttributes(src, dst string) error {
-	// Get source file info for preserving attributes
-	srcInfo, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-
-	// Read source file
-	content, err := os.ReadFile(src)
-	if err != nil {
-		return err
-	}
-
-	// Write to destination with source permissions
-	if err := os.WriteFile(dst, content, srcInfo.Mode()); err != nil {
-		return err
-	}
-
-	// Preserve timestamps
-	return os.Chtimes(dst, srcInfo.ModTime(), srcInfo.ModTime())
-}
-
-// ResolveDotfilePath resolves relative paths and validates the dotfile path
-func ResolveDotfilePath(path, homeDir string) (string, error) {
-	// Create a path resolver instance
-	resolver := paths.NewPathResolver(homeDir, config.GetDefaultConfigDirectory())
-	return resolver.ResolveDotfilePath(path)
-}
-
-// GeneratePaths generates source and destination paths for the dotfile
-func GeneratePaths(resolvedPath, homeDir string) (string, string) {
-	// Create a path resolver instance
-	resolver := paths.NewPathResolver(homeDir, config.GetDefaultConfigDirectory())
-	source, destination, err := resolver.GeneratePaths(resolvedPath)
-	if err != nil {
-		// Fallback to manual generation if there's an error
-		relPath := filepath.Base(resolvedPath)
-		destination = "~/" + relPath
-		source = config.TargetToSource(destination)
-	}
-	return source, destination
 }

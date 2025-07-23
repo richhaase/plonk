@@ -45,7 +45,12 @@ func DefaultCopyOptions() CopyOptions {
 // CopyFile copies a file from source to destination with options
 func (f *FileOperations) CopyFile(ctx context.Context, source, destination string, options CopyOptions) error {
 	sourcePath := f.manager.GetSourcePath(source)
-	destPath := f.manager.GetDestinationPath(destination)
+	destPath, err := f.manager.GetDestinationPath(destination)
+	if err != nil {
+		return errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "copy",
+			"failed to resolve destination path").
+			WithItem(destination)
+	}
 
 	// Check if source exists
 	if !f.manager.FileExists(sourcePath) {
@@ -91,7 +96,12 @@ func (f *FileOperations) CopyFile(ctx context.Context, source, destination strin
 // CopyDirectory copies a directory recursively from source to destination
 func (f *FileOperations) CopyDirectory(ctx context.Context, source, destination string, options CopyOptions) error {
 	sourcePath := f.manager.GetSourcePath(source)
-	destPath := f.manager.GetDestinationPath(destination)
+	destPath, err := f.manager.GetDestinationPath(destination)
+	if err != nil {
+		return errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "copy-directory",
+			"failed to resolve destination path").
+			WithItem(destination)
+	}
 
 	// Check if source exists and is a directory
 	if !f.manager.IsDirectory(sourcePath) {
@@ -172,7 +182,12 @@ func (f *FileOperations) copyFileContents(ctx context.Context, source, destinati
 
 // RemoveFile removes a file from the destination
 func (f *FileOperations) RemoveFile(destination string) error {
-	destPath := f.manager.GetDestinationPath(destination)
+	destPath, err := f.manager.GetDestinationPath(destination)
+	if err != nil {
+		return errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "remove",
+			"failed to resolve destination path").
+			WithItem(destination)
+	}
 
 	if !f.manager.FileExists(destPath) {
 		return nil // File doesn't exist, nothing to remove
@@ -191,7 +206,12 @@ func (f *FileOperations) FileNeedsUpdate(ctx context.Context, source, destinatio
 	}
 
 	sourcePath := f.manager.GetSourcePath(source)
-	destPath := f.manager.GetDestinationPath(destination)
+	destPath, err := f.manager.GetDestinationPath(destination)
+	if err != nil {
+		return false, errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "check",
+			"failed to resolve destination path").
+			WithItem(destination)
+	}
 
 	// Check if source exists first
 	if !f.manager.FileExists(sourcePath) {
@@ -237,4 +257,34 @@ func (f *FileOperations) FileNeedsUpdate(ctx context.Context, source, destinatio
 // GetFileInfo returns information about a file
 func (f *FileOperations) GetFileInfo(path string) (os.FileInfo, error) {
 	return os.Stat(path)
+}
+
+// CopyFileWithAttributes is a simple utility function that copies a file while preserving attributes
+// This function creates the destination directory if needed and preserves file permissions and timestamps
+func CopyFileWithAttributes(src, dst string) error {
+	// Create destination directory if it doesn't exist
+	destDir := filepath.Dir(dst)
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		return errors.Wrap(err, errors.ErrDirectoryCreate, errors.DomainDotfiles, "copy", "failed to create destination directory")
+	}
+
+	// Get source file info
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", "failed to stat source file")
+	}
+
+	// Read source file
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", "failed to read source file")
+	}
+
+	// Write to destination with same permissions
+	if err := os.WriteFile(dst, data, srcInfo.Mode()); err != nil {
+		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", "failed to write destination file")
+	}
+
+	// Preserve timestamps
+	return os.Chtimes(dst, srcInfo.ModTime(), srcInfo.ModTime())
 }

@@ -123,13 +123,9 @@ func (m *Manager) GetSourcePath(source string) string {
 }
 
 // GetDestinationPath returns the full destination path for a dotfile
-func (m *Manager) GetDestinationPath(destination string) string {
-	// For backward compatibility with state files,
-	// we need to keep expanding without validation
-	if strings.HasPrefix(destination, "~/") {
-		return filepath.Join(m.homeDir, destination[2:])
-	}
-	return destination
+func (m *Manager) GetDestinationPath(destination string) (string, error) {
+	// Delegate to the centralized PathResolver
+	return m.pathResolver.GetDestinationPath(destination)
 }
 
 // FileExists checks if a file exists at the given path

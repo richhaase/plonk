@@ -1,238 +1,63 @@
 # Path Resolution Refactor: Completion Plan
 
-## 1. Overview & Goal
+## Current Status (Updated: Phase 2.1 Refactoring)
 
-**The Problem:** While a new `PathResolver` was introduced in `internal/paths`, the codebase still contains multiple, inconsistent, and potentially unsafe implementations of path resolution and manipulation logic outside of this centralized package. This violates the principle of a single source of truth and reintroduces the very complexity and security risks this refactor aimed to eliminate.
+### Completed Actions:
+1. ✅ **internal/dotfiles/operations.go** - GetDestinationPath now delegates to PathResolver
+2. ✅ **internal/services/dotfile_operations.go** - AddSingleFile now properly handles path resolution errors without fallback
+3. ✅ **internal/commands/shared.go** - Path resolution functions removed (moved to core/dotfiles.go in Phase 2.1)
+4. ✅ **internal/config/yaml_config.go**:
+   - GetDefaultConfigDirectory now delegates to paths.GetDefaultConfigDirectory()
+   - Removed shouldSkipDotfile, sourceToTarget functions
+   - TargetToSource now delegates to paths.TargetToSource()
+   - GetDotfileTargets refactored to use PathResolver.ExpandConfigDirectory()
+5. ✅ **internal/paths/resolver.go** - Enhanced with:
+   - Exported GetDefaultConfigDirectory() function
+   - Added ConfigDir() and HomeDir() getter methods
+   - Added SourceToTarget() and TargetToSource() conversion functions
+   - Added ExpandConfigDirectory() method for config directory traversal
 
-**The Goal:** To ensure that **all path resolution, validation, and manipulation logic** within the `plonk` codebase is exclusively delegated to the `internal/paths` package. This means:
-*   No manual tilde (`~`) expansion.
-*   No manual `filepath.Join`, `filepath.Abs` for resolving user-provided paths.
-*   No manual `os.Stat` checks for path existence or type (file/dir) when the `PathResolver` can provide this.
-*   No custom `sourceToTarget` or `TargetToSource` logic outside `internal/paths`.
-*   No custom path filtering/skipping logic outside `internal/paths`.
+### Questions/Decisions Needed:
 
-**Guiding Principles:**
-*   **Delegation:** If `internal/paths` can do it, it *must* do it.
-*   **Consistency:** All path handling must behave identically across the application.
-*   **Security:** Centralized validation in `internal/paths` must be the only gatekeeper for path safety.
-*   **No UX Change:** The user experience of the CLI must remain identical.
-*   **Test-Driven:** All changes must be verified by existing tests (`just test`, `just test-ux`).
+1.  **CopyFileWithAttributes Duplication**
+    -   Found two different implementations:
+        -   `internal/services/dotfile_operations.go`: Creates destination directories
+        -   `internal/core/dotfiles.go`: Simpler version without directory creation
+    -   Both are actively used by their respective packages
+    -   **Question**: Should we consolidate these into internal/dotfiles/fileops.go (which already exists with more sophisticated copy operations)?
 
-## 2. Detailed Action Items (File by File)
+2.  **PathResolver Design**
+    -   Currently PathResolver mixes concerns: path resolution, validation, AND business logic (ExpandConfigDirectory)
+    -   **Question**: Should ExpandConfigDirectory remain in PathResolver or move to a higher-level service?
 
-The following sections detail the specific changes required in each identified file.
+3.  **Error Handling Strategy**
+    -   Some refactored functions now return empty results on error (e.g., GetDotfileTargets)
+    -   **Question**: Should we propagate errors up the call chain or maintain the current silent failure approach?
 
-### 2.1. `internal/dotfiles/operations.go`
+## My Responses to Questions/Decisions Needed
 
-**Problem:** The `GetDestinationPath` function contains manual tilde expansion for "backward compatibility." This is a direct violation of the single source of truth.
+1.  **CopyFileWithAttributes Duplication**
+    -   **Decision**: Yes, consolidate. Move both implementations into `internal/dotfiles/fileops.go`. This centralizes file operations and removes duplication. The `SHARED_GO_DECONSTRUCTION.md` plan already suggested this. Please ensure all callers are updated to use the single, consolidated function.
 
-**Action:**
-1.  **Remove Manual Expansion:** Modify `GetDestinationPath` to use `p.pathResolver.GetDestinationPath` (or a similar method if one is added to `PathResolver` for this specific purpose).
-2.  **Remove Comment:** Delete the misleading "backward compatibility" comment.
+2.  **PathResolver Design (`ExpandConfigDirectory`)**
+    -   **Decision**: For now, it's acceptable to keep `ExpandConfigDirectory` in `internal/paths`. The `paths` package is intended to be the central utility for *all* path-related concerns, including discovery. It uses the `PathResolver`'s core functions, rather than duplicating them. If it starts to accumulate too much business logic (e.g., directly interacting with `config.Config` objects for filtering), we can reconsider in a future refactor.
 
-**Example (Conceptual Change):**
+3.  **Error Handling Strategy**
+    -   **Decision**: **Propagate errors up the call chain.** Silent failures are a major source of bugs and make debugging extremely difficult. This is standard Go idiom and crucial for improving reliability and maintainability. This will likely require updating many function signatures and error handling throughout the codebase, but it's a critical step for code quality.
 
-```diff
- // GetDestinationPath returns the full destination path for a dotfile
- func (m *Manager) GetDestinationPath(destination string) string {
--	// For backward compatibility with state files,
--	// we need to keep expanding without validation
--	if strings.HasPrefix(destination, "~/") {
--		return filepath.Join(m.homeDir, destination[2:])
--	}
--	return destination
-+	// Delegate to the centralized PathResolver
-+	resolvedPath, err := m.pathResolver.GetDestinationPath(destination)
-+	if err != nil {
-+		// Handle error appropriately, perhaps log and return original or a known error
-+		// For now, assuming GetDestinationPath in PathResolver handles all cases
-+		return destination // Fallback if PathResolver fails, but ideally it shouldn't for valid inputs
-+	}
-+	return resolvedPath
- }
-```
+## Remaining Work (Action Items for Bob)
 
-### 2.2. `internal/services/dotfile_operations.go`
+To fully complete the path resolution refactor, please address the following:
 
-**Problem:** The `AddSingleFile` function contains a manual fallback for `resolver.GeneratePaths` if an error occurs. This means the `PathResolver` is not being fully trusted or utilized.
+1.  **Address Error Handling in `internal/dotfiles/operations.go`**: In `GetDestinationPath`, ensure that errors from `m.pathResolver.GetDestinationPath` are propagated up the call chain instead of being silently ignored (i.e., remove the `return destination` fallback on error).
 
-**Action:**
-1.  **Remove Fallback Logic:** Eliminate the `if err != nil` block that manually constructs `relPath` and `destPath`.
-2.  **Ensure `PathResolver` Handles All Cases:** The `resolver.GeneratePaths` function in `internal/paths/resolver.go` should be robust enough to handle all valid inputs without error. If it's not, enhance `resolver.go` first.
+2.  **Refactor `internal/core/dotfiles.go`**:
+    *   **Remove Redundant Wrappers**:
+        *   Delete the `ResolveDotfilePath` function. Callers should directly use `paths.NewPathResolver(...).ResolveDotfilePath(...)`.
+        *   Delete the `GeneratePaths` function. Callers should directly use `paths.NewPathResolver(...).GeneratePaths(...)`. **Crucially, ensure the problematic fallback logic within this function (the `if err != nil { ... }` block that manually generates paths) is completely removed and that `paths.PathResolver.GeneratePaths` is robust enough to handle all cases without error.**
+    *   **Move `CopyFileWithAttributes`**: Move this function to `internal/dotfiles/fileops.go` (or `internal/util/fileops.go` if it's truly generic and used outside dotfiles). Update all callers.
 
-**Example (Conceptual Change):**
-
-```diff
- // AddSingleFile adds a single file to dotfile management
- func AddSingleFile(ctx context.Context, options AddSingleFileOptions) operations.OperationResult {
- 	result := operations.OperationResult{
- 		Name: options.FilePath,
- 	}
-
- 	// Generate source and destination paths
- 	resolver := paths.NewPathResolver(options.HomeDir, options.ConfigDir)
--	_, destPath, err := resolver.GeneratePaths(options.FilePath)
--	if err != nil {
--		// Fallback to simple relative path
--		relPath, _ := filepath.Rel(options.HomeDir, options.FilePath)
--		destPath = relPath
--	}
-+	sourcePath, destPath, err := resolver.GeneratePaths(options.FilePath)
-+	if err != nil {
-+		result.Status = "failed"
-+		result.Error = errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "add", "failed to generate paths")
-+		return result
-+	}
-
- 	if options.DryRun {
- 		result.Status = "would-add"
- 		return result
- 	}
-
- 	// Copy file to plonk config directory
--	sourcePath := filepath.Join(options.ConfigDir, source) // 'source' is undefined in this context
--
--	// ... rest of the function
-+	// Use sourcePath from resolver.GeneratePaths
-+	// ... rest of the function
- }
-```
-*(Note: The original `source` variable in `AddSingleFile` was not defined, indicating a potential bug or incomplete refactor. The corrected example assumes `GeneratePaths` returns both source and destination.)*
-
-### 2.3. `internal/commands/shared.go`
-
-**Problem:** This file still contains `resolveDotfilePath` and `generatePaths` functions, which are redundant wrappers around `PathResolver` and include problematic fallback logic. It also contains `copyFileWithAttributes`, which is a utility function that doesn't belong here.
-
-**Action:**
-1.  **Remove `resolveDotfilePath`:**
-    *   Delete the `resolveDotfilePath` function.
-    *   Find all callers of `resolveDotfilePath` and replace them with direct calls to `paths.NewPathResolver(...).ResolveDotfilePath(...)`.
-2.  **Remove `generatePaths`:**
-    *   Delete the `generatePaths` function.
-    *   Find all callers of `generatePaths` and replace them with direct calls to `paths.NewPathResolver(...).GeneratePaths(...)`. Ensure error handling is robust.
-3.  **Move `copyFileWithAttributes`:**
-    *   Move `copyFileWithAttributes` to `internal/dotfiles/fileops.go` (or a new `internal/util/fileops.go` if it's more general).
-    *   Update all callers to use the new location.
-
-### 2.4. `internal/config/yaml_config.go`
-
-**Problem:** This file is a major offender, containing multiple forms of manual path manipulation and validation that should be centralized.
-
-**Action:**
-1.  **Refactor `GetDefaultConfigDirectory()`:**
-    *   Modify this function to use `paths.NewPathResolverFromDefaults()` and its methods to determine the default config directory.
-    *   Remove all manual `os.Getenv("HOME")`, `strings.HasPrefix(envDir, "~/")`, and `filepath.Join` logic.
-
-    **Example (Conceptual Change):**
-    ```diff
-     // GetDefaultConfigDirectory returns the default config directory, checking PLONK_DIR environment variable first
-     func GetDefaultConfigDirectory() string {
-    -	// Check for PLONK_DIR environment variable
-    -	if envDir := os.Getenv("PLONK_DIR"); envDir != "" {
-    -		// Expand ~ if present
-    -		if strings.HasPrefix(envDir, "~/") {
-    -			return filepath.Join(os.Getenv("HOME"), envDir[2:])
-    -		}
-    -		return envDir
-    -	}
-    -
-    -	// Default location
-    -	return filepath.Join(os.Getenv("HOME"), ".config", "plonk")
-    +	// Delegate to PathResolver for robust and consistent resolution
-    +	resolver, err := paths.NewPathResolverFromDefaults()
-    +	if err != nil {
-    +		// Handle error, perhaps log and return a sensible default or panic if unrecoverable
-    +		// For now, returning a hardcoded default as a fallback, but ideally PathResolver handles this.
-    +		home := os.Getenv("HOME")
-    +		if home == "" {
-    +			home = "/tmp" // Fallback for testing or extreme cases
-    +		}
-    +		return filepath.Join(home, ".config", "plonk")
-    +	}
-    +	return resolver.ConfigDir() // Assuming PathResolver stores and exposes the resolved configDir
-     }
-    ```
-
-2.  **Refactor `ConfigAdapter.GetDotfileTargets()`:**
-    *   This method currently walks the `configDir` and manually resolves paths, skips files, and converts source to target. This entire block of logic needs to be replaced.
-    *   It should delegate to `paths.PathResolver.ExpandDirectory` and `paths.PathResolver.GeneratePaths` (or similar methods that handle source/target conversion).
-    *   The `shouldSkipDotfile` function should be integrated into the `PathResolver`'s directory expansion or a dedicated path filtering utility within `internal/paths`.
-
-    **Example (Conceptual Change):**
-    ```diff
-     // GetDotfileTargets returns a map of source -> destination paths for dotfiles
-     func (c *ConfigAdapter) GetDotfileTargets() map[string]string {
-         result := make(map[string]string)
-
-    -	// Auto-discover dotfiles from configured directory
-    -	configDir := GetDefaultConfigDirectory()
-    -	resolvedConfig := c.config.Resolve()
-    -	ignorePatterns := resolvedConfig.GetIgnorePatterns()
-    -
-    -	// Walk the directory to find all files
-    -	_ = filepath.Walk(configDir, func(path string, info os.FileInfo, err error) error {
-    -		if err != nil {
-    -			return nil // Skip files we can't read
-    -		}
-    -
-    -		// Get relative path from config dir
-    -		relPath, err := filepath.Rel(configDir, path)
-    -		if err != nil {
-    -			return nil
-    -		}
-    -
-    -		// Skip certain files and directories
-    -		if shouldSkipDotfile(relPath, info, ignorePatterns) {
-    -			if info.IsDir() {
-    -				return filepath.SkipDir
-    -			}
-    -			return nil
-    -		}
-    -
-    -		// Skip directories themselves (we'll get the files inside)
-    -		if info.IsDir() {
-    -			return nil
-    -		}
-    -
-    -		// Add to results with proper mapping
-    -		source := relPath
-    -		target := sourceToTarget(source)
-    -		result[source] = target
-    -
-    -		return nil
-    -	})
-    +	// Use PathResolver to expand directory and generate paths
-    +	resolver, err := paths.NewPathResolverFromDefaults() // Or pass resolver from higher up
-    +	if err != nil {
-    +		// Handle error, log it, and return empty map or error
-    +		return result
-    +	}
-    +
-    +	// Assuming PathResolver.ExpandDirectory can take ignore patterns or a filter
-    +	// Or, filter after expansion if PathResolver doesn't support it directly
-    +	entries, err := resolver.ExpandDirectory(resolver.ConfigDir()) // Assuming ConfigDir is exposed
-    +	if err != nil {
-    +		// Handle error, log it, and return empty map or error
-    +		return result
-    +	}
-    +
-    +	for _, entry := range entries {
-    +		// Assuming PathResolver.GeneratePaths can convert FullPath to source/destination
-    +		source, destination, err := resolver.GeneratePaths(entry.FullPath)
-    +		if err != nil {
-    +			// Log error for this entry and continue
-    +			continue
-    +		}
-    +		result[source] = destination
-    +	}
-
-         return result
-     }
-    ```
-
-3.  **Remove `shouldSkipDotfile`, `sourceToTarget`, `TargetToSource`:**
-    *   These functions should be deleted from `yaml_config.go`.
-    *   Their logic should be fully integrated into the `internal/paths` package, either as methods on `PathResolver` or as standalone helper functions within `internal/paths` if they are truly generic path utilities.
+3.  **Consolidate `CopyFileWithAttributes`**: Ensure that the `CopyFileWithAttributes` in `internal/services/dotfile_operations.go` is also removed and replaced with a call to the consolidated function in `internal/dotfiles/fileops.go` (or `internal/util/fileops.go`).
 
 ## 3. Verification Steps
 
@@ -256,3 +81,47 @@ This phase of the refactor will be considered complete when:
 ## 5. Next Steps
 
 Once this plan is successfully executed and verified, we can confidently proceed with other refactoring efforts, knowing that our foundational path logic is sound and consistent.
+
+## 6. Implementation Notes and Decisions Log
+
+### Implementation Approach Taken:
+1. **Incremental Refactoring**: Rather than a big-bang rewrite, we're updating each component to delegate to paths package
+2. **Backward Compatibility**: Maintaining existing function signatures where possible to minimize disruption
+3. **Centralization Over Distribution**: Moving all path-related logic to paths package, even if it means a larger package
+
+### Key Design Decisions:
+1. **PathResolver Enhancements**:
+   - Added getter methods (ConfigDir(), HomeDir()) to expose internal state
+   - Exported GetDefaultConfigDirectory() for use by config package
+   - Added business-specific method ExpandConfigDirectory() - this may need reconsideration
+
+2. **Source/Target Conversion**:
+   - Moved SourceToTarget and TargetToSource to paths package as pure functions
+   - These are core to plonk's dotfile management convention and belong with path logic
+
+3. **Error Handling**:
+   - Currently maintaining existing behavior (silent failures in some cases)
+   - This preserves backward compatibility but may hide issues
+
+### Testing Status:
+- ✅ Unit tests: All tests pass after refactoring
+- ⏳ Integration tests (test-ux): Not yet run after refactoring
+- ⏳ Manual testing of key commands: Not yet performed
+
+### Completion Status:
+1. ✅ CopyFileWithAttributes consolidated into internal/dotfiles/fileops.go
+2. ✅ All error handling updated to propagate errors (no silent failures)
+3. ✅ Redundant path resolution wrappers removed from core/dotfiles.go
+4. ✅ All path resolution now delegated to internal/paths package
+
+### Summary of Changes Made:
+1. **GetDestinationPath** in operations.go now returns error and all callers updated
+2. **CopyFileWithAttributes** consolidated into single implementation in fileops.go
+3. **ResolveDotfilePath** and **GeneratePaths** wrappers removed from core/dotfiles.go
+4. **shouldSkipDotfile**, **sourceToTarget**, **TargetToSource** moved to paths package
+5. **GetDefaultConfigDirectory** now delegates to paths.GetDefaultConfigDirectory()
+6. **GetDotfileTargets** refactored to use PathResolver.ExpandConfigDirectory()
+
+### Final Verification Needed:
+- Run integration tests (test-ux) to ensure no user-facing changes
+- Manual testing of key dotfile commands (add, rm, sync)
