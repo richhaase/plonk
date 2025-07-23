@@ -109,7 +109,10 @@ The codebase's complexity presents several risks. Here is how we will mitigate t
 ### Phase Status
 - ✅ Phase 0: Preparation - COMPLETE
 - ✅ Phase 1: Migrate Low-Dependency Functions - COMPLETE
-- ⏳ Phase 2: Migrate Core Business Logic - NOT STARTED
+- ⏳ Phase 2: Migrate Core Business Logic - IN PROGRESS
+  - ✅ Phase 2.1: Dotfile Core Logic - COMPLETE
+  - ⏳ Phase 2.2: Package Core Logic - NOT STARTED
+  - ⏳ Phase 2.3: State and Config Logic - NOT STARTED
 - ⏳ Phase 3: Final Cleanup - NOT STARTED
 
 ### Types/Functions Moved
@@ -141,3 +144,10 @@ The codebase's complexity presents several risks. Here is how we will mitigate t
 | mapStatusToAction() | shared.go:411-418 | ui/formatters.go | ✅ Moved |
 | convertToDotfileAddOutput() | shared.go:421-436 | ui/formatters.go | ✅ Moved |
 | getMetadataString() | pipeline.go:265-273 | cli/helpers.go | ✅ Moved |
+| addSingleDotfile() | shared.go:245-247 | Wrapper to core.AddSingleDotfile | ✅ Replaced |
+| addSingleFileNew() | shared.go:250-252 | Wrapper to core.AddSingleFile | ✅ Replaced |
+| addDirectoryFilesNew() | shared.go:306-308 | Wrapper to core.AddDirectoryFiles | ✅ Replaced |
+| copyFileWithAttributes() | shared.go:354-375 | core/dotfiles.go | ✅ Moved |
+| resolveDotfilePath() | shared.go:377-382 | core/dotfiles.go | ✅ Moved |
+| generatePaths() | shared.go:384-396 | core/dotfiles.go | ✅ Moved |
+| removeSingleDotfile() | shared.go:649-651 | Wrapper to core.RemoveSingleDotfile | ✅ Replaced |
