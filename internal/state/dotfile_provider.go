@@ -40,6 +40,11 @@ func (d *DotfileProvider) Domain() string {
 	return "dotfile"
 }
 
+// GetManager returns the dotfile manager for direct access
+func (d *DotfileProvider) GetManager() *dotfiles.Manager {
+	return d.manager
+}
+
 // GetConfiguredItems returns dotfiles defined in configuration
 func (d *DotfileProvider) GetConfiguredItems() ([]ConfigItem, error) {
 	targets := d.configLoader.GetDotfileTargets()

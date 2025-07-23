@@ -209,47 +209,20 @@ func (sc *SharedContext) CreatePackageProvider(ctx context.Context) (*state.Mult
 
 // ReconcileDotfiles reconciles dotfile state
 func (sc *SharedContext) ReconcileDotfiles(ctx context.Context) (state.Result, error) {
-	provider, err := sc.CreateDotfileProvider()
-	if err != nil {
-		return state.Result{}, err
-	}
-
-	reconciler := sc.Reconciler()
-	reconciler.RegisterProvider("dotfile", provider)
-	return reconciler.ReconcileProvider(ctx, "dotfile")
+	// Use simplified direct reconciliation
+	return sc.SimplifiedReconcileDotfiles(ctx)
 }
 
 // ReconcilePackages reconciles package state
 func (sc *SharedContext) ReconcilePackages(ctx context.Context) (state.Result, error) {
-	provider, err := sc.CreatePackageProvider(ctx)
-	if err != nil {
-		return state.Result{}, err
-	}
-
-	reconciler := sc.Reconciler()
-	reconciler.RegisterProvider("package", provider)
-	return reconciler.ReconcileProvider(ctx, "package")
+	// Use simplified direct reconciliation
+	return sc.SimplifiedReconcilePackages(ctx)
 }
 
 // ReconcileAll reconciles all domains
 func (sc *SharedContext) ReconcileAll(ctx context.Context) (map[string]state.Result, error) {
-	results := make(map[string]state.Result)
-
-	// Reconcile dotfiles
-	dotfileResult, err := sc.ReconcileDotfiles(ctx)
-	if err != nil {
-		return nil, err
-	}
-	results["dotfile"] = dotfileResult
-
-	// Reconcile packages
-	packageResult, err := sc.ReconcilePackages(ctx)
-	if err != nil {
-		return nil, err
-	}
-	results["package"] = packageResult
-
-	return results, nil
+	// Use simplified direct reconciliation
+	return sc.SimplifiedReconcileAll(ctx)
 }
 
 // SaveConfiguration saves configuration using ConfigManager
