@@ -309,23 +309,25 @@ func runSync(cmd *cobra.Command, args []string) error {
 - ✅ `executor` → use exec.Command directly (COMPLETED 2025-07-24)
 - ✅ `types` → confusing aliases, delete it (COMPLETED 2025-07-24)
 - ✅ `interfaces` → define interfaces where used (COMPLETED 2025-07-24)
+- ✅ `services` → pure pass-through, delete it (COMPLETED 2025-07-24)
 - `core` → merge into domain packages
 - `operations` → unnecessary abstraction
-- `paths` → use filepath package directly
-- `services` → pure pass-through, delete it
 - `mocks` → use simple test doubles instead
 
 ### 2. Transform These Packages
 - `runtime` → Transform to minimal `orchestrator` (~200-300 LOC), remove SharedContext pattern
 
-### 3. Simplify These Packages
+### 3. Keep These Packages (After Analysis)
+- `paths` → Contains important domain-specific logic and security validation
+
+### 4. Simplify These Packages
 - `config` → Remove dual config system, remove getters, keep YAML output support
 - `errors` → Replace with standard error wrapping
 - `state` → Simplify provider pattern but keep reconciliation logic (Managed/Missing/Untracked)
 - `managers` → Remove BaseManager inheritance
 - `commands` → Move business logic to domain packages
 
-### 4. Idiomatic Go Changes
+### 5. Idiomatic Go Changes
 - Remove all 103 getter methods
 - Replace Result types with `(value, error)` returns
 - Move interfaces to consumer packages
@@ -334,7 +336,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 - Remove the context pooling
 - Replace complex mocks with simple test doubles
 
-### 5. Feature Simplifications
+### 6. Feature Simplifications
 - Merge `doctor` command into `status`
 - Keep both JSON and YAML output formats (minimal maintenance cost, high automation value)
 - Remove progress indicators
@@ -342,7 +344,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 - Remove SharedContext caching (no performance benefit)
 - Make dry-run only available for sync command
 
-### 6. State Management Simplification
+### 7. State Management Simplification
 Current: Complex provider/reconciler pattern with 6 different item types
 Proposed: Simplified provider pattern that preserves reconciliation semantics
 
@@ -538,8 +540,15 @@ The current codebase suffers from premature abstraction and non-idiomatic patter
    - Updated 15 files to use new interface locations
    - Package count: 18 → 17
 
+7. **2025-07-24**: Deleted `services` package
+   - Moved ApplyPackages and ApplyDotfiles directly into sync command
+   - Eliminated unnecessary service layer abstraction
+   - Used internal types to avoid naming conflicts
+   - Package count: 17 → 16
+
 ### Remaining Work
-- 5 packages still to eliminate (operations, paths, services, core, mocks)
+- 3 packages still to eliminate (operations, core, mocks)
 - 1 package to transform (runtime → orchestrator)
+- 1 package to keep after analysis (paths - has domain logic)
 - 5 packages to simplify (errors, config, state, managers, commands)
-- ~16,000 lines of code to remove
+- ~15,000 lines of code to remove

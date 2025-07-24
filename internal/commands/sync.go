@@ -8,9 +8,10 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/core"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/runtime"
-	"github.com/richhaase/plonk/internal/services"
+	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
 )
 
@@ -50,6 +51,56 @@ func init() {
 	syncCmd.Flags().Bool("backup", false, "Create backups before overwriting existing dotfiles")
 }
 
+// packageSyncResult represents the internal result of package sync operations
+type packageSyncResult struct {
+	DryRun            bool                `json:"dry_run" yaml:"dry_run"`
+	TotalMissing      int                 `json:"total_missing" yaml:"total_missing"`
+	TotalInstalled    int                 `json:"total_installed" yaml:"total_installed"`
+	TotalFailed       int                 `json:"total_failed" yaml:"total_failed"`
+	TotalWouldInstall int                 `json:"total_would_install" yaml:"total_would_install"`
+	Managers          []managerSyncResult `json:"managers" yaml:"managers"`
+}
+
+// managerSyncResult represents the result for a specific manager
+type managerSyncResult struct {
+	Name         string                       `json:"name" yaml:"name"`
+	MissingCount int                          `json:"missing_count" yaml:"missing_count"`
+	Packages     []packageOperationSyncResult `json:"packages" yaml:"packages"`
+}
+
+// packageOperationSyncResult represents the result for a specific package operation
+type packageOperationSyncResult struct {
+	Name   string `json:"name" yaml:"name"`
+	Status string `json:"status" yaml:"status"`
+	Error  string `json:"error,omitempty" yaml:"error,omitempty"`
+}
+
+// dotfileSyncResult represents the internal result of dotfile sync operations
+type dotfileSyncResult struct {
+	DryRun     bool                      `json:"dry_run" yaml:"dry_run"`
+	Backup     bool                      `json:"backup" yaml:"backup"`
+	TotalFiles int                       `json:"total_files" yaml:"total_files"`
+	Actions    []dotfileActionSyncResult `json:"actions" yaml:"actions"`
+	Summary    dotfileSummarySyncResult  `json:"summary" yaml:"summary"`
+}
+
+// dotfileActionSyncResult represents an action taken on a dotfile
+type dotfileActionSyncResult struct {
+	Source      string `json:"source" yaml:"source"`
+	Destination string `json:"destination" yaml:"destination"`
+	Action      string `json:"action" yaml:"action"`
+	Status      string `json:"status" yaml:"status"`
+	Error       string `json:"error,omitempty" yaml:"error,omitempty"`
+}
+
+// dotfileSummarySyncResult provides summary statistics
+type dotfileSummarySyncResult struct {
+	Added     int `json:"added" yaml:"added"`
+	Updated   int `json:"updated" yaml:"updated"`
+	Unchanged int `json:"unchanged" yaml:"unchanged"`
+	Failed    int `json:"failed" yaml:"failed"`
+}
+
 func runSync(cmd *cobra.Command, args []string) error {
 	// Parse flags
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
@@ -78,14 +129,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 
 	// Sync packages (unless dotfiles-only)
 	if !dotfilesOnly {
-		// Call services.ApplyPackages directly
-		options := services.PackageApplyOptions{
-			ConfigDir: configDir,
-			Config:    cfg,
-			DryRun:    dryRun,
-		}
-
-		result, err := services.ApplyPackages(ctx, options)
+		result, err := applyPackages(ctx, configDir, cfg, dryRun)
 		if err != nil {
 			return err
 		}
@@ -136,16 +180,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 
 	// Sync dotfiles (unless packages-only)
 	if !packagesOnly {
-		// Call services.ApplyDotfiles directly
-		options := services.DotfileApplyOptions{
-			ConfigDir: configDir,
-			HomeDir:   homeDir,
-			Config:    cfg,
-			DryRun:    dryRun,
-			Backup:    backup,
-		}
-
-		result, err := services.ApplyDotfiles(ctx, options)
+		result, err := applyDotfiles(ctx, configDir, homeDir, cfg, dryRun, backup)
 		if err != nil {
 			return err
 		}
@@ -157,7 +192,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 				Source:      action.Source,
 				Destination: action.Destination,
 				Status:      action.Status,
-				Reason:      "", // Business module uses Action field differently
+				Reason:      "", // Not used in this context
 			}
 		}
 
@@ -201,6 +236,201 @@ func runSync(cmd *cobra.Command, args []string) error {
 	}
 
 	return RenderOutput(outputData, format)
+}
+
+// applyPackages applies package configuration and returns the result
+func applyPackages(ctx context.Context, configDir string, cfg *config.Config, dryRun bool) (packageSyncResult, error) {
+	// Use shared context for reconciliation
+	sharedCtx := runtime.GetSharedContext()
+
+	// Reconcile package domain to find missing packages
+	result, err := sharedCtx.ReconcilePackages(ctx)
+	if err != nil {
+		return packageSyncResult{}, errors.Wrap(err, errors.ErrReconciliation, errors.DomainPackages, "reconcile", "failed to reconcile package state")
+	}
+
+	// Group missing packages by manager
+	missingByManager := make(map[string][]state.Item)
+	for _, item := range result.Missing {
+		manager := item.Metadata["manager"].(string)
+		missingByManager[manager] = append(missingByManager[manager], item)
+	}
+
+	var managerResults []managerSyncResult
+	totalMissing := len(result.Missing)
+	totalInstalled := 0
+	totalFailed := 0
+	totalWouldInstall := 0
+
+	// Get manager registry from shared context
+	registry := sharedCtx.ManagerRegistry()
+
+	// Process each manager's missing packages
+	for managerName, packages := range missingByManager {
+		manager, err := registry.GetManager(managerName)
+		if err != nil {
+			return packageSyncResult{}, errors.Wrap(err, errors.ErrManagerUnavailable, errors.DomainPackages, "apply",
+				"failed to get package manager")
+		}
+
+		available, err := manager.IsAvailable(ctx)
+		if err != nil {
+			return packageSyncResult{}, errors.Wrap(err, errors.ErrManagerUnavailable, errors.DomainPackages, "apply",
+				"failed to check manager availability")
+		}
+
+		var packageResults []packageOperationSyncResult
+		installedCount := 0
+		failedCount := 0
+		wouldInstallCount := 0
+
+		for _, pkg := range packages {
+			if dryRun {
+				packageResults = append(packageResults, packageOperationSyncResult{
+					Name:   pkg.Name,
+					Status: "would-install",
+				})
+				wouldInstallCount++
+			} else if !available {
+				packageResults = append(packageResults, packageOperationSyncResult{
+					Name:   pkg.Name,
+					Status: "failed",
+					Error:  "package manager not available",
+				})
+				failedCount++
+			} else {
+				// Install the package
+				err := manager.Install(ctx, pkg.Name)
+				if err != nil {
+					packageResults = append(packageResults, packageOperationSyncResult{
+						Name:   pkg.Name,
+						Status: "failed",
+						Error:  err.Error(),
+					})
+					failedCount++
+				} else {
+					packageResults = append(packageResults, packageOperationSyncResult{
+						Name:   pkg.Name,
+						Status: "installed",
+					})
+					installedCount++
+				}
+			}
+		}
+
+		managerResults = append(managerResults, managerSyncResult{
+			Name:         managerName,
+			MissingCount: len(packages),
+			Packages:     packageResults,
+		})
+
+		totalInstalled += installedCount
+		totalFailed += failedCount
+		totalWouldInstall += wouldInstallCount
+	}
+
+	return packageSyncResult{
+		DryRun:            dryRun,
+		TotalMissing:      totalMissing,
+		TotalInstalled:    totalInstalled,
+		TotalFailed:       totalFailed,
+		TotalWouldInstall: totalWouldInstall,
+		Managers:          managerResults,
+	}, nil
+}
+
+// applyDotfiles applies dotfile configuration and returns the result
+func applyDotfiles(ctx context.Context, configDir, homeDir string, cfg *config.Config, dryRun, backup bool) (dotfileSyncResult, error) {
+	// Create dotfile provider
+	provider := createDotfileProvider(homeDir, configDir, cfg)
+
+	// Get configured dotfiles
+	configuredItems, err := provider.GetConfiguredItems()
+	if err != nil {
+		return dotfileSyncResult{}, errors.Wrap(err, errors.ErrConfigNotFound, errors.DomainDotfiles, "apply",
+			"failed to get configured dotfiles")
+	}
+
+	var actions []dotfileActionSyncResult
+	summary := dotfileSummarySyncResult{}
+
+	// Process each configured dotfile
+	for _, item := range configuredItems {
+		result, err := core.ProcessDotfileForApply(ctx, core.ProcessDotfileForApplyOptions{
+			ConfigDir:   configDir,
+			HomeDir:     homeDir,
+			Source:      item.Name,
+			Destination: item.Metadata["destination"].(string),
+			DryRun:      dryRun,
+			Backup:      backup,
+		})
+
+		action := dotfileActionSyncResult{
+			Source:      result.Source,
+			Destination: result.Destination,
+			Action:      result.Action,
+			Status:      result.Status,
+			Error:       result.Error,
+		}
+
+		if err != nil {
+			action.Action = "error"
+			action.Status = "failed"
+			action.Error = err.Error()
+			summary.Failed++
+		} else {
+			switch action.Status {
+			case "added":
+				summary.Added++
+			case "updated":
+				summary.Updated++
+			case "unchanged":
+				summary.Unchanged++
+			case "failed":
+				summary.Failed++
+			}
+		}
+
+		actions = append(actions, action)
+	}
+
+	return dotfileSyncResult{
+		DryRun:     dryRun,
+		Backup:     backup,
+		TotalFiles: len(configuredItems),
+		Actions:    actions,
+		Summary:    summary,
+	}, nil
+}
+
+// dotfileConfigAdapter adapts config.Config to DotfileConfigLoader interface
+type dotfileConfigAdapter struct {
+	cfg *config.Config
+}
+
+func (d *dotfileConfigAdapter) GetDotfileTargets() map[string]string {
+	// This would need to be implemented based on how dotfiles are configured
+	// For now, return empty map as a placeholder
+	return make(map[string]string)
+}
+
+func (d *dotfileConfigAdapter) GetIgnorePatterns() []string {
+	if d.cfg != nil {
+		return d.cfg.GetIgnorePatterns()
+	}
+	return []string{}
+}
+
+func (d *dotfileConfigAdapter) GetExpandDirectories() []string {
+	if d.cfg != nil {
+		return d.cfg.GetExpandDirectories()
+	}
+	return []string{}
+}
+
+// createDotfileProvider creates a dotfile provider
+func createDotfileProvider(homeDir string, configDir string, cfg *config.Config) *state.DotfileProvider {
+	return state.NewDotfileProvider(homeDir, configDir, &dotfileConfigAdapter{cfg: cfg})
 }
 
 // getSyncScope returns a description of what's being synced
