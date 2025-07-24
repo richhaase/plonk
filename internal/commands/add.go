@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/richhaase/plonk/internal/core"
+	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/richhaase/plonk/internal/state"
@@ -70,7 +70,8 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	configDir := sharedCtx.ConfigDir()
 
 	// Load config for ignore patterns
-	cfg, err := core.LoadOrCreateConfig(configDir)
+	manager := config.NewConfigManager(configDir)
+	cfg, err := manager.LoadOrCreate()
 	if err != nil {
 		return err
 	}
@@ -81,7 +82,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 	for _, dotfilePath := range args {
 		// Call core business logic directly
-		dotfileResults := core.AddSingleDotfile(ctx, cfg, homeDir, configDir, dotfilePath, dryRun)
+		dotfileResults := AddSingleDotfile(ctx, cfg, homeDir, configDir, dotfilePath, dryRun)
 		results = append(results, dotfileResults...)
 	}
 

@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/core"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/richhaase/plonk/internal/state"
@@ -356,7 +355,7 @@ func applyDotfiles(ctx context.Context, configDir, homeDir string, cfg *config.C
 
 	// Process each configured dotfile
 	for _, item := range configuredItems {
-		result, err := core.ProcessDotfileForApply(ctx, core.ProcessDotfileForApplyOptions{
+		result, err := ProcessDotfileForApply(ctx, ProcessDotfileForApplyOptions{
 			ConfigDir:   configDir,
 			HomeDir:     homeDir,
 			Source:      item.Name,

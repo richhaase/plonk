@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/core"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
@@ -151,7 +150,7 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 	// For Go packages, we need to check with the binary name
 	checkPackageName := packageName
 	if manager == "go" {
-		checkPackageName = core.ExtractBinaryNameFromPath(packageName)
+		checkPackageName = managers.ExtractBinaryNameFromPath(packageName)
 	}
 
 	// Check if already managed
@@ -215,7 +214,7 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 	lockPackageName := packageName
 	if manager == "go" {
 		// Extract binary name from module path
-		lockPackageName = core.ExtractBinaryNameFromPath(packageName)
+		lockPackageName = managers.ExtractBinaryNameFromPath(packageName)
 	}
 
 	// Get package version after installation

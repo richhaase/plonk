@@ -15,6 +15,28 @@ import (
 	"github.com/richhaase/plonk/internal/errors"
 )
 
+// ExtractBinaryNameFromPath extracts the binary name from a Go module path
+// Examples:
+//   - github.com/user/tool -> tool
+//   - github.com/user/project/cmd/tool -> tool
+//   - github.com/user/tool@v1.2.3 -> tool
+func ExtractBinaryNameFromPath(modulePath string) string {
+	// Remove version specification if present
+	modulePath = strings.Split(modulePath, "@")[0]
+
+	// Extract the last component of the path
+	parts := strings.Split(modulePath, "/")
+	binaryName := parts[len(parts)-1]
+
+	// Handle special case of .../cmd/toolname pattern
+	if len(parts) >= 2 && parts[len(parts)-2] == "cmd" {
+		return binaryName
+	}
+
+	// For simple cases, the binary name is usually the last component
+	return binaryName
+}
+
 // GoInstallManager manages Go packages using BaseManager for common functionality.
 type GoInstallManager struct {
 	*BaseManager

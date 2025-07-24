@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/core"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/richhaase/plonk/internal/state"
@@ -81,7 +80,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 		}
 
 		// Remove single dotfile directly
-		result := core.RemoveSingleDotfile(homeDir, configDir, cfg, dotfilePath, flags.DryRun)
+		result := RemoveSingleDotfile(homeDir, configDir, cfg, dotfilePath, flags.DryRun)
 
 		// Show individual progress
 		reporter.ShowItemProgress(result)

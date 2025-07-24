@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/core"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
@@ -132,7 +131,7 @@ func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService,
 	// For Go packages, we need to check with the binary name
 	checkPackageName := packageName
 	if managerFlag == "go" {
-		checkPackageName = core.ExtractBinaryNameFromPath(packageName)
+		checkPackageName = managers.ExtractBinaryNameFromPath(packageName)
 	}
 
 	// Find package in lock file
@@ -142,7 +141,7 @@ func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService,
 	// If we found it and it's a go package, we might need to check with binary name
 	if !found && managerFlag == "" && strings.Contains(packageName, "/") {
 		// This might be a Go module path, try with binary name
-		checkPackageName = core.ExtractBinaryNameFromPath(packageName)
+		checkPackageName = managers.ExtractBinaryNameFromPath(packageName)
 		managerName, found = findPackageInLockFile(lockService, checkPackageName)
 		wasManaged = found
 	}
