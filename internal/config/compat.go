@@ -8,15 +8,28 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/richhaase/plonk/internal/paths"
 	"gopkg.in/yaml.v3"
 )
 
-// TargetToSource is now provided by the paths package
+// TargetToSource converts a target path to source path using plonk's convention
+// Removes the ~/. prefix
+// Examples:
+//
+//	~/.config/nvim/ -> config/nvim/
+//	~/.zshrc -> zshrc
+//	~/.editorconfig -> editorconfig
 func TargetToSource(target string) string {
-	return paths.TargetToSource(target)
+	// Remove ~/. prefix if present
+	if len(target) > 3 && target[:3] == "~/." {
+		return target[3:]
+	}
+	// Handle case where there's no prefix (shouldn't happen in normal use)
+	return target
 }
 
 // Config type is now defined in config.go
@@ -31,9 +44,19 @@ func LoadConfigWithDefaults(configDir string) *Config {
 	return LoadWithDefaults(configDir)
 }
 
-// GetDefaultConfigDirectory returns the default config directory
+// GetDefaultConfigDirectory returns the default config directory, checking PLONK_DIR environment variable first
 func GetDefaultConfigDirectory() string {
-	return paths.GetDefaultConfigDirectory()
+	// Check for PLONK_DIR environment variable
+	if envDir := os.Getenv("PLONK_DIR"); envDir != "" {
+		// Expand ~ if present
+		if strings.HasPrefix(envDir, "~/") {
+			return filepath.Join(os.Getenv("HOME"), envDir[2:])
+		}
+		return envDir
+	}
+
+	// Default location
+	return filepath.Join(os.Getenv("HOME"), ".config", "plonk")
 }
 
 // ResolvedConfig is an alias to Config for backward compatibility
