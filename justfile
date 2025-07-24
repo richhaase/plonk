@@ -66,12 +66,12 @@ generate-mocks:
     @echo "Generating mocks..."
     @mkdir -p internal/mocks
     @echo "  • Generating unified interface mocks..."
-    @go run go.uber.org/mock/mockgen@latest -source=internal/interfaces/core.go -destination=internal/mocks/core_mocks.go -package=mocks
-    @go run go.uber.org/mock/mockgen@latest -source=internal/interfaces/package_manager.go -destination=internal/mocks/package_manager_mocks.go -package=mocks
-    @go run go.uber.org/mock/mockgen@latest -source=internal/interfaces/config.go -destination=internal/mocks/config_mocks.go -package=mocks
-    @go run go.uber.org/mock/mockgen@latest -source=internal/interfaces/operations.go -destination=internal/mocks/operations_mocks.go -package=mocks
+    @go run go.uber.org/mock/mockgen@latest -source=internal/state/types.go -destination=internal/mocks/core_mocks.go -package=mocks
+    @go run go.uber.org/mock/mockgen@latest -source=internal/managers/interfaces.go -destination=internal/mocks/package_manager_mocks.go -package=mocks
+    @go run go.uber.org/mock/mockgen@latest -source=internal/config/config.go -destination=internal/mocks/config_mocks.go -package=mocks
+    # operations.go was removed - no longer needed
     @echo "  • Generating backward compatibility mocks..."
-    @go run go.uber.org/mock/mockgen@latest -source=internal/managers/common.go -destination=internal/managers/mock_manager.go -package=managers
+    # common.go was removed - replaced with interfaces.go
     @go run go.uber.org/mock/mockgen@latest -source=internal/state/reconciler.go -destination=internal/state/mock_provider.go -package=state
     @go run go.uber.org/mock/mockgen@latest -source=internal/state/package_provider.go -destination=internal/state/mock_package_interfaces.go -package=state
     @go run go.uber.org/mock/mockgen@latest -source=internal/config/interfaces.go -destination=internal/config/mock_config.go -package=config

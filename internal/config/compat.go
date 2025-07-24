@@ -13,7 +13,6 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/interfaces"
 	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/paths"
 	"gopkg.in/yaml.v3"
@@ -83,12 +82,12 @@ func (c *ConfigAdapter) GetDotfileTargets() map[string]string {
 
 // GetPackagesForManager returns package names for a specific package manager
 // NOTE: Packages are now managed by the lock file, so this always returns empty
-func (c *ConfigAdapter) GetPackagesForManager(managerName string) ([]interfaces.PackageConfigItem, error) {
+func (c *ConfigAdapter) GetPackagesForManager(managerName string) ([]managers.PackageConfigItem, error) {
 	// Validate manager name
 	for _, supported := range managers.SupportedManagers {
 		if managerName == supported {
 			// Return empty slice - packages are now in lock file
-			return []interfaces.PackageConfigItem{}, nil
+			return []managers.PackageConfigItem{}, nil
 		}
 	}
 

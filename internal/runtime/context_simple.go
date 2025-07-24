@@ -9,7 +9,7 @@ package runtime
 import (
 	"context"
 
-	"github.com/richhaase/plonk/internal/interfaces"
+	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/state"
 )
 
@@ -60,34 +60,34 @@ func (sc *SharedContext) SimplifiedReconcilePackages(ctx context.Context) (state
 }
 
 // reconcileDotfileItems performs the core reconciliation logic for dotfiles
-func reconcileDotfileItems(provider *state.DotfileProvider, configured []interfaces.ConfigItem, actual []interfaces.ActualItem) state.Result {
+func reconcileDotfileItems(provider *state.DotfileProvider, configured []state.ConfigItem, actual []state.ActualItem) state.Result {
 	// Build lookup sets
-	actualSet := make(map[string]*interfaces.ActualItem)
+	actualSet := make(map[string]*state.ActualItem)
 	for i := range actual {
 		actualSet[actual[i].Name] = &actual[i]
 	}
 
-	configuredSet := make(map[string]*interfaces.ConfigItem)
+	configuredSet := make(map[string]*state.ConfigItem)
 	for i := range configured {
 		configuredSet[configured[i].Name] = &configured[i]
 	}
 
 	result := state.Result{
 		Domain:    "dotfile",
-		Managed:   make([]interfaces.Item, 0),
-		Missing:   make([]interfaces.Item, 0),
-		Untracked: make([]interfaces.Item, 0),
+		Managed:   make([]state.Item, 0),
+		Missing:   make([]state.Item, 0),
+		Untracked: make([]state.Item, 0),
 	}
 
 	// Check each configured item against actual
 	for _, configItem := range configured {
 		if actualItem, exists := actualSet[configItem.Name]; exists {
 			// Item is managed (in config AND present)
-			item := provider.CreateItem(configItem.Name, interfaces.StateManaged, &configItem, actualItem)
+			item := provider.CreateItem(configItem.Name, state.StateManaged, &configItem, actualItem)
 			result.Managed = append(result.Managed, item)
 		} else {
 			// Item is missing (in config BUT not present)
-			item := provider.CreateItem(configItem.Name, interfaces.StateMissing, &configItem, nil)
+			item := provider.CreateItem(configItem.Name, state.StateMissing, &configItem, nil)
 			result.Missing = append(result.Missing, item)
 		}
 	}
@@ -96,7 +96,7 @@ func reconcileDotfileItems(provider *state.DotfileProvider, configured []interfa
 	for _, actualItem := range actual {
 		if _, exists := configuredSet[actualItem.Name]; !exists {
 			// Item is untracked (present BUT not in config)
-			item := provider.CreateItem(actualItem.Name, interfaces.StateUntracked, nil, &actualItem)
+			item := provider.CreateItem(actualItem.Name, state.StateUntracked, nil, &actualItem)
 			result.Untracked = append(result.Untracked, item)
 		}
 	}
@@ -105,34 +105,34 @@ func reconcileDotfileItems(provider *state.DotfileProvider, configured []interfa
 }
 
 // reconcilePackageItems performs the core reconciliation logic for packages
-func reconcilePackageItems(provider *state.MultiManagerPackageProvider, configured []interfaces.ConfigItem, actual []interfaces.ActualItem) state.Result {
+func reconcilePackageItems(provider *managers.MultiManagerPackageProvider, configured []state.ConfigItem, actual []state.ActualItem) state.Result {
 	// Build lookup sets
-	actualSet := make(map[string]*interfaces.ActualItem)
+	actualSet := make(map[string]*state.ActualItem)
 	for i := range actual {
 		actualSet[actual[i].Name] = &actual[i]
 	}
 
-	configuredSet := make(map[string]*interfaces.ConfigItem)
+	configuredSet := make(map[string]*state.ConfigItem)
 	for i := range configured {
 		configuredSet[configured[i].Name] = &configured[i]
 	}
 
 	result := state.Result{
 		Domain:    "package",
-		Managed:   make([]interfaces.Item, 0),
-		Missing:   make([]interfaces.Item, 0),
-		Untracked: make([]interfaces.Item, 0),
+		Managed:   make([]state.Item, 0),
+		Missing:   make([]state.Item, 0),
+		Untracked: make([]state.Item, 0),
 	}
 
 	// Check each configured item against actual
 	for _, configItem := range configured {
 		if actualItem, exists := actualSet[configItem.Name]; exists {
 			// Item is managed (in config AND present)
-			item := provider.CreateItem(configItem.Name, interfaces.StateManaged, &configItem, actualItem)
+			item := provider.CreateItem(configItem.Name, state.StateManaged, &configItem, actualItem)
 			result.Managed = append(result.Managed, item)
 		} else {
 			// Item is missing (in config BUT not present)
-			item := provider.CreateItem(configItem.Name, interfaces.StateMissing, &configItem, nil)
+			item := provider.CreateItem(configItem.Name, state.StateMissing, &configItem, nil)
 			result.Missing = append(result.Missing, item)
 		}
 	}
@@ -141,7 +141,7 @@ func reconcilePackageItems(provider *state.MultiManagerPackageProvider, configur
 	for _, actualItem := range actual {
 		if _, exists := configuredSet[actualItem.Name]; !exists {
 			// Item is untracked (present BUT not in config)
-			item := provider.CreateItem(actualItem.Name, interfaces.StateUntracked, nil, &actualItem)
+			item := provider.CreateItem(actualItem.Name, state.StateUntracked, nil, &actualItem)
 			result.Untracked = append(result.Untracked, item)
 		}
 	}

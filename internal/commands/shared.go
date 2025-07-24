@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/interfaces"
 	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/richhaase/plonk/internal/ui"
@@ -66,9 +65,9 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 
 	// If a specific manager is requested, filter results
 	if flags.Manager != "" {
-		filteredManaged := make([]interfaces.Item, 0)
-		filteredMissing := make([]interfaces.Item, 0)
-		filteredUntracked := make([]interfaces.Item, 0)
+		filteredManaged := make([]state.Item, 0)
+		filteredMissing := make([]state.Item, 0)
+		filteredUntracked := make([]state.Item, 0)
 
 		for _, item := range domainResult.Managed {
 			if item.Manager == flags.Manager {
@@ -93,7 +92,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 
 	// For non-verbose mode, clear untracked items
 	if !flags.Verbose {
-		domainResult.Untracked = []interfaces.Item{}
+		domainResult.Untracked = []state.Item{}
 	}
 
 	// Wrap result to implement OutputData interface
@@ -131,7 +130,7 @@ func (w *packageListResultWrapper) TableOutput() string {
 
 	// Collect all items with their states
 	type itemWithState struct {
-		item  interfaces.Item
+		item  state.Item
 		state string
 	}
 	var items []itemWithState
@@ -213,17 +212,17 @@ func runDotList(cmd *cobra.Command, args []string) error {
 
 	// Filter based on flags
 	if showManaged {
-		filteredResult.Missing = []interfaces.Item{}
-		filteredResult.Untracked = []interfaces.Item{}
+		filteredResult.Missing = []state.Item{}
+		filteredResult.Untracked = []state.Item{}
 	} else if showMissing {
-		filteredResult.Managed = []interfaces.Item{}
-		filteredResult.Untracked = []interfaces.Item{}
+		filteredResult.Managed = []state.Item{}
+		filteredResult.Untracked = []state.Item{}
 	} else if showUntracked {
-		filteredResult.Managed = []interfaces.Item{}
-		filteredResult.Missing = []interfaces.Item{}
+		filteredResult.Managed = []state.Item{}
+		filteredResult.Missing = []state.Item{}
 	} else if !verbose {
 		// Default: show managed + missing, hide untracked unless verbose
-		filteredResult.Untracked = []interfaces.Item{}
+		filteredResult.Untracked = []state.Item{}
 	}
 
 	// Wrap result to implement OutputData interface
@@ -275,7 +274,7 @@ func (w *dotfileListResultWrapper) TableOutput() string {
 
 	// Collect all items with their states
 	type itemWithState struct {
-		item  interfaces.Item
+		item  state.Item
 		state string
 	}
 	var items []itemWithState
@@ -353,7 +352,7 @@ func (w *dotfileListResultWrapper) StructuredData() any {
 	var dotfiles []map[string]string
 
 	// Helper to add items
-	addItems := func(items []interfaces.Item, stateStr string) {
+	addItems := func(items []state.Item, stateStr string) {
 		for _, item := range items {
 			target := item.Path
 			source := item.Name

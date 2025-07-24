@@ -8,8 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/richhaase/plonk/internal/interfaces"
 )
 
 // MockDotfileConfigLoader implements DotfileConfigLoader for testing
@@ -90,7 +88,7 @@ func TestDotfileProvider_GetConfiguredItems(t *testing.T) {
 	}
 
 	// Verify items structure
-	itemsByName := make(map[string]interfaces.ConfigItem)
+	itemsByName := make(map[string]ConfigItem)
 	for _, item := range items {
 		itemsByName[item.Name] = item
 	}
@@ -174,17 +172,17 @@ func TestDotfileProvider_GetActualItems(t *testing.T) {
 
 	items, err := provider.GetActualItems(context.Background())
 	if err != nil {
-		t.Fatalf("Getinterfaces.ActualItems() failed: %v", err)
+		t.Fatalf("GetActualItems() failed: %v", err)
 	}
 
 	// Should find dotfiles but not regular files
 	expectedDotfiles := []string{".zshrc", ".gitconfig", ".vimrc", ".config", ".ssh"}
 	if len(items) != len(expectedDotfiles) {
-		t.Errorf("Getinterfaces.ActualItems() returned %d items, expected %d", len(items), len(expectedDotfiles))
+		t.Errorf("GetActualItems() returned %d items, expected %d", len(items), len(expectedDotfiles))
 	}
 
 	// Verify items structure
-	itemsByName := make(map[string]interfaces.ActualItem)
+	itemsByName := make(map[string]ActualItem)
 	for _, item := range items {
 		itemsByName[item.Name] = item
 	}
@@ -217,33 +215,33 @@ func TestDotfileProvider_CreateItem(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		state        interfaces.ItemState
-		configured   *interfaces.ConfigItem
-		actual       *interfaces.ActualItem
+		state        ItemState
+		configured   *ConfigItem
+		actual       *ActualItem
 		expectedName string
 		expectedPath string
 	}{
 		{
 			name:         "managed dotfile",
-			state:        interfaces.StateManaged,
-			configured:   &interfaces.ConfigItem{Name: ".zshrc", Metadata: map[string]interface{}{"source": "zshrc", "destination": "~/.zshrc"}},
-			actual:       &interfaces.ActualItem{Name: ".zshrc", Path: "/home/user/.zshrc", Metadata: map[string]interface{}{"path": "/home/user/.zshrc"}},
+			state:        StateManaged,
+			configured:   &ConfigItem{Name: ".zshrc", Metadata: map[string]interface{}{"source": "zshrc", "destination": "~/.zshrc"}},
+			actual:       &ActualItem{Name: ".zshrc", Path: "/home/user/.zshrc", Metadata: map[string]interface{}{"path": "/home/user/.zshrc"}},
 			expectedName: ".zshrc",
 			expectedPath: "/home/user/.zshrc",
 		},
 		{
 			name:         "missing dotfile",
-			state:        interfaces.StateMissing,
-			configured:   &interfaces.ConfigItem{Name: ".gitconfig", Metadata: map[string]interface{}{"source": "gitconfig", "destination": "~/.gitconfig"}},
+			state:        StateMissing,
+			configured:   &ConfigItem{Name: ".gitconfig", Metadata: map[string]interface{}{"source": "gitconfig", "destination": "~/.gitconfig"}},
 			actual:       nil,
 			expectedName: ".gitconfig",
 			expectedPath: "/home/user/.gitconfig", // expandPath converts ~/ to /home/user/
 		},
 		{
 			name:         "untracked dotfile",
-			state:        interfaces.StateUntracked,
+			state:        StateUntracked,
 			configured:   nil,
-			actual:       &interfaces.ActualItem{Name: ".vimrc", Path: "/home/user/.vimrc", Metadata: map[string]interface{}{"path": "/home/user/.vimrc"}},
+			actual:       &ActualItem{Name: ".vimrc", Path: "/home/user/.vimrc", Metadata: map[string]interface{}{"path": "/home/user/.vimrc"}},
 			expectedName: ".vimrc",
 			expectedPath: "/home/user/.vimrc",
 		},
@@ -340,7 +338,7 @@ func TestDotfileProvider_GetActualItems_WithConfiguredDirectories(t *testing.T) 
 
 	items, err := provider.GetActualItems(context.Background())
 	if err != nil {
-		t.Fatalf("Getinterfaces.ActualItems() failed: %v", err)
+		t.Fatalf("GetActualItems() failed: %v", err)
 	}
 
 	// Should find dotfiles plus nvim directory files
@@ -354,14 +352,14 @@ func TestDotfileProvider_GetActualItems_WithConfiguredDirectories(t *testing.T) 
 	}
 
 	if len(items) != len(expectedItems) {
-		t.Errorf("Getinterfaces.ActualItems() returned %d items, expected %d", len(items), len(expectedItems))
+		t.Errorf("GetActualItems() returned %d items, expected %d", len(items), len(expectedItems))
 		for i, item := range items {
 			t.Logf("Item %d: %s", i, item.Name)
 		}
 	}
 
 	// Verify all expected items are present
-	itemsByName := make(map[string]interfaces.ActualItem)
+	itemsByName := make(map[string]ActualItem)
 	for _, item := range items {
 		itemsByName[item.Name] = item
 	}
@@ -402,7 +400,7 @@ func TestDotfileProvider_GetActualItems_NoDuplicates(t *testing.T) {
 
 	items, err := provider.GetActualItems(context.Background())
 	if err != nil {
-		t.Fatalf("Getinterfaces.ActualItems() failed: %v", err)
+		t.Fatalf("GetActualItems() failed: %v", err)
 	}
 
 	// Should only find .vimrc once, not duplicated

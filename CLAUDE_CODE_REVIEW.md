@@ -306,24 +306,26 @@ func runSync(cmd *cobra.Command, args []string) error {
 ### 1. Eliminate These Packages Entirely
 - ✅ `cli` → merge 1 file into `commands` (COMPLETED 2025-07-24)
 - ✅ `constants` → inline where used (COMPLETED 2025-07-24)
+- ✅ `executor` → use exec.Command directly (COMPLETED 2025-07-24)
+- ✅ `types` → confusing aliases, delete it (COMPLETED 2025-07-24)
+- ✅ `interfaces` → define interfaces where used (COMPLETED 2025-07-24)
 - `core` → merge into domain packages
-- `executor` → use exec.Command directly
-- `interfaces` → define interfaces where used
 - `operations` → unnecessary abstraction
 - `paths` → use filepath package directly
-- `runtime` → eliminate SharedContext entirely
 - `services` → pure pass-through, delete it
-- ✅ `types` → confusing aliases, delete it (COMPLETED 2025-07-24)
 - `mocks` → use simple test doubles instead
 
-### 2. Simplify These Packages
-- `config` → Remove dual config system, remove getters
+### 2. Transform These Packages
+- `runtime` → Transform to minimal `orchestrator` (~200-300 LOC), remove SharedContext pattern
+
+### 3. Simplify These Packages
+- `config` → Remove dual config system, remove getters, keep YAML output support
 - `errors` → Replace with standard error wrapping
-- `state` → Remove provider pattern, use direct functions
+- `state` → Simplify provider pattern but keep reconciliation logic (Managed/Missing/Untracked)
 - `managers` → Remove BaseManager inheritance
 - `commands` → Move business logic to domain packages
 
-### 3. Idiomatic Go Changes
+### 4. Idiomatic Go Changes
 - Remove all 103 getter methods
 - Replace Result types with `(value, error)` returns
 - Move interfaces to consumer packages
@@ -332,30 +334,31 @@ func runSync(cmd *cobra.Command, args []string) error {
 - Remove the context pooling
 - Replace complex mocks with simple test doubles
 
-### 4. Feature Simplifications
+### 5. Feature Simplifications
 - Merge `doctor` command into `status`
-- Remove YAML output format (keep JSON only)
+- Keep both JSON and YAML output formats (minimal maintenance cost, high automation value)
 - Remove progress indicators
 - Simplify error matching to basic checks
 - Remove SharedContext caching (no performance benefit)
 - Make dry-run only available for sync command
 
-### 5. State Management Simplification
+### 6. State Management Simplification
 Current: Complex provider/reconciler pattern with 6 different item types
-Proposed: Simple comparison of config files vs actual state
+Proposed: Simplified provider pattern that preserves reconciliation semantics
 
 ```go
-// Current: Over-abstracted
+// Current: Over-abstracted with heavy framework
 provider := state.NewMultiManagerPackageProvider(sharedCtx)
 configured := provider.GetConfiguredPackages()
 actual := provider.GetActualPackages(ctx)
 items := state.ReconcilePackages(configured, actual)
 
-// Proposed: Direct and simple
+// Proposed: Simple reconciliation helper
 lock := lock.Load()
 for mgr, pkgs := range lock.Packages {
     installed := managers.Get(mgr).List()
-    // Compare directly
+    // Simple reconciliation preserving Managed/Missing/Untracked states
+    result := reconcile(pkgs, installed)
 }
 ```
 
@@ -481,9 +484,21 @@ Best for: Larger teams, limited test coverage, need for continuous stability
 3. **Risk**: Performance regression
    **Mitigation**: The current caching provides no real benefit for a CLI
 
+## Extensibility Considerations (AI Lab Requirements)
+
+While aggressively simplifying, we preserve specific extensibility points for future features:
+
+1. **Orchestrator Pattern**: Transform runtime to minimal orchestrator (~200-300 LOC) rather than deleting
+2. **Reconciliation Semantics**: Keep the Managed/Missing/Untracked pattern for future resource types
+3. **Lock File Design**: Structure internally to support future resource types beyond packages
+4. **Clean Interfaces**: Maintain clear boundaries between packages for future extensions
+5. **Structured Output**: Keep both JSON and YAML output for automation needs
+
+These aren't premature abstractions - they're carefully chosen extensibility points based on known future requirements.
+
 ## Conclusion
 
-The current codebase suffers from premature abstraction and non-idiomatic patterns that make it harder to understand and maintain than necessary. The proposed simplification would reduce the codebase by ~70% while maintaining all essential functionality and improving developer experience. The key insight is that Plonk is fundamentally simple: it copies files and runs package manager commands. The implementation should reflect this simplicity.
+The current codebase suffers from premature abstraction and non-idiomatic patterns that make it harder to understand and maintain than necessary. The proposed simplification would reduce the codebase by ~70% while maintaining all essential functionality and improving developer experience. The key insight is that Plonk is fundamentally simple: it copies files and runs package manager commands. The implementation should reflect this simplicity while preserving specific, minimal extensibility points for future evolution.
 
 ## Progress Tracking
 
@@ -517,7 +532,14 @@ The current codebase suffers from premature abstraction and non-idiomatic patter
    - No tests execute actual commands (proper unit test boundary)
    - Integration testing handled separately via `just test-ux`
 
+6. **2025-07-24**: Deleted `interfaces` package
+   - Moved interfaces to consumer packages following Go best practices
+   - Resolved import cycles by moving MultiManagerPackageProvider to managers
+   - Updated 15 files to use new interface locations
+   - Package count: 18 → 17
+
 ### Remaining Work
-- 7 packages still to eliminate (interfaces, operations, paths, services, runtime, core, mocks)
+- 5 packages still to eliminate (operations, paths, services, core, mocks)
+- 1 package to transform (runtime → orchestrator)
 - 5 packages to simplify (errors, config, state, managers, commands)
-- ~17,000 lines of code to remove
+- ~16,000 lines of code to remove

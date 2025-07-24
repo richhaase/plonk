@@ -186,7 +186,7 @@ func (sc *SharedContext) CreateDotfileProvider() (*state.DotfileProvider, error)
 }
 
 // CreatePackageProvider creates a multi-manager package provider using lock file
-func (sc *SharedContext) CreatePackageProvider(ctx context.Context) (*state.MultiManagerPackageProvider, error) {
+func (sc *SharedContext) CreatePackageProvider(ctx context.Context) (*managers.MultiManagerPackageProvider, error) {
 	// Create lock file adapter
 	lockService := lock.NewYAMLLockService(sc.configDir)
 	lockAdapter := lock.NewLockFileAdapter(lockService)

@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/richhaase/plonk/internal/state"
 )
@@ -20,7 +21,7 @@ func LoadOrCreateConfig(configDir string) (*config.Config, error) {
 }
 
 // CreatePackageProvider creates a multi-manager package provider using lock file
-func CreatePackageProvider(ctx context.Context, configDir string) (*state.MultiManagerPackageProvider, error) {
+func CreatePackageProvider(ctx context.Context, configDir string) (*managers.MultiManagerPackageProvider, error) {
 	// Use SharedContext to create provider
 	sharedCtx := runtime.GetSharedContext()
 	return sharedCtx.CreatePackageProvider(ctx)
