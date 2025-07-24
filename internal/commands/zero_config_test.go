@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/state"
 )
 
 // TestZeroConfigCommands tests that commands work without configuration files
@@ -133,12 +134,12 @@ func TestConfigResolutionInCommands(t *testing.T) {
 
 		// Verify resolution works
 		resolved := cfg.Resolve()
-		if resolved.GetDefaultManager() != "homebrew" {
-			t.Errorf("Expected default manager 'homebrew', got '%s'", resolved.GetDefaultManager())
+		if resolved.DefaultManager != "homebrew" {
+			t.Errorf("Expected default manager 'homebrew', got '%s'", resolved.DefaultManager)
 		}
 
-		if resolved.GetOperationTimeout() != 300 {
-			t.Errorf("Expected operation timeout 300, got %d", resolved.GetOperationTimeout())
+		if resolved.OperationTimeout != 300 {
+			t.Errorf("Expected operation timeout 300, got %d", resolved.OperationTimeout)
 		}
 	})
 
@@ -166,71 +167,56 @@ operation_timeout: 900
 		resolved := cfg.Resolve()
 
 		// Check overridden values
-		if resolved.GetDefaultManager() != "cargo" {
-			t.Errorf("Expected overridden default manager 'cargo', got '%s'", resolved.GetDefaultManager())
+		if resolved.DefaultManager != "cargo" {
+			t.Errorf("Expected overridden default manager 'cargo', got '%s'", resolved.DefaultManager)
 		}
 
-		if resolved.GetOperationTimeout() != 900 {
-			t.Errorf("Expected overridden operation timeout 900, got %d", resolved.GetOperationTimeout())
+		if resolved.OperationTimeout != 900 {
+			t.Errorf("Expected overridden operation timeout 900, got %d", resolved.OperationTimeout)
 		}
 
 		// Check default values for unspecified settings
-		if resolved.GetPackageTimeout() != 180 {
-			t.Errorf("Expected default package timeout 180, got %d", resolved.GetPackageTimeout())
+		if resolved.PackageTimeout != 180 {
+			t.Errorf("Expected default package timeout 180, got %d", resolved.PackageTimeout)
 		}
 
-		if resolved.GetDotfileTimeout() != 60 {
-			t.Errorf("Expected default dotfile timeout 60, got %d", resolved.GetDotfileTimeout())
+		if resolved.DotfileTimeout != 60 {
+			t.Errorf("Expected default dotfile timeout 60, got %d", resolved.DotfileTimeout)
 		}
 	})
 }
 
 // TestConfigAdapterZeroConfig tests config adapter behavior with zero config
 func TestConfigAdapterZeroConfig(t *testing.T) {
-	t.Run("config adapter handles empty config", func(t *testing.T) {
-		cfg := &config.Config{} // Empty config
-		adapter := config.NewConfigAdapter(cfg)
+	t.Run("config based dotfile loader handles empty config", func(t *testing.T) {
+		cfg := config.LoadConfigWithDefaults("/tmp/nonexistent") // Will get defaults
+		dotfileConfigLoader := state.NewConfigBasedDotfileLoader(cfg.IgnorePatterns, cfg.ExpandDirectories)
 
 		// Test dotfile operations
-		targets := adapter.GetDotfileTargets()
+		targets := dotfileConfigLoader.GetDotfileTargets()
 		if targets == nil {
 			t.Error("Expected dotfile targets map to be non-nil")
 		}
-
-		// Test package operations (should all return empty - packages now in lock file)
-		for _, manager := range []string{"homebrew", "npm", "cargo"} {
-			packages, err := adapter.GetPackagesForManager(manager)
-			if err != nil {
-				t.Errorf("Expected no error for %s packages, got: %v", manager, err)
-			}
-
-			if len(packages) != 0 {
-				t.Errorf("Expected empty packages for %s (packages now in lock file), got %d", manager, len(packages))
-			}
-		}
 	})
 
-	t.Run("state adapters work with zero config", func(t *testing.T) {
-		cfg := &config.Config{} // Empty config
-		configAdapter := config.NewConfigAdapter(cfg)
-
-		// Test state dotfile config adapter
-		stateDotfileAdapter := config.NewStateDotfileConfigAdapter(configAdapter)
+	t.Run("state dotfile loader works with zero config", func(t *testing.T) {
+		cfg := config.LoadConfigWithDefaults("/tmp/nonexistent") // Will get defaults
+		dotfileConfigLoader := state.NewConfigBasedDotfileLoader(cfg.IgnorePatterns, cfg.ExpandDirectories)
 
 		// Should get default ignore patterns
-		patterns := stateDotfileAdapter.GetIgnorePatterns()
+		patterns := dotfileConfigLoader.GetIgnorePatterns()
 		if len(patterns) == 0 {
 			t.Error("Expected default ignore patterns from state adapter")
 		}
 
 		// Should get default expand directories
-		dirs := stateDotfileAdapter.GetExpandDirectories()
+		dirs := dotfileConfigLoader.GetExpandDirectories()
 		if len(dirs) == 0 {
 			t.Error("Expected default expand directories from state adapter")
 		}
 
 		// Should get dotfile targets (may be empty but shouldn't error)
-		targets := stateDotfileAdapter.GetDotfileTargets()
+		targets := dotfileConfigLoader.GetDotfileTargets()
 		if targets == nil {
 			t.Error("Expected dotfile targets map to be non-nil")
 		}
