@@ -7,11 +7,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os/exec"
 	"sort"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/executor"
 	"github.com/richhaase/plonk/internal/managers/parsers"
 )
 
@@ -20,18 +20,13 @@ type NpmManager struct {
 	*BaseManager
 }
 
-// NewNpmManager creates a new NPM manager with the default executor.
+// NewNpmManager creates a new NPM manager.
 func NewNpmManager() *NpmManager {
-	return newNpmManager(nil)
+	return newNpmManager()
 }
 
-// NewNpmManagerWithExecutor creates a new NPM manager with a custom executor for testing.
-func NewNpmManagerWithExecutor(exec executor.CommandExecutor) *NpmManager {
-	return newNpmManager(exec)
-}
-
-// newNpmManager creates an NPM manager with the given executor.
-func newNpmManager(exec executor.CommandExecutor) *NpmManager {
+// newNpmManager creates an NPM manager.
+func newNpmManager() *NpmManager {
 	config := ManagerConfig{
 		BinaryName:  "npm",
 		VersionArgs: []string{"--version"},
@@ -52,12 +47,7 @@ func newNpmManager(exec executor.CommandExecutor) *NpmManager {
 	errorMatcher.AddPattern(ErrorTypePermission, "EACCES")
 	errorMatcher.AddPattern(ErrorTypeNotInstalled, "ENOENT", "cannot remove")
 
-	var base *BaseManager
-	if exec == nil {
-		base = NewBaseManager(config)
-	} else {
-		base = NewBaseManagerWithExecutor(config, exec)
-	}
+	base := NewBaseManager(config)
 	base.ErrorMatcher = errorMatcher
 
 	return &NpmManager{
@@ -68,7 +58,8 @@ func newNpmManager(exec executor.CommandExecutor) *NpmManager {
 // ListInstalled lists all globally installed NPM packages.
 func (n *NpmManager) ListInstalled(ctx context.Context) ([]string, error) {
 	// Call the binary directly to handle npm's unique exit code behavior
-	output, err := n.Executor.Execute(ctx, n.GetBinary(), n.Config.ListArgs()...)
+	cmd := exec.CommandContext(ctx, n.GetBinary(), n.Config.ListArgs()...)
+	output, err := cmd.Output()
 	if err != nil {
 		// npm list can return non-zero exit codes even when working correctly
 		// (e.g., when there are peer dependency warnings)
@@ -130,7 +121,8 @@ func (n *NpmManager) Uninstall(ctx context.Context, name string) error {
 
 // IsInstalled checks if a specific package is installed globally.
 func (n *NpmManager) IsInstalled(ctx context.Context, name string) (bool, error) {
-	_, err := n.Executor.Execute(ctx, n.GetBinary(), "list", "-g", name)
+	checkCmd := exec.CommandContext(ctx, n.GetBinary(), "list", "-g", name)
+	_, err := checkCmd.Output()
 	if err != nil {
 		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() == 1 {
 			// Package not found - this is not an error condition
@@ -145,7 +137,8 @@ func (n *NpmManager) IsInstalled(ctx context.Context, name string) (bool, error)
 
 // Search searches for packages in NPM registry.
 func (n *NpmManager) Search(ctx context.Context, query string) ([]string, error) {
-	output, err := n.Executor.Execute(ctx, n.GetBinary(), "search", query, "--json")
+	cmd := exec.CommandContext(ctx, n.GetBinary(), "search", query, "--json")
+	output, err := cmd.Output()
 	if err != nil {
 		// Check if this is a real error vs expected conditions
 		if execErr, ok := err.(interface{ ExitCode() int }); ok {
@@ -218,7 +211,8 @@ func (n *NpmManager) Info(ctx context.Context, name string) (*PackageInfo, error
 	}
 
 	// Always use npm view for info (works for both installed and available packages)
-	output, err := n.Executor.Execute(ctx, n.GetBinary(), "view", name, "--json")
+	cmd := exec.CommandContext(ctx, n.GetBinary(), "view", name, "--json")
+	output, err := cmd.Output()
 	if err != nil {
 		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() == 1 {
 			return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
@@ -329,7 +323,8 @@ func (n *NpmManager) GetInstalledVersion(ctx context.Context, name string) (stri
 	}
 
 	// Get version using npm list with specific package
-	output, err := n.Executor.Execute(ctx, n.GetBinary(), "list", "-g", name, "--depth=0", "--json")
+	cmd := exec.CommandContext(ctx, n.GetBinary(), "list", "-g", name, "--depth=0", "--json")
+	output, err := cmd.Output()
 	if err != nil {
 		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
 			"failed to get package version information")

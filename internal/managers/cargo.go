@@ -7,10 +7,10 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"os/exec"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/executor"
 )
 
 // CargoManager manages Rust packages via cargo using BaseManager for common functionality.
@@ -18,18 +18,13 @@ type CargoManager struct {
 	*BaseManager
 }
 
-// NewCargoManager creates a new cargo manager with the default executor.
+// NewCargoManager creates a new cargo manager.
 func NewCargoManager() *CargoManager {
-	return newCargoManager(nil)
+	return newCargoManager()
 }
 
-// NewCargoManagerWithExecutor creates a new cargo manager with a custom executor for testing.
-func NewCargoManagerWithExecutor(exec executor.CommandExecutor) *CargoManager {
-	return newCargoManager(exec)
-}
-
-// newCargoManager creates a cargo manager with the given executor.
-func newCargoManager(exec executor.CommandExecutor) *CargoManager {
+// newCargoManager creates a cargo manager.
+func newCargoManager() *CargoManager {
 	config := ManagerConfig{
 		BinaryName:  "cargo",
 		VersionArgs: []string{"--version"},
@@ -50,12 +45,7 @@ func newCargoManager(exec executor.CommandExecutor) *CargoManager {
 	errorMatcher.AddPattern(ErrorTypeAlreadyInstalled, "binary `", "` already exists")
 	errorMatcher.AddPattern(ErrorTypeNotInstalled, "not installed")
 
-	var base *BaseManager
-	if exec == nil {
-		base = NewBaseManager(config)
-	} else {
-		base = NewBaseManagerWithExecutor(config, exec)
-	}
+	base := NewBaseManager(config)
 	base.ErrorMatcher = errorMatcher
 
 	return &CargoManager{
@@ -121,7 +111,8 @@ func (c *CargoManager) IsInstalled(ctx context.Context, name string) (bool, erro
 
 // Search searches for packages in the cargo registry.
 func (c *CargoManager) Search(ctx context.Context, query string) ([]string, error) {
-	output, err := c.Executor.Execute(ctx, c.GetBinary(), "search", query)
+	cmd := exec.CommandContext(ctx, c.GetBinary(), "search", query)
+	output, err := cmd.Output()
 	if err != nil {
 		// cargo search returns a non-zero exit code if no packages are found.
 		if _, ok := err.(interface{ ExitCode() int }); ok {
@@ -157,7 +148,8 @@ func (c *CargoManager) parseSearchOutput(output []byte) []string {
 // Info retrieves detailed information about a package.
 func (c *CargoManager) Info(ctx context.Context, name string) (*PackageInfo, error) {
 	// Use search with limit 1 to get package info
-	output, err := c.Executor.Execute(ctx, c.GetBinary(), "search", name, "--limit", "1")
+	cmd := exec.CommandContext(ctx, c.GetBinary(), "search", name, "--limit", "1")
+	output, err := cmd.Output()
 	if err != nil {
 		return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", name,
 			"failed to get info for cargo package")
@@ -246,7 +238,8 @@ func (c *CargoManager) GetInstalledVersion(ctx context.Context, name string) (st
 	}
 
 	// Use cargo install --list to get version information
-	output, err := c.Executor.Execute(ctx, c.GetBinary(), "install", "--list")
+	cmd := exec.CommandContext(ctx, c.GetBinary(), "install", "--list")
+	output, err := cmd.Output()
 	if err != nil {
 		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
 			"failed to get package version information")

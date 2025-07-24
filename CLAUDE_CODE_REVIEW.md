@@ -505,7 +505,19 @@ The current codebase suffers from premature abstraction and non-idiomatic patter
    - Constants now co-located with their logic
    - Package count: 20 → 19
 
+4. **2025-07-24**: Deleted `executor` package
+   - Replaced CommandExecutor interface with direct exec.Command calls
+   - Updated all 7 package managers to use exec directly
+   - Removed unnecessary abstraction layer
+   - Package count: 19 → 18
+
+5. **2025-07-24**: Fixed manager tests after executor removal
+   - Converted ~39 mock-based tests to ~22 pure unit tests
+   - Tests now focus on parsing logic and business rules
+   - No tests execute actual commands (proper unit test boundary)
+   - Integration testing handled separately via `just test-ux`
+
 ### Remaining Work
-- 8 packages still to eliminate
-- 5 packages to simplify
-- ~18,000 lines of code to remove
+- 7 packages still to eliminate (interfaces, operations, paths, services, runtime, core, mocks)
+- 5 packages to simplify (errors, config, state, managers, commands)
+- ~17,000 lines of code to remove

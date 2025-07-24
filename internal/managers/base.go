@@ -6,9 +6,9 @@ package managers
 import (
 	"context"
 	"fmt"
+	"os/exec"
 
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/executor"
 )
 
 // ManagerConfig defines the configuration for a package manager
@@ -35,7 +35,6 @@ type ManagerConfig struct {
 // BaseManager provides common functionality for all package managers
 type BaseManager struct {
 	Config       ManagerConfig
-	Executor     executor.CommandExecutor
 	ErrorMatcher *ErrorMatcher
 	binaryCache  string // Cache the binary name after first check
 }
@@ -44,24 +43,15 @@ type BaseManager struct {
 func NewBaseManager(config ManagerConfig) *BaseManager {
 	return &BaseManager{
 		Config:       config,
-		Executor:     &executor.RealCommandExecutor{},
 		ErrorMatcher: NewCommonErrorMatcher(),
 	}
 }
 
-// NewBaseManagerWithExecutor creates a new base manager with a custom executor for testing
-func NewBaseManagerWithExecutor(config ManagerConfig, exec executor.CommandExecutor) *BaseManager {
-	return &BaseManager{
-		Config:       config,
-		Executor:     exec,
-		ErrorMatcher: NewCommonErrorMatcher(),
-	}
-}
 
 // IsAvailable checks if the package manager is installed and accessible
 func (b *BaseManager) IsAvailable(ctx context.Context) (bool, error) {
 	// Try primary binary
-	if _, err := b.Executor.LookPath(b.Config.BinaryName); err == nil {
+	if _, err := exec.LookPath(b.Config.BinaryName); err == nil {
 		if verifyErr := b.verifyBinary(ctx, b.Config.BinaryName); verifyErr == nil {
 			b.binaryCache = b.Config.BinaryName
 			return true, nil
@@ -79,7 +69,7 @@ func (b *BaseManager) IsAvailable(ctx context.Context) (bool, error) {
 
 	// Try fallback binaries
 	for _, fallback := range b.Config.FallbackBinaries {
-		if _, err := b.Executor.LookPath(fallback); err == nil {
+		if _, err := exec.LookPath(fallback); err == nil {
 			if verifyErr := b.verifyBinary(ctx, fallback); verifyErr == nil {
 				b.binaryCache = fallback
 				return true, nil
@@ -115,7 +105,8 @@ func (b *BaseManager) verifyBinary(ctx context.Context, binary string) error {
 		args = []string{"--version"} // Default version argument
 	}
 
-	_, err := b.Executor.Execute(ctx, binary, args...)
+	cmd := exec.CommandContext(ctx, binary, args...)
+	_, err := cmd.Output()
 	if err != nil {
 		// Check for context cancellation - return directly without wrapping
 		if err == context.Canceled || err == context.DeadlineExceeded {
@@ -143,7 +134,8 @@ func (b *BaseManager) ExecuteList(ctx context.Context) ([]byte, error) {
 		args = append(args, b.Config.JSONFlag)
 	}
 
-	output, err := b.Executor.Execute(ctx, binary, args...)
+	cmd := exec.CommandContext(ctx, binary, args...)
+	output, err := cmd.Output()
 	if err != nil {
 		return nil, b.wrapCommandError(err, "list", "failed to execute list command")
 	}
@@ -161,7 +153,8 @@ func (b *BaseManager) ExecuteInstall(ctx context.Context, packageName string) er
 	binary := b.GetBinary()
 	args := b.Config.InstallArgs(packageName)
 
-	output, err := b.Executor.ExecuteCombined(ctx, binary, args...)
+	cmd := exec.CommandContext(ctx, binary, args...)
+	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return b.handleInstallError(err, output, packageName)
 	}
@@ -179,7 +172,8 @@ func (b *BaseManager) ExecuteUninstall(ctx context.Context, packageName string) 
 	binary := b.GetBinary()
 	args := b.Config.UninstallArgs(packageName)
 
-	output, err := b.Executor.ExecuteCombined(ctx, binary, args...)
+	cmd := exec.CommandContext(ctx, binary, args...)
+	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return b.handleUninstallError(err, output, packageName)
 	}

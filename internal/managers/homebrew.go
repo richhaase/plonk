@@ -6,10 +6,10 @@ package managers
 import (
 	"context"
 	"fmt"
+	"os/exec"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/executor"
 )
 
 // HomebrewManager manages Homebrew packages using BaseManager for common functionality.
@@ -17,18 +17,13 @@ type HomebrewManager struct {
 	*BaseManager
 }
 
-// NewHomebrewManager creates a new homebrew manager with the default executor.
+// NewHomebrewManager creates a new homebrew manager.
 func NewHomebrewManager() *HomebrewManager {
-	return newHomebrewManager(nil)
+	return newHomebrewManager()
 }
 
-// NewHomebrewManagerWithExecutor creates a new homebrew manager with a custom executor for testing.
-func NewHomebrewManagerWithExecutor(exec executor.CommandExecutor) *HomebrewManager {
-	return newHomebrewManager(exec)
-}
-
-// newHomebrewManager creates a homebrew manager with the given executor.
-func newHomebrewManager(exec executor.CommandExecutor) *HomebrewManager {
+// newHomebrewManager creates a homebrew manager.
+func newHomebrewManager() *HomebrewManager {
 	config := ManagerConfig{
 		BinaryName:  "brew",
 		VersionArgs: []string{"--version"},
@@ -50,12 +45,7 @@ func newHomebrewManager(exec executor.CommandExecutor) *HomebrewManager {
 	errorMatcher.AddPattern(ErrorTypeNotInstalled, "No such keg", "not installed")
 	errorMatcher.AddPattern(ErrorTypeDependency, "because it is required by", "still has dependents")
 
-	var base *BaseManager
-	if exec == nil {
-		base = NewBaseManager(config)
-	} else {
-		base = NewBaseManagerWithExecutor(config, exec)
-	}
+	base := NewBaseManager(config)
 	base.ErrorMatcher = errorMatcher
 
 	return &HomebrewManager{
@@ -121,7 +111,8 @@ func (h *HomebrewManager) IsInstalled(ctx context.Context, name string) (bool, e
 
 // Search searches for packages in Homebrew repositories.
 func (h *HomebrewManager) Search(ctx context.Context, query string) ([]string, error) {
-	output, err := h.Executor.Execute(ctx, h.GetBinary(), "search", query)
+	cmd := exec.CommandContext(ctx, h.GetBinary(), "search", query)
+	output, err := cmd.Output()
 	if err != nil {
 		return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "search", query,
 			"failed to search homebrew packages")
@@ -154,7 +145,8 @@ func (h *HomebrewManager) parseSearchOutput(output []byte) []string {
 
 // Info retrieves detailed information about a package.
 func (h *HomebrewManager) Info(ctx context.Context, name string) (*PackageInfo, error) {
-	output, err := h.Executor.Execute(ctx, h.GetBinary(), "info", name)
+	cmd := exec.CommandContext(ctx, h.GetBinary(), "info", name)
+	output, err := cmd.Output()
 	if err != nil {
 		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() == 1 {
 			return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
@@ -260,7 +252,8 @@ func (h *HomebrewManager) GetInstalledVersion(ctx context.Context, name string) 
 	}
 
 	// Get version using brew list --versions
-	output, err := h.Executor.Execute(ctx, h.GetBinary(), "list", "--versions", name)
+	cmd := exec.CommandContext(ctx, h.GetBinary(), "list", "--versions", name)
+	output, err := cmd.Output()
 	if err != nil {
 		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
 			"failed to get package version information")

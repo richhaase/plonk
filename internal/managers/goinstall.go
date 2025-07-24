@@ -7,12 +7,12 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/executor"
 )
 
 // GoInstallManager manages Go packages using BaseManager for common functionality.
@@ -20,18 +20,13 @@ type GoInstallManager struct {
 	*BaseManager
 }
 
-// NewGoInstallManager creates a new go install manager with the default executor.
+// NewGoInstallManager creates a new go install manager.
 func NewGoInstallManager() *GoInstallManager {
-	return newGoInstallManager(nil)
+	return newGoInstallManager()
 }
 
-// NewGoInstallManagerWithExecutor creates a new go install manager with a custom executor for testing.
-func NewGoInstallManagerWithExecutor(exec executor.CommandExecutor) *GoInstallManager {
-	return newGoInstallManager(exec)
-}
-
-// newGoInstallManager creates a go install manager with the given executor.
-func newGoInstallManager(exec executor.CommandExecutor) *GoInstallManager {
+// newGoInstallManager creates a go install manager.
+func newGoInstallManager() *GoInstallManager {
 	config := ManagerConfig{
 		BinaryName:  "go",
 		VersionArgs: []string{"version"},
@@ -55,12 +50,7 @@ func newGoInstallManager(exec executor.CommandExecutor) *GoInstallManager {
 	errorMatcher.AddPattern(ErrorTypeNetwork, "connection", "timeout")
 	errorMatcher.AddPattern(ErrorTypeBuild, "build failed", "compilation")
 
-	var base *BaseManager
-	if exec == nil {
-		base = NewBaseManager(config)
-	} else {
-		base = NewBaseManagerWithExecutor(config, exec)
-	}
+	base := NewBaseManager(config)
 	base.ErrorMatcher = errorMatcher
 
 	return &GoInstallManager{
@@ -77,7 +67,8 @@ func (g *GoInstallManager) IsAvailable(ctx context.Context) (bool, error) {
 	}
 
 	// Check if version is >= 1.16 (when go install was improved)
-	output, err := g.Executor.Execute(ctx, g.GetBinary(), "version")
+	cmd := exec.CommandContext(ctx, g.GetBinary(), "version")
+	output, err := cmd.Output()
 	if err != nil {
 		return false, errors.Wrap(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", "go version check failed")
 	}
@@ -94,7 +85,8 @@ func (g *GoInstallManager) IsAvailable(ctx context.Context) (bool, error) {
 // getGoBinDir returns the directory where go installs binaries
 func (g *GoInstallManager) getGoBinDir(ctx context.Context) (string, error) {
 	// First try GOBIN
-	output, err := g.Executor.Execute(ctx, g.GetBinary(), "env", "GOBIN")
+	cmd := exec.CommandContext(ctx, g.GetBinary(), "env", "GOBIN")
+	output, err := cmd.Output()
 	if err != nil {
 		return "", errors.Wrap(err, errors.ErrCommandExecution, errors.DomainPackages, "config",
 			"failed to get GOBIN")
@@ -106,7 +98,8 @@ func (g *GoInstallManager) getGoBinDir(ctx context.Context) (string, error) {
 	}
 
 	// Fall back to GOPATH/bin
-	output, err = g.Executor.Execute(ctx, g.GetBinary(), "env", "GOPATH")
+	cmd = exec.CommandContext(ctx, g.GetBinary(), "env", "GOPATH")
+	output, err = cmd.Output()
 	if err != nil {
 		return "", errors.Wrap(err, errors.ErrCommandExecution, errors.DomainPackages, "config",
 			"failed to get GOPATH")
@@ -168,7 +161,8 @@ func (g *GoInstallManager) isGoBinary(ctx context.Context, binaryPath string) bo
 	checkCtx, cancel := context.WithTimeout(ctx, 2*1000*1000*1000) // 2 seconds
 	defer cancel()
 
-	_, err := g.Executor.Execute(checkCtx, g.GetBinary(), "version", "-m", binaryPath)
+	checkCmd := exec.CommandContext(checkCtx, g.GetBinary(), "version", "-m", binaryPath)
+	_, err := checkCmd.Output()
 	// If go version -m succeeds, it's a Go binary
 	return err == nil
 }
@@ -319,7 +313,8 @@ func (g *GoInstallManager) Info(ctx context.Context, name string) (*PackageInfo,
 	}
 
 	// Get module information using go version -m
-	output, err := g.Executor.Execute(ctx, g.GetBinary(), "version", "-m", binaryPath)
+	cmd := exec.CommandContext(ctx, g.GetBinary(), "version", "-m", binaryPath)
+	output, err := cmd.Output()
 	if err != nil {
 		return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", name,
 			"failed to get module information")
@@ -379,7 +374,8 @@ func (g *GoInstallManager) GetInstalledVersion(ctx context.Context, name string)
 	}
 
 	// Get version using go version -m
-	output, err := g.Executor.Execute(ctx, g.GetBinary(), "version", "-m", binaryPath)
+	cmd := exec.CommandContext(ctx, g.GetBinary(), "version", "-m", binaryPath)
+	output, err := cmd.Output()
 	if err != nil {
 		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
 			"failed to get version information")
