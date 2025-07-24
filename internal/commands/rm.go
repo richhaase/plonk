@@ -10,8 +10,9 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/core"
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/runtime"
+	"github.com/richhaase/plonk/internal/state"
+	"github.com/richhaase/plonk/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -68,10 +69,10 @@ func runRm(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
-	var results []operations.OperationResult
+	var results []state.OperationResult
 
 	// Show header for progress tracking
-	reporter := operations.NewProgressReporterForOperation("remove", "dotfile", true)
+	reporter := ui.NewProgressReporterForOperation("remove", "dotfile", true)
 
 	for _, dotfilePath := range args {
 		// Check if context was canceled
@@ -106,7 +107,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 	}
 
 	// Determine exit code based on results
-	exitErr := operations.DetermineExitCode(results, errors.DomainDotfiles, "remove")
+	exitErr := DetermineExitCode(results, errors.DomainDotfiles, "remove")
 	if exitErr != nil {
 		return exitErr
 	}
@@ -116,9 +117,9 @@ func runRm(cmd *cobra.Command, args []string) error {
 
 // DotfileRemovalOutput represents the output for dotfile removal
 type DotfileRemovalOutput struct {
-	TotalFiles int                          `json:"total_files" yaml:"total_files"`
-	Results    []operations.OperationResult `json:"results" yaml:"results"`
-	Summary    DotfileRemovalSummary        `json:"summary" yaml:"summary"`
+	TotalFiles int                     `json:"total_files" yaml:"total_files"`
+	Results    []state.OperationResult `json:"results" yaml:"results"`
+	Summary    DotfileRemovalSummary   `json:"summary" yaml:"summary"`
 }
 
 // DotfileRemovalSummary provides summary for dotfile removal
@@ -129,8 +130,8 @@ type DotfileRemovalSummary struct {
 }
 
 // calculateRemovalSummary calculates summary from results using generic operations summary
-func calculateRemovalSummary(results []operations.OperationResult) DotfileRemovalSummary {
-	genericSummary := operations.CalculateSummary(results)
+func calculateRemovalSummary(results []state.OperationResult) DotfileRemovalSummary {
+	genericSummary := state.CalculateSummary(results)
 	return DotfileRemovalSummary{
 		Removed: genericSummary.Added, // In removal context, "added" means "removed"
 		Skipped: genericSummary.Skipped,

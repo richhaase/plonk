@@ -1,10 +1,7 @@
 // Copyright (c) 2025 Rich Haase
 // Licensed under the MIT License. See LICENSE file in the project root for license information.
 
-// Package operations provides shared utilities for batch operations across different domains.
-// It includes common result types, progress reporting, and error handling utilities
-// used by both package and dotfile multiple add operations.
-package operations
+package state
 
 // OperationResult represents the result of a single operation (package install, dotfile add, etc.)
 type OperationResult struct {

@@ -1,13 +1,14 @@
 // Copyright (c) 2025 Rich Haase
 // Licensed under the MIT License. See LICENSE file in the project root for license information.
 
-package operations
+package ui
 
 import (
 	"fmt"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/state"
 )
 
 // DefaultProgressReporter provides a standard implementation of progress reporting
@@ -36,7 +37,7 @@ func NewProgressReporterForOperation(operation, itemType string, showIndividual 
 }
 
 // ShowItemProgress displays progress for an individual item
-func (r *DefaultProgressReporter) ShowItemProgress(result OperationResult) {
+func (r *DefaultProgressReporter) ShowItemProgress(result state.OperationResult) {
 	if !r.ShowIndividualProgress {
 		return
 	}
@@ -94,8 +95,8 @@ func (r *DefaultProgressReporter) ShowItemProgress(result OperationResult) {
 }
 
 // ShowBatchSummary displays a summary of the batch operation
-func (r *DefaultProgressReporter) ShowBatchSummary(results []OperationResult) {
-	summary := CalculateSummary(results)
+func (r *DefaultProgressReporter) ShowBatchSummary(results []state.OperationResult) {
+	summary := state.CalculateSummary(results)
 
 	// Generate operation-appropriate summary message
 	var summaryMsg string

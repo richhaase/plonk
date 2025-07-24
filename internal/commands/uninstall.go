@@ -14,8 +14,9 @@ import (
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
-	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/runtime"
+	"github.com/richhaase/plonk/internal/state"
+	"github.com/richhaase/plonk/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -76,10 +77,10 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 
-	var results []operations.OperationResult
+	var results []state.OperationResult
 
 	// Show header for progress tracking
-	reporter := operations.NewProgressReporterForOperation("uninstall", "package", true)
+	reporter := ui.NewProgressReporterForOperation("uninstall", "package", true)
 
 	for _, packageName := range args {
 		// Check if context was canceled
@@ -114,7 +115,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	}
 
 	// Determine exit code based on results
-	exitErr := operations.DetermineExitCode(results, errors.DomainPackages, "uninstall")
+	exitErr := DetermineExitCode(results, errors.DomainPackages, "uninstall")
 	if exitErr != nil {
 		return exitErr
 	}
@@ -123,8 +124,8 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 }
 
 // uninstallSinglePackage removes a single package
-func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService, packageName string, dryRun bool, managerFlag string) operations.OperationResult {
-	result := operations.OperationResult{
+func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService, packageName string, dryRun bool, managerFlag string) state.OperationResult {
+	result := state.OperationResult{
 		Name: packageName,
 	}
 
@@ -273,9 +274,9 @@ func uninstallPackageFromSystem(managerName, packageName string) error {
 
 // PackageUninstallOutput represents the output for package uninstallation
 type PackageUninstallOutput struct {
-	TotalPackages int                          `json:"total_packages" yaml:"total_packages"`
-	Results       []operations.OperationResult `json:"results" yaml:"results"`
-	Summary       PackageUninstallSummary      `json:"summary" yaml:"summary"`
+	TotalPackages int                     `json:"total_packages" yaml:"total_packages"`
+	Results       []state.OperationResult `json:"results" yaml:"results"`
+	Summary       PackageUninstallSummary `json:"summary" yaml:"summary"`
 }
 
 // PackageUninstallSummary provides summary for package uninstallation
@@ -286,8 +287,8 @@ type PackageUninstallSummary struct {
 }
 
 // calculateUninstallSummary calculates summary from uninstall results using generic operations summary
-func calculateUninstallSummary(results []operations.OperationResult) PackageUninstallSummary {
-	genericSummary := operations.CalculateSummary(results)
+func calculateUninstallSummary(results []state.OperationResult) PackageUninstallSummary {
+	genericSummary := state.CalculateSummary(results)
 	return PackageUninstallSummary{
 		Removed: genericSummary.Removed,
 		Skipped: genericSummary.Skipped,

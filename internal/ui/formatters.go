@@ -6,7 +6,7 @@ package ui
 import (
 	"fmt"
 
-	"github.com/richhaase/plonk/internal/operations"
+	"github.com/richhaase/plonk/internal/state"
 )
 
 // ApplyOutput represents the output structure for package apply operations
@@ -367,7 +367,7 @@ func (d DotfileBatchAddOutput) StructuredData() any {
 }
 
 // ExtractErrorMessages extracts error messages from failed results
-func ExtractErrorMessages(results []operations.OperationResult) []string {
+func ExtractErrorMessages(results []state.OperationResult) []string {
 	var errors []string
 	for _, result := range results {
 		if result.Status == "failed" && result.Error != nil {
@@ -388,7 +388,7 @@ func MapStatusToAction(status string) string {
 }
 
 // ConvertToDotfileAddOutput converts OperationResult to DotfileAddOutput for structured output
-func ConvertToDotfileAddOutput(results []operations.OperationResult) []DotfileAddOutput {
+func ConvertToDotfileAddOutput(results []state.OperationResult) []DotfileAddOutput {
 	outputs := make([]DotfileAddOutput, 0, len(results))
 	for _, result := range results {
 		if result.Status == "failed" {

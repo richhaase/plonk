@@ -13,8 +13,9 @@ import (
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
-	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/runtime"
+	"github.com/richhaase/plonk/internal/state"
+	"github.com/richhaase/plonk/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -94,10 +95,10 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	var results []operations.OperationResult
+	var results []state.OperationResult
 
 	// Show header for progress tracking
-	reporter := operations.NewProgressReporterForOperation("install", "package", true)
+	reporter := ui.NewProgressReporterForOperation("install", "package", true)
 
 	for _, packageName := range args {
 		// Check if context was canceled
@@ -132,7 +133,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	// Determine exit code based on results
-	exitErr := operations.DetermineExitCode(results, errors.DomainPackages, "install")
+	exitErr := DetermineExitCode(results, errors.DomainPackages, "install")
 	if exitErr != nil {
 		return exitErr
 	}
@@ -141,8 +142,8 @@ func runInstall(cmd *cobra.Command, args []string) error {
 }
 
 // installSinglePackage installs a single package
-func installSinglePackage(configDir string, lockService *lock.YAMLLockService, packageName, manager string, dryRun, force bool) operations.OperationResult {
-	result := operations.OperationResult{
+func installSinglePackage(configDir string, lockService *lock.YAMLLockService, packageName, manager string, dryRun, force bool) state.OperationResult {
+	result := state.OperationResult{
 		Name:    packageName,
 		Manager: manager,
 	}
@@ -244,9 +245,9 @@ func getPackageManager(manager string) (managers.PackageManager, error) {
 
 // PackageInstallOutput represents the output for package installation
 type PackageInstallOutput struct {
-	TotalPackages int                          `json:"total_packages" yaml:"total_packages"`
-	Results       []operations.OperationResult `json:"results" yaml:"results"`
-	Summary       PackageInstallSummary        `json:"summary" yaml:"summary"`
+	TotalPackages int                     `json:"total_packages" yaml:"total_packages"`
+	Results       []state.OperationResult `json:"results" yaml:"results"`
+	Summary       PackageInstallSummary   `json:"summary" yaml:"summary"`
 }
 
 // PackageInstallSummary provides summary for package installation
@@ -257,8 +258,8 @@ type PackageInstallSummary struct {
 }
 
 // calculatePackageSummary calculates summary from results using generic operations summary
-func calculatePackageSummary(results []operations.OperationResult) PackageInstallSummary {
-	genericSummary := operations.CalculateSummary(results)
+func calculatePackageSummary(results []state.OperationResult) PackageInstallSummary {
+	genericSummary := state.CalculateSummary(results)
 	return PackageInstallSummary{
 		Added:   genericSummary.Added,
 		Skipped: genericSummary.Skipped,

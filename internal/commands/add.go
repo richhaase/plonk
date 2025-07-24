@@ -9,8 +9,8 @@ import (
 
 	"github.com/richhaase/plonk/internal/core"
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/runtime"
+	"github.com/richhaase/plonk/internal/state"
 	"github.com/richhaase/plonk/internal/ui"
 	"github.com/spf13/cobra"
 )
@@ -77,7 +77,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 	// Process each dotfile directly
 	ctx := context.Background()
-	var results []operations.OperationResult
+	var results []state.OperationResult
 
 	for _, dotfilePath := range args {
 		// Call core business logic directly

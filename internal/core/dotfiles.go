@@ -14,17 +14,17 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/paths"
+	"github.com/richhaase/plonk/internal/state"
 )
 
 // AddSingleDotfile processes a single dotfile path and returns results for all files processed
-func AddSingleDotfile(ctx context.Context, cfg *config.Config, homeDir, configDir, dotfilePath string, dryRun bool) []operations.OperationResult {
+func AddSingleDotfile(ctx context.Context, cfg *config.Config, homeDir, configDir, dotfilePath string, dryRun bool) []state.OperationResult {
 	// Resolve and validate dotfile path
 	resolver := paths.NewPathResolver(homeDir, configDir)
 	resolvedPath, err := resolver.ResolveDotfilePath(dotfilePath)
 	if err != nil {
-		return []operations.OperationResult{{
+		return []state.OperationResult{{
 			Name:   dotfilePath,
 			Status: "failed",
 			Error:  errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainDotfiles, "resolve", dotfilePath, "failed to resolve dotfile path"),
@@ -34,14 +34,14 @@ func AddSingleDotfile(ctx context.Context, cfg *config.Config, homeDir, configDi
 	// Check if dotfile exists
 	info, err := os.Stat(resolvedPath)
 	if os.IsNotExist(err) {
-		return []operations.OperationResult{{
+		return []state.OperationResult{{
 			Name:   dotfilePath,
 			Status: "failed",
 			Error:  errors.NewError(errors.ErrFileNotFound, errors.DomainDotfiles, "check", fmt.Sprintf("dotfile does not exist: %s", resolvedPath)).WithSuggestionMessage("Check if path exists: ls -la " + resolvedPath),
 		}}
 	}
 	if err != nil {
-		return []operations.OperationResult{{
+		return []state.OperationResult{{
 			Name:   dotfilePath,
 			Status: "failed",
 			Error:  errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "check", "failed to check dotfile"),
@@ -55,12 +55,12 @@ func AddSingleDotfile(ctx context.Context, cfg *config.Config, homeDir, configDi
 
 	// Handle single file
 	result := AddSingleFile(ctx, cfg, resolvedPath, homeDir, configDir, dryRun)
-	return []operations.OperationResult{result}
+	return []state.OperationResult{result}
 }
 
 // AddSingleFile processes a single file and returns an OperationResult
-func AddSingleFile(ctx context.Context, cfg *config.Config, filePath, homeDir, configDir string, dryRun bool) operations.OperationResult {
-	result := operations.OperationResult{
+func AddSingleFile(ctx context.Context, cfg *config.Config, filePath, homeDir, configDir string, dryRun bool) state.OperationResult {
+	result := state.OperationResult{
 		Name: filePath,
 	}
 
@@ -122,8 +122,8 @@ func AddSingleFile(ctx context.Context, cfg *config.Config, filePath, homeDir, c
 }
 
 // AddDirectoryFiles processes all files in a directory and returns results
-func AddDirectoryFiles(ctx context.Context, cfg *config.Config, dirPath, homeDir, configDir string, dryRun bool) []operations.OperationResult {
-	var results []operations.OperationResult
+func AddDirectoryFiles(ctx context.Context, cfg *config.Config, dirPath, homeDir, configDir string, dryRun bool) []state.OperationResult {
+	var results []state.OperationResult
 	ignorePatterns := cfg.Resolve().GetIgnorePatterns()
 
 	// Use PathResolver to expand directory
@@ -132,7 +132,7 @@ func AddDirectoryFiles(ctx context.Context, cfg *config.Config, dirPath, homeDir
 
 	entries, err := resolver.ExpandDirectory(dirPath)
 	if err != nil {
-		return []operations.OperationResult{{
+		return []state.OperationResult{{
 			Name:   dirPath,
 			Status: "failed",
 			Error:  err,
@@ -149,7 +149,7 @@ func AddDirectoryFiles(ctx context.Context, cfg *config.Config, dirPath, homeDir
 		// Get file info for skip checking
 		info, err := os.Stat(entry.FullPath)
 		if err != nil {
-			results = append(results, operations.OperationResult{
+			results = append(results, state.OperationResult{
 				Name:   entry.FullPath,
 				Status: "failed",
 				Error:  errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "stat", "failed to get file info"),
@@ -171,8 +171,8 @@ func AddDirectoryFiles(ctx context.Context, cfg *config.Config, dirPath, homeDir
 }
 
 // RemoveSingleDotfile removes a single dotfile
-func RemoveSingleDotfile(homeDir, configDir string, cfg *config.Config, dotfilePath string, dryRun bool) operations.OperationResult {
-	result := operations.OperationResult{
+func RemoveSingleDotfile(homeDir, configDir string, cfg *config.Config, dotfilePath string, dryRun bool) state.OperationResult {
+	result := state.OperationResult{
 		Name: dotfilePath,
 	}
 
