@@ -4,7 +4,7 @@
 
 Plonk is a package and dotfile manager that has accumulated significant complexity during rapid development. The codebase contains **22 packages** and **~26,000 lines of code** for what is fundamentally a wrapper around package managers and a file synchronization tool. This review proposes a **ruthless simplification**, reducing the codebase by **~70%** while maintaining all core user-facing functionality.
 
-**Key Finding**: The codebase must be reduced from 22 packages to 5-6 packages, eliminating approximately 18,000 lines of code. Half-measures have failed - radical simplification is required.
+**Key Finding**: The codebase must be radically simplified from 22 packages to a clean, domain-focused architecture. The goal is not an arbitrary package count, but clear domain separation with idiomatic Go patterns.
 
 **Critical Insight**: A simple operation like `plonk add ~/.vimrc` currently traverses 9 layers of abstraction. After refactoring, it will be ~30 lines of direct, readable code.
 
@@ -130,7 +130,7 @@ type NpmManager struct {
 
 ## Proposed Simplified Architecture
 
-### Package Structure (5-6 packages total)
+### Package Structure (7-9 well-defined domains)
 ```
 plonk/
 ├── cmd/
@@ -599,4 +599,11 @@ The current codebase suffers from premature abstraction and non-idiomatic patter
 - **Progress**: 22 → 9 packages (59% reduction), targeting final 5-6 packages
 
 ### Future Polish Tasks (Post-Simplification)
-- **Human-Readable Output Analysis**: Review and improve consistency/UX of table output formats across all commands (low priority - after reaching 5-6 package and code reduction goals)
+- **Human-Readable Output Analysis**: Review and improve consistency/UX of table output formats across all commands (low priority - after achieving clean architecture)
+
+### Architectural Philosophy
+- **Not about arbitrary package count**: Started at 22, now at 9, targeting 7-9 well-defined domains
+- **Domain clarity over numbers**: Each package should represent a clear business domain
+- **Idiomatic Go patterns**: Following community standards, not enterprise/Java patterns
+- **Developer/AI friendly**: Easy to understand, navigate, and extend
+- **Right-sized packages**: Not too granular (avoid pkg sprawl), not too monolithic
