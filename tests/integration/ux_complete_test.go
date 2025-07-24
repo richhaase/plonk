@@ -13,101 +13,39 @@ import (
 	"testing"
 )
 
-func TestCompleteUserExperience(t *testing.T) {
-	// Setup test environment
-	testDir := t.TempDir()
-	os.Setenv("PLONK_DIR", testDir)
-	defer os.Unsetenv("PLONK_DIR")
+// Constants for file names and binaries
+const (
+	PlonkBinary    = "./plonk"
+	LockFileName   = "plonk.lock"
+	ConfigFileName = "plonk.yaml"
+)
 
-	// Build plonk from project root
-	mustRun(t, "go", "build", "-o", "plonk", "../../cmd/plonk")
+// Manager constants
+const (
+	ManagerNPM   = "npm"
+	ManagerPip   = "pip"
+	ManagerCargo = "cargo"
+	ManagerGem   = "gem"
+	ManagerBrew  = "brew"
+	ManagerGo    = "go"
+)
 
-	// Test packages for each manager
-	testPackages := map[string]struct {
-		install  string
-		search   string
-		nonexist string
-	}{
-		"npm":   {"is-thirteen", "cowsay", "xxx-does-not-exist-xxx"},
-		"pip":   {"asciinema", "cowsay", "xxx-does-not-exist-xxx"},
-		"cargo": {"hyperfine", "serde", "xxx-does-not-exist-xxx"},
-		"gem":   {"colorize", "rake", "xxx-does-not-exist-xxx"},
-		"brew":  {"fortune", "cowsay", "xxx-does-not-exist-xxx"},
-		"go":    {"github.com/josharian/impl@latest", "gofmt", "xxx-does-not-exist-xxx"},
-	}
+// addManagerFlag adds the appropriate manager flag to command arguments
+func addManagerFlag(args []string, manager string) []string {
+	return append(args, "--"+manager)
+}
 
-	t.Run("InitialSetup", func(t *testing.T) {
-		// 1. Help should be informative
-		output := run(t, "./plonk", "--help")
-		assertContains(t, output, "plonk", "Help should show plonk name")
-		assertContains(t, output, "status", "Help should list commands")
-		assertContains(t, output, "install", "Help should list commands")
-
-		// 2. Version should work
-		output = run(t, "./plonk", "--version")
-		assertContains(t, output, "plonk", "Version should show plonk")
-
-		// 3. Init should create config
-		output = run(t, "./plonk", "init")
-		assertContains(t, output, "✅", "Init should show success")
-		assertFileExists(t, filepath.Join(testDir, "plonk.yaml"))
-		// Lock file is created on first package add, not init
-	})
-
-	t.Run("EmptyState", func(t *testing.T) {
-		// 4. Status with no packages
-		output := run(t, "./plonk", "status")
-		assertContains(t, output, "Plonk Status", "Should show status header")
-		assertContains(t, output, "0", "Should show 0 packages")
-
-		// 5. List with no packages
-		output = run(t, "./plonk", "ls")
-		assertContainsAny(t, output, []string{"Plonk Overview", "Total: 0 managed"}, "Should indicate empty or show overview")
-
-		// 6. JSON output
-		output = run(t, "./plonk", "ls", "-o", "json")
-		var data interface{}
-		assertJSON(t, output, &data, "JSON output should be valid")
-	})
-
-	t.Run("DoctorCommand", func(t *testing.T) {
-		// 7. Doctor shows system info
-		output := run(t, "./plonk", "doctor")
-		assertContains(t, output, "System", "Should show system section")
-		assertContains(t, output, "Package Manager", "Should show managers section")
-		assertContainsAny(t, output, []string{"✅", "❌"}, "Should show availability markers")
-
-		// Bug #1: Doctor should not suggest installing package managers that are OS-incompatible
-		// For example, apt on macOS
-		osName := run(t, "uname", "-s")
-		if strings.Contains(strings.ToLower(osName), "darwin") {
-			// On macOS, doctor should not suggest installing apt
-			if strings.Contains(output, "apt: ❌") && strings.Contains(output, "Consider installing additional package managers") {
-				// This is the bug - we should add a test to ensure platform-aware suggestions
-				// TODO: Add assertion when bug is fixed
-			}
-		}
-
-		// 8. Doctor with JSON output
-		output = run(t, "./plonk", "doctor", "-o", "json")
-		var doctorJSON map[string]interface{}
-		assertJSON(t, output, &doctorJSON, "Doctor JSON output should be valid")
-	})
-
-	// Find available managers
-	var availableManager string
-	var availableManagers []string
-	var testPkg struct {
-		install  string
-		search   string
-		nonexist string
-	}
-
-	doctorJSON := run(t, "./plonk", "doctor", "-o", "json")
+// parseManagersFromDoctor extracts available managers from doctor JSON output
+func parseManagersFromDoctor(doctorJSON string) ([]string, error) {
 	var doctorData map[string]interface{}
-	json.Unmarshal([]byte(doctorJSON), &doctorData)
+	if err := json.Unmarshal([]byte(doctorJSON), &doctorData); err != nil {
+		return nil, err
+	}
 
-	// Parse the new doctor JSON structure and collect all available managers
+	var availableManagers []string
+	managerNames := []string{ManagerNPM, ManagerPip, ManagerCargo, ManagerGem, ManagerBrew, ManagerGo}
+
+	// Parse the doctor JSON structure and collect all available managers
 	if checks, ok := doctorData["checks"].([]interface{}); ok {
 		for _, check := range checks {
 			if c, ok := check.(map[string]interface{}); ok {
@@ -115,7 +53,7 @@ func TestCompleteUserExperience(t *testing.T) {
 					if details, ok := c["details"].([]interface{}); ok {
 						for _, detail := range details {
 							if d, ok := detail.(string); ok {
-								for mgr, _ := range testPackages {
+								for _, mgr := range managerNames {
 									if strings.Contains(d, mgr+": ✅") {
 										// Check if manager is already in the list to avoid duplicates
 										found := false
@@ -136,6 +74,105 @@ func TestCompleteUserExperience(t *testing.T) {
 				}
 			}
 		}
+	}
+
+	return availableManagers, nil
+}
+
+// TestPackage represents test package information for a manager
+type TestPackage struct {
+	Install  string
+	Search   string
+	NonExist string
+}
+
+func TestCompleteUserExperience(t *testing.T) {
+	// Setup test environment
+	testDir := t.TempDir()
+	os.Setenv("PLONK_DIR", testDir)
+	defer os.Unsetenv("PLONK_DIR")
+
+	// Build plonk from project root
+	mustRun(t, "go", "build", "-o", "plonk", "../../cmd/plonk")
+
+	// Test packages for each manager
+	testPackages := map[string]TestPackage{
+		ManagerNPM:   {"is-thirteen", "cowsay", "xxx-does-not-exist-xxx"},
+		ManagerPip:   {"asciinema", "cowsay", "xxx-does-not-exist-xxx"},
+		ManagerCargo: {"hyperfine", "serde", "xxx-does-not-exist-xxx"},
+		ManagerGem:   {"colorize", "rake", "xxx-does-not-exist-xxx"},
+		ManagerBrew:  {"fortune", "cowsay", "xxx-does-not-exist-xxx"},
+		ManagerGo:    {"github.com/josharian/impl@latest", "gofmt", "xxx-does-not-exist-xxx"},
+	}
+
+	t.Run("InitialSetup", func(t *testing.T) {
+		// 1. Help should be informative
+		output := run(t, PlonkBinary, "--help")
+		assertContains(t, output, "plonk", "Help should show plonk name")
+		assertContains(t, output, "status", "Help should list commands")
+		assertContains(t, output, "install", "Help should list commands")
+
+		// 2. Version should work
+		output = run(t, PlonkBinary, "--version")
+		assertContains(t, output, "plonk", "Version should show plonk")
+
+		// 3. Init should create config
+		output = run(t, PlonkBinary, "init")
+		assertContains(t, output, "✅", "Init should show success")
+		assertFileExists(t, filepath.Join(testDir, ConfigFileName))
+		// Lock file is created on first package add, not init
+	})
+
+	t.Run("EmptyState", func(t *testing.T) {
+		// 4. Status with no packages
+		output := run(t, PlonkBinary, "status")
+		assertContains(t, output, "Plonk Status", "Should show status header")
+		assertContains(t, output, "0", "Should show 0 packages")
+
+		// 5. List with no packages
+		output = run(t, PlonkBinary, "ls")
+		assertContainsAny(t, output, []string{"Plonk Overview", "Total: 0 managed"}, "Should indicate empty or show overview")
+
+		// 6. JSON output
+		output = run(t, PlonkBinary, "ls", "-o", "json")
+		var data interface{}
+		assertJSON(t, output, &data, "JSON output should be valid")
+	})
+
+	t.Run("DoctorCommand", func(t *testing.T) {
+		// 7. Doctor shows system info
+		output := run(t, PlonkBinary, "doctor")
+		assertContains(t, output, "System", "Should show system section")
+		assertContains(t, output, "Package Manager", "Should show managers section")
+		assertContainsAny(t, output, []string{"✅", "❌"}, "Should show availability markers")
+
+		// Bug #1: Doctor should not suggest installing package managers that are OS-incompatible
+		// For example, apt on macOS
+		osName := run(t, "uname", "-s")
+		if strings.Contains(strings.ToLower(osName), "darwin") {
+			// On macOS, doctor should not suggest installing apt
+			if strings.Contains(output, "apt: ❌") && strings.Contains(output, "Consider installing additional package managers") {
+				// This is the bug - we should add a test to ensure platform-aware suggestions
+				// TODO: Add assertion when bug is fixed
+			}
+		}
+
+		// 8. Doctor with JSON output
+		output = run(t, PlonkBinary, "doctor", "-o", "json")
+		var doctorJSON map[string]interface{}
+		assertJSON(t, output, &doctorJSON, "Doctor JSON output should be valid")
+	})
+
+	// Find available managers
+	var availableManager string
+	var availableManagers []string
+	var testPkg TestPackage
+
+	doctorJSON := run(t, PlonkBinary, "doctor", "-o", "json")
+	var err error
+	availableManagers, err = parseManagersFromDoctor(doctorJSON)
+	if err != nil {
+		t.Fatalf("Failed to parse available managers from doctor JSON: %v", err)
 	}
 
 	if len(availableManagers) == 0 {
@@ -173,7 +210,7 @@ func TestCompleteUserExperience(t *testing.T) {
 		// TODO: Re-enable when search functionality is more robust
 
 		// 10. Install non-existent package (error handling)
-		output, err := runWithError("./plonk", "install", testPkg.nonexist)
+		output, err := runWithError(PlonkBinary, "install", testPkg.NonExist)
 		assertError(t, err, "Should error on non-existent package")
 		assertContainsAny(t, output, []string{"not found", "Error", "failed"},
 			"Should show clear error message")
@@ -181,30 +218,20 @@ func TestCompleteUserExperience(t *testing.T) {
 		// 11. Install real package
 		installArgs := []string{"install"}
 		// Add manager flag based on available manager
-		switch availableManager {
-		case "npm":
-			installArgs = append(installArgs, "--npm")
-		case "pip":
-			installArgs = append(installArgs, "--pip")
-		case "cargo":
-			installArgs = append(installArgs, "--cargo")
-		case "gem":
-			installArgs = append(installArgs, "--gem")
-		case "brew":
-			installArgs = append(installArgs, "--brew")
-		case "go":
-			installArgs = append(installArgs, "--go")
-		}
-		installArgs = append(installArgs, testPkg.install)
-		cmdArgs := append([]string{"./plonk"}, installArgs...)
+		installArgs = addManagerFlag(installArgs, availableManager)
+		installArgs = append(installArgs, testPkg.Install)
+		cmdArgs := append([]string{PlonkBinary}, installArgs...)
 		output = run(t, cmdArgs...)
 		assertContainsAny(t, output, []string{"✓", "added", "installed"},
 			"Should show installation progress")
 
 		// Verify lock file was created and contains the package
-		lockContent, _ := os.ReadFile(filepath.Join(testDir, "plonk.lock"))
+		lockContent, err := os.ReadFile(filepath.Join(testDir, LockFileName))
+		if err != nil {
+			t.Fatalf("Failed to read lock file: %v", err)
+		}
 		// For Go packages, the lock file stores just the binary name (e.g., "impl" not "github.com/josharian/impl")
-		expectedInLock := strings.Split(testPkg.install, "@")[0]
+		expectedInLock := strings.Split(testPkg.Install, "@")[0]
 		if availableManager == "go" && strings.Contains(expectedInLock, "/") {
 			// Extract binary name from Go module path
 			parts := strings.Split(expectedInLock, "/")
@@ -221,8 +248,8 @@ func TestCompleteUserExperience(t *testing.T) {
 		assertNotContains(t, output, "✗", "Already managed should not show error symbol")
 
 		// 13. List shows package
-		output = run(t, "./plonk", "ls", "-v")
-		pkgName := strings.Split(testPkg.install, "@")[0] // handle go packages
+		output = run(t, PlonkBinary, "ls", "-v")
+		pkgName := strings.Split(testPkg.Install, "@")[0] // handle go packages
 		// For Go packages, list shows just the binary name
 		if availableManager == "go" && strings.Contains(pkgName, "/") {
 			parts := strings.Split(pkgName, "/")
@@ -247,20 +274,20 @@ func TestCompleteUserExperience(t *testing.T) {
 			filterFlag = "--go"
 		}
 		if filterFlag != "" {
-			output = run(t, "./plonk", "ls", filterFlag, "-v")
+			output = run(t, PlonkBinary, "ls", filterFlag, "-v")
 			// This shows all packages from the manager, not just managed ones
 		}
 
 		// 15. Status shows package count
-		output = run(t, "./plonk", "status")
+		output = run(t, PlonkBinary, "status")
 		assertContains(t, output, "1", "Should show package count")
 
 		// 16. Status shows managed
-		output = run(t, "./plonk", "status")
+		output = run(t, PlonkBinary, "status")
 		assertContains(t, output, "1", "Status should show 1 managed package")
 
 		// 17. Info command
-		output = runAllowError(t, "./plonk", "info", testPkg.install)
+		output = runAllowError(t, PlonkBinary, "info", testPkg.Install)
 		if !strings.Contains(output, "not supported") {
 			assertContainsAny(t, output, []string{pkgName, "Version", "Description"},
 				"Info should show package details")
@@ -272,7 +299,7 @@ func TestCompleteUserExperience(t *testing.T) {
 		}
 
 		// 18. Sync command - syncs current state
-		output = run(t, "./plonk", "sync")
+		output = run(t, PlonkBinary, "sync")
 		// Sync shows current state, not necessarily changes
 
 		// 19. Test reinstallation after uninstall
@@ -292,8 +319,8 @@ func TestCompleteUserExperience(t *testing.T) {
 		case "go":
 			uninstallArgs = append(uninstallArgs, "--go")
 		}
-		uninstallArgs = append(uninstallArgs, testPkg.install)
-		uninstallCmdArgs := append([]string{"./plonk"}, uninstallArgs...)
+		uninstallArgs = append(uninstallArgs, testPkg.Install)
+		uninstallCmdArgs := append([]string{PlonkBinary}, uninstallArgs...)
 		run(t, uninstallCmdArgs...) // Remove first
 
 		// Reinstall to test idempotency
@@ -303,22 +330,9 @@ func TestCompleteUserExperience(t *testing.T) {
 		// 20. Uninstall
 		uninstallArgs = []string{"uninstall"}
 		// Add manager flag based on available manager
-		switch availableManager {
-		case "npm":
-			uninstallArgs = append(uninstallArgs, "--npm")
-		case "pip":
-			uninstallArgs = append(uninstallArgs, "--pip")
-		case "cargo":
-			uninstallArgs = append(uninstallArgs, "--cargo")
-		case "gem":
-			uninstallArgs = append(uninstallArgs, "--gem")
-		case "brew":
-			uninstallArgs = append(uninstallArgs, "--brew")
-		case "go":
-			uninstallArgs = append(uninstallArgs, "--go")
-		}
-		uninstallArgs = append(uninstallArgs, testPkg.install)
-		uninstallCmdArgs = append([]string{"./plonk"}, uninstallArgs...)
+		uninstallArgs = addManagerFlag(uninstallArgs, availableManager)
+		uninstallArgs = append(uninstallArgs, testPkg.Install)
+		uninstallCmdArgs = append([]string{PlonkBinary}, uninstallArgs...)
 		output = run(t, uninstallCmdArgs...)
 		assertContainsAny(t, output, []string{"✓", "removed", "uninstalled"}, "Uninstall should show success")
 
@@ -326,9 +340,12 @@ func TestCompleteUserExperience(t *testing.T) {
 		// Currently shows "0 added, 0 updated, 0 skipped, 0 failed" but should show removals
 
 		// Bug #6: Verify lock file is updated after uninstall
-		lockContent2, _ := os.ReadFile(filepath.Join(testDir, "plonk.lock"))
+		lockContent2, err := os.ReadFile(filepath.Join(testDir, LockFileName))
+		if err != nil {
+			t.Fatalf("Failed to read lock file after uninstall: %v", err)
+		}
 		// Use the same logic for expected package name in lock file
-		expectedNotInLock := strings.Split(testPkg.install, "@")[0]
+		expectedNotInLock := strings.Split(testPkg.Install, "@")[0]
 		if availableManager == "go" && strings.Contains(expectedNotInLock, "/") {
 			parts := strings.Split(expectedNotInLock, "/")
 			expectedNotInLock = parts[len(parts)-1]
@@ -344,16 +361,16 @@ func TestCompleteUserExperience(t *testing.T) {
 
 	t.Run("OutputFormats", func(t *testing.T) {
 		// 22. Table format (default)
-		output := run(t, "./plonk", "ls", "-o", "table")
+		output := run(t, PlonkBinary, "ls", "-o", "table")
 		assertContainsAny(t, output, []string{"Plonk Overview", "Total", "managed"},
 			"Table should have overview information")
 
 		// 23. YAML format
-		output = run(t, "./plonk", "ls", "-o", "yaml")
+		output = run(t, PlonkBinary, "ls", "-o", "yaml")
 		assertContains(t, output, ":", "YAML should have colons")
 
 		// 24. Test verbose listing
-		output = run(t, "./plonk", "ls", "-v")
+		output = run(t, PlonkBinary, "ls", "-v")
 		// Should work without error
 	})
 
@@ -363,28 +380,28 @@ func TestCompleteUserExperience(t *testing.T) {
 		os.WriteFile(dotfile, []byte("test content"), 0644)
 
 		// 26. List all (packages + dotfiles)
-		output := run(t, "./plonk", "ls", "-a")
+		output := run(t, PlonkBinary, "ls", "-a")
 		assertContainsAny(t, output, []string{"Package:", "Dotfile:", "testrc"}, "Should show test dotfile")
 
 		// 27. Status includes dotfiles
-		output = run(t, "./plonk", "status")
+		output = run(t, PlonkBinary, "status")
 		assertContains(t, output, "Plonk Status", "Should show status")
 	})
 
 	t.Run("ErrorScenarios", func(t *testing.T) {
 		// 28. Invalid command
-		output, err := runWithError("./plonk", "invalidcommand")
+		output, err := runWithError(PlonkBinary, "invalidcommand")
 		assertError(t, err, "Invalid command should error")
 		assertContains(t, output, "unknown command", "Should show helpful error")
 
 		// 29. Missing required argument
-		output, err = runWithError("./plonk", "install")
+		output, err = runWithError(PlonkBinary, "install")
 		assertError(t, err, "Missing argument should error")
 		assertContainsAny(t, output, []string{"requires", "usage", "argument"},
 			"Should indicate missing argument")
 
 		// 30. Invalid flags
-		output, err = runWithError("./plonk", "ls", "--invalid-flag")
+		output, err = runWithError(PlonkBinary, "ls", "--invalid-flag")
 		assertError(t, err, "Invalid flag should error")
 		assertContains(t, output, "unknown flag", "Should indicate unknown flag")
 	})
@@ -405,13 +422,13 @@ func TestCompleteUserExperience(t *testing.T) {
 				for _, manager := range managers {
 					t.Run(manager+"_unavailable", func(t *testing.T) {
 						// Check doctor shows it's unavailable
-						doctorOutput := run(t, "./plonk", "doctor")
+						doctorOutput := run(t, PlonkBinary, "doctor")
 						if strings.Contains(doctorOutput, manager+": ✅") {
 							t.Skipf("Manager %s is available on this system", manager)
 						}
 
 						// Try to use the unavailable manager
-						_, err := runWithError("./plonk", "install", "--"+manager, "vim")
+						_, err := runWithError(PlonkBinary, "install", "--"+manager, "vim")
 						assertError(t, err, "Should error when using unavailable manager")
 
 						// Bug: Currently shows "unknown flag" but should explain manager is unavailable
@@ -428,14 +445,14 @@ func TestCompleteUserExperience(t *testing.T) {
 		// 31. Custom config location
 		customDir := t.TempDir()
 		os.Setenv("PLONK_DIR", customDir)
-		output := run(t, "./plonk", "env")
+		output := run(t, PlonkBinary, "env")
 		assertContains(t, output, customDir, "Should show custom PLONK_DIR")
 		os.Unsetenv("PLONK_DIR")
 	})
 }
 
 // testPackageManager tests install/uninstall/info/list for a specific package manager
-func testPackageManager(t *testing.T, testDir, manager string, pkg struct{ install, search, nonexist string }) {
+func testPackageManager(t *testing.T, testDir, manager string, pkg TestPackage) {
 	t.Helper()
 
 	// Check if manager is available
@@ -443,7 +460,7 @@ func testPackageManager(t *testing.T, testDir, manager string, pkg struct{ insta
 		t.Skipf("Manager %s not available", manager)
 	}
 
-	pkgName := strings.Split(pkg.install, "@")[0]
+	pkgName := strings.Split(pkg.Install, "@")[0]
 
 	// For Go packages, extract just the binary name from the module path
 	if manager == "go" {
@@ -452,13 +469,13 @@ func testPackageManager(t *testing.T, testDir, manager string, pkg struct{ insta
 	}
 
 	// Test installation
-	if !testInstall(t, testDir, manager, pkg.install, pkgName) {
-		t.Errorf("Manager %s failed to install %s", manager, pkg.install)
+	if !testInstall(t, testDir, manager, pkg.Install, pkgName) {
+		t.Errorf("Manager %s failed to install %s", manager, pkg.Install)
 		return // Skip remaining tests if install failed
 	}
 
 	// Test already installed behavior
-	testAlreadyInstalled(t, manager, pkg.install)
+	testAlreadyInstalled(t, manager, pkg.Install)
 
 	// Test info command
 	testInfo(t, manager, pkgName)
@@ -467,16 +484,16 @@ func testPackageManager(t *testing.T, testDir, manager string, pkg struct{ insta
 	testList(t, manager, pkgName)
 
 	// Test uninstall
-	testUninstall(t, testDir, manager, pkg.install, pkgName)
+	testUninstall(t, testDir, manager, pkg.Install, pkgName)
 
 	// Test uninstalling non-installed package
-	testUninstallNonInstalled(t, manager, pkg.install)
+	testUninstallNonInstalled(t, manager, pkg.Install)
 }
 
 // isManagerAvailable checks if a package manager is available on the system
 func isManagerAvailable(t *testing.T, manager string) bool {
 	t.Helper()
-	doctorOutput := run(t, "./plonk", "doctor")
+	doctorOutput := run(t, PlonkBinary, "doctor")
 	return strings.Contains(doctorOutput, manager+": ✅")
 }
 
@@ -486,7 +503,7 @@ func testInstall(t *testing.T, testDir, manager, pkgFullName, pkgName string) bo
 
 	t.Logf("DEBUG: Attempting to install package '%s' (expected name in lock: '%s') via manager '%s'", pkgFullName, pkgName, manager)
 
-	installArgs := []string{"./plonk", "install", "--" + manager, pkgFullName}
+	installArgs := []string{PlonkBinary, "install", "--" + manager, pkgFullName}
 	t.Logf("DEBUG: Running install command: %v", installArgs)
 
 	output, err := runWithError(installArgs...)
@@ -501,7 +518,10 @@ func testInstall(t *testing.T, testDir, manager, pkgFullName, pkgName string) bo
 	assertContains(t, output, "✓", "Install should show success")
 
 	// Verify lock file contains package
-	lockContent, _ := os.ReadFile(filepath.Join(testDir, "plonk.lock"))
+	lockContent, err := os.ReadFile(filepath.Join(testDir, LockFileName))
+	if err != nil {
+		t.Fatalf("Failed to read lock file: %v", err)
+	}
 	t.Logf("DEBUG: Lock file after install:\n%s", string(lockContent))
 	assertContains(t, string(lockContent), pkgName, "Lock file should contain installed package")
 
@@ -512,7 +532,7 @@ func testInstall(t *testing.T, testDir, manager, pkgFullName, pkgName string) bo
 func testAlreadyInstalled(t *testing.T, manager, pkgFullName string) {
 	t.Helper()
 
-	installArgs := []string{"./plonk", "install", "--" + manager, pkgFullName}
+	installArgs := []string{PlonkBinary, "install", "--" + manager, pkgFullName}
 	output := run(t, installArgs...)
 	assertContainsAny(t, output, []string{"already managed", "skipped"}, "Should handle already installed")
 	// Bug #2: Check that "already managed" doesn't use error symbol
@@ -523,7 +543,7 @@ func testAlreadyInstalled(t *testing.T, manager, pkgFullName string) {
 func testInfo(t *testing.T, manager, pkgName string) {
 	t.Helper()
 
-	infoOutput := runAllowError(t, "./plonk", "info", pkgName)
+	infoOutput := runAllowError(t, PlonkBinary, "info", pkgName)
 	if !strings.Contains(infoOutput, "not supported") {
 		// Bug #3: Info should show correct manager
 		assertContains(t, infoOutput, manager, "Info should show the manager that installed the package")
@@ -535,7 +555,7 @@ func testInfo(t *testing.T, manager, pkgName string) {
 func testList(t *testing.T, manager, pkgName string) {
 	t.Helper()
 
-	listOutput := run(t, "./plonk", "ls", "--"+manager, "-v")
+	listOutput := run(t, PlonkBinary, "ls", "--"+manager, "-v")
 	assertContains(t, listOutput, pkgName, "List should show installed package")
 }
 
@@ -547,10 +567,13 @@ func testUninstall(t *testing.T, testDir, manager, pkgFullName, pkgName string) 
 	t.Logf("DEBUG: Attempting to uninstall package '%s' (display name: '%s') via manager '%s'", pkgFullName, pkgName, manager)
 
 	// Debug: Check lock file before uninstall
-	lockContentBefore, _ := os.ReadFile(filepath.Join(testDir, "plonk.lock"))
+	lockContentBefore, err := os.ReadFile(filepath.Join(testDir, LockFileName))
+	if err != nil {
+		t.Fatalf("Failed to read lock file before uninstall: %v", err)
+	}
 	t.Logf("DEBUG: Lock file before uninstall:\n%s", string(lockContentBefore))
 
-	uninstallArgs := []string{"./plonk", "uninstall", "--" + manager, pkgFullName}
+	uninstallArgs := []string{PlonkBinary, "uninstall", "--" + manager, pkgFullName}
 	t.Logf("DEBUG: Running command: %v", uninstallArgs)
 
 	output := run(t, uninstallArgs...)
@@ -560,7 +583,10 @@ func testUninstall(t *testing.T, testDir, manager, pkgFullName, pkgName string) 
 	// Bug #5: Check uninstall summary shows removal count (currently shows all zeros)
 
 	// Bug #6: Verify lock file is updated after uninstall
-	lockContent, _ := os.ReadFile(filepath.Join(testDir, "plonk.lock"))
+	lockContent, err := os.ReadFile(filepath.Join(testDir, LockFileName))
+	if err != nil {
+		t.Fatalf("Failed to read lock file after uninstall: %v", err)
+	}
 	assertNotContains(t, string(lockContent), pkgName, "Lock file should NOT contain uninstalled package")
 }
 
@@ -568,7 +594,7 @@ func testUninstall(t *testing.T, testDir, manager, pkgFullName, pkgName string) 
 func testUninstallNonInstalled(t *testing.T, manager, pkgFullName string) {
 	t.Helper()
 
-	uninstallArgs := []string{"./plonk", "uninstall", "--" + manager, pkgFullName}
+	uninstallArgs := []string{PlonkBinary, "uninstall", "--" + manager, pkgFullName}
 	output := runAllowError(t, uninstallArgs...)
 	assertContainsAny(t, output, []string{"not managed", "skipped"}, "Should handle not installed gracefully")
 }
