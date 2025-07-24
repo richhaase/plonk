@@ -3,19 +3,6 @@
 
 package state
 
-// ConfigItem represents an item as defined in configuration
-type ConfigItem struct {
-	Name     string
-	Metadata map[string]interface{}
-}
-
-// ActualItem represents an item as it exists in the system
-type ActualItem struct {
-	Name     string
-	Path     string
-	Metadata map[string]interface{}
-}
-
 // ItemState represents the reconciliation state of any managed item
 type ItemState int
 
@@ -47,13 +34,6 @@ type Item struct {
 	Manager  string                 `json:"manager,omitempty" yaml:"manager,omitempty"`   // "homebrew", "npm", etc.
 	Path     string                 `json:"path,omitempty" yaml:"path,omitempty"`         // For dotfiles
 	Metadata map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"` // Additional data
-}
-
-// DotfileConfigLoader defines how to load dotfile configuration
-type DotfileConfigLoader interface {
-	GetDotfileTargets() map[string]string // source -> destination mapping
-	GetIgnorePatterns() []string          // ignore patterns for file filtering
-	GetExpandDirectories() []string       // directories to expand in dot list
 }
 
 // Result contains the results of state reconciliation for a domain
@@ -89,4 +69,64 @@ func (r *Result) AddToSummary(summary *Summary) {
 	summary.TotalMissing += len(r.Missing)
 	summary.TotalUntracked += len(r.Untracked)
 	summary.Results = append(summary.Results, *r)
+}
+
+// OperationResult represents the result of a single operation (package install, dotfile add, etc.)
+type OperationResult struct {
+	Name           string                 `json:"name"`                      // Package name or file path
+	Manager        string                 `json:"manager,omitempty"`         // Package manager (for packages only)
+	Version        string                 `json:"version,omitempty"`         // Package version (for packages only)
+	Status         string                 `json:"status"`                    // "added", "updated", "skipped", "failed", "would-add", "would-update"
+	Error          error                  `json:"error,omitempty"`           // Error if operation failed
+	AlreadyManaged bool                   `json:"already_managed,omitempty"` // Whether item was already managed
+	FilesProcessed int                    `json:"files_processed,omitempty"` // Number of files processed (for directories)
+	Metadata       map[string]interface{} `json:"metadata,omitempty"`        // Additional operation-specific data
+}
+
+// ResultSummary provides aggregate information about a batch operation
+type ResultSummary struct {
+	Total          int `json:"total"`
+	Added          int `json:"added"`
+	Updated        int `json:"updated"`
+	Removed        int `json:"removed"`
+	Unlinked       int `json:"unlinked"`
+	Skipped        int `json:"skipped"`
+	Failed         int `json:"failed"`
+	FilesProcessed int `json:"files_processed,omitempty"` // Total files processed (for dotfiles)
+}
+
+// CalculateSummary generates a summary from operation results
+func CalculateSummary(results []OperationResult) ResultSummary {
+	summary := ResultSummary{Total: len(results)}
+
+	for _, result := range results {
+		switch result.Status {
+		case "added", "would-add":
+			summary.Added++
+		case "updated", "would-update":
+			summary.Updated++
+		case "removed", "would-remove":
+			summary.Removed++
+		case "unlinked", "would-unlink":
+			summary.Unlinked++
+		case "skipped":
+			summary.Skipped++
+		case "failed":
+			summary.Failed++
+		}
+		summary.FilesProcessed += result.FilesProcessed
+	}
+
+	return summary
+}
+
+// CountByStatus counts results with a specific status
+func CountByStatus(results []OperationResult, status string) int {
+	count := 0
+	for _, result := range results {
+		if result.Status == status {
+			count++
+		}
+	}
+	return count
 }

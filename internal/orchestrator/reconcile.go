@@ -5,59 +5,189 @@ package orchestrator
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/richhaase/plonk/internal/config"
+	"os"
+
+	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/state"
 )
 
-// ReconcileDotfiles performs dotfile reconciliation without SharedContext
-func ReconcileDotfiles(ctx context.Context, homeDir, configDir string) (state.Result, error) {
-	// Create fresh provider (no caching)
-	cfg := config.LoadConfigWithDefaults(configDir)
-	dotfileConfigLoader := state.NewConfigBasedDotfileLoader(cfg.IgnorePatterns, cfg.ExpandDirectories)
-	provider := state.NewDotfileProvider(homeDir, configDir, dotfileConfigLoader)
-
-	// Get items
-	configured, err := provider.GetConfiguredItems()
-	if err != nil {
-		return state.Result{}, err
+// ReconcileItems performs generic reconciliation logic for any domain
+func ReconcileItems(configured, actual []state.Item, domain string) state.Result {
+	// Build lookup map for actual items by name
+	actualMap := make(map[string]*state.Item)
+	for i := range actual {
+		actualMap[actual[i].Name] = &actual[i]
 	}
 
-	actual, err := provider.GetActualItems(ctx)
-	if err != nil {
-		return state.Result{}, err
+	// Build lookup map for configured items by name
+	configuredMap := make(map[string]*state.Item)
+	for i := range configured {
+		configuredMap[configured[i].Name] = &configured[i]
 	}
 
-	// Reconcile (copy exact logic from runtime/context_simple.go)
-	return reconcileDotfileItems(provider, configured, actual), nil
+	result := state.Result{
+		Domain:    domain,
+		Managed:   make([]state.Item, 0),
+		Missing:   make([]state.Item, 0),
+		Untracked: make([]state.Item, 0),
+	}
+
+	// Check each configured item against actual
+	for _, configItem := range configured {
+		item := configItem // Copy the item
+		if actualItem, exists := actualMap[configItem.Name]; exists {
+			// Item is managed (in config AND present)
+			item.State = state.StateManaged
+			// Merge metadata from actual if needed
+			if item.Metadata == nil {
+				item.Metadata = actualItem.Metadata
+			} else if actualItem.Metadata != nil {
+				// Merge actual metadata into configured
+				for k, v := range actualItem.Metadata {
+					if _, exists := item.Metadata[k]; !exists {
+						item.Metadata[k] = v
+					}
+				}
+			}
+			// Use actual path if available (for dotfiles)
+			if item.Path == "" && actualItem.Path != "" {
+				item.Path = actualItem.Path
+			}
+			result.Managed = append(result.Managed, item)
+		} else {
+			// Item is missing (in config BUT not present)
+			item.State = state.StateMissing
+			result.Missing = append(result.Missing, item)
+		}
+	}
+
+	// Check each actual item against configured
+	for _, actualItem := range actual {
+		if _, exists := configuredMap[actualItem.Name]; !exists {
+			// Item is untracked (present BUT not in config)
+			item := actualItem // Copy the item
+			item.State = state.StateUntracked
+			result.Untracked = append(result.Untracked, item)
+		}
+	}
+
+	return result
 }
 
-// ReconcilePackages performs package reconciliation without SharedContext
+// ReconcileDotfiles performs dotfile reconciliation
+func ReconcileDotfiles(ctx context.Context, homeDir, configDir string) (state.Result, error) {
+	// Get configured dotfiles
+	configured, err := dotfiles.GetConfiguredDotfiles(homeDir, configDir)
+	if err != nil {
+		return state.Result{}, fmt.Errorf("getting configured dotfiles: %w", err)
+	}
+
+	// Get actual dotfiles
+	actual, err := dotfiles.GetActualDotfiles(ctx, homeDir, configDir)
+	if err != nil {
+		return state.Result{}, fmt.Errorf("getting actual dotfiles: %w", err)
+	}
+
+	// Reconcile
+	return ReconcileItems(configured, actual, "dotfile"), nil
+}
+
+// ReconcilePackages performs package reconciliation
 func ReconcilePackages(ctx context.Context, configDir string) (state.Result, error) {
-	// Create fresh providers (no caching)
+	// Get configured packages from lock file
 	lockService := lock.NewYAMLLockService(configDir)
-	lockAdapter := lock.NewLockFileAdapter(lockService)
-	registry := managers.NewManagerRegistry()
-	provider, err := registry.CreateMultiProvider(ctx, lockAdapter)
+	lockFile, err := lockService.Load()
 	if err != nil {
-		return state.Result{}, err
+		if !os.IsNotExist(err) {
+			return state.Result{}, fmt.Errorf("loading lock file: %w", err)
+		}
+		// No lock file means no configured packages
+		lockFile = &lock.LockFile{
+			Version:  1,
+			Packages: make(map[string][]lock.PackageEntry),
+		}
 	}
 
-	// Get items
-	configured, err := provider.GetConfiguredItems()
-	if err != nil {
-		return state.Result{}, err
+	configured := make([]state.Item, 0)
+	for manager, packages := range lockFile.Packages {
+		for _, pkg := range packages {
+			configured = append(configured, state.Item{
+				Name:    pkg.Name,
+				State:   state.StateMissing, // Will be updated during reconciliation
+				Domain:  "package",
+				Manager: manager,
+				Metadata: map[string]interface{}{
+					"version": pkg.Version,
+				},
+			})
+		}
 	}
 
-	actual, err := provider.GetActualItems(ctx)
+	// Get actual packages
+	actual, err := managers.GetActualPackages(ctx)
 	if err != nil {
-		return state.Result{}, err
+		return state.Result{}, fmt.Errorf("getting actual packages: %w", err)
 	}
 
-	// Reconcile (copy exact logic from runtime/context_simple.go)
-	return reconcilePackageItems(provider, configured, actual), nil
+	// Create maps by manager+name for proper reconciliation
+	configuredByKey := make(map[string]*state.Item)
+	for i := range configured {
+		key := configured[i].Manager + ":" + configured[i].Name
+		configuredByKey[key] = &configured[i]
+	}
+
+	actualByKey := make(map[string]*state.Item)
+	for i := range actual {
+		key := actual[i].Manager + ":" + actual[i].Name
+		actualByKey[key] = &actual[i]
+	}
+
+	result := state.Result{
+		Domain:    "package",
+		Managed:   make([]state.Item, 0),
+		Missing:   make([]state.Item, 0),
+		Untracked: make([]state.Item, 0),
+	}
+
+	// Check configured against actual
+	for key, configItem := range configuredByKey {
+		item := *configItem // Copy
+		if actualItem, exists := actualByKey[key]; exists {
+			// Managed
+			item.State = state.StateManaged
+			if actualItem.Metadata != nil {
+				if item.Metadata == nil {
+					item.Metadata = actualItem.Metadata
+				} else {
+					// Merge actual version if available
+					if v, ok := actualItem.Metadata["version"]; ok {
+						item.Metadata["actualVersion"] = v
+					}
+				}
+			}
+			result.Managed = append(result.Managed, item)
+		} else {
+			// Missing
+			item.State = state.StateMissing
+			result.Missing = append(result.Missing, item)
+		}
+	}
+
+	// Check actual against configured
+	for key, actualItem := range actualByKey {
+		if _, exists := configuredByKey[key]; !exists {
+			// Untracked
+			item := *actualItem
+			item.State = state.StateUntracked
+			result.Untracked = append(result.Untracked, item)
+		}
+	}
+
+	return result, nil
 }
 
 // ReconcileAll reconciles all domains
@@ -79,94 +209,4 @@ func ReconcileAll(ctx context.Context, homeDir, configDir string) (map[string]st
 	results["package"] = packageResult
 
 	return results, nil
-}
-
-// reconcileDotfileItems performs the core reconciliation logic for dotfiles
-func reconcileDotfileItems(provider *state.DotfileProvider, configured []state.ConfigItem, actual []state.ActualItem) state.Result {
-	// Build lookup sets
-	actualSet := make(map[string]*state.ActualItem)
-	for i := range actual {
-		actualSet[actual[i].Name] = &actual[i]
-	}
-
-	configuredSet := make(map[string]*state.ConfigItem)
-	for i := range configured {
-		configuredSet[configured[i].Name] = &configured[i]
-	}
-
-	result := state.Result{
-		Domain:    "dotfile",
-		Managed:   make([]state.Item, 0),
-		Missing:   make([]state.Item, 0),
-		Untracked: make([]state.Item, 0),
-	}
-
-	// Check each configured item against actual
-	for _, configItem := range configured {
-		if actualItem, exists := actualSet[configItem.Name]; exists {
-			// Item is managed (in config AND present)
-			item := provider.CreateItem(configItem.Name, state.StateManaged, &configItem, actualItem)
-			result.Managed = append(result.Managed, item)
-		} else {
-			// Item is missing (in config BUT not present)
-			item := provider.CreateItem(configItem.Name, state.StateMissing, &configItem, nil)
-			result.Missing = append(result.Missing, item)
-		}
-	}
-
-	// Check each actual item against configured
-	for _, actualItem := range actual {
-		if _, exists := configuredSet[actualItem.Name]; !exists {
-			// Item is untracked (present BUT not in config)
-			item := provider.CreateItem(actualItem.Name, state.StateUntracked, nil, &actualItem)
-			result.Untracked = append(result.Untracked, item)
-		}
-	}
-
-	return result
-}
-
-// reconcilePackageItems performs the core reconciliation logic for packages
-func reconcilePackageItems(provider *managers.MultiManagerPackageProvider, configured []state.ConfigItem, actual []state.ActualItem) state.Result {
-	// Build lookup sets
-	actualSet := make(map[string]*state.ActualItem)
-	for i := range actual {
-		actualSet[actual[i].Name] = &actual[i]
-	}
-
-	configuredSet := make(map[string]*state.ConfigItem)
-	for i := range configured {
-		configuredSet[configured[i].Name] = &configured[i]
-	}
-
-	result := state.Result{
-		Domain:    "package",
-		Managed:   make([]state.Item, 0),
-		Missing:   make([]state.Item, 0),
-		Untracked: make([]state.Item, 0),
-	}
-
-	// Check each configured item against actual
-	for _, configItem := range configured {
-		if actualItem, exists := actualSet[configItem.Name]; exists {
-			// Item is managed (in config AND present)
-			item := provider.CreateItem(configItem.Name, state.StateManaged, &configItem, actualItem)
-			result.Managed = append(result.Managed, item)
-		} else {
-			// Item is missing (in config BUT not present)
-			item := provider.CreateItem(configItem.Name, state.StateMissing, &configItem, nil)
-			result.Missing = append(result.Missing, item)
-		}
-	}
-
-	// Check each actual item against configured
-	for _, actualItem := range actual {
-		if _, exists := configuredSet[actualItem.Name]; !exists {
-			// Item is untracked (present BUT not in config)
-			item := provider.CreateItem(actualItem.Name, state.StateUntracked, nil, &actualItem)
-			result.Untracked = append(result.Untracked, item)
-		}
-	}
-
-	return result
 }

@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/state"
 )
 
 // TestZeroConfigCommands tests that commands work without configuration files
@@ -182,43 +181,6 @@ operation_timeout: 900
 
 		if resolved.DotfileTimeout != 60 {
 			t.Errorf("Expected default dotfile timeout 60, got %d", resolved.DotfileTimeout)
-		}
-	})
-}
-
-// TestConfigAdapterZeroConfig tests config adapter behavior with zero config
-func TestConfigAdapterZeroConfig(t *testing.T) {
-	t.Run("config based dotfile loader handles empty config", func(t *testing.T) {
-		cfg := config.LoadConfigWithDefaults("/tmp/nonexistent") // Will get defaults
-		dotfileConfigLoader := state.NewConfigBasedDotfileLoader(cfg.IgnorePatterns, cfg.ExpandDirectories)
-
-		// Test dotfile operations
-		targets := dotfileConfigLoader.GetDotfileTargets()
-		if targets == nil {
-			t.Error("Expected dotfile targets map to be non-nil")
-		}
-	})
-
-	t.Run("state dotfile loader works with zero config", func(t *testing.T) {
-		cfg := config.LoadConfigWithDefaults("/tmp/nonexistent") // Will get defaults
-		dotfileConfigLoader := state.NewConfigBasedDotfileLoader(cfg.IgnorePatterns, cfg.ExpandDirectories)
-
-		// Should get default ignore patterns
-		patterns := dotfileConfigLoader.GetIgnorePatterns()
-		if len(patterns) == 0 {
-			t.Error("Expected default ignore patterns from state adapter")
-		}
-
-		// Should get default expand directories
-		dirs := dotfileConfigLoader.GetExpandDirectories()
-		if len(dirs) == 0 {
-			t.Error("Expected default expand directories from state adapter")
-		}
-
-		// Should get dotfile targets (may be empty but shouldn't error)
-		targets := dotfileConfigLoader.GetDotfileTargets()
-		if targets == nil {
-			t.Error("Expected dotfile targets map to be non-nil")
 		}
 	})
 }

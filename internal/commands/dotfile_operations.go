@@ -55,7 +55,7 @@ func AddSingleDotfile(ctx context.Context, cfg *config.Config, homeDir, configDi
 	return []state.OperationResult{result}
 }
 
-// AddSingleFile processes a single file and returns an OperationResult
+// AddSingleFile processes a single file and returns an state.OperationResult
 func AddSingleFile(ctx context.Context, cfg *config.Config, filePath, homeDir, configDir string, dryRun bool) state.OperationResult {
 	result := state.OperationResult{
 		Name: filePath,
@@ -77,9 +77,16 @@ func AddSingleFile(ctx context.Context, cfg *config.Config, filePath, homeDir, c
 	result.FilesProcessed = 1
 
 	// Check if already managed by checking if source file exists in config dir
-	dotfileConfigLoader := state.NewConfigBasedDotfileLoader(cfg.IgnorePatterns, cfg.ExpandDirectories)
-	dotfileTargets := dotfileConfigLoader.GetDotfileTargets()
-	if _, exists := dotfileTargets[source]; exists {
+	configured, err := dotfiles.GetConfiguredDotfiles(homeDir, configDir)
+	if err == nil {
+		for _, item := range configured {
+			if meta, ok := item.Metadata["source"].(string); ok && meta == source {
+				result.AlreadyManaged = true
+				break
+			}
+		}
+	}
+	if result.AlreadyManaged {
 		if dryRun {
 			result.Status = "would-update"
 		} else {

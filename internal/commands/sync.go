@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/state"
@@ -334,11 +335,8 @@ func applyPackages(ctx context.Context, configDir string, cfg *config.Config, dr
 
 // applyDotfiles applies dotfile configuration and returns the result
 func applyDotfiles(ctx context.Context, configDir, homeDir string, cfg *config.Config, dryRun, backup bool) (dotfileSyncResult, error) {
-	// Create dotfile provider
-	provider := createDotfileProvider(homeDir, configDir, cfg)
-
 	// Get configured dotfiles
-	configuredItems, err := provider.GetConfiguredItems()
+	configuredItems, err := dotfiles.GetConfiguredDotfiles(homeDir, configDir)
 	if err != nil {
 		return dotfileSyncResult{}, fmt.Errorf("failed to get configured dotfiles: %w", err)
 	}
@@ -351,7 +349,7 @@ func applyDotfiles(ctx context.Context, configDir, homeDir string, cfg *config.C
 		result, err := ProcessDotfileForApply(ctx, ProcessDotfileForApplyOptions{
 			ConfigDir:   configDir,
 			HomeDir:     homeDir,
-			Source:      item.Name,
+			Source:      item.Metadata["source"].(string),
 			Destination: item.Metadata["destination"].(string),
 			DryRun:      dryRun,
 			Backup:      backup,
@@ -393,36 +391,6 @@ func applyDotfiles(ctx context.Context, configDir, homeDir string, cfg *config.C
 		Actions:    actions,
 		Summary:    summary,
 	}, nil
-}
-
-// dotfileConfigAdapter adapts config.Config to DotfileConfigLoader interface
-type dotfileConfigAdapter struct {
-	cfg *config.Config
-}
-
-func (d *dotfileConfigAdapter) GetDotfileTargets() map[string]string {
-	// This would need to be implemented based on how dotfiles are configured
-	// For now, return empty map as a placeholder
-	return make(map[string]string)
-}
-
-func (d *dotfileConfigAdapter) GetIgnorePatterns() []string {
-	if d.cfg != nil {
-		return d.cfg.IgnorePatterns
-	}
-	return []string{}
-}
-
-func (d *dotfileConfigAdapter) GetExpandDirectories() []string {
-	if d.cfg != nil {
-		return d.cfg.ExpandDirectories
-	}
-	return []string{}
-}
-
-// createDotfileProvider creates a dotfile provider
-func createDotfileProvider(homeDir string, configDir string, cfg *config.Config) *state.DotfileProvider {
-	return state.NewDotfileProvider(homeDir, configDir, &dotfileConfigAdapter{cfg: cfg})
 }
 
 // getSyncScope returns a description of what's being synced

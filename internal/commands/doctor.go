@@ -14,9 +14,10 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
-	"github.com/richhaase/plonk/internal/state"
+	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/spf13/cobra"
 )
 
@@ -308,9 +309,12 @@ func checkConfigurationValidity() HealthCheck {
 		packageCount := getPackageCountFromLockFile(configDir)
 
 		// Get auto-discovered dotfiles
-		dotfileConfigLoader := state.NewConfigBasedDotfileLoader(cfg.IgnorePatterns, cfg.ExpandDirectories)
-		dotfileTargets := dotfileConfigLoader.GetDotfileTargets()
-		dotfileCount := len(dotfileTargets)
+		// Use the dotfiles package directly to get configured count
+		configured, err := dotfiles.GetConfiguredDotfiles(orchestrator.GetHomeDir(), configDir)
+		dotfileCount := 0
+		if err == nil {
+			dotfileCount = len(configured)
+		}
 
 		check.Details = append(check.Details,
 			fmt.Sprintf("Default manager: %s", cfg.DefaultManager),

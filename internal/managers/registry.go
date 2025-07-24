@@ -59,26 +59,6 @@ func (r *ManagerRegistry) GetAllManagerNames() []string {
 	return names
 }
 
-// CreateMultiProvider creates a MultiManagerPackageProvider with all available managers
-func (r *ManagerRegistry) CreateMultiProvider(ctx context.Context, configLoader PackageConfigLoader) (*MultiManagerPackageProvider, error) {
-	packageProvider := NewMultiManagerPackageProvider()
-
-	for name, factory := range r.managers {
-		manager := factory()
-		available, err := manager.IsAvailable(ctx)
-		if err != nil {
-			// Log the error but continue without this manager
-			// Skip problematic managers gracefully
-			continue
-		}
-		if available {
-			packageProvider.AddManager(name, manager, configLoader)
-		}
-	}
-
-	return packageProvider, nil
-}
-
 // ManagerInfo holds information about a package manager
 type ManagerInfo struct {
 	Name      string
