@@ -31,7 +31,8 @@
 17. ✅ **Task 016**: Analyzed managers package - Identified 1,180-1,450 LOC reduction potential (21-26%)
 
 ## Current Task Queue
-1. **Task 017** (Commands Refactoring): READY - Extract business logic from commands (20-30% reduction target)
+1. **Task 017** (Commands Refactoring): IN PROGRESS - Extract business logic from commands (20-30% reduction target)
+2. **Task 018** (Managers Optimization): READY - Implement duplication fixes (21-26% reduction target)
 
 ## Next Priorities Based on Metrics
 1. **Commands refactoring**: Extract business logic from commands package (20-30% reduction, 5,076 LOC base)

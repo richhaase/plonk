@@ -9,9 +9,7 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
-	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/richhaase/plonk/internal/ui"
 	"github.com/spf13/cobra"
@@ -74,43 +72,26 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	// Get directories
 	configDir := config.GetDefaultConfigDirectory()
 
-	// Initialize lock file service
-	lockService := lock.NewYAMLLockService(configDir)
-
-	// Get manager - default to configured default or homebrew
-	manager := flags.Manager
-	if manager == "" {
-		cfg := config.LoadConfigWithDefaults(orchestrator.GetConfigDir())
-		if cfg.DefaultManager != "" {
-			manager = cfg.DefaultManager
-		} else {
-			manager = managers.DefaultManager // fallback default
-		}
+	// Configure installation options
+	opts := managers.InstallOptions{
+		Manager: flags.Manager,
+		DryRun:  flags.DryRun,
+		Force:   flags.Force,
 	}
 
-	// Process each package directly
+	// Process packages using managers package
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	var results []state.OperationResult
+	results, err := managers.InstallPackages(ctx, configDir, args, opts)
+	if err != nil {
+		return fmt.Errorf("install: failed to process packages: %w", err)
+	}
 
-	// Show header for progress tracking
+	// Show progress reporting
 	reporter := ui.NewProgressReporterForOperation("install", "package", true)
-
-	for _, packageName := range args {
-		// Check if context was canceled
-		if ctx.Err() != nil {
-			break
-		}
-
-		// Install single package directly
-		result := installSinglePackage(configDir, lockService, packageName, manager, flags.DryRun, flags.Force)
-
-		// Show individual progress
+	for _, result := range results {
 		reporter.ShowItemProgress(result)
-
-		// Collect result
-		results = append(results, result)
 	}
 
 	// Show batch summary
@@ -136,97 +117,6 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-// installSinglePackage installs a single package
-func installSinglePackage(configDir string, lockService *lock.YAMLLockService, packageName, manager string, dryRun, force bool) state.OperationResult {
-	result := state.OperationResult{
-		Name:    packageName,
-		Manager: manager,
-	}
-
-	// For Go packages, we need to check with the binary name
-	checkPackageName := packageName
-	if manager == "go" {
-		checkPackageName = managers.ExtractBinaryNameFromPath(packageName)
-	}
-
-	// Check if already managed
-	if lockService.HasPackage(manager, checkPackageName) {
-		if !force {
-			result.Status = "skipped"
-			result.AlreadyManaged = true
-			return result
-		}
-	}
-
-	if dryRun {
-		result.Status = "would-add"
-		return result
-	}
-
-	// Get package manager instance
-	pkgManager, err := getPackageManager(manager)
-	if err != nil {
-		result.Status = "failed"
-		result.Error = fmt.Errorf("install %s: failed to get package manager: %w", packageName, err)
-		return result
-	}
-
-	// Create context with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
-
-	// Check if manager is available
-	available, err := pkgManager.IsAvailable(ctx)
-	if err != nil {
-		result.Status = "failed"
-		result.Error = fmt.Errorf("install %s: failed to check %s availability: %w", packageName, manager, err)
-		return result
-	}
-	if !available {
-		result.Status = "failed"
-		result.Error = fmt.Errorf("install %s: %s manager not available (%s)", packageName, manager, getManagerInstallSuggestion(manager))
-		return result
-	}
-
-	// Install the package
-	err = pkgManager.Install(ctx, packageName)
-	if err != nil {
-		result.Status = "failed"
-		result.Error = fmt.Errorf("install %s via %s: %w", packageName, manager, err)
-		return result
-	}
-
-	// For Go packages, we need to determine the actual binary name
-	lockPackageName := packageName
-	if manager == "go" {
-		// Extract binary name from module path
-		lockPackageName = managers.ExtractBinaryNameFromPath(packageName)
-	}
-
-	// Get package version after installation
-	version, err := pkgManager.GetInstalledVersion(ctx, lockPackageName)
-	if err == nil && version != "" {
-		result.Version = version
-	}
-
-	// Add to lock file
-	err = lockService.AddPackage(manager, lockPackageName, version)
-	if err != nil {
-		result.Status = "failed"
-		result.Error = fmt.Errorf("install %s: failed to add to lock file (manager: %s, version: %s): %w", packageName, manager, version, err)
-		return result
-	}
-
-	result.Status = "added"
-	return result
-}
-
-// getPackageManager returns the appropriate package manager instance
-func getPackageManager(manager string) (managers.PackageManager, error) {
-	registry := managers.NewManagerRegistry()
-	return registry.GetManager(manager)
 }
 
 // PackageInstallOutput represents the output for package installation

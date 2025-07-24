@@ -4,19 +4,9 @@
 package commands
 
 import (
-	"context"
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"runtime"
 	"strings"
-	"time"
 
-	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/dotfiles"
-	"github.com/richhaase/plonk/internal/lock"
-	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/spf13/cobra"
 )
@@ -55,516 +45,34 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid output format: %w", err)
 	}
 
-	// Run comprehensive health checks
-	healthReport := runHealthChecks()
+	// Run comprehensive health checks using orchestrator
+	healthReport := orchestrator.RunHealthChecks()
 
-	return RenderOutput(healthReport, format)
-}
-
-// runHealthChecks performs comprehensive system health checks
-func runHealthChecks() DoctorOutput {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	report := DoctorOutput{
+	// Convert to command output type
+	doctorOutput := DoctorOutput{
 		Overall: HealthStatus{
-			Status:  "healthy",
-			Message: "All systems operational",
+			Status:  healthReport.Overall.Status,
+			Message: healthReport.Overall.Message,
 		},
-		Checks: []HealthCheck{},
+		Checks: make([]HealthCheck, len(healthReport.Checks)),
 	}
 
-	// System checks
-	report.Checks = append(report.Checks, checkSystemRequirements())
-	report.Checks = append(report.Checks, checkEnvironmentVariables())
-	report.Checks = append(report.Checks, checkPermissions())
+	for i, check := range healthReport.Checks {
+		doctorOutput.Checks[i] = HealthCheck{
+			Name:        check.Name,
+			Category:    check.Category,
+			Status:      check.Status,
+			Message:     check.Message,
+			Details:     check.Details,
+			Issues:      check.Issues,
+			Suggestions: check.Suggestions,
+		}
+	}
 
-	// Configuration checks
-	report.Checks = append(report.Checks, checkConfigurationFile())
-	report.Checks = append(report.Checks, checkConfigurationValidity())
-
-	// Lock file checks
-	report.Checks = append(report.Checks, checkLockFile())
-	report.Checks = append(report.Checks, checkLockFileValidity())
-
-	// Package manager checks
-	report.Checks = append(report.Checks, checkPackageManagerAvailability(ctx))
-	report.Checks = append(report.Checks, checkPackageManagerFunctionality(ctx))
-
-	// Path and executable checks
-	report.Checks = append(report.Checks, checkExecutablePath())
-	report.Checks = append(report.Checks, checkPathConfiguration())
-
-	// Determine overall health
-	report.Overall = calculateOverallHealth(report.Checks)
-
-	return report
+	return RenderOutput(doctorOutput, format)
 }
 
-// checkSystemRequirements checks basic system requirements
-func checkSystemRequirements() HealthCheck {
-	check := HealthCheck{
-		Name:     "System Requirements",
-		Category: "system",
-		Status:   "pass",
-		Message:  "System requirements met",
-	}
-
-	var issues []string
-	var suggestions []string
-
-	// Check OS support
-	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
-		issues = append(issues, fmt.Sprintf("Unsupported operating system: %s", runtime.GOOS))
-		suggestions = append(suggestions, "plonk is designed for macOS and Linux systems")
-		check.Status = "fail"
-	}
-
-	// Check Go version (if available)
-	if goVersion := runtime.Version(); goVersion != "" {
-		check.Details = append(check.Details, fmt.Sprintf("Go version: %s", goVersion))
-	}
-
-	check.Details = append(check.Details,
-		fmt.Sprintf("OS: %s", runtime.GOOS),
-		fmt.Sprintf("Architecture: %s", runtime.GOARCH),
-	)
-
-	if len(issues) > 0 {
-		check.Issues = issues
-		check.Suggestions = suggestions
-		check.Message = "System requirements not met"
-	}
-
-	return check
-}
-
-// checkEnvironmentVariables checks important environment variables
-func checkEnvironmentVariables() HealthCheck {
-	check := HealthCheck{
-		Name:     "Environment Variables",
-		Category: "environment",
-		Status:   "pass",
-		Message:  "Environment variables configured",
-	}
-
-	var warnings []string
-	var suggestions []string
-
-	// Check essential variables
-	home := os.Getenv("HOME")
-	if home == "" {
-		check.Status = "fail"
-		check.Issues = append(check.Issues, "HOME environment variable not set")
-		check.Suggestions = append(check.Suggestions, "Set HOME environment variable to your home directory")
-	} else {
-		check.Details = append(check.Details, fmt.Sprintf("HOME: %s", home))
-	}
-
-	// Check PATH
-	path := os.Getenv("PATH")
-	if path == "" {
-		check.Status = "fail"
-		check.Issues = append(check.Issues, "PATH environment variable not set")
-		check.Suggestions = append(check.Suggestions, "Set PATH environment variable to include system binaries")
-	} else {
-		check.Details = append(check.Details, fmt.Sprintf("PATH entries: %d", len(strings.Split(path, string(os.PathListSeparator)))))
-	}
-
-	// Check optional but useful variables
-	if os.Getenv("EDITOR") == "" && os.Getenv("VISUAL") == "" {
-		warnings = append(warnings, "No EDITOR or VISUAL environment variable set")
-		suggestions = append(suggestions, "Set EDITOR environment variable for better config editing experience")
-	}
-
-	if len(warnings) > 0 && check.Status == "pass" {
-		check.Status = "warn"
-		check.Issues = warnings
-		check.Suggestions = suggestions
-		check.Message = "Environment variables have warnings"
-	}
-
-	return check
-}
-
-// checkPermissions checks file and directory permissions
-func checkPermissions() HealthCheck {
-	check := HealthCheck{
-		Name:     "File Permissions",
-		Category: "permissions",
-		Status:   "pass",
-		Message:  "File permissions are correct",
-	}
-
-	configDir := config.GetDefaultConfigDirectory()
-
-	// Check if config directory exists and is writable
-	if info, err := os.Stat(configDir); err != nil {
-		if os.IsNotExist(err) {
-			check.Details = append(check.Details, "Config directory does not exist (will be created when needed)")
-		} else {
-			check.Status = "warn"
-			check.Issues = append(check.Issues, fmt.Sprintf("Cannot access config directory: %v", err))
-			check.Suggestions = append(check.Suggestions, "Check permissions on ~/.config directory")
-		}
-	} else {
-		if !info.IsDir() {
-			check.Status = "fail"
-			check.Issues = append(check.Issues, "Config path exists but is not a directory")
-			check.Suggestions = append(check.Suggestions, "Remove ~/.config/plonk file and recreate as directory")
-		} else {
-			check.Details = append(check.Details, fmt.Sprintf("Config directory: %s", configDir))
-		}
-	}
-
-	// Test write permissions by creating a temp file
-	tempFile := filepath.Join(configDir, ".plonk_doctor_test")
-	if err := os.MkdirAll(configDir, 0750); err != nil {
-		check.Status = "fail"
-		check.Issues = append(check.Issues, fmt.Sprintf("Cannot create config directory: %v", err))
-		check.Suggestions = append(check.Suggestions, "Check permissions on ~/.config directory")
-	} else {
-		if err := os.WriteFile(tempFile, []byte("test"), 0600); err != nil {
-			check.Status = "fail"
-			check.Issues = append(check.Issues, fmt.Sprintf("Cannot write to config directory: %v", err))
-			check.Suggestions = append(check.Suggestions, "Check write permissions on ~/.config/plonk directory")
-		} else {
-			_ = os.Remove(tempFile) // Clean up
-			check.Details = append(check.Details, "Config directory is writable")
-		}
-	}
-
-	return check
-}
-
-// checkConfigurationFile checks if configuration file exists and is accessible
-func checkConfigurationFile() HealthCheck {
-	check := HealthCheck{
-		Name:     "Configuration File",
-		Category: "configuration",
-		Status:   "pass",
-		Message:  "Configuration file is accessible",
-	}
-
-	configDir := config.GetDefaultConfigDirectory()
-	configPath := filepath.Join(configDir, "plonk.yaml")
-
-	// Check if config file exists
-	if info, err := os.Stat(configPath); err != nil {
-		if os.IsNotExist(err) {
-			check.Status = "warn"
-			check.Issues = append(check.Issues, "Configuration file does not exist")
-			check.Suggestions = append(check.Suggestions, "Run 'plonk init' to create a configuration file")
-			check.Details = append(check.Details, fmt.Sprintf("Expected location: %s", configPath))
-		} else {
-			check.Status = "fail"
-			check.Issues = append(check.Issues, fmt.Sprintf("Cannot access configuration file: %v", err))
-			check.Suggestions = append(check.Suggestions, "Check file permissions and path")
-		}
-	} else {
-		check.Details = append(check.Details,
-			fmt.Sprintf("Config file: %s", configPath),
-			fmt.Sprintf("Size: %d bytes", info.Size()),
-			fmt.Sprintf("Modified: %s", info.ModTime().Format("2006-01-02 15:04:05")),
-		)
-
-		// Check if file is readable
-		if content, err := os.ReadFile(configPath); err != nil {
-			check.Status = "fail"
-			check.Issues = append(check.Issues, fmt.Sprintf("Cannot read configuration file: %v", err))
-			check.Suggestions = append(check.Suggestions, "Check file permissions")
-		} else {
-			check.Details = append(check.Details, fmt.Sprintf("Content length: %d characters", len(content)))
-		}
-	}
-
-	return check
-}
-
-// checkConfigurationValidity validates the configuration file
-func checkConfigurationValidity() HealthCheck {
-	check := HealthCheck{
-		Name:     "Configuration Validity",
-		Category: "configuration",
-		Status:   "pass",
-		Message:  "Configuration is valid",
-	}
-
-	configDir := config.GetDefaultConfigDirectory()
-
-	// Try to load configuration
-	cfg := config.LoadConfigWithDefaults(configDir)
-
-	// Run validation
-	validator := config.NewSimpleValidator()
-	result := validator.ValidateConfig(cfg)
-
-	if !result.Valid {
-		check.Status = "fail"
-		check.Issues = result.Errors
-		check.Suggestions = append(check.Suggestions, "Run 'plonk config validate' for detailed error information")
-		check.Message = "Configuration has validation errors"
-	} else {
-		// Count configured items - packages now in lock file
-		packageCount := getPackageCountFromLockFile(configDir)
-
-		// Get auto-discovered dotfiles
-		// Use the dotfiles package directly to get configured count
-		configured, err := dotfiles.GetConfiguredDotfiles(orchestrator.GetHomeDir(), configDir)
-		dotfileCount := 0
-		if err == nil {
-			dotfileCount = len(configured)
-		}
-
-		check.Details = append(check.Details,
-			fmt.Sprintf("Default manager: %s", cfg.DefaultManager),
-			fmt.Sprintf("Configured packages: %d", packageCount),
-			fmt.Sprintf("Auto-discovered dotfiles: %d", dotfileCount),
-		)
-
-		if len(result.Warnings) > 0 {
-			check.Status = "warn"
-			check.Issues = result.Warnings
-			check.Message = "Configuration is valid but has warnings"
-		}
-	}
-
-	return check
-}
-
-// checkPackageManagerAvailability checks if package managers are available
-func checkPackageManagerAvailability(ctx context.Context) HealthCheck {
-	check := HealthCheck{
-		Name:     "Package Manager Availability",
-		Category: "package-managers",
-		Status:   "pass",
-		Message:  "Package managers are available",
-	}
-
-	// Get OS support information
-	osSupport := getOSPackageManagerSupport()
-
-	// Get current configuration to check default manager
-	configDir := config.GetDefaultConfigDirectory()
-	cfg := config.LoadConfigWithDefaults(configDir)
-	defaultManager := ""
-	if cfg != nil && cfg.DefaultManager != "" {
-		defaultManager = cfg.DefaultManager
-	}
-	if defaultManager == "" {
-		defaultManager = managers.DefaultManager
-	}
-
-	registry := managers.NewManagerRegistry()
-	managerMap := make(map[string]managers.PackageManager)
-	for _, name := range registry.GetAllManagerNames() {
-		if manager, err := registry.GetManager(name); err == nil {
-			managerMap[name] = manager
-		}
-	}
-
-	availableCount := 0
-	defaultManagerAvailable := false
-
-	for name, manager := range managerMap {
-		// Check OS support first
-		if supported, exists := osSupport[name]; exists && !supported {
-			check.Details = append(check.Details, fmt.Sprintf("%s: ⚪ Not supported on %s", name, runtime.GOOS))
-			continue
-		}
-
-		available, err := manager.IsAvailable(ctx)
-		if err != nil {
-			check.Issues = append(check.Issues, fmt.Sprintf("%s: %v", name, err))
-			check.Status = "warn"
-		} else if available {
-			availableCount++
-			check.Details = append(check.Details, fmt.Sprintf("%s: ✅ Available", name))
-			if name == defaultManager {
-				defaultManagerAvailable = true
-			}
-		} else {
-			// Only a problem if it's the default manager
-			if name == defaultManager {
-				check.Status = "fail"
-				check.Issues = append(check.Issues,
-					fmt.Sprintf("Default package manager '%s' is not installed", name))
-				check.Suggestions = append(check.Suggestions,
-					getManagerInstallSuggestion(name))
-				defaultManagerAvailable = false
-			} else {
-				check.Details = append(check.Details,
-					fmt.Sprintf("%s: ⬜ Not installed (optional)", name))
-			}
-		}
-	}
-
-	// Update message based on findings
-	if !defaultManagerAvailable && defaultManager != "" {
-		check.Status = "fail"
-		check.Message = "Default package manager is not available"
-	} else if availableCount == 0 {
-		check.Status = "fail"
-		check.Message = "No package managers available"
-		check.Issues = append(check.Issues, "No package managers are available")
-		check.Suggestions = append(check.Suggestions,
-			"Install at least one package manager or change default with 'plonk config edit'")
-	} else {
-		// Reset to pass if we have at least one manager and default is available
-		if check.Status != "warn" {
-			check.Status = "pass"
-		}
-		check.Message = "Package managers are available"
-	}
-
-	return check
-}
-
-// checkPackageManagerFunctionality tests basic package manager functionality
-func checkPackageManagerFunctionality(ctx context.Context) HealthCheck {
-	check := HealthCheck{
-		Name:     "Package Manager Functionality",
-		Category: "package-managers",
-		Status:   "pass",
-		Message:  "Package managers are functional",
-	}
-
-	registry := managers.NewManagerRegistry()
-	managerMap := make(map[string]managers.PackageManager)
-	for _, name := range registry.GetAllManagerNames() {
-		if manager, err := registry.GetManager(name); err == nil {
-			managerMap[name] = manager
-		}
-	}
-
-	for name, manager := range managerMap {
-		available, err := manager.IsAvailable(ctx)
-		if err != nil || !available {
-			continue // Skip unavailable managers
-		}
-
-		// Test basic functionality
-		if packages, err := manager.ListInstalled(ctx); err != nil {
-			check.Status = "warn"
-			check.Issues = append(check.Issues, fmt.Sprintf("%s: Cannot list installed packages: %v", name, err))
-			check.Suggestions = append(check.Suggestions, fmt.Sprintf("Check %s installation and permissions", name))
-		} else {
-			check.Details = append(check.Details, fmt.Sprintf("%s: Listed %d installed packages", name, len(packages)))
-		}
-	}
-
-	return check
-}
-
-// checkExecutablePath checks if plonk executable is accessible
-func checkExecutablePath() HealthCheck {
-	check := HealthCheck{
-		Name:     "Executable Path",
-		Category: "installation",
-		Status:   "pass",
-		Message:  "Executable is accessible",
-	}
-
-	// Get current executable path
-	execPath, err := os.Executable()
-	if err != nil {
-		check.Status = "warn"
-		check.Issues = append(check.Issues, fmt.Sprintf("Cannot determine executable path: %v", err))
-	} else {
-		check.Details = append(check.Details, fmt.Sprintf("Executable: %s", execPath))
-
-		// Check if executable is in PATH
-		if pathExec, err := exec.LookPath("plonk"); err != nil {
-			check.Status = "warn"
-			check.Issues = append(check.Issues, "plonk executable not found in PATH")
-			check.Suggestions = append(check.Suggestions, "Add plonk to your PATH or use full path to executable")
-		} else {
-			check.Details = append(check.Details, fmt.Sprintf("Found in PATH: %s", pathExec))
-		}
-	}
-
-	return check
-}
-
-// checkPathConfiguration checks PATH configuration for common issues
-func checkPathConfiguration() HealthCheck {
-	check := HealthCheck{
-		Name:     "PATH Configuration",
-		Category: "environment",
-		Status:   "pass",
-		Message:  "PATH is configured correctly",
-	}
-
-	path := os.Getenv("PATH")
-	if path == "" {
-		check.Status = "fail"
-		check.Issues = append(check.Issues, "PATH environment variable is not set")
-		return check
-	}
-
-	pathDirs := strings.Split(path, string(os.PathListSeparator))
-	check.Details = append(check.Details, fmt.Sprintf("PATH contains %d directories", len(pathDirs)))
-
-	// Check for common required directories
-	requiredPaths := []string{
-		"/usr/bin",
-		"/usr/local/bin",
-	}
-
-	if runtime.GOOS == "darwin" {
-		requiredPaths = append(requiredPaths, "/opt/homebrew/bin")
-	}
-
-	for _, reqPath := range requiredPaths {
-		found := false
-		for _, pathDir := range pathDirs {
-			if pathDir == reqPath {
-				found = true
-				break
-			}
-		}
-		if !found {
-			check.Status = "warn"
-			check.Issues = append(check.Issues, fmt.Sprintf("Required path not found: %s", reqPath))
-			check.Suggestions = append(check.Suggestions, fmt.Sprintf("Add %s to your PATH", reqPath))
-		}
-	}
-
-	return check
-}
-
-// calculateOverallHealth determines overall health based on individual checks
-func calculateOverallHealth(checks []HealthCheck) HealthStatus {
-	status := HealthStatus{
-		Status:  "healthy",
-		Message: "All systems operational",
-	}
-
-	failCount := 0
-	warnCount := 0
-
-	for _, check := range checks {
-		switch check.Status {
-		case "fail":
-			failCount++
-		case "warn":
-			warnCount++
-		}
-	}
-
-	if failCount > 0 {
-		status.Status = "unhealthy"
-		status.Message = fmt.Sprintf("%d critical issues found", failCount)
-	} else if warnCount > 0 {
-		status.Status = "warning"
-		status.Message = fmt.Sprintf("%d warnings found", warnCount)
-	}
-
-	return status
-}
-
-// Output structures
-
+// DoctorOutput represents the output of the doctor command
 type DoctorOutput struct {
 	Overall HealthStatus  `json:"overall" yaml:"overall"`
 	Checks  []HealthCheck `json:"checks" yaml:"checks"`
@@ -624,30 +132,34 @@ func (d DoctorOutput) TableOutput() string {
 					icon = "⚠️"
 				case "fail":
 					icon = "❌"
+				case "info":
+					icon = "ℹ️"
+				default:
+					icon = "❓"
 				}
 
-				output.WriteString(fmt.Sprintf("%s **%s**: %s\n", icon, check.Name, check.Message))
+				output.WriteString(fmt.Sprintf("### %s %s\n", icon, check.Name))
+				output.WriteString(fmt.Sprintf("**Status**: %s\n", strings.ToUpper(check.Status)))
+				output.WriteString(fmt.Sprintf("**Message**: %s\n", check.Message))
 
-				// Details
 				if len(check.Details) > 0 {
+					output.WriteString("\n**Details:**\n")
 					for _, detail := range check.Details {
-						output.WriteString(fmt.Sprintf("   • %s\n", detail))
+						output.WriteString(fmt.Sprintf("- %s\n", detail))
 					}
 				}
 
-				// Issues
 				if len(check.Issues) > 0 {
-					output.WriteString("   Issues:\n")
+					output.WriteString("\n**Issues:**\n")
 					for _, issue := range check.Issues {
-						output.WriteString(fmt.Sprintf("   ⚠️  %s\n", issue))
+						output.WriteString(fmt.Sprintf("- ❌ %s\n", issue))
 					}
 				}
 
-				// Suggestions
 				if len(check.Suggestions) > 0 {
-					output.WriteString("   Suggestions:\n")
+					output.WriteString("\n**Suggestions:**\n")
 					for _, suggestion := range check.Suggestions {
-						output.WriteString(fmt.Sprintf("   💡 %s\n", suggestion))
+						output.WriteString(fmt.Sprintf("- 💡 %s\n", suggestion))
 					}
 				}
 
@@ -662,110 +174,4 @@ func (d DoctorOutput) TableOutput() string {
 // StructuredData returns the structured data for serialization
 func (d DoctorOutput) StructuredData() any {
 	return d
-}
-
-// getPackageCountFromLockFile counts packages in the lock file
-func getPackageCountFromLockFile(configDir string) int {
-	lockService := lock.NewYAMLLockService(configDir)
-
-	totalCount := 0
-
-	for _, manager := range managers.SupportedManagers {
-		packages, err := lockService.GetPackages(manager)
-		if err == nil {
-			totalCount += len(packages)
-		}
-	}
-
-	return totalCount
-}
-
-// checkLockFile checks for the existence and accessibility of the lock file
-func checkLockFile() HealthCheck {
-	check := HealthCheck{
-		Name:     "Lock File",
-		Category: "configuration",
-		Status:   "pass",
-		Message:  "Lock file accessible",
-	}
-
-	configDir := config.GetDefaultConfigDirectory()
-	lockPath := filepath.Join(configDir, "plonk.lock")
-
-	check.Details = append(check.Details, fmt.Sprintf("Lock file path: %s", lockPath))
-
-	// Check if lock file exists
-	if _, err := os.Stat(lockPath); os.IsNotExist(err) {
-		check.Status = "warn"
-		check.Message = "Lock file does not exist (will be created when packages are added)"
-		check.Details = append(check.Details, "Lock file will be automatically created when you add packages")
-		return check
-	}
-
-	// Check if file is readable
-	if content, err := os.ReadFile(lockPath); err != nil {
-		check.Status = "fail"
-		check.Issues = append(check.Issues, fmt.Sprintf("Cannot read lock file: %v", err))
-		check.Suggestions = append(check.Suggestions, "Check file permissions and directory access")
-		check.Message = "Lock file is not readable"
-	} else {
-		check.Details = append(check.Details, fmt.Sprintf("Lock file size: %d bytes", len(content)))
-
-		// Basic file integrity check
-		if len(content) == 0 {
-			check.Status = "warn"
-			check.Message = "Lock file is empty"
-			check.Details = append(check.Details, "No packages currently managed")
-		}
-	}
-
-	return check
-}
-
-// checkLockFileValidity validates the lock file format and content
-func checkLockFileValidity() HealthCheck {
-	check := HealthCheck{
-		Name:     "Lock File Validity",
-		Category: "configuration",
-		Status:   "pass",
-		Message:  "Lock file is valid",
-	}
-
-	configDir := config.GetDefaultConfigDirectory()
-	lockService := lock.NewYAMLLockService(configDir)
-
-	// Try to load the lock file
-	lockFile, err := lockService.Load()
-	if err != nil {
-		// If file doesn't exist, that's okay
-		if os.IsNotExist(err) {
-			check.Status = "info"
-			check.Message = "No lock file found (packages will be tracked when added)"
-			return check
-		}
-
-		check.Status = "fail"
-		check.Issues = append(check.Issues, fmt.Sprintf("Lock file is invalid: %v", err))
-		check.Suggestions = append(check.Suggestions, "Validate lock file format or regenerate by running 'plonk pkg add' commands")
-		check.Message = "Lock file has format errors"
-		return check
-	}
-
-	// Count packages by manager
-	totalPackages := 0
-	for manager, packages := range lockFile.Packages {
-		count := len(packages)
-		totalPackages += count
-		check.Details = append(check.Details, fmt.Sprintf("%s packages: %d", manager, count))
-	}
-
-	check.Details = append(check.Details, fmt.Sprintf("Total managed packages: %d", totalPackages))
-	check.Details = append(check.Details, fmt.Sprintf("Lock file version: %d", lockFile.Version))
-
-	if totalPackages == 0 {
-		check.Status = "info"
-		check.Message = "Lock file is valid but contains no packages"
-	}
-
-	return check
 }

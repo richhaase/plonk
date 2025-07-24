@@ -6,11 +6,9 @@ package commands
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/richhaase/plonk/internal/ui"
@@ -67,32 +65,25 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	// Get directories
 	configDir := config.GetDefaultConfigDirectory()
 
-	// Initialize lock file service
-	lockService := lock.NewYAMLLockService(configDir)
+	// Configure uninstallation options
+	opts := managers.UninstallOptions{
+		Manager: flags.Manager,
+		DryRun:  flags.DryRun,
+	}
 
-	// Process each package directly
+	// Process packages using managers package
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 
-	var results []state.OperationResult
+	results, err := managers.UninstallPackages(ctx, configDir, args, opts)
+	if err != nil {
+		return fmt.Errorf("uninstall: failed to process packages: %w", err)
+	}
 
-	// Show header for progress tracking
+	// Show progress reporting
 	reporter := ui.NewProgressReporterForOperation("uninstall", "package", true)
-
-	for _, packageName := range args {
-		// Check if context was canceled
-		if ctx.Err() != nil {
-			break
-		}
-
-		// Uninstall single package directly
-		result := uninstallSinglePackage(configDir, lockService, packageName, flags.DryRun, flags.Manager)
-
-		// Show individual progress
+	for _, result := range results {
 		reporter.ShowItemProgress(result)
-
-		// Collect result
-		results = append(results, result)
 	}
 
 	// Show batch summary
@@ -118,151 +109,6 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-// uninstallSinglePackage removes a single package
-func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService, packageName string, dryRun bool, managerFlag string) state.OperationResult {
-	result := state.OperationResult{
-		Name: packageName,
-	}
-
-	// For Go packages, we need to check with the binary name
-	checkPackageName := packageName
-	if managerFlag == "go" {
-		checkPackageName = managers.ExtractBinaryNameFromPath(packageName)
-	}
-
-	// Find package in lock file
-	managerName, found := findPackageInLockFile(lockService, checkPackageName)
-	wasManaged := found
-
-	// If we found it and it's a go package, we might need to check with binary name
-	if !found && managerFlag == "" && strings.Contains(packageName, "/") {
-		// This might be a Go module path, try with binary name
-		checkPackageName = managers.ExtractBinaryNameFromPath(packageName)
-		managerName, found = findPackageInLockFile(lockService, checkPackageName)
-		wasManaged = found
-	}
-
-	// If not in lock file, we need to detect which manager to use
-	if !found {
-		// If manager flag is provided, use it
-		if managerFlag != "" {
-			managerName = managerFlag
-		} else {
-			// Try to detect which manager has the package installed
-			detectedManager, err := detectInstalledPackageManager(packageName)
-			if err != nil {
-				result.Status = "skipped"
-				result.Error = fmt.Errorf("detect packages: package '%s' not found in any package manager", packageName)
-				return result
-			}
-			managerName = detectedManager
-		}
-	}
-
-	result.Manager = managerName
-
-	if dryRun {
-		result.Status = "would-remove"
-		return result
-	}
-
-	// Attempt to uninstall from system
-	err := uninstallPackageFromSystem(managerName, packageName)
-	if err != nil {
-		// If package wasn't installed but was in lock file, we should still remove it from lock
-		if wasManaged {
-			lockErr := lockService.RemovePackage(managerName, checkPackageName)
-			if lockErr == nil {
-				result.Status = "removed"
-				result.Error = fmt.Errorf("uninstall %s: package not installed, removed from lock file: %w", packageName, err)
-				return result
-			}
-		}
-		result.Status = "failed"
-		result.Error = fmt.Errorf("uninstall %s via %s: failed to uninstall package: %w", packageName, managerName, err)
-		return result
-	}
-
-	// Remove from lock file if it was managed
-	if wasManaged {
-		err = lockService.RemovePackage(managerName, checkPackageName)
-		if err != nil {
-			result.Status = "partially-removed"
-			result.Error = fmt.Errorf("remove-lock %s: uninstalled but failed to remove from lock file (manager: %s): %w", packageName, managerName, err)
-			return result
-		}
-	}
-
-	result.Status = "removed"
-	return result
-}
-
-// findPackageInLockFile finds which manager manages a package
-func findPackageInLockFile(lockService *lock.YAMLLockService, packageName string) (string, bool) {
-	for _, manager := range managers.SupportedManagers {
-		if lockService.HasPackage(manager, packageName) {
-			return manager, true
-		}
-	}
-
-	return "", false
-}
-
-// detectInstalledPackageManager tries to detect which package manager has the package installed
-func detectInstalledPackageManager(packageName string) (string, error) {
-	registry := managers.NewManagerRegistry()
-	ctx := context.Background()
-
-	// Try each manager to see if package is installed
-	for _, managerName := range managers.SupportedManagers {
-		mgr, err := registry.GetManager(managerName)
-		if err != nil {
-			continue
-		}
-
-		// Check if manager is available
-		available, err := mgr.IsAvailable(ctx)
-		if err != nil || !available {
-			continue
-		}
-
-		// Check if package is installed
-		installed, err := mgr.IsInstalled(ctx, packageName)
-		if err != nil {
-			continue
-		}
-
-		if installed {
-			return managerName, nil
-		}
-	}
-
-	return "", fmt.Errorf("detect packages: package not found in any available package manager")
-}
-
-// uninstallPackageFromSystem uninstalls a package using the appropriate manager
-func uninstallPackageFromSystem(managerName, packageName string) error {
-	registry := managers.NewManagerRegistry()
-	mgr, err := registry.GetManager(managerName)
-	if err != nil {
-		return err
-	}
-
-	ctx := context.Background()
-
-	// Check if manager is available
-	available, err := mgr.IsAvailable(ctx)
-	if err != nil {
-		return fmt.Errorf("uninstall packages: failed to check manager availability: %w", err)
-	}
-	if !available {
-		return fmt.Errorf("uninstall packages: manager '%s' is not available (%s)", managerName, getManagerInstallSuggestion(managerName))
-	}
-
-	// Uninstall the package
-	return mgr.Uninstall(ctx, packageName)
 }
 
 // PackageUninstallOutput represents the output for package uninstallation

@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/orchestrator"
-	"github.com/richhaase/plonk/internal/state"
 	"github.com/richhaase/plonk/internal/ui"
 	"github.com/spf13/cobra"
 )
@@ -73,14 +73,20 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Process each dotfile directly
-	ctx := context.Background()
-	var results []state.OperationResult
+	// Create dotfile manager
+	manager := dotfiles.NewManager(homeDir, configDir)
 
-	for _, dotfilePath := range args {
-		// Call core business logic directly
-		dotfileResults := AddSingleDotfile(ctx, cfg, homeDir, configDir, dotfilePath, dryRun)
-		results = append(results, dotfileResults...)
+	// Configure options
+	opts := dotfiles.AddOptions{
+		DryRun: dryRun,
+		Force:  false, // TODO: implement force flag
+	}
+
+	// Process dotfiles using domain package
+	ctx := context.Background()
+	results, err := manager.AddFiles(ctx, cfg, args, opts)
+	if err != nil {
+		return fmt.Errorf("add: failed to process dotfiles: %w", err)
 	}
 
 	// Create output data based on number of results

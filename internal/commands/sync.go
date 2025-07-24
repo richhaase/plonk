@@ -8,10 +8,7 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/dotfiles"
-	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/orchestrator"
-	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
 )
 
@@ -51,56 +48,6 @@ func init() {
 	syncCmd.Flags().Bool("backup", false, "Create backups before overwriting existing dotfiles")
 }
 
-// packageSyncResult represents the internal result of package sync operations
-type packageSyncResult struct {
-	DryRun            bool                `json:"dry_run" yaml:"dry_run"`
-	TotalMissing      int                 `json:"total_missing" yaml:"total_missing"`
-	TotalInstalled    int                 `json:"total_installed" yaml:"total_installed"`
-	TotalFailed       int                 `json:"total_failed" yaml:"total_failed"`
-	TotalWouldInstall int                 `json:"total_would_install" yaml:"total_would_install"`
-	Managers          []managerSyncResult `json:"managers" yaml:"managers"`
-}
-
-// managerSyncResult represents the result for a specific manager
-type managerSyncResult struct {
-	Name         string                       `json:"name" yaml:"name"`
-	MissingCount int                          `json:"missing_count" yaml:"missing_count"`
-	Packages     []packageOperationSyncResult `json:"packages" yaml:"packages"`
-}
-
-// packageOperationSyncResult represents the result for a specific package operation
-type packageOperationSyncResult struct {
-	Name   string `json:"name" yaml:"name"`
-	Status string `json:"status" yaml:"status"`
-	Error  string `json:"error,omitempty" yaml:"error,omitempty"`
-}
-
-// dotfileSyncResult represents the internal result of dotfile sync operations
-type dotfileSyncResult struct {
-	DryRun     bool                      `json:"dry_run" yaml:"dry_run"`
-	Backup     bool                      `json:"backup" yaml:"backup"`
-	TotalFiles int                       `json:"total_files" yaml:"total_files"`
-	Actions    []dotfileActionSyncResult `json:"actions" yaml:"actions"`
-	Summary    dotfileSummarySyncResult  `json:"summary" yaml:"summary"`
-}
-
-// dotfileActionSyncResult represents an action taken on a dotfile
-type dotfileActionSyncResult struct {
-	Source      string `json:"source" yaml:"source"`
-	Destination string `json:"destination" yaml:"destination"`
-	Action      string `json:"action" yaml:"action"`
-	Status      string `json:"status" yaml:"status"`
-	Error       string `json:"error,omitempty" yaml:"error,omitempty"`
-}
-
-// dotfileSummarySyncResult provides summary statistics
-type dotfileSummarySyncResult struct {
-	Added     int `json:"added" yaml:"added"`
-	Updated   int `json:"updated" yaml:"updated"`
-	Unchanged int `json:"unchanged" yaml:"unchanged"`
-	Failed    int `json:"failed" yaml:"failed"`
-}
-
 func runSync(cmd *cobra.Command, args []string) error {
 	// Parse flags
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
@@ -128,7 +75,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 
 	// Sync packages (unless dotfiles-only)
 	if !dotfilesOnly {
-		result, err := applyPackages(ctx, configDir, cfg, dryRun)
+		result, err := orchestrator.SyncPackages(ctx, configDir, cfg, dryRun)
 		if err != nil {
 			return err
 		}
@@ -179,7 +126,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 
 	// Sync dotfiles (unless packages-only)
 	if !packagesOnly {
-		result, err := applyDotfiles(ctx, configDir, homeDir, cfg, dryRun, backup)
+		result, err := orchestrator.SyncDotfiles(ctx, configDir, homeDir, cfg, dryRun, backup)
 		if err != nil {
 			return err
 		}
@@ -235,162 +182,6 @@ func runSync(cmd *cobra.Command, args []string) error {
 	}
 
 	return RenderOutput(outputData, format)
-}
-
-// applyPackages applies package configuration and returns the result
-func applyPackages(ctx context.Context, configDir string, cfg *config.Config, dryRun bool) (packageSyncResult, error) {
-	// Reconcile package domain to find missing packages
-	result, err := orchestrator.ReconcilePackages(ctx, configDir)
-	if err != nil {
-		return packageSyncResult{}, fmt.Errorf("failed to reconcile package state: %w", err)
-	}
-
-	// Group missing packages by manager
-	missingByManager := make(map[string][]state.Item)
-	for _, item := range result.Missing {
-		manager := item.Metadata["manager"].(string)
-		missingByManager[manager] = append(missingByManager[manager], item)
-	}
-
-	var managerResults []managerSyncResult
-	totalMissing := len(result.Missing)
-	totalInstalled := 0
-	totalFailed := 0
-	totalWouldInstall := 0
-
-	// Get manager registry
-	registry := managers.NewManagerRegistry()
-
-	// Process each manager's missing packages
-	for managerName, packages := range missingByManager {
-		manager, err := registry.GetManager(managerName)
-		if err != nil {
-			return packageSyncResult{}, fmt.Errorf("failed to get package manager %s: %w", managerName, err)
-		}
-
-		available, err := manager.IsAvailable(ctx)
-		if err != nil {
-			return packageSyncResult{}, fmt.Errorf("failed to check manager %s availability: %w", managerName, err)
-		}
-
-		var packageResults []packageOperationSyncResult
-		installedCount := 0
-		failedCount := 0
-		wouldInstallCount := 0
-
-		for _, pkg := range packages {
-			if dryRun {
-				packageResults = append(packageResults, packageOperationSyncResult{
-					Name:   pkg.Name,
-					Status: "would-install",
-				})
-				wouldInstallCount++
-			} else if !available {
-				packageResults = append(packageResults, packageOperationSyncResult{
-					Name:   pkg.Name,
-					Status: "failed",
-					Error:  "package manager not available",
-				})
-				failedCount++
-			} else {
-				// Install the package
-				err := manager.Install(ctx, pkg.Name)
-				if err != nil {
-					packageResults = append(packageResults, packageOperationSyncResult{
-						Name:   pkg.Name,
-						Status: "failed",
-						Error:  err.Error(),
-					})
-					failedCount++
-				} else {
-					packageResults = append(packageResults, packageOperationSyncResult{
-						Name:   pkg.Name,
-						Status: "installed",
-					})
-					installedCount++
-				}
-			}
-		}
-
-		managerResults = append(managerResults, managerSyncResult{
-			Name:         managerName,
-			MissingCount: len(packages),
-			Packages:     packageResults,
-		})
-
-		totalInstalled += installedCount
-		totalFailed += failedCount
-		totalWouldInstall += wouldInstallCount
-	}
-
-	return packageSyncResult{
-		DryRun:            dryRun,
-		TotalMissing:      totalMissing,
-		TotalInstalled:    totalInstalled,
-		TotalFailed:       totalFailed,
-		TotalWouldInstall: totalWouldInstall,
-		Managers:          managerResults,
-	}, nil
-}
-
-// applyDotfiles applies dotfile configuration and returns the result
-func applyDotfiles(ctx context.Context, configDir, homeDir string, cfg *config.Config, dryRun, backup bool) (dotfileSyncResult, error) {
-	// Get configured dotfiles
-	configuredItems, err := dotfiles.GetConfiguredDotfiles(homeDir, configDir)
-	if err != nil {
-		return dotfileSyncResult{}, fmt.Errorf("failed to get configured dotfiles: %w", err)
-	}
-
-	var actions []dotfileActionSyncResult
-	summary := dotfileSummarySyncResult{}
-
-	// Process each configured dotfile
-	for _, item := range configuredItems {
-		result, err := ProcessDotfileForApply(ctx, ProcessDotfileForApplyOptions{
-			ConfigDir:   configDir,
-			HomeDir:     homeDir,
-			Source:      item.Metadata["source"].(string),
-			Destination: item.Metadata["destination"].(string),
-			DryRun:      dryRun,
-			Backup:      backup,
-		})
-
-		action := dotfileActionSyncResult{
-			Source:      result.Source,
-			Destination: result.Destination,
-			Action:      result.Action,
-			Status:      result.Status,
-			Error:       result.Error,
-		}
-
-		if err != nil {
-			action.Action = "error"
-			action.Status = "failed"
-			action.Error = err.Error()
-			summary.Failed++
-		} else {
-			switch action.Status {
-			case "added":
-				summary.Added++
-			case "updated":
-				summary.Updated++
-			case "unchanged":
-				summary.Unchanged++
-			case "failed":
-				summary.Failed++
-			}
-		}
-
-		actions = append(actions, action)
-	}
-
-	return dotfileSyncResult{
-		DryRun:     dryRun,
-		Backup:     backup,
-		TotalFiles: len(configuredItems),
-		Actions:    actions,
-		Summary:    summary,
-	}, nil
 }
 
 // getSyncScope returns a description of what's being synced

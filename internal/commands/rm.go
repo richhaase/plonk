@@ -4,11 +4,10 @@
 package commands
 
 import (
-	"context"
 	"fmt"
-	"time"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/richhaase/plonk/internal/ui"
@@ -63,29 +62,24 @@ func runRm(cmd *cobra.Command, args []string) error {
 	// Load config using LoadConfigWithDefaults for consistent zero-config behavior
 	cfg := config.LoadConfigWithDefaults(configDir)
 
-	// Process each dotfile directly
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	defer cancel()
+	// Create dotfile manager
+	manager := dotfiles.NewManager(homeDir, configDir)
 
-	var results []state.OperationResult
+	// Configure options
+	opts := dotfiles.RemoveOptions{
+		DryRun: flags.DryRun,
+	}
 
-	// Show header for progress tracking
+	// Process dotfiles using domain package
+	results, err := manager.RemoveFiles(cfg, args, opts)
+	if err != nil {
+		return fmt.Errorf("rm: failed to process dotfiles: %w", err)
+	}
+
+	// Show progress reporting
 	reporter := ui.NewProgressReporterForOperation("remove", "dotfile", true)
-
-	for _, dotfilePath := range args {
-		// Check if context was canceled
-		if ctx.Err() != nil {
-			break
-		}
-
-		// Remove single dotfile directly
-		result := RemoveSingleDotfile(homeDir, configDir, cfg, dotfilePath, flags.DryRun)
-
-		// Show individual progress
+	for _, result := range results {
 		reporter.ShowItemProgress(result)
-
-		// Collect result
-		results = append(results, result)
 	}
 
 	// Show batch summary
