@@ -11,8 +11,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-
-	"github.com/richhaase/plonk/internal/errors"
 )
 
 // ExtractBinaryNameFromPath extracts the binary name from a Go module path
@@ -92,13 +90,12 @@ func (g *GoInstallManager) IsAvailable(ctx context.Context) (bool, error) {
 	cmd := exec.CommandContext(ctx, g.GetBinary(), "version")
 	output, err := cmd.Output()
 	if err != nil {
-		return false, errors.Wrap(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check", "go version check failed")
+		return false, fmt.Errorf("go version check failed: %w", err)
 	}
 
 	versionStr := string(output)
 	if !strings.Contains(versionStr, "go1.") {
-		return false, errors.NewError(errors.ErrManagerUnavailable, errors.DomainPackages, "check",
-			"unsupported go version").WithSuggestionMessage("Go 1.16 or later required")
+		return false, fmt.Errorf("unsupported go version: Go 1.16 or later required")
 	}
 
 	return true, nil
@@ -110,8 +107,7 @@ func (g *GoInstallManager) getGoBinDir(ctx context.Context) (string, error) {
 	cmd := exec.CommandContext(ctx, g.GetBinary(), "env", "GOBIN")
 	output, err := cmd.Output()
 	if err != nil {
-		return "", errors.Wrap(err, errors.ErrCommandExecution, errors.DomainPackages, "config",
-			"failed to get GOBIN")
+		return "", fmt.Errorf("failed to get GOBIN: %w", err)
 	}
 
 	gobin := strings.TrimSpace(string(output))
@@ -123,8 +119,7 @@ func (g *GoInstallManager) getGoBinDir(ctx context.Context) (string, error) {
 	cmd = exec.CommandContext(ctx, g.GetBinary(), "env", "GOPATH")
 	output, err = cmd.Output()
 	if err != nil {
-		return "", errors.Wrap(err, errors.ErrCommandExecution, errors.DomainPackages, "config",
-			"failed to get GOPATH")
+		return "", fmt.Errorf("failed to get GOPATH: %w", err)
 	}
 
 	gopath := strings.TrimSpace(string(output))
@@ -132,8 +127,7 @@ func (g *GoInstallManager) getGoBinDir(ctx context.Context) (string, error) {
 		// Use default
 		home, err := os.UserHomeDir()
 		if err != nil {
-			return "", errors.Wrap(err, errors.ErrFileIO, errors.DomainPackages, "config",
-				"failed to get home directory")
+			return "", fmt.Errorf("failed to get home directory: %w", err)
 		}
 		gopath = filepath.Join(home, "go")
 	}
@@ -157,8 +151,7 @@ func (g *GoInstallManager) ListInstalled(ctx context.Context) ([]string, error) 
 	// List all files in the bin directory
 	entries, err := os.ReadDir(binDir)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.ErrFileIO, errors.DomainPackages, "list",
-			"failed to read GOBIN directory")
+		return nil, fmt.Errorf("failed to read GOBIN directory: %w", err)
 	}
 
 	var goBinaries []string
@@ -241,21 +234,16 @@ func (g *GoInstallManager) Uninstall(ctx context.Context, name string) error {
 
 	// Verify it's a Go binary before removing
 	if !g.isGoBinary(ctx, binaryPath) {
-		return errors.NewError(errors.ErrInvalidInput, errors.DomainPackages, "uninstall",
-			fmt.Sprintf("'%s' is not a Go binary", binaryName)).
-			WithSuggestionMessage("Only Go binaries installed with 'go install' can be managed")
+		return fmt.Errorf("'%s' is not a Go binary", binaryName)
 	}
 
 	// Remove the binary
 	err = os.Remove(binaryPath)
 	if err != nil {
 		if os.IsPermission(err) {
-			return errors.NewError(errors.ErrFilePermission, errors.DomainPackages, "uninstall",
-				fmt.Sprintf("permission denied removing %s", binaryName)).
-				WithSuggestionMessage("Check file permissions")
+			return fmt.Errorf("permission denied removing %s", binaryName)
 		}
-		return errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainPackages, "uninstall", name,
-			"failed to remove binary")
+		return fmt.Errorf("failed to remove binary %s: %w", name, err)
 	}
 
 	return nil
@@ -306,10 +294,7 @@ func (g *GoInstallManager) SupportsSearch() bool {
 // Search searches for Go modules.
 func (g *GoInstallManager) Search(ctx context.Context, query string) ([]string, error) {
 	// Go doesn't have a built-in search command
-	return nil, errors.NewError(errors.ErrOperationNotSupported, errors.DomainPackages, "search",
-		"go does not have a built-in search command").
-		WithItem("go").
-		WithSuggestionMessage(fmt.Sprintf("Search for Go packages at https://pkg.go.dev/search?q=%s", query))
+	return nil, fmt.Errorf("go does not have a built-in search command. Search for Go packages at https://pkg.go.dev/search?q=%s", query)
 }
 
 // Info retrieves detailed information about a Go binary.
@@ -329,17 +314,14 @@ func (g *GoInstallManager) Info(ctx context.Context, name string) (*PackageInfo,
 	}
 
 	if !installed {
-		return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
-			fmt.Sprintf("binary '%s' not found", binaryName)).
-			WithSuggestionMessage(fmt.Sprintf("Install with: plonk install --go %s", name))
+		return nil, fmt.Errorf("binary '%s' not found", binaryName)
 	}
 
 	// Get module information using go version -m
 	cmd := exec.CommandContext(ctx, g.GetBinary(), "version", "-m", binaryPath)
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", name,
-			"failed to get module information")
+		return nil, fmt.Errorf("failed to get module information for %s: %w", name, err)
 	}
 
 	info := &PackageInfo{
@@ -391,16 +373,14 @@ func (g *GoInstallManager) GetInstalledVersion(ctx context.Context, name string)
 		return "", err
 	}
 	if !installed {
-		return "", errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "version",
-			fmt.Sprintf("binary '%s' is not installed", binaryName))
+		return "", fmt.Errorf("binary '%s' is not installed", binaryName)
 	}
 
 	// Get version using go version -m
 	cmd := exec.CommandContext(ctx, g.GetBinary(), "version", "-m", binaryPath)
 	output, err := cmd.Output()
 	if err != nil {
-		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
-			"failed to get version information")
+		return "", fmt.Errorf("failed to get version information for %s: %w", name, err)
 	}
 
 	// Parse version from output
@@ -423,6 +403,5 @@ func (g *GoInstallManager) GetInstalledVersion(ctx context.Context, name string)
 		}
 	}
 
-	return "", errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "version",
-		fmt.Sprintf("could not extract version for binary '%s'", binaryName))
+	return "", fmt.Errorf("could not extract version for binary '%s'", binaryName)
 }

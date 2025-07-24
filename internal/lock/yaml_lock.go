@@ -4,12 +4,13 @@
 package lock
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/richhaase/plonk/internal/dotfiles"
-	"github.com/richhaase/plonk/internal/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -39,16 +40,12 @@ func (s *YAMLLockService) Load() (*LockFile, error) {
 
 	data, err := os.ReadFile(s.lockPath)
 	if err != nil {
-		return nil, errors.ConfigError(errors.ErrFileIO, "Load", "Failed to read lock file").
-			WithCause(err).
-			WithMetadata("path", s.lockPath)
+		return nil, fmt.Errorf("failed to read lock file %s: %w", s.lockPath, err)
 	}
 
 	var lock LockFile
 	if err := yaml.Unmarshal(data, &lock); err != nil {
-		return nil, errors.ConfigError(errors.ErrConfigParseFailure, "Load", "Failed to parse lock file").
-			WithCause(err).
-			WithMetadata("path", s.lockPath)
+		return nil, fmt.Errorf("failed to parse lock file %s: %w", s.lockPath, err)
 	}
 
 	// Initialize packages map if nil
@@ -62,7 +59,7 @@ func (s *YAMLLockService) Load() (*LockFile, error) {
 // Save writes the lock file to disk
 func (s *YAMLLockService) Save(lock *LockFile) error {
 	if lock == nil {
-		return errors.ConfigError(errors.ErrInvalidInput, "Save", "Cannot save nil lock file")
+		return errors.New("cannot save nil lock file")
 	}
 
 	// Ensure version is set
@@ -73,16 +70,13 @@ func (s *YAMLLockService) Save(lock *LockFile) error {
 	// Marshal to YAML
 	data, err := yaml.Marshal(lock)
 	if err != nil {
-		return errors.ConfigError(errors.ErrInternal, "Save", "Failed to marshal lock file").
-			WithCause(err)
+		return fmt.Errorf("failed to marshal lock file: %w", err)
 	}
 
 	// Use atomic write to ensure safety
 	writer := dotfiles.NewAtomicFileWriter()
 	if err := writer.WriteFile(s.lockPath, data, 0644); err != nil {
-		return errors.ConfigError(errors.ErrFileIO, "Save", "Failed to write lock file").
-			WithCause(err).
-			WithMetadata("path", s.lockPath)
+		return fmt.Errorf("failed to write lock file %s: %w", s.lockPath, err)
 	}
 
 	return nil

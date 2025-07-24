@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/paths"
 	"gopkg.in/yaml.v3"
@@ -91,8 +90,7 @@ func (c *ConfigAdapter) GetPackagesForManager(managerName string) ([]managers.Pa
 		}
 	}
 
-	return nil, errors.NewError(errors.ErrInvalidInput, errors.DomainConfig, "get-packages",
-		fmt.Sprintf("unknown package manager: %s", managerName)).WithItem(managerName)
+	return nil, fmt.Errorf("unknown package manager: %s", managerName)
 }
 
 // StateDotfileConfigAdapter bridges the config package's ConfigAdapter to the state

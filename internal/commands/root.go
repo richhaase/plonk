@@ -61,7 +61,10 @@ func ExecuteWithExitCode(version, commit, date string) int {
 		Date:    date,
 	}
 	err := rootCmd.Execute()
-	return HandleError(err)
+	if err != nil {
+		return 1
+	}
+	return 0
 }
 
 func init() {

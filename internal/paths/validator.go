@@ -4,11 +4,11 @@
 package paths
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/richhaase/plonk/internal/errors"
 )
 
 // PathValidator provides security and policy validation for dotfile paths
@@ -44,33 +44,28 @@ func NewPathValidatorFromDefaults(homeDir, configDir string) *PathValidator {
 func (v *PathValidator) ValidateSecure(path string) error {
 	// Check for directory traversal attempts
 	if strings.Contains(path, "..") {
-		return errors.NewError(errors.ErrInvalidInput, errors.DomainDotfiles, "validate",
-			"path contains directory traversal: "+path)
+		return fmt.Errorf("path contains directory traversal: %s", path)
 	}
 
 	// Check for null bytes (potential security issue)
 	if strings.Contains(path, "\x00") {
-		return errors.NewError(errors.ErrInvalidInput, errors.DomainDotfiles, "validate",
-			"path contains null bytes: "+path)
+		return fmt.Errorf("path contains null bytes: %s", path)
 	}
 
 	// Resolve to absolute path for boundary checking
 	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "validate",
-			"failed to resolve absolute path")
+		return fmt.Errorf("failed to resolve absolute path: %w", err)
 	}
 
 	// Ensure path is within home directory
 	if !strings.HasPrefix(absPath, v.homeDir) {
-		return errors.NewError(errors.ErrInvalidInput, errors.DomainDotfiles, "validate",
-			"path is outside home directory")
+		return errors.New("path is outside home directory")
 	}
 
 	// Prevent access to plonk config directory
 	if strings.HasPrefix(absPath, v.configDir) {
-		return errors.NewError(errors.ErrInvalidInput, errors.DomainDotfiles, "validate",
-			"cannot manage plonk configuration directory")
+		return errors.New("cannot manage plonk configuration directory")
 	}
 
 	return nil
@@ -123,17 +118,14 @@ func (v *PathValidator) ValidateDirectory(dirPath string) error {
 	info, err := os.Stat(dirPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return errors.NewError(errors.ErrFileNotFound, errors.DomainDotfiles, "validate",
-				"directory does not exist: "+dirPath)
+			return fmt.Errorf("directory does not exist: %s", dirPath)
 		}
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "validate",
-			"failed to access directory")
+		return fmt.Errorf("failed to access directory: %w", err)
 	}
 
 	// Ensure it's actually a directory
 	if !info.IsDir() {
-		return errors.NewError(errors.ErrInvalidInput, errors.DomainDotfiles, "validate",
-			"path is not a directory: "+dirPath)
+		return fmt.Errorf("path is not a directory: %s", dirPath)
 	}
 
 	return nil
@@ -150,17 +142,14 @@ func (v *PathValidator) ValidateFile(filePath string) error {
 	info, err := os.Stat(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return errors.NewError(errors.ErrFileNotFound, errors.DomainDotfiles, "validate",
-				"file does not exist: "+filePath)
+			return fmt.Errorf("file does not exist: %s", filePath)
 		}
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "validate",
-			"failed to access file")
+		return fmt.Errorf("failed to access file: %w", err)
 	}
 
 	// Ensure it's actually a file
 	if info.IsDir() {
-		return errors.NewError(errors.ErrInvalidInput, errors.DomainDotfiles, "validate",
-			"path is a directory, not a file: "+filePath)
+		return fmt.Errorf("path is a directory, not a file: %s", filePath)
 	}
 
 	return nil

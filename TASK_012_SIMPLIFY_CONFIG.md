@@ -16,7 +16,7 @@ Eliminate the dual config system and Java-style patterns in the config package, 
 3. **Delete old_config.go** entirely (118 LOC eliminated)
 4. **Update type aliases** (`Config = NewConfig`)
 
-### Phase 2: Remove Adapter Patterns  
+### Phase 2: Remove Adapter Patterns
 1. **Replace ConfigAdapter usage** with direct config access
 2. **Remove StateDotfileConfigAdapter** by moving interface to state package
 3. **Simplify orchestrator config usage**
@@ -35,7 +35,7 @@ Eliminate the dual config system and Java-style patterns in the config package, 
 
 ## Files to Update (18 total)
 **Commands**: add.go, config_edit.go, config_show.go, config_validate.go, doctor.go, dotfile_operations.go, info.go, install.go, search.go, status.go, sync.go, env.go, rm.go, uninstall.go
-**Orchestrator**: reconcile.go, paths.go  
+**Orchestrator**: reconcile.go, paths.go
 **Tests**: zero_config_test.go
 
 ## Preservation Requirements
@@ -54,7 +54,7 @@ Eliminate the dual config system and Java-style patterns in the config package, 
 
 ## Success Criteria
 1. ✅ **OldConfig system completely removed**
-2. ✅ **All 15 getter methods eliminated** 
+2. ✅ **All 15 getter methods eliminated**
 3. ✅ **8 loading functions → 2 functions**
 4. ✅ **All 18 dependent files updated and compiling**
 5. ✅ **YAML/JSON output preserved**

@@ -5,10 +5,9 @@ package dotfiles
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/richhaase/plonk/internal/errors"
 )
 
 // ScanResult represents a scanned file or directory
@@ -39,8 +38,7 @@ func (s *Scanner) ScanDirectory(ctx context.Context, dir string, maxDepth int) (
 
 	err := s.walkDirectory(ctx, dir, dir, 0, maxDepth, &results)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "scan",
-			"failed to scan directory")
+		return nil, fmt.Errorf("failed to scan directory: %w", err)
 	}
 
 	return results, nil
@@ -53,8 +51,7 @@ func (s *Scanner) ScanDotfiles(ctx context.Context) ([]ScanResult, error) {
 	// List all entries in home directory
 	entries, err := os.ReadDir(s.homeDir)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "scan",
-			"failed to read home directory")
+		return nil, fmt.Errorf("failed to read home directory: %w", err)
 	}
 
 	for _, entry := range entries {

@@ -5,11 +5,10 @@ package dotfiles
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-
-	"github.com/richhaase/plonk/internal/errors"
 )
 
 // AtomicFileWriter handles atomic file operations using temp file + rename pattern
@@ -41,8 +40,7 @@ func (a *AtomicFileWriter) CopyFile(ctx context.Context, src, dst string, perm o
 	// Open source file
 	srcFile, err := os.Open(src)
 	if err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "copy",
-			"failed to open source file").WithMetadata("source", src)
+		return fmt.Errorf("failed to open source file %s: %w", src, err)
 	}
 	defer srcFile.Close()
 
@@ -51,8 +49,7 @@ func (a *AtomicFileWriter) CopyFile(ctx context.Context, src, dst string, perm o
 	if perm == 0 {
 		srcInfo, err := srcFile.Stat()
 		if err != nil {
-			return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "copy",
-				"failed to get source file info").WithMetadata("source", src)
+			return fmt.Errorf("failed to get source file info %s: %w", src, err)
 		}
 		finalPerm = srcInfo.Mode()
 	} else {
@@ -78,15 +75,13 @@ func (a *AtomicFileWriter) writeFileInternal(filename string, writeFunc func(*os
 	// Create destination directory if it doesn't exist
 	destDir := filepath.Dir(filename)
 	if err := os.MkdirAll(destDir, 0750); err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "write",
-			"failed to create destination directory").WithMetadata("directory", destDir).WithSuggestionMessage("Check directory permissions and disk space")
+		return fmt.Errorf("failed to create destination directory %s: %w", destDir, err)
 	}
 
 	// Create temporary file in same directory as destination
 	tmpFile, err := os.CreateTemp(destDir, ".tmp-"+filepath.Base(filename))
 	if err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "write",
-			"failed to create temporary file").WithMetadata("directory", destDir).WithMetadata("filename", filename).WithSuggestionMessage("Check directory permissions and disk space")
+		return fmt.Errorf("failed to create temporary file in %s for %s: %w", destDir, filename, err)
 	}
 	tmpPath := tmpFile.Name()
 
@@ -100,33 +95,28 @@ func (a *AtomicFileWriter) writeFileInternal(filename string, writeFunc func(*os
 
 	// Write data using provided function
 	if err := writeFunc(tmpFile); err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "write",
-			"failed to write file contents").WithMetadata("filename", filename).WithMetadata("tmpPath", tmpPath)
+		return fmt.Errorf("failed to write file contents for %s (tmp: %s): %w", filename, tmpPath, err)
 	}
 
 	// Sync to disk
 	if err := tmpFile.Sync(); err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "write",
-			"failed to sync temporary file").WithMetadata("filename", filename).WithMetadata("tmpPath", tmpPath)
+		return fmt.Errorf("failed to sync temporary file %s for %s: %w", tmpPath, filename, err)
 	}
 
 	// Close temporary file
 	if err := tmpFile.Close(); err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "write",
-			"failed to close temporary file").WithMetadata("filename", filename).WithMetadata("tmpPath", tmpPath)
+		return fmt.Errorf("failed to close temporary file %s for %s: %w", tmpPath, filename, err)
 	}
 	tmpFile = nil // Mark as closed for defer cleanup
 
 	// Set permissions
 	if err := os.Chmod(tmpPath, perm); err != nil {
-		return errors.Wrap(err, errors.ErrFilePermission, errors.DomainDotfiles, "write",
-			"failed to set file permissions").WithMetadata("filename", filename).WithMetadata("tmpPath", tmpPath).WithMetadata("permissions", perm).WithSuggestionMessage("Check file ownership and directory permissions")
+		return fmt.Errorf("failed to set file permissions %v on %s for %s: %w", perm, tmpPath, filename, err)
 	}
 
 	// Atomic rename - this is the critical atomic operation
 	if err := os.Rename(tmpPath, filename); err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "write",
-			"failed to rename temporary file").WithMetadata("filename", filename).WithMetadata("tmpPath", tmpPath).WithSuggestionMessage("Check destination directory permissions and disk space")
+		return fmt.Errorf("failed to rename temporary file %s to %s: %w", tmpPath, filename, err)
 	}
 
 	return nil

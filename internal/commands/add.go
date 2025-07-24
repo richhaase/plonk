@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/richhaase/plonk/internal/ui"
@@ -56,7 +55,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "add", "output-format", "invalid output format")
+		return fmt.Errorf("add: invalid output format %s: %w", outputFormat, err)
 	}
 
 	// Get flags
@@ -124,12 +123,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	if allFailed && len(results) > 0 {
-		return errors.NewError(
-			errors.ErrFileNotFound,
-			errors.DomainDotfiles,
-			"add-multiple",
-			fmt.Sprintf("failed to process %d item(s)", len(results)),
-		)
+		return fmt.Errorf("add-multiple dotfiles: failed to process %d item(s)", len(results))
 	}
 
 	return nil

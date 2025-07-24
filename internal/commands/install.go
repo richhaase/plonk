@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/orchestrator"
@@ -63,7 +62,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "install", "output-format", "invalid output format")
+		return fmt.Errorf("install: invalid output format %s: %w", outputFormat, err)
 	}
 
 	// Get flags
@@ -131,7 +130,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	// Determine exit code based on results
-	exitErr := DetermineExitCode(results, errors.DomainPackages, "install")
+	exitErr := DetermineExitCode(results, "packages", "install")
 	if exitErr != nil {
 		return exitErr
 	}
@@ -170,12 +169,7 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 	pkgManager, err := getPackageManager(manager)
 	if err != nil {
 		result.Status = "failed"
-		// Don't wrap the error if it's already a PlonkError with proper context
-		if _, ok := err.(*errors.PlonkError); ok {
-			result.Error = err
-		} else {
-			result.Error = errors.WrapWithItem(err, errors.ErrManagerUnavailable, errors.DomainPackages, "install", packageName, "failed to get package manager")
-		}
+		result.Error = fmt.Errorf("install %s: failed to get package manager: %w", packageName, err)
 		return result
 	}
 
@@ -187,12 +181,12 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 	available, err := pkgManager.IsAvailable(ctx)
 	if err != nil {
 		result.Status = "failed"
-		result.Error = errors.WrapWithItem(err, errors.ErrManagerUnavailable, errors.DomainPackages, "install", packageName, "failed to check manager availability")
+		result.Error = fmt.Errorf("install %s: failed to check %s availability: %w", packageName, manager, err)
 		return result
 	}
 	if !available {
 		result.Status = "failed"
-		result.Error = errors.NewError(errors.ErrManagerUnavailable, errors.DomainPackages, "install", fmt.Sprintf("package manager '%s' is not available", manager)).WithSuggestionMessage(getManagerInstallSuggestion(manager))
+		result.Error = fmt.Errorf("install %s: %s manager not available (%s)", packageName, manager, getManagerInstallSuggestion(manager))
 		return result
 	}
 
@@ -200,12 +194,7 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 	err = pkgManager.Install(ctx, packageName)
 	if err != nil {
 		result.Status = "failed"
-		// Don't wrap PlonkErrors as they already have proper context and suggestions
-		if _, ok := err.(*errors.PlonkError); ok {
-			result.Error = err
-		} else {
-			result.Error = errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "install", packageName, "failed to install package").WithMetadata("manager", manager)
-		}
+		result.Error = fmt.Errorf("install %s via %s: %w", packageName, manager, err)
 		return result
 	}
 
@@ -226,7 +215,7 @@ func installSinglePackage(configDir string, lockService *lock.YAMLLockService, p
 	err = lockService.AddPackage(manager, lockPackageName, version)
 	if err != nil {
 		result.Status = "failed"
-		result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainPackages, "install", packageName, "failed to add package to lock file").WithMetadata("manager", manager).WithMetadata("version", version)
+		result.Error = fmt.Errorf("install %s: failed to add to lock file (manager: %s, version: %s): %w", packageName, manager, version, err)
 		return result
 	}
 

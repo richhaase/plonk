@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/richhaase/plonk/internal/ui"
@@ -44,7 +43,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "packages", "output-format", "invalid output format")
+		return fmt.Errorf("invalid output format: %w", err)
 	}
 
 	// Get specific manager if flag is set
@@ -60,7 +59,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 	domainResult, err := orchestrator.ReconcilePackages(ctx, configDir)
 	if err != nil {
-		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainState, "reconcile", "failed to reconcile package state")
+		return fmt.Errorf("failed to reconcile package state: %w", err)
 	}
 
 	// If a specific manager is requested, filter results
@@ -182,7 +181,7 @@ func runDotList(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "dotfiles", "output-format", "invalid output format")
+		return fmt.Errorf("invalid output format: %w", err)
 	}
 
 	// Get directories
@@ -193,7 +192,7 @@ func runDotList(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 	domainResult, err := orchestrator.ReconcileDotfiles(ctx, homeDir, configDir)
 	if err != nil {
-		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainState, "reconcile", "failed to reconcile dotfiles")
+		return fmt.Errorf("failed to reconcile dotfiles: %w", err)
 	}
 
 	// Parse filter flags

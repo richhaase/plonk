@@ -5,8 +5,7 @@ package managers
 
 import (
 	"context"
-
-	"github.com/richhaase/plonk/internal/errors"
+	"fmt"
 )
 
 // ManagerFactory defines a function that creates a package manager instance
@@ -35,8 +34,7 @@ func NewManagerRegistry() *ManagerRegistry {
 func (r *ManagerRegistry) GetManager(name string) (PackageManager, error) {
 	factory, exists := r.managers[name]
 	if !exists {
-		return nil, errors.NewError(errors.ErrInvalidInput, errors.DomainPackages, "get-manager",
-			"unsupported package manager: "+name).WithSuggestionMessage("Check available managers with 'plonk doctor' or change default with 'plonk config edit'")
+		return nil, fmt.Errorf("unsupported package manager: %s", name)
 	}
 	return factory(), nil
 }

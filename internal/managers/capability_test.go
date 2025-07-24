@@ -6,52 +6,43 @@ package managers
 import (
 	"context"
 	"testing"
-
-	"github.com/richhaase/plonk/internal/errors"
 )
 
 func TestPackageManagerCapabilities(t *testing.T) {
 	tests := []struct {
-		name            string
-		manager         func() PackageManager
-		supportsSearch  bool
-		searchErrorCode errors.ErrorCode
+		name           string
+		manager        func() PackageManager
+		supportsSearch bool
 	}{
 		{
-			name:            "cargo supports search",
-			manager:         func() PackageManager { return NewCargoManager() },
-			supportsSearch:  true,
-			searchErrorCode: "",
+			name:           "cargo supports search",
+			manager:        func() PackageManager { return NewCargoManager() },
+			supportsSearch: true,
 		},
 		{
-			name:            "gem supports search",
-			manager:         func() PackageManager { return NewGemManager() },
-			supportsSearch:  true,
-			searchErrorCode: "",
+			name:           "gem supports search",
+			manager:        func() PackageManager { return NewGemManager() },
+			supportsSearch: true,
 		},
 		{
-			name:            "homebrew supports search",
-			manager:         func() PackageManager { return NewHomebrewManager() },
-			supportsSearch:  true,
-			searchErrorCode: "",
+			name:           "homebrew supports search",
+			manager:        func() PackageManager { return NewHomebrewManager() },
+			supportsSearch: true,
 		},
 		{
-			name:            "npm supports search",
-			manager:         func() PackageManager { return NewNpmManager() },
-			supportsSearch:  true,
-			searchErrorCode: "",
+			name:           "npm supports search",
+			manager:        func() PackageManager { return NewNpmManager() },
+			supportsSearch: true,
 		},
 		{
-			name:            "go does not support search",
-			manager:         func() PackageManager { return NewGoInstallManager() },
-			supportsSearch:  false,
-			searchErrorCode: errors.ErrOperationNotSupported,
+			name:           "go does not support search",
+			manager:        func() PackageManager { return NewGoInstallManager() },
+			supportsSearch: false,
 		},
 		{
-			name:            "pip supports search",
-			manager:         func() PackageManager { return NewPipManager() },
-			supportsSearch:  true,
-			searchErrorCode: "",
+			name:           "pip supports search",
+			manager:        func() PackageManager { return NewPipManager() },
+			supportsSearch: true,
 		},
 	}
 
@@ -64,22 +55,12 @@ func TestPackageManagerCapabilities(t *testing.T) {
 				t.Errorf("SupportsSearch() = %v, want %v", got, tt.supportsSearch)
 			}
 
-			// Test that unsupported operations return correct error
+			// Test that unsupported operations return error
 			if !tt.supportsSearch {
 				ctx := context.Background()
 				_, err := manager.Search(ctx, "test-query")
 				if err == nil {
 					t.Errorf("Search() expected error for unsupported operation, got nil")
-				} else if plonkErr, ok := err.(*errors.PlonkError); ok {
-					if plonkErr.Code != tt.searchErrorCode {
-						t.Errorf("Search() error code = %v, want %v", plonkErr.Code, tt.searchErrorCode)
-					}
-					// Verify error has helpful suggestion
-					if plonkErr.Suggestion == nil || plonkErr.Suggestion.Message == "" {
-						t.Errorf("Search() error missing suggestion message")
-					}
-				} else {
-					t.Errorf("Search() error type = %T, want *PlonkError", err)
 				}
 			}
 		})

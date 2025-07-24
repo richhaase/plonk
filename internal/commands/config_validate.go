@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -41,7 +40,7 @@ func runConfigValidate(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "config-validate", "output-format", "invalid output format")
+		return fmt.Errorf("invalid output format: %w", err)
 	}
 
 	// Get config directory
@@ -62,7 +61,7 @@ func runConfigValidate(cmd *cobra.Command, args []string) error {
 	// Read config file
 	content, err := os.ReadFile(configPath)
 	if err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "validate", "failed to read configuration file")
+		return fmt.Errorf("failed to read configuration file: %w", err)
 	}
 
 	// Validate configuration

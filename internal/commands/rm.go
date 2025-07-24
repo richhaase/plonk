@@ -5,10 +5,10 @@ package commands
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/richhaase/plonk/internal/ui"
@@ -47,7 +47,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "rm", "output-format", "invalid output format")
+		return fmt.Errorf("rm: invalid output format %s: %w", outputFormat, err)
 	}
 
 	// Get flags
@@ -105,7 +105,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 	}
 
 	// Determine exit code based on results
-	exitErr := DetermineExitCode(results, errors.DomainDotfiles, "remove")
+	exitErr := DetermineExitCode(results, "dotfiles", "remove")
 	if exitErr != nil {
 		return exitErr
 	}

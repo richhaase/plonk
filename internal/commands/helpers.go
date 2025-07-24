@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
@@ -122,16 +121,15 @@ func CreateOperationContext(timeout time.Duration) (context.Context, context.Can
 }
 
 // CheckCancellation checks if the context has been canceled and returns appropriate error
-func CheckCancellation(ctx context.Context, domain errors.Domain, operation string) error {
+func CheckCancellation(ctx context.Context, domain string, operation string) error {
 	if ctx.Err() != nil {
-		return errors.Wrap(ctx.Err(), errors.ErrInternal, domain, operation,
-			"operation canceled or timed out")
+		return fmt.Errorf("%s %s: operation canceled or timed out: %w", operation, domain, ctx.Err())
 	}
 	return nil
 }
 
 // DetermineExitCode determines the appropriate exit code based on operation results
-func DetermineExitCode(results []state.OperationResult, domain errors.Domain, operation string) error {
+func DetermineExitCode(results []state.OperationResult, domain string, operation string) error {
 	if len(results) == 0 {
 		return nil
 	}
@@ -145,27 +143,10 @@ func DetermineExitCode(results []state.OperationResult, domain errors.Domain, op
 
 	// Failure only if all items failed
 	if summary.Failed > 0 && summary.Added == 0 && summary.Updated == 0 && summary.Skipped == 0 {
-		return errors.NewError(
-			getErrorCodeForDomain(domain),
-			domain,
-			operation,
-			fmt.Sprintf("failed to process %d item(s)", summary.Failed),
-		)
+		return fmt.Errorf("%s %s: failed to process %d item(s)", operation, domain, summary.Failed)
 	}
 
 	return nil
-}
-
-// getErrorCodeForDomain returns the appropriate error code for a domain
-func getErrorCodeForDomain(domain errors.Domain) errors.ErrorCode {
-	switch domain {
-	case errors.DomainPackages:
-		return errors.ErrPackageInstall
-	case errors.DomainDotfiles:
-		return errors.ErrFileIO
-	default:
-		return errors.ErrInternal
-	}
 }
 
 // SimpleFlags represents basic command flags without detection logic

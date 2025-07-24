@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
 	"github.com/spf13/cobra"
@@ -43,7 +42,7 @@ func runInfo(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "info", "output-format", "invalid output format")
+		return fmt.Errorf("invalid output format: %w", err)
 	}
 
 	packageName := args[0]
@@ -54,7 +53,7 @@ func runInfo(cmd *cobra.Command, args []string) error {
 	// Perform info lookup
 	infoResult, err := performPackageInfo(ctx, packageName)
 	if err != nil {
-		return errors.Wrap(err, errors.ErrCommandExecution, errors.DomainCommands, "info", "failed to get package information")
+		return fmt.Errorf("failed to get package information: %w", err)
 	}
 
 	return RenderOutput(infoResult, format)
@@ -72,8 +71,7 @@ func performPackageInfo(ctx context.Context, packageName string) (InfoOutput, er
 	// Get available managers
 	availableManagers, err := getAvailableManagers(ctx)
 	if err != nil {
-		return InfoOutput{}, errors.Wrap(err, errors.ErrCommandExecution, errors.DomainCommands, "info",
-			"failed to get available managers").WithSuggestionMessage("Try running 'plonk doctor' to check system health")
+		return InfoOutput{}, fmt.Errorf("failed to get available managers: %w", err)
 	}
 
 	if len(availableManagers) == 0 {
@@ -111,8 +109,7 @@ func performPackageInfo(ctx context.Context, packageName string) (InfoOutput, er
 	// Otherwise, check if package is installed and get info from the installing manager
 	installedManager, packageInfo, err := findInstalledPackageInfo(ctx, packageName, availableManagers)
 	if err != nil {
-		return InfoOutput{}, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", packageName,
-			"failed to check if package is installed")
+		return InfoOutput{}, fmt.Errorf("failed to check if package %s is installed: %w", packageName, err)
 	}
 
 	if installedManager != "" {
@@ -127,8 +124,7 @@ func performPackageInfo(ctx context.Context, packageName string) (InfoOutput, er
 	// Package is not installed, determine search strategy
 	defaultManager, err := getDefaultManager()
 	if err != nil {
-		return InfoOutput{}, errors.Wrap(err, errors.ErrConfigParseFailure, errors.DomainConfig, "info",
-			"failed to get default manager").WithSuggestionMessage("Check your configuration with 'plonk config show'")
+		return InfoOutput{}, fmt.Errorf("failed to get default manager: %w", err)
 	}
 
 	if defaultManager != "" {
@@ -145,14 +141,12 @@ func findInstalledPackageInfo(ctx context.Context, packageName string, managers 
 	for name, manager := range managers {
 		installed, err := manager.IsInstalled(ctx, packageName)
 		if err != nil {
-			return "", nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "check", packageName,
-				fmt.Sprintf("failed to check if package is installed in %s", name)).WithMetadata("manager", name)
+			return "", nil, fmt.Errorf("failed to check if package %s is installed in %s: %w", packageName, name, err)
 		}
 		if installed {
 			info, err := manager.Info(ctx, packageName)
 			if err != nil {
-				return "", nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", packageName,
-					fmt.Sprintf("failed to get package info from %s", name)).WithMetadata("manager", name)
+				return "", nil, fmt.Errorf("failed to get package %s info from %s: %w", packageName, name, err)
 			}
 			return name, info, nil
 		}
@@ -165,9 +159,7 @@ func getInfoWithDefaultManager(ctx context.Context, packageName string, defaultM
 	// Check default manager first
 	defaultMgr, exists := availableManagers[defaultManager]
 	if !exists {
-		return InfoOutput{}, errors.NewError(errors.ErrManagerUnavailable, errors.DomainPackages, "info",
-			fmt.Sprintf("default manager '%s' is not available", defaultManager)).WithSuggestionMessage(
-			fmt.Sprintf("Install %s or change default manager in config", defaultManager)).WithMetadata("manager", defaultManager)
+		return InfoOutput{}, fmt.Errorf("default manager '%s' is not available", defaultManager)
 	}
 
 	info, err := defaultMgr.Info(ctx, packageName)

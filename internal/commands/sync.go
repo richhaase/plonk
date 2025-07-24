@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/state"
@@ -112,7 +111,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "sync", "output-format", "invalid output format")
+		return fmt.Errorf("invalid output format: %w", err)
 	}
 
 	// Get directories
@@ -242,7 +241,7 @@ func applyPackages(ctx context.Context, configDir string, cfg *config.Config, dr
 	// Reconcile package domain to find missing packages
 	result, err := orchestrator.ReconcilePackages(ctx, configDir)
 	if err != nil {
-		return packageSyncResult{}, errors.Wrap(err, errors.ErrReconciliation, errors.DomainPackages, "reconcile", "failed to reconcile package state")
+		return packageSyncResult{}, fmt.Errorf("failed to reconcile package state: %w", err)
 	}
 
 	// Group missing packages by manager
@@ -265,14 +264,12 @@ func applyPackages(ctx context.Context, configDir string, cfg *config.Config, dr
 	for managerName, packages := range missingByManager {
 		manager, err := registry.GetManager(managerName)
 		if err != nil {
-			return packageSyncResult{}, errors.Wrap(err, errors.ErrManagerUnavailable, errors.DomainPackages, "apply",
-				"failed to get package manager")
+			return packageSyncResult{}, fmt.Errorf("failed to get package manager %s: %w", managerName, err)
 		}
 
 		available, err := manager.IsAvailable(ctx)
 		if err != nil {
-			return packageSyncResult{}, errors.Wrap(err, errors.ErrManagerUnavailable, errors.DomainPackages, "apply",
-				"failed to check manager availability")
+			return packageSyncResult{}, fmt.Errorf("failed to check manager %s availability: %w", managerName, err)
 		}
 
 		var packageResults []packageOperationSyncResult
@@ -343,8 +340,7 @@ func applyDotfiles(ctx context.Context, configDir, homeDir string, cfg *config.C
 	// Get configured dotfiles
 	configuredItems, err := provider.GetConfiguredItems()
 	if err != nil {
-		return dotfileSyncResult{}, errors.Wrap(err, errors.ErrConfigNotFound, errors.DomainDotfiles, "apply",
-			"failed to get configured dotfiles")
+		return dotfileSyncResult{}, fmt.Errorf("failed to get configured dotfiles: %w", err)
 	}
 
 	var actions []dotfileActionSyncResult

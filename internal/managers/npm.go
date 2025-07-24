@@ -11,7 +11,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/managers/parsers"
 )
 
@@ -66,14 +65,12 @@ func (n *NpmManager) ListInstalled(ctx context.Context) ([]string, error) {
 		if execErr, ok := err.(interface{ ExitCode() int }); ok {
 			// Only treat it as an error if the exit code indicates a real failure
 			if execErr.ExitCode() > 1 {
-				return nil, errors.Wrap(err, errors.ErrCommandExecution, errors.DomainPackages, "list",
-					"npm list command failed with severe error")
+				return nil, fmt.Errorf("npm list command failed with severe error: %w", err)
 			}
 			// Exit code 1 might just be warnings - continue with parsing
 		} else {
 			// Non-exit errors (e.g., command not found, context cancellation)
-			return nil, errors.Wrap(err, errors.ErrCommandExecution, errors.DomainPackages, "list",
-				"failed to execute npm list command")
+			return nil, fmt.Errorf("failed to execute npm list command: %w", err)
 		}
 	}
 
@@ -129,8 +126,7 @@ func (n *NpmManager) IsInstalled(ctx context.Context, name string) (bool, error)
 			return false, nil
 		}
 		// Real error (npm not found, permission issues, etc.)
-		return false, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "check", name,
-			"failed to check package installation status")
+		return false, fmt.Errorf("failed to check package installation status for %s: %w", name, err)
 	}
 	return true, nil
 }
@@ -147,12 +143,10 @@ func (n *NpmManager) Search(ctx context.Context, query string) ([]string, error)
 				return []string{}, nil
 			}
 			// Other exit codes indicate real errors
-			return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "search", query,
-				"npm search command failed")
+			return nil, fmt.Errorf("npm search command failed for %s: %w", query, err)
 		}
 		// Non-exit errors (e.g., command not found, context cancellation)
-		return nil, errors.Wrap(err, errors.ErrCommandExecution, errors.DomainPackages, "search",
-			"failed to execute npm search command")
+		return nil, fmt.Errorf("failed to execute npm search command: %w", err)
 	}
 
 	return n.parseSearchOutput(output), nil
@@ -206,8 +200,7 @@ func (n *NpmManager) Info(ctx context.Context, name string) (*PackageInfo, error
 	// Check if package is installed first
 	installed, err := n.IsInstalled(ctx, name)
 	if err != nil {
-		return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", name,
-			"failed to check package installation status")
+		return nil, fmt.Errorf("failed to check package installation status for %s: %w", name, err)
 	}
 
 	// Always use npm view for info (works for both installed and available packages)
@@ -215,12 +208,9 @@ func (n *NpmManager) Info(ctx context.Context, name string) (*PackageInfo, error
 	output, err := cmd.Output()
 	if err != nil {
 		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() == 1 {
-			return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
-				fmt.Sprintf("package '%s' not found", name)).
-				WithSuggestionMessage(fmt.Sprintf("Search available packages: npm search %s", name))
+			return nil, fmt.Errorf("package '%s' not found", name)
 		}
-		return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", name,
-			"failed to get package info")
+		return nil, fmt.Errorf("failed to get package info for %s: %w", name, err)
 	}
 
 	info := n.parseInfoOutput(output, name)
@@ -314,20 +304,17 @@ func (n *NpmManager) GetInstalledVersion(ctx context.Context, name string) (stri
 	// First check if package is installed
 	installed, err := n.IsInstalled(ctx, name)
 	if err != nil {
-		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
-			"failed to check package installation status")
+		return "", fmt.Errorf("failed to check package installation status for %s: %w", name, err)
 	}
 	if !installed {
-		return "", errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "version",
-			fmt.Sprintf("package '%s' is not installed globally", name))
+		return "", fmt.Errorf("package '%s' is not installed globally", name)
 	}
 
 	// Get version using npm list with specific package
 	cmd := exec.CommandContext(ctx, n.GetBinary(), "list", "-g", name, "--depth=0", "--json")
 	output, err := cmd.Output()
 	if err != nil {
-		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
-			"failed to get package version information")
+		return "", fmt.Errorf("failed to get package version information for %s: %w", name, err)
 	}
 
 	// Parse JSON output
@@ -338,16 +325,14 @@ func (n *NpmManager) GetInstalledVersion(ctx context.Context, name string) (stri
 	}
 
 	if err := json.Unmarshal(output, &listResult); err != nil {
-		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
-			"failed to parse npm JSON output")
+		return "", fmt.Errorf("failed to parse npm JSON output for %s: %w", name, err)
 	}
 
 	if dep, ok := listResult.Dependencies[name]; ok && dep.Version != "" {
 		return dep.Version, nil
 	}
 
-	return "", errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "version",
-		fmt.Sprintf("package '%s' not found in npm list output", name))
+	return "", fmt.Errorf("package '%s' not found in npm list output", name)
 }
 
 // cleanJSONValue removes quotes and commas from a JSON value

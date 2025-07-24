@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/state"
@@ -56,7 +55,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "uninstall", "output-format", "invalid output format")
+		return fmt.Errorf("uninstall: invalid output format %s: %w", outputFormat, err)
 	}
 
 	// Get flags
@@ -113,7 +112,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	}
 
 	// Determine exit code based on results
-	exitErr := DetermineExitCode(results, errors.DomainPackages, "uninstall")
+	exitErr := DetermineExitCode(results, "packages", "uninstall")
 	if exitErr != nil {
 		return exitErr
 	}
@@ -155,7 +154,7 @@ func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService,
 			detectedManager, err := detectInstalledPackageManager(packageName)
 			if err != nil {
 				result.Status = "skipped"
-				result.Error = errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "detect", fmt.Sprintf("package '%s' not found in any package manager", packageName))
+				result.Error = fmt.Errorf("detect packages: package '%s' not found in any package manager", packageName)
 				return result
 			}
 			managerName = detectedManager
@@ -177,12 +176,12 @@ func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService,
 			lockErr := lockService.RemovePackage(managerName, checkPackageName)
 			if lockErr == nil {
 				result.Status = "removed"
-				result.Error = errors.WrapWithItem(err, errors.ErrPackageUninstall, errors.DomainPackages, "uninstall", packageName, "package not installed, removed from lock file")
+				result.Error = fmt.Errorf("uninstall %s: package not installed, removed from lock file: %w", packageName, err)
 				return result
 			}
 		}
 		result.Status = "failed"
-		result.Error = errors.WrapWithItem(err, errors.ErrPackageUninstall, errors.DomainPackages, "uninstall", packageName, "failed to uninstall package").WithMetadata("manager", managerName)
+		result.Error = fmt.Errorf("uninstall %s via %s: failed to uninstall package: %w", packageName, managerName, err)
 		return result
 	}
 
@@ -191,7 +190,7 @@ func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService,
 		err = lockService.RemovePackage(managerName, checkPackageName)
 		if err != nil {
 			result.Status = "partially-removed"
-			result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainPackages, "remove-lock", packageName, "uninstalled but failed to remove from lock file").WithMetadata("manager", managerName)
+			result.Error = fmt.Errorf("remove-lock %s: uninstalled but failed to remove from lock file (manager: %s): %w", packageName, managerName, err)
 			return result
 		}
 	}
@@ -240,7 +239,7 @@ func detectInstalledPackageManager(packageName string) (string, error) {
 		}
 	}
 
-	return "", errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "detect", "package not found in any available package manager")
+	return "", fmt.Errorf("detect packages: package not found in any available package manager")
 }
 
 // uninstallPackageFromSystem uninstalls a package using the appropriate manager
@@ -256,12 +255,10 @@ func uninstallPackageFromSystem(managerName, packageName string) error {
 	// Check if manager is available
 	available, err := mgr.IsAvailable(ctx)
 	if err != nil {
-		return errors.Wrap(err, errors.ErrManagerUnavailable, errors.DomainPackages, "uninstall",
-			"failed to check manager availability")
+		return fmt.Errorf("uninstall packages: failed to check manager availability: %w", err)
 	}
 	if !available {
-		return errors.NewError(errors.ErrManagerUnavailable, errors.DomainPackages, "uninstall",
-			"manager '"+managerName+"' is not available").WithSuggestionMessage(getManagerInstallSuggestion(managerName))
+		return fmt.Errorf("uninstall packages: manager '%s' is not available (%s)", managerName, getManagerInstallSuggestion(managerName))
 	}
 
 	// Uninstall the package

@@ -475,9 +475,10 @@ func TestFileOperations_FileNeedsUpdate_NonexistentSource(t *testing.T) {
 		t.Error("FileNeedsUpdate() should error for nonexistent source")
 	}
 
-	expectedError := "source file does not exist"
-	if !strings.Contains(err.Error(), expectedError) {
-		t.Errorf("Expected error to contain %q, got: %v", expectedError, err)
+	// Check that error mentions source file not existing
+	errMsg := err.Error()
+	if !strings.Contains(errMsg, "source file") || !strings.Contains(errMsg, "does not exist") {
+		t.Errorf("Expected error to mention source file not existing, got: %v", err)
 	}
 }
 

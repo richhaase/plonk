@@ -5,11 +5,10 @@ package dotfiles
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/richhaase/plonk/internal/errors"
 )
 
 // FileOperations handles file system operations for dotfiles
@@ -47,26 +46,18 @@ func (f *FileOperations) CopyFile(ctx context.Context, source, destination strin
 	sourcePath := f.manager.GetSourcePath(source)
 	destPath, err := f.manager.GetDestinationPath(destination)
 	if err != nil {
-		return errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "copy",
-			"failed to resolve destination path").
-			WithItem(destination)
+		return fmt.Errorf("failed to resolve destination path %s: %w", destination, err)
 	}
 
 	// Check if source exists
 	if !f.manager.FileExists(sourcePath) {
-		return errors.DotfileError(errors.ErrFileNotFound, "copy",
-			"source file does not exist").
-			WithItem(source).
-			WithMetadata("source_path", sourcePath)
+		return fmt.Errorf("source file %s does not exist at %s", source, sourcePath)
 	}
 
 	// Create destination directory if it doesn't exist
 	destDir := filepath.Dir(destPath)
 	if err := os.MkdirAll(destDir, 0750); err != nil {
-		return errors.Wrap(err, errors.ErrDirectoryCreate, errors.DomainDotfiles, "copy",
-			"failed to create destination directory").
-			WithItem(destination).
-			WithMetadata("dest_dir", destDir)
+		return fmt.Errorf("failed to create destination directory %s for %s: %w", destDir, destination, err)
 	}
 
 	// Handle backup if destination exists
@@ -74,18 +65,12 @@ func (f *FileOperations) CopyFile(ctx context.Context, source, destination strin
 		if options.CreateBackup {
 			backupPath := destPath + options.BackupSuffix
 			if err := f.createBackup(ctx, destPath, backupPath); err != nil {
-				return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "copy",
-					"failed to create backup").
-					WithItem(destination).
-					WithMetadata("backup_path", backupPath)
+				return fmt.Errorf("failed to create backup %s for %s: %w", backupPath, destination, err)
 			}
 		}
 
 		if !options.OverwriteExisting {
-			return errors.DotfileError(errors.ErrFilePermission, "copy",
-				"destination file exists and overwrite is disabled").
-				WithItem(destination).
-				WithMetadata("dest_path", destPath)
+			return fmt.Errorf("destination file %s exists at %s and overwrite is disabled", destination, destPath)
 		}
 	}
 
@@ -98,18 +83,12 @@ func (f *FileOperations) CopyDirectory(ctx context.Context, source, destination 
 	sourcePath := f.manager.GetSourcePath(source)
 	destPath, err := f.manager.GetDestinationPath(destination)
 	if err != nil {
-		return errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "copy-directory",
-			"failed to resolve destination path").
-			WithItem(destination)
+		return fmt.Errorf("failed to resolve destination path %s: %w", destination, err)
 	}
 
 	// Check if source exists and is a directory
 	if !f.manager.IsDirectory(sourcePath) {
-		return errors.DotfileError(errors.ErrInvalidInput, "copy-directory",
-			"source is not a directory").
-			WithItem(source).
-			WithMetadata("source_path", sourcePath).
-			WithSuggestionMessage("Ensure the source path points to a directory, not a file")
+		return fmt.Errorf("source %s is not a directory at %s", source, sourcePath)
 	}
 
 	// Walk the source directory and copy each file
@@ -134,10 +113,7 @@ func (f *FileOperations) CopyDirectory(ctx context.Context, source, destination 
 		// Create destination directory
 		destDir := filepath.Dir(destFilePath)
 		if err := os.MkdirAll(destDir, 0750); err != nil {
-			return errors.Wrap(err, errors.ErrDirectoryCreate, errors.DomainDotfiles, "copy-directory",
-				"failed to create destination directory").
-				WithMetadata("dest_dir", destDir).
-				WithSuggestionMessage("Check directory permissions and available disk space")
+			return fmt.Errorf("failed to create destination directory %s: %w", destDir, err)
 		}
 
 		// Handle backup if destination exists
@@ -145,18 +121,12 @@ func (f *FileOperations) CopyDirectory(ctx context.Context, source, destination 
 			if options.CreateBackup {
 				backupPath := destFilePath + options.BackupSuffix
 				if err := f.createBackup(ctx, destFilePath, backupPath); err != nil {
-					return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "copy-directory",
-						"failed to create backup").
-						WithMetadata("dest_path", destFilePath).
-						WithSuggestionMessage("Check file permissions and available disk space")
+					return fmt.Errorf("failed to create backup for %s: %w", destFilePath, err)
 				}
 			}
 
 			if !options.OverwriteExisting {
-				return errors.DotfileError(errors.ErrFilePermission, "copy-directory",
-					"destination file exists and overwrite is disabled").
-					WithMetadata("dest_path", destFilePath).
-					WithSuggestionMessage("Use --force to overwrite existing files or enable overwrite in copy options")
+				return fmt.Errorf("destination file exists at %s and overwrite is disabled", destFilePath)
 			}
 		}
 
@@ -184,9 +154,7 @@ func (f *FileOperations) copyFileContents(ctx context.Context, source, destinati
 func (f *FileOperations) RemoveFile(destination string) error {
 	destPath, err := f.manager.GetDestinationPath(destination)
 	if err != nil {
-		return errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "remove",
-			"failed to resolve destination path").
-			WithItem(destination)
+		return fmt.Errorf("failed to resolve destination path %s: %w", destination, err)
 	}
 
 	if !f.manager.FileExists(destPath) {
@@ -208,17 +176,12 @@ func (f *FileOperations) FileNeedsUpdate(ctx context.Context, source, destinatio
 	sourcePath := f.manager.GetSourcePath(source)
 	destPath, err := f.manager.GetDestinationPath(destination)
 	if err != nil {
-		return false, errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "check",
-			"failed to resolve destination path").
-			WithItem(destination)
+		return false, fmt.Errorf("failed to resolve destination path %s: %w", destination, err)
 	}
 
 	// Check if source exists first
 	if !f.manager.FileExists(sourcePath) {
-		return false, errors.DotfileError(errors.ErrFileNotFound, "check",
-			"source file does not exist").
-			WithItem(source).
-			WithMetadata("source_path", sourcePath)
+		return false, fmt.Errorf("source file %s does not exist at %s", source, sourcePath)
 	}
 
 	// If destination doesn't exist, it needs to be created
@@ -236,18 +199,12 @@ func (f *FileOperations) FileNeedsUpdate(ctx context.Context, source, destinatio
 	// Compare modification times
 	sourceInfo, err := os.Stat(sourcePath)
 	if err != nil {
-		return false, errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "check",
-			"failed to stat source file").
-			WithMetadata("source_path", sourcePath).
-			WithSuggestionMessage("Check if the source file exists and is accessible")
+		return false, fmt.Errorf("failed to stat source file %s: %w", sourcePath, err)
 	}
 
 	destInfo, err := os.Stat(destPath)
 	if err != nil {
-		return false, errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "check",
-			"failed to stat destination file").
-			WithMetadata("dest_path", destPath).
-			WithSuggestionMessage("Check if the destination file exists and is accessible")
+		return false, fmt.Errorf("failed to stat destination file %s: %w", destPath, err)
 	}
 
 	// Source is newer than destination
@@ -265,24 +222,24 @@ func CopyFileWithAttributes(src, dst string) error {
 	// Create destination directory if it doesn't exist
 	destDir := filepath.Dir(dst)
 	if err := os.MkdirAll(destDir, 0755); err != nil {
-		return errors.Wrap(err, errors.ErrDirectoryCreate, errors.DomainDotfiles, "copy", "failed to create destination directory")
+		return fmt.Errorf("failed to create destination directory %s: %w", destDir, err)
 	}
 
 	// Get source file info
 	srcInfo, err := os.Stat(src)
 	if err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", "failed to stat source file")
+		return fmt.Errorf("failed to stat source file %s: %w", src, err)
 	}
 
 	// Read source file
 	data, err := os.ReadFile(src)
 	if err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", "failed to read source file")
+		return fmt.Errorf("failed to read source file %s: %w", src, err)
 	}
 
 	// Write to destination with same permissions
 	if err := os.WriteFile(dst, data, srcInfo.Mode()); err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", "failed to write destination file")
+		return fmt.Errorf("failed to write destination file %s: %w", dst, err)
 	}
 
 	// Preserve timestamps

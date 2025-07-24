@@ -11,7 +11,6 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/dotfiles"
-	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/paths"
 	"github.com/richhaase/plonk/internal/state"
 )
@@ -25,7 +24,7 @@ func AddSingleDotfile(ctx context.Context, cfg *config.Config, homeDir, configDi
 		return []state.OperationResult{{
 			Name:   dotfilePath,
 			Status: "failed",
-			Error:  errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainDotfiles, "resolve", dotfilePath, "failed to resolve dotfile path"),
+			Error:  fmt.Errorf("failed to resolve dotfile path %s: %w", dotfilePath, err),
 		}}
 	}
 
@@ -35,14 +34,14 @@ func AddSingleDotfile(ctx context.Context, cfg *config.Config, homeDir, configDi
 		return []state.OperationResult{{
 			Name:   dotfilePath,
 			Status: "failed",
-			Error:  errors.NewError(errors.ErrFileNotFound, errors.DomainDotfiles, "check", fmt.Sprintf("dotfile does not exist: %s", resolvedPath)).WithSuggestionMessage("Check if path exists: ls -la " + resolvedPath),
+			Error:  fmt.Errorf("dotfile does not exist: %s", resolvedPath),
 		}}
 	}
 	if err != nil {
 		return []state.OperationResult{{
 			Name:   dotfilePath,
 			Status: "failed",
-			Error:  errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "check", "failed to check dotfile"),
+			Error:  fmt.Errorf("failed to check dotfile: %w", err),
 		}}
 	}
 
@@ -67,7 +66,7 @@ func AddSingleFile(ctx context.Context, cfg *config.Config, filePath, homeDir, c
 	source, destination, err := resolver.GeneratePaths(filePath)
 	if err != nil {
 		result.Status = "failed"
-		result.Error = errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "add", "failed to generate paths")
+		result.Error = fmt.Errorf("failed to generate paths: %w", err)
 		return result
 	}
 
@@ -105,14 +104,14 @@ func AddSingleFile(ctx context.Context, cfg *config.Config, filePath, homeDir, c
 	// Create parent directories
 	if err := os.MkdirAll(filepath.Dir(sourcePath), 0750); err != nil {
 		result.Status = "failed"
-		result.Error = errors.Wrap(err, errors.ErrDirectoryCreate, errors.DomainDotfiles, "create-dirs", "failed to create parent directories")
+		result.Error = fmt.Errorf("failed to create parent directories: %w", err)
 		return result
 	}
 
 	// Copy file with attribute preservation
 	if err := dotfiles.CopyFileWithAttributes(filePath, sourcePath); err != nil {
 		result.Status = "failed"
-		result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "copy", source, "failed to copy dotfile")
+		result.Error = fmt.Errorf("failed to copy dotfile %s: %w", source, err)
 		return result
 	}
 
@@ -150,7 +149,7 @@ func AddDirectoryFiles(ctx context.Context, cfg *config.Config, dirPath, homeDir
 			results = append(results, state.OperationResult{
 				Name:   entry.FullPath,
 				Status: "failed",
-				Error:  errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "stat", "failed to get file info"),
+				Error:  fmt.Errorf("failed to get file info: %w", err),
 			})
 			continue
 		}
@@ -179,7 +178,7 @@ func RemoveSingleDotfile(homeDir, configDir string, cfg *config.Config, dotfileP
 	resolvedPath, err := resolver.ResolveDotfilePath(dotfilePath)
 	if err != nil {
 		result.Status = "failed"
-		result.Error = errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainDotfiles, "resolve", dotfilePath, "failed to resolve dotfile path")
+		result.Error = fmt.Errorf("failed to resolve dotfile path %s: %w", dotfilePath, err)
 		return result
 	}
 
@@ -188,7 +187,7 @@ func RemoveSingleDotfile(homeDir, configDir string, cfg *config.Config, dotfileP
 	_, destination, err := resolver2.GeneratePaths(resolvedPath)
 	if err != nil {
 		result.Status = "failed"
-		result.Error = errors.WrapWithItem(err, errors.ErrPathValidation, errors.DomainDotfiles, "resolve", dotfilePath, "failed to generate paths")
+		result.Error = fmt.Errorf("failed to generate paths for %s: %w", dotfilePath, err)
 		return result
 	}
 	source := config.TargetToSource(destination)
@@ -197,7 +196,7 @@ func RemoveSingleDotfile(homeDir, configDir string, cfg *config.Config, dotfileP
 	// Check if file is managed (has corresponding file in config directory)
 	if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
 		result.Status = "skipped"
-		result.Error = errors.NewError(errors.ErrFileNotFound, errors.DomainDotfiles, "check", fmt.Sprintf("dotfile '%s' is not managed by plonk", dotfilePath))
+		result.Error = fmt.Errorf("dotfile '%s' is not managed by plonk", dotfilePath)
 		return result
 	}
 
@@ -216,7 +215,7 @@ func RemoveSingleDotfile(homeDir, configDir string, cfg *config.Config, dotfileP
 		err = os.Remove(resolvedPath)
 		if err != nil {
 			result.Status = "failed"
-			result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "remove", dotfilePath, "failed to remove deployed dotfile")
+			result.Error = fmt.Errorf("failed to remove deployed dotfile %s: %w", dotfilePath, err)
 			return result
 		}
 	}
@@ -226,7 +225,7 @@ func RemoveSingleDotfile(homeDir, configDir string, cfg *config.Config, dotfileP
 		// If we can't remove the source file, the deployed file is already gone
 		// so we report partial success
 		result.Status = "removed"
-		result.Error = errors.WrapWithItem(err, errors.ErrFileIO, errors.DomainDotfiles, "remove-source", source, "deployed file removed but failed to remove source file from config")
+		result.Error = fmt.Errorf("deployed file removed but failed to remove source file %s from config: %w", source, err)
 		result.Metadata = map[string]interface{}{
 			"source":      source,
 			"destination": destination,
@@ -272,8 +271,7 @@ func ProcessDotfileForApply(ctx context.Context, options ProcessDotfileForApplyO
 	sourcePath := filepath.Join(options.ConfigDir, options.Source)
 	destinationPath, err := resolver.ResolveDotfilePath(options.Destination)
 	if err != nil {
-		return ProcessDotfileForApplyResult{}, errors.Wrap(err, errors.ErrPathValidation, errors.DomainDotfiles, "apply",
-			"failed to resolve destination path")
+		return ProcessDotfileForApplyResult{}, fmt.Errorf("failed to resolve destination path: %w", err)
 	}
 
 	// Check if source exists

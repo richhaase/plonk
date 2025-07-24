@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/richhaase/plonk/internal/errors"
+	"errors"
 )
 
 // PathResolver handles dotfile path resolution, validation, and conversion
@@ -32,8 +32,7 @@ func NewPathResolver(homeDir, configDir string) *PathResolver {
 func NewPathResolverFromDefaults() (*PathResolver, error) {
 	homeDir := os.Getenv("HOME")
 	if homeDir == "" {
-		return nil, errors.NewError(errors.ErrInternal, errors.DomainDotfiles, "init",
-			"HOME environment variable not set")
+		return nil, errors.New("HOME environment variable not set")
 	}
 
 	configDir := GetDefaultConfigDirectory()
@@ -84,8 +83,7 @@ func (p *PathResolver) ResolveDotfilePath(path string) (string, error) {
 		// Relative path - try to resolve relative to current working directory first
 		absPath, err := filepath.Abs(path)
 		if err != nil {
-			return "", errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "resolve",
-				"failed to resolve path")
+			return "", fmt.Errorf("failed to resolve path: %w", err)
 		}
 
 		// Check if file exists at the absolute path
@@ -107,8 +105,7 @@ func (p *PathResolver) ResolveDotfilePath(path string) (string, error) {
 
 	// Ensure it's within the home directory
 	if !strings.HasPrefix(resolvedPath, p.homeDir) {
-		return "", errors.NewError(errors.ErrInvalidInput, errors.DomainDotfiles, "validate",
-			fmt.Sprintf("dotfile must be within home directory: %s", resolvedPath))
+		return "", fmt.Errorf("dotfile must be within home directory: %s", resolvedPath)
 	}
 
 	return resolvedPath, nil
@@ -119,8 +116,7 @@ func (p *PathResolver) GenerateDestinationPath(resolvedPath string) (string, err
 	// Get relative path from home directory
 	relPath, err := filepath.Rel(p.homeDir, resolvedPath)
 	if err != nil {
-		return "", errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "generate",
-			"failed to generate relative path")
+		return "", fmt.Errorf("failed to generate relative path: %w", err)
 	}
 
 	// Generate destination (always relative to home with ~ prefix)
@@ -161,8 +157,7 @@ func (p *PathResolver) GeneratePaths(resolvedPath string) (source, destination s
 func (p *PathResolver) ValidatePath(path string) error {
 	// Check for directory traversal attempts
 	if strings.Contains(path, "..") {
-		return errors.NewError(errors.ErrInvalidInput, errors.DomainDotfiles, "validate",
-			"path contains directory traversal: "+path)
+		return fmt.Errorf("path contains directory traversal: %s", path)
 	}
 
 	// Resolve the path to check final location
@@ -173,8 +168,7 @@ func (p *PathResolver) ValidatePath(path string) error {
 
 	// Ensure it's within home directory (already checked in ResolveDotfilePath, but double-check)
 	if !strings.HasPrefix(resolvedPath, p.homeDir) {
-		return errors.NewError(errors.ErrInvalidInput, errors.DomainDotfiles, "validate",
-			fmt.Sprintf("path is outside home directory: %s", resolvedPath))
+		return fmt.Errorf("path is outside home directory: %s", resolvedPath)
 	}
 
 	return nil
@@ -188,20 +182,17 @@ func (p *PathResolver) ExpandDirectory(dirPath string) ([]DirectoryEntry, error)
 	// Resolve the directory path first
 	resolvedDirPath, err := p.ResolveDotfilePath(dirPath)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "expand",
-			"failed to resolve directory path")
+		return nil, fmt.Errorf("failed to resolve directory path: %w", err)
 	}
 
 	// Check if it's actually a directory
 	info, err := os.Stat(resolvedDirPath)
 	if err != nil {
-		return nil, errors.Wrap(err, errors.ErrFileNotFound, errors.DomainDotfiles, "expand",
-			"directory does not exist")
+		return nil, fmt.Errorf("directory does not exist: %w", err)
 	}
 
 	if !info.IsDir() {
-		return nil, errors.NewError(errors.ErrInvalidInput, errors.DomainDotfiles, "expand",
-			"path is not a directory: "+dirPath)
+		return nil, fmt.Errorf("path is not a directory: %s", dirPath)
 	}
 
 	err = filepath.Walk(resolvedDirPath, func(path string, info os.FileInfo, err error) error {
@@ -230,8 +221,7 @@ func (p *PathResolver) ExpandDirectory(dirPath string) ([]DirectoryEntry, error)
 	})
 
 	if err != nil {
-		return nil, errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "expand",
-			"failed to walk directory")
+		return nil, fmt.Errorf("failed to walk directory: %w", err)
 	}
 
 	return entries, nil
@@ -305,8 +295,7 @@ func (p *PathResolver) ExpandConfigDirectory(ignorePatterns []string) (map[strin
 	})
 
 	if err != nil {
-		return nil, errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "expand",
-			"failed to walk config directory")
+		return nil, fmt.Errorf("failed to walk config directory: %w", err)
 	}
 
 	return result, nil

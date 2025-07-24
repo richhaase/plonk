@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-
-	"github.com/richhaase/plonk/internal/errors"
 )
 
 // HomebrewManager manages Homebrew packages using BaseManager for common functionality.
@@ -114,8 +112,7 @@ func (h *HomebrewManager) Search(ctx context.Context, query string) ([]string, e
 	cmd := exec.CommandContext(ctx, h.GetBinary(), "search", query)
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "search", query,
-			"failed to search homebrew packages")
+		return nil, fmt.Errorf("failed to search homebrew packages for %s: %w", query, err)
 	}
 
 	return h.parseSearchOutput(output), nil
@@ -149,12 +146,9 @@ func (h *HomebrewManager) Info(ctx context.Context, name string) (*PackageInfo, 
 	output, err := cmd.Output()
 	if err != nil {
 		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() == 1 {
-			return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
-				fmt.Sprintf("package '%s' not found", name)).
-				WithSuggestionMessage(fmt.Sprintf("Search available packages: brew search %s", name))
+			return nil, fmt.Errorf("package '%s' not found", name)
 		}
-		return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", name,
-			"failed to get package info")
+		return nil, fmt.Errorf("failed to get package info for %s: %w", name, err)
 	}
 
 	// Check if installed
@@ -243,26 +237,22 @@ func (h *HomebrewManager) GetInstalledVersion(ctx context.Context, name string) 
 	// First check if package is installed
 	installed, err := h.IsInstalled(ctx, name)
 	if err != nil {
-		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
-			"failed to check package installation status")
+		return "", fmt.Errorf("failed to check package installation status for %s: %w", name, err)
 	}
 	if !installed {
-		return "", errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "version",
-			fmt.Sprintf("package '%s' is not installed", name))
+		return "", fmt.Errorf("package '%s' is not installed", name)
 	}
 
 	// Get version using brew list --versions
 	cmd := exec.CommandContext(ctx, h.GetBinary(), "list", "--versions", name)
 	output, err := cmd.Output()
 	if err != nil {
-		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
-			"failed to get package version information")
+		return "", fmt.Errorf("failed to get package version information for %s: %w", name, err)
 	}
 
 	version := h.extractVersion(output, name)
 	if version == "" {
-		return "", errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "version",
-			fmt.Sprintf("could not extract version for package '%s'", name))
+		return "", fmt.Errorf("could not extract version for package '%s'", name)
 	}
 
 	return version, nil

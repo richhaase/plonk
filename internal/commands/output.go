@@ -9,7 +9,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/richhaase/plonk/internal/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -43,8 +42,7 @@ func RenderOutput(data OutputData, format OutputFormat) error {
 		defer encoder.Close()
 		return encoder.Encode(data.StructuredData())
 	default:
-		return errors.NewError(errors.ErrInvalidInput, errors.DomainCommands, "output",
-			fmt.Sprintf("unsupported output format: %s", format)).WithSuggestionMessage("Use: table, json, or yaml")
+		return fmt.Errorf("unsupported output format: %s (use: table, json, or yaml)", format)
 	}
 }
 
@@ -58,8 +56,7 @@ func ParseOutputFormat(format string) (OutputFormat, error) {
 	case "yaml":
 		return OutputYAML, nil
 	default:
-		return OutputTable, errors.NewError(errors.ErrInvalidInput, errors.DomainCommands, "parse",
-			fmt.Sprintf("unsupported format '%s'", format)).WithSuggestionMessage("Use: table, json, or yaml")
+		return OutputTable, fmt.Errorf("unsupported format '%s' (use: table, json, or yaml)", format)
 	}
 }
 

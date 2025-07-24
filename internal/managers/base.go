@@ -7,8 +7,6 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
-
-	"github.com/richhaase/plonk/internal/errors"
 )
 
 // ManagerConfig defines the configuration for a package manager
@@ -112,8 +110,7 @@ func (b *BaseManager) verifyBinary(ctx context.Context, binary string) error {
 			return err
 		}
 		// Return the error wrapped with context
-		return errors.Wrap(err, errors.ErrManagerUnavailable, errors.DomainPackages, "check",
-			fmt.Sprintf("%s binary found but not functional", binary))
+		return fmt.Errorf("%s binary found but not functional: %w", binary, err)
 	}
 	return nil
 }
@@ -121,8 +118,7 @@ func (b *BaseManager) verifyBinary(ctx context.Context, binary string) error {
 // ExecuteList runs the list command with proper error handling
 func (b *BaseManager) ExecuteList(ctx context.Context) ([]byte, error) {
 	if b.Config.ListArgs == nil {
-		return nil, errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "list",
-			"list command not configured for this manager")
+		return nil, fmt.Errorf("list command not configured for this manager")
 	}
 
 	binary := b.GetBinary()
@@ -145,8 +141,7 @@ func (b *BaseManager) ExecuteList(ctx context.Context) ([]byte, error) {
 // ExecuteInstall runs the install command with proper error handling
 func (b *BaseManager) ExecuteInstall(ctx context.Context, packageName string) error {
 	if b.Config.InstallArgs == nil {
-		return errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "install",
-			"install command not configured for this manager")
+		return fmt.Errorf("install command not configured for this manager")
 	}
 
 	binary := b.GetBinary()
@@ -164,8 +159,7 @@ func (b *BaseManager) ExecuteInstall(ctx context.Context, packageName string) er
 // ExecuteUninstall runs the uninstall command with proper error handling
 func (b *BaseManager) ExecuteUninstall(ctx context.Context, packageName string) error {
 	if b.Config.UninstallArgs == nil {
-		return errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "uninstall",
-			"uninstall command not configured for this manager")
+		return fmt.Errorf("uninstall command not configured for this manager")
 	}
 
 	binary := b.GetBinary()
@@ -190,44 +184,31 @@ func (b *BaseManager) handleInstallError(err error, output []byte, packageName s
 
 		switch errorType {
 		case ErrorTypeNotFound:
-			return errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "install",
-				fmt.Sprintf("package '%s' not found", packageName)).
-				WithSuggestionMessage(fmt.Sprintf("Search for available packages or check the package name"))
+			return fmt.Errorf("package '%s' not found", packageName)
 
 		case ErrorTypeAlreadyInstalled:
 			// Package is already installed - this is typically fine
 			return nil
 
 		case ErrorTypePermission:
-			return errors.NewError(errors.ErrFilePermission, errors.DomainPackages, "install",
-				fmt.Sprintf("permission denied installing %s", packageName)).
-				WithSuggestionMessage("Try with elevated permissions (sudo) or check file permissions")
+			return fmt.Errorf("permission denied installing %s", packageName)
 
 		case ErrorTypeLocked:
-			return errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "install",
-				"package manager database is locked").
-				WithSuggestionMessage("Wait for other package manager processes to complete")
+			return fmt.Errorf("package manager database is locked")
 
 		case ErrorTypeNetwork:
-			return errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "install",
-				"network error during installation").
-				WithSuggestionMessage("Check internet connection and proxy settings")
+			return fmt.Errorf("network error during installation")
 
 		case ErrorTypeBuild:
-			return errors.NewError(errors.ErrPackageInstall, errors.DomainPackages, "install",
-				fmt.Sprintf("failed to build package '%s'", packageName)).
-				WithSuggestionMessage("Package may have build dependencies or compatibility issues")
+			return fmt.Errorf("failed to build package '%s'", packageName)
 
 		case ErrorTypeDependency:
-			return errors.NewError(errors.ErrPackageInstall, errors.DomainPackages, "install",
-				fmt.Sprintf("dependency conflict installing package '%s'", packageName)).
-				WithSuggestionMessage("Check for package conflicts and dependency requirements")
+			return fmt.Errorf("dependency conflict installing package '%s'", packageName)
 
 		default:
 			// Only treat non-zero exit codes as errors
 			if execErr.ExitCode() != 0 {
-				return errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "install", packageName,
-					fmt.Sprintf("package installation failed (exit code %d)", execErr.ExitCode()))
+				return fmt.Errorf("package installation failed (exit code %d): %w", execErr.ExitCode(), err)
 			}
 			// Exit code 0 with no recognized error pattern - success
 			return nil
@@ -235,8 +216,7 @@ func (b *BaseManager) handleInstallError(err error, output []byte, packageName s
 	}
 
 	// Non-exit errors (command not found, context cancellation, etc.)
-	return errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "install", packageName,
-		"failed to execute install command")
+	return fmt.Errorf("failed to execute install command: %w", err)
 }
 
 // handleUninstallError processes uninstall command errors using ErrorMatcher
@@ -253,25 +233,18 @@ func (b *BaseManager) handleUninstallError(err error, output []byte, packageName
 			return nil
 
 		case ErrorTypePermission:
-			return errors.NewError(errors.ErrFilePermission, errors.DomainPackages, "uninstall",
-				fmt.Sprintf("permission denied uninstalling %s", packageName)).
-				WithSuggestionMessage("Try with elevated permissions (sudo) or check file ownership")
+			return fmt.Errorf("permission denied uninstalling %s", packageName)
 
 		case ErrorTypeLocked:
-			return errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "uninstall",
-				"package manager database is locked").
-				WithSuggestionMessage("Wait for other package manager processes to complete")
+			return fmt.Errorf("package manager database is locked")
 
 		case ErrorTypeDependency:
-			return errors.NewError(errors.ErrPackageUninstall, errors.DomainPackages, "uninstall",
-				fmt.Sprintf("cannot uninstall package '%s' due to dependency conflicts", packageName)).
-				WithSuggestionMessage("Check for packages that depend on this one")
+			return fmt.Errorf("cannot uninstall package '%s' due to dependency conflicts", packageName)
 
 		default:
 			// Only treat non-zero exit codes as errors
 			if execErr.ExitCode() != 0 {
-				return errors.WrapWithItem(err, errors.ErrPackageUninstall, errors.DomainPackages, "uninstall", packageName,
-					fmt.Sprintf("package uninstallation failed (exit code %d)", execErr.ExitCode()))
+				return fmt.Errorf("package uninstallation failed (exit code %d): %w", execErr.ExitCode(), err)
 			}
 			// Exit code 0 with no recognized error pattern - success
 			return nil
@@ -279,13 +252,12 @@ func (b *BaseManager) handleUninstallError(err error, output []byte, packageName
 	}
 
 	// Non-exit errors (command not found, context cancellation, etc.)
-	return errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "uninstall", packageName,
-		"failed to execute uninstall command")
+	return fmt.Errorf("failed to execute uninstall command: %w", err)
 }
 
 // wrapCommandError wraps a command error with appropriate context
 func (b *BaseManager) wrapCommandError(err error, operation, message string) error {
-	return errors.Wrap(err, errors.ErrCommandExecution, errors.DomainPackages, operation, message)
+	return fmt.Errorf("%s: %w", message, err)
 }
 
 // SupportsSearch returns true by default as most package managers support search.

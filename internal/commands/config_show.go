@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 
 	"github.com/richhaase/plonk/internal/config" // getConfigPath returns the path to the main configuration file
-	"github.com/richhaase/plonk/internal/errors"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -42,7 +41,7 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "config-show", "output-format", "invalid output format")
+		return fmt.Errorf("invalid output format: %w", err)
 	}
 
 	// Get config directory

@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -47,13 +46,13 @@ func runConfigEdit(cmd *cobra.Command, args []string) error {
 
 	// Create config directory if it doesn't exist
 	if err := os.MkdirAll(configDir, 0750); err != nil {
-		return errors.Wrap(err, errors.ErrDirectoryCreate, errors.DomainConfig, "edit", "failed to create config directory")
+		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
 	// Create default config file if it doesn't exist
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		if err := createDefaultConfig(configPath); err != nil {
-			return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "edit", "failed to create default config")
+			return fmt.Errorf("failed to create default config: %w", err)
 		}
 		fmt.Printf("Created default configuration file: %s\n", configPath)
 	}
@@ -66,7 +65,7 @@ func runConfigEdit(cmd *cobra.Command, args []string) error {
 	for {
 		// Open editor
 		if err := openEditor(editor, configPath); err != nil {
-			return errors.Wrap(err, errors.ErrCommandExecution, errors.DomainCommands, "config-edit", "failed to open editor")
+			return fmt.Errorf("failed to open editor: %w", err)
 		}
 
 		// Validate the edited config
@@ -75,7 +74,7 @@ func runConfigEdit(cmd *cobra.Command, args []string) error {
 
 			// Ask if user wants to edit again
 			if !promptEditAgain() {
-				return errors.NewError(errors.ErrConfigValidation, errors.DomainConfig, "edit", "configuration validation failed")
+				return fmt.Errorf("configuration validation failed")
 			}
 			continue
 		}
@@ -115,8 +114,7 @@ func openEditor(editor, filepath string) error {
 	// Split editor command in case it has arguments
 	parts := strings.Fields(editor)
 	if len(parts) == 0 {
-		return errors.NewError(errors.ErrInvalidInput, errors.DomainCommands, "edit",
-			"no editor specified").WithSuggestionMessage("Set EDITOR environment variable or specify editor with --editor flag")
+		return fmt.Errorf("no editor specified: set EDITOR environment variable or specify editor with --editor flag")
 	}
 
 	cmd := exec.Command(parts[0], append(parts[1:], filepath)...)
@@ -132,8 +130,7 @@ func validateEditedConfig(configPath string) error {
 	// Read config file
 	content, err := os.ReadFile(configPath)
 	if err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "validate",
-			"failed to read config file").WithMetadata("path", configPath)
+		return fmt.Errorf("failed to read config file %s: %w", configPath, err)
 	}
 
 	// Validate configuration
@@ -153,8 +150,7 @@ func validateEditedConfig(configPath string) error {
 			}
 		}
 
-		return errors.NewError(errors.ErrConfigValidation, errors.DomainConfig, "validate",
-			"configuration validation failed").WithMetadata("path", configPath).WithMetadata("errorCount", len(result.Errors)).WithSuggestionMessage("Fix the errors shown above and try again")
+		return fmt.Errorf("configuration validation failed: %d errors found", len(result.Errors))
 	}
 
 	// Show warnings if any

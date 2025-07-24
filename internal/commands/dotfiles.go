@@ -4,7 +4,8 @@
 package commands
 
 import (
-	"github.com/richhaase/plonk/internal/errors"
+	"fmt"
+
 	"github.com/spf13/cobra"
 )
 
@@ -43,13 +44,13 @@ func runDotfiles(cmd *cobra.Command, args []string) error {
 	// Parse flags and delegate to the shared implementation
 	flags, err := ParseSimpleFlags(cmd)
 	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "dotfiles", "flags", "invalid flag combination")
+		return fmt.Errorf("invalid flag combination: %w", err)
 	}
 
 	// Parse output format
 	format, err := ParseOutputFormat(flags.Output)
 	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "dotfiles", "output-format", "invalid output format")
+		return fmt.Errorf("invalid output format: %w", err)
 	}
 
 	// Call the shared dotfile list implementation

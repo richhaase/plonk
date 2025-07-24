@@ -6,11 +6,11 @@
 package dotfiles
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/paths"
 )
 
@@ -165,18 +165,12 @@ func (m *Manager) ValidatePaths(source, destination string) error {
 	// Check if source exists in config directory
 	sourcePath := m.GetSourcePath(source)
 	if !m.FileExists(sourcePath) {
-		return errors.DotfileError(errors.ErrFileNotFound, "validate",
-			"source file does not exist").
-			WithItem(source).
-			WithMetadata("source_path", sourcePath)
+		return fmt.Errorf("source file %s does not exist at %s", source, sourcePath)
 	}
 
 	// Validate destination path format
 	if !strings.HasPrefix(destination, "~/") && !filepath.IsAbs(destination) {
-		return errors.DotfileError(errors.ErrPathValidation, "validate",
-			"destination must start with ~/ or be absolute").
-			WithItem(destination).
-			WithMetadata("destination", destination)
+		return fmt.Errorf("destination %s must start with ~/ or be absolute", destination)
 	}
 
 	return nil

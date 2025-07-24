@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -45,15 +44,13 @@ func runInit(cmd *cobra.Command, args []string) error {
 	// Check if config file already exists
 	if !initForce {
 		if _, err := os.Stat(configPath); err == nil {
-			return errors.NewError(errors.ErrFileExists, errors.DomainConfig, "init",
-				fmt.Sprintf("Configuration file already exists: %s\nUse --force to overwrite", configPath))
+			return fmt.Errorf("configuration file already exists: %s\nUse --force to overwrite", configPath)
 		}
 	}
 
 	// Create config directory if it doesn't exist
 	if err := os.MkdirAll(configDir, 0750); err != nil {
-		return errors.Wrap(err, errors.ErrDirectoryCreate, errors.DomainConfig, "init",
-			"failed to create config directory").WithItem(configDir)
+		return fmt.Errorf("failed to create config directory %s: %w", configDir, err)
 	}
 
 	// Get actual default values
@@ -112,8 +109,7 @@ ignore_patterns:`
 
 	// Write the configuration file
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		return errors.Wrap(err, errors.ErrFileIO, errors.DomainConfig, "init",
-			"failed to write configuration file").WithItem(configPath)
+		return fmt.Errorf("failed to write configuration file %s: %w", configPath, err)
 	}
 
 	// Success message

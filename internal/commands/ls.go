@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
@@ -65,13 +64,13 @@ func runLs(cmd *cobra.Command, args []string) error {
 	// Parse flags
 	flags, err := ParseSimpleFlags(cmd)
 	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "ls", "flags", "invalid flag combination")
+		return fmt.Errorf("invalid flag combination: %w", err)
 	}
 
 	// Parse output format
 	format, err := ParseOutputFormat(flags.Output)
 	if err != nil {
-		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "ls", "output-format", "invalid output format")
+		return fmt.Errorf("invalid output format: %w", err)
 	}
 
 	// Get filter flags
@@ -106,7 +105,7 @@ func runSmartOverview(cmd *cobra.Command, flags *SimpleFlags, format OutputForma
 	ctx := context.Background()
 	results, err := orchestrator.ReconcileAll(ctx, homeDir, configDir)
 	if err != nil {
-		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainState, "reconcile", "failed to reconcile state")
+		return fmt.Errorf("failed to reconcile state: %w", err)
 	}
 
 	// Convert results to summary
@@ -121,7 +120,7 @@ func runSmartOverview(cmd *cobra.Command, flags *SimpleFlags, format OutputForma
 		result.AddToSummary(summary)
 	}
 	if err != nil {
-		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainState, "reconcile", "failed to reconcile state")
+		return fmt.Errorf("failed to reconcile state: %w", err)
 	}
 
 	// Prepare smart overview data

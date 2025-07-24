@@ -9,7 +9,6 @@ import (
 	"os"
 
 	"github.com/richhaase/plonk/internal/dotfiles"
-	"github.com/richhaase/plonk/internal/errors"
 )
 
 // DotfileConfigLoader is defined in types.go
@@ -68,8 +67,7 @@ func (d *DotfileProvider) GetConfiguredItems() ([]ConfigItem, error) {
 			// Expand directory to individual files
 			dirItems, err := d.expandConfigDirectory(source, destination)
 			if err != nil {
-				return nil, errors.Wrap(err, errors.ErrFileIO, errors.DomainDotfiles, "scan",
-					fmt.Sprintf("failed to expand directory %s", source))
+				return nil, fmt.Errorf("failed to expand directory %s: %w", source, err)
 			}
 			items = append(items, dirItems...)
 		} else {

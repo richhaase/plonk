@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-
-	"github.com/richhaase/plonk/internal/errors"
 )
 
 // PipManager manages Python packages via pip using BaseManager for common functionality.
@@ -74,8 +72,7 @@ func (p *PipManager) ListInstalled(ctx context.Context) ([]string, error) {
 				return p.listInstalledFallback(ctx)
 			}
 		}
-		return nil, errors.Wrap(err, errors.ErrCommandExecution, errors.DomainPackages, "list",
-			"failed to execute pip list command")
+		return nil, fmt.Errorf("failed to execute pip list command: %w", err)
 	}
 
 	return p.parseListOutput(output)
@@ -148,8 +145,7 @@ func (p *PipManager) listInstalledFallback(ctx context.Context) ([]string, error
 		cmd = exec.CommandContext(ctx, pipCmd, "list")
 		output, err = cmd.Output()
 		if err != nil {
-			return nil, errors.Wrap(err, errors.ErrCommandExecution, errors.DomainPackages, "list",
-				"failed to execute pip list command")
+			return nil, fmt.Errorf("failed to execute pip list command: %w", err)
 		}
 	}
 
@@ -172,18 +168,14 @@ func (p *PipManager) Install(ctx context.Context, name string) error {
 
 			switch errorType {
 			case ErrorTypeNotFound:
-				return errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "install",
-					fmt.Sprintf("package '%s' not found", name)).
-					WithSuggestionMessage(fmt.Sprintf("Search available packages or check the package name"))
+				return fmt.Errorf("package '%s' not found", name)
 
 			case ErrorTypeAlreadyInstalled:
 				// Package is already installed - this is typically fine
 				return nil
 
 			case ErrorTypePermission:
-				return errors.NewError(errors.ErrFilePermission, errors.DomainPackages, "install",
-					fmt.Sprintf("permission denied installing %s", name)).
-					WithSuggestionMessage("Try with elevated permissions or check file permissions")
+				return fmt.Errorf("permission denied installing %s", name)
 
 			default:
 				// Check for --user flag issues
@@ -197,14 +189,12 @@ func (p *PipManager) Install(ctx context.Context, name string) error {
 				}
 
 				// Other exit errors with more context
-				return errors.WrapWithItem(err, errors.ErrPackageInstall, errors.DomainPackages, "install", name,
-					fmt.Sprintf("package installation failed (exit code %d)", execErr.ExitCode()))
+				return fmt.Errorf("package installation failed (exit code %d): %w", execErr.ExitCode(), err)
 			}
 		}
 
 		// Non-exit errors (command not found, context cancellation, etc.)
-		return errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "install", name,
-			"failed to execute pip install command")
+		return fmt.Errorf("failed to execute pip install command: %w", err)
 	}
 
 	return nil
@@ -222,8 +212,7 @@ func (p *PipManager) IsInstalled(ctx context.Context, name string) (bool, error)
 
 	packages, err := p.ListInstalled(ctx)
 	if err != nil {
-		return false, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "check", name,
-			"failed to check package installation status")
+		return false, fmt.Errorf("failed to check package installation status for %s: %w", name, err)
 	}
 
 	for _, pkg := range packages {
@@ -251,13 +240,10 @@ func (p *PipManager) Search(ctx context.Context, query string) ([]string, error)
 			outputStr := string(output)
 			if strings.Contains(outputStr, "ERROR") && strings.Contains(outputStr, "XMLRPC") {
 				// PyPI disabled XMLRPC search API, return helpful message
-				return nil, errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "search",
-					"PyPI search API is currently disabled").
-					WithSuggestionMessage(fmt.Sprintf("Visit https://pypi.org/search/?q=%s to search for packages", query))
+				return nil, fmt.Errorf("PyPI search API is currently disabled. Visit https://pypi.org/search/?q=%s to search for packages", query)
 			}
 		}
-		return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "search", query,
-			"failed to search pip packages")
+		return nil, fmt.Errorf("failed to search pip packages for %s: %w", query, err)
 	}
 
 	return p.parseSearchOutput(output), nil
@@ -296,8 +282,7 @@ func (p *PipManager) Info(ctx context.Context, name string) (*PackageInfo, error
 	// Check if package is installed first
 	installed, err := p.IsInstalled(ctx, name)
 	if err != nil {
-		return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", name,
-			"failed to check package installation status")
+		return nil, fmt.Errorf("failed to check package installation status for %s: %w", name, err)
 	}
 
 	pipCmd := p.GetBinary()
@@ -307,13 +292,10 @@ func (p *PipManager) Info(ctx context.Context, name string) (*PackageInfo, error
 		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() != 0 {
 			outputStr := string(output)
 			if strings.Contains(outputStr, "not found") {
-				return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
-					fmt.Sprintf("package '%s' not found", name)).
-					WithSuggestionMessage(fmt.Sprintf("Check available packages at https://pypi.org/project/%s", name))
+				return nil, fmt.Errorf("package '%s' not found", name)
 			}
 		}
-		return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", name,
-			"failed to get package info")
+		return nil, fmt.Errorf("failed to get package info for %s: %w", name, err)
 	}
 
 	info := p.parseInfoOutput(output, name)
@@ -360,12 +342,10 @@ func (p *PipManager) GetInstalledVersion(ctx context.Context, name string) (stri
 	// First check if package is installed
 	installed, err := p.IsInstalled(ctx, name)
 	if err != nil {
-		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
-			"failed to check package installation status")
+		return "", fmt.Errorf("failed to check package installation status for %s: %w", name, err)
 	}
 	if !installed {
-		return "", errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "version",
-			fmt.Sprintf("package '%s' is not installed", name))
+		return "", fmt.Errorf("package '%s' is not installed", name)
 	}
 
 	// Get version using pip show
@@ -373,14 +353,12 @@ func (p *PipManager) GetInstalledVersion(ctx context.Context, name string) (stri
 	cmd := exec.CommandContext(ctx, pipCmd, "show", name)
 	output, err := cmd.Output()
 	if err != nil {
-		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
-			"failed to get package version information")
+		return "", fmt.Errorf("failed to get package version information for %s: %w", name, err)
 	}
 
 	version := p.extractVersion(output)
 	if version == "" {
-		return "", errors.NewError(errors.ErrCommandExecution, errors.DomainPackages, "version",
-			fmt.Sprintf("could not extract version for package '%s' from pip output", name))
+		return "", fmt.Errorf("could not extract version for package '%s' from pip output", name)
 	}
 
 	return version, nil

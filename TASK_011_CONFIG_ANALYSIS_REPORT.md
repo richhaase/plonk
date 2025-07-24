@@ -12,7 +12,7 @@ The config package exhibits a **dual config system** with significant complexity
 
 **Primary Config Types:**
 1. **`NewConfig`** (config.go:16-23) - Modern direct field struct
-2. **`OldConfig`** (old_config.go:10-17) - Legacy pointer-based struct  
+2. **`OldConfig`** (old_config.go:10-17) - Legacy pointer-based struct
 3. **`Config = OldConfig`** (compat.go:132) - Type alias for backward compatibility
 4. **`ResolvedConfig = NewConfig`** (compat.go:151) - Type alias
 
@@ -50,7 +50,7 @@ The dual system consists of:
 
 **NewConfig getters (6):**
 1. `GetDefaultManager() string` (config.go:103)
-2. `GetOperationTimeout() int` (config.go:108) 
+2. `GetOperationTimeout() int` (config.go:108)
 3. `GetPackageTimeout() int` (config.go:113)
 4. `GetDotfileTimeout() int` (config.go:118)
 5. `GetExpandDirectories() []string` (config.go:123)
@@ -69,7 +69,7 @@ The dual system consists of:
 
 **Utility getters (3):**
 1. `GetDefaultConfigDirectory() string` (compat.go:145)
-2. `GetDefaults() *ResolvedConfig` (compat.go:154) 
+2. `GetDefaults() *ResolvedConfig` (compat.go:154)
 3. `ValidationResult.GetSummary() string` (compat.go:171)
 
 ### Config Loading Function Inventory
@@ -78,7 +78,7 @@ The dual system consists of:
 
 **New System:**
 1. `LoadNew(configDir string) (*NewConfig, error)`
-2. `LoadNewFromPath(configPath string) (*NewConfig, error)` 
+2. `LoadNewFromPath(configPath string) (*NewConfig, error)`
 3. `LoadNewWithDefaults(configDir string) *NewConfig`
 
 **Old System:**
@@ -129,7 +129,7 @@ This confirms YAML output is **actively used** for automation and must be preser
 ### Code Reduction Estimate
 
 - **Before**: 593 lines across 5 files
-- **After**: ~150-200 lines in 2 files  
+- **After**: ~150-200 lines in 2 files
 - **Reduction**: ~65-70% LOC elimination
 
 ### Proposed Simplified Architecture
@@ -146,7 +146,7 @@ internal/config/
 // config.go - Single config type
 type Config struct {
     DefaultManager    string        `yaml:"default_manager,omitempty"`
-    OperationTimeout  time.Duration `yaml:"operation_timeout,omitempty"`  
+    OperationTimeout  time.Duration `yaml:"operation_timeout,omitempty"`
     PackageTimeout    time.Duration `yaml:"package_timeout,omitempty"`
     DotfileTimeout    time.Duration `yaml:"dotfile_timeout,omitempty"`
     ExpandDirectories []string      `yaml:"expand_directories,omitempty"`
@@ -170,15 +170,15 @@ func LoadWithDefaults(configDir string) *Config
 3. **Delete old_config.go** entirely
 4. **Update type aliases** to point to `NewConfig`
 
-### Phase 2: Remove Adapters (1 day)  
+### Phase 2: Remove Adapters (1 day)
 1. **Replace `ConfigAdapter`** with direct config usage
 2. **Remove `StateDotfileConfigAdapter`** by moving interface to state package
 3. **Update `state.DotfileProvider`** to accept `*Config` directly
-4. **Simplify orchestrator usage** 
+4. **Simplify orchestrator usage**
 
 ### Phase 3: Consolidate Loading (1 day)
 1. **Keep only `LoadNew` and `LoadNewWithDefaults`**
-2. **Remove compatibility aliases** (`LoadConfig`, etc.)  
+2. **Remove compatibility aliases** (`LoadConfig`, etc.)
 3. **Remove `ConfigManager`** pattern → inline CRUD
 4. **Rename `New*` functions** to standard names
 
@@ -198,14 +198,14 @@ func LoadWithDefaults(configDir string) *Config
 
 1. **Import cycles when removing adapters**
    - *Mitigation*: Move `DotfileConfigLoader` interface to state package
-   
-2. **Lost functionality from ConfigManager** 
+
+2. **Lost functionality from ConfigManager**
    - *Mitigation*: Inline Save/LoadOrCreate operations into commands
 
 ### Success Criteria
 - ✅ All 18 dependent files updated without breaking functionality
 - ✅ YAML/JSON output preserved for automation
-- ✅ Zero-config behavior maintained  
+- ✅ Zero-config behavior maintained
 - ✅ Validation functionality preserved
 - ✅ 65-70% code reduction achieved
 - ✅ No CLI interface changes
@@ -216,7 +216,7 @@ func LoadWithDefaults(configDir string) *Config
 The dual system provides no real value and can be eliminated entirely. Direct field access is more idiomatic Go than Java-style getters, and adapter patterns are unnecessary abstraction for this use case.
 
 ### Implementation Priority
-1. **High Priority**: Remove dual config system (Phases 1-3) 
+1. **High Priority**: Remove dual config system (Phases 1-3)
 2. **Medium Priority**: Remove getters (Phase 4)
 3. **Future Enhancement**: Time duration refactor
 

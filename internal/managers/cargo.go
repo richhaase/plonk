@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-
-	"github.com/richhaase/plonk/internal/errors"
 )
 
 // CargoManager manages Rust packages via cargo using BaseManager for common functionality.
@@ -121,8 +119,7 @@ func (c *CargoManager) Search(ctx context.Context, query string) ([]string, erro
 				return []string{}, nil
 			}
 		}
-		return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "search", query,
-			"failed to search for cargo package")
+		return nil, fmt.Errorf("failed to search for cargo package %s: %w", query, err)
 	}
 
 	return c.parseSearchOutput(output), nil
@@ -151,15 +148,12 @@ func (c *CargoManager) Info(ctx context.Context, name string) (*PackageInfo, err
 	cmd := exec.CommandContext(ctx, c.GetBinary(), "search", name, "--limit", "1")
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "info", name,
-			"failed to get info for cargo package")
+		return nil, fmt.Errorf("failed to get info for cargo package %s: %w", name, err)
 	}
 
 	info := c.parseInfoOutput(output, name)
 	if info == nil {
-		return nil, errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "info",
-			fmt.Sprintf("package '%s' not found", name)).
-			WithSuggestionMessage(fmt.Sprintf("Search available packages: cargo search %s", name))
+		return nil, fmt.Errorf("package '%s' not found", name)
 	}
 
 	// Check if installed
@@ -229,26 +223,22 @@ func (c *CargoManager) GetInstalledVersion(ctx context.Context, name string) (st
 	// First check if package is installed
 	installed, err := c.IsInstalled(ctx, name)
 	if err != nil {
-		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
-			"failed to check package installation status")
+		return "", fmt.Errorf("failed to check package installation status for %s: %w", name, err)
 	}
 	if !installed {
-		return "", errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "version",
-			fmt.Sprintf("package '%s' is not installed", name))
+		return "", fmt.Errorf("package '%s' is not installed", name)
 	}
 
 	// Use cargo install --list to get version information
 	cmd := exec.CommandContext(ctx, c.GetBinary(), "install", "--list")
 	output, err := cmd.Output()
 	if err != nil {
-		return "", errors.WrapWithItem(err, errors.ErrCommandExecution, errors.DomainPackages, "version", name,
-			"failed to get package version information")
+		return "", fmt.Errorf("failed to get package version information for %s: %w", name, err)
 	}
 
 	version := c.extractVersion(output, name)
 	if version == "" {
-		return "", errors.NewError(errors.ErrPackageNotFound, errors.DomainPackages, "version",
-			fmt.Sprintf("could not find version information for package '%s'", name))
+		return "", fmt.Errorf("could not find version information for package '%s'", name)
 	}
 
 	return version, nil
