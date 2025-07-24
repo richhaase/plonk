@@ -494,7 +494,7 @@ While aggressively simplifying, we preserve specific extensibility points for fu
 2. **Reconciliation Semantics**: Keep the Managed/Missing/Untracked pattern for future resource types
 3. **Lock File Design**: Structure internally to support future resource types beyond packages
 4. **Clean Interfaces**: Maintain clear boundaries between packages for future extensions
-5. **Structured Output**: Keep both JSON and YAML output for automation needs
+5. **Structured Output**: Keep all 3 output formats (table, json, yaml) for broad compatibility
 
 These aren't premature abstractions - they're carefully chosen extensibility points based on known future requirements.
 
@@ -584,7 +584,6 @@ The current codebase suffers from premature abstraction and non-idiomatic patter
 ### Current Task Status
 - **Task 010** (Delete Errors): IN PROGRESS by worker - 766 LOC elimination
 - **Task 012** (Simplify Config): READY - 65-70% reduction plan completed
-- **Task 013** (Standardize Output): READY - Remove JSON, keep YAML+table
 
 ### Remaining Work
 - 1 package elimination in progress (errors - 766 LOC)
@@ -592,3 +591,6 @@ The current codebase suffers from premature abstraction and non-idiomatic patter
 - 1 package to keep (paths - has domain logic and security validation)
 - 3 packages to simplify (state, managers, commands)
 - **Progress**: 22 → 10 packages (54% reduction), targeting final 5-6 packages
+
+### Future Polish Tasks (Post-Simplification)
+- **Human-Readable Output Analysis**: Review and improve consistency/UX of table output formats across all commands (low priority - after reaching 5-6 package and code reduction goals)

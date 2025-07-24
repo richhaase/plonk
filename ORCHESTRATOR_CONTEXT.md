@@ -26,18 +26,16 @@
 ## Current Task Queue
 1. **Task 010** (Delete Errors): IN PROGRESS by worker - 766 LOC elimination
 2. **Task 012** (Simplify Config): READY - 65-70% reduction (593 → 150-200 LOC)
-3. **Task 013** (Standardize Output): READY - Remove JSON, keep YAML+table formats
 
 ## Package Analysis Complete
 - **errors**: 766 LOC over-engineered system - delete completely (IN PROGRESS)
 - **config**: 593 LOC with migration debt - 65-70% reduction possible (PLANNED)
 - **paths**: Keep - contains domain logic and security validation (DECISION FINAL)
-- **Output formats**: Standardize on YAML+table, remove JSON (USER REQUEST)
 
 ## Critical Preservation Points (AI Lab Requirements)
 1. **Orchestrator Pattern** - Transform runtime, don't delete
 2. **Reconciliation Logic** - Keep Managed/Missing/Untracked pattern
-3. **YAML Output** - Keep YAML and human-readable (JSON removed per user request)
+3. **Output Formats** - Keep all 3 formats (table, json, yaml) for broad compatibility
 4. **Clean Interfaces** - Maintain package boundaries for extensibility
 5. **Lock File** - Design for future resource types (not just packages)
 
