@@ -17,7 +17,6 @@ import (
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
-	plonkruntime "github.com/richhaase/plonk/internal/runtime"
 	"github.com/spf13/cobra"
 )
 
@@ -352,8 +351,7 @@ func checkPackageManagerAvailability(ctx context.Context) HealthCheck {
 		defaultManager = managers.DefaultManager
 	}
 
-	sharedCtx := plonkruntime.GetSharedContext()
-	registry := sharedCtx.ManagerRegistry()
+	registry := managers.NewManagerRegistry()
 	managerMap := make(map[string]managers.PackageManager)
 	for _, name := range registry.GetAllManagerNames() {
 		if manager, err := registry.GetManager(name); err == nil {
@@ -427,8 +425,7 @@ func checkPackageManagerFunctionality(ctx context.Context) HealthCheck {
 		Message:  "Package managers are functional",
 	}
 
-	sharedCtx := plonkruntime.GetSharedContext()
-	registry := sharedCtx.ManagerRegistry()
+	registry := managers.NewManagerRegistry()
 	managerMap := make(map[string]managers.PackageManager)
 	for _, name := range registry.GetAllManagerNames() {
 		if manager, err := registry.GetManager(name); err == nil {

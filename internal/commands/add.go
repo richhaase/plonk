@@ -9,7 +9,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/runtime"
+	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/richhaase/plonk/internal/ui"
 	"github.com/spf13/cobra"
@@ -64,10 +64,9 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	// TODO: force flag is defined but not currently used in core.AddSingleDotfile
 	// force, _ := cmd.Flags().GetBool("force")
 
-	// Get directories from shared context
-	sharedCtx := runtime.GetSharedContext()
-	homeDir := sharedCtx.HomeDir()
-	configDir := sharedCtx.ConfigDir()
+	// Get directories
+	homeDir := orchestrator.GetHomeDir()
+	configDir := orchestrator.GetConfigDir()
 
 	// Load config for ignore patterns
 	manager := config.NewConfigManager(configDir)

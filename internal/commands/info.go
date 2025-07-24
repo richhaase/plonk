@@ -12,7 +12,6 @@ import (
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
-	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/spf13/cobra"
 )
 
@@ -49,10 +48,8 @@ func runInfo(cmd *cobra.Command, args []string) error {
 
 	packageName := args[0]
 
-	// Get context from shared context pool
-	sharedCtx := runtime.GetSharedContext()
-	ctx, cancel := sharedCtx.AcquireContext()
-	defer sharedCtx.ReleaseContext(ctx, cancel)
+	// Create context
+	ctx := context.Background()
 
 	// Perform info lookup
 	infoResult, err := performPackageInfo(ctx, packageName)

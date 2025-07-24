@@ -9,7 +9,8 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/runtime"
+	"github.com/richhaase/plonk/internal/managers"
+	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
 )
@@ -114,10 +115,9 @@ func runSync(cmd *cobra.Command, args []string) error {
 		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "sync", "output-format", "invalid output format")
 	}
 
-	// Get directories from shared context
-	sharedCtx := runtime.GetSharedContext()
-	homeDir := sharedCtx.HomeDir()
-	configDir := sharedCtx.ConfigDir()
+	// Get directories
+	homeDir := orchestrator.GetHomeDir()
+	configDir := orchestrator.GetConfigDir()
 
 	// Load configuration
 	cfg := config.LoadConfigWithDefaults(configDir)
@@ -239,11 +239,8 @@ func runSync(cmd *cobra.Command, args []string) error {
 
 // applyPackages applies package configuration and returns the result
 func applyPackages(ctx context.Context, configDir string, cfg *config.Config, dryRun bool) (packageSyncResult, error) {
-	// Use shared context for reconciliation
-	sharedCtx := runtime.GetSharedContext()
-
 	// Reconcile package domain to find missing packages
-	result, err := sharedCtx.ReconcilePackages(ctx)
+	result, err := orchestrator.ReconcilePackages(ctx, configDir)
 	if err != nil {
 		return packageSyncResult{}, errors.Wrap(err, errors.ErrReconciliation, errors.DomainPackages, "reconcile", "failed to reconcile package state")
 	}
@@ -261,8 +258,8 @@ func applyPackages(ctx context.Context, configDir string, cfg *config.Config, dr
 	totalFailed := 0
 	totalWouldInstall := 0
 
-	// Get manager registry from shared context
-	registry := sharedCtx.ManagerRegistry()
+	// Get manager registry
+	registry := managers.NewManagerRegistry()
 
 	// Process each manager's missing packages
 	for managerName, packages := range missingByManager {

@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/runtime"
+	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
 )
@@ -98,12 +98,13 @@ func runLs(cmd *cobra.Command, args []string) error {
 
 // runSmartOverview provides a unified view of packages and dotfiles
 func runSmartOverview(cmd *cobra.Command, flags *SimpleFlags, format OutputFormat, showAll bool) error {
-	// Get shared context
-	sharedCtx := runtime.GetSharedContext()
+	// Get directories
+	homeDir := orchestrator.GetHomeDir()
+	configDir := orchestrator.GetConfigDir()
 
-	// Reconcile all domains directly
+	// Reconcile all domains
 	ctx := context.Background()
-	results, err := sharedCtx.ReconcileAll(ctx)
+	results, err := orchestrator.ReconcileAll(ctx, homeDir, configDir)
 	if err != nil {
 		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainState, "reconcile", "failed to reconcile state")
 	}

@@ -13,7 +13,6 @@ import (
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
-	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/richhaase/plonk/internal/ui"
 	"github.com/spf13/cobra"
@@ -214,8 +213,7 @@ func findPackageInLockFile(lockService *lock.YAMLLockService, packageName string
 
 // detectInstalledPackageManager tries to detect which package manager has the package installed
 func detectInstalledPackageManager(packageName string) (string, error) {
-	sharedCtx := runtime.GetSharedContext()
-	registry := sharedCtx.ManagerRegistry()
+	registry := managers.NewManagerRegistry()
 	ctx := context.Background()
 
 	// Try each manager to see if package is installed
@@ -247,8 +245,7 @@ func detectInstalledPackageManager(packageName string) (string, error) {
 
 // uninstallPackageFromSystem uninstalls a package using the appropriate manager
 func uninstallPackageFromSystem(managerName, packageName string) error {
-	sharedCtx := runtime.GetSharedContext()
-	registry := sharedCtx.ManagerRegistry()
+	registry := managers.NewManagerRegistry()
 	mgr, err := registry.GetManager(managerName)
 	if err != nil {
 		return err

@@ -15,7 +15,8 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
-	plonkruntime "github.com/richhaase/plonk/internal/runtime"
+	"github.com/richhaase/plonk/internal/managers"
+	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/spf13/cobra"
 )
 
@@ -61,9 +62,8 @@ func gatherEnvironmentInfo() EnvOutput {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	sharedCtx := plonkruntime.GetSharedContext()
-	homeDir := sharedCtx.HomeDir()
-	configDir := sharedCtx.ConfigDir()
+	homeDir := orchestrator.GetHomeDir()
+	configDir := orchestrator.GetConfigDir()
 	configPath := filepath.Join(configDir, "plonk.yaml")
 
 	// System information
@@ -131,8 +131,7 @@ func getManagerInfo(ctx context.Context, managerName string) ManagerInfo {
 		Available: false,
 	}
 
-	sharedCtx := plonkruntime.GetSharedContext()
-	registry := sharedCtx.ManagerRegistry()
+	registry := managers.NewManagerRegistry()
 	manager, err := registry.GetManager(managerName)
 	if err != nil {
 		info.Error = "unknown manager"

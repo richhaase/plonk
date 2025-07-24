@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/errors"
-	internalRuntime "github.com/richhaase/plonk/internal/runtime"
+	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
 )
@@ -207,9 +207,8 @@ func ParseSimpleFlags(cmd *cobra.Command) (*SimpleFlags, error) {
 
 // CompleteDotfilePaths provides file path completion for dotfiles
 func CompleteDotfilePaths(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	// Get home directory from shared context (no error handling needed)
-	sharedCtx := internalRuntime.GetSharedContext()
-	_ = sharedCtx.HomeDir()
+	// Get home directory (no error handling needed)
+	_ = orchestrator.GetHomeDir()
 
 	// Define common dotfile suggestions
 	commonDotfiles := []string{

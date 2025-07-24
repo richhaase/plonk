@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/runtime"
+	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/richhaase/plonk/internal/ui"
 	"github.com/spf13/cobra"
@@ -47,18 +47,18 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "packages", "output-format", "invalid output format")
 	}
 
-	// Get shared context
-	sharedCtx := runtime.GetSharedContext()
-
 	// Get specific manager if flag is set
 	flags, err := ParseSimpleFlags(cmd)
 	if err != nil {
 		return err
 	}
 
-	// Reconcile packages directly
+	// Get directories
+	configDir := orchestrator.GetConfigDir()
+
+	// Reconcile packages
 	ctx := context.Background()
-	domainResult, err := sharedCtx.ReconcilePackages(ctx)
+	domainResult, err := orchestrator.ReconcilePackages(ctx, configDir)
 	if err != nil {
 		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainState, "reconcile", "failed to reconcile package state")
 	}
@@ -185,12 +185,13 @@ func runDotList(cmd *cobra.Command, args []string) error {
 		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "dotfiles", "output-format", "invalid output format")
 	}
 
-	// Get shared context
-	sharedCtx := runtime.GetSharedContext()
+	// Get directories
+	homeDir := orchestrator.GetHomeDir()
+	configDir := orchestrator.GetConfigDir()
 
-	// Reconcile dotfiles directly
+	// Reconcile dotfiles
 	ctx := context.Background()
-	domainResult, err := sharedCtx.ReconcileDotfiles(ctx)
+	domainResult, err := orchestrator.ReconcileDotfiles(ctx, homeDir, configDir)
 	if err != nil {
 		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainState, "reconcile", "failed to reconcile dotfiles")
 	}

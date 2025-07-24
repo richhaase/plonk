@@ -9,8 +9,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
-	"github.com/richhaase/plonk/internal/runtime"
+	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
 )
@@ -48,16 +49,17 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "status", "output-format", "invalid output format")
 	}
 
-	// Get shared context
-	sharedCtx := runtime.GetSharedContext()
-	configDir := sharedCtx.ConfigDir()
+	// Get directories
+	homeDir := orchestrator.GetHomeDir()
+	configDir := orchestrator.GetConfigDir()
 
 	// Load configuration (may fail if config is invalid, but we handle this gracefully)
-	_, configLoadErr := sharedCtx.Config()
+	manager := config.NewConfigManager(configDir)
+	_, configLoadErr := manager.LoadOrCreate()
 
-	// Reconcile all domains using SharedContext
+	// Reconcile all domains
 	ctx := context.Background()
-	results, err := sharedCtx.ReconcileAll(ctx)
+	results, err := orchestrator.ReconcileAll(ctx, homeDir, configDir)
 	if err != nil {
 		return errors.Wrap(err, errors.ErrReconciliation, errors.DomainState, "reconcile", "failed to reconcile state")
 	}

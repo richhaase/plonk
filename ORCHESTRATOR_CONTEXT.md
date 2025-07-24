@@ -19,16 +19,17 @@
 7. ✅ Deleted `services` package (moved to sync command)
 8. ✅ Deleted `operations` package (moved to state/ui packages)
 9. ✅ Deleted `core` package (moved to commands/managers packages)
+10. ✅ Transformed `runtime` → `orchestrator` - Eliminated singleton, preserved coordination logic
 
 ## Next Priority Tasks
-1. **Transform `runtime` → `orchestrator`** - Eliminate singleton, keep ~200-300 LOC coordination (IN PROGRESS - Task 008)
-2. Delete `mocks` package - Replace with simple test doubles
+1. **Delete `mocks` package** - Replace with safe test doubles (READY - Task 009)
+2. **Delete `errors` package** - Replace with idiomatic Go patterns (READY - Task 010)
 3. Keep `paths` package - Contains important domain-specific logic and security validation
 
 ## Package Analysis Notes
 - **paths**: More complex than expected, provides security validation and Plonk-specific logic
-- **runtime**: Complex singleton pattern - transform to simple orchestrator functions
-- **mocks**: Generated complexity - replace with simple test doubles
+- **mocks**: Generated complexity - replace with safe test doubles (ready for execution)
+- **errors**: Over-engineered 766 LOC system - delete completely and use fmt.Errorf
 
 ## Critical Preservation Points (AI Lab Requirements)
 1. **Orchestrator Pattern** - Transform runtime, don't delete

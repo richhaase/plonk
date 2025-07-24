@@ -1,27 +1,26 @@
 // Copyright (c) 2025 Rich Haase
 // Licensed under the MIT License. See LICENSE file in the project root for license information.
 
-// This file contains simplified state reconciliation methods that bypass
-// the generic Provider interface and Reconciler abstraction.
-
-package runtime
+package orchestrator
 
 import (
 	"context"
 
+	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/state"
 )
 
-// SimplifiedReconcileDotfiles performs direct dotfile reconciliation without Provider interface
-func (sc *SharedContext) SimplifiedReconcileDotfiles(ctx context.Context) (state.Result, error) {
-	// Create the dotfile provider directly
-	provider, err := sc.CreateDotfileProvider()
-	if err != nil {
-		return state.Result{}, err
-	}
+// ReconcileDotfiles performs dotfile reconciliation without SharedContext
+func ReconcileDotfiles(ctx context.Context, homeDir, configDir string) (state.Result, error) {
+	// Create fresh provider (no caching)
+	cfg := config.LoadConfigWithDefaults(configDir)
+	configAdapter := config.NewConfigAdapter(cfg)
+	dotfileConfigAdapter := config.NewStateDotfileConfigAdapter(configAdapter)
+	provider := state.NewDotfileProvider(homeDir, configDir, dotfileConfigAdapter)
 
-	// Get configured and actual items directly
+	// Get items
 	configured, err := provider.GetConfiguredItems()
 	if err != nil {
 		return state.Result{}, err
@@ -32,19 +31,22 @@ func (sc *SharedContext) SimplifiedReconcileDotfiles(ctx context.Context) (state
 		return state.Result{}, err
 	}
 
-	// Perform reconciliation inline
+	// Reconcile (copy exact logic from runtime/context_simple.go)
 	return reconcileDotfileItems(provider, configured, actual), nil
 }
 
-// SimplifiedReconcilePackages performs direct package reconciliation without Provider interface
-func (sc *SharedContext) SimplifiedReconcilePackages(ctx context.Context) (state.Result, error) {
-	// Create the package provider directly
-	provider, err := sc.CreatePackageProvider(ctx)
+// ReconcilePackages performs package reconciliation without SharedContext
+func ReconcilePackages(ctx context.Context, configDir string) (state.Result, error) {
+	// Create fresh providers (no caching)
+	lockService := lock.NewYAMLLockService(configDir)
+	lockAdapter := lock.NewLockFileAdapter(lockService)
+	registry := managers.NewManagerRegistry()
+	provider, err := registry.CreateMultiProvider(ctx, lockAdapter)
 	if err != nil {
 		return state.Result{}, err
 	}
 
-	// Get configured and actual items directly
+	// Get items
 	configured, err := provider.GetConfiguredItems()
 	if err != nil {
 		return state.Result{}, err
@@ -55,8 +57,29 @@ func (sc *SharedContext) SimplifiedReconcilePackages(ctx context.Context) (state
 		return state.Result{}, err
 	}
 
-	// Perform reconciliation inline
+	// Reconcile (copy exact logic from runtime/context_simple.go)
 	return reconcilePackageItems(provider, configured, actual), nil
+}
+
+// ReconcileAll reconciles all domains
+func ReconcileAll(ctx context.Context, homeDir, configDir string) (map[string]state.Result, error) {
+	results := make(map[string]state.Result)
+
+	// Reconcile dotfiles
+	dotfileResult, err := ReconcileDotfiles(ctx, homeDir, configDir)
+	if err != nil {
+		return nil, err
+	}
+	results["dotfile"] = dotfileResult
+
+	// Reconcile packages
+	packageResult, err := ReconcilePackages(ctx, configDir)
+	if err != nil {
+		return nil, err
+	}
+	results["package"] = packageResult
+
+	return results, nil
 }
 
 // reconcileDotfileItems performs the core reconciliation logic for dotfiles
@@ -147,25 +170,4 @@ func reconcilePackageItems(provider *managers.MultiManagerPackageProvider, confi
 	}
 
 	return result
-}
-
-// SimplifiedReconcileAll reconciles all domains without using the generic Reconciler
-func (sc *SharedContext) SimplifiedReconcileAll(ctx context.Context) (map[string]state.Result, error) {
-	results := make(map[string]state.Result)
-
-	// Reconcile dotfiles directly
-	dotfileResult, err := sc.SimplifiedReconcileDotfiles(ctx)
-	if err != nil {
-		return nil, err
-	}
-	results["dotfile"] = dotfileResult
-
-	// Reconcile packages directly
-	packageResult, err := sc.SimplifiedReconcilePackages(ctx)
-	if err != nil {
-		return nil, err
-	}
-	results["package"] = packageResult
-
-	return results, nil
 }
