@@ -603,11 +603,24 @@ The current codebase suffers from premature abstraction and non-idiomatic patter
 
 ### Progress Summary
 - **Original**: 22 packages, ~26,000 LOC
-- **Current**: 9 packages, significant LOC reduction
+- **Current**: 9 packages, 15,166 LOC (42% overall reduction achieved!)
 - **Eliminated**: cli, types, constants, executor, interfaces, services, operations, core, mocks, testing, errors (11 packages)
 - **Transformed**: runtime → orchestrator (preserved AI Lab coordination)
 - **Simplified**: config (68% reduction)
 - **Target**: 7-9 well-defined domain packages with idiomatic Go patterns
+
+### Current Package Metrics (via scc)
+| Package | LOC | % of Total | Status |
+|---------|-----|------------|--------|
+| commands | 5,087 | 33.5% | Too large - needs business logic extraction |
+| managers | 4,513 | 29.8% | Needs BaseManager inheritance removal |
+| dotfiles | 2,142 | 14.1% | Core domain, reasonable size |
+| paths | 1,067 | 7.0% | May merge with dotfiles |
+| state | 689 | 4.5% | Ready for 60-70% reduction (Task 013) |
+| config | 579 | 3.8% | Recently simplified, good size |
+| ui | 464 | 3.1% | Well-focused, right size |
+| lock | 328 | 2.2% | Focused domain |
+| orchestrator | 297 | 2.0% | Minimal coordination layer |
 
 ### Future Polish Tasks (Post-Simplification)
 - **Human-Readable Output Analysis**: Review and improve consistency/UX of table output formats across all commands (low priority - after achieving clean architecture)
