@@ -68,8 +68,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	configDir := orchestrator.GetConfigDir()
 
 	// Load config for ignore patterns
-	manager := config.NewConfigManager(configDir)
-	cfg, err := manager.LoadOrCreate()
+	cfg, err := config.LoadConfig(configDir)
 	if err != nil {
 		return err
 	}

@@ -77,8 +77,8 @@ func AddSingleFile(ctx context.Context, cfg *config.Config, filePath, homeDir, c
 	result.FilesProcessed = 1
 
 	// Check if already managed by checking if source file exists in config dir
-	adapter := config.NewConfigAdapter(cfg)
-	dotfileTargets := adapter.GetDotfileTargets()
+	dotfileConfigLoader := state.NewConfigBasedDotfileLoader(cfg.IgnorePatterns, cfg.ExpandDirectories)
+	dotfileTargets := dotfileConfigLoader.GetDotfileTargets()
 	if _, exists := dotfileTargets[source]; exists {
 		if dryRun {
 			result.Status = "would-update"
@@ -121,7 +121,7 @@ func AddSingleFile(ctx context.Context, cfg *config.Config, filePath, homeDir, c
 // AddDirectoryFiles processes all files in a directory and returns results
 func AddDirectoryFiles(ctx context.Context, cfg *config.Config, dirPath, homeDir, configDir string, dryRun bool) []state.OperationResult {
 	var results []state.OperationResult
-	ignorePatterns := cfg.Resolve().GetIgnorePatterns()
+	ignorePatterns := cfg.IgnorePatterns
 
 	// Use PathResolver to expand directory
 	resolver := paths.NewPathResolver(homeDir, configDir)

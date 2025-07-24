@@ -53,8 +53,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	configDir := orchestrator.GetConfigDir()
 
 	// Load configuration (may fail if config is invalid, but we handle this gracefully)
-	manager := config.NewConfigManager(configDir)
-	_, configLoadErr := manager.LoadOrCreate()
+	_, configLoadErr := config.LoadConfig(configDir)
 
 	// Reconcile all domains
 	ctx := context.Background()

@@ -152,7 +152,7 @@ func getDefaultManager() (string, error) {
 	configDir := config.GetDefaultConfigDirectory()
 	cfg := config.LoadConfigWithDefaults(configDir)
 
-	return cfg.Resolve().GetDefaultManager(), nil
+	return cfg.DefaultManager, nil
 }
 
 // searchWithDefaultManager searches the default manager first, then others if needed

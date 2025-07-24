@@ -10,13 +10,13 @@ import (
 	"testing"
 )
 
-func TestLoadNew_MissingFile(t *testing.T) {
+func TestLoad_MissingFile(t *testing.T) {
 	// Test zero-config behavior - missing file should return defaults
 	tempDir := t.TempDir()
 
-	cfg, err := LoadNew(tempDir)
+	cfg, err := Load(tempDir)
 	if err != nil {
-		t.Fatalf("LoadNew with missing file should not error, got: %v", err)
+		t.Fatalf("Load with missing file should not error, got: %v", err)
 	}
 
 	// Check all defaults are applied
@@ -40,7 +40,7 @@ func TestLoadNew_MissingFile(t *testing.T) {
 	}
 }
 
-func TestLoadNew_ValidConfig(t *testing.T) {
+func TestLoad_ValidConfig(t *testing.T) {
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "plonk.yaml")
 
@@ -61,9 +61,9 @@ ignore_patterns:
 		t.Fatal(err)
 	}
 
-	cfg, err := LoadNew(tempDir)
+	cfg, err := Load(tempDir)
 	if err != nil {
-		t.Fatalf("LoadNew failed: %v", err)
+		t.Fatalf("Load failed: %v", err)
 	}
 
 	// Verify loaded values
@@ -91,7 +91,7 @@ ignore_patterns:
 	}
 }
 
-func TestLoadNew_PartialConfig(t *testing.T) {
+func TestLoad_PartialConfig(t *testing.T) {
 	// Test that unspecified fields get defaults
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "plonk.yaml")
@@ -105,9 +105,9 @@ operation_timeout: 400
 		t.Fatal(err)
 	}
 
-	cfg, err := LoadNew(tempDir)
+	cfg, err := Load(tempDir)
 	if err != nil {
-		t.Fatalf("LoadNew failed: %v", err)
+		t.Fatalf("Load failed: %v", err)
 	}
 
 	// Check specified values
@@ -133,7 +133,7 @@ operation_timeout: 400
 	}
 }
 
-func TestLoadNew_InvalidManager(t *testing.T) {
+func TestLoad_InvalidManager(t *testing.T) {
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "plonk.yaml")
 
@@ -145,13 +145,13 @@ default_manager: invalid_manager
 		t.Fatal(err)
 	}
 
-	_, err := LoadNew(tempDir)
+	_, err := Load(tempDir)
 	if err == nil {
 		t.Error("Expected validation error for invalid manager")
 	}
 }
 
-func TestLoadNew_InvalidTimeout(t *testing.T) {
+func TestLoad_InvalidTimeout(t *testing.T) {
 	tests := []struct {
 		name    string
 		content string
@@ -191,7 +191,7 @@ dotfile_timeout: 601
 				t.Fatal(err)
 			}
 
-			_, err := LoadNew(tempDir)
+			_, err := Load(tempDir)
 			if err == nil {
 				t.Error("Expected validation error for invalid timeout")
 			}
@@ -199,7 +199,7 @@ dotfile_timeout: 601
 	}
 }
 
-func TestLoadNew_InvalidYAML(t *testing.T) {
+func TestLoad_InvalidYAML(t *testing.T) {
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "plonk.yaml")
 
@@ -211,20 +211,20 @@ default_manager: [this is not valid yaml
 		t.Fatal(err)
 	}
 
-	_, err := LoadNew(tempDir)
+	_, err := Load(tempDir)
 	if err == nil {
 		t.Error("Expected error for invalid YAML")
 	}
 }
 
-func TestLoadNewWithDefaults(t *testing.T) {
-	// Test that LoadNewWithDefaults always returns a config
+func TestLoadWithDefaults(t *testing.T) {
+	// Test that LoadWithDefaults always returns a config
 	tempDir := t.TempDir()
 
 	// Case 1: Missing file
-	cfg := LoadNewWithDefaults(tempDir)
+	cfg := LoadWithDefaults(tempDir)
 	if cfg == nil {
-		t.Fatal("LoadNewWithDefaults should never return nil")
+		t.Fatal("LoadWithDefaults should never return nil")
 	}
 	if cfg.DefaultManager != "homebrew" {
 		t.Error("Should return defaults for missing file")
@@ -236,17 +236,17 @@ func TestLoadNewWithDefaults(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cfg = LoadNewWithDefaults(tempDir)
+	cfg = LoadWithDefaults(tempDir)
 	if cfg == nil {
-		t.Fatal("LoadNewWithDefaults should never return nil")
+		t.Fatal("LoadWithDefaults should never return nil")
 	}
 	if cfg.DefaultManager != "homebrew" {
 		t.Error("Should return defaults for invalid file")
 	}
 }
 
-func TestNewConfig_Getters(t *testing.T) {
-	cfg := &NewConfig{
+func TestConfig_DirectFieldAccess(t *testing.T) {
+	cfg := &Config{
 		DefaultManager:    "npm",
 		OperationTimeout:  500,
 		PackageTimeout:    200,
@@ -256,32 +256,32 @@ func TestNewConfig_Getters(t *testing.T) {
 	}
 
 	// Test all getter methods
-	if cfg.GetDefaultManager() != "npm" {
-		t.Error("GetDefaultManager returned wrong value")
+	if cfg.DefaultManager != "npm" {
+		t.Error("DefaultManager returned wrong value")
 	}
-	if cfg.GetOperationTimeout() != 500 {
-		t.Error("GetOperationTimeout returned wrong value")
+	if cfg.OperationTimeout != 500 {
+		t.Error("OperationTimeout returned wrong value")
 	}
-	if cfg.GetPackageTimeout() != 200 {
-		t.Error("GetPackageTimeout returned wrong value")
+	if cfg.PackageTimeout != 200 {
+		t.Error("PackageTimeout returned wrong value")
 	}
-	if cfg.GetDotfileTimeout() != 100 {
-		t.Error("GetDotfileTimeout returned wrong value")
+	if cfg.DotfileTimeout != 100 {
+		t.Error("DotfileTimeout returned wrong value")
 	}
 
-	dirs := cfg.GetExpandDirectories()
+	dirs := cfg.ExpandDirectories
 	if len(dirs) != 2 || dirs[0] != ".config" {
-		t.Error("GetExpandDirectories returned wrong value")
+		t.Error("ExpandDirectories returned wrong value")
 	}
 
-	patterns := cfg.GetIgnorePatterns()
+	patterns := cfg.IgnorePatterns
 	if len(patterns) != 2 || patterns[0] != "*.tmp" {
-		t.Error("GetIgnorePatterns returned wrong value")
+		t.Error("IgnorePatterns returned wrong value")
 	}
 }
 
-func TestNewConfig_Resolve(t *testing.T) {
-	cfg := &NewConfig{
+func TestConfig_Resolve(t *testing.T) {
+	cfg := &Config{
 		DefaultManager: "pip",
 	}
 
@@ -292,7 +292,7 @@ func TestNewConfig_Resolve(t *testing.T) {
 	}
 }
 
-func TestLoadNewFromPath_PermissionError(t *testing.T) {
+func TestLoadFromPath_PermissionError(t *testing.T) {
 	// Skip on Windows where file permissions work differently
 	if os.Getenv("GOOS") == "windows" {
 		t.Skip("Skipping permission test on Windows")
@@ -306,7 +306,7 @@ func TestLoadNewFromPath_PermissionError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := LoadNewFromPath(configPath)
+	_, err := LoadFromPath(configPath)
 	if err == nil {
 		t.Error("Expected error for unreadable file")
 	}

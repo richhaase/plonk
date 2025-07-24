@@ -11,9 +11,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// NewConfig represents the plonk configuration
-// This will replace the current Config struct
-type NewConfig struct {
+// Config represents the plonk configuration
+type Config struct {
 	DefaultManager    string   `yaml:"default_manager,omitempty" validate:"omitempty,oneof=homebrew npm pip gem go cargo test-unavailable"`
 	OperationTimeout  int      `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"`
 	PackageTimeout    int      `yaml:"package_timeout,omitempty" validate:"omitempty,min=0,max=1800"`
@@ -23,7 +22,7 @@ type NewConfig struct {
 }
 
 // defaultConfig holds the default configuration values
-var defaultConfig = NewConfig{
+var defaultConfig = Config{
 	DefaultManager:   "homebrew",
 	OperationTimeout: 300, // 5 minutes
 	PackageTimeout:   180, // 3 minutes
@@ -47,14 +46,14 @@ var defaultConfig = NewConfig{
 	},
 }
 
-// LoadNew reads and validates configuration from the standard location
-func LoadNew(configDir string) (*NewConfig, error) {
+// Load reads and validates configuration from the standard location
+func Load(configDir string) (*Config, error) {
 	configPath := filepath.Join(configDir, "plonk.yaml")
-	return LoadNewFromPath(configPath)
+	return LoadFromPath(configPath)
 }
 
-// LoadNewFromPath reads and validates configuration from a specific path
-func LoadNewFromPath(configPath string) (*NewConfig, error) {
+// LoadFromPath reads and validates configuration from a specific path
+func LoadFromPath(configPath string) (*Config, error) {
 	// Start with a copy of defaults
 	cfg := defaultConfig
 
@@ -82,9 +81,9 @@ func LoadNewFromPath(configPath string) (*NewConfig, error) {
 	return &cfg, nil
 }
 
-// LoadNewWithDefaults provides zero-config behavior matching current LoadConfigWithDefaults
-func LoadNewWithDefaults(configDir string) *NewConfig {
-	cfg, err := LoadNew(configDir)
+// LoadWithDefaults provides zero-config behavior matching current LoadConfigWithDefaults
+func LoadWithDefaults(configDir string) *Config {
+	cfg, err := Load(configDir)
 	if err != nil {
 		// Return copy of defaults on any error
 		defaultCopy := defaultConfig
@@ -95,42 +94,12 @@ func LoadNewWithDefaults(configDir string) *NewConfig {
 
 // Resolve returns self for API compatibility
 // In the new system, Config IS the resolved config
-func (c *NewConfig) Resolve() *NewConfig {
+func (c *Config) Resolve() *Config {
 	return c
 }
 
-// GetDefaultManager returns the default package manager
-func (c *NewConfig) GetDefaultManager() string {
-	return c.DefaultManager
-}
-
-// GetOperationTimeout returns operation timeout in seconds
-func (c *NewConfig) GetOperationTimeout() int {
-	return c.OperationTimeout
-}
-
-// GetPackageTimeout returns package timeout in seconds
-func (c *NewConfig) GetPackageTimeout() int {
-	return c.PackageTimeout
-}
-
-// GetDotfileTimeout returns dotfile timeout in seconds
-func (c *NewConfig) GetDotfileTimeout() int {
-	return c.DotfileTimeout
-}
-
-// GetExpandDirectories returns directories to expand
-func (c *NewConfig) GetExpandDirectories() []string {
-	return c.ExpandDirectories
-}
-
-// GetIgnorePatterns returns patterns to ignore
-func (c *NewConfig) GetIgnorePatterns() []string {
-	return c.IgnorePatterns
-}
-
 // applyDefaults applies default values to a config
-func applyDefaults(cfg *NewConfig) {
+func applyDefaults(cfg *Config) {
 	if cfg.DefaultManager == "" {
 		cfg.DefaultManager = defaultConfig.DefaultManager
 	}

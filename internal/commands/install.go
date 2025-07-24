@@ -81,8 +81,8 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	manager := flags.Manager
 	if manager == "" {
 		cfg := config.LoadConfigWithDefaults(orchestrator.GetConfigDir())
-		if cfg.DefaultManager != nil && *cfg.DefaultManager != "" {
-			manager = *cfg.DefaultManager
+		if cfg.DefaultManager != "" {
+			manager = cfg.DefaultManager
 		} else {
 			manager = managers.DefaultManager // fallback default
 		}

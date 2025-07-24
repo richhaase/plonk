@@ -16,9 +16,8 @@ import (
 func ReconcileDotfiles(ctx context.Context, homeDir, configDir string) (state.Result, error) {
 	// Create fresh provider (no caching)
 	cfg := config.LoadConfigWithDefaults(configDir)
-	configAdapter := config.NewConfigAdapter(cfg)
-	dotfileConfigAdapter := config.NewStateDotfileConfigAdapter(configAdapter)
-	provider := state.NewDotfileProvider(homeDir, configDir, dotfileConfigAdapter)
+	dotfileConfigLoader := state.NewConfigBasedDotfileLoader(cfg.IgnorePatterns, cfg.ExpandDirectories)
+	provider := state.NewDotfileProvider(homeDir, configDir, dotfileConfigLoader)
 
 	// Get items
 	configured, err := provider.GetConfiguredItems()

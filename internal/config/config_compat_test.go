@@ -9,20 +9,20 @@ import (
 	"testing"
 )
 
-// TestNewConfig_CompatibilityWithExisting ensures the new implementation
+// TestConfig_CompatibilityWithExisting ensures the new implementation
 // can read configs that work with the current system
-func TestNewConfig_CompatibilityWithExisting(t *testing.T) {
+func TestConfig_CompatibilityWithExisting(t *testing.T) {
 	tests := []struct {
 		name    string
 		content string
-		check   func(t *testing.T, cfg *NewConfig)
+		check   func(t *testing.T, cfg *Config)
 	}{
 		{
 			name: "minimal config with version",
 			content: `version: 1
 default_manager: npm
 `,
-			check: func(t *testing.T, cfg *NewConfig) {
+			check: func(t *testing.T, cfg *Config) {
 				if cfg.DefaultManager != "npm" {
 					t.Errorf("Expected default_manager npm, got %s", cfg.DefaultManager)
 				}
@@ -42,7 +42,7 @@ ignore_patterns:
   - "*.tmp"
   - "*.log"
 `,
-			check: func(t *testing.T, cfg *NewConfig) {
+			check: func(t *testing.T, cfg *Config) {
 				if cfg.DefaultManager != "cargo" {
 					t.Errorf("Expected default_manager cargo, got %s", cfg.DefaultManager)
 				}
@@ -72,7 +72,7 @@ packages:
   - name: git
     manager: homebrew
 `,
-			check: func(t *testing.T, cfg *NewConfig) {
+			check: func(t *testing.T, cfg *Config) {
 				if cfg.DefaultManager != "pip" {
 					t.Errorf("Expected default_manager pip, got %s", cfg.DefaultManager)
 				}
@@ -82,7 +82,7 @@ packages:
 		{
 			name:    "empty config",
 			content: ``,
-			check: func(t *testing.T, cfg *NewConfig) {
+			check: func(t *testing.T, cfg *Config) {
 				// Should get all defaults
 				if cfg.DefaultManager != "homebrew" {
 					t.Errorf("Expected default homebrew, got %s", cfg.DefaultManager)
@@ -95,7 +95,7 @@ packages:
 expand_directories: []
 ignore_patterns: []
 `,
-			check: func(t *testing.T, cfg *NewConfig) {
+			check: func(t *testing.T, cfg *Config) {
 				if cfg.DefaultManager != "gem" {
 					t.Errorf("Expected default_manager gem, got %s", cfg.DefaultManager)
 				}
@@ -118,7 +118,7 @@ ignore_patterns: []
 				t.Fatal(err)
 			}
 
-			cfg, err := LoadNew(tempDir)
+			cfg, err := Load(tempDir)
 			if err != nil {
 				t.Fatalf("Failed to load config: %v", err)
 			}
@@ -128,15 +128,15 @@ ignore_patterns: []
 	}
 }
 
-// TestNewConfig_RealWorldExample tests with a real config file if it exists
-func TestNewConfig_RealWorldExample(t *testing.T) {
+// TestConfig_RealWorldExample tests with a real config file if it exists
+func TestConfig_RealWorldExample(t *testing.T) {
 	// Try to load the test config if it exists
 	testConfigPath := "../../tmp-test/plonk.yaml"
 	if _, err := os.Stat(testConfigPath); os.IsNotExist(err) {
 		t.Skip("Test config not found, skipping real-world test")
 	}
 
-	cfg, err := LoadNewFromPath(testConfigPath)
+	cfg, err := LoadFromPath(testConfigPath)
 	if err != nil {
 		t.Fatalf("Failed to load real config: %v", err)
 	}

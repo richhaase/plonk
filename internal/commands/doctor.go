@@ -16,6 +16,7 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
+	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
 )
 
@@ -307,12 +308,12 @@ func checkConfigurationValidity() HealthCheck {
 		packageCount := getPackageCountFromLockFile(configDir)
 
 		// Get auto-discovered dotfiles
-		adapter := config.NewConfigAdapter(cfg)
-		dotfileTargets := adapter.GetDotfileTargets()
+		dotfileConfigLoader := state.NewConfigBasedDotfileLoader(cfg.IgnorePatterns, cfg.ExpandDirectories)
+		dotfileTargets := dotfileConfigLoader.GetDotfileTargets()
 		dotfileCount := len(dotfileTargets)
 
 		check.Details = append(check.Details,
-			fmt.Sprintf("Default manager: %s", cfg.Resolve().GetDefaultManager()),
+			fmt.Sprintf("Default manager: %s", cfg.DefaultManager),
 			fmt.Sprintf("Configured packages: %d", packageCount),
 			fmt.Sprintf("Auto-discovered dotfiles: %d", dotfileCount),
 		)
@@ -343,8 +344,8 @@ func checkPackageManagerAvailability(ctx context.Context) HealthCheck {
 	configDir := config.GetDefaultConfigDirectory()
 	cfg := config.LoadConfigWithDefaults(configDir)
 	defaultManager := ""
-	if cfg != nil && cfg.DefaultManager != nil {
-		defaultManager = *cfg.DefaultManager
+	if cfg != nil && cfg.DefaultManager != "" {
+		defaultManager = cfg.DefaultManager
 	}
 	if defaultManager == "" {
 		defaultManager = managers.DefaultManager
