@@ -5,6 +5,8 @@ package managers
 
 import (
 	"testing"
+
+	managerTesting "github.com/richhaase/plonk/internal/managers/testing"
 )
 
 func TestNpmManager_parseListOutput(t *testing.T) {
@@ -79,7 +81,7 @@ func TestNpmManager_parseListOutput(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			manager := NewNpmManager()
 			got := manager.parseListOutput(tt.output)
-			if !stringSlicesEqual(got, tt.want) {
+			if !managerTesting.StringSlicesEqual(got, tt.want) {
 				t.Errorf("parseListOutput() = %v, want %v", got, tt.want)
 			}
 		})
@@ -151,7 +153,7 @@ func TestNpmManager_parseSearchOutput(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			manager := NewNpmManager()
 			got := manager.parseSearchOutput(tt.output)
-			if !stringSlicesEqual(got, tt.want) {
+			if !managerTesting.StringSlicesEqual(got, tt.want) {
 				t.Errorf("parseSearchOutput() = %v, want %v", got, tt.want)
 			}
 		})
@@ -233,4 +235,17 @@ func TestNpmManager_parseInfoOutput(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Shared integration tests using the common test suite
+func TestNpmManager_SharedTestSuite(t *testing.T) {
+	suite := &managerTesting.ManagerTestSuite{
+		Manager:     NewNpmManager(),
+		TestPackage: "lodash",
+		BinaryName:  "npm",
+	}
+
+	t.Run("IsAvailable", suite.TestIsAvailable)
+	t.Run("ListInstalled", suite.TestListInstalled)
+	t.Run("SupportsSearch", suite.TestSupportsSearch)
 }

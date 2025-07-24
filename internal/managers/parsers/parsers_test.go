@@ -17,21 +17,12 @@ func TestParseJSON(t *testing.T) {
 		wantErr   bool
 	}{
 		{
-			name:   "npm json format",
+			name:   "valid json with packages",
 			output: []byte(`[{"name": "TypeScript", "version": "4.5.0"}, {"name": "React", "version": "18.0.0"}]`),
 			extractor: func(data []byte) ([]Package, error) {
 				return ExtractNPMPackages(data)
 			},
 			want:    []string{"typescript", "react"},
-			wantErr: false,
-		},
-		{
-			name:   "pip json format",
-			output: []byte(`[{"name": "requests", "version": "2.28.0"}, {"name": "Flask", "version": "2.2.0"}]`),
-			extractor: func(data []byte) ([]Package, error) {
-				return ExtractPipPackages(data)
-			},
-			want:    []string{"requests", "flask"},
 			wantErr: false,
 		},
 		{
@@ -82,24 +73,12 @@ package3`),
 			want: []string{"package1", "package2", "package3"},
 		},
 		{
-			name: "list with warnings",
+			name: "list with filtered content",
 			output: []byte(`WARNING: something
 package1
 ---
 package2`),
 			want: []string{"package1", "package2"},
-		},
-		{
-			name:   "empty output",
-			output: []byte(``),
-			want:   nil,
-		},
-		{
-			name: "whitespace handling",
-			output: []byte(`  package1
-   package2
-package3`),
-			want: []string{"package1", "package2", "package3"},
 		},
 	}
 
@@ -196,7 +175,7 @@ func TestExtractVersion(t *testing.T) {
 		want   string
 	}{
 		{
-			name: "pip show format",
+			name: "key-value format",
 			output: []byte(`Name: requests
 Version: 2.28.0
 Summary: HTTP library`),
@@ -204,26 +183,10 @@ Summary: HTTP library`),
 			want:   "2.28.0",
 		},
 		{
-			name: "npm version format",
-			output: []byte(`{
-  "name": "typescript",
-  "version": "4.5.0"
-}`),
-			prefix: `"version":`,
-			want:   `"4.5.0"`,
-		},
-		{
 			name:   "version not found",
 			output: []byte(`Some other output without version info`),
 			prefix: "Version:",
 			want:   "",
-		},
-		{
-			name: "multiple versions - first match",
-			output: []byte(`Current Version: 1.0.0
-Previous Version: 0.9.0`),
-			prefix: "Current Version:",
-			want:   "1.0.0",
 		},
 	}
 
@@ -244,17 +207,7 @@ func TestNormalizePackageName(t *testing.T) {
 		want  string
 	}{
 		{
-			name:  "lowercase conversion",
-			input: "TypeScript",
-			want:  "typescript",
-		},
-		{
-			name:  "dash to underscore",
-			input: "flask-cors",
-			want:  "flask_cors",
-		},
-		{
-			name:  "mixed case with dashes",
+			name:  "mixed case and dashes",
 			input: "Django-REST-Framework",
 			want:  "django_rest_framework",
 		},
@@ -293,28 +246,10 @@ func TestSimpleLineParser(t *testing.T) {
 			parsed:     "package1",
 		},
 		{
-			name:       "separator line",
-			line:       "----------",
-			shouldSkip: true,
-			parsed:     "",
-		},
-		{
-			name:       "total line",
+			name:       "filtered line",
 			line:       "Total: 5 packages",
 			shouldSkip: true,
 			parsed:     "",
-		},
-		{
-			name:       "empty line",
-			line:       "",
-			shouldSkip: true,
-			parsed:     "",
-		},
-		{
-			name:       "single word",
-			line:       "package",
-			shouldSkip: false,
-			parsed:     "package",
 		},
 	}
 

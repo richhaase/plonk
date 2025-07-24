@@ -3,7 +3,7 @@
 ## Current State (2025-07-24)
 - **Branch**: refactor/simplify
 - **Package Count**: 22 → 9 (59% reduction achieved)
-- **LOC Count**: ~26,000 → 14,573 (44% overall reduction)
+- **LOC Count**: ~26,000 → 14,591 (44% overall reduction)
 - **Goal**: Clean, domain-focused architecture with idiomatic Go patterns
 - **Philosophy**: Not forcing arbitrary package count, but achieving maintainable domain separation
 
@@ -29,35 +29,36 @@
 15. ✅ **Task 014**: Removed BaseManager inheritance - Eliminated Java-style patterns (qualitative win)
 16. ✅ **Task 015**: Improved integration test implementation - Enhanced error handling and Go idioms
 17. ✅ **Task 016**: Analyzed managers package - Identified 1,180-1,450 LOC reduction potential (21-26%)
+18. ✅ **Task 017**: Refactored commands package - 25% reduction (5,305 → 3,990 LOC), extracted business logic to domain packages
 
 ## Current Task Queue
-1. **Task 017** (Commands Refactoring): IN PROGRESS - Extract business logic from commands (20-30% reduction target)
-2. **Task 018** (Managers Optimization): READY - Implement duplication fixes (21-26% reduction target)
+1. **Task 018** (Managers Optimization): READY - Implement duplication fixes (21-26% reduction target)
+2. **Task 019** (Paths/Dotfiles Merge): READY - Merge paths into dotfiles and simplify
 
 ## Next Priorities Based on Metrics
-1. **Commands refactoring**: Extract business logic from commands package (20-30% reduction, 5,076 LOC base)
-2. **Managers optimization**: Implement identified duplication fixes (21-26% reduction, detailed roadmap available)
-3. **Path/Dotfiles merge**: Consider consolidating related functionality (package count reduction)
-4. **UI enhancements**: Improve output consistency across commands
+1. **Managers optimization** (Task 018): Implement identified duplication fixes (21-26% reduction target)
+2. **Path/Dotfiles merge** (Task 019): Consolidate and simplify (target 8 packages)
+3. **UI enhancements**: Improve output consistency across commands (post-architecture work)
 
 ## Package Architecture Vision
 
-### Current Metrics (9 packages, 14,573 LOC total)
+### Current Metrics (9 packages, 14,591 LOC total)
 | Package | LOC | % of Total | Assessment |
 |---------|-----|------------|------------|
-| commands | 5,076 | 34.8% | Too large - business logic extraction needed |
-| managers | 4,402 | 30.2% | BaseManager inheritance needs removal |
-| dotfiles | 2,245 | 15.4% | Core domain, appropriate size |
+| managers | 4,619 | 31.7% | Added operations.go (+217 LOC), ready for optimization |
+| commands | 3,990 | 27.3% | Successfully reduced from 5,305 LOC (25% reduction) |
+| dotfiles | 2,592 | 17.8% | Added operations.go (+347 LOC), core domain |
 | paths | 1,067 | 7.3% | Consider merging with dotfiles |
+| orchestrator | 1,054 | 7.2% | Added health.go and sync.go for extracted logic |
 | config | 579 | 4.0% | Recently simplified, good size |
 | ui | 464 | 3.2% | Well-focused |
-| orchestrator | 334 | 2.3% | Minimal coordination layer |
 | lock | 304 | 2.1% | Focused domain |
 | state | 102 | 0.7% | Successfully simplified (87% reduction) |
 
 ### Key Achievements
-- **44% overall LOC reduction** from ~26,000 to 14,573
+- **44% overall LOC reduction** from ~26,000 to 14,591
 - **59% package reduction** from 22 to 9 packages
+- **Commands package transformation**: Now thin CLI handlers (25% reduction)
 - **Eliminated anti-patterns**: Java-style getters, complex errors, unnecessary abstractions
 - **Preserved extensibility**: AI Lab coordination patterns intact
 - **Major simplifications**: state (87% reduction), config (68% reduction), errors (100% deletion)

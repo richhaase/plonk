@@ -9,12 +9,13 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+
+	"github.com/richhaase/plonk/internal/managers/parsers"
 )
 
 // PipManager manages Python packages via pip.
 type PipManager struct {
-	binary       string
-	errorMatcher *ErrorMatcher
+	*StandardManager
 }
 
 // NewPipManager creates a new pip manager.
@@ -24,28 +25,17 @@ func NewPipManager() *PipManager {
 
 // newPipManager creates a pip manager.
 func newPipManager() *PipManager {
-	// Add pip-specific error patterns
-	errorMatcher := NewCommonErrorMatcher()
-	errorMatcher.AddPattern(ErrorTypeNotFound, "Could not find", "No matching distribution", "ERROR: No matching distribution")
-	errorMatcher.AddPattern(ErrorTypeAlreadyInstalled, "Requirement already satisfied", "already satisfied")
-	errorMatcher.AddPattern(ErrorTypeNotInstalled, "WARNING: Skipping", "not installed", "Cannot uninstall")
-	errorMatcher.AddPattern(ErrorTypePermission, "Permission denied", "access is denied")
-
-	// Find available binary (pip or pip3)
-	binary := FindAvailableBinary(context.Background(), []string{"pip", "pip3"}, []string{"--version"})
-	if binary == "" {
-		binary = "pip" // Default fallback
-	}
+	config := GetPipConfig()
+	standardManager := NewStandardManager(config)
 
 	return &PipManager{
-		binary:       binary,
-		errorMatcher: errorMatcher,
+		StandardManager: standardManager,
 	}
 }
 
 // ListInstalled lists all user-installed pip packages.
 func (p *PipManager) ListInstalled(ctx context.Context) ([]string, error) {
-	cmd := exec.CommandContext(ctx, p.binary, "list", "--user", "--format=json")
+	cmd := exec.CommandContext(ctx, p.Binary, "list", "--user", "--format=json")
 	output, err := cmd.Output()
 	if err != nil {
 		// Check if --user flag is not supported (some pip installations)
@@ -121,11 +111,11 @@ func (p *PipManager) parseListOutputPlainText(output []byte) []string {
 
 // listInstalledFallback lists packages without JSON format (for older pip versions)
 func (p *PipManager) listInstalledFallback(ctx context.Context) ([]string, error) {
-	cmd := exec.CommandContext(ctx, p.binary, "list", "--user")
+	cmd := exec.CommandContext(ctx, p.Binary, "list", "--user")
 	output, err := cmd.Output()
 	if err != nil {
 		// Try without --user flag as last resort
-		cmd = exec.CommandContext(ctx, p.binary, "list")
+		cmd = exec.CommandContext(ctx, p.Binary, "list")
 		output, err = cmd.Output()
 		if err != nil {
 			return nil, fmt.Errorf("failed to execute pip list command: %w", err)
@@ -137,14 +127,14 @@ func (p *PipManager) listInstalledFallback(ctx context.Context) ([]string, error
 
 // Install installs a pip package for the user with custom retry logic for --user flag issues.
 func (p *PipManager) Install(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, p.binary, "install", "--user", name)
+	output, err := ExecuteCommandCombined(ctx, p.Binary, "install", "--user", name)
 	if err != nil {
 		outputStr := string(output)
 
 		// Check for --user flag issues first
 		if strings.Contains(outputStr, "--user") && strings.Contains(outputStr, "error") {
 			// Try without --user flag
-			output, err = ExecuteCommandCombined(ctx, p.binary, "install", name)
+			output, err = ExecuteCommandCombined(ctx, p.Binary, "install", name)
 			if err == nil {
 				return nil
 			}
@@ -157,7 +147,7 @@ func (p *PipManager) Install(ctx context.Context, name string) error {
 
 // Uninstall removes a pip package.
 func (p *PipManager) Uninstall(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, p.binary, "uninstall", "-y", name)
+	output, err := ExecuteCommandCombined(ctx, p.Binary, "uninstall", "-y", name)
 	if err != nil {
 		return p.handleUninstallError(err, output, name)
 	}
@@ -190,7 +180,7 @@ func (p *PipManager) SupportsSearch() bool {
 
 // Search searches for packages in PyPI using pip search.
 func (p *PipManager) Search(ctx context.Context, query string) ([]string, error) {
-	cmd := exec.CommandContext(ctx, p.binary, "search", query)
+	cmd := exec.CommandContext(ctx, p.Binary, "search", query)
 	output, err := cmd.Output()
 	if err != nil {
 		// Check if search command is not available (some pip versions/configurations)
@@ -243,7 +233,7 @@ func (p *PipManager) Info(ctx context.Context, name string) (*PackageInfo, error
 		return nil, fmt.Errorf("failed to check package installation status for %s: %w", name, err)
 	}
 
-	cmd := exec.CommandContext(ctx, p.binary, "show", name)
+	cmd := exec.CommandContext(ctx, p.Binary, "show", name)
 	output, err := cmd.Output()
 	if err != nil {
 		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() != 0 {
@@ -306,7 +296,7 @@ func (p *PipManager) GetInstalledVersion(ctx context.Context, name string) (stri
 	}
 
 	// Get version using pip show
-	cmd := exec.CommandContext(ctx, p.binary, "show", name)
+	cmd := exec.CommandContext(ctx, p.Binary, "show", name)
 	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to get package version information for %s: %w", name, err)
@@ -322,17 +312,8 @@ func (p *PipManager) GetInstalledVersion(ctx context.Context, name string) (stri
 
 // extractVersion extracts version from pip show output
 func (p *PipManager) extractVersion(output []byte) string {
-	lines := strings.Split(string(output), "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "Version:") {
-			version := strings.TrimSpace(strings.TrimPrefix(line, "Version:"))
-			if version != "" {
-				return version
-			}
-		}
-	}
-	return ""
+	version, _ := parsers.ParseVersionOutput(output, "Version:")
+	return version
 }
 
 // normalizeName normalizes a package name according to pip's rules
@@ -345,11 +326,11 @@ func (p *PipManager) normalizeName(name string) string {
 
 // IsAvailable checks if pip is installed and accessible
 func (p *PipManager) IsAvailable(ctx context.Context) (bool, error) {
-	if !CheckCommandAvailable(p.binary) {
+	if !CheckCommandAvailable(p.Binary) {
 		return false, nil
 	}
 
-	err := VerifyBinary(ctx, p.binary, []string{"--version"})
+	err := VerifyBinary(ctx, p.Binary, []string{"--version"})
 	if err != nil {
 		// Check for context cancellation
 		if IsContextError(err) {
@@ -364,81 +345,10 @@ func (p *PipManager) IsAvailable(ctx context.Context) (bool, error) {
 
 // handleInstallError processes install command errors using ErrorMatcher
 func (p *PipManager) handleInstallError(err error, output []byte, packageName string) error {
-	outputStr := string(output)
-
-	// Check for specific error conditions using ErrorMatcher
-	if exitCode, ok := ExtractExitCode(err); ok {
-		errorType := p.errorMatcher.MatchError(outputStr)
-
-		switch errorType {
-		case ErrorTypeNotFound:
-			return fmt.Errorf("package '%s' not found", packageName)
-
-		case ErrorTypeAlreadyInstalled:
-			// Package is already installed - this is typically fine
-			return nil
-
-		case ErrorTypePermission:
-			return fmt.Errorf("permission denied installing %s", packageName)
-
-		case ErrorTypeLocked:
-			return fmt.Errorf("package manager database is locked")
-
-		case ErrorTypeNetwork:
-			return fmt.Errorf("network error during installation")
-
-		case ErrorTypeBuild:
-			return fmt.Errorf("failed to build package '%s'", packageName)
-
-		case ErrorTypeDependency:
-			return fmt.Errorf("dependency conflict installing package '%s'", packageName)
-
-		default:
-			// Only treat non-zero exit codes as errors
-			if exitCode != 0 {
-				return fmt.Errorf("package installation failed (exit code %d): %w", exitCode, err)
-			}
-			// Exit code 0 with no recognized error pattern - success
-			return nil
-		}
-	}
-
-	// Non-exit errors (command not found, context cancellation, etc.)
-	return fmt.Errorf("failed to execute install command: %w", err)
+	return p.ErrorHandler.HandleInstallError(err, output, packageName)
 }
 
 // handleUninstallError processes uninstall command errors using ErrorMatcher
 func (p *PipManager) handleUninstallError(err error, output []byte, packageName string) error {
-	outputStr := string(output)
-
-	// Check for specific error conditions using ErrorMatcher
-	if exitCode, ok := ExtractExitCode(err); ok {
-		errorType := p.errorMatcher.MatchError(outputStr)
-
-		switch errorType {
-		case ErrorTypeNotInstalled:
-			// Package is not installed - this is typically fine for uninstall
-			return nil
-
-		case ErrorTypePermission:
-			return fmt.Errorf("permission denied uninstalling %s", packageName)
-
-		case ErrorTypeLocked:
-			return fmt.Errorf("package manager database is locked")
-
-		case ErrorTypeDependency:
-			return fmt.Errorf("cannot uninstall package '%s' due to dependency conflicts", packageName)
-
-		default:
-			// Only treat non-zero exit codes as errors
-			if exitCode != 0 {
-				return fmt.Errorf("package uninstallation failed (exit code %d): %w", exitCode, err)
-			}
-			// Exit code 0 with no recognized error pattern - success
-			return nil
-		}
-	}
-
-	// Non-exit errors (command not found, context cancellation, etc.)
-	return fmt.Errorf("failed to execute uninstall command: %w", err)
+	return p.ErrorHandler.HandleUninstallError(err, output, packageName)
 }

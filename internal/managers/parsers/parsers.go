@@ -7,6 +7,7 @@ package parsers
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -380,4 +381,115 @@ func ExtractPipPackages(output []byte) ([]Package, error) {
 		})
 	}
 	return packages, nil
+}
+
+// Common parsing utilities
+
+// ParseVersionOutput extracts version from output using a specific prefix
+func ParseVersionOutput(output []byte, prefix string) (string, error) {
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, prefix) {
+			version := strings.TrimSpace(strings.TrimPrefix(line, prefix))
+			if version != "" {
+				return CleanVersionString(version), nil
+			}
+		}
+	}
+	return "", fmt.Errorf("version not found with prefix %s", prefix)
+}
+
+// ParsePackageList parses a simple list of packages separated by newlines
+func ParsePackageList(output []byte, separator string) []string {
+	result := strings.TrimSpace(string(output))
+	if result == "" {
+		return []string{}
+	}
+
+	if separator == "" {
+		separator = "\n"
+	}
+
+	lines := strings.Split(result, separator)
+	var packages []string
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			packages = append(packages, strings.ToLower(line))
+		}
+	}
+
+	return packages
+}
+
+// CleanPackageOutput removes common noise from package manager output
+func CleanPackageOutput(output []byte) []byte {
+	cleaned := string(output)
+
+	// Remove common warning patterns
+	patterns := []string{
+		`WARNING:.*\n`,
+		`DEPRECATION:.*\n`,
+		`ERROR:.*\n`,
+		`Note:.*\n`,
+	}
+
+	for _, pattern := range patterns {
+		re := regexp.MustCompile(pattern)
+		cleaned = re.ReplaceAllString(cleaned, "")
+	}
+
+	return []byte(strings.TrimSpace(cleaned))
+}
+
+// SplitAndFilterLines splits output by lines and filters using a predicate
+func SplitAndFilterLines(output []byte, filter func(string) bool) []string {
+	lines := strings.Split(string(output), "\n")
+	var result []string
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" && filter(line) {
+			result = append(result, line)
+		}
+	}
+
+	return result
+}
+
+// ExtractFirstWord extracts the first word from each line
+func ExtractFirstWord(lines []string) []string {
+	var result []string
+
+	for _, line := range lines {
+		fields := strings.Fields(line)
+		if len(fields) > 0 {
+			result = append(result, strings.ToLower(fields[0]))
+		}
+	}
+
+	return result
+}
+
+// ParseInfoKeyValue extracts key-value pairs from output for package info
+func ParseInfoKeyValue(output []byte, keys []string) map[string]string {
+	result := make(map[string]string)
+	lines := strings.Split(string(output), "\n")
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		for _, key := range keys {
+			prefix := key + ":"
+			if strings.HasPrefix(line, prefix) {
+				value := strings.TrimSpace(strings.TrimPrefix(line, prefix))
+				if value != "" {
+					result[key] = value
+				}
+			}
+		}
+	}
+
+	return result
 }

@@ -5,6 +5,8 @@ package managers
 
 import (
 	"testing"
+
+	managerTesting "github.com/richhaase/plonk/internal/managers/testing"
 )
 
 func TestPipManager_parseListOutput(t *testing.T) {
@@ -186,4 +188,17 @@ URL: https://www.djangoproject.com/`),
 			}
 		})
 	}
+}
+
+// Shared integration tests using the common test suite
+func TestPipManager_SharedTestSuite(t *testing.T) {
+	suite := &managerTesting.ManagerTestSuite{
+		Manager:     NewPipManager(),
+		TestPackage: "requests",
+		BinaryName:  "pip",
+	}
+
+	t.Run("IsAvailable", suite.TestIsAvailable)
+	t.Run("ListInstalled", suite.TestListInstalled)
+	t.Run("SupportsSearch", suite.TestSupportsSearch)
 }

@@ -629,28 +629,40 @@ The current codebase suffers from premature abstraction and non-idiomatic patter
     - Created detailed implementation roadmap with risk/effort assessment
     - Provided data-driven foundation for future managers optimization
 
+19. **2025-07-24**: Refactored commands package (Task 017)
+    - Achieved 25% reduction (5,305 → 3,990 LOC) in commands package
+    - Extracted business logic to domain packages:
+      - Health checks → orchestrator/health.go (498 LOC)
+      - Package operations → managers/operations.go (217 LOC)
+      - Dotfile operations → dotfiles/operations.go (347 LOC)
+      - Sync logic → orchestrator/sync.go (222 LOC)
+    - Commands now follow clean architecture pattern (CLI → Domain → Output)
+    - Major wins: doctor.go reduced 77% (771 → 177 LOC), sync.go reduced 44%
+    - All tests passing, no functionality lost
+
 ### Current Task Status
-- **Task 017** (Commands Refactoring): IN PROGRESS - Extract business logic from commands package
-- **Task 018** (Managers Optimization): READY - Implement duplication fixes based on Task 016 analysis
+- **Task 017** (Commands Refactoring): ✅ COMPLETED - Achieved 25% reduction, business logic extracted
+- **Task 018** (Managers Optimization): IN PROGRESS - Implement duplication fixes based on Task 016 analysis
+- **Task 019** (Paths/Dotfiles Merge): READY - Merge paths into dotfiles and simplify
 
 ### Progress Summary
 - **Original**: 22 packages, ~26,000 LOC
-- **Current**: 9 packages, 14,573 LOC (44% overall reduction achieved!)
+- **Current**: 9 packages, 14,591 LOC (44% overall reduction achieved!)
 - **Eliminated**: cli, types, constants, executor, interfaces, services, operations, core, mocks, testing, errors (11 packages)
 - **Transformed**: runtime → orchestrator (preserved AI Lab coordination)
-- **Simplified**: config (68% reduction), state (87% reduction)
+- **Simplified**: config (68% reduction), state (87% reduction), commands (25% reduction)
 - **Target**: 7-9 well-defined domain packages with idiomatic Go patterns
 
 ### Current Package Metrics (via scc)
 | Package | LOC | % of Total | Status |
 |---------|-----|------------|--------|
-| commands | 5,076 | 34.8% | Too large - needs business logic extraction |
-| managers | 4,402 | 30.2% | Needs BaseManager inheritance removal |
-| dotfiles | 2,245 | 15.4% | Core domain, reasonable size |
-| paths | 1,067 | 7.3% | May merge with dotfiles |
+| managers | 4,619 | 31.7% | Ready for optimization (Task 018) |
+| commands | 3,990 | 27.3% | ✅ Successfully reduced from 5,305 LOC |
+| dotfiles | 2,592 | 17.8% | Core domain, added operations.go |
+| paths | 1,067 | 7.3% | To be merged with dotfiles (Task 019) |
+| orchestrator | 1,054 | 7.2% | Expanded with health.go and sync.go |
 | config | 579 | 4.0% | Recently simplified, good size |
 | ui | 464 | 3.2% | Well-focused, right size |
-| orchestrator | 334 | 2.3% | Minimal coordination layer |
 | lock | 304 | 2.1% | Focused domain |
 | state | 102 | 0.7% | Successfully simplified (87% reduction) |
 
