@@ -61,21 +61,15 @@ _check-main-branch:
 # MAIN RECIPES
 # =============================================================================
 
-# Generate mocks for testing
+# Generate mocks for testing (only package-internal mocks remain)
 generate-mocks:
-    @echo "Generating mocks..."
-    @mkdir -p internal/mocks
-    @echo "  • Generating unified interface mocks..."
-    @go run go.uber.org/mock/mockgen@latest -source=internal/state/types.go -destination=internal/mocks/core_mocks.go -package=mocks
-    @go run go.uber.org/mock/mockgen@latest -source=internal/managers/interfaces.go -destination=internal/mocks/package_manager_mocks.go -package=mocks
-    @go run go.uber.org/mock/mockgen@latest -source=internal/config/config.go -destination=internal/mocks/config_mocks.go -package=mocks
-    # operations.go was removed - no longer needed
-    @echo "  • Generating backward compatibility mocks..."
-    # common.go was removed - replaced with interfaces.go
+    @echo "Generating package-internal mocks..."
+    @echo "  • Generating state package mocks..."
     @go run go.uber.org/mock/mockgen@latest -source=internal/state/reconciler.go -destination=internal/state/mock_provider.go -package=state
     @go run go.uber.org/mock/mockgen@latest -source=internal/state/package_provider.go -destination=internal/state/mock_package_interfaces.go -package=state
+    @echo "  • Generating config package mocks..."
     @go run go.uber.org/mock/mockgen@latest -source=internal/config/interfaces.go -destination=internal/config/mock_config.go -package=config
-    @echo "✅ Generated mocks successfully!"
+    @echo "✅ Generated package-internal mocks successfully!"
 
 # Build the plonk binary with version information
 build:
