@@ -9,8 +9,9 @@ import (
 
 	"github.com/richhaase/plonk/internal/cli"
 	"github.com/richhaase/plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/interfaces"
 	"github.com/richhaase/plonk/internal/runtime"
-	"github.com/richhaase/plonk/internal/state"
+	"github.com/richhaase/plonk/internal/types"
 	"github.com/richhaase/plonk/internal/ui"
 	"github.com/spf13/cobra"
 )
@@ -66,9 +67,9 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 
 	// If a specific manager is requested, filter results
 	if flags.Manager != "" {
-		filteredManaged := make([]state.Item, 0)
-		filteredMissing := make([]state.Item, 0)
-		filteredUntracked := make([]state.Item, 0)
+		filteredManaged := make([]interfaces.Item, 0)
+		filteredMissing := make([]interfaces.Item, 0)
+		filteredUntracked := make([]interfaces.Item, 0)
 
 		for _, item := range domainResult.Managed {
 			if item.Manager == flags.Manager {
@@ -93,7 +94,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 
 	// For non-verbose mode, clear untracked items
 	if !flags.Verbose {
-		domainResult.Untracked = []state.Item{}
+		domainResult.Untracked = []interfaces.Item{}
 	}
 
 	// Wrap result to implement OutputData interface
@@ -105,9 +106,9 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 	return RenderOutput(outputWrapper, format)
 }
 
-// packageListResultWrapper wraps state.Result to implement OutputData
+// packageListResultWrapper wraps types.Result to implement OutputData
 type packageListResultWrapper struct {
-	Result state.Result
+	Result types.Result
 }
 
 // TableOutput generates human-friendly table output
@@ -131,7 +132,7 @@ func (w *packageListResultWrapper) TableOutput() string {
 
 	// Collect all items with their states
 	type itemWithState struct {
-		item  state.Item
+		item  interfaces.Item
 		state string
 	}
 	var items []itemWithState
@@ -203,7 +204,7 @@ func runDotList(cmd *cobra.Command, args []string) error {
 	verbose, _ := cmd.Flags().GetBool("verbose")
 
 	// Apply filters to the result
-	filteredResult := state.Result{
+	filteredResult := types.Result{
 		Domain:    domainResult.Domain,
 		Manager:   domainResult.Manager,
 		Managed:   domainResult.Managed,
@@ -213,17 +214,17 @@ func runDotList(cmd *cobra.Command, args []string) error {
 
 	// Filter based on flags
 	if showManaged {
-		filteredResult.Missing = []state.Item{}
-		filteredResult.Untracked = []state.Item{}
+		filteredResult.Missing = []interfaces.Item{}
+		filteredResult.Untracked = []interfaces.Item{}
 	} else if showMissing {
-		filteredResult.Managed = []state.Item{}
-		filteredResult.Untracked = []state.Item{}
+		filteredResult.Managed = []interfaces.Item{}
+		filteredResult.Untracked = []interfaces.Item{}
 	} else if showUntracked {
-		filteredResult.Managed = []state.Item{}
-		filteredResult.Missing = []state.Item{}
+		filteredResult.Managed = []interfaces.Item{}
+		filteredResult.Missing = []interfaces.Item{}
 	} else if !verbose {
 		// Default: show managed + missing, hide untracked unless verbose
-		filteredResult.Untracked = []state.Item{}
+		filteredResult.Untracked = []interfaces.Item{}
 	}
 
 	// Wrap result to implement OutputData interface
@@ -236,9 +237,9 @@ func runDotList(cmd *cobra.Command, args []string) error {
 	return RenderOutput(outputWrapper, format)
 }
 
-// dotfileListResultWrapper wraps state.Result to implement OutputData
+// dotfileListResultWrapper wraps types.Result to implement OutputData
 type dotfileListResultWrapper struct {
-	Result  state.Result
+	Result  types.Result
 	Verbose bool
 }
 
@@ -275,7 +276,7 @@ func (w *dotfileListResultWrapper) TableOutput() string {
 
 	// Collect all items with their states
 	type itemWithState struct {
-		item  state.Item
+		item  interfaces.Item
 		state string
 	}
 	var items []itemWithState
@@ -353,7 +354,7 @@ func (w *dotfileListResultWrapper) StructuredData() any {
 	var dotfiles []map[string]string
 
 	// Helper to add items
-	addItems := func(items []state.Item, stateStr string) {
+	addItems := func(items []interfaces.Item, stateStr string) {
 		for _, item := range items {
 			target := item.Path
 			source := item.Name

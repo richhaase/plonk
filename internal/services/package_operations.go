@@ -8,8 +8,8 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/interfaces"
 	"github.com/richhaase/plonk/internal/runtime"
-	"github.com/richhaase/plonk/internal/state"
 )
 
 // PackageApplyOptions configures package apply operations
@@ -55,7 +55,7 @@ func ApplyPackages(ctx context.Context, options PackageApplyOptions) (PackageApp
 	}
 
 	// Group missing packages by manager
-	missingByManager := make(map[string][]state.Item)
+	missingByManager := make(map[string][]interfaces.Item)
 	for _, item := range result.Missing {
 		manager := item.Metadata["manager"].(string)
 		missingByManager[manager] = append(missingByManager[manager], item)

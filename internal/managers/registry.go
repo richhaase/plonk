@@ -8,6 +8,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/constants"
 	"github.com/richhaase/plonk/internal/errors"
+	"github.com/richhaase/plonk/internal/interfaces"
 	"github.com/richhaase/plonk/internal/state"
 )
 
@@ -64,7 +65,7 @@ func (r *ManagerRegistry) GetAllManagerNames() []string {
 }
 
 // CreateMultiProvider creates a MultiManagerPackageProvider with all available managers
-func (r *ManagerRegistry) CreateMultiProvider(ctx context.Context, configLoader state.PackageConfigLoader) (*state.MultiManagerPackageProvider, error) {
+func (r *ManagerRegistry) CreateMultiProvider(ctx context.Context, configLoader interfaces.PackageConfigLoader) (*state.MultiManagerPackageProvider, error) {
 	packageProvider := state.NewMultiManagerPackageProvider()
 
 	for name, factory := range r.managers {

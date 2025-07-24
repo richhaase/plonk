@@ -8,6 +8,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/richhaase/plonk/internal/interfaces"
 	"github.com/richhaase/plonk/internal/mocks"
 	"go.uber.org/mock/gomock"
 )
@@ -59,7 +60,7 @@ func TestPackageProvider_GetConfiguredItems_Success(t *testing.T) {
 	configLoader := mocks.NewMockPackageConfigLoader(ctrl)
 
 	// Set up expectations
-	configLoader.EXPECT().GetPackagesForManager("homebrew").Return([]PackageConfigItem{
+	configLoader.EXPECT().GetPackagesForManager("homebrew").Return([]interfaces.PackageConfigItem{
 		{Name: "git"},
 		{Name: "curl"},
 		{Name: "jq"},
@@ -205,17 +206,17 @@ func TestPackageProvider_CreateItem(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		state            ItemState
-		configured       *ConfigItem
-		actual           *ActualItem
+		state            interfaces.ItemState
+		configured       *interfaces.ConfigItem
+		actual           *interfaces.ActualItem
 		expectedName     string
 		expectedMetadata map[string]interface{}
 	}{
 		{
 			name:         "managed item",
-			state:        StateManaged,
-			configured:   &ConfigItem{Name: "test", Metadata: map[string]interface{}{"config": "data"}},
-			actual:       &ActualItem{Name: "test", Metadata: map[string]interface{}{"actual": "data"}},
+			state:        interfaces.StateManaged,
+			configured:   &interfaces.ConfigItem{Name: "test", Metadata: map[string]interface{}{"config": "data"}},
+			actual:       &interfaces.ActualItem{Name: "test", Metadata: map[string]interface{}{"actual": "data"}},
 			expectedName: "test",
 			expectedMetadata: map[string]interface{}{
 				"manager": "npm", // Always added by CreateItem
@@ -225,8 +226,8 @@ func TestPackageProvider_CreateItem(t *testing.T) {
 		},
 		{
 			name:         "missing item",
-			state:        StateMissing,
-			configured:   &ConfigItem{Name: "missing", Metadata: map[string]interface{}{"config": "data"}},
+			state:        interfaces.StateMissing,
+			configured:   &interfaces.ConfigItem{Name: "missing", Metadata: map[string]interface{}{"config": "data"}},
 			actual:       nil,
 			expectedName: "missing",
 			expectedMetadata: map[string]interface{}{
@@ -236,9 +237,9 @@ func TestPackageProvider_CreateItem(t *testing.T) {
 		},
 		{
 			name:         "untracked item",
-			state:        StateUntracked,
+			state:        interfaces.StateUntracked,
 			configured:   nil,
-			actual:       &ActualItem{Name: "untracked", Path: "/path", Metadata: map[string]interface{}{"actual": "data"}},
+			actual:       &interfaces.ActualItem{Name: "untracked", Path: "/path", Metadata: map[string]interface{}{"actual": "data"}},
 			expectedName: "untracked",
 			expectedMetadata: map[string]interface{}{
 				"manager": "npm", // Always added by CreateItem
@@ -267,7 +268,7 @@ func TestPackageProvider_CreateItem(t *testing.T) {
 				t.Errorf("item.Manager = %s, expected npm", item.Manager)
 			}
 
-			// Package items don't typically set Path from ActualItem
+			// Package items don't typically set Path from interfaces.ActualItem
 			// The Path field is mainly used for dotfiles
 
 			// Verify metadata

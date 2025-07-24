@@ -46,10 +46,10 @@ func (d *DotfileProvider) GetManager() *dotfiles.Manager {
 }
 
 // GetConfiguredItems returns dotfiles defined in configuration
-func (d *DotfileProvider) GetConfiguredItems() ([]ConfigItem, error) {
+func (d *DotfileProvider) GetConfiguredItems() ([]interfaces.ConfigItem, error) {
 	targets := d.configLoader.GetDotfileTargets()
 
-	items := make([]ConfigItem, 0)
+	items := make([]interfaces.ConfigItem, 0)
 	for source, destination := range targets {
 		// Check if source is a directory
 		sourcePath := d.manager.GetSourcePath(source)
@@ -57,7 +57,7 @@ func (d *DotfileProvider) GetConfiguredItems() ([]ConfigItem, error) {
 		if err != nil {
 			// Source doesn't exist yet, treat as single file
 			name := d.manager.DestinationToName(destination)
-			items = append(items, ConfigItem{
+			items = append(items, interfaces.ConfigItem{
 				Name: name,
 				Metadata: map[string]interface{}{
 					"source":      source,
@@ -78,7 +78,7 @@ func (d *DotfileProvider) GetConfiguredItems() ([]ConfigItem, error) {
 		} else {
 			// Single file
 			name := d.manager.DestinationToName(destination)
-			items = append(items, ConfigItem{
+			items = append(items, interfaces.ConfigItem{
 				Name: name,
 				Metadata: map[string]interface{}{
 					"source":      source,
@@ -92,7 +92,7 @@ func (d *DotfileProvider) GetConfiguredItems() ([]ConfigItem, error) {
 }
 
 // GetActualItems returns dotfiles currently present in the home directory
-func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, error) {
+func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]interfaces.ActualItem, error) {
 	// Create filter with ignore patterns
 	filter := dotfiles.NewFilter(
 		d.configLoader.GetIgnorePatterns(),
@@ -110,7 +110,7 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 		scanner,
 	)
 
-	var items []ActualItem
+	var items []interfaces.ActualItem
 
 	// Step 1: Scan home directory for dotfiles
 	scanResults, err := scanner.ScanDotfiles(ctx)
@@ -126,7 +126,7 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 			expandedResults, err := expander.ExpandDirectory(ctx, result.Path, result.Name)
 			if err != nil {
 				// Fall back to showing directory as single item
-				items = append(items, ActualItem{
+				items = append(items, interfaces.ActualItem{
 					Name:     result.Name,
 					Path:     result.Path,
 					Metadata: result.Metadata,
@@ -136,7 +136,7 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 
 			// Add expanded results
 			for _, expanded := range expandedResults {
-				items = append(items, ActualItem{
+				items = append(items, interfaces.ActualItem{
 					Name:     expanded.Name,
 					Path:     expanded.Path,
 					Metadata: expanded.Metadata,
@@ -146,7 +146,7 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 			// Single file or unexpanded directory
 			// Mark as seen in expander to avoid duplicates later
 			expander.CheckDuplicate(result.Name)
-			items = append(items, ActualItem{
+			items = append(items, interfaces.ActualItem{
 				Name:     result.Name,
 				Path:     result.Path,
 				Metadata: result.Metadata,
@@ -190,7 +190,7 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 				continue
 			}
 
-			items = append(items, ActualItem{
+			items = append(items, interfaces.ActualItem{
 				Name: relPath,
 				Path: destPath,
 				Metadata: map[string]interface{}{
@@ -211,7 +211,7 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 					continue
 				}
 
-				items = append(items, ActualItem{
+				items = append(items, interfaces.ActualItem{
 					Name:     result.Name,
 					Path:     result.Path,
 					Metadata: result.Metadata,
@@ -224,8 +224,8 @@ func (d *DotfileProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 }
 
 // CreateItem creates an Item from dotfile data
-func (d *DotfileProvider) CreateItem(name string, state ItemState, configured *ConfigItem, actual *ActualItem) Item {
-	item := Item{
+func (d *DotfileProvider) CreateItem(name string, state interfaces.ItemState, configured *interfaces.ConfigItem, actual *interfaces.ActualItem) interfaces.Item {
+	item := interfaces.Item{
 		Name:   name,
 		State:  state,
 		Domain: "dotfile",
@@ -261,16 +261,16 @@ func (d *DotfileProvider) CreateItem(name string, state ItemState, configured *C
 	return item
 }
 
-// expandConfigDirectory walks a directory and creates individual ConfigItems for each file
-func (d *DotfileProvider) expandConfigDirectory(sourceDir, destDir string) ([]ConfigItem, error) {
+// expandConfigDirectory walks a directory and creates individual interfaces.ConfigItems for each file
+func (d *DotfileProvider) expandConfigDirectory(sourceDir, destDir string) ([]interfaces.ConfigItem, error) {
 	dotfileInfos, err := d.manager.ExpandDirectory(sourceDir, destDir)
 	if err != nil {
 		return nil, err
 	}
 
-	items := make([]ConfigItem, len(dotfileInfos))
+	items := make([]interfaces.ConfigItem, len(dotfileInfos))
 	for i, info := range dotfileInfos {
-		items[i] = ConfigItem{
+		items[i] = interfaces.ConfigItem{
 			Name:     info.Name,
 			Metadata: info.Metadata,
 		}

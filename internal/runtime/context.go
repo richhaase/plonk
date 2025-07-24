@@ -13,6 +13,7 @@ import (
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/state"
+	"github.com/richhaase/plonk/internal/types"
 )
 
 // SharedContext provides optimized, cached access to commonly used resources
@@ -197,19 +198,19 @@ func (sc *SharedContext) CreatePackageProvider(ctx context.Context) (*state.Mult
 }
 
 // ReconcileDotfiles reconciles dotfile state
-func (sc *SharedContext) ReconcileDotfiles(ctx context.Context) (state.Result, error) {
+func (sc *SharedContext) ReconcileDotfiles(ctx context.Context) (types.Result, error) {
 	// Use simplified direct reconciliation
 	return sc.SimplifiedReconcileDotfiles(ctx)
 }
 
 // ReconcilePackages reconciles package state
-func (sc *SharedContext) ReconcilePackages(ctx context.Context) (state.Result, error) {
+func (sc *SharedContext) ReconcilePackages(ctx context.Context) (types.Result, error) {
 	// Use simplified direct reconciliation
 	return sc.SimplifiedReconcilePackages(ctx)
 }
 
 // ReconcileAll reconciles all domains
-func (sc *SharedContext) ReconcileAll(ctx context.Context) (map[string]state.Result, error) {
+func (sc *SharedContext) ReconcileAll(ctx context.Context) (map[string]types.Result, error) {
 	// Use simplified direct reconciliation
 	return sc.SimplifiedReconcileAll(ctx)
 }

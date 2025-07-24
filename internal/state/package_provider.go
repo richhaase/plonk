@@ -10,27 +10,15 @@ import (
 	"github.com/richhaase/plonk/internal/interfaces"
 )
 
-// PackageManager is an alias for the unified interface to maintain backward compatibility.
-// Deprecated: Use interfaces.PackageManager directly.
-type PackageManager = interfaces.PackageManager
-
-// PackageConfigLoader is an alias for the unified interface to maintain backward compatibility.
-// Deprecated: Use interfaces.PackageConfigLoader directly.
-type PackageConfigLoader = interfaces.PackageConfigLoader
-
-// PackageConfigItem is an alias for the unified type to maintain backward compatibility.
-// Deprecated: Use interfaces.PackageConfigItem directly.
-type PackageConfigItem = interfaces.PackageConfigItem
-
 // PackageProvider manages package state for a single package manager
 type PackageProvider struct {
 	managerName  string
-	manager      PackageManager
-	configLoader PackageConfigLoader
+	manager      interfaces.PackageManager
+	configLoader interfaces.PackageConfigLoader
 }
 
 // NewPackageProvider creates a new package provider for a specific manager
-func NewPackageProvider(managerName string, manager PackageManager, configLoader PackageConfigLoader) *PackageProvider {
+func NewPackageProvider(managerName string, manager interfaces.PackageManager, configLoader interfaces.PackageConfigLoader) *PackageProvider {
 	return &PackageProvider{
 		managerName:  managerName,
 		manager:      manager,
@@ -44,15 +32,15 @@ func (p *PackageProvider) Domain() string {
 }
 
 // GetConfiguredItems returns packages defined in configuration
-func (p *PackageProvider) GetConfiguredItems() ([]ConfigItem, error) {
+func (p *PackageProvider) GetConfiguredItems() ([]interfaces.ConfigItem, error) {
 	packages, err := p.configLoader.GetPackagesForManager(p.managerName)
 	if err != nil {
 		return nil, err
 	}
 
-	items := make([]ConfigItem, len(packages))
+	items := make([]interfaces.ConfigItem, len(packages))
 	for i, pkg := range packages {
-		items[i] = ConfigItem{
+		items[i] = interfaces.ConfigItem{
 			Name: pkg.Name,
 			Metadata: map[string]interface{}{
 				"manager": p.managerName,
@@ -64,7 +52,7 @@ func (p *PackageProvider) GetConfiguredItems() ([]ConfigItem, error) {
 }
 
 // GetActualItems returns packages currently installed by this manager
-func (p *PackageProvider) GetActualItems(ctx context.Context) ([]ActualItem, error) {
+func (p *PackageProvider) GetActualItems(ctx context.Context) ([]interfaces.ActualItem, error) {
 	// Check for context cancellation
 	select {
 	case <-ctx.Done():
@@ -77,7 +65,7 @@ func (p *PackageProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 		return nil, fmt.Errorf("failed to check manager availability: %w", err)
 	}
 	if !available {
-		return []ActualItem{}, nil
+		return []interfaces.ActualItem{}, nil
 	}
 
 	installed, err := p.manager.ListInstalled(ctx)
@@ -85,9 +73,9 @@ func (p *PackageProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 		return nil, err
 	}
 
-	items := make([]ActualItem, len(installed))
+	items := make([]interfaces.ActualItem, len(installed))
 	for i, pkg := range installed {
-		items[i] = ActualItem{
+		items[i] = interfaces.ActualItem{
 			Name: pkg,
 			Metadata: map[string]interface{}{
 				"manager": p.managerName,
@@ -99,8 +87,8 @@ func (p *PackageProvider) GetActualItems(ctx context.Context) ([]ActualItem, err
 }
 
 // CreateItem creates an Item from package data
-func (p *PackageProvider) CreateItem(name string, state ItemState, configured *ConfigItem, actual *ActualItem) Item {
-	item := Item{
+func (p *PackageProvider) CreateItem(name string, state interfaces.ItemState, configured *interfaces.ConfigItem, actual *interfaces.ActualItem) interfaces.Item {
+	item := interfaces.Item{
 		Name:    name,
 		State:   state,
 		Domain:  "package",
@@ -138,7 +126,7 @@ func NewMultiManagerPackageProvider() *MultiManagerPackageProvider {
 }
 
 // AddManager adds a package manager to the multi-manager provider
-func (m *MultiManagerPackageProvider) AddManager(managerName string, manager PackageManager, configLoader PackageConfigLoader) {
+func (m *MultiManagerPackageProvider) AddManager(managerName string, manager interfaces.PackageManager, configLoader interfaces.PackageConfigLoader) {
 	m.providers[managerName] = NewPackageProvider(managerName, manager, configLoader)
 }
 
@@ -148,8 +136,8 @@ func (m *MultiManagerPackageProvider) Domain() string {
 }
 
 // GetConfiguredItems returns packages from all managers
-func (m *MultiManagerPackageProvider) GetConfiguredItems() ([]ConfigItem, error) {
-	var allItems []ConfigItem
+func (m *MultiManagerPackageProvider) GetConfiguredItems() ([]interfaces.ConfigItem, error) {
+	var allItems []interfaces.ConfigItem
 
 	for _, provider := range m.providers {
 		items, err := provider.GetConfiguredItems()
@@ -163,8 +151,8 @@ func (m *MultiManagerPackageProvider) GetConfiguredItems() ([]ConfigItem, error)
 }
 
 // GetActualItems returns installed packages from all managers
-func (m *MultiManagerPackageProvider) GetActualItems(ctx context.Context) ([]ActualItem, error) {
-	var allItems []ActualItem
+func (m *MultiManagerPackageProvider) GetActualItems(ctx context.Context) ([]interfaces.ActualItem, error) {
+	var allItems []interfaces.ActualItem
 
 	for _, provider := range m.providers {
 		items, err := provider.GetActualItems(ctx)
@@ -178,7 +166,7 @@ func (m *MultiManagerPackageProvider) GetActualItems(ctx context.Context) ([]Act
 }
 
 // CreateItem creates an Item from package data
-func (m *MultiManagerPackageProvider) CreateItem(name string, state ItemState, configured *ConfigItem, actual *ActualItem) Item {
+func (m *MultiManagerPackageProvider) CreateItem(name string, state interfaces.ItemState, configured *interfaces.ConfigItem, actual *interfaces.ActualItem) interfaces.Item {
 	// Determine which manager this package belongs to
 	managerName := "unknown"
 	if configured != nil {
@@ -198,7 +186,7 @@ func (m *MultiManagerPackageProvider) CreateItem(name string, state ItemState, c
 	}
 
 	// Fallback generic item creation
-	item := Item{
+	item := interfaces.Item{
 		Name:    name,
 		State:   state,
 		Domain:  "package",
