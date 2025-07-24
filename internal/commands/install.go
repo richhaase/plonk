@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/constants"
 	"github.com/richhaase/plonk/internal/core"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
@@ -87,7 +86,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		if cfg.DefaultManager != nil && *cfg.DefaultManager != "" {
 			manager = *cfg.DefaultManager
 		} else {
-			manager = constants.DefaultManager // fallback default
+			manager = managers.DefaultManager // fallback default
 		}
 	}
 

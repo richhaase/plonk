@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-
-	"github.com/richhaase/plonk/internal/constants"
 )
 
 func TestYAMLLockService_SaveAndLoad(t *testing.T) {
@@ -28,8 +26,8 @@ func TestYAMLLockService_SaveAndLoad(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load empty lock failed: %v", err)
 	}
-	if lock.Version != constants.LockFileVersion {
-		t.Errorf("Expected version %d, got %d", constants.LockFileVersion, lock.Version)
+	if lock.Version != LockFileVersion {
+		t.Errorf("Expected version %d, got %d", LockFileVersion, lock.Version)
 	}
 	if len(lock.Packages) != 0 {
 		t.Errorf("Expected empty packages, got %d", len(lock.Packages))
@@ -37,7 +35,7 @@ func TestYAMLLockService_SaveAndLoad(t *testing.T) {
 
 	// Create test lock file
 	testLock := &LockFile{
-		Version: constants.LockFileVersion,
+		Version: LockFileVersion,
 		Packages: map[string][]PackageEntry{
 			"homebrew": {
 				{Name: "git", Version: "2.43.0", InstalledAt: time.Now()},
@@ -55,7 +53,7 @@ func TestYAMLLockService_SaveAndLoad(t *testing.T) {
 	}
 
 	// Verify file exists
-	lockPath := filepath.Join(tmpDir, constants.LockFileName)
+	lockPath := filepath.Join(tmpDir, LockFileName)
 	if _, err := os.Stat(lockPath); err != nil {
 		t.Fatalf("Lock file not created: %v", err)
 	}

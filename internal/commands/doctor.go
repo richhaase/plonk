@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/constants"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/managers"
@@ -350,7 +349,7 @@ func checkPackageManagerAvailability(ctx context.Context) HealthCheck {
 		defaultManager = *cfg.DefaultManager
 	}
 	if defaultManager == "" {
-		defaultManager = constants.DefaultManager
+		defaultManager = managers.DefaultManager
 	}
 
 	sharedCtx := plonkruntime.GetSharedContext()
@@ -670,7 +669,7 @@ func getPackageCountFromLockFile(configDir string) int {
 
 	totalCount := 0
 
-	for _, manager := range constants.SupportedManagers {
+	for _, manager := range managers.SupportedManagers {
 		packages, err := lockService.GetPackages(manager)
 		if err == nil {
 			totalCount += len(packages)

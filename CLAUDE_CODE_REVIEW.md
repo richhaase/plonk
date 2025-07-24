@@ -305,7 +305,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 
 ### 1. Eliminate These Packages Entirely
 - ✅ `cli` → merge 1 file into `commands` (COMPLETED 2025-07-24)
-- `constants` → inline where used
+- ✅ `constants` → inline where used (COMPLETED 2025-07-24)
 - `core` → merge into domain packages
 - `executor` → use exec.Command directly
 - `interfaces` → define interfaces where used
@@ -499,7 +499,13 @@ The current codebase suffers from premature abstraction and non-idiomatic patter
    - Updated 5 files to use state package directly
    - Package count: 21 → 20
 
+3. **2025-07-24**: Deleted `constants` package
+   - Moved constants to their domain packages (config, lock, managers)
+   - Updated 7 files to use domain-specific constants
+   - Constants now co-located with their logic
+   - Package count: 20 → 19
+
 ### Remaining Work
-- 9 packages still to eliminate
+- 8 packages still to eliminate
 - 5 packages to simplify
 - ~18,000 lines of code to remove

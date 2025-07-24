@@ -6,7 +6,6 @@ package managers
 import (
 	"context"
 
-	"github.com/richhaase/plonk/internal/constants"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/interfaces"
 	"github.com/richhaase/plonk/internal/state"
@@ -59,8 +58,8 @@ func (r *ManagerRegistry) GetAvailableManagers(ctx context.Context) []string {
 // GetAllManagerNames returns all supported manager names regardless of availability
 func (r *ManagerRegistry) GetAllManagerNames() []string {
 	// Return a copy to prevent external modification
-	names := make([]string, len(constants.SupportedManagers))
-	copy(names, constants.SupportedManagers)
+	names := make([]string, len(SupportedManagers))
+	copy(names, SupportedManagers)
 	return names
 }
 

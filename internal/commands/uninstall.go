@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/constants"
 	"github.com/richhaase/plonk/internal/core"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/lock"
+	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/spf13/cobra"
@@ -203,7 +203,7 @@ func uninstallSinglePackage(configDir string, lockService *lock.YAMLLockService,
 
 // findPackageInLockFile finds which manager manages a package
 func findPackageInLockFile(lockService *lock.YAMLLockService, packageName string) (string, bool) {
-	for _, manager := range constants.SupportedManagers {
+	for _, manager := range managers.SupportedManagers {
 		if lockService.HasPackage(manager, packageName) {
 			return manager, true
 		}
@@ -219,7 +219,7 @@ func detectInstalledPackageManager(packageName string) (string, error) {
 	ctx := context.Background()
 
 	// Try each manager to see if package is installed
-	for _, managerName := range constants.SupportedManagers {
+	for _, managerName := range managers.SupportedManagers {
 		mgr, err := registry.GetManager(managerName)
 		if err != nil {
 			continue
