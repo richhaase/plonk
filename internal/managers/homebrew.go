@@ -10,9 +10,10 @@ import (
 	"strings"
 )
 
-// HomebrewManager manages Homebrew packages using BaseManager for common functionality.
+// HomebrewManager manages Homebrew packages.
 type HomebrewManager struct {
-	*BaseManager
+	binary       string
+	errorMatcher *ErrorMatcher
 }
 
 // NewHomebrewManager creates a new homebrew manager.
@@ -22,20 +23,6 @@ func NewHomebrewManager() *HomebrewManager {
 
 // newHomebrewManager creates a homebrew manager.
 func newHomebrewManager() *HomebrewManager {
-	config := ManagerConfig{
-		BinaryName:  "brew",
-		VersionArgs: []string{"--version"},
-		ListArgs: func() []string {
-			return []string{"list"}
-		},
-		InstallArgs: func(pkg string) []string {
-			return []string{"install", pkg}
-		},
-		UninstallArgs: func(pkg string) []string {
-			return []string{"uninstall", pkg}
-		},
-	}
-
 	// Add homebrew-specific error patterns
 	errorMatcher := NewCommonErrorMatcher()
 	errorMatcher.AddPattern(ErrorTypeNotFound, "No available formula", "No formulae found")
@@ -43,19 +30,17 @@ func newHomebrewManager() *HomebrewManager {
 	errorMatcher.AddPattern(ErrorTypeNotInstalled, "No such keg", "not installed")
 	errorMatcher.AddPattern(ErrorTypeDependency, "because it is required by", "still has dependents")
 
-	base := NewBaseManager(config)
-	base.ErrorMatcher = errorMatcher
-
 	return &HomebrewManager{
-		BaseManager: base,
+		binary:       "brew",
+		errorMatcher: errorMatcher,
 	}
 }
 
 // ListInstalled lists all installed Homebrew packages.
 func (h *HomebrewManager) ListInstalled(ctx context.Context) ([]string, error) {
-	output, err := h.ExecuteList(ctx)
+	output, err := ExecuteCommand(ctx, h.binary, "list")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list installed packages: %w", err)
 	}
 
 	return h.parseListOutput(output), nil
@@ -63,32 +48,25 @@ func (h *HomebrewManager) ListInstalled(ctx context.Context) ([]string, error) {
 
 // parseListOutput parses brew list output
 func (h *HomebrewManager) parseListOutput(output []byte) []string {
-	result := strings.TrimSpace(string(output))
-	if result == "" {
-		return []string{}
-	}
-
-	// Parse output into package list
-	packages := strings.Split(result, "\n")
-	// Filter out any empty strings that might result from parsing
-	var filteredPackages []string
-	for _, pkg := range packages {
-		if trimmed := strings.TrimSpace(pkg); trimmed != "" {
-			filteredPackages = append(filteredPackages, trimmed)
-		}
-	}
-
-	return filteredPackages
+	return SplitLines(output)
 }
 
 // Install installs a Homebrew package.
 func (h *HomebrewManager) Install(ctx context.Context, name string) error {
-	return h.ExecuteInstall(ctx, name)
+	output, err := ExecuteCommandCombined(ctx, h.binary, "install", name)
+	if err != nil {
+		return h.handleInstallError(err, output, name)
+	}
+	return nil
 }
 
 // Uninstall removes a Homebrew package.
 func (h *HomebrewManager) Uninstall(ctx context.Context, name string) error {
-	return h.ExecuteUninstall(ctx, name)
+	output, err := ExecuteCommandCombined(ctx, h.binary, "uninstall", name)
+	if err != nil {
+		return h.handleUninstallError(err, output, name)
+	}
+	return nil
 }
 
 // IsInstalled checks if a specific package is installed.
@@ -109,7 +87,7 @@ func (h *HomebrewManager) IsInstalled(ctx context.Context, name string) (bool, e
 
 // Search searches for packages in Homebrew repositories.
 func (h *HomebrewManager) Search(ctx context.Context, query string) ([]string, error) {
-	cmd := exec.CommandContext(ctx, h.GetBinary(), "search", query)
+	cmd := exec.CommandContext(ctx, h.binary, "search", query)
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("failed to search homebrew packages for %s: %w", query, err)
@@ -142,7 +120,7 @@ func (h *HomebrewManager) parseSearchOutput(output []byte) []string {
 
 // Info retrieves detailed information about a package.
 func (h *HomebrewManager) Info(ctx context.Context, name string) (*PackageInfo, error) {
-	cmd := exec.CommandContext(ctx, h.GetBinary(), "info", name)
+	cmd := exec.CommandContext(ctx, h.binary, "info", name)
 	output, err := cmd.Output()
 	if err != nil {
 		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() == 1 {
@@ -244,7 +222,7 @@ func (h *HomebrewManager) GetInstalledVersion(ctx context.Context, name string) 
 	}
 
 	// Get version using brew list --versions
-	cmd := exec.CommandContext(ctx, h.GetBinary(), "list", "--versions", name)
+	cmd := exec.CommandContext(ctx, h.binary, "list", "--versions", name)
 	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to get package version information for %s: %w", name, err)
@@ -269,4 +247,109 @@ func (h *HomebrewManager) extractVersion(output []byte, name string) string {
 		}
 	}
 	return ""
+}
+
+// IsAvailable checks if homebrew is installed and accessible
+func (h *HomebrewManager) IsAvailable(ctx context.Context) (bool, error) {
+	if !CheckCommandAvailable(h.binary) {
+		return false, nil
+	}
+
+	err := VerifyBinary(ctx, h.binary, []string{"--version"})
+	if err != nil {
+		// Check for context cancellation
+		if IsContextError(err) {
+			return false, err
+		}
+		// Binary exists but not functional - not an error condition
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// SupportsSearch returns true as Homebrew supports package search
+func (h *HomebrewManager) SupportsSearch() bool {
+	return true
+}
+
+// handleInstallError processes install command errors using ErrorMatcher
+func (h *HomebrewManager) handleInstallError(err error, output []byte, packageName string) error {
+	outputStr := string(output)
+
+	// Check for specific error conditions using ErrorMatcher
+	if exitCode, ok := ExtractExitCode(err); ok {
+		errorType := h.errorMatcher.MatchError(outputStr)
+
+		switch errorType {
+		case ErrorTypeNotFound:
+			return fmt.Errorf("package '%s' not found", packageName)
+
+		case ErrorTypeAlreadyInstalled:
+			// Package is already installed - this is typically fine
+			return nil
+
+		case ErrorTypePermission:
+			return fmt.Errorf("permission denied installing %s", packageName)
+
+		case ErrorTypeLocked:
+			return fmt.Errorf("package manager database is locked")
+
+		case ErrorTypeNetwork:
+			return fmt.Errorf("network error during installation")
+
+		case ErrorTypeBuild:
+			return fmt.Errorf("failed to build package '%s'", packageName)
+
+		case ErrorTypeDependency:
+			return fmt.Errorf("dependency conflict installing package '%s'", packageName)
+
+		default:
+			// Only treat non-zero exit codes as errors
+			if exitCode != 0 {
+				return fmt.Errorf("package installation failed (exit code %d): %w", exitCode, err)
+			}
+			// Exit code 0 with no recognized error pattern - success
+			return nil
+		}
+	}
+
+	// Non-exit errors (command not found, context cancellation, etc.)
+	return fmt.Errorf("failed to execute install command: %w", err)
+}
+
+// handleUninstallError processes uninstall command errors using ErrorMatcher
+func (h *HomebrewManager) handleUninstallError(err error, output []byte, packageName string) error {
+	outputStr := string(output)
+
+	// Check for specific error conditions using ErrorMatcher
+	if exitCode, ok := ExtractExitCode(err); ok {
+		errorType := h.errorMatcher.MatchError(outputStr)
+
+		switch errorType {
+		case ErrorTypeNotInstalled:
+			// Package is not installed - this is typically fine for uninstall
+			return nil
+
+		case ErrorTypePermission:
+			return fmt.Errorf("permission denied uninstalling %s", packageName)
+
+		case ErrorTypeLocked:
+			return fmt.Errorf("package manager database is locked")
+
+		case ErrorTypeDependency:
+			return fmt.Errorf("cannot uninstall package '%s' due to dependency conflicts", packageName)
+
+		default:
+			// Only treat non-zero exit codes as errors
+			if exitCode != 0 {
+				return fmt.Errorf("package uninstallation failed (exit code %d): %w", exitCode, err)
+			}
+			// Exit code 0 with no recognized error pattern - success
+			return nil
+		}
+	}
+
+	// Non-exit errors (command not found, context cancellation, etc.)
+	return fmt.Errorf("failed to execute uninstall command: %w", err)
 }

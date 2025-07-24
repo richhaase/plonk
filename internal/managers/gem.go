@@ -10,9 +10,10 @@ import (
 	"strings"
 )
 
-// GemManager manages Ruby gems using BaseManager for common functionality.
+// GemManager manages Ruby gems.
 type GemManager struct {
-	*BaseManager
+	binary       string
+	errorMatcher *ErrorMatcher
 }
 
 // NewGemManager creates a new gem manager.
@@ -22,20 +23,6 @@ func NewGemManager() *GemManager {
 
 // newGemManager creates a gem manager.
 func newGemManager() *GemManager {
-	config := ManagerConfig{
-		BinaryName:  "gem",
-		VersionArgs: []string{"--version"},
-		ListArgs: func() []string {
-			return []string{"list", "--local", "--no-versions"}
-		},
-		InstallArgs: func(pkg string) []string {
-			return []string{"install", pkg, "--user-install"}
-		},
-		UninstallArgs: func(pkg string) []string {
-			return []string{"uninstall", pkg, "-x", "-a", "-I"}
-		},
-	}
-
 	// Add gem-specific error patterns
 	errorMatcher := NewCommonErrorMatcher()
 	errorMatcher.AddPattern(ErrorTypeNotFound, "Could not find a valid gem", "ERROR:  Could not find")
@@ -44,19 +31,17 @@ func newGemManager() *GemManager {
 	errorMatcher.AddPattern(ErrorTypePermission, "Errno::EACCES", "Gem::FilePermissionError")
 	errorMatcher.AddPattern(ErrorTypeDependency, "requires Ruby version", "ruby version is")
 
-	base := NewBaseManager(config)
-	base.ErrorMatcher = errorMatcher
-
 	return &GemManager{
-		BaseManager: base,
+		binary:       "gem",
+		errorMatcher: errorMatcher,
 	}
 }
 
 // ListInstalled lists all installed gems.
 func (g *GemManager) ListInstalled(ctx context.Context) ([]string, error) {
-	output, err := g.ExecuteList(ctx)
+	output, err := ExecuteCommand(ctx, g.binary, "list", "--local", "--no-versions")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list installed gems: %w", err)
 	}
 
 	return g.parseListOutput(output), nil
@@ -64,38 +49,27 @@ func (g *GemManager) ListInstalled(ctx context.Context) ([]string, error) {
 
 // parseListOutput parses gem list output
 func (g *GemManager) parseListOutput(output []byte) []string {
-	result := strings.TrimSpace(string(output))
-	if result == "" {
-		return []string{}
-	}
-
-	// Parse output to get gem names
+	lines := SplitLines(output)
 	var gems []string
-	lines := strings.Split(result, "\n")
 	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line != "" && !strings.HasPrefix(line, "***") {
+		if !strings.HasPrefix(line, "***") {
 			gems = append(gems, line)
 		}
 	}
-
 	return gems
 }
 
 // Install installs a Ruby gem.
 func (g *GemManager) Install(ctx context.Context, name string) error {
 	// First try with --user-install
-	args := g.Config.InstallArgs(name)
-	cmd := exec.CommandContext(ctx, g.GetBinary(), args...)
-	output, err := cmd.CombinedOutput()
+	output, err := ExecuteCommandCombined(ctx, g.binary, "install", name, "--user-install")
 	if err != nil {
 		outputStr := string(output)
 
 		// Check if we should retry without --user-install
 		if strings.Contains(outputStr, "--user-install") || strings.Contains(outputStr, "Use --user-install") {
 			// Try without --user-install
-			retryCmd := exec.CommandContext(ctx, g.GetBinary(), "install", name)
-			output2, err2 := retryCmd.CombinedOutput()
+			output2, err2 := ExecuteCommandCombined(ctx, g.binary, "install", name)
 			if err2 == nil {
 				return nil
 			}
@@ -150,12 +124,16 @@ func (g *GemManager) handleGemInstallError(err error, output []byte, packageName
 
 // Uninstall removes a Ruby gem.
 func (g *GemManager) Uninstall(ctx context.Context, name string) error {
-	return g.ExecuteUninstall(ctx, name)
+	output, err := ExecuteCommandCombined(ctx, g.binary, "uninstall", name, "-x", "-a", "-I")
+	if err != nil {
+		return g.handleUninstallError(err, output, name)
+	}
+	return nil
 }
 
 // IsInstalled checks if a specific gem is installed.
 func (g *GemManager) IsInstalled(ctx context.Context, name string) (bool, error) {
-	cmd := exec.CommandContext(ctx, g.GetBinary(), "list", "--local", name)
+	cmd := exec.CommandContext(ctx, g.binary, "list", "--local", name)
 	output, err := cmd.Output()
 	if err != nil {
 		return false, fmt.Errorf("failed to check gem installation status for %s: %w", name, err)
@@ -169,7 +147,7 @@ func (g *GemManager) IsInstalled(ctx context.Context, name string) (bool, error)
 
 // Search searches for gems in RubyGems.org.
 func (g *GemManager) Search(ctx context.Context, query string) ([]string, error) {
-	cmd := exec.CommandContext(ctx, g.GetBinary(), "search", query)
+	cmd := exec.CommandContext(ctx, g.binary, "search", query)
 	output, err := cmd.Output()
 	if err != nil {
 		// Check if this is a real error vs expected conditions
@@ -221,7 +199,7 @@ func (g *GemManager) Info(ctx context.Context, name string) (*PackageInfo, error
 	}
 
 	// Get gem specification
-	cmd := exec.CommandContext(ctx, g.GetBinary(), "specification", name)
+	cmd := exec.CommandContext(ctx, g.binary, "specification", name)
 	output, err := cmd.Output()
 	if err != nil {
 		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() == 1 {
@@ -269,7 +247,7 @@ func (g *GemManager) parseInfoOutput(output []byte, name string) *PackageInfo {
 
 // getDependencies gets the dependencies of an installed gem
 func (g *GemManager) getDependencies(ctx context.Context, name string) []string {
-	cmd := exec.CommandContext(ctx, g.GetBinary(), "dependency", name)
+	cmd := exec.CommandContext(ctx, g.binary, "dependency", name)
 	output, err := cmd.Output()
 	if err != nil {
 		return []string{}
@@ -308,7 +286,7 @@ func (g *GemManager) GetInstalledVersion(ctx context.Context, name string) (stri
 	}
 
 	// Get version using gem list with specific gem
-	cmd := exec.CommandContext(ctx, g.GetBinary(), "list", "--local", name)
+	cmd := exec.CommandContext(ctx, g.binary, "list", "--local", name)
 	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to get gem version information for %s: %w", name, err)
@@ -338,4 +316,109 @@ func (g *GemManager) extractVersion(output []byte, name string) string {
 		}
 	}
 	return ""
+}
+
+// IsAvailable checks if gem is installed and accessible
+func (g *GemManager) IsAvailable(ctx context.Context) (bool, error) {
+	if !CheckCommandAvailable(g.binary) {
+		return false, nil
+	}
+
+	err := VerifyBinary(ctx, g.binary, []string{"--version"})
+	if err != nil {
+		// Check for context cancellation
+		if IsContextError(err) {
+			return false, err
+		}
+		// Binary exists but not functional - not an error condition
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// SupportsSearch returns true as gem supports package search
+func (g *GemManager) SupportsSearch() bool {
+	return true
+}
+
+// handleInstallError processes install command errors using ErrorMatcher
+func (g *GemManager) handleInstallError(err error, output []byte, packageName string) error {
+	outputStr := string(output)
+
+	// Check for specific error conditions using ErrorMatcher
+	if exitCode, ok := ExtractExitCode(err); ok {
+		errorType := g.errorMatcher.MatchError(outputStr)
+
+		switch errorType {
+		case ErrorTypeNotFound:
+			return fmt.Errorf("package '%s' not found", packageName)
+
+		case ErrorTypeAlreadyInstalled:
+			// Package is already installed - this is typically fine
+			return nil
+
+		case ErrorTypePermission:
+			return fmt.Errorf("permission denied installing %s", packageName)
+
+		case ErrorTypeLocked:
+			return fmt.Errorf("package manager database is locked")
+
+		case ErrorTypeNetwork:
+			return fmt.Errorf("network error during installation")
+
+		case ErrorTypeBuild:
+			return fmt.Errorf("failed to build package '%s'", packageName)
+
+		case ErrorTypeDependency:
+			return fmt.Errorf("dependency conflict installing package '%s'", packageName)
+
+		default:
+			// Only treat non-zero exit codes as errors
+			if exitCode != 0 {
+				return fmt.Errorf("package installation failed (exit code %d): %w", exitCode, err)
+			}
+			// Exit code 0 with no recognized error pattern - success
+			return nil
+		}
+	}
+
+	// Non-exit errors (command not found, context cancellation, etc.)
+	return fmt.Errorf("failed to execute install command: %w", err)
+}
+
+// handleUninstallError processes uninstall command errors using ErrorMatcher
+func (g *GemManager) handleUninstallError(err error, output []byte, packageName string) error {
+	outputStr := string(output)
+
+	// Check for specific error conditions using ErrorMatcher
+	if exitCode, ok := ExtractExitCode(err); ok {
+		errorType := g.errorMatcher.MatchError(outputStr)
+
+		switch errorType {
+		case ErrorTypeNotInstalled:
+			// Package is not installed - this is typically fine for uninstall
+			return nil
+
+		case ErrorTypePermission:
+			return fmt.Errorf("permission denied uninstalling %s", packageName)
+
+		case ErrorTypeLocked:
+			return fmt.Errorf("package manager database is locked")
+
+		case ErrorTypeDependency:
+			return fmt.Errorf("cannot uninstall package '%s' due to dependency conflicts", packageName)
+
+		default:
+			// Only treat non-zero exit codes as errors
+			if exitCode != 0 {
+				return fmt.Errorf("package uninstallation failed (exit code %d): %w", exitCode, err)
+			}
+			// Exit code 0 with no recognized error pattern - success
+			return nil
+		}
+	}
+
+	// Non-exit errors (command not found, context cancellation, etc.)
+	return fmt.Errorf("failed to execute uninstall command: %w", err)
 }

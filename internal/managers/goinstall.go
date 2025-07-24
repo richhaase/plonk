@@ -35,9 +35,10 @@ func ExtractBinaryNameFromPath(modulePath string) string {
 	return binaryName
 }
 
-// GoInstallManager manages Go packages using BaseManager for common functionality.
+// GoInstallManager manages Go packages.
 type GoInstallManager struct {
-	*BaseManager
+	binary       string
+	errorMatcher *ErrorMatcher
 }
 
 // NewGoInstallManager creates a new go install manager.
@@ -47,64 +48,22 @@ func NewGoInstallManager() *GoInstallManager {
 
 // newGoInstallManager creates a go install manager.
 func newGoInstallManager() *GoInstallManager {
-	config := ManagerConfig{
-		BinaryName:  "go",
-		VersionArgs: []string{"version"},
-		ListArgs: func() []string {
-			return []string{"env", "GOBIN"}
-		},
-		InstallArgs: func(pkg string) []string {
-			modulePath, version := parseModulePath(pkg)
-			moduleSpec := fmt.Sprintf("%s@%s", modulePath, version)
-			return []string{"install", moduleSpec}
-		},
-		UninstallArgs: func(pkg string) []string {
-			// go doesn't have uninstall, we'll handle this manually
-			return []string{"version", "-m"}
-		},
-	}
-
 	// Add go-specific error patterns
 	errorMatcher := NewCommonErrorMatcher()
 	errorMatcher.AddPattern(ErrorTypeNotFound, "cannot find module", "no matching versions", "malformed module path")
 	errorMatcher.AddPattern(ErrorTypeNetwork, "connection", "timeout")
 	errorMatcher.AddPattern(ErrorTypeBuild, "build failed", "compilation")
 
-	base := NewBaseManager(config)
-	base.ErrorMatcher = errorMatcher
-
 	return &GoInstallManager{
-		BaseManager: base,
+		binary:       "go",
+		errorMatcher: errorMatcher,
 	}
-}
-
-// IsAvailable checks if go is installed and has a supported version.
-func (g *GoInstallManager) IsAvailable(ctx context.Context) (bool, error) {
-	// Use BaseManager's IsAvailable but add version check
-	available, err := g.BaseManager.IsAvailable(ctx)
-	if !available || err != nil {
-		return available, err
-	}
-
-	// Check if version is >= 1.16 (when go install was improved)
-	cmd := exec.CommandContext(ctx, g.GetBinary(), "version")
-	output, err := cmd.Output()
-	if err != nil {
-		return false, fmt.Errorf("go version check failed: %w", err)
-	}
-
-	versionStr := string(output)
-	if !strings.Contains(versionStr, "go1.") {
-		return false, fmt.Errorf("unsupported go version: Go 1.16 or later required")
-	}
-
-	return true, nil
 }
 
 // getGoBinDir returns the directory where go installs binaries
 func (g *GoInstallManager) getGoBinDir(ctx context.Context) (string, error) {
 	// First try GOBIN
-	cmd := exec.CommandContext(ctx, g.GetBinary(), "env", "GOBIN")
+	cmd := exec.CommandContext(ctx, g.binary, "env", "GOBIN")
 	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to get GOBIN: %w", err)
@@ -116,7 +75,7 @@ func (g *GoInstallManager) getGoBinDir(ctx context.Context) (string, error) {
 	}
 
 	// Fall back to GOPATH/bin
-	cmd = exec.CommandContext(ctx, g.GetBinary(), "env", "GOPATH")
+	cmd = exec.CommandContext(ctx, g.binary, "env", "GOPATH")
 	output, err = cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to get GOPATH: %w", err)
@@ -176,7 +135,7 @@ func (g *GoInstallManager) isGoBinary(ctx context.Context, binaryPath string) bo
 	checkCtx, cancel := context.WithTimeout(ctx, 2*1000*1000*1000) // 2 seconds
 	defer cancel()
 
-	checkCmd := exec.CommandContext(checkCtx, g.GetBinary(), "version", "-m", binaryPath)
+	checkCmd := exec.CommandContext(checkCtx, g.binary, "version", "-m", binaryPath)
 	_, err := checkCmd.Output()
 	// If go version -m succeeds, it's a Go binary
 	return err == nil
@@ -197,7 +156,7 @@ func parseModulePath(pkg string) (modulePath string, version string) {
 
 // Install installs a Go package.
 func (g *GoInstallManager) Install(ctx context.Context, name string) error {
-	err := g.ExecuteInstall(ctx, name)
+	err := g.handleInstall(ctx, name)
 	if err != nil {
 		return err
 	}
@@ -286,11 +245,6 @@ func (g *GoInstallManager) IsInstalled(ctx context.Context, name string) (bool, 
 	return g.isGoBinary(ctx, binaryPath), nil
 }
 
-// SupportsSearch returns false as Go doesn't have a built-in package search command.
-func (g *GoInstallManager) SupportsSearch() bool {
-	return false
-}
-
 // Search searches for Go modules.
 func (g *GoInstallManager) Search(ctx context.Context, query string) ([]string, error) {
 	// Go doesn't have a built-in search command
@@ -318,7 +272,7 @@ func (g *GoInstallManager) Info(ctx context.Context, name string) (*PackageInfo,
 	}
 
 	// Get module information using go version -m
-	cmd := exec.CommandContext(ctx, g.GetBinary(), "version", "-m", binaryPath)
+	cmd := exec.CommandContext(ctx, g.binary, "version", "-m", binaryPath)
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get module information for %s: %w", name, err)
@@ -377,7 +331,7 @@ func (g *GoInstallManager) GetInstalledVersion(ctx context.Context, name string)
 	}
 
 	// Get version using go version -m
-	cmd := exec.CommandContext(ctx, g.GetBinary(), "version", "-m", binaryPath)
+	cmd := exec.CommandContext(ctx, g.binary, "version", "-m", binaryPath)
 	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to get version information for %s: %w", name, err)
@@ -404,4 +358,85 @@ func (g *GoInstallManager) GetInstalledVersion(ctx context.Context, name string)
 	}
 
 	return "", fmt.Errorf("could not extract version for binary '%s'", binaryName)
+}
+
+// IsAvailable checks if go is installed and accessible
+func (g *GoInstallManager) IsAvailable(ctx context.Context) (bool, error) {
+	if !CheckCommandAvailable(g.binary) {
+		return false, nil
+	}
+
+	err := VerifyBinary(ctx, g.binary, []string{"version"})
+	if err != nil {
+		// Check for context cancellation
+		if IsContextError(err) {
+			return false, err
+		}
+		// Binary exists but not functional - not an error condition
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// SupportsSearch returns false as go install doesn't support package search
+func (g *GoInstallManager) SupportsSearch() bool {
+	return false
+}
+
+// handleInstall handles the install operation for Go packages
+func (g *GoInstallManager) handleInstall(ctx context.Context, name string) error {
+	modulePath, version := parseModulePath(name)
+	moduleSpec := fmt.Sprintf("%s@%s", modulePath, version)
+
+	output, err := ExecuteCommandCombined(ctx, g.binary, "install", moduleSpec)
+	if err != nil {
+		return g.handleInstallError(err, output, name)
+	}
+	return nil
+}
+
+// handleInstallError processes install command errors using ErrorMatcher
+func (g *GoInstallManager) handleInstallError(err error, output []byte, packageName string) error {
+	outputStr := string(output)
+
+	// Check for specific error conditions using ErrorMatcher
+	if exitCode, ok := ExtractExitCode(err); ok {
+		errorType := g.errorMatcher.MatchError(outputStr)
+
+		switch errorType {
+		case ErrorTypeNotFound:
+			return fmt.Errorf("package '%s' not found", packageName)
+
+		case ErrorTypeAlreadyInstalled:
+			// Package is already installed - this is typically fine
+			return nil
+
+		case ErrorTypePermission:
+			return fmt.Errorf("permission denied installing %s", packageName)
+
+		case ErrorTypeLocked:
+			return fmt.Errorf("package manager database is locked")
+
+		case ErrorTypeNetwork:
+			return fmt.Errorf("network error during installation")
+
+		case ErrorTypeBuild:
+			return fmt.Errorf("failed to build package '%s'", packageName)
+
+		case ErrorTypeDependency:
+			return fmt.Errorf("dependency conflict installing package '%s'", packageName)
+
+		default:
+			// Only treat non-zero exit codes as errors
+			if exitCode != 0 {
+				return fmt.Errorf("package installation failed (exit code %d): %w", exitCode, err)
+			}
+			// Exit code 0 with no recognized error pattern - success
+			return nil
+		}
+	}
+
+	// Non-exit errors (command not found, context cancellation, etc.)
+	return fmt.Errorf("failed to execute install command: %w", err)
 }

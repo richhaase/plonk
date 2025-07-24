@@ -62,7 +62,7 @@ python_magic (0.4.27) - File type identification using libmagic`),
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			manager := &PipManager{BaseManager: &BaseManager{}}
+			manager := newPipManager()
 			got := manager.parseSearchOutput(tt.output)
 			if !stringSlicesEqual(got, tt.want) {
 				t.Errorf("parseSearchOutput() = %v, want %v", got, tt.want)

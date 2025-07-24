@@ -80,46 +80,12 @@ func TestParseModulePath(t *testing.T) {
 func TestGoInstallManager_Configuration(t *testing.T) {
 	manager := NewGoInstallManager()
 
-	if manager.BaseManager == nil {
-		t.Error("BaseManager not initialized")
+	if manager.binary != "go" {
+		t.Errorf("binary = %v, want go", manager.binary)
 	}
 
-	if manager.Config.BinaryName != "go" {
-		t.Errorf("BinaryName = %v, want go", manager.Config.BinaryName)
-	}
-
-	if manager.Config.VersionArgs == nil {
-		t.Error("VersionArgs not set")
-	} else {
-		versionArgs := manager.Config.VersionArgs
-		expected := []string{"version"}
-		if len(versionArgs) != len(expected) {
-			t.Errorf("VersionArgs length = %v, want %v", len(versionArgs), len(expected))
-		}
-		for i, arg := range versionArgs {
-			if arg != expected[i] {
-				t.Errorf("VersionArgs[%d] = %v, want %v", i, arg, expected[i])
-			}
-		}
-	}
-
-	if manager.Config.InstallArgs == nil {
-		t.Error("InstallArgs not set")
-	} else {
-		installArgs := manager.Config.InstallArgs("github.com/user/repo@v1.0.0")
-		expected := []string{"install", "github.com/user/repo@v1.0.0"}
-		if len(installArgs) != len(expected) {
-			t.Errorf("InstallArgs length = %v, want %v", len(installArgs), len(expected))
-		}
-		for i, arg := range installArgs {
-			if arg != expected[i] {
-				t.Errorf("InstallArgs[%d] = %v, want %v", i, arg, expected[i])
-			}
-		}
-	}
-
-	if manager.Config.UninstallArgs == nil {
-		t.Error("UninstallArgs should not be nil for go install manager")
+	if manager.errorMatcher == nil {
+		t.Error("errorMatcher not initialized")
 	}
 }
 
