@@ -47,7 +47,6 @@ func NewBaseManager(config ManagerConfig) *BaseManager {
 	}
 }
 
-
 // IsAvailable checks if the package manager is installed and accessible
 func (b *BaseManager) IsAvailable(ctx context.Context) (bool, error) {
 	// Try primary binary

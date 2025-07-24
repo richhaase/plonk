@@ -47,9 +47,9 @@ Another invalid line without parentheses`),
 			want: []string{"requests", "requests-oauthlib"},
 		},
 		{
-			name: "single package result",
+			name:   "single package result",
 			output: []byte(`requests (2.28.1) - Python HTTP for Humans.`),
-			want: []string{"requests"},
+			want:   []string{"requests"},
 		},
 		{
 			name: "packages with underscores and hyphens",
@@ -70,4 +70,3 @@ python_magic (0.4.27) - File type identification using libmagic`),
 		})
 	}
 }
-

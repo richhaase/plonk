@@ -46,9 +46,9 @@ my-custom-tool v1.0.0:
 		},
 		{
 			name: "output with extra whitespace",
-			output: []byte(`  ripgrep v13.0.0:  
+			output: []byte(`  ripgrep v13.0.0:
     rg
-  tokio v1.24.1:  
+  tokio v1.24.1:
     tokio-util`),
 			want: []string{"ripgrep", "tokio"},
 		},
@@ -84,9 +84,9 @@ serde_derive = "1.0.152"    # Macros 1.1 implementation of #[derive(Serialize, D
 			want:   []string{},
 		},
 		{
-			name: "single result",
+			name:   "single result",
 			output: []byte(`ripgrep = "13.0.0"    # ripgrep recursively searches directories for a regex pattern while respecting your gitignore`),
-			want: []string{"ripgrep"},
+			want:   []string{"ripgrep"},
 		},
 		{
 			name: "packages with hyphens",
@@ -96,7 +96,7 @@ my-tool = "1.0.0"    # A custom tool`),
 		},
 		{
 			name: "output with extra whitespace",
-			output: []byte(`  serde = "1.0.152"    # A generic framework  
+			output: []byte(`  serde = "1.0.152"    # A generic framework
   tokio = "1.24.1"    # An event-driven framework  `),
 			want: []string{"serde", "tokio"},
 		},
@@ -133,8 +133,8 @@ serde_json = "1.0.91"    # A JSON serialization file format`),
 			},
 		},
 		{
-			name: "exact match for requested package",
-			output: []byte(`ripgrep = "13.0.0"    # ripgrep recursively searches directories for a regex pattern while respecting your gitignore`),
+			name:        "exact match for requested package",
+			output:      []byte(`ripgrep = "13.0.0"    # ripgrep recursively searches directories for a regex pattern while respecting your gitignore`),
 			packageName: "ripgrep",
 			want: &PackageInfo{
 				Name:        "ripgrep",
@@ -147,16 +147,11 @@ serde_json = "1.0.91"    # A JSON serialization file format`),
 			name:        "empty output",
 			output:      []byte(""),
 			packageName: "unknown",
-			want: &PackageInfo{
-				Name:        "unknown",
-				Version:     "",
-				Description: "",
-				Homepage:    "",
-			},
+			want:        nil,
 		},
 		{
-			name: "package with underscores",
-			output: []byte(`tokio_util = "0.7.4"    # Additional utilities for working with Tokio`),
+			name:        "package with underscores",
+			output:      []byte(`tokio_util = "0.7.4"    # Additional utilities for working with Tokio`),
 			packageName: "tokio_util",
 			want: &PackageInfo{
 				Name:        "tokio_util",

@@ -190,7 +190,7 @@ func (p *PipManager) Install(ctx context.Context, name string) error {
 				if strings.Contains(outputStr, "--user") && strings.Contains(outputStr, "error") {
 					// Try without --user flag
 					retryCmd := exec.CommandContext(ctx, pipCmd, "install", name)
-				_, retryErr := retryCmd.CombinedOutput()
+					_, retryErr := retryCmd.CombinedOutput()
 					if retryErr == nil {
 						return nil
 					}

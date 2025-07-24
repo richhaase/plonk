@@ -28,7 +28,7 @@ func TestNpmManager_parseListOutput(t *testing.T) {
     }
   }
 }`),
-			want: []string{"typescript", "eslint", "prettier"},
+			want: []string{"eslint", "prettier", "typescript"},
 		},
 		{
 			name:   "empty dependencies",

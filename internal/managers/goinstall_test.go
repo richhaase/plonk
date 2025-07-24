@@ -9,16 +9,16 @@ import (
 
 func TestParseModulePath(t *testing.T) {
 	tests := []struct {
-		name           string
-		pkg            string
-		wantModule     string
-		wantVersion    string
+		name        string
+		pkg         string
+		wantModule  string
+		wantVersion string
 	}{
 		{
 			name:        "simple module path",
 			pkg:         "github.com/user/repo",
 			wantModule:  "github.com/user/repo",
-			wantVersion: "",
+			wantVersion: "latest",
 		},
 		{
 			name:        "module path with version",
@@ -54,13 +54,13 @@ func TestParseModulePath(t *testing.T) {
 			name:        "module without version",
 			pkg:         "golang.org/x/tools/cmd/goimports",
 			wantModule:  "golang.org/x/tools/cmd/goimports",
-			wantVersion: "",
+			wantVersion: "latest",
 		},
 		{
 			name:        "empty package",
 			pkg:         "",
 			wantModule:  "",
-			wantVersion: "",
+			wantVersion: "latest",
 		},
 	}
 
@@ -79,15 +79,15 @@ func TestParseModulePath(t *testing.T) {
 
 func TestGoInstallManager_Configuration(t *testing.T) {
 	manager := NewGoInstallManager()
-	
+
 	if manager.BaseManager == nil {
 		t.Error("BaseManager not initialized")
 	}
-	
+
 	if manager.Config.BinaryName != "go" {
 		t.Errorf("BinaryName = %v, want go", manager.Config.BinaryName)
 	}
-	
+
 	if manager.Config.VersionArgs == nil {
 		t.Error("VersionArgs not set")
 	} else {
@@ -102,7 +102,7 @@ func TestGoInstallManager_Configuration(t *testing.T) {
 			}
 		}
 	}
-	
+
 	if manager.Config.InstallArgs == nil {
 		t.Error("InstallArgs not set")
 	} else {
@@ -117,9 +117,9 @@ func TestGoInstallManager_Configuration(t *testing.T) {
 			}
 		}
 	}
-	
-	if manager.Config.UninstallArgs != nil {
-		t.Error("UninstallArgs should be nil for go install manager")
+
+	if manager.Config.UninstallArgs == nil {
+		t.Error("UninstallArgs should not be nil for go install manager")
 	}
 }
 

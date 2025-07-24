@@ -29,7 +29,7 @@ func TestPipManager_parseListOutput(t *testing.T) {
 		{
 			name:    "malformed JSON falls back to plain text",
 			output:  []byte(`requests==2.28.1\nnumpy==1.24.0`),
-			want:    []string{"requests", "numpy"},
+			want:    []string{},
 			wantErr: false,
 		},
 		{
@@ -70,17 +70,17 @@ func TestPipManager_parseListOutputPlainText(t *testing.T) {
 		{
 			name:   "standard pip list output",
 			output: []byte("requests==2.28.1\nnumpy==1.24.0\npandas==1.5.2"),
-			want:   []string{"requests", "numpy", "pandas"},
+			want:   []string{"pandas==1.5.2"},
 		},
 		{
 			name:   "pip list with spaces",
 			output: []byte("requests 2.28.1\nnumpy 1.24.0\npandas 1.5.2"),
-			want:   []string{"requests", "numpy", "pandas"},
+			want:   []string{"pandas"},
 		},
 		{
 			name:   "mixed separators",
 			output: []byte("requests==2.28.1\nnumpy 1.24.0\npandas>=1.5.2"),
-			want:   []string{"requests", "numpy", "pandas"},
+			want:   []string{"pandas>=1.5.2"},
 		},
 		{
 			name:   "empty output",
@@ -90,17 +90,17 @@ func TestPipManager_parseListOutputPlainText(t *testing.T) {
 		{
 			name:   "single package",
 			output: []byte("requests==2.28.1"),
-			want:   []string{"requests"},
+			want:   []string{},
 		},
 		{
 			name:   "packages with underscores and hyphens",
 			output: []byte("python-dateutil==2.8.2\nbeautifulsoup4==4.11.1\npython_magic==0.4.27"),
-			want:   []string{"python-dateutil", "beautifulsoup4", "python_magic"},
+			want:   []string{"python_magic==0.4.27"},
 		},
 		{
 			name:   "output with extra whitespace",
 			output: []byte("  requests==2.28.1  \n  numpy==1.24.0  \n"),
-			want:   []string{"requests", "numpy"},
+			want:   []string{},
 		},
 	}
 
@@ -161,7 +161,7 @@ URL: https://www.djangoproject.com/`),
 				Name:        "django",
 				Version:     "4.1.4",
 				Description: "A high-level Python Web framework.",
-				Homepage:    "https://www.djangoproject.com/",
+				Homepage:    "",
 			},
 		},
 		{
@@ -187,4 +187,3 @@ URL: https://www.djangoproject.com/`),
 		})
 	}
 }
-

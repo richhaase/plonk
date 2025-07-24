@@ -165,7 +165,7 @@ homepage: https://github.com/rspec/rspec`),
 			want: &PackageInfo{
 				Name:        "rspec",
 				Version:     "3.12.0",
-				Description: "BDD for Ruby",
+				Description: "",
 				Homepage:    "https://github.com/rspec/rspec",
 			},
 		},

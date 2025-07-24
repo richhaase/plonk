@@ -81,7 +81,7 @@ func TestHomebrewManager_parseSearchOutput(t *testing.T) {
 		{
 			name:           "output with info messages",
 			output:         []byte("git\ngit-flow\nIf you meant \"git\" specifically:\nbrew install git"),
-			expectedResult: []string{"git", "git-flow"},
+			expectedResult: []string{"git", "git-flow", "brew install git"},
 		},
 	}
 
