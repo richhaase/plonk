@@ -11,26 +11,25 @@ import (
 
 	"github.com/richhaase/plonk/internal/interfaces"
 	"github.com/richhaase/plonk/internal/state"
-	"github.com/richhaase/plonk/internal/types"
 )
 
 // SimplifiedReconcileDotfiles performs direct dotfile reconciliation without Provider interface
-func (sc *SharedContext) SimplifiedReconcileDotfiles(ctx context.Context) (types.Result, error) {
+func (sc *SharedContext) SimplifiedReconcileDotfiles(ctx context.Context) (state.Result, error) {
 	// Create the dotfile provider directly
 	provider, err := sc.CreateDotfileProvider()
 	if err != nil {
-		return types.Result{}, err
+		return state.Result{}, err
 	}
 
 	// Get configured and actual items directly
 	configured, err := provider.GetConfiguredItems()
 	if err != nil {
-		return types.Result{}, err
+		return state.Result{}, err
 	}
 
 	actual, err := provider.GetActualItems(ctx)
 	if err != nil {
-		return types.Result{}, err
+		return state.Result{}, err
 	}
 
 	// Perform reconciliation inline
@@ -38,22 +37,22 @@ func (sc *SharedContext) SimplifiedReconcileDotfiles(ctx context.Context) (types
 }
 
 // SimplifiedReconcilePackages performs direct package reconciliation without Provider interface
-func (sc *SharedContext) SimplifiedReconcilePackages(ctx context.Context) (types.Result, error) {
+func (sc *SharedContext) SimplifiedReconcilePackages(ctx context.Context) (state.Result, error) {
 	// Create the package provider directly
 	provider, err := sc.CreatePackageProvider(ctx)
 	if err != nil {
-		return types.Result{}, err
+		return state.Result{}, err
 	}
 
 	// Get configured and actual items directly
 	configured, err := provider.GetConfiguredItems()
 	if err != nil {
-		return types.Result{}, err
+		return state.Result{}, err
 	}
 
 	actual, err := provider.GetActualItems(ctx)
 	if err != nil {
-		return types.Result{}, err
+		return state.Result{}, err
 	}
 
 	// Perform reconciliation inline
@@ -61,7 +60,7 @@ func (sc *SharedContext) SimplifiedReconcilePackages(ctx context.Context) (types
 }
 
 // reconcileDotfileItems performs the core reconciliation logic for dotfiles
-func reconcileDotfileItems(provider *state.DotfileProvider, configured []interfaces.ConfigItem, actual []interfaces.ActualItem) types.Result {
+func reconcileDotfileItems(provider *state.DotfileProvider, configured []interfaces.ConfigItem, actual []interfaces.ActualItem) state.Result {
 	// Build lookup sets
 	actualSet := make(map[string]*interfaces.ActualItem)
 	for i := range actual {
@@ -73,7 +72,7 @@ func reconcileDotfileItems(provider *state.DotfileProvider, configured []interfa
 		configuredSet[configured[i].Name] = &configured[i]
 	}
 
-	result := types.Result{
+	result := state.Result{
 		Domain:    "dotfile",
 		Managed:   make([]interfaces.Item, 0),
 		Missing:   make([]interfaces.Item, 0),
@@ -106,7 +105,7 @@ func reconcileDotfileItems(provider *state.DotfileProvider, configured []interfa
 }
 
 // reconcilePackageItems performs the core reconciliation logic for packages
-func reconcilePackageItems(provider *state.MultiManagerPackageProvider, configured []interfaces.ConfigItem, actual []interfaces.ActualItem) types.Result {
+func reconcilePackageItems(provider *state.MultiManagerPackageProvider, configured []interfaces.ConfigItem, actual []interfaces.ActualItem) state.Result {
 	// Build lookup sets
 	actualSet := make(map[string]*interfaces.ActualItem)
 	for i := range actual {
@@ -118,7 +117,7 @@ func reconcilePackageItems(provider *state.MultiManagerPackageProvider, configur
 		configuredSet[configured[i].Name] = &configured[i]
 	}
 
-	result := types.Result{
+	result := state.Result{
 		Domain:    "package",
 		Managed:   make([]interfaces.Item, 0),
 		Missing:   make([]interfaces.Item, 0),
@@ -151,8 +150,8 @@ func reconcilePackageItems(provider *state.MultiManagerPackageProvider, configur
 }
 
 // SimplifiedReconcileAll reconciles all domains without using the generic Reconciler
-func (sc *SharedContext) SimplifiedReconcileAll(ctx context.Context) (map[string]types.Result, error) {
-	results := make(map[string]types.Result)
+func (sc *SharedContext) SimplifiedReconcileAll(ctx context.Context) (map[string]state.Result, error) {
+	results := make(map[string]state.Result)
 
 	// Reconcile dotfiles directly
 	dotfileResult, err := sc.SimplifiedReconcileDotfiles(ctx)

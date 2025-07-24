@@ -11,7 +11,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/runtime"
-	"github.com/richhaase/plonk/internal/types"
+	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
 )
 
@@ -95,13 +95,13 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	return RenderOutput(outputData, format)
 }
 
-// convertResultsToSummary converts reconciliation results to types.Summary for output compatibility
-func convertResultsToSummary(results map[string]types.Result) types.Summary {
-	summary := types.Summary{
+// convertResultsToSummary converts reconciliation results to state.Summary for output compatibility
+func convertResultsToSummary(results map[string]state.Result) state.Summary {
+	summary := state.Summary{
 		TotalManaged:   0,
 		TotalMissing:   0,
 		TotalUntracked: 0,
-		Results:        make([]types.Result, 0, len(results)),
+		Results:        make([]state.Result, 0, len(results)),
 	}
 
 	for _, result := range results {
@@ -123,7 +123,7 @@ type StatusOutput struct {
 	ConfigExists bool          `json:"config_exists" yaml:"config_exists"`
 	ConfigValid  bool          `json:"config_valid" yaml:"config_valid"`
 	LockExists   bool          `json:"lock_exists" yaml:"lock_exists"`
-	StateSummary types.Summary `json:"state_summary" yaml:"state_summary"`
+	StateSummary state.Summary `json:"state_summary" yaml:"state_summary"`
 }
 
 // StatusOutputSummary represents a summary-focused version for JSON/YAML output
@@ -218,7 +218,7 @@ func (s StatusOutput) StructuredData() any {
 }
 
 // createDomainSummary creates domain summaries with counts only
-func createDomainSummary(results []types.Result) []DomainSummary {
+func createDomainSummary(results []state.Result) []DomainSummary {
 	var domains []DomainSummary
 	for _, result := range results {
 		if result.IsEmpty() {
@@ -236,7 +236,7 @@ func createDomainSummary(results []types.Result) []DomainSummary {
 }
 
 // extractManagedItems extracts only the managed items without full metadata
-func extractManagedItems(results []types.Result) []ManagedItem {
+func extractManagedItems(results []state.Result) []ManagedItem {
 	var items []ManagedItem
 	for _, result := range results {
 		for _, managed := range result.Managed {

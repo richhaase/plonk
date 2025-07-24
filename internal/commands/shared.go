@@ -10,7 +10,7 @@ import (
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/interfaces"
 	"github.com/richhaase/plonk/internal/runtime"
-	"github.com/richhaase/plonk/internal/types"
+	"github.com/richhaase/plonk/internal/state"
 	"github.com/richhaase/plonk/internal/ui"
 	"github.com/spf13/cobra"
 )
@@ -105,9 +105,9 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 	return RenderOutput(outputWrapper, format)
 }
 
-// packageListResultWrapper wraps types.Result to implement OutputData
+// packageListResultWrapper wraps state.Result to implement OutputData
 type packageListResultWrapper struct {
-	Result types.Result
+	Result state.Result
 }
 
 // TableOutput generates human-friendly table output
@@ -203,7 +203,7 @@ func runDotList(cmd *cobra.Command, args []string) error {
 	verbose, _ := cmd.Flags().GetBool("verbose")
 
 	// Apply filters to the result
-	filteredResult := types.Result{
+	filteredResult := state.Result{
 		Domain:    domainResult.Domain,
 		Manager:   domainResult.Manager,
 		Managed:   domainResult.Managed,
@@ -236,9 +236,9 @@ func runDotList(cmd *cobra.Command, args []string) error {
 	return RenderOutput(outputWrapper, format)
 }
 
-// dotfileListResultWrapper wraps types.Result to implement OutputData
+// dotfileListResultWrapper wraps state.Result to implement OutputData
 type dotfileListResultWrapper struct {
-	Result  types.Result
+	Result  state.Result
 	Verbose bool
 }
 

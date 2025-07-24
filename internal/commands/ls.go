@@ -11,7 +11,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/runtime"
-	"github.com/richhaase/plonk/internal/types"
+	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
 )
 
@@ -109,11 +109,11 @@ func runSmartOverview(cmd *cobra.Command, flags *SimpleFlags, format OutputForma
 	}
 
 	// Convert results to summary
-	summary := &types.Summary{
+	summary := &state.Summary{
 		TotalManaged:   0,
 		TotalMissing:   0,
 		TotalUntracked: 0,
-		Results:        make([]types.Result, 0),
+		Results:        make([]state.Result, 0),
 	}
 
 	for _, result := range results {
