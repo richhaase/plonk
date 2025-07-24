@@ -546,9 +546,22 @@ The current codebase suffers from premature abstraction and non-idiomatic patter
    - Used internal types to avoid naming conflicts
    - Package count: 17 → 16
 
+8. **2025-07-24**: Deleted `operations` package
+   - Moved OperationResult and ResultSummary types to `state` package
+   - Moved progress reporting to `ui` package
+   - Enhanced commands/helpers.go with context utilities
+   - Package count: 16 → 15
+
+9. **2025-07-24**: Deleted `core` package
+   - Moved dotfile operations to `commands/dotfile_operations.go`
+   - Moved ExtractBinaryNameFromPath to `managers/goinstall.go`
+   - Inlined LoadOrCreateConfig wrapper in commands
+   - Resolved import cycle between state and dotfiles packages
+   - Package count: 15 → 14
+
 ### Remaining Work
-- 3 packages still to eliminate (operations, core, mocks)
-- 1 package to transform (runtime → orchestrator)
+- 2 packages still to eliminate (mocks)
+- 1 package to transform (runtime → orchestrator) - **NEXT PRIORITY**
 - 1 package to keep after analysis (paths - has domain logic)
 - 5 packages to simplify (errors, config, state, managers, commands)
-- ~15,000 lines of code to remove
+- ~13,000 lines of code to remove

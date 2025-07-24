@@ -2,7 +2,7 @@
 
 ## Current State (2025-07-24)
 - **Branch**: refactor/simplify
-- **Package Count**: 22 → 16 (6 eliminated)
+- **Package Count**: 22 → 13 (9 eliminated)
 - **Goal**: Reduce to 5-6 packages while preserving extensibility for AI Lab features
 
 ## Key Documents
@@ -17,17 +17,18 @@
 5. ✅ Fixed manager tests (converted to unit tests)
 6. ✅ Deleted `interfaces` package (moved to consumers)
 7. ✅ Deleted `services` package (moved to sync command)
+8. ✅ Deleted `operations` package (moved to state/ui packages)
+9. ✅ Deleted `core` package (moved to commands/managers packages)
 
 ## Next Priority Tasks
-1. Delete `operations` package - Move types to state, UI to ui package (READY - Task 006)
-2. Transform `runtime` → `orchestrator` - Keep ~200-300 LOC coordination
-3. Delete `core` package - Merge into domain packages
-4. Keep `paths` package - Contains important domain-specific logic and security validation
+1. **Transform `runtime` → `orchestrator`** - Eliminate singleton, keep ~200-300 LOC coordination (IN PROGRESS - Task 008)
+2. Delete `mocks` package - Replace with simple test doubles
+3. Keep `paths` package - Contains important domain-specific logic and security validation
 
 ## Package Analysis Notes
 - **paths**: More complex than expected, provides security validation and Plonk-specific logic
-- **operations**: Good candidate - simple types that fit naturally in state/ui packages
-- **services**: Easiest target - thin wrapper used only by sync command
+- **runtime**: Complex singleton pattern - transform to simple orchestrator functions
+- **mocks**: Generated complexity - replace with simple test doubles
 
 ## Critical Preservation Points (AI Lab Requirements)
 1. **Orchestrator Pattern** - Transform runtime, don't delete
