@@ -2,8 +2,9 @@
 
 ## Current State (2025-07-24)
 - **Branch**: refactor/simplify
-- **Package Count**: 22 → 10 (12 eliminated)
+- **Package Count**: 22 → 10 (54% reduction achieved)
 - **Goal**: Reduce to 5-6 packages while preserving extensibility for AI Lab features
+- **Progress**: Excellent - only 4-5 more package changes needed to reach target
 
 ## Key Documents
 - **CLAUDE_CODE_REVIEW.md** - Master refactoring plan and progress tracker
@@ -22,20 +23,21 @@
 10. ✅ Transformed `runtime` → `orchestrator` - Eliminated singleton, preserved coordination logic
 11. ✅ Deleted `mocks` and `testing` packages - Eliminated 514 LOC of unused generated code
 
-## Next Priority Tasks
-1. **Delete `errors` package** - Replace with idiomatic Go patterns (READY - Task 010)
-2. **Analyze `config` package** - Research dual config system for simplification (READY - Task 011)
-3. Keep `paths` package - Contains important domain-specific logic and security validation
+## Current Task Queue
+1. **Task 010** (Delete Errors): IN PROGRESS by worker - 766 LOC elimination
+2. **Task 012** (Simplify Config): READY - 65-70% reduction (593 → 150-200 LOC)
+3. **Task 013** (Standardize Output): READY - Remove JSON, keep YAML+table formats
 
-## Package Analysis Notes
-- **paths**: More complex than expected, provides security validation and Plonk-specific logic
-- **errors**: Over-engineered 766 LOC system - delete completely and use fmt.Errorf (ready for execution)
-- **config**: Dual config system mentioned in review - needs analysis to identify simplification opportunities
+## Package Analysis Complete
+- **errors**: 766 LOC over-engineered system - delete completely (IN PROGRESS)
+- **config**: 593 LOC with migration debt - 65-70% reduction possible (PLANNED)
+- **paths**: Keep - contains domain logic and security validation (DECISION FINAL)
+- **Output formats**: Standardize on YAML+table, remove JSON (USER REQUEST)
 
 ## Critical Preservation Points (AI Lab Requirements)
 1. **Orchestrator Pattern** - Transform runtime, don't delete
 2. **Reconciliation Logic** - Keep Managed/Missing/Untracked pattern
-3. **YAML Output** - Keep both JSON and YAML
+3. **YAML Output** - Keep YAML and human-readable (JSON removed per user request)
 4. **Clean Interfaces** - Maintain package boundaries for extensibility
 5. **Lock File** - Design for future resource types (not just packages)
 
