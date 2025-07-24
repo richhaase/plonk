@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/richhaase/plonk/internal/cli"
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/constants"
 	"github.com/richhaase/plonk/internal/core"
@@ -69,7 +68,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get flags
-	flags, err := cli.ParseSimpleFlags(cmd)
+	flags, err := ParseSimpleFlags(cmd)
 	if err != nil {
 		return err
 	}

@@ -7,7 +7,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/richhaase/plonk/internal/cli"
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/core"
 	"github.com/richhaase/plonk/internal/errors"
@@ -40,7 +39,7 @@ func init() {
 	rmCmd.Flags().BoolP("force", "f", false, "Force removal even if not managed")
 
 	// Add file path completion
-	rmCmd.ValidArgsFunction = cli.CompleteDotfilePaths
+	rmCmd.ValidArgsFunction = CompleteDotfilePaths
 }
 
 func runRm(cmd *cobra.Command, args []string) error {
@@ -52,7 +51,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get flags
-	flags, err := cli.ParseSimpleFlags(cmd)
+	flags, err := ParseSimpleFlags(cmd)
 	if err != nil {
 		return err
 	}

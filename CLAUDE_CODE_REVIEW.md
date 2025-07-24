@@ -304,7 +304,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 ## Specific Recommendations
 
 ### 1. Eliminate These Packages Entirely
-- `cli` → merge 1 file into `commands`
+- ✅ `cli` → merge 1 file into `commands` (COMPLETED 2025-07-24)
 - `constants` → inline where used
 - `core` → merge into domain packages
 - `executor` → use exec.Command directly
@@ -484,3 +484,16 @@ Best for: Larger teams, limited test coverage, need for continuous stability
 ## Conclusion
 
 The current codebase suffers from premature abstraction and non-idiomatic patterns that make it harder to understand and maintain than necessary. The proposed simplification would reduce the codebase by ~70% while maintaining all essential functionality and improving developer experience. The key insight is that Plonk is fundamentally simple: it copies files and runs package manager commands. The implementation should reflect this simplicity.
+
+## Progress Tracking
+
+### Completed Refactoring
+1. **2025-07-24**: Merged `cli` package into `commands`
+   - Moved 4 helper functions from `internal/cli/helpers.go` to `internal/commands/helpers.go`
+   - Updated 7 files to remove cli imports
+   - Package count: 22 → 21
+
+### Remaining Work
+- 10 packages still to eliminate
+- 5 packages to simplify
+- ~18,000 lines of code to remove

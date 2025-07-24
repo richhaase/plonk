@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/richhaase/plonk/internal/cli"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/interfaces"
 	"github.com/richhaase/plonk/internal/runtime"
@@ -53,7 +52,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 	sharedCtx := runtime.GetSharedContext()
 
 	// Get specific manager if flag is set
-	flags, err := cli.ParseSimpleFlags(cmd)
+	flags, err := ParseSimpleFlags(cmd)
 	if err != nil {
 		return err
 	}

@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/richhaase/plonk/internal/cli"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/runtime"
 	"github.com/richhaase/plonk/internal/types"
@@ -64,7 +63,7 @@ func init() {
 
 func runLs(cmd *cobra.Command, args []string) error {
 	// Parse flags
-	flags, err := cli.ParseSimpleFlags(cmd)
+	flags, err := ParseSimpleFlags(cmd)
 	if err != nil {
 		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "ls", "flags", "invalid flag combination")
 	}
@@ -98,7 +97,7 @@ func runLs(cmd *cobra.Command, args []string) error {
 }
 
 // runSmartOverview provides a unified view of packages and dotfiles
-func runSmartOverview(cmd *cobra.Command, flags *cli.SimpleFlags, format OutputFormat, showAll bool) error {
+func runSmartOverview(cmd *cobra.Command, flags *SimpleFlags, format OutputFormat, showAll bool) error {
 	// Get shared context
 	sharedCtx := runtime.GetSharedContext()
 
@@ -184,19 +183,19 @@ func runSmartOverview(cmd *cobra.Command, flags *cli.SimpleFlags, format OutputF
 }
 
 // runPackageList shows packages only (reuses existing logic)
-func runPackageList(cmd *cobra.Command, flags *cli.SimpleFlags, format OutputFormat) error {
+func runPackageList(cmd *cobra.Command, flags *SimpleFlags, format OutputFormat) error {
 	// Delegate to the existing package list implementation
 	return runPkgList(cmd, []string{})
 }
 
 // runDotfileList shows dotfiles only (delegates to existing implementation)
-func runDotfileList(cmd *cobra.Command, flags *cli.SimpleFlags, format OutputFormat) error {
+func runDotfileList(cmd *cobra.Command, flags *SimpleFlags, format OutputFormat) error {
 	// Delegate to the shared dotfile listing implementation
 	return runDotList(cmd, []string{})
 }
 
 // runManagerSpecificList shows packages for a specific manager
-func runManagerSpecificList(cmd *cobra.Command, flags *cli.SimpleFlags, format OutputFormat) error {
+func runManagerSpecificList(cmd *cobra.Command, flags *SimpleFlags, format OutputFormat) error {
 	// Set the manager flag and delegate to package list
 	cmd.Flags().Set("manager", flags.Manager)
 	return runPackageList(cmd, flags, format)

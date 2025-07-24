@@ -4,7 +4,6 @@
 package commands
 
 import (
-	"github.com/richhaase/plonk/internal/cli"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/spf13/cobra"
 )
@@ -42,7 +41,7 @@ func init() {
 
 func runDotfiles(cmd *cobra.Command, args []string) error {
 	// Parse flags and delegate to the shared implementation
-	flags, err := cli.ParseSimpleFlags(cmd)
+	flags, err := ParseSimpleFlags(cmd)
 	if err != nil {
 		return errors.WrapWithItem(err, errors.ErrInvalidInput, errors.DomainCommands, "dotfiles", "flags", "invalid flag combination")
 	}

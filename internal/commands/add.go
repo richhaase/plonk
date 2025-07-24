@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/richhaase/plonk/internal/cli"
 	"github.com/richhaase/plonk/internal/core"
 	"github.com/richhaase/plonk/internal/errors"
 	"github.com/richhaase/plonk/internal/operations"
@@ -49,7 +48,7 @@ func init() {
 	addCmd.Flags().BoolP("force", "f", false, "Force addition even if already managed")
 
 	// Add file path completion
-	addCmd.ValidArgsFunction = cli.CompleteDotfilePaths
+	addCmd.ValidArgsFunction = CompleteDotfilePaths
 }
 
 func runAdd(cmd *cobra.Command, args []string) error {
@@ -92,8 +91,8 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		// Single file output
 		result := results[0]
 		output := &DotfileAddOutput{
-			Source:      cli.GetMetadataString(result, "source"),
-			Destination: cli.GetMetadataString(result, "destination"),
+			Source:      GetMetadataString(result, "source"),
+			Destination: GetMetadataString(result, "destination"),
 			Action:      ui.MapStatusToAction(result.Status),
 			Path:        result.Name,
 		}
