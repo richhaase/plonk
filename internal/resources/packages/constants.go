@@ -1,9 +1,9 @@
 // Copyright (c) 2025 Rich Haase
 // Licensed under the MIT License. See LICENSE file in the project root for license information.
 
-package managers
+package packages
 
-// SupportedManagers contains all package managers supported by plonk
+// SupportedManagers contains all package packages supported by plonk
 var SupportedManagers = []string{
 	"cargo",
 	"gem",

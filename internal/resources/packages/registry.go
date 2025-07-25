@@ -1,7 +1,7 @@
 // Copyright (c) 2025 Rich Haase
 // Licensed under the MIT License. See LICENSE file in the project root for license information.
 
-package managers
+package packages
 
 import (
 	"context"
@@ -16,7 +16,7 @@ type ManagerRegistry struct {
 	managers map[string]ManagerFactory
 }
 
-// NewManagerRegistry creates a new manager registry with all supported package managers
+// NewManagerRegistry creates a new manager registry with all supported package packages
 func NewManagerRegistry() *ManagerRegistry {
 	return &ManagerRegistry{
 		managers: map[string]ManagerFactory{

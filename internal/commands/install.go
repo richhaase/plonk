@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/output"
+	"github.com/richhaase/plonk/internal/resources/packages"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
 )
@@ -73,7 +73,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	configDir := config.GetDefaultConfigDirectory()
 
 	// Configure installation options
-	opts := managers.InstallOptions{
+	opts := packages.InstallOptions{
 		Manager: flags.Manager,
 		DryRun:  flags.DryRun,
 		Force:   flags.Force,
@@ -83,7 +83,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	results, err := managers.InstallPackages(ctx, configDir, args, opts)
+	results, err := packages.InstallPackages(ctx, configDir, args, opts)
 	if err != nil {
 		return fmt.Errorf("install: failed to process packages: %w", err)
 	}

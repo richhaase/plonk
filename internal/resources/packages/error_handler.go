@@ -1,11 +1,11 @@
 // Copyright (c) 2025 Rich Haase
 // Licensed under the MIT License. See LICENSE file in the project root for license information.
 
-package managers
+package packages
 
 import "fmt"
 
-// ErrorHandler provides shared error handling functionality for package managers
+// ErrorHandler provides shared error handling functionality for package packages
 type ErrorHandler struct {
 	errorMatcher *ErrorMatcher
 	managerName  string

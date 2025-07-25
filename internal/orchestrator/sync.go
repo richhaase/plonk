@@ -9,7 +9,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/dotfiles"
-	"github.com/richhaase/plonk/internal/managers"
+	"github.com/richhaase/plonk/internal/resources/packages"
 	"github.com/richhaase/plonk/internal/state"
 )
 
@@ -85,7 +85,7 @@ func SyncPackages(ctx context.Context, configDir string, cfg *config.Config, dry
 	totalWouldInstall := 0
 
 	// Get manager registry
-	registry := managers.NewManagerRegistry()
+	registry := packages.NewManagerRegistry()
 
 	// Process each manager's missing packages
 	for managerName, packages := range missingByManager {

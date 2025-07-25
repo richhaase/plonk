@@ -1,7 +1,7 @@
 // Copyright (c) 2025 Rich Haase
 // Licensed under the MIT License. See LICENSE file in the project root for license information.
 
-package managers
+package packages
 
 import "context"
 
@@ -17,13 +17,13 @@ type PackageManagerCapabilities interface {
 	// SupportsDependencyTree() bool
 }
 
-// PackageManager defines the standard interface for package managers.
+// PackageManager defines the standard interface for package packages.
 // Package managers handle availability checking, listing, installing, and uninstalling packages.
 // All methods accept a context for cancellation and timeout support.
 type PackageManager interface {
 	PackageManagerCapabilities
 
-	// Core operations - these are always supported by all package managers
+	// Core operations - these are always supported by all package packages
 	IsAvailable(ctx context.Context) (bool, error)
 	ListInstalled(ctx context.Context) ([]string, error)
 	Install(ctx context.Context, name string) error

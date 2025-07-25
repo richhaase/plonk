@@ -1,12 +1,12 @@
 // Copyright (c) 2025 Rich Haase
 // Licensed under the MIT License. See LICENSE file in the project root for license information.
 
-package managers
+package packages
 
 import (
 	"testing"
 
-	managerTesting "github.com/richhaase/plonk/internal/managers/testing"
+	managerTesting "github.com/richhaase/plonk/internal/resources/packages/testing"
 )
 
 func TestPipManager_parseListOutput(t *testing.T) {

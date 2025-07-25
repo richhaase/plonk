@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/managers"
+	"github.com/richhaase/plonk/internal/resources/packages"
 	"github.com/spf13/cobra"
 )
 
@@ -108,9 +108,9 @@ func performPackageSearch(ctx context.Context, packageName string) (SearchOutput
 }
 
 // getAvailableManagers returns a map of available package managers
-func getAvailableManagers(ctx context.Context) (map[string]managers.PackageManager, error) {
-	registry := managers.NewManagerRegistry()
-	availableManagers := make(map[string]managers.PackageManager)
+func getAvailableManagers(ctx context.Context) (map[string]packages.PackageManager, error) {
+	registry := packages.NewManagerRegistry()
+	availableManagers := make(map[string]packages.PackageManager)
 
 	for _, name := range registry.GetAllManagerNames() {
 		// Skip cargo for search since it doesn't support search well
@@ -134,7 +134,7 @@ func getAvailableManagers(ctx context.Context) (map[string]managers.PackageManag
 }
 
 // findInstalledPackage checks if the package is installed by any manager
-func findInstalledPackage(ctx context.Context, packageName string, managers map[string]managers.PackageManager) (string, error) {
+func findInstalledPackage(ctx context.Context, packageName string, managers map[string]packages.PackageManager) (string, error) {
 	for name, manager := range managers {
 		installed, err := manager.IsInstalled(ctx, packageName)
 		if err != nil {
@@ -156,7 +156,7 @@ func getDefaultManager() (string, error) {
 }
 
 // searchWithDefaultManager searches the default manager first, then others if needed
-func searchWithDefaultManager(ctx context.Context, packageName string, defaultManager string, availableManagers map[string]managers.PackageManager) (SearchOutput, error) {
+func searchWithDefaultManager(ctx context.Context, packageName string, defaultManager string, availableManagers map[string]packages.PackageManager) (SearchOutput, error) {
 	// Search default manager first
 	defaultMgr, exists := availableManagers[defaultManager]
 	if !exists {
@@ -188,7 +188,7 @@ func searchWithDefaultManager(ctx context.Context, packageName string, defaultMa
 	}
 
 	// Not found in default manager, search other managers
-	otherManagers := make(map[string]managers.PackageManager)
+	otherManagers := make(map[string]packages.PackageManager)
 	for name, manager := range availableManagers {
 		if name != defaultManager {
 			otherManagers[name] = manager
@@ -199,7 +199,7 @@ func searchWithDefaultManager(ctx context.Context, packageName string, defaultMa
 }
 
 // searchAllManagers searches all available managers
-func searchAllManagers(ctx context.Context, packageName string, availableManagers map[string]managers.PackageManager) (SearchOutput, error) {
+func searchAllManagers(ctx context.Context, packageName string, availableManagers map[string]packages.PackageManager) (SearchOutput, error) {
 	var foundManagers []string
 	allResults := make(map[string][]string)
 
@@ -242,7 +242,7 @@ func searchAllManagers(ctx context.Context, packageName string, availableManager
 }
 
 // searchOtherManagers searches managers other than the default
-func searchOtherManagers(ctx context.Context, packageName string, defaultManager string, otherManagers map[string]managers.PackageManager) (SearchOutput, error) {
+func searchOtherManagers(ctx context.Context, packageName string, defaultManager string, otherManagers map[string]packages.PackageManager) (SearchOutput, error) {
 	var foundManagers []string
 	allResults := make(map[string][]string)
 

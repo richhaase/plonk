@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/managers"
 	"github.com/richhaase/plonk/internal/orchestrator"
+	"github.com/richhaase/plonk/internal/resources/packages"
 	"github.com/spf13/cobra"
 )
 
@@ -130,7 +130,7 @@ func getManagerInfo(ctx context.Context, managerName string) ManagerInfo {
 		Available: false,
 	}
 
-	registry := managers.NewManagerRegistry()
+	registry := packages.NewManagerRegistry()
 	manager, err := registry.GetManager(managerName)
 	if err != nil {
 		info.Error = "unknown manager"

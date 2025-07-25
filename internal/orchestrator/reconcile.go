@@ -11,7 +11,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/lock"
-	"github.com/richhaase/plonk/internal/managers"
+	"github.com/richhaase/plonk/internal/resources/packages"
 	"github.com/richhaase/plonk/internal/state"
 )
 
@@ -128,7 +128,7 @@ func ReconcilePackages(ctx context.Context, configDir string) (state.Result, err
 	}
 
 	// Get actual packages
-	actual, err := managers.GetActualPackages(ctx)
+	actual, err := packages.GetActualPackages(ctx)
 	if err != nil {
 		return state.Result{}, fmt.Errorf("getting actual packages: %w", err)
 	}

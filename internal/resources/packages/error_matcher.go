@@ -1,7 +1,7 @@
 // Copyright (c) 2025 Rich Haase
 // Licensed under the MIT License. See LICENSE file in the project root for license information.
 
-package managers
+package packages
 
 import (
 	"strings"
@@ -42,7 +42,7 @@ type ErrorMatcher struct {
 	patterns []ErrorPattern
 }
 
-// NewCommonErrorMatcher creates an error matcher with common patterns across package managers
+// NewCommonErrorMatcher creates an error matcher with common patterns across package packages
 func NewCommonErrorMatcher() *ErrorMatcher {
 	return &ErrorMatcher{
 		patterns: []ErrorPattern{

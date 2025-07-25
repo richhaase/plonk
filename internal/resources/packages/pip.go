@@ -1,7 +1,7 @@
 // Copyright (c) 2025 Rich Haase
 // Licensed under the MIT License. See LICENSE file in the project root for license information.
 
-package managers
+package packages
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/richhaase/plonk/internal/managers/parsers"
+	"github.com/richhaase/plonk/internal/resources/packages/parsers"
 )
 
 // PipManager manages Python packages via pip.

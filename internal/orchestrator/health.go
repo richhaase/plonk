@@ -15,7 +15,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
-	"github.com/richhaase/plonk/internal/managers"
+	"github.com/richhaase/plonk/internal/resources/packages"
 )
 
 // HealthStatus represents overall system health
@@ -358,11 +358,11 @@ func checkPackageManagerAvailability(ctx context.Context) HealthCheck {
 		Message:  "Package managers detected",
 	}
 
-	registry := managers.NewManagerRegistry()
+	registry := packages.NewManagerRegistry()
 	availableManagers := []string{}
 	unavailableManagers := []string{}
 
-	for _, managerName := range managers.SupportedManagers {
+	for _, managerName := range packages.SupportedManagers {
 		mgr, err := registry.GetManager(managerName)
 		if err != nil {
 			unavailableManagers = append(unavailableManagers, managerName)
@@ -403,11 +403,11 @@ func checkPackageManagerFunctionality(ctx context.Context) HealthCheck {
 		Message:  "Package managers are functional",
 	}
 
-	registry := managers.NewManagerRegistry()
+	registry := packages.NewManagerRegistry()
 	functionalManagers := 0
 	totalTested := 0
 
-	for _, managerName := range managers.SupportedManagers {
+	for _, managerName := range packages.SupportedManagers {
 		mgr, err := registry.GetManager(managerName)
 		if err != nil {
 			continue
