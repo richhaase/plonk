@@ -6,260 +6,356 @@ Finalize the refactoring with comprehensive testing, documentation updates, and 
 ## Timeline
 Day 11 (8 hours)
 
-## Current State (Expected after Phase 6-7)
-- New orchestrator integrated with CLI
-- Hooks and lock v2 working
-- Business logic extracted from commands
-- Code quality improved and naming consistent
-- All structural refactoring complete
+## Current State (Expected after Phase 7)
+- Clean, consistent codebase with good naming
+- ~13,500-13,700 LOC (after dead code removal)
+- 8 well-organized packages
+- All infrastructure integrated and working:
+  - New orchestrator with hooks
+  - Lock v2 with automatic migration
+  - Resource abstraction for extensibility
+- No known architectural issues
 
 ## Task Breakdown
 
-### Task 8.1: Update Tests for New Structure (2 hours)
+### Task 8.1: Update and Enhance Tests (2.5 hours)
 **Agent Instructions:**
-1. Review and update test files:
-   - Update imports for moved code
-   - Fix tests broken by refactoring
-   - Remove tests for deleted code
-   - Add tests for new functionality
-
-2. Ensure test coverage for:
-   - New orchestrator integration
-   - Hook execution
-   - Lock v2 migration
-   - Resource abstraction
-
-3. Run tests and fix failures:
+1. Review existing test coverage:
    ```bash
-   go test ./...
-   ```
-
-4. Check test coverage:
-   ```bash
+   # Generate coverage report
    go test -coverprofile=coverage.out ./...
-   go tool cover -html=coverage.out
+   go tool cover -html=coverage.out -o coverage.html
+
+   # Focus on packages with low coverage
+   go test -cover ./...
    ```
 
-5. Commit: "test: update tests for refactored structure"
+2. Add missing unit tests for Phase 5-6 features:
+   ```go
+   // Test hook execution
+   func TestHookRunner_Timeout(t *testing.T) {
+       // Test that hooks timeout correctly
+   }
+
+   // Test lock migration
+   func TestLockV1ToV2Migration(t *testing.T) {
+       // Test automatic migration preserves data
+   }
+
+   // Test new orchestrator
+   func TestOrchestrator_WithOptions(t *testing.T) {
+       // Test functional options pattern
+   }
+   ```
+
+3. Update broken tests from refactoring:
+   - Fix import paths
+   - Update for new function names
+   - Adjust for new behavior
+
+4. Ensure critical paths have tests:
+   - Resource reconciliation
+   - Hook execution with continue_on_error
+   - Lock file migration
+   - Config validation
+
+5. Commit: "test: add missing tests for new features"
 
 ### Task 8.2: Add Integration Tests (2 hours)
 **Agent Instructions:**
-1. Create integration tests for key workflows:
+1. Create end-to-end tests for key workflows:
    ```go
-   // tests/integration/hooks_test.go
-   func TestSyncWithHooks(t *testing.T) {
-       // Create config with hooks
+   // tests/integration/full_sync_test.go
+   func TestFullSyncWithHooks(t *testing.T) {
+       // Create config with packages, dotfiles, and hooks
        // Run sync
        // Verify hooks executed
        // Verify lock v2 created
+       // Verify resources applied
    }
 
-   func TestLockV1Migration(t *testing.T) {
+   func TestLockMigrationOnSync(t *testing.T) {
        // Create v1 lock file
        // Run sync
-       // Verify migration to v2
+       // Verify automatic migration
        // Verify data preserved
    }
    ```
 
 2. Test error scenarios:
-   - Hook timeout
-   - Hook failure with continue_on_error
-   - Invalid configuration
+   - Hook failures (with and without continue_on_error)
+   - Invalid configurations
    - Missing resources
+   - Permission errors
 
-3. Performance benchmarks:
+3. Test resource extensibility:
    ```go
+   // Verify the Resource interface works for future types
+   type mockResource struct{}
+   func (m *mockResource) ID() string { return "mock" }
+   // ... implement interface
+   ```
+
+4. Performance benchmarks:
+   ```go
+   func BenchmarkReconciliation(b *testing.B) {
+       // Measure reconciliation performance
+   }
+
    func BenchmarkSync(b *testing.B) {
-       // Measure sync performance
+       // Measure full sync performance
    }
    ```
 
-4. Commit: "test: add integration tests for hooks and migration"
+5. Commit: "test: add comprehensive integration tests"
 
-### Task 8.3: Create ARCHITECTURE.md (1.5 hours)
+### Task 8.3: Create Architecture Documentation (1.5 hours)
 **Agent Instructions:**
 1. Create `docs/ARCHITECTURE.md`:
    ```markdown
    # Plonk Architecture
 
    ## Overview
-   Plonk uses a resource-based architecture...
+   Plonk uses a resource-based architecture that provides extensibility
+   for future resource types while maintaining simplicity for current
+   package and dotfile management.
 
    ## Core Concepts
+
    ### Resources
-   All managed items (packages, dotfiles) implement the Resource interface...
-
-   ### Orchestrator
-   Coordinates operations across resources...
-
-   ### Lock File
-   Tracks state using versioned schema...
-
-   ## Package Structure
-   - `commands/` - CLI command handlers
-   - `config/` - Configuration management
-   - `lock/` - Lock file operations
-   - `orchestrator/` - Resource coordination
-   - `output/` - Output formatting
-   - `resources/` - Resource implementations
-     - `packages/` - Package managers
-     - `dotfiles/` - Dotfile management
-
-   ## Adding a New Resource Type
-   1. Implement the Resource interface
-   2. Register with orchestrator
-   3. Add configuration support
-   4. Update lock schema if needed
-
-   ## Adding a New Package Manager
-   1. Create manager in resources/packages/
-   2. Implement PackageManager interface
-   3. Add to manager registry
-   4. Add tests
+   The Resource interface is the foundation for extensibility:
+   ```go
+   type Resource interface {
+       ID() string
+       Desired() []Item
+       Actual(ctx context.Context) []Item
+       Apply(ctx context.Context, item Item) error
+   }
    ```
 
-2. Include:
-   - Architectural decisions
-   - Data flow diagrams
-   - Extension points
-   - Future considerations
+   ### Reconciliation
+   Generic reconciliation pattern compares desired vs actual state...
 
-3. Commit: "docs: create architecture documentation"
+   ### Orchestrator
+   Coordinates operations across resources, manages hooks and lock files...
 
-### Task 8.4: Update README and Examples (1.5 hours)
+   ## Package Structure
+   ```
+   internal/
+   ├── commands/      # CLI command handlers (thin layer)
+   ├── config/        # Configuration management
+   ├── diagnostics/   # Health checks and diagnostics
+   ├── lock/          # Lock file v2 with migration
+   ├── orchestrator/  # Resource coordination and hooks
+   ├── output/        # Output formatting (table/json/yaml)
+   └── resources/     # Resource implementations
+       ├── dotfiles/  # Dotfile management
+       └── packages/  # Package manager abstraction
+   ```
+
+   ## Data Flow
+   1. User runs command → commands package
+   2. Command loads config → config package
+   3. Creates orchestrator → orchestrator package
+   4. Orchestrator coordinates resources → resources package
+   5. Results formatted → output package
+
+   ## Adding a New Resource Type
+   To add a new resource type (e.g., Docker Compose):
+
+   1. Create package: `resources/compose/`
+   2. Implement Resource interface
+   3. Register in orchestrator
+   4. Add config schema support
+   5. Update lock file schema if needed
+
+   ## Adding a New Package Manager
+   1. Create file: `resources/packages/newmanager.go`
+   2. Implement PackageManager interface
+   3. Register in package registry
+   4. Add tests
+
+   ## Hook System
+   Hooks run at pre_sync and post_sync phases...
+
+   ## Lock File Format
+   Version 2 supports generic resources...
+   ```
+
+2. Include diagrams where helpful (mermaid or ASCII)
+
+3. Document design decisions and trade-offs
+
+4. Commit: "docs: create comprehensive architecture documentation"
+
+### Task 8.4: Update User Documentation (1.5 hours)
 **Agent Instructions:**
-1. Update README.md:
-   - Fix any outdated commands
-   - Update feature list
+1. Update `README.md`:
    - Add hook examples
+   - Document lock file migration
    - Update installation instructions
+   - Add troubleshooting section
 
 2. Create example configurations:
    ```yaml
-   # examples/basic-plonk.yaml
+   # examples/basic.yaml
    packages:
      homebrew:
-       - jq
        - ripgrep
+       - jq
+   dotfiles:
+     - ~/.gitconfig
 
    # examples/with-hooks.yaml
    packages:
      homebrew:
-       - jq
+       - ripgrep
    hooks:
      pre_sync:
        - command: "echo 'Starting sync...'"
+       - command: "./backup.sh"
+         timeout: "2m"
      post_sync:
        - command: "./notify.sh"
          continue_on_error: true
+
+   # examples/multi-manager.yaml
+   packages:
+     homebrew:
+       - ripgrep
+     npm:
+       - typescript
+       - prettier
+     pip:
+       - black
+       - mypy
    ```
 
-3. Update quick-start guide:
-   - Reflect new features
-   - Show common workflows
-   - Include troubleshooting
+3. Document new features:
+   - Hook configuration and behavior
+   - Lock file v2 benefits
+   - Resource extensibility
 
-4. Commit: "docs: update README and add examples"
+4. Update CLI help text if needed
 
-### Task 8.5: Performance Optimization (1 hour)
+5. Commit: "docs: update user documentation for new features"
+
+### Task 8.5: Performance Verification (0.5 hours)
 **Agent Instructions:**
-1. Profile the application:
+1. Run benchmarks:
    ```bash
-   go test -bench=. -cpuprofile=cpu.prof
+   # Run all benchmarks
+   go test -bench=. -benchmem ./...
+
+   # Profile if needed
+   go test -cpuprofile=cpu.prof -bench=BenchmarkSync
    go tool pprof cpu.prof
    ```
 
-2. Identify bottlenecks:
-   - Slow package manager operations
-   - Inefficient file operations
-   - Unnecessary allocations
+2. Verify acceptable performance:
+   - Reconciliation should be fast (<100ms for typical configs)
+   - No obvious memory leaks
+   - Reasonable memory usage
 
-3. Optimize if reasonable:
-   - Parallel operations where safe
-   - Reduce allocations
-   - Cache expensive computations
+3. Document any performance considerations
 
-4. Measure improvements:
-   ```bash
-   # Before and after benchmarks
-   go test -bench=. -benchmem
-   ```
-
-5. Only optimize if:
-   - Significant improvement (>20%)
-   - Doesn't complicate code
-   - Maintains correctness
-
-6. Commit: "perf: optimize critical paths"
+4. Commit only if optimizations are made
 
 ### Task 8.6: Final Verification (1 hour)
 **Agent Instructions:**
-1. Full system test:
+1. Full system test on clean environment:
    ```bash
-   # Clean environment
-   docker run -it golang:latest
+   # Use Docker for clean environment
+   docker run -it --rm golang:1.22 bash
 
-   # Install plonk
-   go install github.com/yourusername/plonk@latest
+   # In container:
+   git clone <repo>
+   cd plonk
+   go install ./cmd/plonk
 
-   # Test all commands
+   # Test all major workflows
    plonk init
-   plonk add brew jq
-   plonk dotfiles add .bashrc
+   plonk add brew ripgrep
+   plonk dotfiles add ~/.bashrc
    plonk sync
-   plonk status
+   plonk status --health
    ```
 
-2. Verify all features:
-   - [ ] Package management works
-   - [ ] Dotfile management works
+2. Verify all features work:
+   - [ ] Package management (all 6 managers)
+   - [ ] Dotfile management
    - [ ] Hooks execute properly
-   - [ ] Lock v2 migration works
-   - [ ] All commands function
-   - [ ] Output formats work (table/json/yaml)
+   - [ ] Lock v2 migration automatic
+   - [ ] All output formats (table/json/yaml)
+   - [ ] Health checks function
 
-3. Check metrics:
+3. Check final metrics:
    ```bash
    # Line count
-   find internal/ -name "*.go" | xargs wc -l
-
-   # Package count
-   find internal/ -type d -maxdepth 1 | wc -l
+   scc --include-lang Go internal/
 
    # Test execution time
    time go test ./...
+
+   # Build time
+   time go build ./cmd/plonk
    ```
 
 4. Create final summary:
-   ```
-   REFACTOR_COMPLETE.md
+   ```markdown
+   # Refactor Complete Summary
+
+   ## Metrics
    - Starting: 9 packages, ~13,536 LOC
-   - Ending: X packages, Y LOC
-   - Major features added:
-     - Resource abstraction
-     - Hook system
-     - Lock v2 with migration
-   - All tests passing
-   - Documentation updated
+   - Ending: 8 packages, ~X,XXX LOC
+   - Test coverage: XX%
+   - Test execution: Xs
+
+   ## Major Achievements
+   - Resource abstraction for extensibility
+   - Hook system for automation
+   - Lock v2 with automatic migration
+   - Clean architectural boundaries
+   - Idiomatic Go throughout
+
+   ## Breaking Changes
+   - None (full backward compatibility maintained)
+
+   ## Ready for AI Lab
+   - Resource interface supports future types
+   - Hook system enables automation
+   - Clean architecture for extensions
    ```
 
-5. Commit: "docs: final refactor summary"
+5. Commit: "docs: final refactor summary and verification"
 
 ## Success Criteria
-- [ ] All tests passing
-- [ ] Integration tests cover key workflows
-- [ ] Architecture documented
-- [ ] README updated with current information
-- [ ] Examples provided for new features
+- [ ] Test coverage >70% for critical packages
+- [ ] All integration tests pass
+- [ ] Architecture clearly documented
+- [ ] User docs updated with examples
 - [ ] Performance acceptable
 - [ ] All features working correctly
+- [ ] No regressions from refactor
 
 ## Notes for Agent
-This is the final phase - focus on:
-1. Ensuring everything works correctly
-2. Documenting what was built
-3. Making it easy for others to understand and extend
-4. Verifying the refactor achieved its goals
 
-Don't introduce new features or major changes at this stage.
+### Testing Philosophy
+- Test behavior, not implementation
+- Focus on critical paths and edge cases
+- Integration tests verify the full system works
+- Keep tests readable and maintainable
+
+### Documentation Philosophy
+- Write for future maintainers
+- Include "why" not just "what"
+- Use examples liberally
+- Keep it up to date
+
+### Final Checks
+- Ensure nothing is broken
+- Verify backward compatibility
+- Confirm extensibility goals met
+- Leave codebase better than you found it
+
+This is the final phase - make sure everything is polished, tested, and ready for long-term maintenance and AI Lab integration.

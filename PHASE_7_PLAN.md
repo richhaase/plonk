@@ -1,29 +1,25 @@
-# Phase 6: Code Quality & Naming
+# Phase 7: Code Quality & Naming
 
 ## Objective
-Improve code quality through consistent naming, removal of unused code, and addressing linter issues. Focus on maintainability over metrics.
+Improve code quality through consistent naming, removal of unused code, and addressing linter issues. Focus on maintainability and clarity.
 
 ## Timeline
-Day 9 (8 hours)
+Day 10 (8 hours)
 
 ## Current State
-- ~13,826 LOC after Phase 5
-- 8 packages (down from 9)
-- Resource abstraction implemented
-- Lock v2 and hooks implemented but NOT integrated into CLI
-- Good architectural foundation, needs polish
+- ~13,800 LOC after Phase 6
+- 8 packages (commands, config, lock, orchestrator, output, resources + sub-packages)
+- Resource abstraction implemented and working
+- Lock v2 and hooks fully integrated into CLI (Phase 6 completed this)
+- Clean architectural boundaries established
+- Import cycles resolved
 
 ## Important Context
-**The lock v2 and hook systems from Phase 5 are not yet wired to the CLI commands.** Static analysis tools will correctly identify some of this code as "unused" because:
-- The new `Orchestrator.Sync()` method exists but isn't called by `cmd/sync.go`
-- Hook execution code is implemented but not reachable from user commands
-- Lock v2 migration code exists but current commands still create v1 locks
-
-**This is intentional** - integration is deferred to Phase 7 to avoid rework. When you see "unused" warnings for these systems, note them but don't remove the code.
+Phase 6 successfully integrated the orchestrator, so all infrastructure is now connected and functional. Any "unused" code findings should be genuine dead code, not pending integrations.
 
 ## Task Breakdown
 
-### Task 6.1: Identify Unused Code (2 hours)
+### Task 7.1: Identify and Remove Unused Code (2 hours)
 **Agent Instructions:**
 1. Run static analysis tools:
    ```bash
@@ -35,104 +31,114 @@ Day 9 (8 hours)
 
    # Check for unnecessary dependencies
    go mod why -m all | grep -B1 "# .* is not used"
+
+   # Use deadcode tool for comprehensive analysis
+   go install golang.org/x/tools/cmd/deadcode@latest
+   deadcode ./...
    ```
 
 2. Create a report categorizing findings:
    ```
-   PHASE_6_UNUSED_CODE.md
+   PHASE_7_UNUSED_CODE.md
 
    ## Safe to Remove
    - Functions never called anywhere
    - Old helper functions replaced by better versions
    - Test utilities no longer used
-
-   ## Keep - Integration Pending (Phase 7)
-   - orchestrator.Sync() - new method pending CLI integration
-   - HookRunner methods - pending CLI integration
-   - Lock v2 migration - pending CLI integration
+   - Unused struct fields
+   - Dead constants and variables
 
    ## Keep - Exported API
-   - Public functions that might be used by external code
+   - Public functions that might be used externally
    - Interface methods (even if only one implementation)
+   - Struct fields used in serialization (json/yaml tags)
    ```
 
-3. Remove only the "Safe to Remove" category
+3. Remove only genuinely dead code
 
-4. Expected reduction: 200-500 lines
+4. Expected reduction: 100-300 lines
 
-5. Commit: "cleanup: remove genuinely unused code"
+5. Commit: "cleanup: remove dead code identified by static analysis"
 
-**Important**: If unsure whether something is part of Phase 5's pending integration, keep it.
-
-### Task 6.2: Standardize Function Naming (2 hours)
+### Task 7.2: Standardize Function Naming (2 hours)
 **Agent Instructions:**
 1. Fix inconsistent getter patterns:
    ```go
-   // Inconsistent:
-   GetHomeDir()        // has Get prefix
-   ConfigDir()         // no Get prefix
+   // Current mixed patterns in config package:
+   GetHomeDir()          // has Get prefix
+   GetConfigDir()        // has Get prefix
+   LoadWithDefaults()    // no Get prefix
 
-   // Choose one pattern (prefer no prefix in Go):
+   // Standardize to idiomatic Go (no Get prefix):
    HomeDir()
    ConfigDir()
+   LoadWithDefaults()    // already correct
    ```
 
-2. Fix manager/manager confusion:
+2. Clarify ambiguous resource names:
    ```go
-   // Confusing:
-   type Manager interface {}     // package interface
-   type BrewManager struct {}    // specific implementation
-   manager := managers.Get()     // which kind of manager?
+   // Current vague names:
+   Item              // Too generic for a type
+   Result            // Which kind of result?
 
-   // Clearer:
-   type PackageManager interface {}
-   type BrewManager struct {}
-   mgr := packages.GetManager()
+   // Consider more specific names:
+   ResourceItem      // If it's the main resource type
+   ReconcileResult   // If it's reconciliation specific
    ```
 
-3. Clarify ambiguous names:
-   - `Process()` → `ProcessPackages()` or `ProcessDotfiles()`
-   - `Load()` → `LoadConfig()` or `LoadLock()`
-   - `items` → `packages`, `dotfiles`, or `resources`
+3. Fix package/type stuttering:
+   ```go
+   // Avoid:
+   resources.ResourceItem  // stutters
+
+   // Prefer:
+   resources.Item         // cleaner
+   ```
 
 4. Run on each package separately, commit per package
 
-5. Expected changes: ~50-100 renamed items
+5. Expected changes: ~30-50 renamed items
 
 **Validation**: Code still compiles and tests pass after each rename
 
-### Task 6.3: Improve Variable Names (1.5 hours)
+### Task 7.3: Improve Variable and Parameter Names (1.5 hours)
 **Agent Instructions:**
-1. Replace single-letter names (except in obvious loops):
+1. Replace vague names with specific ones:
    ```go
    // Bad:
-   func Process(c *Config, m Manager, p []Package) error {
-       for _, i := range p {
+   func Process(cfg *Config, mgr Manager, items []Item) error {
+       for _, i := range items {
 
    // Better:
-   func Process(config *Config, pkgManager Manager, packages []Package) error {
+   func ProcessPackages(config *Config, pkgManager Manager, packages []Item) error {
        for _, pkg := range packages {
    ```
 
-2. Replace generic names with specific ones:
-   - `data` → `configData`, `lockData`, `packageData`
-   - `result` → `syncResult`, `applyResult`
-   - `info` → `packageInfo`, `systemInfo`
-   - `item` → `package`, `dotfile`, `resource`
+2. Fix abbreviated names (except well-known conventions):
+   ```go
+   // Keep these common abbreviations:
+   ctx  → context.Context (standard)
+   pkg  → package (common in Go)
+   cfg  → config (acceptable if local)
+   err  → error (standard)
 
-3. Fix abbreviations:
-   - `mgr` → `manager` (unless very locally scoped)
-   - `cfg` → `config`
-   - `pkg` is OK for `package` (common Go convention)
-   - `ctx` is OK for `context.Context` (standard)
+   // Expand unclear abbreviations:
+   mgr  → manager
+   rsc  → resource
+   svc  → service
+   ```
 
-4. Commit: "refactor: improve variable naming clarity"
+3. Ensure consistency across codebase:
+   - If using `package` in one place, don't use `pkg` elsewhere
+   - If using `manager` in one place, don't use `mgr` elsewhere
 
-### Task 6.4: Fix Linter Issues (1.5 hours)
+4. Commit: "refactor: improve variable and parameter naming"
+
+### Task 7.4: Fix Linter Issues (1.5 hours)
 **Agent Instructions:**
 1. Run comprehensive linting:
    ```bash
-   # Run golangci-lint with all checks
+   # Run golangci-lint with most checks enabled
    golangci-lint run ./...
 
    # Run go vet
@@ -140,135 +146,129 @@ Day 9 (8 hours)
 
    # Check formatting
    gofmt -d -s .
+   goimports -d .
    ```
 
 2. Fix issues in priority order:
-   - Errors (must fix)
-   - Warnings about correctness
-   - Style issues that improve readability
-   - Skip pedantic style issues that hurt readability
+   - Correctness issues (must fix)
+   - Error handling issues
+   - Simplification opportunities
+   - Style consistency
 
-3. Common fixes:
+3. Common fixes needed:
    - Add missing error checks
    - Fix error strings (lowercase, no punctuation)
-   - Remove redundant type declarations
    - Simplify slice/map initialization
+   - Remove redundant type conversions
+   - Fix receiver names consistency
 
-4. Commit fixes by category:
-   - "fix: add missing error checks"
-   - "style: fix error string formatting"
-   - "refactor: simplify initialization"
+4. Skip pedantic rules that hurt readability
 
-### Task 6.5: Improve Package Documentation (1 hour)
+5. Commit fixes by category
+
+### Task 7.5: Improve Documentation (1.5 hours)
 **Agent Instructions:**
-1. Ensure each package has a clear package comment:
+1. Ensure package documentation is clear:
    ```go
    // Package orchestrator coordinates resource operations across
-   // package managers and dotfiles. It provides the main sync
-   // logic for the plonk CLI.
+   // package managers and dotfiles, providing the main sync
+   // logic with hook support and lock file management.
    package orchestrator
    ```
 
-2. Add missing function documentation:
-   - Public functions must have comments
-   - Focus on "why" not "what"
-   - Document non-obvious behavior
-
-3. Fix comment style:
+2. Document all exported types and functions:
    ```go
-   // Bad:
-   // Gets the home directory
-   func GetHomeDir() string {
-
-   // Better:
-   // HomeDir returns the user's home directory, using the
-   // HOME environment variable with fallback to os.UserHomeDir.
-   func HomeDir() string {
+   // Item represents a single managed resource (package or dotfile)
+   // that can be in one of several states (managed, missing, untracked).
+   type Item struct {
    ```
 
-4. Document pending integration:
-   ```go
-   // Sync orchestrates resource synchronization with hook support.
-   // NOTE: This method is not yet integrated into the CLI commands.
-   // Integration is planned for Phase 7 of the refactor.
-   func (o *Orchestrator) Sync() error {
-   ```
+3. Add missing godoc comments focusing on:
+   - Why something exists (not just what it does)
+   - Important behavior or side effects
+   - Usage examples for complex functions
 
-5. Commit: "docs: improve package and function documentation"
+4. Document important internal functions if behavior is non-obvious
 
-### Task 6.6: Final Code Quality Check (1 hour)
+5. Fix comment formatting:
+   - Start with function/type name
+   - Use proper sentences
+   - Keep concise but complete
+
+6. Commit: "docs: improve package and function documentation"
+
+### Task 7.6: Final Code Quality Check (1 hour)
 **Agent Instructions:**
-1. Run complexity analysis:
+1. Run final quality checks:
    ```bash
-   # Check cyclomatic complexity
+   # Cyclomatic complexity
    gocyclo -over 15 ./...
-   ```
 
-2. Simplify complex functions if found (split into helpers)
+   # Cognitive complexity
+   gocognit -over 20 ./...
 
-3. Check for:
-   - Functions over 50 lines → split if possible
-   - Deeply nested code → early returns
-   - Complex conditionals → extract to well-named functions
-
-4. Final test run:
-   ```bash
+   # Final test run
    go test ./...
    ```
 
-5. Create summary report:
-   ```
-   PHASE_6_SUMMARY.md
-   - Unused code removed: X lines
-   - Functions renamed: Y
-   - Linter issues fixed: Z
-   - Documentation improved: N packages
-   - Complex functions simplified: M
+2. Address any remaining issues:
+   - Split complex functions if needed
+   - Simplify deeply nested code
+   - Extract helper functions for clarity
+
+3. Measure current state:
+   ```bash
+   # Line count
+   scc --include-lang Go internal/
+
+   # Package structure
+   find internal/ -type d -maxdepth 1 | wc -l
    ```
 
-6. Commit: "chore: final code quality improvements"
+4. Create summary report:
+   ```
+   PHASE_7_SUMMARY.md
+   - Dead code removed: X lines
+   - Functions renamed: Y
+   - Variables improved: Z
+   - Linter issues fixed: N
+   - Documentation added: M functions/types
+   - Current LOC: ~X,XXX
+   - All tests passing: ✓
+   ```
+
+5. Commit: "chore: final code quality improvements"
 
 ## Important Notes
 
-### What NOT to Remove
-1. **Phase 5 Integration Code**:
-   - New Orchestrator.Sync() method
-   - HookRunner and all hook-related code
-   - Lock v2 migration functions
-   - New ResourceEntry types
+### Naming Conventions
+- Use idiomatic Go patterns (no Get prefix for getters)
+- Be consistent throughout the codebase
+- Prefer clarity over brevity
+- Avoid stuttering (package.PackageThing)
 
-2. **Exported API**:
-   - Public functions/types (might be used externally)
-   - Interface definitions (even with single implementation)
+### What NOT to Change
+- Well-established names that would break compatibility
+- Names that are clear and widely used in the codebase
+- Test function names (they have specific patterns)
 
-3. **Future Extensibility**:
-   - Meta fields in structs
-   - "degraded" state (reserved for future use)
-   - Resource abstraction methods
-
-### What TO Remove
-1. **Obviously Dead Code**:
-   - Old implementations replaced by new ones
-   - Helper functions no longer called
-   - Test utilities not used by any tests
-   - Commented-out code
-
-2. **Redundant Code**:
-   - Duplicate helper functions
-   - Unused error types
-   - Empty interfaces
+### Quality Over Metrics
+- Don't rename just to rename
+- Don't remove code that might be useful
+- Focus on genuine improvements
 
 ## Success Criteria
 - [ ] No genuinely dead code remains
 - [ ] Naming is consistent across packages
-- [ ] All public APIs are documented
+- [ ] All exported APIs are documented
 - [ ] Linter issues addressed (where sensible)
 - [ ] Code is more readable and maintainable
-- [ ] Phase 5 integration code preserved for Phase 7
+- [ ] All tests still pass
 
 ## Risk Mitigation
-- **Over-deletion**: When in doubt, keep the code
-- **Breaking changes**: Run tests after each change
-- **Lost functionality**: Keep clear notes about what's pending integration
+- Test after each major change
+- Keep commits focused and atomic
+- Don't break public APIs
+- Preserve working functionality
 
-Remember: This phase is about code quality and maintainability, not hitting specific metrics. A well-named, documented codebase is more valuable than arbitrary LOC reduction.
+This phase focuses on polish and consistency. Every change should make the code easier to understand and maintain.
