@@ -3,6 +3,11 @@
 
 package resources
 
+import (
+	"context"
+	"fmt"
+)
+
 // ReconcileItems compares desired vs actual state and categorizes items
 func ReconcileItems(desired, actual []Item) []Item {
 	// Build lookup map for actual items by name
@@ -170,4 +175,29 @@ func GroupItemsByState(items []Item) (managed, missing, untracked []Item) {
 	}
 
 	return managed, missing, untracked
+}
+
+// ReconcileResource performs reconciliation for a Resource interface
+func ReconcileResource(ctx context.Context, resource Resource) ([]Item, error) {
+	desired := resource.Desired()
+	actual := resource.Actual(ctx)
+
+	// Use the reconciliation helper from resources package
+	reconciled := ReconcileItems(desired, actual)
+	return reconciled, nil
+}
+
+// ReconcileResources performs reconciliation for multiple resources
+func ReconcileResources(ctx context.Context, resourceList []Resource) (map[string][]Item, error) {
+	results := make(map[string][]Item)
+
+	for _, resource := range resourceList {
+		reconciled, err := ReconcileResource(ctx, resource)
+		if err != nil {
+			return nil, fmt.Errorf("reconciling resource %s: %w", resource.ID(), err)
+		}
+		results[resource.ID()] = reconciled
+	}
+
+	return results, nil
 }

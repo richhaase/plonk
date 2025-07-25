@@ -8,9 +8,10 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources"
+	"github.com/richhaase/plonk/internal/resources/dotfiles"
+	"github.com/richhaase/plonk/internal/resources/packages"
 	"github.com/spf13/cobra"
 )
 
@@ -58,7 +59,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 
 	// Reconcile packages
 	ctx := context.Background()
-	domainResult, err := orchestrator.ReconcilePackages(ctx, configDir)
+	domainResult, err := packages.Reconcile(ctx, configDir)
 	if err != nil {
 		return err
 	}
@@ -191,7 +192,7 @@ func runDotList(cmd *cobra.Command, args []string) error {
 
 	// Reconcile dotfiles
 	ctx := context.Background()
-	domainResult, err := orchestrator.ReconcileDotfiles(ctx, homeDir, configDir)
+	domainResult, err := dotfiles.Reconcile(ctx, homeDir, configDir)
 	if err != nil {
 		return err
 	}

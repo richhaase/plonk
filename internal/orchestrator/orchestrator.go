@@ -196,7 +196,7 @@ func (o *Orchestrator) SyncLegacy() error {
 	resourceList := o.GetResources()
 
 	// Reconcile all resources
-	results, err := ReconcileResources(o.ctx, resourceList)
+	results, err := resources.ReconcileResources(o.ctx, resourceList)
 	if err != nil {
 		return fmt.Errorf("reconciling resources: %w", err)
 	}
@@ -289,4 +289,25 @@ func (o *Orchestrator) writeLock(resourceList []resources.Resource) error {
 func SyncWithLockUpdate(ctx context.Context, configDir, homeDir string, cfg *config.Config) error {
 	orchestrator := NewOrchestrator(ctx, cfg, configDir, homeDir)
 	return orchestrator.SyncLegacy()
+}
+
+// ReconcileAll reconciles all domains - coordination logic belongs in orchestrator
+func ReconcileAll(ctx context.Context, homeDir, configDir string) (map[string]resources.Result, error) {
+	results := make(map[string]resources.Result)
+
+	// Reconcile dotfiles using domain package
+	dotfileResult, err := dotfiles.Reconcile(ctx, homeDir, configDir)
+	if err != nil {
+		return nil, err
+	}
+	results["dotfile"] = dotfileResult
+
+	// Reconcile packages using domain package
+	packageResult, err := packages.Reconcile(ctx, configDir)
+	if err != nil {
+		return nil, err
+	}
+	results["package"] = packageResult
+
+	return results, nil
 }

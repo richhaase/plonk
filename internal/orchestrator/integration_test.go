@@ -62,7 +62,7 @@ func TestOrchestratorSyncWithResources(t *testing.T) {
 
 	// Test 1: Dotfile reconciliation only (doesn't require external tools)
 	t.Run("DotfileReconciliation", func(t *testing.T) {
-		result, err := orchestrator.ReconcileDotfiles(ctx, homeDir, configDir)
+		result, err := dotfiles.Reconcile(ctx, homeDir, configDir)
 		require.NoError(t, err)
 
 		// Check dotfile reconciliation
@@ -86,7 +86,7 @@ func TestOrchestratorSyncWithResources(t *testing.T) {
 		dotfileResource.SetDesired(configured)
 
 		// Reconcile
-		reconciled, err := orchestrator.ReconcileResource(ctx, dotfileResource)
+		reconciled, err := resources.ReconcileResource(ctx, dotfileResource)
 		require.NoError(t, err)
 
 		// Check results

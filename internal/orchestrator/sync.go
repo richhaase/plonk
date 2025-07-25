@@ -68,7 +68,7 @@ type DotfileSummarySyncResult struct {
 // SyncPackages applies package configuration and returns the result
 func SyncPackages(ctx context.Context, configDir string, cfg *config.Config, dryRun bool) (PackageSyncResult, error) {
 	// Reconcile package domain to find missing packages
-	result, err := ReconcilePackages(ctx, configDir)
+	result, err := packages.Reconcile(ctx, configDir)
 	if err != nil {
 		return PackageSyncResult{}, err
 	}
@@ -159,7 +159,7 @@ func SyncDotfiles(ctx context.Context, configDir, homeDir string, cfg *config.Co
 	dotfileResource.SetDesired(configuredItems)
 
 	// Reconcile to find what needs to be done
-	reconciled, err := ReconcileResource(ctx, dotfileResource)
+	reconciled, err := resources.ReconcileResource(ctx, dotfileResource)
 	if err != nil {
 		return DotfileSyncResult{}, err
 	}

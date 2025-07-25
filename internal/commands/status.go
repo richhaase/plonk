@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/diagnostics"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/resources"
 	"github.com/spf13/cobra"
@@ -112,8 +113,8 @@ func runStatus(cmd *cobra.Command, args []string) error {
 
 // runHealthChecks runs the doctor functionality when --health flag is set
 func runHealthChecks(format OutputFormat) error {
-	// Run comprehensive health checks using orchestrator
-	healthReport := orchestrator.RunHealthChecks()
+	// Run comprehensive health checks using diagnostics
+	healthReport := diagnostics.RunHealthChecks()
 
 	// Convert to command output type
 	doctorOutput := DoctorOutput{
