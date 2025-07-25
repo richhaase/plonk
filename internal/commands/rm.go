@@ -9,8 +9,8 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/orchestrator"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/state"
-	"github.com/richhaase/plonk/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -77,7 +77,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 	}
 
 	// Show progress reporting
-	reporter := ui.NewProgressReporterForOperation("remove", "dotfile", true)
+	reporter := output.NewProgressReporterForOperation("remove", "dotfile", true)
 	for _, result := range results {
 		reporter.ShowItemProgress(result)
 	}

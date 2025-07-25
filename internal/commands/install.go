@@ -10,8 +10,8 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/managers"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/state"
-	"github.com/richhaase/plonk/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -89,7 +89,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	// Show progress reporting
-	reporter := ui.NewProgressReporterForOperation("install", "package", true)
+	reporter := output.NewProgressReporterForOperation("install", "package", true)
 	for _, result := range results {
 		reporter.ShowItemProgress(result)
 	}

@@ -10,8 +10,8 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/managers"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/state"
-	"github.com/richhaase/plonk/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -81,7 +81,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	}
 
 	// Show progress reporting
-	reporter := ui.NewProgressReporterForOperation("uninstall", "package", true)
+	reporter := output.NewProgressReporterForOperation("uninstall", "package", true)
 	for _, result := range results {
 		reporter.ShowItemProgress(result)
 	}

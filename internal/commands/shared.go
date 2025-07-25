@@ -8,32 +8,32 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/orchestrator"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/state"
-	"github.com/richhaase/plonk/internal/ui"
 	"github.com/spf13/cobra"
 )
 
-// Type aliases for UI types (these have been moved to internal/ui/formatters.go)
-type ApplyOutput = ui.ApplyOutput
-type ManagerApplyResult = ui.ManagerApplyResult
-type PackageApplyResult = ui.PackageApplyResult
+// Type aliases for UI types (these have been moved to internal/output/formatters.go)
+type ApplyOutput = output.ApplyOutput
+type ManagerApplyResult = output.ManagerApplyResult
+type PackageApplyResult = output.PackageApplyResult
 
-type DotfileApplyOutput = ui.DotfileApplyOutput
-type DotfileAction = ui.DotfileAction
+type DotfileApplyOutput = output.DotfileApplyOutput
+type DotfileAction = output.DotfileAction
 
-// TableOutput and StructuredData methods have been moved to internal/ui/formatters.go
+// TableOutput and StructuredData methods have been moved to internal/output/formatters.go
 
-type DotfileListOutput = ui.DotfileListOutput
-type DotfileListSummary = ui.DotfileListSummary
-type DotfileInfo = ui.DotfileInfo
+type DotfileListOutput = output.DotfileListOutput
+type DotfileListSummary = output.DotfileListSummary
+type DotfileInfo = output.DotfileInfo
 
-// TableOutput and StructuredData methods moved to internal/ui/formatters.go
+// TableOutput and StructuredData methods moved to internal/output/formatters.go
 
-// Shared output types from dot_add.go (moved to internal/ui/formatters.go)
-type DotfileAddOutput = ui.DotfileAddOutput
-type DotfileBatchAddOutput = ui.DotfileBatchAddOutput
+// Shared output types from dot_add.go (moved to internal/output/formatters.go)
+type DotfileAddOutput = output.DotfileAddOutput
+type DotfileBatchAddOutput = output.DotfileBatchAddOutput
 
-// TableOutput and StructuredData methods moved to internal/ui/formatters.go
+// TableOutput and StructuredData methods moved to internal/output/formatters.go
 
 // Shared functions for pkg and dot list operations
 

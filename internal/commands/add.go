@@ -10,7 +10,7 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/orchestrator"
-	"github.com/richhaase/plonk/internal/ui"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -97,7 +97,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		output := &DotfileAddOutput{
 			Source:      GetMetadataString(result, "source"),
 			Destination: GetMetadataString(result, "destination"),
-			Action:      ui.MapStatusToAction(result.Status),
+			Action:      output.MapStatusToAction(result.Status),
 			Path:        result.Name,
 		}
 		if result.Error != nil {
@@ -108,8 +108,8 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		// Batch output
 		outputData = &DotfileBatchAddOutput{
 			TotalFiles: len(results),
-			AddedFiles: ui.ConvertToDotfileAddOutput(results),
-			Errors:     ui.ExtractErrorMessages(results),
+			AddedFiles: output.ConvertToDotfileAddOutput(results),
+			Errors:     output.ExtractErrorMessages(results),
 		}
 	}
 
