@@ -88,13 +88,15 @@ internal/
 
 **Result**: 474 lines reduction per scc (13,826 LOC), focused on genuine simplification
 
-### Phase 5: Lock v2 & Hooks (Day 8)
-- [ ] Implement lock file v2 schema with resources section
-- [ ] Add migration logic (v1 → v2, auto-upgrade on write)
-- [ ] Add single lock version constant to prevent drift
-- [ ] Implement hook execution in orchestrator (10min default timeout)
-- [ ] Update plonk.yaml schema for hooks
-- [ ] Log version migration during apply operations
+### Phase 5: Lock v2 & Hooks (Day 8) ✅ COMPLETE*
+- [x] Implement lock file v2 schema with resources section
+- [x] Add migration logic (v1 → v2, auto-upgrade on write)
+- [x] Add single lock version constant to prevent drift
+- [x] Implement hook execution in orchestrator (10min default timeout)
+- [x] Update plonk.yaml schema for hooks
+- [x] Log version migration during apply operations
+
+**Note**: Infrastructure complete but not integrated into sync command (deferred to Phase 7)
 
 ### Phase 6: Code Quality & Naming (Day 9)
 - [ ] Find and remove unused code
@@ -112,6 +114,11 @@ internal/
 - [ ] Run `golint` and `go vet` for additional issues
 
 ### Phase 7: Testing & Documentation (Day 10)
+- [ ] Integrate new Orchestrator into sync command
+  - [ ] Update sync.go to use new Orchestrator.Sync() method
+  - [ ] Enable hook execution (pre/post sync)
+  - [ ] Enable v2 lock file generation
+  - [ ] Add integration tests for hooks and v2 migration
 - [ ] Update all tests for new structure
 - [ ] Ensure <5s test execution (hard CI gate on unit + fast integration)
 - [ ] Update ARCHITECTURE.md with "How to add a new Resource" section
