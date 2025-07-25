@@ -61,16 +61,6 @@ _check-main-branch:
 # MAIN RECIPES
 # =============================================================================
 
-# Generate mocks for testing (only package-internal mocks remain)
-generate-mocks:
-    @echo "Generating package-internal mocks..."
-    @echo "  • Generating state package mocks..."
-    @go run go.uber.org/mock/mockgen@latest -source=internal/state/reconciler.go -destination=internal/state/mock_provider.go -package=state
-    @go run go.uber.org/mock/mockgen@latest -source=internal/state/package_provider.go -destination=internal/state/mock_package_interfaces.go -package=state
-    @echo "  • Generating config package mocks..."
-    @go run go.uber.org/mock/mockgen@latest -source=internal/config/interfaces.go -destination=internal/config/mock_config.go -package=config
-    @echo "✅ Generated package-internal mocks successfully!"
-
 # Build the plonk binary with version information
 build:
     #!/usr/bin/env bash

@@ -26,7 +26,6 @@ jobs:
       with:
         coverage: 'true'
         coverage-format: 'ci'
-        generate-mocks: 'true'
         upload-codecov: 'true'
 
     - name: Quality checks

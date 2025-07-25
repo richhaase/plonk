@@ -9,10 +9,6 @@ inputs:
     description: 'Coverage format: ci or html (default: ci)'
     required: false
     default: 'ci'
-  generate-mocks:
-    description: 'Generate mocks before testing (default: false)'
-    required: false
-    default: 'false'
   upload-codecov:
     description: 'Upload coverage to Codecov (default: false)'
     required: false
@@ -21,11 +17,6 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Generate mocks
-      if: ${{ inputs.generate-mocks == 'true' }}
-      run: just generate-mocks
-      shell: bash
-
     - name: Run tests with coverage (CI)
       if: ${{ inputs.coverage == 'true' && inputs.coverage-format == 'ci' }}
       run: just test-coverage-ci
