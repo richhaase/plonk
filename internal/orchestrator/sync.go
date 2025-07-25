@@ -62,6 +62,9 @@ type DotfileSummarySyncResult struct {
 	Failed    int `json:"failed" yaml:"failed"`
 }
 
+// Legacy sync functions - keeping for backward compatibility during transition
+// These will be removed in a future phase
+
 // SyncPackages applies package configuration and returns the result
 func SyncPackages(ctx context.Context, configDir string, cfg *config.Config, dryRun bool) (PackageSyncResult, error) {
 	// Reconcile package domain to find missing packages

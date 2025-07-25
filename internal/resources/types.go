@@ -3,6 +3,8 @@
 
 package resources
 
+import "fmt"
+
 // ItemState represents the reconciliation state of any managed item
 type ItemState int
 
@@ -143,4 +145,107 @@ func CountByStatus(results []OperationResult, status string) int {
 		}
 	}
 	return count
+}
+
+// Status display utilities for CLI commands
+
+// DomainSummary represents counts for a specific domain/manager
+type DomainSummary struct {
+	Domain         string `json:"domain" yaml:"domain"`
+	Manager        string `json:"manager,omitempty" yaml:"manager,omitempty"`
+	ManagedCount   int    `json:"managed_count" yaml:"managed_count"`
+	MissingCount   int    `json:"missing_count" yaml:"missing_count"`
+	UntrackedCount int    `json:"untracked_count" yaml:"untracked_count"`
+}
+
+// ManagedItem represents a currently managed item for status display
+type ManagedItem struct {
+	Name    string `json:"name" yaml:"name"`
+	Domain  string `json:"domain" yaml:"domain"`
+	Manager string `json:"manager,omitempty" yaml:"manager,omitempty"`
+}
+
+// ConvertResultsToSummary converts reconciliation results to Summary for output compatibility
+func ConvertResultsToSummary(results map[string]Result) Summary {
+	summary := Summary{
+		TotalManaged:   0,
+		TotalMissing:   0,
+		TotalUntracked: 0,
+		Results:        make([]Result, 0, len(results)),
+	}
+
+	for _, result := range results {
+		summary.TotalManaged += len(result.Managed)
+		summary.TotalMissing += len(result.Missing)
+		summary.TotalUntracked += len(result.Untracked)
+		summary.Results = append(summary.Results, result)
+	}
+
+	return summary
+}
+
+// CreateDomainSummary creates domain summaries with counts only
+func CreateDomainSummary(results []Result) []DomainSummary {
+	var domains []DomainSummary
+	for _, result := range results {
+		if result.IsEmpty() {
+			continue
+		}
+		domains = append(domains, DomainSummary{
+			Domain:         result.Domain,
+			Manager:        result.Manager,
+			ManagedCount:   len(result.Managed),
+			MissingCount:   len(result.Missing),
+			UntrackedCount: len(result.Untracked),
+		})
+	}
+	return domains
+}
+
+// ExtractManagedItems extracts only the managed items without full metadata
+func ExtractManagedItems(results []Result) []ManagedItem {
+	var items []ManagedItem
+	for _, result := range results {
+		for _, managed := range result.Managed {
+			items = append(items, ManagedItem{
+				Name:    managed.Name,
+				Domain:  managed.Domain,
+				Manager: managed.Manager,
+			})
+		}
+	}
+	return items
+}
+
+// Operation validation utilities for CLI commands
+
+// ValidateOperationResults checks if all operations failed and returns appropriate error
+func ValidateOperationResults(results []OperationResult, operationType string) error {
+	if len(results) == 0 {
+		return nil
+	}
+
+	allFailed := true
+	for _, result := range results {
+		if result.Status != "failed" {
+			allFailed = false
+			break
+		}
+	}
+
+	if allFailed {
+		return fmt.Errorf("%s operation failed: all %d item(s) failed to process", operationType, len(results))
+	}
+
+	return nil
+}
+
+// HasFailures returns true if any operations failed
+func HasFailures(results []OperationResult) bool {
+	for _, result := range results {
+		if result.Status == "failed" {
+			return true
+		}
+	}
+	return false
 }

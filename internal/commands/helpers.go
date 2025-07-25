@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/richhaase/plonk/internal/orchestrator"
+	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/resources"
 	"github.com/spf13/cobra"
 )
@@ -165,7 +165,7 @@ func ParseSimpleFlags(cmd *cobra.Command) (*SimpleFlags, error) {
 // CompleteDotfilePaths provides file path completion for dotfiles
 func CompleteDotfilePaths(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	// Get home directory (no error handling needed)
-	_ = orchestrator.GetHomeDir()
+	_ = config.GetHomeDir()
 
 	// Define common dotfile suggestions
 	commonDotfiles := []string{

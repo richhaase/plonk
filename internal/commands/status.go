@@ -64,8 +64,8 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get directories
-	homeDir := orchestrator.GetHomeDir()
-	configDir := orchestrator.GetConfigDir()
+	homeDir := config.GetHomeDir()
+	configDir := config.GetConfigDir()
 
 	// Load configuration (may fail if config is invalid, but we handle this gracefully)
 	_, configLoadErr := config.LoadConfig(configDir)
@@ -78,7 +78,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	}
 
 	// Convert results to summary for compatibility with existing output logic
-	summary := convertResultsToSummary(results)
+	summary := resources.ConvertResultsToSummary(results)
 
 	// Check file existence and validity
 	configPath := filepath.Join(configDir, "plonk.yaml")
@@ -139,23 +139,17 @@ func runHealthChecks(format OutputFormat) error {
 	return RenderOutput(doctorOutput, format)
 }
 
-// convertResultsToSummary converts reconciliation results to resources.Summary for output compatibility
-func convertResultsToSummary(results map[string]resources.Result) resources.Summary {
-	summary := resources.Summary{
-		TotalManaged:   0,
-		TotalMissing:   0,
-		TotalUntracked: 0,
-		Results:        make([]resources.Result, 0, len(results)),
+// convertManagedItems converts resources.ManagedItem to command-specific ManagedItem
+func convertManagedItems(items []resources.ManagedItem) []ManagedItem {
+	result := make([]ManagedItem, len(items))
+	for i, item := range items {
+		result[i] = ManagedItem{
+			Name:    item.Name,
+			Domain:  item.Domain,
+			Manager: item.Manager,
+		}
 	}
-
-	for _, result := range results {
-		summary.TotalManaged += len(result.Managed)
-		summary.TotalMissing += len(result.Missing)
-		summary.TotalUntracked += len(result.Untracked)
-		summary.Results = append(summary.Results, result)
-	}
-
-	return summary
+	return result
 }
 
 // Removed - using config.ConfigAdapter instead
@@ -183,19 +177,10 @@ type StatusOutputSummary struct {
 
 // StatusSummaryData represents aggregate counts and domain summaries
 type StatusSummaryData struct {
-	TotalManaged   int             `json:"total_managed" yaml:"total_managed"`
-	TotalMissing   int             `json:"total_missing" yaml:"total_missing"`
-	TotalUntracked int             `json:"total_untracked" yaml:"total_untracked"`
-	Domains        []DomainSummary `json:"domains" yaml:"domains"`
-}
-
-// DomainSummary represents counts for a specific domain/manager
-type DomainSummary struct {
-	Domain         string `json:"domain" yaml:"domain"`
-	Manager        string `json:"manager,omitempty" yaml:"manager,omitempty"`
-	ManagedCount   int    `json:"managed_count" yaml:"managed_count"`
-	MissingCount   int    `json:"missing_count" yaml:"missing_count"`
-	UntrackedCount int    `json:"untracked_count" yaml:"untracked_count"`
+	TotalManaged   int                       `json:"total_managed" yaml:"total_managed"`
+	TotalMissing   int                       `json:"total_missing" yaml:"total_missing"`
+	TotalUntracked int                       `json:"total_untracked" yaml:"total_untracked"`
+	Domains        []resources.DomainSummary `json:"domains" yaml:"domains"`
 }
 
 // ManagedItem represents a currently managed item
@@ -255,43 +240,10 @@ func (s StatusOutput) StructuredData() any {
 			TotalManaged:   s.StateSummary.TotalManaged,
 			TotalMissing:   s.StateSummary.TotalMissing,
 			TotalUntracked: s.StateSummary.TotalUntracked,
-			Domains:        createDomainSummary(s.StateSummary.Results),
+			Domains:        resources.CreateDomainSummary(s.StateSummary.Results),
 		},
-		ManagedItems: extractManagedItems(s.StateSummary.Results),
+		ManagedItems: convertManagedItems(resources.ExtractManagedItems(s.StateSummary.Results)),
 	}
-}
-
-// createDomainSummary creates domain summaries with counts only
-func createDomainSummary(results []resources.Result) []DomainSummary {
-	var domains []DomainSummary
-	for _, result := range results {
-		if result.IsEmpty() {
-			continue
-		}
-		domains = append(domains, DomainSummary{
-			Domain:         result.Domain,
-			Manager:        result.Manager,
-			ManagedCount:   len(result.Managed),
-			MissingCount:   len(result.Missing),
-			UntrackedCount: len(result.Untracked),
-		})
-	}
-	return domains
-}
-
-// extractManagedItems extracts only the managed items without full metadata
-func extractManagedItems(results []resources.Result) []ManagedItem {
-	var items []ManagedItem
-	for _, result := range results {
-		for _, managed := range result.Managed {
-			items = append(items, ManagedItem{
-				Name:    managed.Name,
-				Domain:  managed.Domain,
-				Manager: managed.Manager,
-			})
-		}
-	}
-	return items
 }
 
 // DoctorOutput represents the output of the doctor command (health checks)

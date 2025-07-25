@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/resources/dotfiles"
 	"github.com/spf13/cobra"
@@ -55,8 +54,8 @@ func runRm(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get directories
-	homeDir := orchestrator.GetHomeDir()
-	configDir := orchestrator.GetConfigDir()
+	homeDir := config.GetHomeDir()
+	configDir := config.GetConfigDir()
 
 	// Load config using LoadConfigWithDefaults for consistent zero-config behavior
 	cfg := config.LoadConfigWithDefaults(configDir)
@@ -94,13 +93,8 @@ func runRm(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Determine exit code based on results
-	exitErr := DetermineExitCode(results, "dotfiles", "remove")
-	if exitErr != nil {
-		return exitErr
-	}
-
-	return nil
+	// Check if all operations failed and return appropriate error
+	return resources.ValidateOperationResults(results, "remove dotfiles")
 }
 
 // DotfileRemovalOutput represents the output for dotfile removal

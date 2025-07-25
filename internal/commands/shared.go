@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources"
@@ -53,7 +54,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get directories
-	configDir := orchestrator.GetConfigDir()
+	configDir := config.GetConfigDir()
 
 	// Reconcile packages
 	ctx := context.Background()
@@ -185,8 +186,8 @@ func runDotList(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get directories
-	homeDir := orchestrator.GetHomeDir()
-	configDir := orchestrator.GetConfigDir()
+	homeDir := config.GetHomeDir()
+	configDir := config.GetConfigDir()
 
 	// Reconcile dotfiles
 	ctx := context.Background()

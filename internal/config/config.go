@@ -133,3 +133,16 @@ func applyDefaults(cfg *Config) {
 		cfg.IgnorePatterns = defaultConfig.IgnorePatterns
 	}
 }
+
+// Utility functions for directory management
+
+// GetHomeDir returns the user's home directory
+func GetHomeDir() string {
+	homeDir, _ := os.UserHomeDir()
+	return homeDir
+}
+
+// GetConfigDir returns the plonk configuration directory
+func GetConfigDir() string {
+	return GetDefaultConfigDirectory()
+}

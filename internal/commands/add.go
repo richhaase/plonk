@@ -5,11 +5,10 @@ package commands
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/output"
+	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/resources/dotfiles"
 	"github.com/spf13/cobra"
 )
@@ -64,8 +63,8 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	// force, _ := cmd.Flags().GetBool("force")
 
 	// Get directories
-	homeDir := orchestrator.GetHomeDir()
-	configDir := orchestrator.GetConfigDir()
+	homeDir := config.GetHomeDir()
+	configDir := config.GetConfigDir()
 
 	// Load config for ignore patterns
 	cfg, err := config.LoadConfig(configDir)
@@ -119,17 +118,5 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Check if all operations failed and return appropriate error
-	allFailed := true
-	for _, result := range results {
-		if result.Status != "failed" {
-			allFailed = false
-			break
-		}
-	}
-
-	if allFailed && len(results) > 0 {
-		return fmt.Errorf("add-multiple dotfiles: failed to process %d item(s)", len(results))
-	}
-
-	return nil
+	return resources.ValidateOperationResults(results, "add dotfiles")
 }

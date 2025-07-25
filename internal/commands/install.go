@@ -106,13 +106,8 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Determine exit code based on results
-	exitErr := DetermineExitCode(results, "packages", "install")
-	if exitErr != nil {
-		return exitErr
-	}
-
-	return nil
+	// Check if all operations failed and return appropriate error
+	return resources.ValidateOperationResults(results, "install packages")
 }
 
 // PackageInstallOutput represents the output for package installation

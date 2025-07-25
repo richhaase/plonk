@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/resources"
 	"github.com/spf13/cobra"
@@ -98,8 +99,8 @@ func runLs(cmd *cobra.Command, args []string) error {
 // runSmartOverview provides a unified view of packages and dotfiles
 func runSmartOverview(cmd *cobra.Command, flags *SimpleFlags, format OutputFormat, showAll bool) error {
 	// Get directories
-	homeDir := orchestrator.GetHomeDir()
-	configDir := orchestrator.GetConfigDir()
+	homeDir := config.GetHomeDir()
+	configDir := config.GetConfigDir()
 
 	// Reconcile all domains
 	ctx := context.Background()

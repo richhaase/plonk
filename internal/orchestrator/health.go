@@ -129,8 +129,8 @@ func checkEnvironmentVariables() HealthCheck {
 	}
 
 	// Check important environment variables
-	homeDir := GetHomeDir()
-	configDir := GetConfigDir()
+	homeDir := config.GetHomeDir()
+	configDir := config.GetConfigDir()
 
 	check.Details = append(check.Details,
 		fmt.Sprintf("HOME: %s", homeDir),
@@ -161,7 +161,7 @@ func checkPermissions() HealthCheck {
 		Message:  "File permissions are correct",
 	}
 
-	configDir := GetConfigDir()
+	configDir := config.GetConfigDir()
 
 	// Check if config directory exists and is writable
 	if err := os.MkdirAll(configDir, 0755); err != nil {
@@ -196,7 +196,7 @@ func checkConfigurationFile() HealthCheck {
 		Message:  "Configuration file exists",
 	}
 
-	configDir := GetConfigDir()
+	configDir := config.GetConfigDir()
 	configPath := filepath.Join(configDir, "plonk.yaml")
 
 	// Check if config file exists
@@ -230,7 +230,7 @@ func checkConfigurationValidity() HealthCheck {
 		Message:  "Configuration is valid",
 	}
 
-	configDir := GetConfigDir()
+	configDir := config.GetConfigDir()
 
 	// Try to load the configuration
 	cfg, err := config.LoadConfig(configDir)
@@ -270,7 +270,7 @@ func checkLockFile() HealthCheck {
 		Message:  "Lock file exists",
 	}
 
-	configDir := GetConfigDir()
+	configDir := config.GetConfigDir()
 	lockPath := filepath.Join(configDir, "plonk.lock")
 
 	// Check if lock file exists
@@ -310,7 +310,7 @@ func checkLockFileValidity() HealthCheck {
 		Message:  "Lock file is valid",
 	}
 
-	configDir := GetConfigDir()
+	configDir := config.GetConfigDir()
 	lockService := lock.NewYAMLLockService(configDir)
 
 	// Try to load the lock file
@@ -487,8 +487,8 @@ func checkPathConfiguration() HealthCheck {
 	importantPaths := []string{
 		"/usr/local/bin",
 		"/opt/homebrew/bin",
-		filepath.Join(GetHomeDir(), ".cargo/bin"),
-		filepath.Join(GetHomeDir(), "go/bin"),
+		filepath.Join(config.GetHomeDir(), ".cargo/bin"),
+		filepath.Join(config.GetHomeDir(), "go/bin"),
 	}
 
 	for _, importantPath := range importantPaths {

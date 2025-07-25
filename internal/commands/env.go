@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/resources/packages"
 	"github.com/spf13/cobra"
 )
@@ -61,8 +60,8 @@ func gatherEnvironmentInfo() EnvOutput {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	homeDir := orchestrator.GetHomeDir()
-	configDir := orchestrator.GetConfigDir()
+	homeDir := config.GetHomeDir()
+	configDir := config.GetConfigDir()
 	configPath := filepath.Join(configDir, "plonk.yaml")
 
 	// System information
