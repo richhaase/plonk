@@ -19,6 +19,20 @@ type Config struct {
 	DotfileTimeout    int      `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`
 	ExpandDirectories []string `yaml:"expand_directories,omitempty"`
 	IgnorePatterns    []string `yaml:"ignore_patterns,omitempty"`
+	Hooks             Hooks    `yaml:"hooks,omitempty"`
+}
+
+// Hooks contains pre and post sync hooks
+type Hooks struct {
+	PreSync  []Hook `yaml:"pre_sync,omitempty"`
+	PostSync []Hook `yaml:"post_sync,omitempty"`
+}
+
+// Hook represents a single hook command
+type Hook struct {
+	Command         string `yaml:"command" validate:"required"`
+	Timeout         string `yaml:"timeout,omitempty"`
+	ContinueOnError bool   `yaml:"continue_on_error,omitempty"`
 }
 
 // defaultConfig holds the default configuration values

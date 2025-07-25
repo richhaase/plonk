@@ -17,11 +17,12 @@ import (
 
 // Orchestrator manages resources and their lock file state
 type Orchestrator struct {
-	ctx       context.Context
-	config    *config.Config
-	lock      lock.LockWriter
-	configDir string
-	homeDir   string
+	ctx        context.Context
+	config     *config.Config
+	lock       lock.LockWriter
+	configDir  string
+	homeDir    string
+	hookRunner *HookRunner
 }
 
 // NewOrchestrator creates a new orchestrator instance
@@ -29,11 +30,12 @@ func NewOrchestrator(ctx context.Context, cfg *config.Config, configDir, homeDir
 	lockService := lock.NewYAMLLockService(configDir)
 
 	return &Orchestrator{
-		ctx:       ctx,
-		config:    cfg,
-		lock:      lockService,
-		configDir: configDir,
-		homeDir:   homeDir,
+		ctx:        ctx,
+		config:     cfg,
+		lock:       lockService,
+		configDir:  configDir,
+		homeDir:    homeDir,
+		hookRunner: NewHookRunner(),
 	}
 }
 
@@ -82,6 +84,11 @@ func (o *Orchestrator) GetResources() []resources.Resource {
 
 // Sync orchestrates the synchronization of all resources
 func (o *Orchestrator) Sync() error {
+	// Run pre-sync hooks
+	if err := o.hookRunner.RunPreSync(o.ctx, o.config.Hooks.PreSync); err != nil {
+		return fmt.Errorf("pre-sync hook failed: %w", err)
+	}
+
 	resourceList := o.GetResources()
 
 	// Reconcile all resources
@@ -105,7 +112,16 @@ func (o *Orchestrator) Sync() error {
 	}
 
 	// Write updated lock file
-	return o.writeLock(resourceList)
+	if err := o.writeLock(resourceList); err != nil {
+		return err
+	}
+
+	// Run post-sync hooks
+	if err := o.hookRunner.RunPostSync(o.ctx, o.config.Hooks.PostSync); err != nil {
+		return fmt.Errorf("post-sync hook failed: %w", err)
+	}
+
+	return nil
 }
 
 // writeLock writes the current resource state to the lock file
