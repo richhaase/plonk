@@ -71,11 +71,15 @@ func SyncPackages(ctx context.Context, configDir string, cfg *config.Config, dry
 		return PackageSyncResult{}, fmt.Errorf("failed to reconcile package state: %w", err)
 	}
 
+	// Create multi-package resource for applying changes
+	packageResource := packages.NewMultiPackageResource()
+
 	// Group missing packages by manager
 	missingByManager := make(map[string][]resources.Item)
 	for _, item := range result.Missing {
-		manager := item.Metadata["manager"].(string)
-		missingByManager[manager] = append(missingByManager[manager], item)
+		if item.Manager != "" {
+			missingByManager[item.Manager] = append(missingByManager[item.Manager], item)
+		}
 	}
 
 	var managerResults []ManagerSyncResult
@@ -84,53 +88,33 @@ func SyncPackages(ctx context.Context, configDir string, cfg *config.Config, dry
 	totalFailed := 0
 	totalWouldInstall := 0
 
-	// Get manager registry
-	registry := packages.NewManagerRegistry()
-
 	// Process each manager's missing packages
-	for managerName, packages := range missingByManager {
-		manager, err := registry.GetManager(managerName)
-		if err != nil {
-			return PackageSyncResult{}, fmt.Errorf("failed to get package manager %s: %w", managerName, err)
-		}
-
-		available, err := manager.IsAvailable(ctx)
-		if err != nil {
-			return PackageSyncResult{}, fmt.Errorf("failed to check manager %s availability: %w", managerName, err)
-		}
-
+	for managerName, missingItems := range missingByManager {
 		var packageResults []PackageOperationSyncResult
 		installedCount := 0
 		failedCount := 0
 		wouldInstallCount := 0
 
-		for _, pkg := range packages {
+		for _, item := range missingItems {
 			if dryRun {
 				packageResults = append(packageResults, PackageOperationSyncResult{
-					Name:   pkg.Name,
+					Name:   item.Name,
 					Status: "would-install",
 				})
 				wouldInstallCount++
-			} else if !available {
-				packageResults = append(packageResults, PackageOperationSyncResult{
-					Name:   pkg.Name,
-					Status: "failed",
-					Error:  "package manager not available",
-				})
-				failedCount++
 			} else {
-				// Install the package
-				err := manager.Install(ctx, pkg.Name)
+				// Use resource Apply method
+				err := packageResource.Apply(ctx, item)
 				if err != nil {
 					packageResults = append(packageResults, PackageOperationSyncResult{
-						Name:   pkg.Name,
+						Name:   item.Name,
 						Status: "failed",
 						Error:  err.Error(),
 					})
 					failedCount++
 				} else {
 					packageResults = append(packageResults, PackageOperationSyncResult{
-						Name:   pkg.Name,
+						Name:   item.Name,
 						Status: "installed",
 					})
 					installedCount++
@@ -140,7 +124,7 @@ func SyncPackages(ctx context.Context, configDir string, cfg *config.Config, dry
 
 		managerResults = append(managerResults, ManagerSyncResult{
 			Name:         managerName,
-			MissingCount: len(packages),
+			MissingCount: len(missingItems),
 			Packages:     packageResults,
 		})
 
@@ -161,56 +145,63 @@ func SyncPackages(ctx context.Context, configDir string, cfg *config.Config, dry
 
 // SyncDotfiles applies dotfile configuration and returns the result
 func SyncDotfiles(ctx context.Context, configDir, homeDir string, cfg *config.Config, dryRun, backup bool) (DotfileSyncResult, error) {
-	// Get configured dotfiles
-	configuredItems, err := dotfiles.GetConfiguredDotfiles(homeDir, configDir)
+	// Create dotfile resource
+	manager := dotfiles.NewManager(homeDir, configDir)
+	dotfileResource := dotfiles.NewDotfileResource(manager)
+
+	// Get configured dotfiles and set as desired
+	configuredItems, err := manager.GetConfiguredDotfiles()
 	if err != nil {
 		return DotfileSyncResult{}, fmt.Errorf("failed to get configured dotfiles: %w", err)
+	}
+	dotfileResource.SetDesired(configuredItems)
+
+	// Reconcile to find what needs to be done
+	reconciled, err := ReconcileResource(ctx, dotfileResource)
+	if err != nil {
+		return DotfileSyncResult{}, fmt.Errorf("failed to reconcile dotfiles: %w", err)
 	}
 
 	var actions []DotfileActionSyncResult
 	summary := DotfileSummarySyncResult{}
 
-	// Process each configured dotfile
-	for _, item := range configuredItems {
-		// Create dotfile manager
-		manager := dotfiles.NewManager(homeDir, configDir)
-		opts := dotfiles.ApplyOptions{
-			DryRun: dryRun,
-			Backup: backup,
-		}
+	// Process missing dotfiles (need to be created/linked)
+	for _, item := range reconciled {
+		if item.State == resources.StateMissing {
+			if !dryRun {
+				// Apply the change using the resource interface
+				err := dotfileResource.Apply(ctx, item)
 
-		result, err := manager.ProcessDotfileForApply(ctx,
-			item.Metadata["source"].(string),
-			item.Metadata["destination"].(string),
-			opts)
+				action := DotfileActionSyncResult{
+					Source:      item.Path,
+					Destination: item.Name,
+					Action:      "copy",
+					Status:      "added",
+				}
 
-		action := DotfileActionSyncResult{
-			Source:      result.Source,
-			Destination: result.Destination,
-			Action:      result.Action,
-			Status:      result.Status,
-			Error:       result.Error,
-		}
-
-		if err != nil {
-			action.Action = "error"
-			action.Status = "failed"
-			action.Error = err.Error()
-			summary.Failed++
-		} else {
-			switch action.Status {
-			case "added":
+				if err != nil {
+					action.Action = "error"
+					action.Status = "failed"
+					action.Error = err.Error()
+					summary.Failed++
+				} else {
+					summary.Added++
+				}
+				actions = append(actions, action)
+			} else {
+				// Dry run
+				actions = append(actions, DotfileActionSyncResult{
+					Source:      item.Path,
+					Destination: item.Name,
+					Action:      "would-copy",
+					Status:      "would-add",
+				})
 				summary.Added++
-			case "updated":
-				summary.Updated++
-			case "unchanged":
-				summary.Unchanged++
-			case "failed":
-				summary.Failed++
 			}
+		} else if item.State == resources.StateManaged {
+			// Already managed files are unchanged
+			summary.Unchanged++
 		}
-
-		actions = append(actions, action)
 	}
 
 	return DotfileSyncResult{

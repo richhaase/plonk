@@ -15,88 +15,61 @@ import (
 	"github.com/richhaase/plonk/internal/resources/packages"
 )
 
-// ReconcileItems performs generic reconciliation logic for any domain
-func ReconcileItems(configured, actual []resources.Item, domain string) resources.Result {
-	// Build lookup map for actual items by name
-	actualMap := make(map[string]*resources.Item)
-	for i := range actual {
-		actualMap[actual[i].Name] = &actual[i]
-	}
+// ReconcileResource performs reconciliation for a Resource interface
+func ReconcileResource(ctx context.Context, resource resources.Resource) ([]resources.Item, error) {
+	desired := resource.Desired()
+	actual := resource.Actual(ctx)
 
-	// Build lookup map for configured items by name
-	configuredMap := make(map[string]*resources.Item)
-	for i := range configured {
-		configuredMap[configured[i].Name] = &configured[i]
-	}
-
-	result := resources.Result{
-		Domain:    domain,
-		Managed:   make([]resources.Item, 0),
-		Missing:   make([]resources.Item, 0),
-		Untracked: make([]resources.Item, 0),
-	}
-
-	// Check each configured item against actual
-	for _, configItem := range configured {
-		item := configItem // Copy the item
-		if actualItem, exists := actualMap[configItem.Name]; exists {
-			// Item is managed (in config AND present)
-			item.State = resources.StateManaged
-			// Merge metadata from actual if needed
-			if item.Metadata == nil {
-				item.Metadata = actualItem.Metadata
-			} else if actualItem.Metadata != nil {
-				// Merge actual metadata into configured
-				for k, v := range actualItem.Metadata {
-					if _, exists := item.Metadata[k]; !exists {
-						item.Metadata[k] = v
-					}
-				}
-			}
-			// Use actual path if available (for dotfiles)
-			if item.Path == "" && actualItem.Path != "" {
-				item.Path = actualItem.Path
-			}
-			result.Managed = append(result.Managed, item)
-		} else {
-			// Item is missing (in config BUT not present)
-			item.State = resources.StateMissing
-			result.Missing = append(result.Missing, item)
-		}
-	}
-
-	// Check each actual item against configured
-	for _, actualItem := range actual {
-		if _, exists := configuredMap[actualItem.Name]; !exists {
-			// Item is untracked (present BUT not in config)
-			item := actualItem // Copy the item
-			item.State = resources.StateUntracked
-			result.Untracked = append(result.Untracked, item)
-		}
-	}
-
-	return result
+	// Use the reconciliation helper from resources package
+	reconciled := resources.ReconcileItems(desired, actual)
+	return reconciled, nil
 }
 
-// ReconcileDotfiles performs dotfile reconciliation
+// ReconcileResources performs reconciliation for multiple resources
+func ReconcileResources(ctx context.Context, resourceList []resources.Resource) (map[string][]resources.Item, error) {
+	results := make(map[string][]resources.Item)
+
+	for _, resource := range resourceList {
+		reconciled, err := ReconcileResource(ctx, resource)
+		if err != nil {
+			return nil, fmt.Errorf("reconciling resource %s: %w", resource.ID(), err)
+		}
+		results[resource.ID()] = reconciled
+	}
+
+	return results, nil
+}
+
+// ReconcileDotfiles performs dotfile reconciliation (backward compatibility)
 func ReconcileDotfiles(ctx context.Context, homeDir, configDir string) (resources.Result, error) {
-	// Get configured dotfiles
-	configured, err := dotfiles.GetConfiguredDotfiles(homeDir, configDir)
+	// Create dotfile resource
+	manager := dotfiles.NewManager(homeDir, configDir)
+	dotfileResource := dotfiles.NewDotfileResource(manager)
+
+	// Get configured dotfiles and set as desired
+	configured, err := manager.GetConfiguredDotfiles()
 	if err != nil {
 		return resources.Result{}, fmt.Errorf("getting configured dotfiles: %w", err)
 	}
+	dotfileResource.SetDesired(configured)
 
-	// Get actual dotfiles
-	actual, err := dotfiles.GetActualDotfiles(ctx, homeDir, configDir)
+	// Reconcile using the resource interface
+	reconciled, err := ReconcileResource(ctx, dotfileResource)
 	if err != nil {
-		return resources.Result{}, fmt.Errorf("getting actual dotfiles: %w", err)
+		return resources.Result{}, fmt.Errorf("reconciling dotfiles: %w", err)
 	}
 
-	// Reconcile
-	return ReconcileItems(configured, actual, "dotfile"), nil
+	// Convert to Result format for backward compatibility
+	managed, missing, untracked := resources.GroupItemsByState(reconciled)
+	return resources.Result{
+		Domain:    "dotfile",
+		Managed:   managed,
+		Missing:   missing,
+		Untracked: untracked,
+	}, nil
 }
 
-// ReconcilePackages performs package reconciliation
+// ReconcilePackages performs package reconciliation (backward compatibility)
 func ReconcilePackages(ctx context.Context, configDir string) (resources.Result, error) {
 	// Get configured packages from lock file
 	lockService := lock.NewYAMLLockService(configDir)
@@ -112,12 +85,15 @@ func ReconcilePackages(ctx context.Context, configDir string) (resources.Result,
 		}
 	}
 
-	configured := make([]resources.Item, 0)
-	for manager, packages := range lockFile.Packages {
-		for _, pkg := range packages {
-			configured = append(configured, resources.Item{
+	// Create multi-package resource
+	packageResource := packages.NewMultiPackageResource()
+
+	// Convert lock file entries to desired items
+	desired := make([]resources.Item, 0)
+	for manager, pkgs := range lockFile.Packages {
+		for _, pkg := range pkgs {
+			desired = append(desired, resources.Item{
 				Name:    pkg.Name,
-				State:   resources.StateMissing, // Will be updated during reconciliation
 				Domain:  "package",
 				Manager: manager,
 				Metadata: map[string]interface{}{
@@ -126,68 +102,22 @@ func ReconcilePackages(ctx context.Context, configDir string) (resources.Result,
 			})
 		}
 	}
+	packageResource.SetDesired(desired)
 
-	// Get actual packages
-	actual, err := packages.GetActualPackages(ctx)
-	if err != nil {
-		return resources.Result{}, fmt.Errorf("getting actual packages: %w", err)
+	// Use custom key function for package reconciliation
+	keyFunc := func(item resources.Item) string {
+		return item.Manager + ":" + item.Name
 	}
+	reconciled := resources.ReconcileItemsWithKey(packageResource.Desired(), packageResource.Actual(ctx), keyFunc)
 
-	// Create maps by manager+name for proper reconciliation
-	configuredByKey := make(map[string]*resources.Item)
-	for i := range configured {
-		key := configured[i].Manager + ":" + configured[i].Name
-		configuredByKey[key] = &configured[i]
-	}
-
-	actualByKey := make(map[string]*resources.Item)
-	for i := range actual {
-		key := actual[i].Manager + ":" + actual[i].Name
-		actualByKey[key] = &actual[i]
-	}
-
-	result := resources.Result{
+	// Convert to Result format for backward compatibility
+	managed, missing, untracked := resources.GroupItemsByState(reconciled)
+	return resources.Result{
 		Domain:    "package",
-		Managed:   make([]resources.Item, 0),
-		Missing:   make([]resources.Item, 0),
-		Untracked: make([]resources.Item, 0),
-	}
-
-	// Check configured against actual
-	for key, configItem := range configuredByKey {
-		item := *configItem // Copy
-		if actualItem, exists := actualByKey[key]; exists {
-			// Managed
-			item.State = resources.StateManaged
-			if actualItem.Metadata != nil {
-				if item.Metadata == nil {
-					item.Metadata = actualItem.Metadata
-				} else {
-					// Merge actual version if available
-					if v, ok := actualItem.Metadata["version"]; ok {
-						item.Metadata["actualVersion"] = v
-					}
-				}
-			}
-			result.Managed = append(result.Managed, item)
-		} else {
-			// Missing
-			item.State = resources.StateMissing
-			result.Missing = append(result.Missing, item)
-		}
-	}
-
-	// Check actual against configured
-	for key, actualItem := range actualByKey {
-		if _, exists := configuredByKey[key]; !exists {
-			// Untracked
-			item := *actualItem
-			item.State = resources.StateUntracked
-			result.Untracked = append(result.Untracked, item)
-		}
-	}
-
-	return result, nil
+		Managed:   managed,
+		Missing:   missing,
+		Untracked: untracked,
+	}, nil
 }
 
 // ReconcileAll reconciles all domains
