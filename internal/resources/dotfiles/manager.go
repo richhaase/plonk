@@ -179,43 +179,26 @@ func (m *Manager) GeneratePaths(resolvedPath string) (source, destination string
 
 // ValidatePath validates that a path is safe and within allowed boundaries
 func (m *Manager) ValidatePath(path string) error {
-	if strings.Contains(path, "..") {
-		return fmt.Errorf("path contains directory traversal: %s", path)
-	}
-
-	resolvedPath, err := m.ResolveDotfilePath(path)
-	if err != nil {
-		return err
-	}
-
-	if !strings.HasPrefix(resolvedPath, m.homeDir) {
-		return fmt.Errorf("path is outside home directory: %s", resolvedPath)
-	}
-
-	return nil
-}
-
-// ValidateSecure performs security validation on a path
-func (m *Manager) ValidateSecure(path string) error {
-	if strings.Contains(path, "..") {
-		return fmt.Errorf("path contains directory traversal: %s", path)
-	}
-
+	// Check for null bytes
 	if strings.Contains(path, "\x00") {
-		return fmt.Errorf("path contains null bytes: %s", path)
+		return fmt.Errorf("path contains null bytes")
 	}
 
-	absPath, err := filepath.Abs(path)
+	// Clean and resolve the path
+	cleanPath := filepath.Clean(path)
+	absPath, err := filepath.Abs(cleanPath)
 	if err != nil {
 		return err
 	}
 
+	// Ensure path is within home directory
 	if !strings.HasPrefix(absPath, m.homeDir) {
-		return errors.New("path is outside home directory")
+		return fmt.Errorf("path is outside home directory: %s", absPath)
 	}
 
+	// Ensure we're not managing plonk's own config
 	if strings.HasPrefix(absPath, m.configDir) {
-		return errors.New("cannot manage plonk configuration directory")
+		return fmt.Errorf("cannot manage plonk configuration directory")
 	}
 
 	return nil
