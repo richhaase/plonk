@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/richhaase/plonk/internal/dotfiles"
+	"github.com/richhaase/plonk/internal/resources/dotfiles"
 	"gopkg.in/yaml.v3"
 )
 

@@ -7,9 +7,9 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/output"
+	"github.com/richhaase/plonk/internal/resources/dotfiles"
 	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
 )
