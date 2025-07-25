@@ -5,7 +5,6 @@ package dotfiles
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -38,7 +37,7 @@ func (s *Scanner) ScanDirectory(ctx context.Context, dir string, maxDepth int) (
 
 	err := s.walkDirectory(ctx, dir, dir, 0, maxDepth, &results)
 	if err != nil {
-		return nil, fmt.Errorf("failed to scan directory: %w", err)
+		return nil, err
 	}
 
 	return results, nil
@@ -51,7 +50,7 @@ func (s *Scanner) ScanDotfiles(ctx context.Context) ([]ScanResult, error) {
 	// List all entries in home directory
 	entries, err := os.ReadDir(s.homeDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read home directory: %w", err)
+		return nil, err
 	}
 
 	for _, entry := range entries {

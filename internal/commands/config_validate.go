@@ -61,7 +61,7 @@ func runConfigValidate(cmd *cobra.Command, args []string) error {
 	// Read config file
 	content, err := os.ReadFile(configPath)
 	if err != nil {
-		return fmt.Errorf("failed to read configuration file: %w", err)
+		return err
 	}
 
 	// Validate configuration

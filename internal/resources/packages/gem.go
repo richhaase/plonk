@@ -26,7 +26,7 @@ func NewGemManager() *GemManager {
 func (g *GemManager) ListInstalled(ctx context.Context) ([]string, error) {
 	output, err := ExecuteCommand(ctx, g.binary, "list", "--local", "--no-versions")
 	if err != nil {
-		return nil, fmt.Errorf("failed to list installed gems: %w", err)
+		return nil, err
 	}
 
 	return g.parseListOutput(output), nil

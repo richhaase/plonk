@@ -5,7 +5,6 @@ package orchestrator
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/resources"
@@ -68,7 +67,7 @@ func SyncPackages(ctx context.Context, configDir string, cfg *config.Config, dry
 	// Reconcile package domain to find missing packages
 	result, err := ReconcilePackages(ctx, configDir)
 	if err != nil {
-		return PackageSyncResult{}, fmt.Errorf("failed to reconcile package state: %w", err)
+		return PackageSyncResult{}, err
 	}
 
 	// Create multi-package resource for applying changes
@@ -152,14 +151,14 @@ func SyncDotfiles(ctx context.Context, configDir, homeDir string, cfg *config.Co
 	// Get configured dotfiles and set as desired
 	configuredItems, err := manager.GetConfiguredDotfiles()
 	if err != nil {
-		return DotfileSyncResult{}, fmt.Errorf("failed to get configured dotfiles: %w", err)
+		return DotfileSyncResult{}, err
 	}
 	dotfileResource.SetDesired(configuredItems)
 
 	// Reconcile to find what needs to be done
 	reconciled, err := ReconcileResource(ctx, dotfileResource)
 	if err != nil {
-		return DotfileSyncResult{}, fmt.Errorf("failed to reconcile dotfiles: %w", err)
+		return DotfileSyncResult{}, err
 	}
 
 	var actions []DotfileActionSyncResult

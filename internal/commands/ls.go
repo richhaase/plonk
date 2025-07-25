@@ -70,7 +70,7 @@ func runLs(cmd *cobra.Command, args []string) error {
 	// Parse output format
 	format, err := ParseOutputFormat(flags.Output)
 	if err != nil {
-		return fmt.Errorf("invalid output format: %w", err)
+		return err
 	}
 
 	// Get filter flags

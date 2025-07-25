@@ -49,7 +49,7 @@ func (p *PipManager) ListInstalled(ctx context.Context) ([]string, error) {
 				return p.listInstalledFallback(ctx)
 			}
 		}
-		return nil, fmt.Errorf("failed to execute pip list command: %w", err)
+		return nil, err
 	}
 
 	return p.parseListOutput(output)
@@ -121,7 +121,7 @@ func (p *PipManager) listInstalledFallback(ctx context.Context) ([]string, error
 		cmd = exec.CommandContext(ctx, p.binary, "list")
 		output, err = cmd.Output()
 		if err != nil {
-			return nil, fmt.Errorf("failed to execute pip list command: %w", err)
+			return nil, err
 		}
 	}
 

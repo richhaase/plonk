@@ -70,7 +70,7 @@ func (s *YAMLLockService) Save(lock *LockFile) error {
 	// Marshal to YAML
 	data, err := yaml.Marshal(lock)
 	if err != nil {
-		return fmt.Errorf("failed to marshal lock file: %w", err)
+		return err
 	}
 
 	// Use atomic write to ensure safety

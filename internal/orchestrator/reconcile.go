@@ -49,14 +49,14 @@ func ReconcileDotfiles(ctx context.Context, homeDir, configDir string) (resource
 	// Get configured dotfiles and set as desired
 	configured, err := manager.GetConfiguredDotfiles()
 	if err != nil {
-		return resources.Result{}, fmt.Errorf("getting configured dotfiles: %w", err)
+		return resources.Result{}, err
 	}
 	dotfileResource.SetDesired(configured)
 
 	// Reconcile using the resource interface
 	reconciled, err := ReconcileResource(ctx, dotfileResource)
 	if err != nil {
-		return resources.Result{}, fmt.Errorf("reconciling dotfiles: %w", err)
+		return resources.Result{}, err
 	}
 
 	// Convert to Result format for backward compatibility
@@ -76,7 +76,7 @@ func ReconcilePackages(ctx context.Context, configDir string) (resources.Result,
 	lockFile, err := lockService.Load()
 	if err != nil {
 		if !os.IsNotExist(err) {
-			return resources.Result{}, fmt.Errorf("loading lock file: %w", err)
+			return resources.Result{}, err
 		}
 		// No lock file means no configured packages
 		lockFile = &lock.LockFile{

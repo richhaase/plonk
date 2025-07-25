@@ -97,7 +97,7 @@ func (g *GoInstallManager) ListInstalled(ctx context.Context) ([]string, error) 
 	// List all files in the bin directory
 	entries, err := os.ReadDir(binDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read GOBIN directory: %w", err)
+		return nil, err
 	}
 
 	var goBinaries []string

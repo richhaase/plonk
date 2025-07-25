@@ -113,7 +113,7 @@ func (m *Manager) ResolveDotfilePath(path string) (string, error) {
 		// Relative path - try current directory first, then home directory
 		absPath, err := filepath.Abs(path)
 		if err != nil {
-			return "", fmt.Errorf("failed to resolve path: %w", err)
+			return "", err
 		}
 
 		if _, err := os.Stat(absPath); err == nil {
@@ -157,7 +157,7 @@ func (m *Manager) GetDestinationPath(destination string) (string, error) {
 func (m *Manager) GenerateDestinationPath(resolvedPath string) (string, error) {
 	relPath, err := filepath.Rel(m.homeDir, resolvedPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate relative path: %w", err)
+		return "", err
 	}
 	return "~/" + relPath, nil
 }
@@ -207,7 +207,7 @@ func (m *Manager) ValidateSecure(path string) error {
 
 	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return fmt.Errorf("failed to resolve absolute path: %w", err)
+		return err
 	}
 
 	if !strings.HasPrefix(absPath, m.homeDir) {

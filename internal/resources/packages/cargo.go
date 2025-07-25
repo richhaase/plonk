@@ -27,7 +27,7 @@ func NewCargoManager() *CargoManager {
 func (c *CargoManager) ListInstalled(ctx context.Context) ([]string, error) {
 	output, err := ExecuteCommand(ctx, c.binary, "install", "--list")
 	if err != nil {
-		return nil, fmt.Errorf("failed to list installed cargo packages: %w", err)
+		return nil, err
 	}
 
 	return c.parseListOutput(output), nil
@@ -323,7 +323,7 @@ func (c *CargoManager) handleInstallError(err error, output []byte, packageName 
 	}
 
 	// Non-exit errors (command not found, context cancellation, etc.)
-	return fmt.Errorf("failed to execute install command: %w", err)
+	return err
 }
 
 // handleUninstallError processes uninstall command errors
@@ -362,5 +362,5 @@ func (c *CargoManager) handleUninstallError(err error, output []byte, packageNam
 	}
 
 	// Non-exit errors (command not found, context cancellation, etc.)
-	return fmt.Errorf("failed to execute uninstall command: %w", err)
+	return err
 }

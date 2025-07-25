@@ -46,7 +46,7 @@ func runConfigEdit(cmd *cobra.Command, args []string) error {
 
 	// Create config directory if it doesn't exist
 	if err := os.MkdirAll(configDir, 0750); err != nil {
-		return fmt.Errorf("failed to create config directory: %w", err)
+		return err
 	}
 
 	// Create default config file if it doesn't exist

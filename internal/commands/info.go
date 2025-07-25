@@ -53,7 +53,7 @@ func runInfo(cmd *cobra.Command, args []string) error {
 	// Perform info lookup
 	infoResult, err := performPackageInfo(ctx, packageName)
 	if err != nil {
-		return fmt.Errorf("failed to get package information: %w", err)
+		return err
 	}
 
 	return RenderOutput(infoResult, format)
@@ -71,7 +71,7 @@ func performPackageInfo(ctx context.Context, packageName string) (InfoOutput, er
 	// Get available managers
 	availableManagers, err := getAvailableManagers(ctx)
 	if err != nil {
-		return InfoOutput{}, fmt.Errorf("failed to get available managers: %w", err)
+		return InfoOutput{}, err
 	}
 
 	if len(availableManagers) == 0 {
@@ -124,7 +124,7 @@ func performPackageInfo(ctx context.Context, packageName string) (InfoOutput, er
 	// Package is not installed, determine search strategy
 	defaultManager, err := getDefaultManager()
 	if err != nil {
-		return InfoOutput{}, fmt.Errorf("failed to get default manager: %w", err)
+		return InfoOutput{}, err
 	}
 
 	if defaultManager != "" {

@@ -45,7 +45,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return fmt.Errorf("invalid output format: %w", err)
+		return err
 	}
 
 	// Get directories

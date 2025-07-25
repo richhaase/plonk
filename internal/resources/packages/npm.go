@@ -42,7 +42,7 @@ func (n *NpmManager) ListInstalled(ctx context.Context) ([]string, error) {
 			// Exit code 1 might just be warnings - continue with parsing
 		} else {
 			// Non-exit errors (e.g., command not found, context cancellation)
-			return nil, fmt.Errorf("failed to execute npm list command: %w", err)
+			return nil, err
 		}
 	}
 
@@ -126,7 +126,7 @@ func (n *NpmManager) Search(ctx context.Context, query string) ([]string, error)
 			return nil, fmt.Errorf("npm search command failed for %s: %w", query, err)
 		}
 		// Non-exit errors (e.g., command not found, context cancellation)
-		return nil, fmt.Errorf("failed to execute npm search command: %w", err)
+		return nil, err
 	}
 
 	return n.parseSearchOutput(output), nil
@@ -367,7 +367,7 @@ func (n *NpmManager) handleInstallError(err error, output []byte, packageName st
 		return nil
 	}
 
-	return fmt.Errorf("failed to execute install command: %w", err)
+	return err
 }
 
 // handleUninstallError processes uninstall command errors
@@ -390,5 +390,5 @@ func (n *NpmManager) handleUninstallError(err error, output []byte, packageName 
 	}
 
 	// Non-exit errors (command not found, context cancellation, etc.)
-	return fmt.Errorf("failed to execute uninstall command: %w", err)
+	return err
 }

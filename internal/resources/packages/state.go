@@ -59,7 +59,7 @@ func GetActualPackagesForManager(ctx context.Context, managerName string) ([]res
 
 	available, err := manager.IsAvailable(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("checking manager availability: %w", err)
+		return nil, err
 	}
 	if !available {
 		return nil, fmt.Errorf("manager %s is not available", managerName)
@@ -68,7 +68,7 @@ func GetActualPackagesForManager(ctx context.Context, managerName string) ([]res
 	// Get installed packages
 	installed, err := manager.ListInstalled(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("listing installed packages: %w", err)
+		return nil, err
 	}
 
 	// Convert to resources.Item
