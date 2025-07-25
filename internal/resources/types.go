@@ -10,6 +10,15 @@ const (
 	StateManaged   ItemState = iota // In config AND present/installed
 	StateMissing                    // In config BUT not present/installed
 	StateUntracked                  // Present/installed BUT not in config
+	StateDegraded                   // Reserved for future use
+)
+
+// State string constants for consistency
+const (
+	StateManagedStr   = "managed"
+	StateMissingStr   = "missing"
+	StateUntrackedStr = "untracked"
+	StateDegradedStr  = "degraded" // Reserved for future use
 )
 
 // String returns a human-readable representation of the item state
@@ -21,6 +30,8 @@ func (s ItemState) String() string {
 		return "missing"
 	case StateUntracked:
 		return "untracked"
+	case StateDegraded:
+		return "degraded"
 	default:
 		return "unknown"
 	}
@@ -29,10 +40,13 @@ func (s ItemState) String() string {
 // Item represents any manageable item (package, dotfile, etc.) with its current state
 type Item struct {
 	Name     string                 `json:"name" yaml:"name"`
+	Type     string                 `json:"type,omitempty" yaml:"type,omitempty"` // Type of item (e.g., "file", "directory", "cask", "formula")
 	State    ItemState              `json:"state" yaml:"state"`
 	Domain   string                 `json:"domain" yaml:"domain"`                         // "package", "dotfile", etc.
 	Manager  string                 `json:"manager,omitempty" yaml:"manager,omitempty"`   // "homebrew", "npm", etc.
 	Path     string                 `json:"path,omitempty" yaml:"path,omitempty"`         // For dotfiles
+	Error    string                 `json:"error,omitempty" yaml:"error,omitempty"`       // Error message if any
+	Meta     map[string]string      `json:"meta,omitempty" yaml:"meta,omitempty"`         // Additional string metadata
 	Metadata map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"` // Additional data
 }
 
