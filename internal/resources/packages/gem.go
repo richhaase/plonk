@@ -12,28 +12,13 @@ import (
 
 // GemManager manages Ruby gems.
 type GemManager struct {
-	binary       string
-	errorMatcher *ErrorMatcher
+	binary string
 }
 
 // NewGemManager creates a new gem manager.
 func NewGemManager() *GemManager {
-	return newGemManager()
-}
-
-// newGemManager creates a gem manager.
-func newGemManager() *GemManager {
-	// Add gem-specific error patterns
-	errorMatcher := NewCommonErrorMatcher()
-	errorMatcher.AddPattern(ErrorTypeNotFound, "Could not find a valid gem", "ERROR:  Could not find")
-	errorMatcher.AddPattern(ErrorTypeAlreadyInstalled, "already installed")
-	errorMatcher.AddPattern(ErrorTypeNotInstalled, "is not installed")
-	errorMatcher.AddPattern(ErrorTypePermission, "Errno::EACCES", "Gem::FilePermissionError")
-	errorMatcher.AddPattern(ErrorTypeDependency, "requires Ruby version", "ruby version is")
-
 	return &GemManager{
-		binary:       "gem",
-		errorMatcher: errorMatcher,
+		binary: "gem",
 	}
 }
 
@@ -342,81 +327,101 @@ func (g *GemManager) SupportsSearch() bool {
 	return true
 }
 
-// handleInstallError processes install command errors using ErrorMatcher
+// handleInstallError processes install command errors
 func (g *GemManager) handleInstallError(err error, output []byte, packageName string) error {
-	outputStr := string(output)
+	outputStr := strings.ToLower(string(output))
 
-	// Check for specific error conditions using ErrorMatcher
 	if exitCode, ok := ExtractExitCode(err); ok {
-		errorType := g.errorMatcher.MatchError(outputStr)
-
-		switch errorType {
-		case ErrorTypeNotFound:
+		// Check for known error patterns
+		if strings.Contains(outputStr, "could not find a valid gem") ||
+			strings.Contains(outputStr, "could not find gem") ||
+			strings.Contains(outputStr, "unknown gem") {
 			return fmt.Errorf("package '%s' not found", packageName)
+		}
 
-		case ErrorTypeAlreadyInstalled:
+		if strings.Contains(outputStr, "already installed") {
 			// Package is already installed - this is typically fine
 			return nil
-
-		case ErrorTypePermission:
-			return fmt.Errorf("permission denied installing %s", packageName)
-
-		case ErrorTypeLocked:
-			return fmt.Errorf("package manager database is locked")
-
-		case ErrorTypeNetwork:
-			return fmt.Errorf("network error during installation")
-
-		case ErrorTypeBuild:
-			return fmt.Errorf("failed to build package '%s'", packageName)
-
-		case ErrorTypeDependency:
-			return fmt.Errorf("dependency conflict installing package '%s'", packageName)
-
-		default:
-			// Only treat non-zero exit codes as errors
-			if exitCode != 0 {
-				return fmt.Errorf("package installation failed (exit code %d): %w", exitCode, err)
-			}
-			// Exit code 0 with no recognized error pattern - success
-			return nil
 		}
+
+		if strings.Contains(outputStr, "permission denied") ||
+			strings.Contains(outputStr, "you don't have write permissions") ||
+			strings.Contains(outputStr, "insufficient permissions") {
+			return fmt.Errorf("permission denied installing %s", packageName)
+		}
+
+		if strings.Contains(outputStr, "database is locked") ||
+			strings.Contains(outputStr, "gem is locked") {
+			return fmt.Errorf("package manager database is locked")
+		}
+
+		if strings.Contains(outputStr, "network error") ||
+			strings.Contains(outputStr, "could not download") ||
+			strings.Contains(outputStr, "unable to download") ||
+			strings.Contains(outputStr, "connection refused") {
+			return fmt.Errorf("network error during installation")
+		}
+
+		if strings.Contains(outputStr, "failed to build") ||
+			strings.Contains(outputStr, "error building") ||
+			strings.Contains(outputStr, "extconf failed") ||
+			strings.Contains(outputStr, "make failed") {
+			return fmt.Errorf("failed to build package '%s'", packageName)
+		}
+
+		if strings.Contains(outputStr, "dependency conflict") ||
+			strings.Contains(outputStr, "incompatible") ||
+			strings.Contains(outputStr, "conflicts with") {
+			return fmt.Errorf("dependency conflict installing package '%s'", packageName)
+		}
+
+		// Only treat non-zero exit codes as errors
+		if exitCode != 0 {
+			return fmt.Errorf("package installation failed (exit code %d): %w", exitCode, err)
+		}
+		// Exit code 0 with no recognized error pattern - success
+		return nil
 	}
 
 	// Non-exit errors (command not found, context cancellation, etc.)
 	return fmt.Errorf("failed to execute install command: %w", err)
 }
 
-// handleUninstallError processes uninstall command errors using ErrorMatcher
+// handleUninstallError processes uninstall command errors
 func (g *GemManager) handleUninstallError(err error, output []byte, packageName string) error {
-	outputStr := string(output)
+	outputStr := strings.ToLower(string(output))
 
-	// Check for specific error conditions using ErrorMatcher
 	if exitCode, ok := ExtractExitCode(err); ok {
-		errorType := g.errorMatcher.MatchError(outputStr)
-
-		switch errorType {
-		case ErrorTypeNotInstalled:
+		// Check for known error patterns
+		if strings.Contains(outputStr, "is not installed") ||
+			strings.Contains(outputStr, "cannot uninstall") ||
+			strings.Contains(outputStr, "gem not installed") {
 			// Package is not installed - this is typically fine for uninstall
 			return nil
-
-		case ErrorTypePermission:
-			return fmt.Errorf("permission denied uninstalling %s", packageName)
-
-		case ErrorTypeLocked:
-			return fmt.Errorf("package manager database is locked")
-
-		case ErrorTypeDependency:
-			return fmt.Errorf("cannot uninstall package '%s' due to dependency conflicts", packageName)
-
-		default:
-			// Only treat non-zero exit codes as errors
-			if exitCode != 0 {
-				return fmt.Errorf("package uninstallation failed (exit code %d): %w", exitCode, err)
-			}
-			// Exit code 0 with no recognized error pattern - success
-			return nil
 		}
+
+		if strings.Contains(outputStr, "permission denied") ||
+			strings.Contains(outputStr, "you don't have write permissions") ||
+			strings.Contains(outputStr, "insufficient permissions") {
+			return fmt.Errorf("permission denied uninstalling %s", packageName)
+		}
+
+		if strings.Contains(outputStr, "database is locked") ||
+			strings.Contains(outputStr, "gem is locked") {
+			return fmt.Errorf("package manager database is locked")
+		}
+
+		if strings.Contains(outputStr, "dependency") && strings.Contains(outputStr, "requires") ||
+			strings.Contains(outputStr, "is depended upon") {
+			return fmt.Errorf("cannot uninstall package '%s' due to dependency conflicts", packageName)
+		}
+
+		// Only treat non-zero exit codes as errors
+		if exitCode != 0 {
+			return fmt.Errorf("package uninstallation failed (exit code %d): %w", exitCode, err)
+		}
+		// Exit code 0 with no recognized error pattern - success
+		return nil
 	}
 
 	// Non-exit errors (command not found, context cancellation, etc.)

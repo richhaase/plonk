@@ -12,27 +12,13 @@ import (
 
 // HomebrewManager manages Homebrew packages.
 type HomebrewManager struct {
-	binary       string
-	errorMatcher *ErrorMatcher
+	binary string
 }
 
 // NewHomebrewManager creates a new homebrew manager.
 func NewHomebrewManager() *HomebrewManager {
-	return newHomebrewManager()
-}
-
-// newHomebrewManager creates a homebrew manager.
-func newHomebrewManager() *HomebrewManager {
-	// Add homebrew-specific error patterns
-	errorMatcher := NewCommonErrorMatcher()
-	errorMatcher.AddPattern(ErrorTypeNotFound, "No available formula", "No formulae found")
-	errorMatcher.AddPattern(ErrorTypeAlreadyInstalled, "already installed")
-	errorMatcher.AddPattern(ErrorTypeNotInstalled, "No such keg", "not installed")
-	errorMatcher.AddPattern(ErrorTypeDependency, "because it is required by", "still has dependents")
-
 	return &HomebrewManager{
-		binary:       "brew",
-		errorMatcher: errorMatcher,
+		binary: "brew",
 	}
 }
 
@@ -43,12 +29,7 @@ func (h *HomebrewManager) ListInstalled(ctx context.Context) ([]string, error) {
 		return nil, fmt.Errorf("failed to list installed packages: %w", err)
 	}
 
-	return h.parseListOutput(output), nil
-}
-
-// parseListOutput parses brew list output
-func (h *HomebrewManager) parseListOutput(output []byte) []string {
-	return SplitLines(output)
+	return SplitLines(output), nil
 }
 
 // Install installs a Homebrew package.
@@ -273,83 +254,55 @@ func (h *HomebrewManager) SupportsSearch() bool {
 	return true
 }
 
-// handleInstallError processes install command errors using ErrorMatcher
+// handleInstallError processes install command errors
 func (h *HomebrewManager) handleInstallError(err error, output []byte, packageName string) error {
-	outputStr := string(output)
+	outputStr := strings.ToLower(string(output))
 
-	// Check for specific error conditions using ErrorMatcher
 	if exitCode, ok := ExtractExitCode(err); ok {
-		errorType := h.errorMatcher.MatchError(outputStr)
-
-		switch errorType {
-		case ErrorTypeNotFound:
+		// Check for known error patterns
+		if strings.Contains(outputStr, "no available formula") || strings.Contains(outputStr, "no formulae found") {
 			return fmt.Errorf("package '%s' not found", packageName)
-
-		case ErrorTypeAlreadyInstalled:
-			// Package is already installed - this is typically fine
-			return nil
-
-		case ErrorTypePermission:
-			return fmt.Errorf("permission denied installing %s", packageName)
-
-		case ErrorTypeLocked:
-			return fmt.Errorf("package manager database is locked")
-
-		case ErrorTypeNetwork:
-			return fmt.Errorf("network error during installation")
-
-		case ErrorTypeBuild:
-			return fmt.Errorf("failed to build package '%s'", packageName)
-
-		case ErrorTypeDependency:
-			return fmt.Errorf("dependency conflict installing package '%s'", packageName)
-
-		default:
-			// Only treat non-zero exit codes as errors
-			if exitCode != 0 {
-				return fmt.Errorf("package installation failed (exit code %d): %w", exitCode, err)
-			}
-			// Exit code 0 with no recognized error pattern - success
-			return nil
 		}
+		if strings.Contains(outputStr, "already installed") {
+			return nil // Already installed is success
+		}
+		if strings.Contains(outputStr, "permission denied") {
+			return fmt.Errorf("permission denied installing %s", packageName)
+		}
+		if strings.Contains(outputStr, "because it is required by") || strings.Contains(outputStr, "still has dependents") {
+			return fmt.Errorf("dependency conflict installing package '%s'", packageName)
+		}
+
+		if exitCode != 0 {
+			return fmt.Errorf("package installation failed (exit code %d): %w", exitCode, err)
+		}
+		return nil
 	}
 
-	// Non-exit errors (command not found, context cancellation, etc.)
 	return fmt.Errorf("failed to execute install command: %w", err)
 }
 
-// handleUninstallError processes uninstall command errors using ErrorMatcher
+// handleUninstallError processes uninstall command errors
 func (h *HomebrewManager) handleUninstallError(err error, output []byte, packageName string) error {
-	outputStr := string(output)
+	outputStr := strings.ToLower(string(output))
 
-	// Check for specific error conditions using ErrorMatcher
 	if exitCode, ok := ExtractExitCode(err); ok {
-		errorType := h.errorMatcher.MatchError(outputStr)
-
-		switch errorType {
-		case ErrorTypeNotInstalled:
-			// Package is not installed - this is typically fine for uninstall
-			return nil
-
-		case ErrorTypePermission:
-			return fmt.Errorf("permission denied uninstalling %s", packageName)
-
-		case ErrorTypeLocked:
-			return fmt.Errorf("package manager database is locked")
-
-		case ErrorTypeDependency:
-			return fmt.Errorf("cannot uninstall package '%s' due to dependency conflicts", packageName)
-
-		default:
-			// Only treat non-zero exit codes as errors
-			if exitCode != 0 {
-				return fmt.Errorf("package uninstallation failed (exit code %d): %w", exitCode, err)
-			}
-			// Exit code 0 with no recognized error pattern - success
-			return nil
+		// Check for known error patterns
+		if strings.Contains(outputStr, "no such keg") || strings.Contains(outputStr, "not installed") {
+			return nil // Not installed is success for uninstall
 		}
+		if strings.Contains(outputStr, "permission denied") {
+			return fmt.Errorf("permission denied uninstalling %s", packageName)
+		}
+		if strings.Contains(outputStr, "because it is required by") || strings.Contains(outputStr, "still has dependents") {
+			return fmt.Errorf("cannot uninstall package '%s' due to dependency conflicts", packageName)
+		}
+
+		if exitCode != 0 {
+			return fmt.Errorf("package uninstallation failed (exit code %d): %w", exitCode, err)
+		}
+		return nil
 	}
 
-	// Non-exit errors (command not found, context cancellation, etc.)
 	return fmt.Errorf("failed to execute uninstall command: %w", err)
 }

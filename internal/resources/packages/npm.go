@@ -16,27 +16,13 @@ import (
 
 // NpmManager manages NPM packages.
 type NpmManager struct {
-	binary       string
-	errorMatcher *ErrorMatcher
+	binary string
 }
 
 // NewNpmManager creates a new NPM manager.
 func NewNpmManager() *NpmManager {
-	return newNpmManager()
-}
-
-// newNpmManager creates an NPM manager.
-func newNpmManager() *NpmManager {
-	// Create error matcher with common patterns
-	errorMatcher := NewCommonErrorMatcher()
-	// Add NPM-specific error patterns
-	errorMatcher.AddPattern(ErrorTypeNotFound, "404", "E404", "Not found")
-	errorMatcher.AddPattern(ErrorTypePermission, "EACCES")
-	errorMatcher.AddPattern(ErrorTypeNotInstalled, "ENOENT", "cannot remove")
-
 	return &NpmManager{
-		binary:       "npm",
-		errorMatcher: errorMatcher,
+		binary: "npm",
 	}
 }
 
@@ -362,44 +348,25 @@ func (n *NpmManager) SupportsSearch() bool {
 func (n *NpmManager) handleInstallError(err error, output []byte, packageName string) error {
 	outputStr := string(output)
 
-	// Check for specific error conditions using ErrorMatcher
 	if exitCode, ok := ExtractExitCode(err); ok {
-		errorType := n.errorMatcher.MatchError(outputStr)
-
-		switch errorType {
-		case ErrorTypeNotFound:
+		// Check for known error patterns
+		if strings.Contains(outputStr, "404") || strings.Contains(outputStr, "E404") || strings.Contains(outputStr, "Not found") {
 			return fmt.Errorf("package '%s' not found", packageName)
-
-		case ErrorTypeAlreadyInstalled:
-			// Package is already installed - this is typically fine
-			return nil
-
-		case ErrorTypePermission:
-			return fmt.Errorf("permission denied installing %s", packageName)
-
-		case ErrorTypeLocked:
-			return fmt.Errorf("package manager database is locked")
-
-		case ErrorTypeNetwork:
-			return fmt.Errorf("network error during installation")
-
-		case ErrorTypeBuild:
-			return fmt.Errorf("failed to build package '%s'", packageName)
-
-		case ErrorTypeDependency:
-			return fmt.Errorf("dependency conflict installing package '%s'", packageName)
-
-		default:
-			// Only treat non-zero exit codes as errors
-			if exitCode != 0 {
-				return fmt.Errorf("package installation failed (exit code %d): %w", exitCode, err)
-			}
-			// Exit code 0 with no recognized error pattern - success
-			return nil
 		}
+		if strings.Contains(outputStr, "EACCES") || strings.Contains(outputStr, "permission denied") {
+			return fmt.Errorf("permission denied installing %s", packageName)
+		}
+		if strings.Contains(outputStr, "ENOENT") {
+			// ENOENT during install usually means npm itself has issues
+			return fmt.Errorf("npm installation error for package '%s': %w", packageName, err)
+		}
+
+		if exitCode != 0 {
+			return fmt.Errorf("package installation failed (exit code %d): %w", exitCode, err)
+		}
+		return nil
 	}
 
-	// Non-exit errors (command not found, context cancellation, etc.)
 	return fmt.Errorf("failed to execute install command: %w", err)
 }
 
@@ -407,32 +374,19 @@ func (n *NpmManager) handleInstallError(err error, output []byte, packageName st
 func (n *NpmManager) handleUninstallError(err error, output []byte, packageName string) error {
 	outputStr := string(output)
 
-	// Check for specific error conditions using ErrorMatcher
 	if exitCode, ok := ExtractExitCode(err); ok {
-		errorType := n.errorMatcher.MatchError(outputStr)
-
-		switch errorType {
-		case ErrorTypeNotInstalled:
-			// Package is not installed - this is typically fine for uninstall
-			return nil
-
-		case ErrorTypePermission:
-			return fmt.Errorf("permission denied uninstalling %s", packageName)
-
-		case ErrorTypeLocked:
-			return fmt.Errorf("package manager database is locked")
-
-		case ErrorTypeDependency:
-			return fmt.Errorf("cannot uninstall package '%s' due to dependency conflicts", packageName)
-
-		default:
-			// Only treat non-zero exit codes as errors
-			if exitCode != 0 {
-				return fmt.Errorf("package uninstallation failed (exit code %d): %w", exitCode, err)
-			}
-			// Exit code 0 with no recognized error pattern - success
-			return nil
+		// Check for known error patterns
+		if strings.Contains(outputStr, "ENOENT") || strings.Contains(outputStr, "cannot remove") || strings.Contains(outputStr, "not installed") {
+			return nil // Not installed is success for uninstall
 		}
+		if strings.Contains(outputStr, "EACCES") || strings.Contains(outputStr, "permission denied") {
+			return fmt.Errorf("permission denied uninstalling %s", packageName)
+		}
+
+		if exitCode != 0 {
+			return fmt.Errorf("package uninstallation failed (exit code %d): %w", exitCode, err)
+		}
+		return nil
 	}
 
 	// Non-exit errors (command not found, context cancellation, etc.)

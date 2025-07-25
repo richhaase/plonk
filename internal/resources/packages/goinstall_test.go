@@ -83,10 +83,6 @@ func TestGoInstallManager_Configuration(t *testing.T) {
 	if manager.binary != "go" {
 		t.Errorf("binary = %v, want go", manager.binary)
 	}
-
-	if manager.errorMatcher == nil {
-		t.Error("errorMatcher not initialized")
-	}
 }
 
 func TestGoInstallManager_SupportsSearch(t *testing.T) {

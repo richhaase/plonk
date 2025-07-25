@@ -37,26 +37,13 @@ func ExtractBinaryNameFromPath(modulePath string) string {
 
 // GoInstallManager manages Go packages.
 type GoInstallManager struct {
-	binary       string
-	errorMatcher *ErrorMatcher
+	binary string
 }
 
 // NewGoInstallManager creates a new go install manager.
 func NewGoInstallManager() *GoInstallManager {
-	return newGoInstallManager()
-}
-
-// newGoInstallManager creates a go install manager.
-func newGoInstallManager() *GoInstallManager {
-	// Add go-specific error patterns
-	errorMatcher := NewCommonErrorMatcher()
-	errorMatcher.AddPattern(ErrorTypeNotFound, "cannot find module", "no matching versions", "malformed module path")
-	errorMatcher.AddPattern(ErrorTypeNetwork, "connection", "timeout")
-	errorMatcher.AddPattern(ErrorTypeBuild, "build failed", "compilation")
-
 	return &GoInstallManager{
-		binary:       "go",
-		errorMatcher: errorMatcher,
+		binary: "go",
 	}
 }
 
@@ -396,45 +383,61 @@ func (g *GoInstallManager) handleInstall(ctx context.Context, name string) error
 	return nil
 }
 
-// handleInstallError processes install command errors using ErrorMatcher
+// handleInstallError processes install command errors
 func (g *GoInstallManager) handleInstallError(err error, output []byte, packageName string) error {
-	outputStr := string(output)
+	outputStr := strings.ToLower(string(output))
 
-	// Check for specific error conditions using ErrorMatcher
 	if exitCode, ok := ExtractExitCode(err); ok {
-		errorType := g.errorMatcher.MatchError(outputStr)
-
-		switch errorType {
-		case ErrorTypeNotFound:
+		// Check for known error patterns
+		if strings.Contains(outputStr, "cannot find module") ||
+			strings.Contains(outputStr, "cannot find package") ||
+			strings.Contains(outputStr, "404 not found") ||
+			strings.Contains(outputStr, "unknown revision") {
 			return fmt.Errorf("package '%s' not found", packageName)
+		}
 
-		case ErrorTypeAlreadyInstalled:
+		if strings.Contains(outputStr, "already exists") ||
+			strings.Contains(outputStr, "already installed") {
 			// Package is already installed - this is typically fine
 			return nil
-
-		case ErrorTypePermission:
-			return fmt.Errorf("permission denied installing %s", packageName)
-
-		case ErrorTypeLocked:
-			return fmt.Errorf("package manager database is locked")
-
-		case ErrorTypeNetwork:
-			return fmt.Errorf("network error during installation")
-
-		case ErrorTypeBuild:
-			return fmt.Errorf("failed to build package '%s'", packageName)
-
-		case ErrorTypeDependency:
-			return fmt.Errorf("dependency conflict installing package '%s'", packageName)
-
-		default:
-			// Only treat non-zero exit codes as errors
-			if exitCode != 0 {
-				return fmt.Errorf("package installation failed (exit code %d): %w", exitCode, err)
-			}
-			// Exit code 0 with no recognized error pattern - success
-			return nil
 		}
+
+		if strings.Contains(outputStr, "permission denied") ||
+			strings.Contains(outputStr, "access is denied") {
+			return fmt.Errorf("permission denied installing %s", packageName)
+		}
+
+		if strings.Contains(outputStr, "database is locked") ||
+			strings.Contains(outputStr, "lock") && strings.Contains(outputStr, "held") {
+			return fmt.Errorf("package manager database is locked")
+		}
+
+		if strings.Contains(outputStr, "network error") ||
+			strings.Contains(outputStr, "cannot download") ||
+			strings.Contains(outputStr, "connection refused") ||
+			strings.Contains(outputStr, "timeout") {
+			return fmt.Errorf("network error during installation")
+		}
+
+		if strings.Contains(outputStr, "build failed") ||
+			strings.Contains(outputStr, "compilation error") ||
+			strings.Contains(outputStr, "cannot compile") ||
+			strings.Contains(outputStr, "build constraints exclude") {
+			return fmt.Errorf("failed to build package '%s'", packageName)
+		}
+
+		if strings.Contains(outputStr, "incompatible") ||
+			strings.Contains(outputStr, "version conflict") ||
+			strings.Contains(outputStr, "requires go") {
+			return fmt.Errorf("dependency conflict installing package '%s'", packageName)
+		}
+
+		// Only treat non-zero exit codes as errors
+		if exitCode != 0 {
+			return fmt.Errorf("package installation failed (exit code %d): %w", exitCode, err)
+		}
+		// Exit code 0 with no recognized error pattern - success
+		return nil
 	}
 
 	// Non-exit errors (command not found, context cancellation, etc.)

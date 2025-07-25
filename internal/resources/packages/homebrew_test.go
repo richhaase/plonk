@@ -42,8 +42,7 @@ func TestHomebrewManager_parseListOutput(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			manager := NewHomebrewManager()
-			result := manager.parseListOutput(tt.output)
+			result := SplitLines(tt.output)
 
 			if !stringSlicesEqual(result, tt.expectedResult) {
 				t.Errorf("Expected result %v but got %v", tt.expectedResult, result)

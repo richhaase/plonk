@@ -13,26 +13,13 @@ import (
 
 // CargoManager manages Rust packages via cargo.
 type CargoManager struct {
-	binary       string
-	errorMatcher *ErrorMatcher
+	binary string
 }
 
 // NewCargoManager creates a new cargo manager.
 func NewCargoManager() *CargoManager {
-	return newCargoManager()
-}
-
-// newCargoManager creates a cargo manager.
-func newCargoManager() *CargoManager {
-	// Add cargo-specific error patterns
-	errorMatcher := NewCommonErrorMatcher()
-	errorMatcher.AddPattern(ErrorTypeNotFound, "no crates found", "could not find")
-	errorMatcher.AddPattern(ErrorTypeAlreadyInstalled, "binary `", "` already exists")
-	errorMatcher.AddPattern(ErrorTypeNotInstalled, "not installed")
-
 	return &CargoManager{
-		binary:       "cargo",
-		errorMatcher: errorMatcher,
+		binary: "cargo",
 	}
 }
 
@@ -282,81 +269,96 @@ func (c *CargoManager) SupportsSearch() bool {
 	return true
 }
 
-// handleInstallError processes install command errors using ErrorMatcher
+// handleInstallError processes install command errors
 func (c *CargoManager) handleInstallError(err error, output []byte, packageName string) error {
-	outputStr := string(output)
+	outputStr := strings.ToLower(string(output))
 
-	// Check for specific error conditions using ErrorMatcher
 	if exitCode, ok := ExtractExitCode(err); ok {
-		errorType := c.errorMatcher.MatchError(outputStr)
-
-		switch errorType {
-		case ErrorTypeNotFound:
+		// Check for known error patterns
+		if strings.Contains(outputStr, "no matching package found") ||
+			strings.Contains(outputStr, "not find package") ||
+			strings.Contains(outputStr, "could not find") {
 			return fmt.Errorf("package '%s' not found", packageName)
+		}
 
-		case ErrorTypeAlreadyInstalled:
+		if strings.Contains(outputStr, "already installed") {
 			// Package is already installed - this is typically fine
 			return nil
-
-		case ErrorTypePermission:
-			return fmt.Errorf("permission denied installing %s", packageName)
-
-		case ErrorTypeLocked:
-			return fmt.Errorf("package manager database is locked")
-
-		case ErrorTypeNetwork:
-			return fmt.Errorf("network error during installation")
-
-		case ErrorTypeBuild:
-			return fmt.Errorf("failed to build package '%s'", packageName)
-
-		case ErrorTypeDependency:
-			return fmt.Errorf("dependency conflict installing package '%s'", packageName)
-
-		default:
-			// Only treat non-zero exit codes as errors
-			if exitCode != 0 {
-				return fmt.Errorf("package installation failed (exit code %d): %w", exitCode, err)
-			}
-			// Exit code 0 with no recognized error pattern - success
-			return nil
 		}
+
+		if strings.Contains(outputStr, "permission denied") ||
+			strings.Contains(outputStr, "access denied") {
+			return fmt.Errorf("permission denied installing %s", packageName)
+		}
+
+		if strings.Contains(outputStr, "database is locked") ||
+			strings.Contains(outputStr, "cargo is locked") {
+			return fmt.Errorf("package manager database is locked")
+		}
+
+		if strings.Contains(outputStr, "network error") ||
+			strings.Contains(outputStr, "failed to fetch") ||
+			strings.Contains(outputStr, "connection timed out") {
+			return fmt.Errorf("network error during installation")
+		}
+
+		if strings.Contains(outputStr, "failed to compile") ||
+			strings.Contains(outputStr, "build failed") ||
+			strings.Contains(outputStr, "compilation error") {
+			return fmt.Errorf("failed to build package '%s'", packageName)
+		}
+
+		if strings.Contains(outputStr, "dependency conflict") ||
+			strings.Contains(outputStr, "incompatible") ||
+			strings.Contains(outputStr, "version conflict") {
+			return fmt.Errorf("dependency conflict installing package '%s'", packageName)
+		}
+
+		// Only treat non-zero exit codes as errors
+		if exitCode != 0 {
+			return fmt.Errorf("package installation failed (exit code %d): %w", exitCode, err)
+		}
+		// Exit code 0 with no recognized error pattern - success
+		return nil
 	}
 
 	// Non-exit errors (command not found, context cancellation, etc.)
 	return fmt.Errorf("failed to execute install command: %w", err)
 }
 
-// handleUninstallError processes uninstall command errors using ErrorMatcher
+// handleUninstallError processes uninstall command errors
 func (c *CargoManager) handleUninstallError(err error, output []byte, packageName string) error {
-	outputStr := string(output)
+	outputStr := strings.ToLower(string(output))
 
-	// Check for specific error conditions using ErrorMatcher
 	if exitCode, ok := ExtractExitCode(err); ok {
-		errorType := c.errorMatcher.MatchError(outputStr)
-
-		switch errorType {
-		case ErrorTypeNotInstalled:
+		// Check for known error patterns
+		if strings.Contains(outputStr, "not installed") ||
+			strings.Contains(outputStr, "package `"+strings.ToLower(packageName)+"` is not installed") {
 			// Package is not installed - this is typically fine for uninstall
 			return nil
-
-		case ErrorTypePermission:
-			return fmt.Errorf("permission denied uninstalling %s", packageName)
-
-		case ErrorTypeLocked:
-			return fmt.Errorf("package manager database is locked")
-
-		case ErrorTypeDependency:
-			return fmt.Errorf("cannot uninstall package '%s' due to dependency conflicts", packageName)
-
-		default:
-			// Only treat non-zero exit codes as errors
-			if exitCode != 0 {
-				return fmt.Errorf("package uninstallation failed (exit code %d): %w", exitCode, err)
-			}
-			// Exit code 0 with no recognized error pattern - success
-			return nil
 		}
+
+		if strings.Contains(outputStr, "permission denied") ||
+			strings.Contains(outputStr, "access denied") {
+			return fmt.Errorf("permission denied uninstalling %s", packageName)
+		}
+
+		if strings.Contains(outputStr, "database is locked") ||
+			strings.Contains(outputStr, "cargo is locked") {
+			return fmt.Errorf("package manager database is locked")
+		}
+
+		if strings.Contains(outputStr, "required by") ||
+			strings.Contains(outputStr, "still depends on") {
+			return fmt.Errorf("cannot uninstall package '%s' due to dependency conflicts", packageName)
+		}
+
+		// Only treat non-zero exit codes as errors
+		if exitCode != 0 {
+			return fmt.Errorf("package uninstallation failed (exit code %d): %w", exitCode, err)
+		}
+		// Exit code 0 with no recognized error pattern - success
+		return nil
 	}
 
 	// Non-exit errors (command not found, context cancellation, etc.)
