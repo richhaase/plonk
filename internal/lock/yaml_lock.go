@@ -6,6 +6,7 @@ package lock
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -54,6 +55,161 @@ func (s *YAMLLockService) Load() (*LockFile, error) {
 	}
 
 	return &lock, nil
+}
+
+// Read reads and parses the lock file into LockData structure with version detection
+func (s *YAMLLockService) Read() (*LockData, error) {
+	// If lock file doesn't exist, return empty lock data
+	if _, err := os.Stat(s.lockPath); os.IsNotExist(err) {
+		return &LockData{
+			Version:   CurrentVersion,
+			Packages:  make(map[string][]Package),
+			Resources: []ResourceEntry{},
+		}, nil
+	}
+
+	data, err := os.ReadFile(s.lockPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read lock file %s: %w", s.lockPath, err)
+	}
+
+	// Read raw YAML to determine version
+	var raw map[string]interface{}
+	if err := yaml.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("failed to parse lock file %s: %w", s.lockPath, err)
+	}
+
+	version := 1
+	if v, ok := raw["version"].(int); ok {
+		version = v
+	}
+
+	switch version {
+	case 1:
+		return s.readV1(raw)
+	case 2:
+		return s.readV2(raw)
+	default:
+		return nil, fmt.Errorf("unsupported lock version: %d", version)
+	}
+}
+
+// readV1 reads a v1 lock file and converts it to LockData
+func (s *YAMLLockService) readV1(raw map[string]interface{}) (*LockData, error) {
+	var v1Lock LockFile
+	data, err := yaml.Marshal(raw)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := yaml.Unmarshal(data, &v1Lock); err != nil {
+		return nil, err
+	}
+
+	// Convert v1 to LockData format
+	lockData := &LockData{
+		Version:   1,
+		Packages:  make(map[string][]Package),
+		Resources: []ResourceEntry{},
+	}
+
+	// Convert PackageEntry to Package
+	for manager, packages := range v1Lock.Packages {
+		lockData.Packages[manager] = make([]Package, len(packages))
+		for i, pkg := range packages {
+			lockData.Packages[manager][i] = Package{
+				Name:        pkg.Name,
+				Version:     pkg.Version,
+				InstalledAt: pkg.InstalledAt.Format(time.RFC3339),
+			}
+		}
+	}
+
+	return lockData, nil
+}
+
+// readV2 reads a v2 lock file into LockData
+func (s *YAMLLockService) readV2(raw map[string]interface{}) (*LockData, error) {
+	var v2Lock LockV2
+	data, err := yaml.Marshal(raw)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := yaml.Unmarshal(data, &v2Lock); err != nil {
+		return nil, err
+	}
+
+	return &LockData{
+		Version:   v2Lock.Version,
+		Packages:  v2Lock.Packages,
+		Resources: v2Lock.Resources,
+	}, nil
+}
+
+// Write writes the lock data to disk (always as v2)
+func (s *YAMLLockService) Write(data *LockData) error {
+	if data == nil {
+		return errors.New("cannot write nil lock data")
+	}
+
+	// Always write as v2
+	v2Data := s.migrateToV2(data)
+
+	// Log migration if it occurred
+	if data.Version < CurrentVersion {
+		log.Printf("Migrated lock file from v%d to v%d", data.Version, CurrentVersion)
+	}
+
+	return s.writeV2(v2Data)
+}
+
+// migrateToV2 converts LockData to v2 format
+func (s *YAMLLockService) migrateToV2(data *LockData) *LockV2 {
+	v2Data := &LockV2{
+		Version:   CurrentVersion,
+		Packages:  data.Packages,
+		Resources: data.Resources,
+	}
+
+	// If packages exist but no resources, convert packages to resources
+	if len(data.Packages) > 0 && len(data.Resources) == 0 {
+		for manager, packages := range data.Packages {
+			for _, pkg := range packages {
+				resource := ResourceEntry{
+					Type:        "package",
+					ID:          fmt.Sprintf("%s:%s", manager, pkg.Name),
+					State:       "managed",
+					InstalledAt: pkg.InstalledAt,
+					Metadata: map[string]interface{}{
+						"manager": manager,
+						"name":    pkg.Name,
+						"version": pkg.Version,
+					},
+				}
+				v2Data.Resources = append(v2Data.Resources, resource)
+			}
+		}
+	}
+
+	return v2Data
+}
+
+// writeV2 writes a v2 lock file to disk
+func (s *YAMLLockService) writeV2(v2Data *LockV2) error {
+	// Marshal to YAML
+	data, err := yaml.Marshal(v2Data)
+	if err != nil {
+		return err
+	}
+
+	// Use atomic write to ensure safety
+	writer := dotfiles.NewAtomicFileWriter()
+	if err := writer.WriteFile(s.lockPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write lock file %s: %w", s.lockPath, err)
+	}
+
+	return nil
 }
 
 // Save writes the lock file to disk

@@ -7,12 +7,16 @@ package lock
 type LockReader interface {
 	// Load reads and parses the lock file
 	Load() (*LockFile, error)
+	// Read reads and parses the lock file into LockData structure
+	Read() (*LockData, error)
 }
 
 // LockWriter defines the interface for writing lock files
 type LockWriter interface {
 	// Save writes the lock file to disk
 	Save(lock *LockFile) error
+	// Write writes the lock data to disk (always as v2)
+	Write(data *LockData) error
 }
 
 // LockService combines reading and writing with additional operations
