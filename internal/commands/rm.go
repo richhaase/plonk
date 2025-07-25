@@ -9,8 +9,8 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/output"
+	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/resources/dotfiles"
-	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
 )
 
@@ -109,9 +109,9 @@ func runRm(cmd *cobra.Command, args []string) error {
 
 // DotfileRemovalOutput represents the output for dotfile removal
 type DotfileRemovalOutput struct {
-	TotalFiles int                     `json:"total_files" yaml:"total_files"`
-	Results    []state.OperationResult `json:"results" yaml:"results"`
-	Summary    DotfileRemovalSummary   `json:"summary" yaml:"summary"`
+	TotalFiles int                         `json:"total_files" yaml:"total_files"`
+	Results    []resources.OperationResult `json:"results" yaml:"results"`
+	Summary    DotfileRemovalSummary       `json:"summary" yaml:"summary"`
 }
 
 // DotfileRemovalSummary provides summary for dotfile removal
@@ -122,8 +122,8 @@ type DotfileRemovalSummary struct {
 }
 
 // calculateRemovalSummary calculates summary from results using generic operations summary
-func calculateRemovalSummary(results []state.OperationResult) DotfileRemovalSummary {
-	genericSummary := state.CalculateSummary(results)
+func calculateRemovalSummary(results []resources.OperationResult) DotfileRemovalSummary {
+	genericSummary := resources.CalculateSummary(results)
 	return DotfileRemovalSummary{
 		Removed: genericSummary.Added, // In removal context, "added" means "removed"
 		Skipped: genericSummary.Skipped,

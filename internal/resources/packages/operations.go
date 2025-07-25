@@ -10,7 +10,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
-	"github.com/richhaase/plonk/internal/state"
+	"github.com/richhaase/plonk/internal/resources"
 )
 
 // InstallOptions configures package installation operations
@@ -27,7 +27,7 @@ type UninstallOptions struct {
 }
 
 // InstallPackages orchestrates the installation of multiple packages
-func InstallPackages(ctx context.Context, configDir string, packages []string, opts InstallOptions) ([]state.OperationResult, error) {
+func InstallPackages(ctx context.Context, configDir string, packages []string, opts InstallOptions) ([]resources.OperationResult, error) {
 	// Initialize lock file service
 	lockService := lock.NewYAMLLockService(configDir)
 
@@ -42,7 +42,7 @@ func InstallPackages(ctx context.Context, configDir string, packages []string, o
 		}
 	}
 
-	var results []state.OperationResult
+	var results []resources.OperationResult
 
 	for _, packageName := range packages {
 		// Check if context was canceled
@@ -59,7 +59,7 @@ func InstallPackages(ctx context.Context, configDir string, packages []string, o
 }
 
 // UninstallPackages orchestrates the uninstallation of multiple packages
-func UninstallPackages(ctx context.Context, configDir string, packages []string, opts UninstallOptions) ([]state.OperationResult, error) {
+func UninstallPackages(ctx context.Context, configDir string, packages []string, opts UninstallOptions) ([]resources.OperationResult, error) {
 	// Initialize lock file service
 	lockService := lock.NewYAMLLockService(configDir)
 
@@ -74,7 +74,7 @@ func UninstallPackages(ctx context.Context, configDir string, packages []string,
 		}
 	}
 
-	var results []state.OperationResult
+	var results []resources.OperationResult
 
 	for _, packageName := range packages {
 		// Check if context was canceled
@@ -91,8 +91,8 @@ func UninstallPackages(ctx context.Context, configDir string, packages []string,
 }
 
 // installSinglePackage installs a single package
-func installSinglePackage(ctx context.Context, configDir string, lockService *lock.YAMLLockService, packageName, manager string, dryRun, force bool) state.OperationResult {
-	result := state.OperationResult{
+func installSinglePackage(ctx context.Context, configDir string, lockService *lock.YAMLLockService, packageName, manager string, dryRun, force bool) resources.OperationResult {
+	result := resources.OperationResult{
 		Name:    packageName,
 		Manager: manager,
 	}
@@ -176,8 +176,8 @@ func installSinglePackage(ctx context.Context, configDir string, lockService *lo
 }
 
 // uninstallSinglePackage uninstalls a single package
-func uninstallSinglePackage(ctx context.Context, configDir string, lockService *lock.YAMLLockService, packageName, manager string, dryRun bool) state.OperationResult {
-	result := state.OperationResult{
+func uninstallSinglePackage(ctx context.Context, configDir string, lockService *lock.YAMLLockService, packageName, manager string, dryRun bool) resources.OperationResult {
+	result := resources.OperationResult{
 		Name:    packageName,
 		Manager: manager,
 	}

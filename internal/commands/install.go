@@ -10,8 +10,8 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
+	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/resources/packages"
-	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
 )
 
@@ -121,9 +121,9 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 // PackageInstallOutput represents the output for package installation
 type PackageInstallOutput struct {
-	TotalPackages int                     `json:"total_packages" yaml:"total_packages"`
-	Results       []state.OperationResult `json:"results" yaml:"results"`
-	Summary       PackageInstallSummary   `json:"summary" yaml:"summary"`
+	TotalPackages int                         `json:"total_packages" yaml:"total_packages"`
+	Results       []resources.OperationResult `json:"results" yaml:"results"`
+	Summary       PackageInstallSummary       `json:"summary" yaml:"summary"`
 }
 
 // PackageInstallSummary provides summary for package installation
@@ -134,8 +134,8 @@ type PackageInstallSummary struct {
 }
 
 // calculatePackageSummary calculates summary from results using generic operations summary
-func calculatePackageSummary(results []state.OperationResult) PackageInstallSummary {
-	genericSummary := state.CalculateSummary(results)
+func calculatePackageSummary(results []resources.OperationResult) PackageInstallSummary {
+	genericSummary := resources.CalculateSummary(results)
 	return PackageInstallSummary{
 		Added:   genericSummary.Added,
 		Skipped: genericSummary.Skipped,

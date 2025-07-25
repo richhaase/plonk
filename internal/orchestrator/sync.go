@@ -8,9 +8,9 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/resources/dotfiles"
 	"github.com/richhaase/plonk/internal/resources/packages"
-	"github.com/richhaase/plonk/internal/state"
 )
 
 // PackageSyncResult represents the result of package sync operations
@@ -72,7 +72,7 @@ func SyncPackages(ctx context.Context, configDir string, cfg *config.Config, dry
 	}
 
 	// Group missing packages by manager
-	missingByManager := make(map[string][]state.Item)
+	missingByManager := make(map[string][]resources.Item)
 	for _, item := range result.Missing {
 		manager := item.Metadata["manager"].(string)
 		missingByManager[manager] = append(missingByManager[manager], item)

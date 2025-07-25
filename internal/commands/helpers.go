@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/orchestrator"
-	"github.com/richhaase/plonk/internal/state"
+	"github.com/richhaase/plonk/internal/resources"
 	"github.com/spf13/cobra"
 )
 
@@ -105,7 +105,7 @@ func getOSSpecificInstallCommand(manager, os string) string {
 }
 
 // GetMetadataString safely extracts string metadata from operation results
-func GetMetadataString(result state.OperationResult, key string) string {
+func GetMetadataString(result resources.OperationResult, key string) string {
 	if result.Metadata == nil {
 		return ""
 	}
@@ -129,12 +129,12 @@ func CheckCancellation(ctx context.Context, domain string, operation string) err
 }
 
 // DetermineExitCode determines the appropriate exit code based on operation results
-func DetermineExitCode(results []state.OperationResult, domain string, operation string) error {
+func DetermineExitCode(results []resources.OperationResult, domain string, operation string) error {
 	if len(results) == 0 {
 		return nil
 	}
 
-	summary := state.CalculateSummary(results)
+	summary := resources.CalculateSummary(results)
 
 	// Success if any items were added or updated
 	if summary.Added > 0 || summary.Updated > 0 {

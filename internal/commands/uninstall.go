@@ -10,8 +10,8 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
+	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/resources/packages"
-	"github.com/richhaase/plonk/internal/state"
 	"github.com/spf13/cobra"
 )
 
@@ -113,9 +113,9 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 
 // PackageUninstallOutput represents the output for package uninstallation
 type PackageUninstallOutput struct {
-	TotalPackages int                     `json:"total_packages" yaml:"total_packages"`
-	Results       []state.OperationResult `json:"results" yaml:"results"`
-	Summary       PackageUninstallSummary `json:"summary" yaml:"summary"`
+	TotalPackages int                         `json:"total_packages" yaml:"total_packages"`
+	Results       []resources.OperationResult `json:"results" yaml:"results"`
+	Summary       PackageUninstallSummary     `json:"summary" yaml:"summary"`
 }
 
 // PackageUninstallSummary provides summary for package uninstallation
@@ -126,8 +126,8 @@ type PackageUninstallSummary struct {
 }
 
 // calculateUninstallSummary calculates summary from uninstall results using generic operations summary
-func calculateUninstallSummary(results []state.OperationResult) PackageUninstallSummary {
-	genericSummary := state.CalculateSummary(results)
+func calculateUninstallSummary(results []resources.OperationResult) PackageUninstallSummary {
+	genericSummary := resources.CalculateSummary(results)
 	return PackageUninstallSummary{
 		Removed: genericSummary.Removed,
 		Skipped: genericSummary.Skipped,

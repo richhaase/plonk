@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/orchestrator"
-	"github.com/richhaase/plonk/internal/state"
+	"github.com/richhaase/plonk/internal/resources"
 	"github.com/spf13/cobra"
 )
 
@@ -109,11 +109,11 @@ func runSmartOverview(cmd *cobra.Command, flags *SimpleFlags, format OutputForma
 	}
 
 	// Convert results to summary
-	summary := &state.Summary{
+	summary := &resources.Summary{
 		TotalManaged:   0,
 		TotalMissing:   0,
 		TotalUntracked: 0,
-		Results:        make([]state.Result, 0),
+		Results:        make([]resources.Result, 0),
 	}
 
 	for _, result := range results {

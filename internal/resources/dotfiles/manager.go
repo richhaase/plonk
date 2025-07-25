@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/state"
+	"github.com/richhaase/plonk/internal/resources"
 )
 
 // Manager handles all dotfile operations including path resolution, validation, and file operations
@@ -477,8 +477,8 @@ func (m *Manager) ExpandDirectory(sourceDir, destDir string) ([]DotfileInfo, err
 }
 
 // AddFiles processes multiple dotfile paths and returns results for all files processed
-func (m *Manager) AddFiles(ctx context.Context, cfg *config.Config, dotfilePaths []string, opts AddOptions) ([]state.OperationResult, error) {
-	var allResults []state.OperationResult
+func (m *Manager) AddFiles(ctx context.Context, cfg *config.Config, dotfilePaths []string, opts AddOptions) ([]resources.OperationResult, error) {
+	var allResults []resources.OperationResult
 
 	for _, dotfilePath := range dotfilePaths {
 		results := m.AddSingleDotfile(ctx, cfg, dotfilePath, opts.DryRun)
@@ -489,11 +489,11 @@ func (m *Manager) AddFiles(ctx context.Context, cfg *config.Config, dotfilePaths
 }
 
 // AddSingleDotfile processes a single dotfile path and returns results for all files processed
-func (m *Manager) AddSingleDotfile(ctx context.Context, cfg *config.Config, dotfilePath string, dryRun bool) []state.OperationResult {
+func (m *Manager) AddSingleDotfile(ctx context.Context, cfg *config.Config, dotfilePath string, dryRun bool) []resources.OperationResult {
 	// Resolve and validate dotfile path
 	resolvedPath, err := m.ResolveDotfilePath(dotfilePath)
 	if err != nil {
-		return []state.OperationResult{{
+		return []resources.OperationResult{{
 			Name:   dotfilePath,
 			Status: "failed",
 			Error:  fmt.Errorf("failed to resolve dotfile path %s: %w", dotfilePath, err),
@@ -503,14 +503,14 @@ func (m *Manager) AddSingleDotfile(ctx context.Context, cfg *config.Config, dotf
 	// Check if dotfile exists
 	info, err := os.Stat(resolvedPath)
 	if os.IsNotExist(err) {
-		return []state.OperationResult{{
+		return []resources.OperationResult{{
 			Name:   dotfilePath,
 			Status: "failed",
 			Error:  fmt.Errorf("dotfile does not exist: %s", resolvedPath),
 		}}
 	}
 	if err != nil {
-		return []state.OperationResult{{
+		return []resources.OperationResult{{
 			Name:   dotfilePath,
 			Status: "failed",
 			Error:  fmt.Errorf("failed to check dotfile: %w", err),
@@ -524,12 +524,12 @@ func (m *Manager) AddSingleDotfile(ctx context.Context, cfg *config.Config, dotf
 
 	// Handle single file
 	result := m.AddSingleFile(ctx, cfg, resolvedPath, dryRun)
-	return []state.OperationResult{result}
+	return []resources.OperationResult{result}
 }
 
-// AddSingleFile processes a single file and returns an state.OperationResult
-func (m *Manager) AddSingleFile(ctx context.Context, cfg *config.Config, filePath string, dryRun bool) state.OperationResult {
-	result := state.OperationResult{
+// AddSingleFile processes a single file and returns an resources.OperationResult
+func (m *Manager) AddSingleFile(ctx context.Context, cfg *config.Config, filePath string, dryRun bool) resources.OperationResult {
+	result := resources.OperationResult{
 		Name: filePath,
 	}
 
@@ -597,13 +597,13 @@ func (m *Manager) AddSingleFile(ctx context.Context, cfg *config.Config, filePat
 }
 
 // AddDirectoryFiles processes all files in a directory and returns results
-func (m *Manager) AddDirectoryFiles(ctx context.Context, cfg *config.Config, dirPath string, dryRun bool) []state.OperationResult {
-	var results []state.OperationResult
+func (m *Manager) AddDirectoryFiles(ctx context.Context, cfg *config.Config, dirPath string, dryRun bool) []resources.OperationResult {
+	var results []resources.OperationResult
 	ignorePatterns := cfg.IgnorePatterns
 
 	entries, err := m.ExpandDirectoryPaths(dirPath)
 	if err != nil {
-		return []state.OperationResult{{
+		return []resources.OperationResult{{
 			Name:   dirPath,
 			Status: "failed",
 			Error:  err,
@@ -620,7 +620,7 @@ func (m *Manager) AddDirectoryFiles(ctx context.Context, cfg *config.Config, dir
 		// Get file info for skip checking
 		info, err := os.Stat(entry.FullPath)
 		if err != nil {
-			results = append(results, state.OperationResult{
+			results = append(results, resources.OperationResult{
 				Name:   entry.FullPath,
 				Status: "failed",
 				Error:  fmt.Errorf("failed to get file info: %w", err),
@@ -642,8 +642,8 @@ func (m *Manager) AddDirectoryFiles(ctx context.Context, cfg *config.Config, dir
 }
 
 // RemoveFiles processes multiple dotfile paths for removal
-func (m *Manager) RemoveFiles(cfg *config.Config, dotfilePaths []string, opts RemoveOptions) ([]state.OperationResult, error) {
-	var allResults []state.OperationResult
+func (m *Manager) RemoveFiles(cfg *config.Config, dotfilePaths []string, opts RemoveOptions) ([]resources.OperationResult, error) {
+	var allResults []resources.OperationResult
 
 	for _, dotfilePath := range dotfilePaths {
 		result := m.RemoveSingleDotfile(cfg, dotfilePath, opts.DryRun)
@@ -654,8 +654,8 @@ func (m *Manager) RemoveFiles(cfg *config.Config, dotfilePaths []string, opts Re
 }
 
 // RemoveSingleDotfile removes a single dotfile
-func (m *Manager) RemoveSingleDotfile(cfg *config.Config, dotfilePath string, dryRun bool) state.OperationResult {
-	result := state.OperationResult{
+func (m *Manager) RemoveSingleDotfile(cfg *config.Config, dotfilePath string, dryRun bool) resources.OperationResult {
+	result := resources.OperationResult{
 		Name: dotfilePath,
 	}
 
@@ -795,7 +795,7 @@ func (m *Manager) ProcessDotfileForApply(ctx context.Context, source, destinatio
 }
 
 // GetConfiguredDotfiles returns dotfiles defined in configuration
-func (m *Manager) GetConfiguredDotfiles() ([]state.Item, error) {
+func (m *Manager) GetConfiguredDotfiles() ([]resources.Item, error) {
 	// Load config to get ignore patterns
 	cfg := config.LoadConfigWithDefaults(m.configDir)
 
@@ -804,7 +804,7 @@ func (m *Manager) GetConfiguredDotfiles() ([]state.Item, error) {
 		return nil, fmt.Errorf("expanding config directory: %w", err)
 	}
 
-	items := make([]state.Item, 0)
+	items := make([]resources.Item, 0)
 
 	for source, destination := range targets {
 		// Check if source is a directory
@@ -813,9 +813,9 @@ func (m *Manager) GetConfiguredDotfiles() ([]state.Item, error) {
 		if err != nil {
 			// Source doesn't exist yet, treat as single file
 			name := m.DestinationToName(destination)
-			items = append(items, state.Item{
+			items = append(items, resources.Item{
 				Name:   name,
-				State:  state.StateMissing,
+				State:  resources.StateMissing,
 				Domain: "dotfile",
 				Path:   destination,
 				Metadata: map[string]interface{}{
@@ -829,9 +829,9 @@ func (m *Manager) GetConfiguredDotfiles() ([]state.Item, error) {
 		if info.IsDir() {
 			// For directories, just use the directory itself as one item
 			name := m.DestinationToName(destination)
-			items = append(items, state.Item{
+			items = append(items, resources.Item{
 				Name:   name,
-				State:  state.StateManaged,
+				State:  resources.StateManaged,
 				Domain: "dotfile",
 				Path:   destination,
 				Metadata: map[string]interface{}{
@@ -843,9 +843,9 @@ func (m *Manager) GetConfiguredDotfiles() ([]state.Item, error) {
 		} else {
 			// Single file
 			name := m.DestinationToName(destination)
-			items = append(items, state.Item{
+			items = append(items, resources.Item{
 				Name:   name,
-				State:  state.StateManaged,
+				State:  resources.StateManaged,
 				Domain: "dotfile",
 				Path:   destination,
 				Metadata: map[string]interface{}{
@@ -860,7 +860,7 @@ func (m *Manager) GetConfiguredDotfiles() ([]state.Item, error) {
 }
 
 // GetActualDotfiles returns dotfiles currently present in the home directory
-func (m *Manager) GetActualDotfiles(ctx context.Context) ([]state.Item, error) {
+func (m *Manager) GetActualDotfiles(ctx context.Context) ([]resources.Item, error) {
 	// Load config to get ignore patterns and expand directories
 	cfg := config.LoadConfigWithDefaults(m.configDir)
 
@@ -873,7 +873,7 @@ func (m *Manager) GetActualDotfiles(ctx context.Context) ([]state.Item, error) {
 	// Create expander
 	expander := NewExpander(m.homeDir, cfg.ExpandDirectories, scanner)
 
-	var items []state.Item
+	var items []resources.Item
 
 	// Scan home directory for dotfiles
 	scanResults, err := scanner.ScanDotfiles(ctx)
@@ -887,9 +887,9 @@ func (m *Manager) GetActualDotfiles(ctx context.Context) ([]state.Item, error) {
 		if result.Info.IsDir() && expander.ShouldExpandDirectory(result.Name) {
 			// For expanded directories, treat as single item
 			expander.CheckDuplicate(result.Name)
-			items = append(items, state.Item{
+			items = append(items, resources.Item{
 				Name:   result.Name,
-				State:  state.StateUntracked,
+				State:  resources.StateUntracked,
 				Domain: "dotfile",
 				Path:   result.Path,
 				Metadata: map[string]interface{}{
@@ -900,9 +900,9 @@ func (m *Manager) GetActualDotfiles(ctx context.Context) ([]state.Item, error) {
 		} else {
 			// Single file or unexpanded directory
 			expander.CheckDuplicate(result.Name)
-			items = append(items, state.Item{
+			items = append(items, resources.Item{
 				Name:     result.Name,
-				State:    state.StateUntracked,
+				State:    resources.StateUntracked,
 				Domain:   "dotfile",
 				Path:     result.Path,
 				Metadata: result.Metadata,
@@ -916,13 +916,13 @@ func (m *Manager) GetActualDotfiles(ctx context.Context) ([]state.Item, error) {
 // Backward compatibility functions for external usage
 
 // GetConfiguredDotfiles is a convenience function that creates a Manager and calls GetConfiguredDotfiles
-func GetConfiguredDotfiles(homeDir, configDir string) ([]state.Item, error) {
+func GetConfiguredDotfiles(homeDir, configDir string) ([]resources.Item, error) {
 	manager := NewManager(homeDir, configDir)
 	return manager.GetConfiguredDotfiles()
 }
 
 // GetActualDotfiles is a convenience function that creates a Manager and calls GetActualDotfiles
-func GetActualDotfiles(ctx context.Context, homeDir, configDir string) ([]state.Item, error) {
+func GetActualDotfiles(ctx context.Context, homeDir, configDir string) ([]resources.Item, error) {
 	manager := NewManager(homeDir, configDir)
 	return manager.GetActualDotfiles(ctx)
 }

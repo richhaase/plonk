@@ -7,13 +7,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/richhaase/plonk/internal/state"
+	"github.com/richhaase/plonk/internal/resources"
 )
 
 // GetActualPackages returns packages currently installed on the system
-func GetActualPackages(ctx context.Context) ([]state.Item, error) {
+func GetActualPackages(ctx context.Context) ([]resources.Item, error) {
 	registry := NewManagerRegistry()
-	items := make([]state.Item, 0)
+	items := make([]resources.Item, 0)
 
 	// Get all available managers
 	for _, managerName := range registry.GetAllManagerNames() {
@@ -35,11 +35,11 @@ func GetActualPackages(ctx context.Context) ([]state.Item, error) {
 			continue
 		}
 
-		// Convert to state.Item
+		// Convert to resources.Item
 		for _, pkgName := range installed {
-			items = append(items, state.Item{
+			items = append(items, resources.Item{
 				Name:    pkgName,
-				State:   state.StateUntracked, // Will be updated during reconciliation
+				State:   resources.StateUntracked, // Will be updated during reconciliation
 				Domain:  "package",
 				Manager: managerName,
 			})
@@ -50,7 +50,7 @@ func GetActualPackages(ctx context.Context) ([]state.Item, error) {
 }
 
 // GetActualPackagesForManager returns packages installed by a specific manager
-func GetActualPackagesForManager(ctx context.Context, managerName string) ([]state.Item, error) {
+func GetActualPackagesForManager(ctx context.Context, managerName string) ([]resources.Item, error) {
 	registry := NewManagerRegistry()
 	manager, err := registry.GetManager(managerName)
 	if err != nil {
@@ -71,12 +71,12 @@ func GetActualPackagesForManager(ctx context.Context, managerName string) ([]sta
 		return nil, fmt.Errorf("listing installed packages: %w", err)
 	}
 
-	// Convert to state.Item
-	items := make([]state.Item, 0, len(installed))
+	// Convert to resources.Item
+	items := make([]resources.Item, 0, len(installed))
 	for _, pkgName := range installed {
-		items = append(items, state.Item{
+		items = append(items, resources.Item{
 			Name:    pkgName,
-			State:   state.StateUntracked, // Will be updated during reconciliation
+			State:   resources.StateUntracked, // Will be updated during reconciliation
 			Domain:  "package",
 			Manager: managerName,
 		})

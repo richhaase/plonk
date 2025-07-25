@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/richhaase/plonk/internal/state"
+	"github.com/richhaase/plonk/internal/resources"
 )
 
 // DefaultProgressReporter provides a standard implementation of progress reporting
@@ -36,7 +36,7 @@ func NewProgressReporterForOperation(operation, itemType string, showIndividual 
 }
 
 // ShowItemProgress displays progress for an individual item
-func (r *DefaultProgressReporter) ShowItemProgress(result state.OperationResult) {
+func (r *DefaultProgressReporter) ShowItemProgress(result resources.OperationResult) {
 	if !r.ShowIndividualProgress {
 		return
 	}
@@ -94,8 +94,8 @@ func (r *DefaultProgressReporter) ShowItemProgress(result state.OperationResult)
 }
 
 // ShowBatchSummary displays a summary of the batch operation
-func (r *DefaultProgressReporter) ShowBatchSummary(results []state.OperationResult) {
-	summary := state.CalculateSummary(results)
+func (r *DefaultProgressReporter) ShowBatchSummary(results []resources.OperationResult) {
+	summary := resources.CalculateSummary(results)
 
 	// Generate operation-appropriate summary message
 	var summaryMsg string

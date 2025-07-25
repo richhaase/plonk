@@ -9,7 +9,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/state"
+	"github.com/richhaase/plonk/internal/resources"
 	"github.com/spf13/cobra"
 )
 
@@ -64,9 +64,9 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 
 	// If a specific manager is requested, filter results
 	if flags.Manager != "" {
-		filteredManaged := make([]state.Item, 0)
-		filteredMissing := make([]state.Item, 0)
-		filteredUntracked := make([]state.Item, 0)
+		filteredManaged := make([]resources.Item, 0)
+		filteredMissing := make([]resources.Item, 0)
+		filteredUntracked := make([]resources.Item, 0)
 
 		for _, item := range domainResult.Managed {
 			if item.Manager == flags.Manager {
@@ -91,7 +91,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 
 	// For non-verbose mode, clear untracked items
 	if !flags.Verbose {
-		domainResult.Untracked = []state.Item{}
+		domainResult.Untracked = []resources.Item{}
 	}
 
 	// Wrap result to implement OutputData interface
@@ -103,9 +103,9 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 	return RenderOutput(outputWrapper, format)
 }
 
-// packageListResultWrapper wraps state.Result to implement OutputData
+// packageListResultWrapper wraps resources.Result to implement OutputData
 type packageListResultWrapper struct {
-	Result state.Result
+	Result resources.Result
 }
 
 // TableOutput generates human-friendly table output
@@ -129,7 +129,7 @@ func (w *packageListResultWrapper) TableOutput() string {
 
 	// Collect all items with their states
 	type itemWithState struct {
-		item  state.Item
+		item  resources.Item
 		state string
 	}
 	var items []itemWithState
@@ -202,7 +202,7 @@ func runDotList(cmd *cobra.Command, args []string) error {
 	verbose, _ := cmd.Flags().GetBool("verbose")
 
 	// Apply filters to the result
-	filteredResult := state.Result{
+	filteredResult := resources.Result{
 		Domain:    domainResult.Domain,
 		Manager:   domainResult.Manager,
 		Managed:   domainResult.Managed,
@@ -212,17 +212,17 @@ func runDotList(cmd *cobra.Command, args []string) error {
 
 	// Filter based on flags
 	if showManaged {
-		filteredResult.Missing = []state.Item{}
-		filteredResult.Untracked = []state.Item{}
+		filteredResult.Missing = []resources.Item{}
+		filteredResult.Untracked = []resources.Item{}
 	} else if showMissing {
-		filteredResult.Managed = []state.Item{}
-		filteredResult.Untracked = []state.Item{}
+		filteredResult.Managed = []resources.Item{}
+		filteredResult.Untracked = []resources.Item{}
 	} else if showUntracked {
-		filteredResult.Managed = []state.Item{}
-		filteredResult.Missing = []state.Item{}
+		filteredResult.Managed = []resources.Item{}
+		filteredResult.Missing = []resources.Item{}
 	} else if !verbose {
 		// Default: show managed + missing, hide untracked unless verbose
-		filteredResult.Untracked = []state.Item{}
+		filteredResult.Untracked = []resources.Item{}
 	}
 
 	// Wrap result to implement OutputData interface
@@ -235,9 +235,9 @@ func runDotList(cmd *cobra.Command, args []string) error {
 	return RenderOutput(outputWrapper, format)
 }
 
-// dotfileListResultWrapper wraps state.Result to implement OutputData
+// dotfileListResultWrapper wraps resources.Result to implement OutputData
 type dotfileListResultWrapper struct {
-	Result  state.Result
+	Result  resources.Result
 	Verbose bool
 }
 
@@ -274,7 +274,7 @@ func (w *dotfileListResultWrapper) TableOutput() string {
 
 	// Collect all items with their states
 	type itemWithState struct {
-		item  state.Item
+		item  resources.Item
 		state string
 	}
 	var items []itemWithState
@@ -352,7 +352,7 @@ func (w *dotfileListResultWrapper) StructuredData() any {
 	var dotfiles []map[string]string
 
 	// Helper to add items
-	addItems := func(items []state.Item, stateStr string) {
+	addItems := func(items []resources.Item, stateStr string) {
 		for _, item := range items {
 			target := item.Path
 			source := item.Name

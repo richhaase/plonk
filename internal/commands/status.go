@@ -11,7 +11,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/orchestrator"
-	"github.com/richhaase/plonk/internal/state"
+	"github.com/richhaase/plonk/internal/resources"
 	"github.com/spf13/cobra"
 )
 
@@ -95,13 +95,13 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	return RenderOutput(outputData, format)
 }
 
-// convertResultsToSummary converts reconciliation results to state.Summary for output compatibility
-func convertResultsToSummary(results map[string]state.Result) state.Summary {
-	summary := state.Summary{
+// convertResultsToSummary converts reconciliation results to resources.Summary for output compatibility
+func convertResultsToSummary(results map[string]resources.Result) resources.Summary {
+	summary := resources.Summary{
 		TotalManaged:   0,
 		TotalMissing:   0,
 		TotalUntracked: 0,
-		Results:        make([]state.Result, 0, len(results)),
+		Results:        make([]resources.Result, 0, len(results)),
 	}
 
 	for _, result := range results {
@@ -118,12 +118,12 @@ func convertResultsToSummary(results map[string]state.Result) state.Summary {
 
 // StatusOutput represents the output structure for status command
 type StatusOutput struct {
-	ConfigPath   string        `json:"config_path" yaml:"config_path"`
-	LockPath     string        `json:"lock_path" yaml:"lock_path"`
-	ConfigExists bool          `json:"config_exists" yaml:"config_exists"`
-	ConfigValid  bool          `json:"config_valid" yaml:"config_valid"`
-	LockExists   bool          `json:"lock_exists" yaml:"lock_exists"`
-	StateSummary state.Summary `json:"state_summary" yaml:"state_summary"`
+	ConfigPath   string            `json:"config_path" yaml:"config_path"`
+	LockPath     string            `json:"lock_path" yaml:"lock_path"`
+	ConfigExists bool              `json:"config_exists" yaml:"config_exists"`
+	ConfigValid  bool              `json:"config_valid" yaml:"config_valid"`
+	LockExists   bool              `json:"lock_exists" yaml:"lock_exists"`
+	StateSummary resources.Summary `json:"state_summary" yaml:"state_summary"`
 }
 
 // StatusOutputSummary represents a summary-focused version for JSON/YAML output
@@ -218,7 +218,7 @@ func (s StatusOutput) StructuredData() any {
 }
 
 // createDomainSummary creates domain summaries with counts only
-func createDomainSummary(results []state.Result) []DomainSummary {
+func createDomainSummary(results []resources.Result) []DomainSummary {
 	var domains []DomainSummary
 	for _, result := range results {
 		if result.IsEmpty() {
@@ -236,7 +236,7 @@ func createDomainSummary(results []state.Result) []DomainSummary {
 }
 
 // extractManagedItems extracts only the managed items without full metadata
-func extractManagedItems(results []state.Result) []ManagedItem {
+func extractManagedItems(results []resources.Result) []ManagedItem {
 	var items []ManagedItem
 	for _, result := range results {
 		for _, managed := range result.Managed {
