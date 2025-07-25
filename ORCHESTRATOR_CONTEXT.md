@@ -1,114 +1,123 @@
-# Orchestrator Context - Plonk Refactoring Project
+# Orchestrator Context - Plonk Resource-Core Refactor
 
-## Current State (2025-07-24)
-- **Branch**: refactor/simplify
-- **Package Count**: 22 → 9 (59% reduction achieved) ✅ TARGET MET!
-- **LOC Count**: ~26,000 → 13,536 (48% overall reduction)
-- **Goal**: Clean, domain-focused architecture with idiomatic Go patterns ✅ ACHIEVED!
-- **Philosophy**: Not forcing arbitrary package count, but achieving maintainable domain separation
+## Current State (2025-07-25)
+- **Branch**: refactor/ai-lab-prep
+- **Current Package Count**: 9 packages
+- **Current LOC**: 13,536
+- **Target**: 5 packages, ~8,000 LOC (41% reduction from current)
+- **Goal**: Introduce Resource abstraction for AI Lab features while simplifying to idiomatic Go
 
 ## Key Documents
-- **CLAUDE_CODE_REVIEW.md** - Master refactoring plan and progress tracker
-- **docs/ARCHITECTURE.md** - Target architecture
+- **REFACTOR.md** - Master plan with 5-phase approach and progress tracking
+- **docs/ARCHITECTURE.md** - DOES NOT EXIST YET - Will be created in Phase 5
 
-## Completed Tasks
-1. ✅ Deleted `cli` package (merged to commands)
-2. ✅ Deleted `constants` package (inlined)
-3. ✅ Deleted `executor` package (use exec.Command directly)
-4. ✅ Deleted `types` package (moved to state)
-5. ✅ Fixed manager tests (converted to unit tests)
-6. ✅ Deleted `interfaces` package (moved to consumers)
-7. ✅ Deleted `services` package (moved to sync command)
-8. ✅ Deleted `operations` package (moved to state/ui packages)
-9. ✅ Deleted `core` package (moved to commands/managers packages)
-10. ✅ Transformed `runtime` → `orchestrator` - Eliminated singleton, preserved coordination logic
-11. ✅ Deleted `mocks` and `testing` packages - Eliminated 514 LOC of unused generated code
-12. ✅ **Task 010**: Deleted `errors` package - Eliminated 766 LOC over-engineered error system
-13. ✅ **Task 012**: Simplified `config` package - 68% reduction achieved (593 → 278 LOC)
-14. ✅ **Task 013**: Simplified `state` package - 87% reduction achieved (1,011 → 131 LOC)
-15. ✅ **Task 014**: Removed BaseManager inheritance - Eliminated Java-style patterns (qualitative win)
-16. ✅ **Task 015**: Improved integration test implementation - Enhanced error handling and Go idioms
-17. ✅ **Task 016**: Analyzed managers package - Identified 1,180-1,450 LOC reduction potential (21-26%)
-18. ✅ **Task 017**: Refactored commands package - 25% reduction (5,305 → 3,990 LOC), extracted business logic to domain packages
-19. ✅ **Task 018**: Optimized managers package - 22% reduction achieved (4,619 → 3,600 LOC), created shared components
-20. ✅ **Task 019**: Merged paths into dotfiles - Eliminated paths package, achieved 9 package target!
+## Previous Refactoring Summary
+The codebase has already undergone significant refactoring:
+- Reduced from 22 → 9 packages (59% reduction)
+- Reduced from ~26,000 → 13,536 LOC (48% reduction)
+- Eliminated anti-patterns: Java-style getters, complex errors, unnecessary abstractions
+- Key deletions: cli, constants, executor, types, interfaces, services, operations, core, mocks, testing, errors packages
 
-## Current Task Queue
-1. **Task 020** (Critical Review): IN PROGRESS - Fresh perspective on further simplification
+## Current Refactor Phase Plan
 
-## Next Priorities Based on Metrics
-1. **Critical review** (Task 020): Fresh perspective for additional simplification
-2. **UI enhancements**: Improve output consistency across commands (post-architecture work)
-3. **Performance optimizations**: Consider parallel operations where appropriate
+### Phase 1: Directory Structure (Day 1) - NOT STARTED
+Create resource-focused architecture and migrate files
 
-## Package Architecture Vision
+### Phase 2: Resource Abstraction (Day 2-3 + ½ day buffer) - NOT STARTED
+Introduce Resource interface and adapt existing code
 
-### Current Metrics (9 packages, 13,536 LOC total) ✅ TARGET ACHIEVED!
-| Package | LOC | % of Total | Assessment |
-|---------|-----|------------|------------|
-| commands | 3,990 | 29.5% | Thin CLI handlers (25% reduction achieved) |
-| managers | 3,600 | 26.6% | Optimized with shared components (22% reduction) |
-| dotfiles | 2,550 | 18.9% | Merged with paths, unified architecture |
-| orchestrator | 1,054 | 7.8% | Coordination layer with extracted logic |
-| config | 640 | 4.7% | Simplified with backward compatibility |
-| ui | 464 | 3.4% | Well-focused output formatting |
-| lock | 304 | 2.2% | Focused domain package |
-| state | 102 | 0.8% | Minimal types (87% reduction) |
+### Phase 3: Simplification & Edge-case Fixes (Day 4-5 + ½ day buffer) - NOT STARTED
+Remove remaining abstractions and flatten implementations
 
-### Key Achievements
-- **48% overall LOC reduction** from ~26,000 to 13,536
-- **59% package reduction** from 22 to 9 packages ✅ TARGET ACHIEVED!
-- **Commands package transformation**: Now thin CLI handlers (25% reduction)
-- **Managers package optimization**: Eliminated duplication (22% reduction)
-- **Paths/Dotfiles consolidation**: Unified architecture (11% reduction)
-- **Eliminated anti-patterns**: Java-style getters, complex errors, unnecessary abstractions
-- **Preserved extensibility**: AI Lab coordination patterns intact
-- **Major simplifications**: state (87% reduction), config (68% reduction), errors (100% deletion)
+### Phase 4: Lock v2 & Hooks (Day 6) - NOT STARTED
+Implement extensible lock file and hook system
 
-**Target Architecture (7-9 well-defined packages)**:
-Focus on domain clarity and idiomatic Go patterns rather than arbitrary package count.
+### Phase 5: Testing & Documentation (Day 7) - NOT STARTED
+Update tests, docs, and ensure performance targets
 
-## Architectural Philosophy
-- **Domain Clarity**: Each package represents a clear business domain
-- **Idiomatic Go**: Following community patterns, not enterprise/Java patterns
-- **Developer/AI Friendly**: Easy to understand, navigate, and extend
-- **Right-sized Packages**: Not too granular, not too monolithic
+## Target Architecture (5 packages)
 
-## Critical Preservation Points (AI Lab Requirements)
-1. **Orchestrator Pattern** - Coordination layer for future features
-2. **Reconciliation Logic** - Managed/Missing/Untracked pattern for extensibility
-3. **Output Formats** - All 3 formats (table, json, yaml) for automation
-4. **Clean Interfaces** - Well-defined package boundaries
-5. **Lock File Design** - Extensible for future resource types
-
-## Task Creation Pattern
-```markdown
-# Task XXX: [Action]
-
-## Objective
-[One sentence goal]
-
-## Quick Context
-[2-3 bullet points]
-
-## Work Required
-[Specific steps]
-
-## Completion Report
-Create `TASK_XXX_COMPLETION_REPORT.md` with:
-- Summary of changes
-- Files modified/deleted
-- Test results
-- Success criteria confirmation
+```
+internal/
+├── commands/      (~1,500 LOC) - Thin CLI handlers only
+├── config/        (~300 LOC)   - Config loading and types
+├── orchestrator/  (~300 LOC)   - Pure coordination
+├── lock/          (~400 LOC)   - Lock v2 with resources section
+├── output/        (≤300 LOC)   - Table/JSON/YAML formatting
+└── resources/     (~5,000 LOC)
+    ├── resource.go           - Resource interface definition
+    ├── reconcile.go          - Shared reconciliation logic
+    ├── packages/             - All package managers
+    └── dotfiles/            - Dotfile operations
 ```
 
-## Testing
-- Unit tests: `go test ./...`
-- Integration tests: `just test-ux`
-- Both must pass before marking task complete
+### Package Migration Mapping
+| Current Package | Target Location | Action |
+|----------------|-----------------|---------|
+| commands | commands | Keep, extract remaining logic |
+| config | config | Keep, minor cleanup |
+| dotfiles | resources/dotfiles | Move and adapt to Resource |
+| lock | lock | Keep, add v2 schema |
+| managers | resources/packages | Move and flatten |
+| orchestrator | orchestrator | Keep, reduce to ~300 LOC |
+| state | DELETE | Move types to resources |
+| ui | output | Rename and simplify |
 
-## Worker Guidance
-- Keep tasks focused and specific
-- Provide just enough context
-- Review completion reports before marking done
-- Clean up task files after completion
+## Key Design Decisions
+
+### Resource Interface
+- Minimal 4-method interface (ID, Desired, Actual, Apply)
+- Orchestrator handles ordering for future dependencies
+- Resources don't parse config - orchestrator sets Desired()
+
+### State Management
+- Single Item type for all resources (packages, dotfiles, future services)
+- Three core states: managed, missing, untracked (+ degraded reserved)
+- Meta map for extensibility without schema changes
+
+### Hook System
+- Default 10min timeout, configurable per hook
+- Fail-fast by default, continue_on_error optional
+- Shell commands only, no rollback in this refactor
+
+### Lock File v2
+- Reader accepts v1 & v2, writer always upgrades
+- Single version constant to prevent drift
+- Resources section for future Docker/service types
+
+## Critical Preservation Points (AI Lab Requirements)
+1. **Orchestrator Pattern** - Thin coordination layer (~300 LOC)
+2. **Reconciliation Logic** - Managed/Missing/Untracked semantics
+3. **Resource Abstraction** - Clean interface for Docker Compose integration
+4. **Output Formats** - Table/JSON/YAML for automation
+5. **Lock File v2** - Extensible for any resource type
+
+## Task Creation Guidelines
+
+### For Phase Tasks
+Create focused task files for agents with:
+1. **Clear objective** - One sentence describing the outcome
+2. **Current state** - What exists now (file locations, package structure)
+3. **Target state** - What should exist after (new structure, moved files)
+4. **Specific steps** - Numbered list of actions to take
+5. **Validation** - How to verify success (tests pass, no circular deps)
+
+### Testing Requirements
+- Unit tests: `go test ./...` must pass
+- Integration tests: `just test-ux` must pass
+- Performance: Unit + fast integration tests must run in <5s
+- Circular deps: Check with `go list -f '{{ join .Imports "\n" }}' ./...`
+
+### Success Metrics
+- All tests green
+- No new circular dependencies
+- Target LOC achieved (±10%)
+- Clean git history (atomic commits)
+
+## Phase 1 Readiness Checklist
+- [x] REFACTOR.md defines complete plan
+- [x] ORCHESTRATOR_CONTEXT.md provides architecture guidance
+- [ ] docs/ARCHITECTURE.md exists (or will be created in Phase 5)
+- [x] Target package structure defined
+- [x] Migration mapping clear
+- [x] Risk mitigations identified
