@@ -4,7 +4,7 @@
 - **Branch**: refactor/ai-lab-prep
 - **Current Package Count**: 8 packages (was 9, state package removed)
 - **Current LOC**: ~14,300 (after Phases 1-3)
-- **Revised Target**: 5 packages, ~10,000-11,000 LOC (25-30% reduction)
+- **Revised Target**: 5 packages, ~11,000-12,000 LOC (15-20% reduction)
 - **Goal**: Simplify while preserving ALL functionality for AI Lab features
 
 ## Key Documents
@@ -39,8 +39,8 @@ Removed abstractions but only achieved ~500 LOC reduction
 ### Phase 3.5: Code Analysis - ✅ COMPLETE
 Identified 6,500-8,000 LOC reduction potential, but many conflict with AI Lab requirements
 
-### Phase 4: AI Lab-Compatible Code Reduction (Day 6-7) - NOT STARTED
-Extract duplication while preserving all functionality (target: 3,000-4,000 LOC reduction)
+### Phase 4: Idiomatic Go Simplification (Day 6-7) - NOT STARTED
+Simplify through idiomatic Go patterns (target: 2,000-3,000 LOC reduction)
 
 ### Phase 5: Lock v2 & Hooks (Day 8) - NOT STARTED
 Implement extensible lock file and hook system

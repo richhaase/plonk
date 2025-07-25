@@ -4,12 +4,12 @@
 Transform plonk from 9 packages to 5, introducing a Resource abstraction while aggressively simplifying within each package. This creates a lean core ready for AI Lab features (Docker Compose stacks, services like vLLM/Weaviate/Guardrails).
 
 **Goals:**
-- Reduce from ~14,300 LOC to ~10,000-11,000 LOC (25-30% reduction)
+- Reduce from ~14,300 LOC to ~11,000-12,000 LOC (15-20% reduction)
 - Reduce from 8 packages to 5 packages
 - Preserve Resource interface for AI Lab extensibility
 - Preserve reconciliation semantics (Managed/Missing/Untracked)
 - Maintain ALL current functionality (all 6 package managers)
-- Remove duplication and improve code organization
+- Focus on idiomatic Go simplification, not aggressive abstraction
 - Keep orchestrator and all extensibility points for AI Lab
 
 ## Target Architecture
@@ -77,16 +77,16 @@ internal/
 
 **Result**: Identified 6,500-8,000 LOC potential reduction, but many conflict with AI Lab goals
 
-### Phase 4: AI Lab-Compatible Code Reduction (Day 6-7)
-- [ ] Extract command boilerplate (300-400 lines)
-- [ ] Consolidate duplicate flag definitions (150-200 lines)
-- [ ] Create common error handling utilities (200+ lines)
-- [ ] Simplify dotfiles over-engineering (500-800 lines)
-- [ ] Merge doctor into status command
-- [ ] Extract cross-package utilities (500-800 lines)
-- [ ] Remove test redundancy (300-500 lines)
+### Phase 4: Idiomatic Go Simplification (Day 6-7)
+- [ ] Simplify error handling without losing context (400-600 lines)
+- [ ] Consolidate package manager tests (800-1,200 lines)
+- [ ] Simplify dotfiles package, trust stdlib (400-600 lines)
+- [ ] Merge doctor into status command (~200 lines)
+- [ ] Remove genuinely unused code (200-400 lines)
+- [ ] Inline trivial single-use helpers (300-500 lines)
+- [ ] Final cleanup and formatting
 
-**Target**: 3,000-4,000 LOC reduction while keeping all functionality
+**Target**: 2,000-3,000 LOC reduction through idiomatic simplification
 
 ### Phase 5: Lock v2 & Hooks (Day 8)
 - [ ] Implement lock file v2 schema with resources section
@@ -185,7 +185,7 @@ hooks:
 - **After Phase 1**: 13,978 (restructuring)
 - **After Phase 2**: ~14,800 (added Resource abstraction)
 - **After Phase 3**: ~14,300 (only 500 LOC reduction)
-- **Target LOC**: ~10,000-11,000 (revised from 8,000)
+- **Target LOC**: ~11,000-12,000 (revised for idiomatic approach)
 - **Starting Packages**: 9
 - **Current Packages**: 8 (state package removed)
 - **Target Packages**: 5
@@ -270,3 +270,10 @@ After completing the refactor, consider investigating a data-driven approach whe
 - BUT: May lose flexibility for manager-specific quirks
 
 Evaluate once the codebase is simplified and we understand the true commonalities across managers.
+
+### Note on Code Reduction
+The revised Phase 4 targets a more realistic 2,000-3,000 LOC reduction through idiomatic Go simplification rather than aggressive abstraction. This approach:
+- Preserves code clarity and maintainability
+- Avoids introducing complexity for the sake of line count
+- Keeps Go idioms and explicit behavior
+- Results in a final target of ~11,000-12,000 LOC instead of 10,000-11,000
