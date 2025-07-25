@@ -258,13 +258,13 @@ Day 2-3 + ½ day buffer (20 hours total)
    - Keep adapters thin
 
 ## Success Criteria
-- [ ] Resource interface defined and implemented
-- [ ] Both packages and dotfiles work through Resources
-- [ ] Orchestrator simplified and generic
-- [ ] All tests passing
-- [ ] Test execution <5s for checkpoint merge
-- [ ] Integration test demonstrates full flow
-- [ ] No functionality regression
+- [x] Resource interface defined and implemented
+- [x] Both packages and dotfiles work through Resources
+- [x] Orchestrator simplified and generic
+- [x] All tests passing
+- [ ] Test execution <5s for checkpoint merge (currently ~8.9s)
+- [x] Integration test demonstrates full flow
+- [x] No functionality regression
 
 ## Checkpoint Decision
 After Phase 2 completion, if all success criteria are met and tests run in <5s, merge to main branch. This provides a stable checkpoint before the more aggressive simplification in Phase 3.
