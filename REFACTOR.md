@@ -4,12 +4,13 @@
 Transform plonk from 9 packages to 5, introducing a Resource abstraction while aggressively simplifying within each package. This creates a lean core ready for AI Lab features (Docker Compose stacks, services like vLLM/Weaviate/Guardrails).
 
 **Goals:**
-- Reduce from ~13,500 LOC to ~8,000 LOC (41% reduction)
-- Reduce from 9 packages to 5 packages
-- Introduce minimal Resource interface for extensibility
+- Reduce from ~14,300 LOC to ~10,000-11,000 LOC (25-30% reduction)
+- Reduce from 8 packages to 5 packages
+- Preserve Resource interface for AI Lab extensibility
 - Preserve reconciliation semantics (Managed/Missing/Untracked)
-- Maintain all current functionality with idiomatic Go
-- Remove unused code and improve naming consistency
+- Maintain ALL current functionality (all 6 package managers)
+- Remove duplication and improve code organization
+- Keep orchestrator and all extensibility points for AI Lab
 
 ## Target Architecture
 
@@ -51,20 +52,43 @@ internal/
 
 **Checkpoint: Test runtime ~8.9s (exceeds 5s target) - proceeding to Phase 3**
 
-### Phase 3: Simplification & Edge-case Fixes (Day 4-5 + ½ day buffer)
-- [ ] Remove StandardManager abstraction
-- [ ] Create `resources/packages/helpers.go` for 3-4 common helpers
-- [ ] Flatten all manager implementations
-- [ ] Simplify state types to single Item struct
-- [ ] Remove error matcher patterns (verify with grep before deletion)
-- [ ] Complete table output with tabwriter
-- [ ] Review and update all code comments for accuracy
-  - [ ] Remove outdated comments referencing deleted packages/patterns
-  - [ ] Update comments to reflect new architecture
-  - [ ] Ensure comments describe "why" not "what"
-  - [ ] Remove TODO comments that are no longer relevant
+### Phase 3: Simplification & Edge-case Fixes (Day 4-5 + ½ day buffer) ✅ COMPLETE
+- [x] Remove StandardManager abstraction
+- [x] Create `resources/packages/helpers.go` for 3-4 common helpers
+- [x] Flatten all manager implementations
+- [x] Simplify state types to single Item struct
+- [x] Remove error matcher patterns (verify with grep before deletion)
+- [x] Complete table output with tabwriter
+- [x] Review and update all code comments for accuracy
+  - [x] Remove outdated comments referencing deleted packages/patterns
+  - [x] Update comments to reflect new architecture
+  - [x] Ensure comments describe "why" not "what"
+  - [x] Remove TODO comments that are no longer relevant
 
-### Phase 4: Lock v2 & Hooks (Day 6)
+**Result**: Only ~500 LOC reduction achieved (not the expected 6,000)
+
+### Phase 3.5: Comprehensive Code Analysis ✅ COMPLETE
+- [x] Analyzed commands package for duplication
+- [x] Compared package manager implementations
+- [x] Investigated dotfiles over-engineering
+- [x] Identified non-essential features
+- [x] Found cross-package duplication
+- [x] Proposed architecture alternatives
+
+**Result**: Identified 6,500-8,000 LOC potential reduction, but many conflict with AI Lab goals
+
+### Phase 4: AI Lab-Compatible Code Reduction (Day 6-7)
+- [ ] Extract command boilerplate (300-400 lines)
+- [ ] Consolidate duplicate flag definitions (150-200 lines)
+- [ ] Create common error handling utilities (200+ lines)
+- [ ] Simplify dotfiles over-engineering (500-800 lines)
+- [ ] Merge doctor into status command
+- [ ] Extract cross-package utilities (500-800 lines)
+- [ ] Remove test redundancy (300-500 lines)
+
+**Target**: 3,000-4,000 LOC reduction while keeping all functionality
+
+### Phase 5: Lock v2 & Hooks (Day 8)
 - [ ] Implement lock file v2 schema with resources section
 - [ ] Add migration logic (v1 → v2, auto-upgrade on write)
 - [ ] Add single lock version constant to prevent drift
@@ -72,7 +96,7 @@ internal/
 - [ ] Update plonk.yaml schema for hooks
 - [ ] Log version migration during apply operations
 
-### Phase 5: Code Quality & Naming (Day 7)
+### Phase 6: Code Quality & Naming (Day 9)
 - [ ] Find and remove unused code
   - [ ] Run `staticcheck -unused ./...` to find unused functions/types
   - [ ] Use `go mod why` to check for unnecessary dependencies
@@ -87,7 +111,7 @@ internal/
   - [ ] Standardize terminology across packages
 - [ ] Run `golint` and `go vet` for additional issues
 
-### Phase 6: Testing & Documentation (Day 8)
+### Phase 7: Testing & Documentation (Day 10)
 - [ ] Update all tests for new structure
 - [ ] Ensure <5s test execution (hard CI gate on unit + fast integration)
 - [ ] Update ARCHITECTURE.md with "How to add a new Resource" section
@@ -158,8 +182,10 @@ hooks:
 
 ### Metrics
 - **Starting LOC**: 13,536
-- **Current LOC**: ~14,800 (after Phase 2, includes new abstractions)
-- **Target LOC**: ~8,000 (±10%)
+- **After Phase 1**: 13,978 (restructuring)
+- **After Phase 2**: ~14,800 (added Resource abstraction)
+- **After Phase 3**: ~14,300 (only 500 LOC reduction)
+- **Target LOC**: ~10,000-11,000 (revised from 8,000)
 - **Starting Packages**: 9
 - **Current Packages**: 8 (state package removed)
 - **Target Packages**: 5
@@ -233,3 +259,14 @@ hooks:
 - Focus on idiomatic Go patterns
 - Document decisions in ARCHITECTURE.md
 - Create `resources/packages/helpers.go` for truly common functions (3-4 max)
+
+## Future Considerations (Post-Refactor)
+
+### Data-Driven Package Managers
+After completing the refactor, consider investigating a data-driven approach where package managers are configured via YAML rather than implemented in code. This could:
+- Reduce 2,340 LOC to ~400 LOC
+- Make adding new managers trivial
+- Align with AI Lab's declarative philosophy
+- BUT: May lose flexibility for manager-specific quirks
+
+Evaluate once the codebase is simplified and we understand the true commonalities across managers.

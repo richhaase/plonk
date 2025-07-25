@@ -3,9 +3,9 @@
 ## Current State (2025-07-25)
 - **Branch**: refactor/ai-lab-prep
 - **Current Package Count**: 8 packages (was 9, state package removed)
-- **Current LOC**: 13,978 (was 13,536, slight increase from restructuring)
-- **Target**: 5 packages, ~8,000 LOC (43% reduction from current)
-- **Goal**: Introduce Resource abstraction for AI Lab features while simplifying to idiomatic Go
+- **Current LOC**: ~14,300 (after Phases 1-3)
+- **Revised Target**: 5 packages, ~10,000-11,000 LOC (25-30% reduction)
+- **Goal**: Simplify while preserving ALL functionality for AI Lab features
 
 ## Key Documents
 - **REFACTOR.md** - Master plan with 5-phase approach and progress tracking
@@ -18,6 +18,13 @@ The codebase has already undergone significant refactoring:
 - Eliminated anti-patterns: Java-style getters, complex errors, unnecessary abstractions
 - Key deletions: cli, constants, executor, types, interfaces, services, operations, core, mocks, testing, errors packages
 
+## Key Decisions from Phase 3.5 Analysis
+- **Keep all 6 package managers** - All are critical to plonk's value
+- **Preserve orchestrator** - Essential for AI Lab Docker Compose coordination
+- **Maintain Resource abstraction** - Needed for future resource types
+- **Keep JSON/YAML output** - Required for automation
+- **Focus on internal simplification** - Not feature removal
+
 ## Current Refactor Phase Plan
 
 ### Phase 1: Directory Structure (Day 1) - ✅ COMPLETE
@@ -26,16 +33,22 @@ Successfully migrated to resource-focused architecture (6 commits, 0.474s test t
 ### Phase 2: Resource Abstraction (Day 2-3 + ½ day buffer) - ✅ COMPLETE
 Successfully introduced Resource interface, adapted packages/dotfiles, simplified orchestrator (-79 lines)
 
-### Phase 3: Simplification & Edge-case Fixes (Day 4-5 + ½ day buffer) - NOT STARTED
-Remove remaining abstractions, flatten implementations, and update code comments
+### Phase 3: Simplification & Edge-case Fixes (Day 4-5 + ½ day buffer) - ✅ COMPLETE
+Removed abstractions but only achieved ~500 LOC reduction
 
-### Phase 4: Lock v2 & Hooks (Day 6) - NOT STARTED
+### Phase 3.5: Code Analysis - ✅ COMPLETE
+Identified 6,500-8,000 LOC reduction potential, but many conflict with AI Lab requirements
+
+### Phase 4: AI Lab-Compatible Code Reduction (Day 6-7) - NOT STARTED
+Extract duplication while preserving all functionality (target: 3,000-4,000 LOC reduction)
+
+### Phase 5: Lock v2 & Hooks (Day 8) - NOT STARTED
 Implement extensible lock file and hook system
 
-### Phase 5: Code Quality & Naming (Day 7) - NOT STARTED
+### Phase 6: Code Quality & Naming (Day 9) - NOT STARTED
 Remove unused code and improve naming consistency
 
-### Phase 6: Testing & Documentation (Day 8) - NOT STARTED
+### Phase 7: Testing & Documentation (Day 10) - NOT STARTED
 Update tests, docs, and ensure performance targets
 
 ## Target Architecture (5 packages)
