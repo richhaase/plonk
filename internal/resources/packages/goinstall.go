@@ -298,8 +298,8 @@ func (g *GoInstallManager) Info(ctx context.Context, name string) (*PackageInfo,
 	return info, nil
 }
 
-// GetInstalledVersion retrieves the installed version of a Go binary
-func (g *GoInstallManager) GetInstalledVersion(ctx context.Context, name string) (string, error) {
+// InstalledVersion retrieves the installed version of a Go binary
+func (g *GoInstallManager) InstalledVersion(ctx context.Context, name string) (string, error) {
 	binDir, err := g.getGoBinDir(ctx)
 	if err != nil {
 		return "", err

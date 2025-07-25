@@ -158,7 +158,7 @@ func installSinglePackage(ctx context.Context, configDir string, lockService *lo
 	}
 
 	// Get package version after installation
-	version, err := pkgManager.GetInstalledVersion(installCtx, lockPackageName)
+	version, err := pkgManager.InstalledVersion(installCtx, lockPackageName)
 	if err == nil && version != "" {
 		result.Version = version
 	}

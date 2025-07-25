@@ -76,7 +76,7 @@ func (p *PackageResource) Actual(ctx context.Context) []resources.Item {
 		}
 
 		// Get version if possible
-		version, err := p.manager.GetInstalledVersion(ctx, pkgName)
+		version, err := p.manager.InstalledVersion(ctx, pkgName)
 		if err == nil && version != "" {
 			if item.Metadata == nil {
 				item.Metadata = make(map[string]interface{})

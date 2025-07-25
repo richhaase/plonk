@@ -29,7 +29,7 @@ type PackageManager interface {
 	Install(ctx context.Context, name string) error
 	Uninstall(ctx context.Context, name string) error
 	IsInstalled(ctx context.Context, name string) (bool, error)
-	GetInstalledVersion(ctx context.Context, name string) (string, error)
+	InstalledVersion(ctx context.Context, name string) (string, error)
 	Info(ctx context.Context, name string) (*PackageInfo, error)
 
 	// Optional operations - check capabilities before calling

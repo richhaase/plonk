@@ -16,33 +16,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// TargetToSource converts a target path to source path using plonk's convention
-// Removes the ~/. prefix
-// Examples:
-//
-//	~/.config/nvim/ -> config/nvim/
-//	~/.zshrc -> zshrc
-//	~/.editorconfig -> editorconfig
-func TargetToSource(target string) string {
-	// Remove ~/. prefix if present
-	if len(target) > 3 && target[:3] == "~/." {
-		return target[3:]
-	}
-	// Handle case where there's no prefix (shouldn't happen in normal use)
-	return target
-}
-
 // Config type is now defined in config.go
-
-// LoadConfig is an alias to Load for backward compatibility
-func LoadConfig(configDir string) (*Config, error) {
-	return Load(configDir)
-}
-
-// LoadConfigWithDefaults is an alias to LoadWithDefaults for backward compatibility
-func LoadConfigWithDefaults(configDir string) *Config {
-	return LoadWithDefaults(configDir)
-}
 
 // GetDefaultConfigDirectory returns the default config directory, checking PLONK_DIR environment variable first
 func GetDefaultConfigDirectory() string {

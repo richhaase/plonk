@@ -198,8 +198,8 @@ func (c *CargoManager) parseInfoOutput(output []byte, name string) *PackageInfo 
 	}
 }
 
-// GetInstalledVersion retrieves the installed version of a Cargo package
-func (c *CargoManager) GetInstalledVersion(ctx context.Context, name string) (string, error) {
+// InstalledVersion retrieves the installed version of a Cargo package
+func (c *CargoManager) InstalledVersion(ctx context.Context, name string) (string, error) {
 	// First check if package is installed
 	installed, err := c.IsInstalled(ctx, name)
 	if err != nil {

@@ -279,8 +279,8 @@ func (n *NpmManager) extractDependencies(jsonOutput string) []string {
 	return dependencies
 }
 
-// GetInstalledVersion retrieves the installed version of a global NPM package
-func (n *NpmManager) GetInstalledVersion(ctx context.Context, name string) (string, error) {
+// InstalledVersion retrieves the installed version of a global NPM package
+func (n *NpmManager) InstalledVersion(ctx context.Context, name string) (string, error) {
 	// First check if package is installed
 	installed, err := n.IsInstalled(ctx, name)
 	if err != nil {

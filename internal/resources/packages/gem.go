@@ -259,8 +259,8 @@ func (g *GemManager) getDependencies(ctx context.Context, name string) []string 
 	return dependencies
 }
 
-// GetInstalledVersion retrieves the installed version of a gem
-func (g *GemManager) GetInstalledVersion(ctx context.Context, name string) (string, error) {
+// InstalledVersion retrieves the installed version of a gem
+func (g *GemManager) InstalledVersion(ctx context.Context, name string) (string, error) {
 	// First check if gem is installed
 	installed, err := g.IsInstalled(ctx, name)
 	if err != nil {
