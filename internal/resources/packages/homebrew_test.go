@@ -5,6 +5,8 @@ package packages
 
 import (
 	"testing"
+
+	managerTesting "github.com/richhaase/plonk/internal/resources/packages/testing"
 )
 
 func TestHomebrewManager_parseListOutput(t *testing.T) {
@@ -44,7 +46,7 @@ func TestHomebrewManager_parseListOutput(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := SplitLines(tt.output)
 
-			if !stringSlicesEqual(result, tt.expectedResult) {
+			if !managerTesting.StringSlicesEqual(result, tt.expectedResult) {
 				t.Errorf("Expected result %v but got %v", tt.expectedResult, result)
 			}
 		})
@@ -89,7 +91,7 @@ func TestHomebrewManager_parseSearchOutput(t *testing.T) {
 			manager := NewHomebrewManager()
 			result := manager.parseSearchOutput(tt.output)
 
-			if !stringSlicesEqual(result, tt.expectedResult) {
+			if !managerTesting.StringSlicesEqual(result, tt.expectedResult) {
 				t.Errorf("Expected result %v but got %v", tt.expectedResult, result)
 			}
 		})
@@ -212,30 +214,15 @@ func TestHomebrewManager_extractVersion(t *testing.T) {
 	}
 }
 
-// Helper functions for testing
-func stringSlicesEqual(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
+// Shared integration tests using the common test suite
+func TestHomebrewManager_SharedTestSuite(t *testing.T) {
+	suite := &managerTesting.ManagerTestSuite{
+		Manager:     NewHomebrewManager(),
+		TestPackage: "git",
+		BinaryName:  "brew",
 	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
 
-func equalPackageInfo(a, b *PackageInfo) bool {
-	if a == nil && b == nil {
-		return true
-	}
-	if a == nil || b == nil {
-		return false
-	}
-	return a.Name == b.Name &&
-		a.Version == b.Version &&
-		a.Description == b.Description &&
-		a.Homepage == b.Homepage &&
-		a.Manager == b.Manager &&
-		a.Installed == b.Installed
+	t.Run("IsAvailable", suite.TestIsAvailable)
+	t.Run("ListInstalled", suite.TestListInstalled)
+	t.Run("SupportsSearch", suite.TestSupportsSearch)
 }

@@ -5,6 +5,8 @@ package packages
 
 import (
 	"testing"
+
+	managerTesting "github.com/richhaase/plonk/internal/resources/packages/testing"
 )
 
 func TestCargoManager_parseListOutput(t *testing.T) {
@@ -171,4 +173,17 @@ serde_json = "1.0.91"    # A JSON serialization file format`),
 			}
 		})
 	}
+}
+
+// Shared integration tests using the common test suite
+func TestCargoManager_SharedTestSuite(t *testing.T) {
+	suite := &managerTesting.ManagerTestSuite{
+		Manager:     NewCargoManager(),
+		TestPackage: "ripgrep",
+		BinaryName:  "cargo",
+	}
+
+	t.Run("IsAvailable", suite.TestIsAvailable)
+	t.Run("ListInstalled", suite.TestListInstalled)
+	t.Run("SupportsSearch", suite.TestSupportsSearch)
 }

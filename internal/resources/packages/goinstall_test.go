@@ -5,6 +5,8 @@ package packages
 
 import (
 	"testing"
+
+	managerTesting "github.com/richhaase/plonk/internal/resources/packages/testing"
 )
 
 func TestParseModulePath(t *testing.T) {
@@ -90,4 +92,17 @@ func TestGoInstallManager_SupportsSearch(t *testing.T) {
 	if manager.SupportsSearch() {
 		t.Error("GoInstallManager should not support search")
 	}
+}
+
+// Shared integration tests using the common test suite
+func TestGoInstallManager_SharedTestSuite(t *testing.T) {
+	suite := &managerTesting.ManagerTestSuite{
+		Manager:     NewGoInstallManager(),
+		TestPackage: "golang.org/x/tools/cmd/goimports",
+		BinaryName:  "go",
+	}
+
+	t.Run("IsAvailable", suite.TestIsAvailable)
+	t.Run("ListInstalled", suite.TestListInstalled)
+	t.Run("SupportsSearch", suite.TestSupportsSearch)
 }
