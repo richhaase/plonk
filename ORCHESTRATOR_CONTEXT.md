@@ -27,12 +27,15 @@ Create resource-focused architecture and migrate files
 Introduce Resource interface and adapt existing code
 
 ### Phase 3: Simplification & Edge-case Fixes (Day 4-5 + ½ day buffer) - NOT STARTED
-Remove remaining abstractions and flatten implementations
+Remove remaining abstractions, flatten implementations, and update code comments
 
 ### Phase 4: Lock v2 & Hooks (Day 6) - NOT STARTED
 Implement extensible lock file and hook system
 
-### Phase 5: Testing & Documentation (Day 7) - NOT STARTED
+### Phase 5: Code Quality & Naming (Day 7) - NOT STARTED
+Remove unused code and improve naming consistency
+
+### Phase 6: Testing & Documentation (Day 8) - NOT STARTED
 Update tests, docs, and ensure performance targets
 
 ## Target Architecture (5 packages)

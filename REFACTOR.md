@@ -9,6 +9,7 @@ Transform plonk from 9 packages to 5, introducing a Resource abstraction while a
 - Introduce minimal Resource interface for extensibility
 - Preserve reconciliation semantics (Managed/Missing/Untracked)
 - Maintain all current functionality with idiomatic Go
+- Remove unused code and improve naming consistency
 
 ## Target Architecture
 
@@ -57,6 +58,11 @@ internal/
 - [ ] Simplify state types to single Item struct
 - [ ] Remove error matcher patterns (verify with grep before deletion)
 - [ ] Complete table output with tabwriter
+- [ ] Review and update all code comments for accuracy
+  - [ ] Remove outdated comments referencing deleted packages/patterns
+  - [ ] Update comments to reflect new architecture
+  - [ ] Ensure comments describe "why" not "what"
+  - [ ] Remove TODO comments that are no longer relevant
 
 ### Phase 4: Lock v2 & Hooks (Day 6)
 - [ ] Implement lock file v2 schema with resources section
@@ -66,7 +72,22 @@ internal/
 - [ ] Update plonk.yaml schema for hooks
 - [ ] Log version migration during apply operations
 
-### Phase 5: Testing & Documentation (Day 7)
+### Phase 5: Code Quality & Naming (Day 7)
+- [ ] Find and remove unused code
+  - [ ] Run `staticcheck -unused ./...` to find unused functions/types
+  - [ ] Use `go mod why` to check for unnecessary dependencies
+  - [ ] Remove dead code paths and unreachable functions
+- [ ] Improve naming consistency
+  - [ ] Rename variables/functions that don't follow Go conventions
+  - [ ] Fix inconsistent naming patterns (e.g., GetX vs X)
+  - [ ] Ensure package names match their purpose
+- [ ] Identify and refactor confusing names
+  - [ ] Replace generic names (e.g., "data", "info", "item") with specific ones
+  - [ ] Clarify ambiguous function names
+  - [ ] Standardize terminology across packages
+- [ ] Run `golint` and `go vet` for additional issues
+
+### Phase 6: Testing & Documentation (Day 8)
 - [ ] Update all tests for new structure
 - [ ] Ensure <5s test execution (hard CI gate on unit + fast integration)
 - [ ] Update ARCHITECTURE.md with "How to add a new Resource" section
