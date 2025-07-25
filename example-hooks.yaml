@@ -1,0 +1,51 @@
+# Example plonk configuration with hooks
+# This demonstrates how to use pre and post sync hooks
+
+# Standard package configuration
+packages:
+  homebrew:
+    - jq
+    - curl
+    - git
+
+# Dotfile configuration (if using dotfiles)
+dotfiles:
+  backup: true
+
+# Hook configuration
+hooks:
+  # Pre-sync hooks run before any synchronization starts
+  pre_sync:
+    - command: "echo 'Starting plonk sync...'"
+    - command: "./scripts/backup.sh"
+      timeout: "2m"
+      continue_on_error: true
+    - command: "brew update"
+      timeout: "5m"
+
+  # Post-sync hooks run after all synchronization is complete
+  post_sync:
+    - command: "echo 'Plonk sync completed successfully!'"
+    - command: "./scripts/notify.sh"
+      continue_on_error: true
+    - command: "echo 'Lock file updated to v2 format'"
+
+# Hook Options:
+# - command: The shell command to execute (required)
+# - timeout: Maximum time to wait (e.g., "30s", "5m", "1h")
+# - continue_on_error: If true, hook failure won't stop the sync process
+
+# Common use cases for hooks:
+# Pre-sync:
+#   - Create backups
+#   - Update package managers
+#   - Check system prerequisites
+#   - Send notifications
+#   - Clean up temporary files
+#
+# Post-sync:
+#   - Run health checks
+#   - Send completion notifications
+#   - Update documentation
+#   - Restart services
+#   - Clean up artifacts
