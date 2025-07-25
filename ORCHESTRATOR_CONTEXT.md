@@ -43,13 +43,16 @@ Identified 6,500-8,000 LOC reduction potential, but many conflict with AI Lab re
 Achieved 474 LOC reduction through genuine simplification (removed 1,165 lines of dead code)
 
 ### Phase 5: Lock v2 & Hooks (Day 8) - ✅ COMPLETE*
-Infrastructure implemented but sync command integration deferred to Phase 7
+Infrastructure implemented but sync command integration deferred to Phase 6
 
-### Phase 6: Code Quality & Naming (Day 9) - NOT STARTED
+### Phase 6: Final Structural Cleanup (Day 9) - NOT STARTED
+Wire up orchestrator, extract business logic, remove abstractions
+
+### Phase 7: Code Quality & Naming (Day 10) - NOT STARTED
 Remove unused code and improve naming consistency
 
-### Phase 7: Testing & Documentation (Day 10) - NOT STARTED
-Update tests, docs, and ensure performance targets
+### Phase 8: Testing & Documentation (Day 11) - NOT STARTED
+Update tests, docs, and final verification
 
 ## Target Architecture (5 packages)
 

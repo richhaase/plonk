@@ -96,9 +96,21 @@ internal/
 - [x] Update plonk.yaml schema for hooks
 - [x] Log version migration during apply operations
 
-**Note**: Infrastructure complete but not integrated into sync command (deferred to Phase 7)
+**Note**: Infrastructure complete but not integrated into sync command (deferred to Phase 6)
 
-### Phase 6: Code Quality & Naming (Day 9)
+### Phase 6: Final Structural Cleanup (Day 9)
+- [ ] Integrate new Orchestrator into sync command
+  - [ ] Update sync.go to use new Orchestrator.Sync() method
+  - [ ] Enable hook execution (pre/post sync)
+  - [ ] Enable v2 lock file generation
+  - [ ] Remove legacy sync functions
+- [ ] Extract business logic from commands package
+- [ ] Simplify orchestrator to pure coordination (~300 LOC)
+- [ ] Remove unnecessary abstractions (single-impl interfaces)
+- [ ] Consolidate related code within packages
+- [ ] Full integration testing
+
+### Phase 7: Code Quality & Naming (Day 10)
 - [ ] Find and remove unused code
   - [ ] Run `staticcheck -unused ./...` to find unused functions/types
   - [ ] Use `go mod why` to check for unnecessary dependencies
@@ -113,18 +125,13 @@ internal/
   - [ ] Standardize terminology across packages
 - [ ] Run `golint` and `go vet` for additional issues
 
-### Phase 7: Testing & Documentation (Day 10)
-- [ ] Integrate new Orchestrator into sync command
-  - [ ] Update sync.go to use new Orchestrator.Sync() method
-  - [ ] Enable hook execution (pre/post sync)
-  - [ ] Enable v2 lock file generation
-  - [ ] Add integration tests for hooks and v2 migration
+### Phase 8: Testing & Documentation (Day 11)
 - [ ] Update all tests for new structure
-- [ ] Ensure <5s test execution (hard CI gate on unit + fast integration)
+- [ ] Ensure reasonable test execution time
 - [ ] Update ARCHITECTURE.md with "How to add a new Resource" section
 - [ ] Update README quick-start paths for new structure
 - [ ] Add "future resource checklist"
-- [ ] Final cleanup and optimization
+- [ ] Final verification and optimization
 
 ## Key Design Decisions
 
