@@ -344,7 +344,7 @@ func (n *NpmManager) SupportsSearch() bool {
 	return true
 }
 
-// handleInstallError processes install command errors using ErrorMatcher
+// handleInstallError processes install command errors
 func (n *NpmManager) handleInstallError(err error, output []byte, packageName string) error {
 	outputStr := string(output)
 
@@ -370,7 +370,7 @@ func (n *NpmManager) handleInstallError(err error, output []byte, packageName st
 	return fmt.Errorf("failed to execute install command: %w", err)
 }
 
-// handleUninstallError processes uninstall command errors using ErrorMatcher
+// handleUninstallError processes uninstall command errors
 func (n *NpmManager) handleUninstallError(err error, output []byte, packageName string) error {
 	outputStr := string(output)
 

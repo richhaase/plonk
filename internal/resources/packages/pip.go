@@ -346,11 +346,11 @@ func (p *PipManager) IsAvailable(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-// handleInstallError processes install command errors using ErrorMatcher
+// handleInstallError processes install command errors
 func (p *PipManager) handleInstallError(err error, output []byte, packageName string) error {
 	outputStr := string(output)
 
-	// Check for specific error conditions using ErrorMatcher
+	// Check for known error patterns
 	if exitCode, ok := ExtractExitCode(err); ok {
 		// Check for known error patterns
 		if strings.Contains(outputStr, "could not find") || strings.Contains(outputStr, "no matching distribution") {
@@ -373,11 +373,11 @@ func (p *PipManager) handleInstallError(err error, output []byte, packageName st
 	return err
 }
 
-// handleUninstallError processes uninstall command errors using ErrorMatcher
+// handleUninstallError processes uninstall command errors
 func (p *PipManager) handleUninstallError(err error, output []byte, packageName string) error {
 	outputStr := string(output)
 
-	// Check for specific error conditions using ErrorMatcher
+	// Check for known error patterns
 	if exitCode, ok := ExtractExitCode(err); ok {
 		// Check for known error patterns
 		if strings.Contains(outputStr, "warning: skipping") || strings.Contains(outputStr, "not installed") || strings.Contains(outputStr, "cannot uninstall") {
