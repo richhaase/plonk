@@ -34,12 +34,12 @@ internal/
 
 ## Phase Plan
 
-### Phase 1: Directory Structure (Day 1)
-- [ ] Create new directory structure under `internal/`
-- [ ] Move files to new locations with git mv
-- [ ] Update all imports
-- [ ] Ensure tests pass with new structure
-- [ ] Verify no circular dependencies with `go list -f '{{ join .Imports "\n" }}' ./...`
+### Phase 1: Directory Structure (Day 1) ✅ COMPLETE
+- [x] Create new directory structure under `internal/`
+- [x] Move files to new locations with git mv
+- [x] Update all imports
+- [x] Ensure tests pass with new structure
+- [x] Verify no circular dependencies with `go list -f '{{ join .Imports "\n" }}' ./...`
 
 ### Phase 2: Resource Abstraction (Day 2-3 + ½ day buffer)
 - [ ] Define minimal Resource interface
@@ -158,30 +158,32 @@ hooks:
 
 ### Metrics
 - **Starting LOC**: 13,536
-- **Current LOC**: 13,536
+- **Current LOC**: 13,978 (after Phase 1)
 - **Target LOC**: ~8,000 (±10%)
 - **Starting Packages**: 9
-- **Current Packages**: 9
+- **Current Packages**: 8 (state package removed)
 - **Target Packages**: 5
 
 ### Package Status
 - [ ] `commands` - Needs business logic extraction
 - [ ] `config` - Already simplified, needs minor cleanup
-- [ ] `dotfiles` - Move to resources/dotfiles
+- [x] `dotfiles` - ✅ Moved to resources/dotfiles
 - [ ] `lock` - Needs v2 schema implementation
-- [ ] `managers` - Move to resources/packages, needs flattening
+- [x] `managers` - ✅ Moved to resources/packages, still needs flattening
 - [ ] `orchestrator` - Needs reduction to ~300 LOC
-- [ ] `output` - Create from current ui package
-- [ ] `state` - Delete, move types to resources
-- [ ] `ui` - Merge into output
+- [x] `output` - ✅ Renamed from ui package
+- [x] `state` - ✅ Deleted, types moved to resources
+- [x] `ui` - ✅ Renamed to output
 
-### Deletions Planned
-- `state/` package (move types to resources)
-- `ui/` package (merge into output)
-- StandardManager abstraction
-- ErrorMatcher patterns
-- Complex state types
-- Unnecessary interfaces
+### Deletions Completed
+- [x] `state/` package - ✅ Types moved to resources
+- [x] `ui/` package - ✅ Renamed to output
+
+### Deletions Remaining
+- [ ] StandardManager abstraction
+- [ ] ErrorMatcher patterns
+- [ ] Complex state types
+- [ ] Unnecessary interfaces
 
 ## Success Criteria
 - [ ] All tests passing
