@@ -3,7 +3,7 @@
 ## Current State (2025-07-25)
 - **Branch**: refactor/ai-lab-prep
 - **Current Package Count**: 8 packages (was 9, state package removed)
-- **Current LOC**: 13,826 (after Phases 1-4, per scc)
+- **Current LOC**: ~13,800 (after Phases 1-6, per scc)
 - **Revised Target**: 5 packages, ~11,000-12,000 LOC (15-20% reduction)
 - **Goal**: Simplify while preserving ALL functionality for AI Lab features
 
@@ -25,6 +25,13 @@ The codebase has already undergone significant refactoring:
 - **Keep JSON/YAML output** - Required for automation
 - **Focus on internal simplification** - Not feature removal
 
+## Key Decisions from Phase 6 Implementation
+- **Preserved reconciliation abstraction** - Generic pattern in resources package
+- **Domain-specific reconcile in domain packages** - Avoids import cycles
+- **ReconcileAll in orchestrator** - Coordination logic belongs there
+- **Eliminated compatibility layer** - Direct function calls are clearer
+- **Consolidated small files** - Reduced fragmentation, improved cohesion
+
 ## Current Refactor Phase Plan
 
 ### Phase 1: Directory Structure (Day 1) - ✅ COMPLETE
@@ -45,8 +52,8 @@ Achieved 474 LOC reduction through genuine simplification (removed 1,165 lines o
 ### Phase 5: Lock v2 & Hooks (Day 8) - ✅ COMPLETE*
 Infrastructure implemented but sync command integration deferred to Phase 6
 
-### Phase 6: Final Structural Cleanup (Day 9) - NOT STARTED
-Wire up orchestrator, extract business logic, remove abstractions
+### Phase 6: Final Structural Cleanup (Day 9) - ✅ COMPLETE
+Orchestrator integrated, business logic extracted, abstractions removed, import cycles resolved
 
 ### Phase 7: Code Quality & Naming (Day 10) - NOT STARTED
 Remove unused code and improve naming consistency
