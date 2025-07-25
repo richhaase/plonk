@@ -59,7 +59,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 	results, err := orchestrator.ReconcileAll(ctx, homeDir, configDir)
 	if err != nil {
-		return fmt.Errorf("failed to reconcile state: %w", err)
+		return err
 	}
 
 	// Convert results to summary for compatibility with existing output logic

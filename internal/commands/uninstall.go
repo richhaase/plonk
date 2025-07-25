@@ -5,7 +5,6 @@ package commands
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -53,7 +52,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return fmt.Errorf("uninstall: invalid output format %s: %w", outputFormat, err)
+		return err
 	}
 
 	// Get flags
@@ -77,7 +76,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 
 	results, err := packages.UninstallPackages(ctx, configDir, args, opts)
 	if err != nil {
-		return fmt.Errorf("uninstall: failed to process packages: %w", err)
+		return err
 	}
 
 	// Show progress reporting

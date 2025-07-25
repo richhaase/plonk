@@ -55,7 +55,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return fmt.Errorf("add: invalid output format %s: %w", outputFormat, err)
+		return err
 	}
 
 	// Get flags
@@ -86,7 +86,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 	results, err := manager.AddFiles(ctx, cfg, args, opts)
 	if err != nil {
-		return fmt.Errorf("add: failed to process dotfiles: %w", err)
+		return err
 	}
 
 	// Create output data based on number of results

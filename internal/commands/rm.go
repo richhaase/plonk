@@ -4,8 +4,6 @@
 package commands
 
 import (
-	"fmt"
-
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/output"
@@ -46,7 +44,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return fmt.Errorf("rm: invalid output format %s: %w", outputFormat, err)
+		return err
 	}
 
 	// Get flags
@@ -73,7 +71,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 	// Process dotfiles using domain package
 	results, err := manager.RemoveFiles(cfg, args, opts)
 	if err != nil {
-		return fmt.Errorf("rm: failed to process dotfiles: %w", err)
+		return err
 	}
 
 	// Show progress reporting

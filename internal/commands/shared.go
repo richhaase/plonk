@@ -59,7 +59,7 @@ func runPkgList(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 	domainResult, err := orchestrator.ReconcilePackages(ctx, configDir)
 	if err != nil {
-		return fmt.Errorf("failed to reconcile package state: %w", err)
+		return err
 	}
 
 	// If a specific manager is requested, filter results
@@ -192,7 +192,7 @@ func runDotList(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 	domainResult, err := orchestrator.ReconcileDotfiles(ctx, homeDir, configDir)
 	if err != nil {
-		return fmt.Errorf("failed to reconcile dotfiles: %w", err)
+		return err
 	}
 
 	// Parse filter flags

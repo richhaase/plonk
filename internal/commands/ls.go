@@ -64,7 +64,7 @@ func runLs(cmd *cobra.Command, args []string) error {
 	// Parse flags
 	flags, err := ParseSimpleFlags(cmd)
 	if err != nil {
-		return fmt.Errorf("invalid flag combination: %w", err)
+		return err
 	}
 
 	// Parse output format
@@ -105,7 +105,7 @@ func runSmartOverview(cmd *cobra.Command, flags *SimpleFlags, format OutputForma
 	ctx := context.Background()
 	results, err := orchestrator.ReconcileAll(ctx, homeDir, configDir)
 	if err != nil {
-		return fmt.Errorf("failed to reconcile state: %w", err)
+		return err
 	}
 
 	// Convert results to summary
@@ -120,7 +120,7 @@ func runSmartOverview(cmd *cobra.Command, flags *SimpleFlags, format OutputForma
 		result.AddToSummary(summary)
 	}
 	if err != nil {
-		return fmt.Errorf("failed to reconcile state: %w", err)
+		return err
 	}
 
 	// Prepare smart overview data

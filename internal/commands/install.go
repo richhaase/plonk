@@ -5,7 +5,6 @@ package commands
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -60,7 +59,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return fmt.Errorf("install: invalid output format %s: %w", outputFormat, err)
+		return err
 	}
 
 	// Get flags
@@ -85,7 +84,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 	results, err := packages.InstallPackages(ctx, configDir, args, opts)
 	if err != nil {
-		return fmt.Errorf("install: failed to process packages: %w", err)
+		return err
 	}
 
 	// Show progress reporting

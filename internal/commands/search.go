@@ -55,7 +55,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	// Perform search
 	searchResult, err := performPackageSearch(ctx, packageName)
 	if err != nil {
-		return fmt.Errorf("failed to search for package: %w", err)
+		return err
 	}
 
 	return RenderOutput(searchResult, format)
@@ -66,7 +66,7 @@ func performPackageSearch(ctx context.Context, packageName string) (SearchOutput
 	// Get available managers
 	availableManagers, err := getAvailableManagers(ctx)
 	if err != nil {
-		return SearchOutput{}, fmt.Errorf("failed to get available managers: %w", err)
+		return SearchOutput{}, err
 	}
 
 	if len(availableManagers) == 0 {
@@ -95,7 +95,7 @@ func performPackageSearch(ctx context.Context, packageName string) (SearchOutput
 	// Package is not installed, determine search strategy
 	defaultManager, err := getDefaultManager()
 	if err != nil {
-		return SearchOutput{}, fmt.Errorf("failed to get default manager: %w", err)
+		return SearchOutput{}, err
 	}
 
 	if defaultManager != "" {
@@ -124,7 +124,7 @@ func getAvailableManagers(ctx context.Context) (map[string]packages.PackageManag
 		}
 
 		if available, err := manager.IsAvailable(ctx); err != nil {
-			return nil, fmt.Errorf("failed to check %s manager availability: %w", name, err)
+			return nil, err
 		} else if available {
 			availableManagers[name] = manager
 		}
