@@ -27,14 +27,6 @@ func (a *AtomicFileWriter) WriteFile(filename string, data []byte, perm os.FileM
 	}, perm)
 }
 
-// WriteFromReader atomically writes from a reader to a file
-func (a *AtomicFileWriter) WriteFromReader(filename string, reader io.Reader, perm os.FileMode) error {
-	return a.writeFileInternal(filename, func(tmpFile *os.File) error {
-		_, err := io.Copy(tmpFile, reader)
-		return err
-	}, perm)
-}
-
 // CopyFile atomically copies a file from source to destination
 func (a *AtomicFileWriter) CopyFile(ctx context.Context, src, dst string, perm os.FileMode) error {
 	// Open source file

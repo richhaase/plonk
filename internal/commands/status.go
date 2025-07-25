@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/orchestrator"
@@ -31,6 +32,7 @@ For detailed lists, use 'plonk dot list' or 'plonk pkg list'.
 
 Examples:
   plonk status           # Show compact status
+  plonk status --health  # Include comprehensive health checks (doctor mode)
   plonk status -o json   # Show as JSON
   plonk status -o yaml   # Show as YAML`,
 	RunE: runStatus,
@@ -38,6 +40,8 @@ Examples:
 
 func init() {
 	rootCmd.AddCommand(statusCmd)
+	statusCmd.Flags().Bool("health", false, "Include comprehensive health checks (doctor mode)")
+	statusCmd.Flags().Bool("check", false, "Alias for --health")
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {
@@ -46,6 +50,17 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
 		return err
+	}
+
+	// Check if health/check flag is set
+	checkHealth, _ := cmd.Flags().GetBool("health")
+	if !checkHealth {
+		checkHealth, _ = cmd.Flags().GetBool("check")
+	}
+
+	// If health check requested, run doctor functionality
+	if checkHealth {
+		return runHealthChecks(format)
 	}
 
 	// Get directories
@@ -93,6 +108,35 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	}
 
 	return RenderOutput(outputData, format)
+}
+
+// runHealthChecks runs the doctor functionality when --health flag is set
+func runHealthChecks(format OutputFormat) error {
+	// Run comprehensive health checks using orchestrator
+	healthReport := orchestrator.RunHealthChecks()
+
+	// Convert to command output type
+	doctorOutput := DoctorOutput{
+		Overall: HealthStatus{
+			Status:  healthReport.Overall.Status,
+			Message: healthReport.Overall.Message,
+		},
+		Checks: make([]HealthCheck, len(healthReport.Checks)),
+	}
+
+	for i, check := range healthReport.Checks {
+		doctorOutput.Checks[i] = HealthCheck{
+			Name:        check.Name,
+			Category:    check.Category,
+			Status:      check.Status,
+			Message:     check.Message,
+			Details:     check.Details,
+			Issues:      check.Issues,
+			Suggestions: check.Suggestions,
+		}
+	}
+
+	return RenderOutput(doctorOutput, format)
 }
 
 // convertResultsToSummary converts reconciliation results to resources.Summary for output compatibility
@@ -248,4 +292,108 @@ func extractManagedItems(results []resources.Result) []ManagedItem {
 		}
 	}
 	return items
+}
+
+// DoctorOutput represents the output of the doctor command (health checks)
+type DoctorOutput struct {
+	Overall HealthStatus  `json:"overall" yaml:"overall"`
+	Checks  []HealthCheck `json:"checks" yaml:"checks"`
+}
+
+type HealthStatus struct {
+	Status  string `json:"status" yaml:"status"`
+	Message string `json:"message" yaml:"message"`
+}
+
+type HealthCheck struct {
+	Name        string   `json:"name" yaml:"name"`
+	Category    string   `json:"category" yaml:"category"`
+	Status      string   `json:"status" yaml:"status"`
+	Message     string   `json:"message" yaml:"message"`
+	Details     []string `json:"details,omitempty" yaml:"details,omitempty"`
+	Issues      []string `json:"issues,omitempty" yaml:"issues,omitempty"`
+	Suggestions []string `json:"suggestions,omitempty" yaml:"suggestions,omitempty"`
+}
+
+// TableOutput generates human-friendly table output for doctor command
+func (d DoctorOutput) TableOutput() string {
+	var output strings.Builder
+
+	// Overall status
+	output.WriteString("# Plonk Health Report\n\n")
+
+	switch d.Overall.Status {
+	case "healthy":
+		output.WriteString("🟢 Overall Status: HEALTHY\n")
+	case "warning":
+		output.WriteString("🟡 Overall Status: WARNING\n")
+	case "unhealthy":
+		output.WriteString("🔴 Overall Status: UNHEALTHY\n")
+	}
+	output.WriteString(fmt.Sprintf("   %s\n\n", d.Overall.Message))
+
+	// Group checks by category
+	categories := make(map[string][]HealthCheck)
+	for _, check := range d.Checks {
+		categories[check.Category] = append(categories[check.Category], check)
+	}
+
+	// Display each category
+	categoryOrder := []string{"system", "environment", "permissions", "configuration", "package-managers", "installation"}
+	for _, category := range categoryOrder {
+		if checks, exists := categories[category]; exists {
+			output.WriteString(fmt.Sprintf("## %s\n", strings.Title(strings.ReplaceAll(category, "-", " "))))
+
+			for _, check := range checks {
+				// Status icon
+				var icon string
+				switch check.Status {
+				case "pass":
+					icon = "✅"
+				case "warn":
+					icon = "⚠️"
+				case "fail":
+					icon = "❌"
+				case "info":
+					icon = "ℹ️"
+				default:
+					icon = "❓"
+				}
+
+				output.WriteString(fmt.Sprintf("### %s %s\n", icon, check.Name))
+				output.WriteString(fmt.Sprintf("**Status**: %s\n", strings.ToUpper(check.Status)))
+				output.WriteString(fmt.Sprintf("**Message**: %s\n", check.Message))
+
+				if len(check.Details) > 0 {
+					output.WriteString("\n**Details:**\n")
+					for _, detail := range check.Details {
+						output.WriteString(fmt.Sprintf("- %s\n", detail))
+					}
+				}
+
+				if len(check.Issues) > 0 {
+					output.WriteString("\n**Issues:**\n")
+					for _, issue := range check.Issues {
+						output.WriteString(fmt.Sprintf("- ❌ %s\n", issue))
+					}
+				}
+
+				if len(check.Suggestions) > 0 {
+					output.WriteString("\n**Suggestions:**\n")
+					for _, suggestion := range check.Suggestions {
+						output.WriteString(fmt.Sprintf("- 💡 %s\n", suggestion))
+					}
+				}
+
+				output.WriteString("\n")
+			}
+		}
+	}
+
+	return output.String()
+}
+
+// StructuredData returns the structured data for serialization
+func (d DoctorOutput) StructuredData() any {
+	return d
 }

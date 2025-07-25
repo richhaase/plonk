@@ -4,9 +4,10 @@
 package commands
 
 import (
+	"fmt"
+
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/orchestrator"
-	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/resources/dotfiles"
 	"github.com/spf13/cobra"
@@ -74,14 +75,11 @@ func runRm(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Show progress reporting
-	reporter := output.NewProgressReporterForOperation("remove", "dotfile", true)
+	// Show progress for each result
 	for _, result := range results {
-		reporter.ShowItemProgress(result)
+		icon := GetStatusIcon(result.Status)
+		fmt.Printf("%s %s %s\n", icon, result.Status, result.Name)
 	}
-
-	// Show batch summary
-	reporter.ShowBatchSummary(results)
 
 	// Create output data
 	summary := calculateRemovalSummary(results)

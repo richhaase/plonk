@@ -5,10 +5,10 @@ package commands
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/resources/packages"
 	"github.com/spf13/cobra"
@@ -79,14 +79,11 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Show progress reporting
-	reporter := output.NewProgressReporterForOperation("uninstall", "package", true)
+	// Show progress for each result
 	for _, result := range results {
-		reporter.ShowItemProgress(result)
+		icon := GetStatusIcon(result.Status)
+		fmt.Printf("%s %s %s\n", icon, result.Status, result.Name)
 	}
-
-	// Show batch summary
-	reporter.ShowBatchSummary(results)
 
 	// Create output data
 	summary := calculateUninstallSummary(results)

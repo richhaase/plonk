@@ -3,24 +3,6 @@
 
 package packages
 
-import "fmt"
-
-// ExitError is a test helper that simulates an exec.ExitError
-type ExitError struct {
-	Code   int
-	Stderr []byte
-}
-
-// Error implements the error interface
-func (e *ExitError) Error() string {
-	return fmt.Sprintf("exit status %d", e.Code)
-}
-
-// ExitCode returns the exit code
-func (e *ExitError) ExitCode() int {
-	return e.Code
-}
-
 // stringSlicesEqual compares two string slices for equality
 func stringSlicesEqual(a, b []string) bool {
 	if len(a) != len(b) {

@@ -41,18 +41,6 @@ func GetStatusIcon(status string) string {
 	}
 }
 
-// GetActionIcon returns the appropriate icon for an action message
-func GetActionIcon(action string) string {
-	actionLower := strings.ToLower(action)
-	if strings.Contains(actionLower, "error") || strings.Contains(actionLower, "failed") {
-		return IconError
-	} else if strings.Contains(actionLower, "already") || strings.Contains(actionLower, "not found") {
-		return IconInfo
-	} else {
-		return IconSuccess
-	}
-}
-
 // TableBuilder helps construct consistent table outputs
 type TableBuilder struct {
 	output strings.Builder
@@ -70,12 +58,6 @@ func (t *TableBuilder) AddTitle(title string) *TableBuilder {
 	return t
 }
 
-// AddSeparator adds a separator line
-func (t *TableBuilder) AddSeparator(char string, length int) *TableBuilder {
-	t.output.WriteString(strings.Repeat(char, length) + "\n")
-	return t
-}
-
 // AddLine adds a single line
 func (t *TableBuilder) AddLine(format string, args ...interface{}) *TableBuilder {
 	t.output.WriteString(fmt.Sprintf(format, args...) + "\n")
@@ -85,27 +67,6 @@ func (t *TableBuilder) AddLine(format string, args ...interface{}) *TableBuilder
 // AddNewline adds an empty line
 func (t *TableBuilder) AddNewline() *TableBuilder {
 	t.output.WriteString("\n")
-	return t
-}
-
-// AddActionList adds a list of actions with appropriate icons
-func (t *TableBuilder) AddActionList(actions []string) *TableBuilder {
-	for _, action := range actions {
-		icon := GetActionIcon(action)
-		t.output.WriteString(fmt.Sprintf("%s %s\n", icon, action))
-	}
-	return t
-}
-
-// AddSummaryLine adds a summary line with optional counts
-func (t *TableBuilder) AddSummaryLine(prefix string, counts map[string]int) *TableBuilder {
-	parts := []string{prefix}
-	for label, count := range counts {
-		if count > 0 {
-			parts = append(parts, fmt.Sprintf("%d %s", count, label))
-		}
-	}
-	t.output.WriteString(strings.Join(parts, " | ") + "\n")
 	return t
 }
 
@@ -137,57 +98,6 @@ type StateSummary struct {
 	Managed   int `json:"managed" yaml:"managed"`
 	Missing   int `json:"missing" yaml:"missing"`
 	Untracked int `json:"untracked,omitempty" yaml:"untracked,omitempty"`
-}
-
-// CalculateOperationSummary calculates a generic summary from status counts
-func CalculateOperationSummary(statusCounts map[string]int) OperationSummary {
-	summary := OperationSummary{}
-
-	// Calculate total
-	for _, count := range statusCounts {
-		summary.Total += count
-	}
-
-	// Map common statuses to summary fields
-	successStatuses := []string{"added", "installed", "removed", "updated", "deployed", "would-add", "would-remove"}
-	skipStatuses := []string{"skipped", "already-configured", "already-installed", "already-managed"}
-	failStatuses := []string{"failed", "error"}
-
-	for status, count := range statusCounts {
-		for _, s := range successStatuses {
-			if status == s {
-				summary.Succeeded += count
-				break
-			}
-		}
-		for _, s := range skipStatuses {
-			if status == s {
-				summary.Skipped += count
-				break
-			}
-		}
-		for _, s := range failStatuses {
-			if status == s {
-				summary.Failed += count
-				break
-			}
-		}
-	}
-
-	return summary
-}
-
-// FormatTableHeader creates a consistent table header
-func FormatTableHeader(columns ...string) string {
-	header := strings.Join(columns, " ")
-	separator := ""
-	for _, col := range columns {
-		if separator != "" {
-			separator += " "
-		}
-		separator += strings.Repeat("-", len(col))
-	}
-	return header + "\n" + separator + "\n"
 }
 
 // TruncateString truncates a string to a specified length with ellipsis

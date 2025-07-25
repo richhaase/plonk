@@ -5,7 +5,6 @@ package dotfiles
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -27,25 +26,6 @@ func NewManager(homeDir, configDir string) *Manager {
 		homeDir:   homeDir,
 		configDir: configDir,
 	}
-}
-
-// NewManagerFromDefaults creates a manager using default directories
-func NewManagerFromDefaults() (*Manager, error) {
-	homeDir := os.Getenv("HOME")
-	if homeDir == "" {
-		return nil, errors.New("HOME environment variable not set")
-	}
-
-	configDir := filepath.Join(homeDir, ".config", "plonk")
-	if envDir := os.Getenv("PLONK_DIR"); envDir != "" {
-		if strings.HasPrefix(envDir, "~/") {
-			configDir = filepath.Join(homeDir, envDir[2:])
-		} else {
-			configDir = envDir
-		}
-	}
-
-	return NewManager(homeDir, configDir), nil
 }
 
 // HomeDir returns the home directory path
@@ -867,7 +847,14 @@ func (m *Manager) GetActualDotfiles(ctx context.Context) ([]resources.Item, erro
 	// Process scan results
 	for _, result := range scanResults {
 		// Check if directory should be expanded
-		if result.Info.IsDir() && expander.ShouldExpandDirectory(result.Name) {
+		shouldExpand := false
+		for _, dir := range cfg.ExpandDirectories {
+			if result.Name == dir {
+				shouldExpand = true
+				break
+			}
+		}
+		if result.Info.IsDir() && shouldExpand {
 			// For expanded directories, treat as single item
 			expander.CheckDuplicate(result.Name)
 			items = append(items, resources.Item{
@@ -902,10 +889,4 @@ func (m *Manager) GetActualDotfiles(ctx context.Context) ([]resources.Item, erro
 func GetConfiguredDotfiles(homeDir, configDir string) ([]resources.Item, error) {
 	manager := NewManager(homeDir, configDir)
 	return manager.GetConfiguredDotfiles()
-}
-
-// GetActualDotfiles is a convenience function that creates a Manager and calls GetActualDotfiles
-func GetActualDotfiles(ctx context.Context, homeDir, configDir string) ([]resources.Item, error) {
-	manager := NewManager(homeDir, configDir)
-	return manager.GetActualDotfiles(ctx)
 }

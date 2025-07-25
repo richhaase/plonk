@@ -30,16 +30,6 @@ func NewExpander(homeDir string, expandDirs []string, scanner *Scanner) *Expande
 	}
 }
 
-// ShouldExpandDirectory determines if a directory should be expanded
-func (e *Expander) ShouldExpandDirectory(dirname string) bool {
-	for _, dir := range e.expandDirs {
-		if dirname == dir {
-			return true
-		}
-	}
-	return false
-}
-
 // ExpandDirectory expands a directory to individual file results
 func (e *Expander) ExpandDirectory(ctx context.Context, dirPath string, relName string) ([]ScanResult, error) {
 	// Use scanner to walk the directory
