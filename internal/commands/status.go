@@ -69,7 +69,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	configDir := config.GetConfigDir()
 
 	// Load configuration (may fail if config is invalid, but we handle this gracefully)
-	_, configLoadErr := config.LoadConfig(configDir)
+	_, configLoadErr := config.Load(configDir)
 
 	// Reconcile all domains
 	ctx := context.Background()
@@ -118,23 +118,8 @@ func runHealthChecks(format OutputFormat) error {
 
 	// Convert to command output type
 	doctorOutput := DoctorOutput{
-		Overall: HealthStatus{
-			Status:  healthReport.Overall.Status,
-			Message: healthReport.Overall.Message,
-		},
-		Checks: make([]HealthCheck, len(healthReport.Checks)),
-	}
-
-	for i, check := range healthReport.Checks {
-		doctorOutput.Checks[i] = HealthCheck{
-			Name:        check.Name,
-			Category:    check.Category,
-			Status:      check.Status,
-			Message:     check.Message,
-			Details:     check.Details,
-			Issues:      check.Issues,
-			Suggestions: check.Suggestions,
-		}
+		Overall: healthReport.Overall,
+		Checks:  healthReport.Checks,
 	}
 
 	return RenderOutput(doctorOutput, format)
@@ -249,23 +234,8 @@ func (s StatusOutput) StructuredData() any {
 
 // DoctorOutput represents the output of the doctor command (health checks)
 type DoctorOutput struct {
-	Overall HealthStatus  `json:"overall" yaml:"overall"`
-	Checks  []HealthCheck `json:"checks" yaml:"checks"`
-}
-
-type HealthStatus struct {
-	Status  string `json:"status" yaml:"status"`
-	Message string `json:"message" yaml:"message"`
-}
-
-type HealthCheck struct {
-	Name        string   `json:"name" yaml:"name"`
-	Category    string   `json:"category" yaml:"category"`
-	Status      string   `json:"status" yaml:"status"`
-	Message     string   `json:"message" yaml:"message"`
-	Details     []string `json:"details,omitempty" yaml:"details,omitempty"`
-	Issues      []string `json:"issues,omitempty" yaml:"issues,omitempty"`
-	Suggestions []string `json:"suggestions,omitempty" yaml:"suggestions,omitempty"`
+	Overall diagnostics.HealthStatus  `json:"overall" yaml:"overall"`
+	Checks  []diagnostics.HealthCheck `json:"checks" yaml:"checks"`
 }
 
 // TableOutput generates human-friendly table output for doctor command
@@ -286,7 +256,7 @@ func (d DoctorOutput) TableOutput() string {
 	output.WriteString(fmt.Sprintf("   %s\n\n", d.Overall.Message))
 
 	// Group checks by category
-	categories := make(map[string][]HealthCheck)
+	categories := make(map[string][]diagnostics.HealthCheck)
 	for _, check := range d.Checks {
 		categories[check.Category] = append(categories[check.Category], check)
 	}

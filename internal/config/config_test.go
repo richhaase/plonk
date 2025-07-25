@@ -285,10 +285,9 @@ func TestConfig_Resolve(t *testing.T) {
 		DefaultManager: "pip",
 	}
 
-	// Resolve should return self
-	resolved := cfg.Resolve()
-	if resolved != cfg {
-		t.Error("Resolve should return self")
+	// Config should work directly without resolution
+	if cfg.DefaultManager != "pip" {
+		t.Error("Config should work directly")
 	}
 }
 

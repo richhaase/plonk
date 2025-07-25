@@ -8,6 +8,19 @@ import (
 	"fmt"
 )
 
+// SupportedManagers contains all package packages supported by plonk
+var SupportedManagers = []string{
+	"cargo",
+	"gem",
+	"go",
+	"homebrew",
+	"npm",
+	"pip",
+}
+
+// DefaultManager is the fallback manager when none is configured
+const DefaultManager = "homebrew"
+
 // ManagerFactory defines a function that creates a package manager instance
 type ManagerFactory func() PackageManager
 

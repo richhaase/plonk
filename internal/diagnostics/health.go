@@ -233,7 +233,7 @@ func checkConfigurationValidity() HealthCheck {
 	configDir := config.GetConfigDir()
 
 	// Try to load the configuration
-	cfg, err := config.LoadConfig(configDir)
+	cfg, err := config.Load(configDir)
 	if err != nil {
 		// If file doesn't exist, that's okay - we use defaults
 		if os.IsNotExist(err) {

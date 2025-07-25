@@ -637,7 +637,7 @@ func (m *Manager) RemoveSingleDotfile(cfg *config.Config, dotfilePath string, dr
 		result.Error = fmt.Errorf("failed to generate paths for %s: %w", dotfilePath, err)
 		return result
 	}
-	source := config.TargetToSource(destination)
+	source := TargetToSource(destination)
 	sourcePath := filepath.Join(m.configDir, source)
 
 	// Check if file is managed (has corresponding file in config directory)
@@ -760,7 +760,7 @@ func (m *Manager) ProcessDotfileForApply(ctx context.Context, source, destinatio
 // GetConfiguredDotfiles returns dotfiles defined in configuration
 func (m *Manager) GetConfiguredDotfiles() ([]resources.Item, error) {
 	// Load config to get ignore patterns
-	cfg := config.LoadConfigWithDefaults(m.configDir)
+	cfg := config.LoadWithDefaults(m.configDir)
 
 	targets, err := m.ExpandConfigDirectory(cfg.IgnorePatterns)
 	if err != nil {
@@ -825,7 +825,7 @@ func (m *Manager) GetConfiguredDotfiles() ([]resources.Item, error) {
 // GetActualDotfiles returns dotfiles currently present in the home directory
 func (m *Manager) GetActualDotfiles(ctx context.Context) ([]resources.Item, error) {
 	// Load config to get ignore patterns and expand directories
-	cfg := config.LoadConfigWithDefaults(m.configDir)
+	cfg := config.LoadWithDefaults(m.configDir)
 
 	// Create filter with ignore patterns
 	filter := NewFilter(cfg.IgnorePatterns, m.configDir, true)

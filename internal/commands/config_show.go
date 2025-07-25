@@ -49,14 +49,12 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 	configPath := getConfigPath(configDir)
 
 	// Load configuration (this handles missing files gracefully due to zero-config)
-	cfg := config.LoadConfigWithDefaults(configDir)
+	cfg := config.LoadWithDefaults(configDir)
 
-	// Build output data with resolved config (merges defaults with user config)
-	resolvedConfig := cfg.Resolve()
-
+	// Build output data
 	outputData := ConfigShowOutput{
 		ConfigPath: configPath,
-		Config:     resolvedConfig,
+		Config:     cfg,
 	}
 
 	return RenderOutput(outputData, format)
@@ -64,8 +62,8 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 
 // ConfigShowOutput represents the output structure for config show command
 type ConfigShowOutput struct {
-	ConfigPath string                 `json:"config_path" yaml:"config_path"`
-	Config     *config.ResolvedConfig `json:"config" yaml:"config"`
+	ConfigPath string         `json:"config_path" yaml:"config_path"`
+	Config     *config.Config `json:"config" yaml:"config"`
 }
 
 // TableOutput generates human-friendly table output for config show

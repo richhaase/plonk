@@ -55,7 +55,7 @@ func (s *Scanner) ScanDotfiles(ctx context.Context) ([]ScanResult, error) {
 
 	for _, entry := range entries {
 		// Skip non-dotfiles
-		if !isDotfile(entry.Name()) {
+		if len(entry.Name()) == 0 || entry.Name()[0] != '.' {
 			continue
 		}
 
@@ -136,9 +136,4 @@ func (s *Scanner) walkDirectory(ctx context.Context, root, dir string, currentDe
 	}
 
 	return nil
-}
-
-// isDotfile checks if a filename represents a dotfile
-func isDotfile(name string) bool {
-	return len(name) > 0 && name[0] == '.'
 }

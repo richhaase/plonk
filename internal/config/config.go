@@ -106,12 +106,6 @@ func LoadWithDefaults(configDir string) *Config {
 	return cfg
 }
 
-// Resolve returns self for API compatibility
-// In the new system, Config IS the resolved config
-func (c *Config) Resolve() *Config {
-	return c
-}
-
 // applyDefaults applies default values to a config
 func applyDefaults(cfg *Config) {
 	if cfg.DefaultManager == "" {

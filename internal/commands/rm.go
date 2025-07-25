@@ -57,8 +57,8 @@ func runRm(cmd *cobra.Command, args []string) error {
 	homeDir := config.GetHomeDir()
 	configDir := config.GetConfigDir()
 
-	// Load config using LoadConfigWithDefaults for consistent zero-config behavior
-	cfg := config.LoadConfigWithDefaults(configDir)
+	// Load config using LoadWithDefaults for consistent zero-config behavior
+	cfg := config.LoadWithDefaults(configDir)
 
 	// Create dotfile manager
 	manager := dotfiles.NewManager(homeDir, configDir)

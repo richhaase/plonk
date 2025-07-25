@@ -80,8 +80,8 @@ func gatherEnvironmentInfo() EnvOutput {
 
 	// Check if config is valid
 	if configInfo.Exists {
-		// LoadConfigWithDefaults handles missing configs gracefully
-		cfg := config.LoadConfigWithDefaults(configDir)
+		// LoadWithDefaults handles missing configs gracefully
+		cfg := config.LoadWithDefaults(configDir)
 		// Config is always valid when using LoadConfigWithDefaults
 		configInfo.Valid = true
 		_ = cfg // Avoid unused variable warning

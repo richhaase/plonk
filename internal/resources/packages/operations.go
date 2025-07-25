@@ -34,7 +34,7 @@ func InstallPackages(ctx context.Context, configDir string, packages []string, o
 	// Get manager - use default if not specified
 	manager := opts.Manager
 	if manager == "" {
-		cfg := config.LoadConfigWithDefaults(configDir)
+		cfg := config.LoadWithDefaults(configDir)
 		if cfg.DefaultManager != "" {
 			manager = cfg.DefaultManager
 		} else {
@@ -66,7 +66,7 @@ func UninstallPackages(ctx context.Context, configDir string, packages []string,
 	// Get manager - use default if not specified
 	manager := opts.Manager
 	if manager == "" {
-		cfg := config.LoadConfigWithDefaults(configDir)
+		cfg := config.LoadWithDefaults(configDir)
 		if cfg.DefaultManager != "" {
 			manager = cfg.DefaultManager
 		} else {

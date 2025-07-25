@@ -126,19 +126,18 @@ func TestConfigResolutionInCommands(t *testing.T) {
 		os.Remove(filepath.Join(tmpDir, "plonk.yaml"))
 
 		// Load config (should get zero config)
-		cfg, err := config.LoadConfig(tmpDir)
+		cfg, err := config.Load(tmpDir)
 		if err != nil {
 			t.Fatalf("Expected LoadConfig to work with missing file, got: %v", err)
 		}
 
-		// Verify resolution works
-		resolved := cfg.Resolve()
-		if resolved.DefaultManager != "homebrew" {
-			t.Errorf("Expected default manager 'homebrew', got '%s'", resolved.DefaultManager)
+		// Verify config works
+		if cfg.DefaultManager != "homebrew" {
+			t.Errorf("Expected default manager 'homebrew', got '%s'", cfg.DefaultManager)
 		}
 
-		if resolved.OperationTimeout != 300 {
-			t.Errorf("Expected operation timeout 300, got %d", resolved.OperationTimeout)
+		if cfg.OperationTimeout != 300 {
+			t.Errorf("Expected operation timeout 300, got %d", cfg.OperationTimeout)
 		}
 	})
 
@@ -158,29 +157,27 @@ operation_timeout: 900
 		}
 
 		// Load and resolve config
-		cfg, err := config.LoadConfig(tmpDir)
+		cfg, err := config.Load(tmpDir)
 		if err != nil {
 			t.Fatalf("Expected LoadConfig to work, got: %v", err)
 		}
 
-		resolved := cfg.Resolve()
-
 		// Check overridden values
-		if resolved.DefaultManager != "cargo" {
-			t.Errorf("Expected overridden default manager 'cargo', got '%s'", resolved.DefaultManager)
+		if cfg.DefaultManager != "cargo" {
+			t.Errorf("Expected overridden default manager 'cargo', got '%s'", cfg.DefaultManager)
 		}
 
-		if resolved.OperationTimeout != 900 {
-			t.Errorf("Expected overridden operation timeout 900, got %d", resolved.OperationTimeout)
+		if cfg.OperationTimeout != 900 {
+			t.Errorf("Expected overridden operation timeout 900, got %d", cfg.OperationTimeout)
 		}
 
 		// Check default values for unspecified settings
-		if resolved.PackageTimeout != 180 {
-			t.Errorf("Expected default package timeout 180, got %d", resolved.PackageTimeout)
+		if cfg.PackageTimeout != 180 {
+			t.Errorf("Expected default package timeout 180, got %d", cfg.PackageTimeout)
 		}
 
-		if resolved.DotfileTimeout != 60 {
-			t.Errorf("Expected default dotfile timeout 60, got %d", resolved.DotfileTimeout)
+		if cfg.DotfileTimeout != 60 {
+			t.Errorf("Expected default dotfile timeout 60, got %d", cfg.DotfileTimeout)
 		}
 	})
 }

@@ -115,7 +115,7 @@ func NewSimpleValidator() *SimpleValidator {
 // ValidateConfig validates a parsed config struct
 func (v *SimpleValidator) ValidateConfig(config *Config) *ValidationResult {
 	// Convert to NewConfig for validation
-	resolved := config.Resolve()
+	resolved := config
 	err := v.validator.Struct(resolved)
 
 	result := &ValidationResult{

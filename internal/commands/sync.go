@@ -67,7 +67,7 @@ func runSync(cmd *cobra.Command, args []string) error {
 	configDir := config.GetConfigDir()
 
 	// Load configuration
-	cfg := config.LoadConfigWithDefaults(configDir)
+	cfg := config.LoadWithDefaults(configDir)
 
 	ctx := context.Background()
 

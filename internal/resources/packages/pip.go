@@ -20,11 +20,6 @@ type PipManager struct {
 
 // NewPipManager creates a new pip manager.
 func NewPipManager() *PipManager {
-	return newPipManager()
-}
-
-// newPipManager creates a pip manager.
-func newPipManager() *PipManager {
 	// Try to find pip or pip3
 	binary := FindAvailableBinary(context.Background(), []string{"pip", "pip3"}, []string{"--version"})
 	if binary == "" {
