@@ -16,7 +16,8 @@ import (
 
 // NpmManager manages NPM packages.
 type NpmManager struct {
-	*StandardManager
+	binary       string
+	errorMatcher *ErrorMatcher
 }
 
 // NewNpmManager creates a new NPM manager.
@@ -26,18 +27,23 @@ func NewNpmManager() *NpmManager {
 
 // newNpmManager creates an NPM manager.
 func newNpmManager() *NpmManager {
-	config := GetNpmConfig()
-	standardManager := NewStandardManager(config)
+	// Create error matcher with common patterns
+	errorMatcher := NewCommonErrorMatcher()
+	// Add NPM-specific error patterns
+	errorMatcher.AddPattern(ErrorTypeNotFound, "404", "E404", "Not found")
+	errorMatcher.AddPattern(ErrorTypePermission, "EACCES")
+	errorMatcher.AddPattern(ErrorTypeNotInstalled, "ENOENT", "cannot remove")
 
 	return &NpmManager{
-		StandardManager: standardManager,
+		binary:       "npm",
+		errorMatcher: errorMatcher,
 	}
 }
 
 // ListInstalled lists all globally installed NPM packages.
 func (n *NpmManager) ListInstalled(ctx context.Context) ([]string, error) {
 	// Call the binary directly to handle npm's unique exit code behavior
-	cmd := exec.CommandContext(ctx, n.Binary, "list", "-g", "--depth=0", "--json")
+	cmd := exec.CommandContext(ctx, n.binary, "list", "-g", "--depth=0", "--json")
 	output, err := cmd.Output()
 	if err != nil {
 		// npm list can return non-zero exit codes even when working correctly
@@ -88,7 +94,7 @@ func (n *NpmManager) parseListOutput(output []byte) []string {
 
 // Install installs a global NPM package.
 func (n *NpmManager) Install(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, n.Binary, "install", "-g", name)
+	output, err := ExecuteCommandCombined(ctx, n.binary, "install", "-g", name)
 	if err != nil {
 		return n.handleInstallError(err, output, name)
 	}
@@ -97,7 +103,7 @@ func (n *NpmManager) Install(ctx context.Context, name string) error {
 
 // Uninstall removes a global NPM package.
 func (n *NpmManager) Uninstall(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, n.Binary, "uninstall", "-g", name)
+	output, err := ExecuteCommandCombined(ctx, n.binary, "uninstall", "-g", name)
 	if err != nil {
 		return n.handleUninstallError(err, output, name)
 	}
@@ -106,7 +112,7 @@ func (n *NpmManager) Uninstall(ctx context.Context, name string) error {
 
 // IsInstalled checks if a specific package is installed globally.
 func (n *NpmManager) IsInstalled(ctx context.Context, name string) (bool, error) {
-	checkCmd := exec.CommandContext(ctx, n.Binary, "list", "-g", name)
+	checkCmd := exec.CommandContext(ctx, n.binary, "list", "-g", name)
 	_, err := checkCmd.Output()
 	if err != nil {
 		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() == 1 {
@@ -121,7 +127,7 @@ func (n *NpmManager) IsInstalled(ctx context.Context, name string) (bool, error)
 
 // Search searches for packages in NPM registry.
 func (n *NpmManager) Search(ctx context.Context, query string) ([]string, error) {
-	cmd := exec.CommandContext(ctx, n.Binary, "search", query, "--json")
+	cmd := exec.CommandContext(ctx, n.binary, "search", query, "--json")
 	output, err := cmd.Output()
 	if err != nil {
 		// Check if this is a real error vs expected conditions
@@ -192,7 +198,7 @@ func (n *NpmManager) Info(ctx context.Context, name string) (*PackageInfo, error
 	}
 
 	// Always use npm view for info (works for both installed and available packages)
-	cmd := exec.CommandContext(ctx, n.Binary, "view", name, "--json")
+	cmd := exec.CommandContext(ctx, n.binary, "view", name, "--json")
 	output, err := cmd.Output()
 	if err != nil {
 		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() == 1 {
@@ -299,7 +305,7 @@ func (n *NpmManager) GetInstalledVersion(ctx context.Context, name string) (stri
 	}
 
 	// Get version using npm list with specific package
-	cmd := exec.CommandContext(ctx, n.Binary, "list", "-g", name, "--depth=0", "--json")
+	cmd := exec.CommandContext(ctx, n.binary, "list", "-g", name, "--depth=0", "--json")
 	output, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to get package version information for %s: %w", name, err)
@@ -325,16 +331,16 @@ func (n *NpmManager) GetInstalledVersion(ctx context.Context, name string) (stri
 
 // cleanJSONValue removes quotes and commas from a JSON value
 func cleanJSONValue(value string) string {
-	return CleanJSONValue(value)
+	return parsers.CleanJSONValue(value)
 }
 
 // IsAvailable checks if npm is installed and accessible
 func (n *NpmManager) IsAvailable(ctx context.Context) (bool, error) {
-	if !CheckCommandAvailable(n.Binary) {
+	if !CheckCommandAvailable(n.binary) {
 		return false, nil
 	}
 
-	err := VerifyBinary(ctx, n.Binary, []string{"--version"})
+	err := VerifyBinary(ctx, n.binary, []string{"--version"})
 	if err != nil {
 		// Check for context cancellation
 		if IsContextError(err) {
@@ -358,7 +364,7 @@ func (n *NpmManager) handleInstallError(err error, output []byte, packageName st
 
 	// Check for specific error conditions using ErrorMatcher
 	if exitCode, ok := ExtractExitCode(err); ok {
-		errorType := n.ErrorMatcher.MatchError(outputStr)
+		errorType := n.errorMatcher.MatchError(outputStr)
 
 		switch errorType {
 		case ErrorTypeNotFound:
@@ -403,7 +409,7 @@ func (n *NpmManager) handleUninstallError(err error, output []byte, packageName 
 
 	// Check for specific error conditions using ErrorMatcher
 	if exitCode, ok := ExtractExitCode(err); ok {
-		errorType := n.ErrorMatcher.MatchError(outputStr)
+		errorType := n.errorMatcher.MatchError(outputStr)
 
 		switch errorType {
 		case ErrorTypeNotInstalled:

@@ -5,23 +5,48 @@ package packages
 
 import (
 	"context"
-	"fmt"
 	"os/exec"
 	"strings"
 )
-
-// ExecuteCommand runs a command with the given arguments and returns the output.
-// This is a simple wrapper around exec.CommandContext for common usage patterns.
-func ExecuteCommand(ctx context.Context, name string, args ...string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, name, args...)
-	return cmd.Output()
-}
 
 // ExecuteCommandCombined runs a command and returns combined stdout and stderr.
 // Useful for commands where error output is important for diagnostics.
 func ExecuteCommandCombined(ctx context.Context, name string, args ...string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
 	return cmd.CombinedOutput()
+}
+
+// ExtractExitCode attempts to extract the exit code from an exec error.
+// Returns the exit code and true if successful, 0 and false otherwise.
+func ExtractExitCode(err error) (int, bool) {
+	if execErr, ok := err.(interface{ ExitCode() int }); ok {
+		return execErr.ExitCode(), true
+	}
+	return 0, false
+}
+
+// SplitLines splits output into lines, filtering out empty lines.
+func SplitLines(output []byte) []string {
+	result := strings.TrimSpace(string(output))
+	if result == "" {
+		return []string{}
+	}
+
+	lines := strings.Split(result, "\n")
+	var filtered []string
+	for _, line := range lines {
+		if trimmed := strings.TrimSpace(line); trimmed != "" {
+			filtered = append(filtered, trimmed)
+		}
+	}
+	return filtered
+}
+
+// ExecuteCommand runs a command with the given arguments and returns the output.
+// This is a simple wrapper around exec.CommandContext for common usage patterns.
+func ExecuteCommand(ctx context.Context, name string, args ...string) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, name, args...)
+	return cmd.Output()
 }
 
 // CheckCommandAvailable checks if a command exists in PATH and is executable.
@@ -45,17 +70,24 @@ func VerifyBinary(ctx context.Context, binary string, versionArgs []string) erro
 			return err
 		}
 		// Return the error wrapped with context
-		return fmt.Errorf("%s binary found but not functional: %w", binary, err)
+		return err
 	}
 	return nil
+}
+
+// IsContextError checks if an error is a context cancellation or deadline error.
+func IsContextError(err error) bool {
+	return err == context.Canceled || err == context.DeadlineExceeded
 }
 
 // FindAvailableBinary checks a list of binary names and returns the first one that is
 // available and functional. Returns empty string if none are found.
 func FindAvailableBinary(ctx context.Context, binaries []string, versionArgs []string) string {
 	for _, binary := range binaries {
-		if CheckCommandAvailable(binary) {
-			if err := VerifyBinary(ctx, binary, versionArgs); err == nil {
+		if _, err := exec.LookPath(binary); err == nil {
+			// Verify the binary works
+			cmd := exec.CommandContext(ctx, binary, versionArgs...)
+			if _, err := cmd.Output(); err == nil {
 				return binary
 			}
 			// Check for context cancellation
@@ -65,43 +97,4 @@ func FindAvailableBinary(ctx context.Context, binaries []string, versionArgs []s
 		}
 	}
 	return ""
-}
-
-// CleanJSONValue removes quotes and trailing commas from a JSON value string.
-// Useful for simple JSON value extraction.
-func CleanJSONValue(value string) string {
-	value = strings.Trim(value, `"`)
-	value = strings.TrimSuffix(value, ",")
-	return value
-}
-
-// ExtractExitCode attempts to extract the exit code from an exec error.
-// Returns the exit code and true if successful, 0 and false otherwise.
-func ExtractExitCode(err error) (int, bool) {
-	if execErr, ok := err.(interface{ ExitCode() int }); ok {
-		return execErr.ExitCode(), true
-	}
-	return 0, false
-}
-
-// IsContextError checks if an error is a context cancellation or deadline error.
-func IsContextError(err error) bool {
-	return err == context.Canceled || err == context.DeadlineExceeded
-}
-
-// SplitLines splits output into lines, filtering out empty lines.
-func SplitLines(output []byte) []string {
-	result := strings.TrimSpace(string(output))
-	if result == "" {
-		return []string{}
-	}
-
-	lines := strings.Split(result, "\n")
-	var filtered []string
-	for _, line := range lines {
-		if trimmed := strings.TrimSpace(line); trimmed != "" {
-			filtered = append(filtered, trimmed)
-		}
-	}
-	return filtered
 }
