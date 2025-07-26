@@ -7,9 +7,9 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
-	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/resources/packages"
 	"github.com/spf13/cobra"
 )
@@ -17,19 +17,16 @@ import (
 var searchCmd = &cobra.Command{
 	Use:   "search <package>",
 	Short: "Search for packages across package managers",
-	Long: `Search for packages across available package managers.
+	Long: `Search for packages across available package managers in parallel.
 
-The search behavior depends on installation status and configuration:
-
-1. If the package is installed: Shows which manager installed it
-2. If not installed and available in default manager: Shows results from default manager
-3. If not installed and not in default manager: Shows all managers that have the package
-4. If no default manager is configured: Shows all managers that have the package
+Searches all available package managers simultaneously with a 3-second timeout.
+Use prefix syntax to search only a specific manager.
 
 Examples:
-  plonk search git              # Search for git package
-  plonk search typescript       # Search for typescript package
-  plonk search nonexistent      # Search for package that doesn't exist`,
+  plonk search git              # Search all managers for git package
+  plonk search typescript       # Search all managers for typescript
+  plonk search brew:ripgrep     # Search only Homebrew for ripgrep
+  plonk search npm:@types/node  # Search only npm for @types/node`,
 	Args: cobra.ExactArgs(1),
 	RunE: runSearch,
 }
@@ -46,14 +43,30 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid output format: %w", err)
 	}
 
-	packageName := args[0]
+	packageSpec := args[0]
+
+	// Parse prefix syntax
+	manager, packageName := ParsePackageSpec(packageSpec)
+
+	// Validate manager if prefix specified
+	if manager != "" && !IsValidManager(manager) {
+		return fmt.Errorf("unknown package manager %q. Valid managers: %s", manager, strings.Join(GetValidManagers(), ", "))
+	}
 
 	// Create context with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	// Perform search
-	searchResult, err := performPackageSearch(ctx, packageName)
+	var searchResult SearchOutput
+	if manager != "" {
+		// Search specific manager
+		searchResult, err = searchSpecificManager(ctx, manager, packageName)
+	} else {
+		// Search all managers in parallel
+		searchResult, err = searchAllManagersParallel(ctx, packageName)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -61,10 +74,59 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	return RenderOutput(searchResult, format)
 }
 
-// performPackageSearch performs the search logic according to the specified behavior
-func performPackageSearch(ctx context.Context, packageName string) (SearchOutput, error) {
+// searchSpecificManager searches only the specified manager
+func searchSpecificManager(ctx context.Context, managerName, packageName string) (SearchOutput, error) {
+	// Get the specific manager
+	registry := packages.NewManagerRegistry()
+	manager, err := registry.GetManager(managerName)
+	if err != nil {
+		return SearchOutput{}, fmt.Errorf("failed to get manager %s: %w", managerName, err)
+	}
+
+	// Check if manager is available
+	available, err := manager.IsAvailable(ctx)
+	if err != nil {
+		return SearchOutput{}, fmt.Errorf("failed to check %s availability: %w", managerName, err)
+	}
+	if !available {
+		return SearchOutput{
+			Package: packageName,
+			Status:  "manager-unavailable",
+			Message: fmt.Sprintf("Package manager '%s' is not available on this system", managerName),
+		}, nil
+	}
+
+	// Search for the package
+	results, err := manager.Search(ctx, packageName)
+	if err != nil {
+		return SearchOutput{}, fmt.Errorf("failed to search for %s in %s: %w", packageName, managerName, err)
+	}
+
+	if len(results) == 0 {
+		return SearchOutput{
+			Package: packageName,
+			Status:  "not-found",
+			Message: fmt.Sprintf("Package '%s' not found in %s", packageName, managerName),
+		}, nil
+	}
+
+	return SearchOutput{
+		Package: packageName,
+		Status:  "found",
+		Message: fmt.Sprintf("Found %d result(s) for '%s' in %s", len(results), packageName, managerName),
+		Results: []SearchResultEntry{
+			{
+				Manager:  managerName,
+				Packages: results,
+			},
+		},
+	}, nil
+}
+
+// searchAllManagersParallel searches all managers in parallel with timeout
+func searchAllManagersParallel(ctx context.Context, packageName string) (SearchOutput, error) {
 	// Get available managers
-	availableManagers, err := getAvailableManagers(ctx)
+	availableManagers, err := getAvailableManagersMap(ctx)
 	if err != nil {
 		return SearchOutput{}, err
 	}
@@ -77,38 +139,101 @@ func performPackageSearch(ctx context.Context, packageName string) (SearchOutput
 		}, nil
 	}
 
-	// Check if package is installed
-	installedManager, err := findInstalledPackage(ctx, packageName, availableManagers)
-	if err != nil {
-		return SearchOutput{}, fmt.Errorf("failed to check if package %s is installed: %w", packageName, err)
+	// Channel for results and wait group for synchronization
+	type managerResult struct {
+		Manager  string
+		Packages []string
+		Error    error
 	}
 
-	if installedManager != "" {
+	resultsChan := make(chan managerResult, len(availableManagers))
+	var wg sync.WaitGroup
+
+	// Search each manager in parallel
+	for name, manager := range availableManagers {
+		wg.Add(1)
+		go func(managerName string, mgr packages.PackageManager) {
+			defer wg.Done()
+
+			// Create a child context for this manager
+			managerCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			defer cancel()
+
+			results, err := mgr.Search(managerCtx, packageName)
+			resultsChan <- managerResult{
+				Manager:  managerName,
+				Packages: results,
+				Error:    err,
+			}
+		}(name, manager)
+	}
+
+	// Close channel when all goroutines complete
+	go func() {
+		wg.Wait()
+		close(resultsChan)
+	}()
+
+	// Collect results
+	var searchResults []SearchResultEntry
+	var errors []string
+
+	for result := range resultsChan {
+		if result.Error != nil {
+			// Handle timeout or other errors gracefully
+			if ctx.Err() == context.DeadlineExceeded {
+				errors = append(errors, fmt.Sprintf("%s: timeout", result.Manager))
+			} else {
+				errors = append(errors, fmt.Sprintf("%s: %v", result.Manager, result.Error))
+			}
+			continue
+		}
+
+		if len(result.Packages) > 0 {
+			searchResults = append(searchResults, SearchResultEntry{
+				Manager:  result.Manager,
+				Packages: result.Packages,
+			})
+		}
+	}
+
+	// Build response
+	if len(searchResults) == 0 {
+		message := fmt.Sprintf("Package '%s' not found in any available package manager", packageName)
+		if len(errors) > 0 {
+			message += fmt.Sprintf(" (errors: %s)", strings.Join(errors, ", "))
+		}
 		return SearchOutput{
-			Package:          packageName,
-			Status:           "installed",
-			Message:          fmt.Sprintf("Package '%s' is installed via %s", packageName, installedManager),
-			InstalledManager: installedManager,
+			Package: packageName,
+			Status:  "not-found",
+			Message: message,
 		}, nil
 	}
 
-	// Package is not installed, determine search strategy
-	defaultManager, err := getDefaultManager()
-	if err != nil {
-		return SearchOutput{}, err
+	totalResults := 0
+	managerNames := make([]string, len(searchResults))
+	for i, result := range searchResults {
+		totalResults += len(result.Packages)
+		managerNames[i] = result.Manager
 	}
 
-	if defaultManager != "" {
-		// We have a default manager, search it first
-		return searchWithDefaultManager(ctx, packageName, defaultManager, availableManagers)
-	} else {
-		// No default manager, search all managers
-		return searchAllManagers(ctx, packageName, availableManagers)
+	message := fmt.Sprintf("Found %d result(s) for '%s' across %d manager(s): %s",
+		totalResults, packageName, len(searchResults), strings.Join(managerNames, ", "))
+
+	if len(errors) > 0 {
+		message += fmt.Sprintf(" (some managers had errors: %s)", strings.Join(errors, ", "))
 	}
+
+	return SearchOutput{
+		Package: packageName,
+		Status:  "found-multiple",
+		Message: message,
+		Results: searchResults,
+	}, nil
 }
 
-// getAvailableManagers returns a map of available package managers
-func getAvailableManagers(ctx context.Context) (map[string]packages.PackageManager, error) {
+// getAvailableManagersMap returns a map of available package managers
+func getAvailableManagersMap(ctx context.Context) (map[string]packages.PackageManager, error) {
 	registry := packages.NewManagerRegistry()
 	availableManagers := make(map[string]packages.PackageManager)
 
@@ -133,170 +258,18 @@ func getAvailableManagers(ctx context.Context) (map[string]packages.PackageManag
 	return availableManagers, nil
 }
 
-// findInstalledPackage checks if the package is installed by any manager
-func findInstalledPackage(ctx context.Context, packageName string, managers map[string]packages.PackageManager) (string, error) {
-	for name, manager := range managers {
-		installed, err := manager.IsInstalled(ctx, packageName)
-		if err != nil {
-			return "", fmt.Errorf("failed to check if package %s is installed in %s: %w", packageName, name, err)
-		}
-		if installed {
-			return name, nil
-		}
-	}
-	return "", nil
-}
-
-// getDefaultManager gets the default manager from configuration
-func getDefaultManager() (string, error) {
-	configDir := config.GetDefaultConfigDirectory()
-	cfg := config.LoadWithDefaults(configDir)
-
-	return cfg.DefaultManager, nil
-}
-
-// searchWithDefaultManager searches the default manager first, then others if needed
-func searchWithDefaultManager(ctx context.Context, packageName string, defaultManager string, availableManagers map[string]packages.PackageManager) (SearchOutput, error) {
-	// Search default manager first
-	defaultMgr, exists := availableManagers[defaultManager]
-	if !exists {
-		return SearchOutput{}, fmt.Errorf("default manager '%s' is not available: %s", defaultManager, getManagerInstallSuggestion(defaultManager))
-	}
-
-	results, err := defaultMgr.Search(ctx, packageName)
-	if err != nil {
-		return SearchOutput{}, fmt.Errorf("failed to search for %s in %s: %w", packageName, defaultManager, err)
-	}
-
-	// Check if package is found in default manager
-	found := false
-	for _, result := range results {
-		if result == packageName {
-			found = true
-			break
-		}
-	}
-
-	if found {
-		return SearchOutput{
-			Package:        packageName,
-			Status:         "found-default",
-			Message:        fmt.Sprintf("Package '%s' available in %s (default)", packageName, defaultManager),
-			DefaultManager: defaultManager,
-			Results:        results,
-		}, nil
-	}
-
-	// Not found in default manager, search other managers
-	otherManagers := make(map[string]packages.PackageManager)
-	for name, manager := range availableManagers {
-		if name != defaultManager {
-			otherManagers[name] = manager
-		}
-	}
-
-	return searchOtherManagers(ctx, packageName, defaultManager, otherManagers)
-}
-
-// searchAllManagers searches all available managers
-func searchAllManagers(ctx context.Context, packageName string, availableManagers map[string]packages.PackageManager) (SearchOutput, error) {
-	var foundManagers []string
-	allResults := make(map[string][]string)
-
-	for name, manager := range availableManagers {
-		results, err := manager.Search(ctx, packageName)
-		if err != nil {
-			return SearchOutput{}, fmt.Errorf("failed to search for %s in %s: %w", packageName, name, err)
-		}
-
-		// Check if exact package name is found
-		found := false
-		for _, result := range results {
-			if result == packageName {
-				found = true
-				break
-			}
-		}
-
-		if found {
-			foundManagers = append(foundManagers, name)
-			allResults[name] = results
-		}
-	}
-
-	if len(foundManagers) == 0 {
-		return SearchOutput{
-			Package: packageName,
-			Status:  "not-found",
-			Message: fmt.Sprintf("Package '%s' not found in any package manager", packageName),
-		}, nil
-	}
-
-	return SearchOutput{
-		Package:        packageName,
-		Status:         "found-multiple",
-		Message:        fmt.Sprintf("Package '%s' available from: %s", packageName, strings.Join(foundManagers, ", ")),
-		FoundManagers:  foundManagers,
-		ManagerResults: allResults,
-	}, nil
-}
-
-// searchOtherManagers searches managers other than the default
-func searchOtherManagers(ctx context.Context, packageName string, defaultManager string, otherManagers map[string]packages.PackageManager) (SearchOutput, error) {
-	var foundManagers []string
-	allResults := make(map[string][]string)
-
-	for name, manager := range otherManagers {
-		results, err := manager.Search(ctx, packageName)
-		if err != nil {
-			return SearchOutput{}, fmt.Errorf("failed to search for %s in %s: %w", packageName, name, err)
-		}
-
-		// Check if exact package name is found
-		found := false
-		for _, result := range results {
-			if result == packageName {
-				found = true
-				break
-			}
-		}
-
-		if found {
-			foundManagers = append(foundManagers, name)
-			allResults[name] = results
-		}
-	}
-
-	if len(foundManagers) == 0 {
-		return SearchOutput{
-			Package:        packageName,
-			Status:         "not-found",
-			Message:        fmt.Sprintf("Package '%s' not found in %s (default) or any other package manager", packageName, defaultManager),
-			DefaultManager: defaultManager,
-		}, nil
-	}
-
-	return SearchOutput{
-		Package:        packageName,
-		Status:         "found-other",
-		Message:        fmt.Sprintf("Package '%s' not found in %s (default), but available from: %s", packageName, defaultManager, strings.Join(foundManagers, ", ")),
-		DefaultManager: defaultManager,
-		FoundManagers:  foundManagers,
-		ManagerResults: allResults,
-	}, nil
-}
-
 // Output structures
 
+type SearchResultEntry struct {
+	Manager  string   `json:"manager" yaml:"manager"`
+	Packages []string `json:"packages" yaml:"packages"`
+}
+
 type SearchOutput struct {
-	Package          string              `json:"package" yaml:"package"`
-	Status           string              `json:"status" yaml:"status"`
-	Message          string              `json:"message" yaml:"message"`
-	InstalledManager string              `json:"installed_manager,omitempty" yaml:"installed_manager,omitempty"`
-	DefaultManager   string              `json:"default_manager,omitempty" yaml:"default_manager,omitempty"`
-	FoundManagers    []string            `json:"found_managers,omitempty" yaml:"found_managers,omitempty"`
-	Results          []string            `json:"results,omitempty" yaml:"results,omitempty"`
-	ManagerResults   map[string][]string `json:"manager_results,omitempty" yaml:"manager_results,omitempty"`
+	Package string              `json:"package" yaml:"package"`
+	Status  string              `json:"status" yaml:"status"`
+	Message string              `json:"message" yaml:"message"`
+	Results []SearchResultEntry `json:"results,omitempty" yaml:"results,omitempty"`
 }
 
 // TableOutput generates human-friendly table output for search command
@@ -304,32 +277,28 @@ func (s SearchOutput) TableOutput() string {
 	var output strings.Builder
 
 	switch s.Status {
-	case "installed":
-		output.WriteString(fmt.Sprintf("✅ %s\n", s.Message))
-
-	case "found-default":
+	case "found":
 		output.WriteString(fmt.Sprintf("📦 %s\n", s.Message))
-		if len(s.Results) > 1 {
-			output.WriteString("\nRelated packages:\n")
-			for _, result := range s.Results {
-				if result != s.Package {
-					output.WriteString(fmt.Sprintf("  • %s\n", result))
-				}
+		if len(s.Results) > 0 && len(s.Results[0].Packages) > 0 {
+			output.WriteString("\nMatching packages:\n")
+			for _, pkg := range s.Results[0].Packages {
+				output.WriteString(fmt.Sprintf("  • %s\n", pkg))
 			}
+			output.WriteString(fmt.Sprintf("\nInstall with: plonk install %s:%s\n", s.Results[0].Manager, s.Package))
 		}
 
 	case "found-multiple":
 		output.WriteString(fmt.Sprintf("📦 %s\n", s.Message))
-		output.WriteString("\nInstall with:\n")
-		for _, manager := range s.FoundManagers {
-			output.WriteString(fmt.Sprintf("  • %s: plonk pkg add %s\n", manager, s.Package))
+		output.WriteString("\nResults by manager:\n")
+		for _, result := range s.Results {
+			output.WriteString(fmt.Sprintf("\n%s:\n", result.Manager))
+			for _, pkg := range result.Packages {
+				output.WriteString(fmt.Sprintf("  • %s\n", pkg))
+			}
 		}
-
-	case "found-other":
-		output.WriteString(fmt.Sprintf("📦 %s\n", s.Message))
-		output.WriteString("\nInstall with:\n")
-		for _, manager := range s.FoundManagers {
-			output.WriteString(fmt.Sprintf("  • %s: plonk pkg add %s\n", manager, s.Package))
+		output.WriteString(fmt.Sprintf("\nInstall examples:\n"))
+		for _, result := range s.Results {
+			output.WriteString(fmt.Sprintf("  • plonk install %s:%s\n", result.Manager, s.Package))
 		}
 
 	case "not-found":
@@ -338,6 +307,9 @@ func (s SearchOutput) TableOutput() string {
 	case "no-managers":
 		output.WriteString(fmt.Sprintf("⚠️  %s\n", s.Message))
 		output.WriteString("\nPlease install a package manager (Homebrew or NPM) to search for packages.\n")
+
+	case "manager-unavailable":
+		output.WriteString(fmt.Sprintf("⚠️  %s\n", s.Message))
 
 	default:
 		output.WriteString(fmt.Sprintf("❓ %s\n", s.Message))

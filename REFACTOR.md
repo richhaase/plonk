@@ -214,13 +214,13 @@ internal/
 - [x] Update help text to show new syntax
 - [x] Update command examples in documentation
 
-### Phase 13: UX Implementation - Search/Info Enhancement (Day 14)
-- [ ] Implement parallel search across all managers
-- [ ] Add timeout handling (2-3 seconds)
-- [ ] Update search output to show manager sources clearly
-- [ ] Implement info command priority logic (managed → installed → all)
-- [ ] Support prefix syntax in info command
-- [ ] Update help text and examples
+### Phase 13: UX Implementation - Search/Info Enhancement (Day 14) ✅ COMPLETE
+- [x] Implement parallel search across all managers
+- [x] Add timeout handling (2-3 seconds)
+- [x] Update search output to show manager sources clearly
+- [x] Implement info command priority logic (managed → installed → all)
+- [x] Support prefix syntax in info command
+- [x] Update help text and examples
 
 ### Phase 13.5: Separate Status and Doctor Commands (Day 14)
 - [ ] Refocus status command on managed resources only

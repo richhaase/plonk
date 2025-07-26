@@ -20,14 +20,17 @@ var infoCmd = &cobra.Command{
 	Long: `Show detailed information about a package including version, description, homepage,
 dependencies, and installation status.
 
-The info command shows different information based on whether the package is installed:
+The info command prioritizes information sources in this order:
+1. If managed by plonk: Shows plonk-managed information
+2. If installed but not managed: Shows installed package information
+3. If available but not installed: Shows available package information
 
-1. If the package is installed: Shows installed version and additional details
-2. If not installed: Shows available version and details from package repositories
+Use prefix syntax to get info from a specific manager.
 
 Examples:
   plonk info git              # Show information about git package
-  plonk info typescript       # Show information about typescript package
+  plonk info brew:ripgrep     # Show ripgrep info specifically from Homebrew
+  plonk info npm:typescript   # Show TypeScript info from npm
   plonk info --output json go # Show information in JSON format`,
 	Args: cobra.ExactArgs(1),
 	RunE: runInfo,
@@ -45,13 +48,29 @@ func runInfo(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid output format: %w", err)
 	}
 
-	packageName := args[0]
+	packageSpec := args[0]
+
+	// Parse prefix syntax
+	manager, packageName := ParsePackageSpec(packageSpec)
+
+	// Validate manager if prefix specified
+	if manager != "" && !IsValidManager(manager) {
+		return fmt.Errorf("unknown package manager %q. Valid managers: %s", manager, strings.Join(GetValidManagers(), ", "))
+	}
 
 	// Create context
 	ctx := context.Background()
 
 	// Perform info lookup
-	infoResult, err := performPackageInfo(ctx, packageName)
+	var infoResult InfoOutput
+	if manager != "" {
+		// Get info from specific manager
+		infoResult, err = getInfoFromSpecificManager(ctx, manager, packageName)
+	} else {
+		// Use priority logic: managed → installed → available
+		infoResult, err = getInfoWithPriorityLogic(ctx, packageName)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -59,17 +78,112 @@ func runInfo(cmd *cobra.Command, args []string) error {
 	return RenderOutput(infoResult, format)
 }
 
-// performPackageInfo performs the info lookup according to the specified behavior
-func performPackageInfo(ctx context.Context, packageName string) (InfoOutput, error) {
+// getInfoFromSpecificManager gets info from a specific package manager only
+func getInfoFromSpecificManager(ctx context.Context, managerName, packageName string) (InfoOutput, error) {
+	// Get the specific manager
+	registry := packages.NewManagerRegistry()
+	manager, err := registry.GetManager(managerName)
+	if err != nil {
+		return InfoOutput{}, fmt.Errorf("failed to get manager %s: %w", managerName, err)
+	}
+
+	// Check if manager is available
+	available, err := manager.IsAvailable(ctx)
+	if err != nil {
+		return InfoOutput{}, fmt.Errorf("failed to check %s availability: %w", managerName, err)
+	}
+	if !available {
+		return InfoOutput{
+			Package: packageName,
+			Status:  "manager-unavailable",
+			Message: fmt.Sprintf("Package manager '%s' is not available on this system", managerName),
+		}, nil
+	}
+
+	// Check if package is installed
+	installed, err := manager.IsInstalled(ctx, packageName)
+	if err != nil {
+		return InfoOutput{}, fmt.Errorf("failed to check if package %s is installed in %s: %w", packageName, managerName, err)
+	}
+
+	// Get package info
+	info, err := manager.Info(ctx, packageName)
+	if err != nil {
+		return InfoOutput{
+			Package: packageName,
+			Status:  "not-found",
+			Message: fmt.Sprintf("Package '%s' not found in %s", packageName, managerName),
+		}, nil
+	}
+
+	// Determine status based on installation
+	status := "available"
+	message := fmt.Sprintf("Package '%s' available in %s", packageName, managerName)
+	if installed {
+		status = "installed"
+		message = fmt.Sprintf("Package '%s' is installed via %s", packageName, managerName)
+	}
+
+	return InfoOutput{
+		Package:     packageName,
+		Status:      status,
+		Message:     message,
+		PackageInfo: info,
+	}, nil
+}
+
+// getInfoWithPriorityLogic implements the priority logic: managed → installed → available
+func getInfoWithPriorityLogic(ctx context.Context, packageName string) (InfoOutput, error) {
 	// Get config directory and initialize lock service
 	configDir := config.GetDefaultConfigDirectory()
 	lockService := lock.NewYAMLLockService(configDir)
 
-	// Check lock file first to see if package is managed
+	// 1. Check if package is managed by plonk
 	packageLocations := lockService.FindPackage(packageName)
+	if len(packageLocations) > 0 {
+		// Use the first location found
+		location := packageLocations[0]
 
-	// Get available managers
-	availableManagers, err := getAvailableManagers(ctx)
+		// Try to get more detailed info from the manager
+		registry := packages.NewManagerRegistry()
+		if manager, err := registry.GetManager(location.Manager); err == nil {
+			if available, err := manager.IsAvailable(ctx); err == nil && available {
+				if info, err := manager.Info(ctx, packageName); err == nil {
+					info.Installed = true // Override to reflect managed status
+					message := fmt.Sprintf("Package '%s' is managed by plonk via %s", packageName, location.Manager)
+					if len(packageLocations) > 1 {
+						message += fmt.Sprintf(" (and %d other manager(s))", len(packageLocations)-1)
+					}
+					return InfoOutput{
+						Package:     packageName,
+						Status:      "managed",
+						Message:     message,
+						PackageInfo: info,
+					}, nil
+				}
+			}
+		}
+
+		// Fallback to lock file info if manager call fails
+		message := fmt.Sprintf("Package '%s' is managed by plonk via %s", packageName, location.Manager)
+		if len(packageLocations) > 1 {
+			message += fmt.Sprintf(" (and %d other manager(s))", len(packageLocations)-1)
+		}
+		return InfoOutput{
+			Package: packageName,
+			Status:  "managed",
+			Message: message,
+			PackageInfo: &packages.PackageInfo{
+				Name:      packageName,
+				Version:   location.Entry.Version,
+				Manager:   location.Manager,
+				Installed: true,
+			},
+		}, nil
+	}
+
+	// 2. Check if package is installed (but not managed)
+	availableManagers, err := getAvailableManagersMap(ctx)
 	if err != nil {
 		return InfoOutput{}, err
 	}
@@ -82,171 +196,51 @@ func performPackageInfo(ctx context.Context, packageName string) (InfoOutput, er
 		}, nil
 	}
 
-	// If package is in lock file, use info from lock file
-	if len(packageLocations) > 0 {
-		// Use the first location found (TODO: handle multiple installations)
-		location := packageLocations[0]
-
-		// Build message that mentions if there are multiple installations
-		message := fmt.Sprintf("Package '%s' is installed via %s", packageName, location.Manager)
-		if len(packageLocations) > 1 {
-			message += fmt.Sprintf(" (and %d other manager(s))", len(packageLocations)-1)
-		}
-
-		return InfoOutput{
-			Package: packageName,
-			Status:  "installed",
-			Message: message,
-			PackageInfo: &packages.PackageInfo{
-				Name:      packageName,
-				Version:   location.Entry.Version,
-				Manager:   location.Manager,
-				Installed: true,
-			},
-		}, nil
-	}
-
-	// Otherwise, check if package is installed and get info from the installing manager
-	installedManager, packageInfo, err := findInstalledPackageInfo(ctx, packageName, availableManagers)
-	if err != nil {
-		return InfoOutput{}, fmt.Errorf("failed to check if package %s is installed: %w", packageName, err)
-	}
-
-	if installedManager != "" {
-		return InfoOutput{
-			Package:     packageName,
-			Status:      "installed",
-			Message:     fmt.Sprintf("Package '%s' is installed via %s", packageName, installedManager),
-			PackageInfo: packageInfo,
-		}, nil
-	}
-
-	// Package is not installed, determine search strategy
-	defaultManager, err := getDefaultManager()
-	if err != nil {
-		return InfoOutput{}, err
-	}
-
-	if defaultManager != "" {
-		// We have a default manager, check it first
-		return getInfoWithDefaultManager(ctx, packageName, defaultManager, availableManagers)
-	} else {
-		// No default manager, check all managers
-		return getInfoFromAllManagers(ctx, packageName, availableManagers)
-	}
-}
-
-// findInstalledPackageInfo checks if the package is installed by any manager and returns its info
-func findInstalledPackageInfo(ctx context.Context, packageName string, managers map[string]packages.PackageManager) (string, *packages.PackageInfo, error) {
-	for name, manager := range managers {
+	for name, manager := range availableManagers {
 		installed, err := manager.IsInstalled(ctx, packageName)
 		if err != nil {
-			return "", nil, fmt.Errorf("failed to check if package %s is installed in %s: %w", packageName, name, err)
+			continue // Skip managers that fail
 		}
 		if installed {
+			// Get detailed info
 			info, err := manager.Info(ctx, packageName)
 			if err != nil {
-				return "", nil, fmt.Errorf("failed to get package %s info from %s: %w", packageName, name, err)
+				// Fallback info if detailed lookup fails
+				info = &packages.PackageInfo{
+					Name:      packageName,
+					Manager:   name,
+					Installed: true,
+				}
 			}
-			return name, info, nil
+			return InfoOutput{
+				Package:     packageName,
+				Status:      "installed",
+				Message:     fmt.Sprintf("Package '%s' is installed via %s (not managed by plonk)", packageName, name),
+				PackageInfo: info,
+			}, nil
 		}
 	}
-	return "", nil, nil
-}
 
-// getInfoWithDefaultManager gets info from the default manager first, then others if needed
-func getInfoWithDefaultManager(ctx context.Context, packageName string, defaultManager string, availableManagers map[string]packages.PackageManager) (InfoOutput, error) {
-	// Check default manager first
-	defaultMgr, exists := availableManagers[defaultManager]
-	if !exists {
-		return InfoOutput{}, fmt.Errorf("default manager '%s' is not available", defaultManager)
-	}
-
-	info, err := defaultMgr.Info(ctx, packageName)
-	if err != nil {
-		// If not found in default manager, try other managers
-		otherManagers := make(map[string]packages.PackageManager)
-		for name, manager := range availableManagers {
-			if name != defaultManager {
-				otherManagers[name] = manager
-			}
-		}
-		return getInfoFromOtherManagers(ctx, packageName, defaultManager, otherManagers)
-	}
-
-	return InfoOutput{
-		Package:     packageName,
-		Status:      "available-default",
-		Message:     fmt.Sprintf("Package '%s' available in %s (default)", packageName, defaultManager),
-		PackageInfo: info,
-	}, nil
-}
-
-// getInfoFromAllManagers gets info from all available managers
-func getInfoFromAllManagers(ctx context.Context, packageName string, availableManagers map[string]packages.PackageManager) (InfoOutput, error) {
-	var foundInfo *packages.PackageInfo
-	var foundManager string
-
+	// 3. Package not installed, search for available packages
 	for name, manager := range availableManagers {
 		info, err := manager.Info(ctx, packageName)
 		if err != nil {
 			continue // Package not found in this manager
 		}
 
-		// Use the first manager where we find the package
-		if foundInfo == nil {
-			foundInfo = info
-			foundManager = name
-		}
-	}
-
-	if foundInfo == nil {
 		return InfoOutput{
-			Package: packageName,
-			Status:  "not-found",
-			Message: fmt.Sprintf("Package '%s' not found in any package manager", packageName),
+			Package:     packageName,
+			Status:      "available",
+			Message:     fmt.Sprintf("Package '%s' available in %s (not installed)", packageName, name),
+			PackageInfo: info,
 		}, nil
 	}
 
+	// Package not found anywhere
 	return InfoOutput{
-		Package:     packageName,
-		Status:      "available-multiple",
-		Message:     fmt.Sprintf("Package '%s' available from %s", packageName, foundManager),
-		PackageInfo: foundInfo,
-	}, nil
-}
-
-// getInfoFromOtherManagers gets info from managers other than the default
-func getInfoFromOtherManagers(ctx context.Context, packageName string, defaultManager string, otherManagers map[string]packages.PackageManager) (InfoOutput, error) {
-	var foundInfo *packages.PackageInfo
-	var foundManager string
-
-	for name, manager := range otherManagers {
-		info, err := manager.Info(ctx, packageName)
-		if err != nil {
-			continue // Package not found in this manager
-		}
-
-		// Use the first manager where we find the package
-		if foundInfo == nil {
-			foundInfo = info
-			foundManager = name
-		}
-	}
-
-	if foundInfo == nil {
-		return InfoOutput{
-			Package: packageName,
-			Status:  "not-found",
-			Message: fmt.Sprintf("Package '%s' not found in %s (default) or any other package manager", packageName, defaultManager),
-		}, nil
-	}
-
-	return InfoOutput{
-		Package:     packageName,
-		Status:      "available-other",
-		Message:     fmt.Sprintf("Package '%s' not found in %s (default), but available from %s", packageName, defaultManager, foundManager),
-		PackageInfo: foundInfo,
+		Package: packageName,
+		Status:  "not-found",
+		Message: fmt.Sprintf("Package '%s' not found in any available package manager", packageName),
 	}, nil
 }
 
@@ -264,25 +258,19 @@ func (i InfoOutput) TableOutput() string {
 	var output strings.Builder
 
 	switch i.Status {
+	case "managed":
+		output.WriteString(fmt.Sprintf("🎯 %s\n", i.Message))
+		if i.PackageInfo != nil {
+			output.WriteString(i.formatPackageInfo())
+		}
+
 	case "installed":
 		output.WriteString(fmt.Sprintf("✅ %s\n", i.Message))
 		if i.PackageInfo != nil {
 			output.WriteString(i.formatPackageInfo())
 		}
 
-	case "available-default":
-		output.WriteString(fmt.Sprintf("📦 %s\n", i.Message))
-		if i.PackageInfo != nil {
-			output.WriteString(i.formatPackageInfo())
-		}
-
-	case "available-multiple":
-		output.WriteString(fmt.Sprintf("📦 %s\n", i.Message))
-		if i.PackageInfo != nil {
-			output.WriteString(i.formatPackageInfo())
-		}
-
-	case "available-other":
+	case "available":
 		output.WriteString(fmt.Sprintf("📦 %s\n", i.Message))
 		if i.PackageInfo != nil {
 			output.WriteString(i.formatPackageInfo())
@@ -294,6 +282,9 @@ func (i InfoOutput) TableOutput() string {
 	case "no-managers":
 		output.WriteString(fmt.Sprintf("⚠️  %s\n", i.Message))
 		output.WriteString("\nPlease install a package manager (Homebrew or NPM) to get package information.\n")
+
+	case "manager-unavailable":
+		output.WriteString(fmt.Sprintf("⚠️  %s\n", i.Message))
 
 	default:
 		output.WriteString(fmt.Sprintf("❓ %s\n", i.Message))
