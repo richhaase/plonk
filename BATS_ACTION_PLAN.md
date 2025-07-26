@@ -27,7 +27,13 @@ This document provides a detailed, step-by-step action plan for implementing BAT
   - Removed unnecessary features (skip_if_dangerous, PLONK_TEST_MODE, etc.)
   - Changed cleanup to default enabled
   - Removed duplicate multiple-package tests (kept only brew as example)
-  - All tests passing
+  - **Enhanced with proper behavioral validation:**
+    - Replaced system packages (jq) with obscure packages (cowsay, figlet, sl, fortune)
+    - Added package-manager-specific verification (brew list, npm list -g, pip show, etc.)
+    - Added lock file verification to ensure plonk state is updated
+    - Removed use of 'which' command to avoid false positives from other package managers
+    - Enhanced dry-run tests to verify no actual changes occur
+  - All tests passing with proper behavioral validation
 
 - [x] **Phase 4: Dotfile Tests** ✅ (Completed)
   - Created dotfile add tests (single, directory, nested, conflicts)
@@ -171,8 +177,10 @@ plonk uninstall brew:jq brew:tree npm:is-odd pip:cowsay
 # These packages are small, harmless, and unlikely to conflict with development
 
 # Homebrew packages (macOS/Linux)
-brew:jq          # JSON processor, ~1MB, no dependencies
-brew:tree        # Directory viewer, ~50KB, read-only tool
+brew:cowsay      # ASCII cow, harmless fun tool
+brew:figlet      # ASCII art text generator
+brew:sl          # Steam locomotive typo corrector
+brew:fortune     # Fortune cookie messages
 
 # NPM packages (Node.js)
 npm:is-odd       # Checks if number is odd, ~4KB, no deps
@@ -180,10 +188,10 @@ npm:left-pad     # Pads strings, ~4KB, famous tiny package
 
 # Python packages
 pip:cowsay       # ASCII cow, harmless fun tool
-pip:fortune      # Fortune cookie messages
+pip:six          # Python 2/3 compatibility, very small
 
 # Ruby gems
-gem:lolcat       # Rainbow text colorizer
+gem:colorize     # Terminal color output, small utility
 
 # Go packages
 go:github.com/rakyll/hey  # HTTP load generator, small tool
