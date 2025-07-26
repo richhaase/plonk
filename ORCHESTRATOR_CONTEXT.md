@@ -77,6 +77,7 @@ Removed ls command, added st alias, no-args shows help, fixed build issues
 ### Phase 12-14: UX Implementation (Days 13-14) - PLANNED
 Phase 12: Package manager prefix syntax (ready to start)
 Phase 13: Search/info enhancements
+Phase 13.5: Separate status and doctor commands
 Phase 14: Integration and polish with BATS tests
 
 ### Phase 15: Output Standardization (Day 14) - NOT STARTED

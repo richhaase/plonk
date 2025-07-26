@@ -6,6 +6,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -20,18 +21,18 @@ var installCmd = &cobra.Command{
 	Long: `Install packages on your system and add them to your lock file for management.
 
 This command installs packages using the specified package manager and adds them
-to your lock file so they can be managed by plonk. Use specific manager flags
-to control which package manager to use.
+to your lock file so they can be managed by plonk. Use prefix syntax to specify
+the package manager, or omit the prefix to use your default manager.
 
 Examples:
   plonk install htop                      # Install htop using default manager
   plonk install git neovim ripgrep        # Install multiple packages
-  plonk install git --brew                # Install git specifically with Homebrew
-  plonk install lodash --npm              # Install lodash with npm global packages
-  plonk install ripgrep --cargo           # Install ripgrep with cargo packages
-  plonk install black flake8 --pip        # Install Python tools with pip
-  plonk install bundler rubocop --gem     # Install Ruby tools with gem
-  plonk install gopls --go                # Install Go tools with go install
+  plonk install brew:git                  # Install git specifically with Homebrew
+  plonk install npm:lodash                # Install lodash with npm global packages
+  plonk install cargo:ripgrep             # Install ripgrep with cargo packages
+  plonk install pip:black pip:flake8      # Install Python tools with pip
+  plonk install gem:bundler gem:rubocop   # Install Ruby tools with gem
+  plonk install go:golang.org/x/tools/cmd/gopls  # Install Go tools with go install
   plonk install --dry-run htop neovim     # Preview what would be installed`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: runInstall,
@@ -39,15 +40,6 @@ Examples:
 
 func init() {
 	rootCmd.AddCommand(installCmd)
-
-	// Manager-specific flags (mutually exclusive)
-	installCmd.Flags().Bool("brew", false, "Use Homebrew package manager")
-	installCmd.Flags().Bool("npm", false, "Use NPM package manager")
-	installCmd.Flags().Bool("cargo", false, "Use Cargo package manager")
-	installCmd.Flags().Bool("pip", false, "Use pip package manager")
-	installCmd.Flags().Bool("gem", false, "Use gem package manager")
-	installCmd.Flags().Bool("go", false, "Use go install package manager")
-	installCmd.MarkFlagsMutuallyExclusive("brew", "npm", "cargo", "pip", "gem", "go")
 
 	// Common flags
 	installCmd.Flags().BoolP("dry-run", "n", false, "Show what would be installed without making changes")
@@ -62,42 +54,97 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Get flags
-	flags, err := ParseSimpleFlags(cmd)
-	if err != nil {
-		return err
-	}
+	// Get flags (only common flags now)
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	force, _ := cmd.Flags().GetBool("force")
 
-	// Get directories
+	// Get directories and config
 	configDir := config.GetDefaultConfigDirectory()
+	cfg := config.LoadWithDefaults(configDir)
 
-	// Configure installation options
-	opts := packages.InstallOptions{
-		Manager: flags.Manager,
-		DryRun:  flags.DryRun,
-		Force:   flags.Force,
-	}
+	// Process each package with prefix parsing
+	var allResults []resources.OperationResult
 
-	// Process packages using managers package
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
+	for _, packageSpec := range args {
+		// Parse the package specification
+		manager, packageName := ParsePackageSpec(packageSpec)
 
-	results, err := packages.InstallPackages(ctx, configDir, args, opts)
-	if err != nil {
-		return err
+		// Validate package specification
+		if packageName == "" {
+			allResults = append(allResults, resources.OperationResult{
+				Name:   packageSpec,
+				Status: "failed",
+				Error:  fmt.Errorf("invalid package specification %q: empty package name", packageSpec),
+			})
+			continue
+		}
+
+		if manager == "" && packageSpec != packageName {
+			// This means there was a colon but empty prefix
+			allResults = append(allResults, resources.OperationResult{
+				Name:   packageSpec,
+				Status: "failed",
+				Error:  fmt.Errorf("invalid package specification %q: empty manager prefix", packageSpec),
+			})
+			continue
+		}
+
+		// Use default manager if no prefix specified
+		if manager == "" {
+			if cfg.DefaultManager != "" {
+				manager = cfg.DefaultManager
+			} else {
+				manager = packages.DefaultManager
+			}
+		}
+
+		// Validate manager
+		if !IsValidManager(manager) {
+			allResults = append(allResults, resources.OperationResult{
+				Name:    packageSpec,
+				Manager: manager,
+				Status:  "failed",
+				Error:   fmt.Errorf("unknown package manager %q. Valid managers: %s", manager, strings.Join(GetValidManagers(), ", ")),
+			})
+			continue
+		}
+
+		// Configure installation options for this package
+		opts := packages.InstallOptions{
+			Manager: manager,
+			DryRun:  dryRun,
+			Force:   force,
+		}
+
+		// Process this package
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		results, err := packages.InstallPackages(ctx, configDir, []string{packageName}, opts)
+		cancel()
+
+		if err != nil {
+			allResults = append(allResults, resources.OperationResult{
+				Name:    packageSpec,
+				Manager: manager,
+				Status:  "failed",
+				Error:   err,
+			})
+			continue
+		}
+
+		allResults = append(allResults, results...)
 	}
 
 	// Show progress for each result
-	for _, result := range results {
+	for _, result := range allResults {
 		icon := GetStatusIcon(result.Status)
 		fmt.Printf("%s %s %s\n", icon, result.Status, result.Name)
 	}
 
 	// Create output data
-	summary := calculatePackageSummary(results)
+	summary := calculatePackageSummary(allResults)
 	outputData := PackageInstallOutput{
-		TotalPackages: len(results),
-		Results:       results,
+		TotalPackages: len(allResults),
+		Results:       allResults,
 		Summary:       summary,
 	}
 
@@ -107,7 +154,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	// Check if all operations failed and return appropriate error
-	return resources.ValidateOperationResults(results, "install packages")
+	return resources.ValidateOperationResults(allResults, "install packages")
 }
 
 // PackageInstallOutput represents the output for package installation
