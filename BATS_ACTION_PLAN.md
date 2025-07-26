@@ -142,8 +142,7 @@ plonk uninstall brew:jq brew:tree npm:is-odd pip:cowsay
 1. **Only use packages/dotfiles from the safe lists**
 2. **Always track created artifacts for cleanup**
 3. **Test on a non-critical system first**
-4. **Mark destructive tests with `skip_if_dangerous`**
-5. **Provide clear test descriptions**
+4. **Provide clear test descriptions**
 ```
 
 ### 1.3 Create Safe Lists
@@ -267,12 +266,6 @@ is_safe_dotfile() {
   return 1
 }
 
-# Skip test if dangerous tests are disabled
-skip_if_dangerous() {
-  if [[ "$PLONK_TEST_SKIP_DANGEROUS" == "1" ]]; then
-    skip "Skipping dangerous test (PLONK_TEST_SKIP_DANGEROUS=1)"
-  fi
-}
 
 # Require a safe package or skip
 require_safe_package() {
@@ -638,7 +631,6 @@ setup() {
 }
 
 @test "install single package with prefix syntax" {
-  skip_if_dangerous
   require_safe_package "brew:jq"
 
   run plonk install brew:jq
@@ -662,7 +654,6 @@ setup() {
 }
 
 @test "install multiple packages in one command" {
-  skip_if_dangerous
   require_safe_package "brew:jq"
   require_safe_package "brew:tree"
 
@@ -691,7 +682,6 @@ setup() {
 }
 
 @test "install already managed package shows appropriate message" {
-  skip_if_dangerous
   require_safe_package "brew:jq"
 
   # First install
@@ -720,7 +710,6 @@ setup() {
 }
 
 @test "uninstall managed package" {
-  skip_if_dangerous
   require_safe_package "brew:jq"
 
   # Install first
@@ -744,7 +733,6 @@ setup() {
 }
 
 @test "uninstall with force removes even if not managed" {
-  skip_if_dangerous
   require_safe_package "brew:tree"
 
   # Ensure it's not managed
@@ -757,7 +745,6 @@ setup() {
 }
 
 @test "uninstall with dry-run shows what would happen" {
-  skip_if_dangerous
   require_safe_package "brew:jq"
 
   # Install first
@@ -792,7 +779,6 @@ setup() {
 }
 
 @test "add single dotfile" {
-  skip_if_dangerous
   local testfile=".plonk-test-rc"
   require_safe_dotfile "$testfile"
 
@@ -833,7 +819,6 @@ setup() {
 }
 
 @test "add directory of dotfiles" {
-  skip_if_dangerous
   local testdir=".config/plonk-test"
   require_safe_dotfile "$testdir/config.yaml"
 
@@ -869,7 +854,6 @@ setup() {
 }
 
 @test "remove managed dotfile" {
-  skip_if_dangerous
   local testfile=".plonk-test-gitconfig"
   require_safe_dotfile "$testfile"
 
@@ -889,7 +873,6 @@ setup() {
 }
 
 @test "remove with dry-run shows what would happen" {
-  skip_if_dangerous
   local testfile=".plonk-test-bashrc"
   require_safe_dotfile "$testfile"
 
@@ -931,7 +914,6 @@ setup() {
 }
 
 @test "apply with all successful operations" {
-  skip_if_dangerous
   require_safe_package "brew:jq"
   require_safe_package "brew:tree"
 
@@ -950,7 +932,6 @@ setup() {
 }
 
 @test "apply continues after package failure" {
-  skip_if_dangerous
   require_safe_package "brew:jq"
 
   # Create config with valid and invalid packages
@@ -1003,7 +984,6 @@ setup() {
 }
 
 @test "apply with mixed packages and dotfiles" {
-  skip_if_dangerous
   require_safe_package "brew:jq"
   local testfile=".plonk-test-rc"
   require_safe_dotfile "$testfile"
@@ -1068,7 +1048,6 @@ setup() {
 }
 
 @test "info shows managed status for installed package" {
-  skip_if_dangerous
   require_safe_package "brew:jq"
 
   # Install package
@@ -1132,37 +1111,6 @@ setup() {
   fi
 }
 
-@test "concurrent operations don't corrupt state" {
-  skip_if_dangerous
-  require_safe_package "brew:jq"
-  require_safe_package "brew:tree"
-
-  # Run multiple plonk commands in parallel
-  plonk install brew:jq &
-  local pid1=$!
-
-  plonk install brew:tree &
-  local pid2=$!
-
-  # Wait for both
-  wait $pid1
-  wait $pid2
-
-  # Check final state is consistent
-  run plonk status
-  assert_success
-  # State should be valid (exact results may vary)
-
-  track_artifact "package" "brew:jq"
-  track_artifact "package" "brew:tree"
-}
-
-@test "recovery from interrupted operation" {
-  skip "Complex to test reliably"
-
-  # Would need to simulate interruption
-  # Perhaps with timeout command
-}
 ```
 
 ## Phase 7: Integration Tests (Day 12)
