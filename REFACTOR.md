@@ -229,6 +229,14 @@ internal/
 - [x] Update help text to clarify purpose
 - [x] Maintain st alias functionality
 
+### Phase 13.75: Replace Init with Setup Command (Day 14) ✅ COMPLETE
+- [x] Replace init command with comprehensive setup command
+- [x] Implement git repository cloning with multiple URL formats
+- [x] Add doctor --fix flag for tool installation
+- [x] Bootstrap package managers (Homebrew, Cargo) installed directly
+- [x] Languages (npm, pip, gem, go) installed via plonk's package system
+- [x] Interactive prompts with --yes flag for automation
+
 ### Phase 14: Additional UX Improvements (Day 14)
 - [ ] Implement apply command partial failure handling
 - [ ] Create BATS test suite for CLI validation

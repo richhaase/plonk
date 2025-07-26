@@ -83,6 +83,9 @@ Successfully implemented parallel search with 3-second timeout, smart info prior
 ### Phase 13.5: Separate Status and Doctor Commands (Day 14) - ✅ COMPLETE
 Successfully refocused status on managed resources only, doctor on system readiness only, removed all overlapping functionality
 
+### Phase 13.75: Replace Init with Setup Command (Day 14) - ✅ COMPLETE
+Successfully replaced init with comprehensive setup command, added git cloning, doctor --fix, and smart package manager bootstrapping
+
 ### Phase 14: UX Implementation (Day 14-15) - PLANNED
 Integration and polish with BATS tests (ready to start)
 
