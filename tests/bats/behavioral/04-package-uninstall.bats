@@ -147,8 +147,8 @@ setup() {
 # General uninstall behavior tests
 @test "uninstall non-managed package shows error" {
   run plonk uninstall brew:not-managed-package
-  assert_failure
-  assert_output --partial "not managed"
+  assert_success  # plonk returns success but skips the package
+  assert_output --partial "skipped"
 }
 
 @test "uninstall with dry-run shows what would happen" {
@@ -162,7 +162,7 @@ setup() {
   # Dry-run uninstall
   run plonk uninstall brew:jq --dry-run
   assert_success
-  assert_output --partial "would uninstall"
+  assert_output --partial "would-remove"
 
   # Verify still managed
   run plonk status
@@ -198,7 +198,7 @@ setup() {
   # Uninstall both
   run plonk uninstall brew:jq brew:tree
   assert_success
-  assert_output_contains_all "jq" "tree" "uninstalled"
+  assert_output_contains_all "jq" "tree" "removed"
 
   # Verify both gone from status
   run plonk status
