@@ -3,8 +3,10 @@
 # These packages are small, harmless, and unlikely to conflict with development
 
 # Homebrew packages (macOS/Linux)
-brew:jq          # JSON processor, ~1MB, no dependencies
-brew:tree        # Directory viewer, ~50KB, read-only tool
+brew:cowsay      # ASCII cow, harmless fun tool
+brew:figlet      # ASCII art text generator
+brew:sl          # Steam locomotive typo corrector
+brew:fortune     # Fortune cookie messages
 
 # NPM packages (Node.js)
 npm:is-odd       # Checks if number is odd, ~4KB, no deps

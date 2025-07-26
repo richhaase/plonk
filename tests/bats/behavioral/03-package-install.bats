@@ -9,36 +9,56 @@ setup() {
 
 # Homebrew tests
 @test "install single brew package" {
-  require_safe_package "brew:jq"
+  require_safe_package "brew:cowsay"
 
-  run plonk install brew:jq
+  run plonk install brew:cowsay
   assert_success
-  assert_output --partial "jq"
+  assert_output --partial "cowsay"
   assert_output --partial "added"
 
-  track_artifact "package" "brew:jq"
+  track_artifact "package" "brew:cowsay"
+
+  # Verify it's actually installed by brew
+  run brew list cowsay
+  assert_success
+
+  # Verify it's in plonk lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "cowsay"
 
   # Verify it's in status
   run plonk status
-  assert_output --partial "jq"
+  assert_output --partial "cowsay"
 }
 
 # Test multiple package installation - only testing with brew since
 # the logic is the same for all managers (just loops over single installs)
 @test "install multiple brew packages" {
-  require_safe_package "brew:jq"
-  require_safe_package "brew:tree"
+  require_safe_package "brew:figlet"
+  require_safe_package "brew:sl"
 
-  run plonk install brew:jq brew:tree
+  run plonk install brew:figlet brew:sl
   assert_success
-  assert_output_contains_all "jq" "tree"
+  assert_output_contains_all "figlet" "sl"
 
-  track_artifact "package" "brew:jq"
-  track_artifact "package" "brew:tree"
+  track_artifact "package" "brew:figlet"
+  track_artifact "package" "brew:sl"
+
+  # Verify they're actually installed by brew
+  run brew list figlet
+  assert_success
+  run brew list sl
+  assert_success
+
+  # Verify both in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output_contains_all "figlet" "sl"
 
   # Verify both in status
   run plonk status
-  assert_output_contains_all "jq" "tree"
+  assert_output_contains_all "figlet" "sl"
 }
 
 # NPM tests
@@ -58,6 +78,16 @@ setup() {
 
   track_artifact "package" "npm:is-odd"
 
+  # Verify it's actually installed by npm
+  run npm list -g is-odd
+  assert_success
+
+  # Verify it's in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "is-odd"
+
+  # Verify in status
   run plonk status
   assert_output --partial "is-odd"
 }
@@ -83,6 +113,16 @@ setup() {
 
   track_artifact "package" "pip:six"
 
+  # Verify it's actually installed by pip
+  run pip show six
+  assert_success
+
+  # Verify it's in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "six"
+
+  # Verify in status
   run plonk status
   assert_output --partial "six"
 }
@@ -104,6 +144,17 @@ setup() {
 
   track_artifact "package" "gem:colorize"
 
+  # Verify it's actually installed by gem
+  run gem list colorize
+  assert_success
+  assert_output --partial "colorize"
+
+  # Verify it's in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "colorize"
+
+  # Verify in status
   run plonk status
   assert_output --partial "colorize"
 }
@@ -125,6 +176,17 @@ setup() {
 
   track_artifact "package" "go:github.com/rakyll/hey"
 
+  # Verify it's actually installed by go
+  run go version -m $(go env GOPATH)/bin/hey
+  assert_success
+  assert_output --partial "github.com/rakyll/hey"
+
+  # Verify it's in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "hey"
+
+  # Verify in status
   run plonk status
   assert_output --partial "hey"
 }
@@ -146,33 +208,58 @@ setup() {
 
   track_artifact "package" "cargo:ripgrep"
 
+  # Verify it's actually installed by cargo
+  run cargo install --list
+  assert_success
+  assert_output --partial "ripgrep"
+
+  # Verify it's in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "ripgrep"
+
+  # Verify in status
   run plonk status
   assert_output --partial "ripgrep"
 }
 
 # General installation behavior tests
 @test "install with dry-run doesn't actually install" {
-  require_safe_package "brew:jq"
+  require_safe_package "brew:fortune"
 
-  run plonk install brew:jq --dry-run
+  run plonk install brew:fortune --dry-run
   assert_success
   assert_output --partial "would"
 
-  # Verify not actually installed
+  # Verify not actually installed by brew
+  run brew list fortune
+  assert_failure
+
+  # Verify not in lock file
+  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
+    run cat "$PLONK_DIR/plonk.lock"
+    refute_output --partial "fortune"
+  fi
+
+  # Verify not in status
   run plonk status
-  refute_output --partial "jq"
+  refute_output --partial "fortune"
 }
 
 @test "install already managed package shows appropriate message" {
-  require_safe_package "brew:jq"
+  require_safe_package "brew:cowsay"
 
   # First install
-  run plonk install brew:jq
+  run plonk install brew:cowsay
   assert_success
-  track_artifact "package" "brew:jq"
+  track_artifact "package" "brew:cowsay"
+
+  # Verify it's actually installed
+  run brew list cowsay
+  assert_success
 
   # Try to install again
-  run plonk install brew:jq
+  run plonk install brew:cowsay
   assert_success
   assert_output --partial "skipped"
 }
