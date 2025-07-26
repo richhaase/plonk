@@ -237,20 +237,22 @@ internal/
 - [x] Languages (npm, pip, gem, go) installed via plonk's package system
 - [x] Interactive prompts with --yes flag for automation
 
-### Phase 14: Additional UX Improvements (Day 14)
+### Phase 14: Additional UX Improvements (Day 15) - DEFERRED
 - [ ] Implement apply command partial failure handling
 - [ ] Create BATS test suite for CLI validation
 - [ ] Fix integration issues between phases
 - [ ] Update help text and error messages
 - [ ] Polish command behavior and consistency
+**Note**: Deferred until after Phase 15 to ensure consistent output format for testing
 
-### Phase 15: Output Standardization (Day 14)
+### Phase 15: Output Standardization (Day 14) - READY TO START
 - [ ] Review all command outputs for consistency
 - [ ] Standardize table formatting across commands
 - [ ] Ensure consistent JSON/YAML structure
 - [ ] Standardize error message formats
 - [ ] Create output guidelines for future commands
 - [ ] Test all output formats (-o table|json|yaml) for each command
+**Note**: Critical for integration testing - standardize output before writing tests
 
 ### Final Phase: Testing & Documentation (Day 15)
 - [ ] Update all tests for new structure and UX
@@ -330,9 +332,10 @@ hooks:
 - **After Phase 5**: 13,826 (infrastructure added, no reduction)
 - **After Phase 6**: ~13,800 (structural cleanup, consolidation)
 - **After Phase 7**: ~12,250 (1,550+ LOC reduction from dead code removal)
+- **After Phases 8-13.75**: ~12,500 (UX improvements added new functionality)
 - **Target LOC**: ~11,000-12,000 (revised for idiomatic approach)
 - **Starting Packages**: 9
-- **Current Packages**: 8 (state package removed)
+- **Current Packages**: 9 (state removed, setup added)
 - **Target Packages**: 5
 
 ### Package Status

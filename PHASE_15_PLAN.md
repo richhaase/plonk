@@ -2,6 +2,8 @@
 
 **IMPORTANT: Read WORKER_CONTEXT.md before starting any work.**
 
+**CRITICAL**: This phase must be completed before Phase 14 (BATS integration testing) because we need consistent, predictable output formats for reliable test assertions.
+
 ## Overview
 
 This phase standardizes output formatting across all commands to ensure a consistent, professional user experience. We'll establish patterns for tables, JSON, and YAML output while maintaining the existing `-o` flag functionality.
