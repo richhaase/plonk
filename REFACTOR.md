@@ -222,12 +222,12 @@ internal/
 - [x] Support prefix syntax in info command
 - [x] Update help text and examples
 
-### Phase 13.5: Separate Status and Doctor Commands (Day 14)
-- [ ] Refocus status command on managed resources only
-- [ ] Refocus doctor command on system readiness only
-- [ ] Remove overlapping functionality
-- [ ] Update help text to clarify purpose
-- [ ] Maintain st alias functionality
+### Phase 13.5: Separate Status and Doctor Commands (Day 14) ✅ COMPLETE
+- [x] Refocus status command on managed resources only
+- [x] Refocus doctor command on system readiness only
+- [x] Remove overlapping functionality
+- [x] Update help text to clarify purpose
+- [x] Maintain st alias functionality
 
 ### Phase 14: Additional UX Improvements (Day 14)
 - [ ] Implement apply command partial failure handling

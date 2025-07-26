@@ -80,9 +80,11 @@ Successfully replaced --manager flags with manager:package prefix syntax
 ### Phase 13: UX Implementation - Search/Info Enhancement (Day 14) - ✅ COMPLETE
 Successfully implemented parallel search with 3-second timeout, smart info priority logic (managed→installed→available), and prefix syntax support
 
-### Phase 13.5-14: UX Implementation (Days 14-15) - PLANNED
-Phase 13.5: Separate status and doctor commands (ready to start)
-Phase 14: Integration and polish with BATS tests
+### Phase 13.5: Separate Status and Doctor Commands (Day 14) - ✅ COMPLETE
+Successfully refocused status on managed resources only, doctor on system readiness only, removed all overlapping functionality
+
+### Phase 14: UX Implementation (Day 14-15) - PLANNED
+Integration and polish with BATS tests (ready to start)
 
 ### Phase 15: Output Standardization (Day 14) - NOT STARTED
 Standardize output formatting across all commands
