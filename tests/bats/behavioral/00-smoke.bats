@@ -40,10 +40,10 @@ load '../lib/assertions'
 
 
   # Test package checking (run creates subshell, so test directly)
-  if is_safe_package "brew:jq"; then
+  if is_safe_package "brew:cowsay"; then
     assert true
   else
-    assert false "brew:jq should be in safe list"
+    assert false "brew:cowsay should be in safe list"
   fi
 
   if is_safe_package "brew:definitely-not-safe"; then

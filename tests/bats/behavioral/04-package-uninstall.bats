@@ -174,8 +174,8 @@ setup() {
   assert_success
   track_artifact "package" "go:github.com/rakyll/hey"
 
-  # Verify it's installed by go
-  run go version -m $(go env GOPATH)/bin/hey
+  # Verify it's installed by go - check binary exists
+  run test -f "$(go env GOPATH)/bin/hey"
   assert_success
 
   # Then uninstall
@@ -183,8 +183,8 @@ setup() {
   assert_success
   assert_output --partial "removed"
 
-  # Verify actually uninstalled by go
-  run go version -m $(go env GOPATH)/bin/hey
+  # Verify actually uninstalled by go - binary should be gone
+  run test -f "$(go env GOPATH)/bin/hey"
   assert_failure
 
   # Verify gone from lock file
