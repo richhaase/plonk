@@ -14,8 +14,7 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/managers"
-	"github.com/richhaase/plonk/internal/orchestrator"
+	"github.com/richhaase/plonk/internal/resources/packages"
 	"github.com/spf13/cobra"
 )
 
@@ -47,7 +46,7 @@ func runEnv(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return fmt.Errorf("invalid output format: %w", err)
+		return err
 	}
 
 	// Gather environment information
@@ -61,8 +60,8 @@ func gatherEnvironmentInfo() EnvOutput {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	homeDir := orchestrator.GetHomeDir()
-	configDir := orchestrator.GetConfigDir()
+	homeDir := config.GetHomeDir()
+	configDir := config.GetConfigDir()
 	configPath := filepath.Join(configDir, "plonk.yaml")
 
 	// System information
@@ -81,8 +80,8 @@ func gatherEnvironmentInfo() EnvOutput {
 
 	// Check if config is valid
 	if configInfo.Exists {
-		// LoadConfigWithDefaults handles missing configs gracefully
-		cfg := config.LoadConfigWithDefaults(configDir)
+		// LoadWithDefaults handles missing configs gracefully
+		cfg := config.LoadWithDefaults(configDir)
 		// Config is always valid when using LoadConfigWithDefaults
 		configInfo.Valid = true
 		_ = cfg // Avoid unused variable warning
@@ -130,7 +129,7 @@ func getManagerInfo(ctx context.Context, managerName string) ManagerInfo {
 		Available: false,
 	}
 
-	registry := managers.NewManagerRegistry()
+	registry := packages.NewManagerRegistry()
 	manager, err := registry.GetManager(managerName)
 	if err != nil {
 		info.Error = "unknown manager"

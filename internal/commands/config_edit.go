@@ -46,13 +46,13 @@ func runConfigEdit(cmd *cobra.Command, args []string) error {
 
 	// Create config directory if it doesn't exist
 	if err := os.MkdirAll(configDir, 0750); err != nil {
-		return fmt.Errorf("failed to create config directory: %w", err)
+		return err
 	}
 
 	// Create default config file if it doesn't exist
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		if err := createDefaultConfig(configPath); err != nil {
-			return fmt.Errorf("failed to create default config: %w", err)
+			return err
 		}
 		fmt.Printf("Created default configuration file: %s\n", configPath)
 	}
@@ -65,7 +65,7 @@ func runConfigEdit(cmd *cobra.Command, args []string) error {
 	for {
 		// Open editor
 		if err := openEditor(editor, configPath); err != nil {
-			return fmt.Errorf("failed to open editor: %w", err)
+			return err
 		}
 
 		// Validate the edited config

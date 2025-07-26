@@ -4,14 +4,12 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 	"runtime"
 	"strings"
-	"time"
 
-	"github.com/richhaase/plonk/internal/orchestrator"
-	"github.com/richhaase/plonk/internal/state"
+	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/resources"
 	"github.com/spf13/cobra"
 )
 
@@ -46,31 +44,22 @@ func getOSPackageManagerSupport() map[string]bool {
 
 // getManagerInstallSuggestion returns installation instructions for different package managers
 func getManagerInstallSuggestion(manager string) string {
-	osSpecific := getOSSpecificInstallCommand(manager, runtime.GOOS)
-	if osSpecific != "" {
-		return osSpecific
-	}
-	return "Install the required package manager or change the default manager with 'plonk config edit'"
-}
-
-// getOSSpecificInstallCommand returns OS-specific installation instructions for package managers
-func getOSSpecificInstallCommand(manager, os string) string {
 	// First check if the manager is supported on this OS
 	support := getOSPackageManagerSupport()
 	if supported, exists := support[manager]; exists && !supported {
-		return fmt.Sprintf("%s is not supported on %s", manager, os)
+		return fmt.Sprintf("%s is not supported on %s", manager, runtime.GOOS)
 	}
 
 	switch manager {
 	case "homebrew":
-		switch os {
+		switch runtime.GOOS {
 		case "darwin":
 			return "Install Homebrew: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
 		case "linux":
 			return "Install Homebrew on Linux: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
 		}
 	case "npm":
-		switch os {
+		switch runtime.GOOS {
 		case "darwin":
 			return "Install Node.js and npm: brew install node OR download from https://nodejs.org"
 		case "linux":
@@ -79,21 +68,21 @@ func getOSSpecificInstallCommand(manager, os string) string {
 	case "cargo":
 		return "Install Rust and Cargo: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
 	case "gem":
-		switch os {
+		switch runtime.GOOS {
 		case "darwin":
 			return "Ruby comes pre-installed on macOS. For a newer version: brew install ruby"
 		case "linux":
 			return "Install Ruby: sudo apt-get install ruby-full OR use rbenv/rvm"
 		}
 	case "go":
-		switch os {
+		switch runtime.GOOS {
 		case "darwin":
 			return "Install Go: brew install go OR download from https://go.dev/dl/"
 		case "linux":
 			return "Install Go: Download from https://go.dev/dl/ OR sudo snap install go --classic"
 		}
 	case "pip":
-		switch os {
+		switch runtime.GOOS {
 		case "darwin":
 			return "Install Python and pip: brew install python3 OR download from https://python.org"
 		case "linux":
@@ -101,11 +90,11 @@ func getOSSpecificInstallCommand(manager, os string) string {
 		}
 	}
 
-	return ""
+	return "Install the required package manager or change the default manager with 'plonk config edit'"
 }
 
 // GetMetadataString safely extracts string metadata from operation results
-func GetMetadataString(result state.OperationResult, key string) string {
+func GetMetadataString(result resources.OperationResult, key string) string {
 	if result.Metadata == nil {
 		return ""
 	}
@@ -115,26 +104,13 @@ func GetMetadataString(result state.OperationResult, key string) string {
 	return ""
 }
 
-// CreateOperationContext creates a context with timeout for batch operations
-func CreateOperationContext(timeout time.Duration) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), timeout)
-}
-
-// CheckCancellation checks if the context has been canceled and returns appropriate error
-func CheckCancellation(ctx context.Context, domain string, operation string) error {
-	if ctx.Err() != nil {
-		return fmt.Errorf("%s %s: operation canceled or timed out: %w", operation, domain, ctx.Err())
-	}
-	return nil
-}
-
 // DetermineExitCode determines the appropriate exit code based on operation results
-func DetermineExitCode(results []state.OperationResult, domain string, operation string) error {
+func DetermineExitCode(results []resources.OperationResult, domain string, operation string) error {
 	if len(results) == 0 {
 		return nil
 	}
 
-	summary := state.CalculateSummary(results)
+	summary := resources.CalculateSummary(results)
 
 	// Success if any items were added or updated
 	if summary.Added > 0 || summary.Updated > 0 {
@@ -189,7 +165,7 @@ func ParseSimpleFlags(cmd *cobra.Command) (*SimpleFlags, error) {
 // CompleteDotfilePaths provides file path completion for dotfiles
 func CompleteDotfilePaths(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	// Get home directory (no error handling needed)
-	_ = orchestrator.GetHomeDir()
+	_ = config.GetHomeDir()
 
 	// Define common dotfile suggestions
 	commonDotfiles := []string{

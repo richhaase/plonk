@@ -5,12 +5,11 @@ package commands
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/dotfiles"
-	"github.com/richhaase/plonk/internal/orchestrator"
-	"github.com/richhaase/plonk/internal/ui"
+	"github.com/richhaase/plonk/internal/output"
+	"github.com/richhaase/plonk/internal/resources"
+	"github.com/richhaase/plonk/internal/resources/dotfiles"
 	"github.com/spf13/cobra"
 )
 
@@ -55,7 +54,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return fmt.Errorf("add: invalid output format %s: %w", outputFormat, err)
+		return err
 	}
 
 	// Get flags
@@ -64,11 +63,11 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	// force, _ := cmd.Flags().GetBool("force")
 
 	// Get directories
-	homeDir := orchestrator.GetHomeDir()
-	configDir := orchestrator.GetConfigDir()
+	homeDir := config.GetHomeDir()
+	configDir := config.GetConfigDir()
 
 	// Load config for ignore patterns
-	cfg, err := config.LoadConfig(configDir)
+	cfg, err := config.Load(configDir)
 	if err != nil {
 		return err
 	}
@@ -86,7 +85,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 	results, err := manager.AddFiles(ctx, cfg, args, opts)
 	if err != nil {
-		return fmt.Errorf("add: failed to process dotfiles: %w", err)
+		return err
 	}
 
 	// Create output data based on number of results
@@ -97,7 +96,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		output := &DotfileAddOutput{
 			Source:      GetMetadataString(result, "source"),
 			Destination: GetMetadataString(result, "destination"),
-			Action:      ui.MapStatusToAction(result.Status),
+			Action:      output.MapStatusToAction(result.Status),
 			Path:        result.Name,
 		}
 		if result.Error != nil {
@@ -108,8 +107,8 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		// Batch output
 		outputData = &DotfileBatchAddOutput{
 			TotalFiles: len(results),
-			AddedFiles: ui.ConvertToDotfileAddOutput(results),
-			Errors:     ui.ExtractErrorMessages(results),
+			AddedFiles: output.ConvertToDotfileAddOutput(results),
+			Errors:     output.ExtractErrorMessages(results),
 		}
 	}
 
@@ -119,17 +118,5 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Check if all operations failed and return appropriate error
-	allFailed := true
-	for _, result := range results {
-		if result.Status != "failed" {
-			allFailed = false
-			break
-		}
-	}
-
-	if allFailed && len(results) > 0 {
-		return fmt.Errorf("add-multiple dotfiles: failed to process %d item(s)", len(results))
-	}
-
-	return nil
+	return resources.ValidateOperationResults(results, "add dotfiles")
 }

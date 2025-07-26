@@ -10,7 +10,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
-	"github.com/richhaase/plonk/internal/managers"
+	"github.com/richhaase/plonk/internal/resources/packages"
 	"github.com/spf13/cobra"
 )
 
@@ -53,7 +53,7 @@ func runInfo(cmd *cobra.Command, args []string) error {
 	// Perform info lookup
 	infoResult, err := performPackageInfo(ctx, packageName)
 	if err != nil {
-		return fmt.Errorf("failed to get package information: %w", err)
+		return err
 	}
 
 	return RenderOutput(infoResult, format)
@@ -71,7 +71,7 @@ func performPackageInfo(ctx context.Context, packageName string) (InfoOutput, er
 	// Get available managers
 	availableManagers, err := getAvailableManagers(ctx)
 	if err != nil {
-		return InfoOutput{}, fmt.Errorf("failed to get available managers: %w", err)
+		return InfoOutput{}, err
 	}
 
 	if len(availableManagers) == 0 {
@@ -97,7 +97,7 @@ func performPackageInfo(ctx context.Context, packageName string) (InfoOutput, er
 			Package: packageName,
 			Status:  "installed",
 			Message: message,
-			PackageInfo: &managers.PackageInfo{
+			PackageInfo: &packages.PackageInfo{
 				Name:      packageName,
 				Version:   location.Entry.Version,
 				Manager:   location.Manager,
@@ -124,7 +124,7 @@ func performPackageInfo(ctx context.Context, packageName string) (InfoOutput, er
 	// Package is not installed, determine search strategy
 	defaultManager, err := getDefaultManager()
 	if err != nil {
-		return InfoOutput{}, fmt.Errorf("failed to get default manager: %w", err)
+		return InfoOutput{}, err
 	}
 
 	if defaultManager != "" {
@@ -137,7 +137,7 @@ func performPackageInfo(ctx context.Context, packageName string) (InfoOutput, er
 }
 
 // findInstalledPackageInfo checks if the package is installed by any manager and returns its info
-func findInstalledPackageInfo(ctx context.Context, packageName string, managers map[string]managers.PackageManager) (string, *managers.PackageInfo, error) {
+func findInstalledPackageInfo(ctx context.Context, packageName string, managers map[string]packages.PackageManager) (string, *packages.PackageInfo, error) {
 	for name, manager := range managers {
 		installed, err := manager.IsInstalled(ctx, packageName)
 		if err != nil {
@@ -155,7 +155,7 @@ func findInstalledPackageInfo(ctx context.Context, packageName string, managers 
 }
 
 // getInfoWithDefaultManager gets info from the default manager first, then others if needed
-func getInfoWithDefaultManager(ctx context.Context, packageName string, defaultManager string, availableManagers map[string]managers.PackageManager) (InfoOutput, error) {
+func getInfoWithDefaultManager(ctx context.Context, packageName string, defaultManager string, availableManagers map[string]packages.PackageManager) (InfoOutput, error) {
 	// Check default manager first
 	defaultMgr, exists := availableManagers[defaultManager]
 	if !exists {
@@ -165,7 +165,7 @@ func getInfoWithDefaultManager(ctx context.Context, packageName string, defaultM
 	info, err := defaultMgr.Info(ctx, packageName)
 	if err != nil {
 		// If not found in default manager, try other managers
-		otherManagers := make(map[string]managers.PackageManager)
+		otherManagers := make(map[string]packages.PackageManager)
 		for name, manager := range availableManagers {
 			if name != defaultManager {
 				otherManagers[name] = manager
@@ -183,8 +183,8 @@ func getInfoWithDefaultManager(ctx context.Context, packageName string, defaultM
 }
 
 // getInfoFromAllManagers gets info from all available managers
-func getInfoFromAllManagers(ctx context.Context, packageName string, availableManagers map[string]managers.PackageManager) (InfoOutput, error) {
-	var foundInfo *managers.PackageInfo
+func getInfoFromAllManagers(ctx context.Context, packageName string, availableManagers map[string]packages.PackageManager) (InfoOutput, error) {
+	var foundInfo *packages.PackageInfo
 	var foundManager string
 
 	for name, manager := range availableManagers {
@@ -217,8 +217,8 @@ func getInfoFromAllManagers(ctx context.Context, packageName string, availableMa
 }
 
 // getInfoFromOtherManagers gets info from managers other than the default
-func getInfoFromOtherManagers(ctx context.Context, packageName string, defaultManager string, otherManagers map[string]managers.PackageManager) (InfoOutput, error) {
-	var foundInfo *managers.PackageInfo
+func getInfoFromOtherManagers(ctx context.Context, packageName string, defaultManager string, otherManagers map[string]packages.PackageManager) (InfoOutput, error) {
+	var foundInfo *packages.PackageInfo
 	var foundManager string
 
 	for name, manager := range otherManagers {
@@ -256,7 +256,7 @@ type InfoOutput struct {
 	Package     string                `json:"package" yaml:"package"`
 	Status      string                `json:"status" yaml:"status"`
 	Message     string                `json:"message" yaml:"message"`
-	PackageInfo *managers.PackageInfo `json:"package_info,omitempty" yaml:"package_info,omitempty"`
+	PackageInfo *packages.PackageInfo `json:"package_info,omitempty" yaml:"package_info,omitempty"`
 }
 
 // TableOutput generates human-friendly table output for info command

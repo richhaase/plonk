@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/diagnostics"
 	"github.com/richhaase/plonk/internal/orchestrator"
-	"github.com/richhaase/plonk/internal/state"
+	"github.com/richhaase/plonk/internal/resources"
 	"github.com/spf13/cobra"
 )
 
@@ -31,6 +33,7 @@ For detailed lists, use 'plonk dot list' or 'plonk pkg list'.
 
 Examples:
   plonk status           # Show compact status
+  plonk status --health  # Include comprehensive health checks (doctor mode)
   plonk status -o json   # Show as JSON
   plonk status -o yaml   # Show as YAML`,
 	RunE: runStatus,
@@ -38,6 +41,8 @@ Examples:
 
 func init() {
 	rootCmd.AddCommand(statusCmd)
+	statusCmd.Flags().Bool("health", false, "Include comprehensive health checks (doctor mode)")
+	statusCmd.Flags().Bool("check", false, "Alias for --health")
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {
@@ -45,25 +50,36 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return fmt.Errorf("invalid output format: %w", err)
+		return err
+	}
+
+	// Check if health/check flag is set
+	checkHealth, _ := cmd.Flags().GetBool("health")
+	if !checkHealth {
+		checkHealth, _ = cmd.Flags().GetBool("check")
+	}
+
+	// If health check requested, run doctor functionality
+	if checkHealth {
+		return runHealthChecks(format)
 	}
 
 	// Get directories
-	homeDir := orchestrator.GetHomeDir()
-	configDir := orchestrator.GetConfigDir()
+	homeDir := config.GetHomeDir()
+	configDir := config.GetConfigDir()
 
 	// Load configuration (may fail if config is invalid, but we handle this gracefully)
-	_, configLoadErr := config.LoadConfig(configDir)
+	_, configLoadErr := config.Load(configDir)
 
 	// Reconcile all domains
 	ctx := context.Background()
 	results, err := orchestrator.ReconcileAll(ctx, homeDir, configDir)
 	if err != nil {
-		return fmt.Errorf("failed to reconcile state: %w", err)
+		return err
 	}
 
 	// Convert results to summary for compatibility with existing output logic
-	summary := convertResultsToSummary(results)
+	summary := resources.ConvertResultsToSummary(results)
 
 	// Check file existence and validity
 	configPath := filepath.Join(configDir, "plonk.yaml")
@@ -95,35 +111,43 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	return RenderOutput(outputData, format)
 }
 
-// convertResultsToSummary converts reconciliation results to state.Summary for output compatibility
-func convertResultsToSummary(results map[string]state.Result) state.Summary {
-	summary := state.Summary{
-		TotalManaged:   0,
-		TotalMissing:   0,
-		TotalUntracked: 0,
-		Results:        make([]state.Result, 0, len(results)),
+// runHealthChecks runs the doctor functionality when --health flag is set
+func runHealthChecks(format OutputFormat) error {
+	// Run comprehensive health checks using diagnostics
+	healthReport := diagnostics.RunHealthChecks()
+
+	// Convert to command output type
+	doctorOutput := DoctorOutput{
+		Overall: healthReport.Overall,
+		Checks:  healthReport.Checks,
 	}
 
-	for _, result := range results {
-		summary.TotalManaged += len(result.Managed)
-		summary.TotalMissing += len(result.Missing)
-		summary.TotalUntracked += len(result.Untracked)
-		summary.Results = append(summary.Results, result)
-	}
+	return RenderOutput(doctorOutput, format)
+}
 
-	return summary
+// convertManagedItems converts resources.ManagedItem to command-specific ManagedItem
+func convertManagedItems(items []resources.ManagedItem) []ManagedItem {
+	result := make([]ManagedItem, len(items))
+	for i, item := range items {
+		result[i] = ManagedItem{
+			Name:    item.Name,
+			Domain:  item.Domain,
+			Manager: item.Manager,
+		}
+	}
+	return result
 }
 
 // Removed - using config.ConfigAdapter instead
 
 // StatusOutput represents the output structure for status command
 type StatusOutput struct {
-	ConfigPath   string        `json:"config_path" yaml:"config_path"`
-	LockPath     string        `json:"lock_path" yaml:"lock_path"`
-	ConfigExists bool          `json:"config_exists" yaml:"config_exists"`
-	ConfigValid  bool          `json:"config_valid" yaml:"config_valid"`
-	LockExists   bool          `json:"lock_exists" yaml:"lock_exists"`
-	StateSummary state.Summary `json:"state_summary" yaml:"state_summary"`
+	ConfigPath   string            `json:"config_path" yaml:"config_path"`
+	LockPath     string            `json:"lock_path" yaml:"lock_path"`
+	ConfigExists bool              `json:"config_exists" yaml:"config_exists"`
+	ConfigValid  bool              `json:"config_valid" yaml:"config_valid"`
+	LockExists   bool              `json:"lock_exists" yaml:"lock_exists"`
+	StateSummary resources.Summary `json:"state_summary" yaml:"state_summary"`
 }
 
 // StatusOutputSummary represents a summary-focused version for JSON/YAML output
@@ -139,19 +163,10 @@ type StatusOutputSummary struct {
 
 // StatusSummaryData represents aggregate counts and domain summaries
 type StatusSummaryData struct {
-	TotalManaged   int             `json:"total_managed" yaml:"total_managed"`
-	TotalMissing   int             `json:"total_missing" yaml:"total_missing"`
-	TotalUntracked int             `json:"total_untracked" yaml:"total_untracked"`
-	Domains        []DomainSummary `json:"domains" yaml:"domains"`
-}
-
-// DomainSummary represents counts for a specific domain/manager
-type DomainSummary struct {
-	Domain         string `json:"domain" yaml:"domain"`
-	Manager        string `json:"manager,omitempty" yaml:"manager,omitempty"`
-	ManagedCount   int    `json:"managed_count" yaml:"managed_count"`
-	MissingCount   int    `json:"missing_count" yaml:"missing_count"`
-	UntrackedCount int    `json:"untracked_count" yaml:"untracked_count"`
+	TotalManaged   int                       `json:"total_managed" yaml:"total_managed"`
+	TotalMissing   int                       `json:"total_missing" yaml:"total_missing"`
+	TotalUntracked int                       `json:"total_untracked" yaml:"total_untracked"`
+	Domains        []resources.DomainSummary `json:"domains" yaml:"domains"`
 }
 
 // ManagedItem represents a currently managed item
@@ -211,41 +226,97 @@ func (s StatusOutput) StructuredData() any {
 			TotalManaged:   s.StateSummary.TotalManaged,
 			TotalMissing:   s.StateSummary.TotalMissing,
 			TotalUntracked: s.StateSummary.TotalUntracked,
-			Domains:        createDomainSummary(s.StateSummary.Results),
+			Domains:        resources.CreateDomainSummary(s.StateSummary.Results),
 		},
-		ManagedItems: extractManagedItems(s.StateSummary.Results),
+		ManagedItems: convertManagedItems(resources.ExtractManagedItems(s.StateSummary.Results)),
 	}
 }
 
-// createDomainSummary creates domain summaries with counts only
-func createDomainSummary(results []state.Result) []DomainSummary {
-	var domains []DomainSummary
-	for _, result := range results {
-		if result.IsEmpty() {
-			continue
-		}
-		domains = append(domains, DomainSummary{
-			Domain:         result.Domain,
-			Manager:        result.Manager,
-			ManagedCount:   len(result.Managed),
-			MissingCount:   len(result.Missing),
-			UntrackedCount: len(result.Untracked),
-		})
-	}
-	return domains
+// DoctorOutput represents the output of the doctor command (health checks)
+type DoctorOutput struct {
+	Overall diagnostics.HealthStatus  `json:"overall" yaml:"overall"`
+	Checks  []diagnostics.HealthCheck `json:"checks" yaml:"checks"`
 }
 
-// extractManagedItems extracts only the managed items without full metadata
-func extractManagedItems(results []state.Result) []ManagedItem {
-	var items []ManagedItem
-	for _, result := range results {
-		for _, managed := range result.Managed {
-			items = append(items, ManagedItem{
-				Name:    managed.Name,
-				Domain:  managed.Domain,
-				Manager: managed.Manager,
-			})
+// TableOutput generates human-friendly table output for doctor command
+func (d DoctorOutput) TableOutput() string {
+	var output strings.Builder
+
+	// Overall status
+	output.WriteString("# Plonk Health Report\n\n")
+
+	switch d.Overall.Status {
+	case "healthy":
+		output.WriteString("🟢 Overall Status: HEALTHY\n")
+	case "warning":
+		output.WriteString("🟡 Overall Status: WARNING\n")
+	case "unhealthy":
+		output.WriteString("🔴 Overall Status: UNHEALTHY\n")
+	}
+	output.WriteString(fmt.Sprintf("   %s\n\n", d.Overall.Message))
+
+	// Group checks by category
+	categories := make(map[string][]diagnostics.HealthCheck)
+	for _, check := range d.Checks {
+		categories[check.Category] = append(categories[check.Category], check)
+	}
+
+	// Display each category
+	categoryOrder := []string{"system", "environment", "permissions", "configuration", "package-managers", "installation"}
+	for _, category := range categoryOrder {
+		if checks, exists := categories[category]; exists {
+			output.WriteString(fmt.Sprintf("## %s\n", strings.Title(strings.ReplaceAll(category, "-", " "))))
+
+			for _, check := range checks {
+				// Status icon
+				var icon string
+				switch check.Status {
+				case "pass":
+					icon = "✅"
+				case "warn":
+					icon = "⚠️"
+				case "fail":
+					icon = "❌"
+				case "info":
+					icon = "ℹ️"
+				default:
+					icon = "❓"
+				}
+
+				output.WriteString(fmt.Sprintf("### %s %s\n", icon, check.Name))
+				output.WriteString(fmt.Sprintf("**Status**: %s\n", strings.ToUpper(check.Status)))
+				output.WriteString(fmt.Sprintf("**Message**: %s\n", check.Message))
+
+				if len(check.Details) > 0 {
+					output.WriteString("\n**Details:**\n")
+					for _, detail := range check.Details {
+						output.WriteString(fmt.Sprintf("- %s\n", detail))
+					}
+				}
+
+				if len(check.Issues) > 0 {
+					output.WriteString("\n**Issues:**\n")
+					for _, issue := range check.Issues {
+						output.WriteString(fmt.Sprintf("- ❌ %s\n", issue))
+					}
+				}
+
+				if len(check.Suggestions) > 0 {
+					output.WriteString("\n**Suggestions:**\n")
+					for _, suggestion := range check.Suggestions {
+						output.WriteString(fmt.Sprintf("- 💡 %s\n", suggestion))
+					}
+				}
+
+				output.WriteString("\n")
+			}
 		}
 	}
-	return items
+
+	return output.String()
+}
+
+// StructuredData returns the structured data for serialization
+func (d DoctorOutput) StructuredData() any {
+	return d
 }

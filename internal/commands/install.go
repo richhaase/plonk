@@ -9,9 +9,8 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/managers"
-	"github.com/richhaase/plonk/internal/state"
-	"github.com/richhaase/plonk/internal/ui"
+	"github.com/richhaase/plonk/internal/resources"
+	"github.com/richhaase/plonk/internal/resources/packages"
 	"github.com/spf13/cobra"
 )
 
@@ -60,7 +59,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return fmt.Errorf("install: invalid output format %s: %w", outputFormat, err)
+		return err
 	}
 
 	// Get flags
@@ -73,7 +72,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	configDir := config.GetDefaultConfigDirectory()
 
 	// Configure installation options
-	opts := managers.InstallOptions{
+	opts := packages.InstallOptions{
 		Manager: flags.Manager,
 		DryRun:  flags.DryRun,
 		Force:   flags.Force,
@@ -83,19 +82,16 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	results, err := managers.InstallPackages(ctx, configDir, args, opts)
+	results, err := packages.InstallPackages(ctx, configDir, args, opts)
 	if err != nil {
-		return fmt.Errorf("install: failed to process packages: %w", err)
+		return err
 	}
 
-	// Show progress reporting
-	reporter := ui.NewProgressReporterForOperation("install", "package", true)
+	// Show progress for each result
 	for _, result := range results {
-		reporter.ShowItemProgress(result)
+		icon := GetStatusIcon(result.Status)
+		fmt.Printf("%s %s %s\n", icon, result.Status, result.Name)
 	}
-
-	// Show batch summary
-	reporter.ShowBatchSummary(results)
 
 	// Create output data
 	summary := calculatePackageSummary(results)
@@ -110,20 +106,15 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Determine exit code based on results
-	exitErr := DetermineExitCode(results, "packages", "install")
-	if exitErr != nil {
-		return exitErr
-	}
-
-	return nil
+	// Check if all operations failed and return appropriate error
+	return resources.ValidateOperationResults(results, "install packages")
 }
 
 // PackageInstallOutput represents the output for package installation
 type PackageInstallOutput struct {
-	TotalPackages int                     `json:"total_packages" yaml:"total_packages"`
-	Results       []state.OperationResult `json:"results" yaml:"results"`
-	Summary       PackageInstallSummary   `json:"summary" yaml:"summary"`
+	TotalPackages int                         `json:"total_packages" yaml:"total_packages"`
+	Results       []resources.OperationResult `json:"results" yaml:"results"`
+	Summary       PackageInstallSummary       `json:"summary" yaml:"summary"`
 }
 
 // PackageInstallSummary provides summary for package installation
@@ -134,8 +125,8 @@ type PackageInstallSummary struct {
 }
 
 // calculatePackageSummary calculates summary from results using generic operations summary
-func calculatePackageSummary(results []state.OperationResult) PackageInstallSummary {
-	genericSummary := state.CalculateSummary(results)
+func calculatePackageSummary(results []resources.OperationResult) PackageInstallSummary {
+	genericSummary := resources.CalculateSummary(results)
 	return PackageInstallSummary{
 		Added:   genericSummary.Added,
 		Skipped: genericSummary.Skipped,

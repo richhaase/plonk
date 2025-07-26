@@ -16,33 +16,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// TargetToSource converts a target path to source path using plonk's convention
-// Removes the ~/. prefix
-// Examples:
-//
-//	~/.config/nvim/ -> config/nvim/
-//	~/.zshrc -> zshrc
-//	~/.editorconfig -> editorconfig
-func TargetToSource(target string) string {
-	// Remove ~/. prefix if present
-	if len(target) > 3 && target[:3] == "~/." {
-		return target[3:]
-	}
-	// Handle case where there's no prefix (shouldn't happen in normal use)
-	return target
-}
-
 // Config type is now defined in config.go
-
-// LoadConfig is an alias to Load for backward compatibility
-func LoadConfig(configDir string) (*Config, error) {
-	return Load(configDir)
-}
-
-// LoadConfigWithDefaults is an alias to LoadWithDefaults for backward compatibility
-func LoadConfigWithDefaults(configDir string) *Config {
-	return LoadWithDefaults(configDir)
-}
 
 // GetDefaultConfigDirectory returns the default config directory, checking PLONK_DIR environment variable first
 func GetDefaultConfigDirectory() string {
@@ -75,11 +49,6 @@ type ValidationResult struct {
 	Warnings []string `json:"warnings,omitempty"`
 }
 
-// IsValid returns whether the validation passed
-func (vr *ValidationResult) IsValid() bool {
-	return vr.Valid
-}
-
 // GetSummary returns a summary of the validation result
 func (vr *ValidationResult) GetSummary() string {
 	if vr.Valid {
@@ -110,25 +79,6 @@ type SimpleValidator struct {
 func NewSimpleValidator() *SimpleValidator {
 	v := validator.New()
 	return &SimpleValidator{validator: v}
-}
-
-// ValidateConfig validates a parsed config struct
-func (v *SimpleValidator) ValidateConfig(config *Config) *ValidationResult {
-	// Convert to NewConfig for validation
-	resolved := config.Resolve()
-	err := v.validator.Struct(resolved)
-
-	result := &ValidationResult{
-		Valid:    err == nil,
-		Errors:   []string{},
-		Warnings: []string{},
-	}
-
-	if err != nil {
-		result.Errors = append(result.Errors, err.Error())
-	}
-
-	return result
 }
 
 // ValidateConfigFromYAML validates configuration from YAML content

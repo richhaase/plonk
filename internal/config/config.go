@@ -19,6 +19,20 @@ type Config struct {
 	DotfileTimeout    int      `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`
 	ExpandDirectories []string `yaml:"expand_directories,omitempty"`
 	IgnorePatterns    []string `yaml:"ignore_patterns,omitempty"`
+	Hooks             Hooks    `yaml:"hooks,omitempty"`
+}
+
+// Hooks contains pre and post sync hooks
+type Hooks struct {
+	PreSync  []Hook `yaml:"pre_sync,omitempty"`
+	PostSync []Hook `yaml:"post_sync,omitempty"`
+}
+
+// Hook represents a single hook command
+type Hook struct {
+	Command         string `yaml:"command" validate:"required"`
+	Timeout         string `yaml:"timeout,omitempty"`
+	ContinueOnError bool   `yaml:"continue_on_error,omitempty"`
 }
 
 // defaultConfig holds the default configuration values
@@ -92,12 +106,6 @@ func LoadWithDefaults(configDir string) *Config {
 	return cfg
 }
 
-// Resolve returns self for API compatibility
-// In the new system, Config IS the resolved config
-func (c *Config) Resolve() *Config {
-	return c
-}
-
 // applyDefaults applies default values to a config
 func applyDefaults(cfg *Config) {
 	if cfg.DefaultManager == "" {
@@ -118,4 +126,17 @@ func applyDefaults(cfg *Config) {
 	if len(cfg.IgnorePatterns) == 0 {
 		cfg.IgnorePatterns = defaultConfig.IgnorePatterns
 	}
+}
+
+// Utility functions for directory management
+
+// GetHomeDir returns the user's home directory
+func GetHomeDir() string {
+	homeDir, _ := os.UserHomeDir()
+	return homeDir
+}
+
+// GetConfigDir returns the plonk configuration directory
+func GetConfigDir() string {
+	return GetDefaultConfigDirectory()
 }

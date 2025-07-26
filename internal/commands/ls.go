@@ -9,8 +9,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/orchestrator"
-	"github.com/richhaase/plonk/internal/state"
+	"github.com/richhaase/plonk/internal/resources"
 	"github.com/spf13/cobra"
 )
 
@@ -64,13 +65,13 @@ func runLs(cmd *cobra.Command, args []string) error {
 	// Parse flags
 	flags, err := ParseSimpleFlags(cmd)
 	if err != nil {
-		return fmt.Errorf("invalid flag combination: %w", err)
+		return err
 	}
 
 	// Parse output format
 	format, err := ParseOutputFormat(flags.Output)
 	if err != nil {
-		return fmt.Errorf("invalid output format: %w", err)
+		return err
 	}
 
 	// Get filter flags
@@ -98,29 +99,29 @@ func runLs(cmd *cobra.Command, args []string) error {
 // runSmartOverview provides a unified view of packages and dotfiles
 func runSmartOverview(cmd *cobra.Command, flags *SimpleFlags, format OutputFormat, showAll bool) error {
 	// Get directories
-	homeDir := orchestrator.GetHomeDir()
-	configDir := orchestrator.GetConfigDir()
+	homeDir := config.GetHomeDir()
+	configDir := config.GetConfigDir()
 
 	// Reconcile all domains
 	ctx := context.Background()
 	results, err := orchestrator.ReconcileAll(ctx, homeDir, configDir)
 	if err != nil {
-		return fmt.Errorf("failed to reconcile state: %w", err)
+		return err
 	}
 
 	// Convert results to summary
-	summary := &state.Summary{
+	summary := &resources.Summary{
 		TotalManaged:   0,
 		TotalMissing:   0,
 		TotalUntracked: 0,
-		Results:        make([]state.Result, 0),
+		Results:        make([]resources.Result, 0),
 	}
 
 	for _, result := range results {
 		result.AddToSummary(summary)
 	}
 	if err != nil {
-		return fmt.Errorf("failed to reconcile state: %w", err)
+		return err
 	}
 
 	// Prepare smart overview data

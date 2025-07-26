@@ -7,10 +7,8 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/dotfiles"
-	"github.com/richhaase/plonk/internal/orchestrator"
-	"github.com/richhaase/plonk/internal/state"
-	"github.com/richhaase/plonk/internal/ui"
+	"github.com/richhaase/plonk/internal/resources"
+	"github.com/richhaase/plonk/internal/resources/dotfiles"
 	"github.com/spf13/cobra"
 )
 
@@ -46,7 +44,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 	outputFormat, _ := cmd.Flags().GetString("output")
 	format, err := ParseOutputFormat(outputFormat)
 	if err != nil {
-		return fmt.Errorf("rm: invalid output format %s: %w", outputFormat, err)
+		return err
 	}
 
 	// Get flags
@@ -56,11 +54,11 @@ func runRm(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get directories
-	homeDir := orchestrator.GetHomeDir()
-	configDir := orchestrator.GetConfigDir()
+	homeDir := config.GetHomeDir()
+	configDir := config.GetConfigDir()
 
-	// Load config using LoadConfigWithDefaults for consistent zero-config behavior
-	cfg := config.LoadConfigWithDefaults(configDir)
+	// Load config using LoadWithDefaults for consistent zero-config behavior
+	cfg := config.LoadWithDefaults(configDir)
 
 	// Create dotfile manager
 	manager := dotfiles.NewManager(homeDir, configDir)
@@ -73,17 +71,14 @@ func runRm(cmd *cobra.Command, args []string) error {
 	// Process dotfiles using domain package
 	results, err := manager.RemoveFiles(cfg, args, opts)
 	if err != nil {
-		return fmt.Errorf("rm: failed to process dotfiles: %w", err)
+		return err
 	}
 
-	// Show progress reporting
-	reporter := ui.NewProgressReporterForOperation("remove", "dotfile", true)
+	// Show progress for each result
 	for _, result := range results {
-		reporter.ShowItemProgress(result)
+		icon := GetStatusIcon(result.Status)
+		fmt.Printf("%s %s %s\n", icon, result.Status, result.Name)
 	}
-
-	// Show batch summary
-	reporter.ShowBatchSummary(results)
 
 	// Create output data
 	summary := calculateRemovalSummary(results)
@@ -98,20 +93,15 @@ func runRm(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Determine exit code based on results
-	exitErr := DetermineExitCode(results, "dotfiles", "remove")
-	if exitErr != nil {
-		return exitErr
-	}
-
-	return nil
+	// Check if all operations failed and return appropriate error
+	return resources.ValidateOperationResults(results, "remove dotfiles")
 }
 
 // DotfileRemovalOutput represents the output for dotfile removal
 type DotfileRemovalOutput struct {
-	TotalFiles int                     `json:"total_files" yaml:"total_files"`
-	Results    []state.OperationResult `json:"results" yaml:"results"`
-	Summary    DotfileRemovalSummary   `json:"summary" yaml:"summary"`
+	TotalFiles int                         `json:"total_files" yaml:"total_files"`
+	Results    []resources.OperationResult `json:"results" yaml:"results"`
+	Summary    DotfileRemovalSummary       `json:"summary" yaml:"summary"`
 }
 
 // DotfileRemovalSummary provides summary for dotfile removal
@@ -122,8 +112,8 @@ type DotfileRemovalSummary struct {
 }
 
 // calculateRemovalSummary calculates summary from results using generic operations summary
-func calculateRemovalSummary(results []state.OperationResult) DotfileRemovalSummary {
-	genericSummary := state.CalculateSummary(results)
+func calculateRemovalSummary(results []resources.OperationResult) DotfileRemovalSummary {
+	genericSummary := resources.CalculateSummary(results)
 	return DotfileRemovalSummary{
 		Removed: genericSummary.Added, // In removal context, "added" means "removed"
 		Skipped: genericSummary.Skipped,

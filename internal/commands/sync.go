@@ -63,13 +63,43 @@ func runSync(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get directories
-	homeDir := orchestrator.GetHomeDir()
-	configDir := orchestrator.GetConfigDir()
+	homeDir := config.GetHomeDir()
+	configDir := config.GetConfigDir()
 
 	// Load configuration
-	cfg := config.LoadConfigWithDefaults(configDir)
+	cfg := config.LoadWithDefaults(configDir)
 
 	ctx := context.Background()
+
+	// For now, maintain backward compatibility by using the old sync functions
+	// TODO: After Task 6.2, update to use scope flags (packages-only, dotfiles-only)
+	if packagesOnly || dotfilesOnly {
+		// Handle scoped sync using legacy functions
+		return runScopedSync(ctx, configDir, homeDir, cfg, dryRun, backup, packagesOnly, dotfilesOnly, format)
+	}
+
+	// Create new orchestrator
+	orch := orchestrator.New(
+		orchestrator.WithConfig(cfg),
+		orchestrator.WithConfigDir(configDir),
+		orchestrator.WithHomeDir(homeDir),
+		orchestrator.WithDryRun(dryRun),
+	)
+
+	// Run sync with hooks and v2 lock
+	result, err := orch.Sync(ctx)
+	if err != nil {
+		return fmt.Errorf("sync failed: %w", err)
+	}
+
+	// Convert to legacy output format for now
+	outputData := convertSyncResult(result, getSyncScope(packagesOnly, dotfilesOnly))
+
+	return RenderOutput(outputData, format)
+}
+
+// runScopedSync handles packages-only or dotfiles-only sync using legacy functions
+func runScopedSync(ctx context.Context, configDir, homeDir string, cfg *config.Config, dryRun, backup, packagesOnly, dotfilesOnly bool, format OutputFormat) error {
 	var packageOutput *ApplyOutput
 	var dotfileOutput *DotfileApplyOutput
 
@@ -182,6 +212,16 @@ func runSync(cmd *cobra.Command, args []string) error {
 	}
 
 	return RenderOutput(outputData, format)
+}
+
+// convertSyncResult converts new SyncResult to legacy CombinedSyncOutput
+func convertSyncResult(result orchestrator.SyncResult, scope string) CombinedSyncOutput {
+	return CombinedSyncOutput{
+		DryRun:   result.DryRun,
+		Packages: result.Packages,
+		Dotfiles: result.Dotfiles,
+		Scope:    scope,
+	}
 }
 
 // getSyncScope returns a description of what's being synced

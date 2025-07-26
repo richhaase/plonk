@@ -48,11 +48,6 @@ func init() {
 	rootCmd.RegisterFlagCompletionFunc("output", completeOutputFormats)
 }
 
-// Execute runs the root command
-func Execute() error {
-	return rootCmd.Execute()
-}
-
 // ExecuteWithExitCode runs the root command and returns appropriate exit code
 func ExecuteWithExitCode(version, commit, date string) int {
 	versionInfo = VersionInfo{
