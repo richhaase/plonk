@@ -129,12 +129,26 @@ internal/
 
 **Result**: 1,550+ lines of dead code removed through two passes. Initial cleanup reduced from 55+ to 16 dead code items (70% improvement), followed by additional cleanup reducing to just 2 test helpers (87.5% total improvement). Major parser cleanup (parsers.go reduced 86%). Standardized function naming throughout codebase. All tests passing with clean linter results.
 
-### Phase 8: Testing & Documentation (Day 11)
-- [ ] Update all tests for new structure
+### Phase 8: Comprehensive UX Review (Day 11)
+- [ ] Review all CLI commands and patterns with stakeholder
+- [ ] Identify opportunities to simplify without sacrificing functionality
+- [ ] Document UX improvement recommendations
+- [ ] Prioritize changes based on user impact and implementation effort
+- [ ] Create detailed plan for UX improvements
+
+### Phase 9+: UX Implementation (Days 12-13)
+- [ ] Implement approved UX improvements
+- [ ] Update command structure as needed
+- [ ] Ensure backward compatibility where appropriate
+- [ ] Update integration tests for new UX
+- [ ] Update documentation for new patterns
+
+### Final Phase: Testing & Documentation (Day 14)
+- [ ] Update all tests for new structure and UX
 - [ ] Ensure reasonable test execution time
 - [ ] Update ARCHITECTURE.md with "How to add a new Resource" section
-- [ ] Update README quick-start paths for new structure
-- [ ] Add "future resource checklist"
+- [ ] Update README with new command patterns
+- [ ] Add comprehensive examples and use cases
 - [ ] Final verification and optimization
 
 ## Key Design Decisions
