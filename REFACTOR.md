@@ -199,13 +199,13 @@ internal/
 
 **Result**: Fixed by removing 264+ version check operations during reconciliation
 
-### Phase 11: UX Implementation - Command Consolidation (Day 13)
-- [ ] Delete `ls.go` command file
-- [ ] Remove `ls` command registration
-- [ ] Update root command to show help (not status) when no args
-- [ ] Add `st` as alias for `status` command
-- [ ] Update help text and documentation
-- [ ] Update integration tests
+### Phase 11: UX Implementation - Command Consolidation (Day 13) ✅ COMPLETE
+- [x] Delete `ls.go` command file
+- [x] Remove `ls` command registration
+- [x] Update root command to show help (not status) when no args
+- [x] Add `st` as alias for `status` command
+- [x] Update help text and documentation
+- [x] Fixed build issues (dotfiles.go function reference)
 
 ### Phase 12: UX Implementation - Package Manager Selection (Day 13)
 - [ ] Implement prefix syntax parsing (e.g., `brew:package`)

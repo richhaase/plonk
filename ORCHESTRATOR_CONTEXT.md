@@ -71,11 +71,13 @@ Successfully renamed sync→apply throughout codebase, updated all functions/hoo
 ### Phase 10.5: Fix Apply Command Hanging (Day 12) - ✅ COMPLETE
 Fixed hanging issue by removing 264+ unnecessary version check operations during reconciliation
 
-### Phase 11-14: UX Implementation (Days 13-14) - PLANNED
-Phase 11: Command consolidation (remove ls, add st alias)
-Phase 12: Package manager prefix syntax
+### Phase 11: UX Implementation - Command Consolidation (Day 13) - ✅ COMPLETE
+Removed ls command, added st alias, no-args shows help, fixed build issues
+
+### Phase 12-14: UX Implementation (Days 13-14) - PLANNED
+Phase 12: Package manager prefix syntax (ready to start)
 Phase 13: Search/info enhancements
-Phase 14: Integration and polish
+Phase 14: Integration and polish with BATS tests
 
 ### Phase 15: Output Standardization (Day 14) - NOT STARTED
 Standardize output formatting across all commands

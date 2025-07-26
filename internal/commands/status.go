@@ -20,8 +20,9 @@ import (
 // Status command implementation using unified state management system
 
 var statusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "Display overall plonk status",
+	Use:     "status",
+	Aliases: []string{"st"},
+	Short:   "Display overall plonk status",
 	Long: `Display a compact overview of your plonk-managed environment.
 
 Shows:
