@@ -29,13 +29,30 @@ This document provides a detailed, step-by-step action plan for implementing BAT
   - Removed duplicate multiple-package tests (kept only brew as example)
   - All tests passing
 
+- [x] **Phase 4: Dotfile Tests** ✅ (Completed)
+  - Created dotfile add tests (single, directory, nested, conflicts)
+  - Created dotfile remove tests
+  - Fixed all test assertions to match actual plonk output
+  - Documented directory removal bug with failing test
+  - 12/13 tests passing (1 failure documents expected behavior)
+
+### In Progress
+- [ ] **Phase 5: Apply Command Tests** 🚧 (In Progress)
+  - Created initial apply tests
+  - Discovered bug: plonk apply shows "All up to date" for system-installed binaries (e.g., jq at /usr/bin/jq)
+  - Discovered test isolation issues - need proper cleanup between tests
+  - Added cleanup to setup() but still seeing state persistence
+  - User suggested using more obscure packages since jq is system-installed on macOS
+
 ### Remaining Phases
-- [ ] Phase 4: Dotfile Tests (Add/remove)
-- [ ] Phase 5: Apply Command Tests
 - [ ] Phase 6: Error Handling Tests
 - [ ] Phase 7: Integration Tests
 - [ ] Phase 8: CI/CD Integration
 - [ ] Phase 9: Documentation Updates
+
+### Known Issues/Bugs Discovered
+1. **Directory removal bug** (Phase 4): `plonk rm ~/.config/myapp/` fails with "directory not empty" instead of performing `rm -rf` on the plonk-managed copy
+2. **System binary detection bug** (Phase 5): `plonk apply` incorrectly treats system-installed binaries (e.g., /usr/bin/jq) as "managed" and shows "All up to date"
 
 ## Pre-Implementation Checklist
 
