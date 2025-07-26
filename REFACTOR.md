@@ -129,21 +129,89 @@ internal/
 
 **Result**: 1,550+ lines of dead code removed through two passes. Initial cleanup reduced from 55+ to 16 dead code items (70% improvement), followed by additional cleanup reducing to just 2 test helpers (87.5% total improvement). Major parser cleanup (parsers.go reduced 86%). Standardized function naming throughout codebase. All tests passing with clean linter results.
 
-### Phase 8: Comprehensive UX Review (Day 11)
-- [ ] Review all CLI commands and patterns with stakeholder
-- [ ] Identify opportunities to simplify without sacrificing functionality
+### Phase 8: Comprehensive UX Review (Day 11) - IN PROGRESS
+- [x] Review all CLI commands and patterns with stakeholder
+- [x] Identify opportunities to simplify without sacrificing functionality
 - [ ] Document UX improvement recommendations
 - [ ] Prioritize changes based on user impact and implementation effort
 - [ ] Create detailed plan for UX improvements
 
-### Phase 9+: UX Implementation (Days 12-13)
-- [ ] Implement approved UX improvements
-- [ ] Update command structure as needed
-- [ ] Ensure backward compatibility where appropriate
-- [ ] Update integration tests for new UX
-- [ ] Update documentation for new patterns
+#### UX Decisions Made:
 
-### Final Phase: Testing & Documentation (Day 14)
+1. **Command Consolidation**
+   - Remove `plonk ls` command (redundant with status)
+   - Change `plonk` (no args) to show help instead of status
+   - Add `plonk st` as alias for `plonk status`
+   - Keep separation: add/rm for dotfiles, install/uninstall for packages
+
+2. **Package Manager Selection**
+   - Replace `--<manager>` flags with prefix syntax: `brew:ripgrep`, `npm:typescript`
+   - No prefix = use default_manager from config
+   - Remove old flag-based selection (e.g., `--brew`, `--cargo`)
+   - Search/info behavior to be refined separately
+
+3. **Config Command Simplification**
+   - Add auto-validation on every config read (fail fast with clear errors)
+   - Remove `plonk config validate` command (validation happens automatically)
+   - Keep `plonk config show` and `plonk config edit` subcommands
+   - Make `config show` display the file path at the top of output
+
+4. **Search and Info Commands Enhancement**
+   - Search should query all managers in parallel (2-3 second timeout acceptable)
+   - Display results in clear table format showing manager source
+   - Info command priority: managed by plonk → installed → all available
+   - Support prefix syntax for specific queries: `plonk info brew:ripgrep`
+   - Implementation details to be refined during development
+
+5. **Output Format Flag**
+   - Keep current `-o table|json|yaml` flag on all commands
+   - Focus on standardizing output content rather than flag optimization
+   - Add dedicated phase for output standardization before documentation
+
+### Phase 9: UX Implementation - Command Consolidation (Day 12)
+- [ ] Delete `ls.go` command file
+- [ ] Remove `ls` command registration
+- [ ] Update root command to show help (not status) when no args
+- [ ] Add `st` as alias for `status` command
+- [ ] Update help text and documentation
+- [ ] Update integration tests
+
+### Phase 10: UX Implementation - Package Manager Selection (Day 12)
+- [ ] Implement prefix syntax parsing (e.g., `brew:package`)
+- [ ] Remove `--<manager>` flag definitions from install/uninstall commands
+- [ ] Update package resolution logic to handle prefixes
+- [ ] Update help text to show new syntax
+- [ ] Update command examples in documentation
+
+### Phase 11: UX Implementation - Config Command Updates (Day 13)
+- [ ] Add auto-validation to config loading functions
+- [ ] Remove `config_validate.go` command file
+- [ ] Update `config show` to display file path at top
+- [ ] Ensure clear error messages on validation failures
+- [ ] Update config error handling throughout codebase
+
+### Phase 12: UX Implementation - Search/Info Enhancement (Day 13)
+- [ ] Implement parallel search across all managers
+- [ ] Add timeout handling (2-3 seconds)
+- [ ] Update search output to show manager sources clearly
+- [ ] Implement info command priority logic (managed → installed → all)
+- [ ] Support prefix syntax in info command
+- [ ] Update help text and examples
+
+### Phase 13+: Additional UX Improvements (Day 13)
+- [ ] Implement remaining UX improvements from Phase 8
+- [ ] Update integration tests for new patterns
+- [ ] Update documentation
+
+### Phase 14: Output Standardization (Day 14)
+- [ ] Review all command outputs for consistency
+- [ ] Standardize table formatting across commands
+- [ ] Ensure consistent JSON/YAML structure
+- [ ] Standardize error message formats
+- [ ] Create output guidelines for future commands
+- [ ] Test all output formats (-o table|json|yaml) for each command
+
+### Final Phase: Testing & Documentation (Day 15)
 - [ ] Update all tests for new structure and UX
 - [ ] Ensure reasonable test execution time
 - [ ] Update ARCHITECTURE.md with "How to add a new Resource" section
