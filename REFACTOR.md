@@ -223,9 +223,11 @@ internal/
 - [ ] Update help text and examples
 
 ### Phase 14: Additional UX Improvements (Day 14)
-- [ ] Implement remaining UX improvements from Phase 8
-- [ ] Update integration tests for new patterns
-- [ ] Update documentation
+- [ ] Implement apply command partial failure handling
+- [ ] Create BATS test suite for CLI validation
+- [ ] Fix integration issues between phases
+- [ ] Update help text and error messages
+- [ ] Polish command behavior and consistency
 
 ### Phase 15: Output Standardization (Day 14)
 - [ ] Review all command outputs for consistency

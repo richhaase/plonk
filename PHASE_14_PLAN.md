@@ -13,6 +13,7 @@ This phase focuses on integration, polish, and ensuring all the UX improvements 
 3. Fix any integration issues between phases
 4. Add command aliases where helpful
 5. Ensure consistent error handling across commands
+6. Implement BATS test suite for CLI validation
 
 ## Key Areas to Address
 
@@ -76,6 +77,42 @@ If not already done in Phase 10:
 - Update any example configs
 - Clear error if old hook names are used
 
+### 7. BATS Test Suite Implementation
+
+Create comprehensive CLI tests using BATS (Bash Automated Testing System):
+
+**Setup:**
+- Create `tests/bats/` directory structure
+- Add README with clear warnings about system modifications
+- Implement test_helper.bash for common functions
+
+**Test Coverage:**
+```bash
+tests/bats/
+├── 01-basic-commands.bats    # Help, version, init
+├── 02-config-commands.bats   # Config operations
+├── 03-apply-command.bats     # Apply with partial failures
+├── 04-package-ops.bats       # Install/uninstall with prefix syntax
+├── 05-search-info.bats       # Parallel search, info priority
+├── 06-status-commands.bats   # Status and st alias
+├── 07-output-formats.bats    # JSON/YAML/table formats
+└── 99-cleanup.bats          # Clean up test artifacts
+```
+
+**Key Tests:**
+- Verify `plonk` (no args) shows help, not status
+- Confirm `plonk ls` returns "unknown command"
+- Test `plonk st` alias works correctly
+- Validate prefix syntax: `plonk install brew:jq`
+- Ensure apply continues on partial failures
+- Test all output formats work consistently
+
+**Safety Measures:**
+- Document that tests modify real system
+- Use small, common packages (jq, cowsay)
+- Provide cleanup instructions
+- Add environment variable to skip dangerous tests
+
 ## Testing Requirements
 
 ### Integration Tests
@@ -128,7 +165,8 @@ Before marking complete:
 - [ ] Integration between phases works smoothly
 - [ ] Error messages are consistent and helpful
 - [ ] Example configs use new patterns
-- [ ] All tests pass
+- [ ] BATS test suite implemented and passing
+- [ ] All existing tests updated
 - [ ] Manual testing confirms good UX
 
 ## Notes
