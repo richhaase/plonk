@@ -61,8 +61,12 @@ Removed 1,550+ lines of dead code (87.5% reduction to just 2 test helpers), stan
 ### Phase 8: Comprehensive UX Review (Day 11) - ✅ COMPLETE
 Reviewed all CLI commands and created detailed UX improvement plan
 
-### Phase 9-14: UX Implementation (Days 12-14) - NOT STARTED
-Implement command consolidation, prefix syntax, config changes, search/info improvements, and sync→apply rename
+### Phase 9: UX Implementation - Config Command Updates (Day 12) - ✅ COMPLETE
+Added auto-validation to config loading (already existed), removed config validate command, updated config show to display file path
+
+### Phase 10-14: UX Implementation (Days 12-14) - IN PROGRESS
+Phase 10: Sync→apply rename (ready to start)
+Phases 11-14: Command consolidation, prefix syntax, search/info improvements
 
 ### Phase 15: Output Standardization (Day 14) - NOT STARTED
 Standardize output formatting across all commands
