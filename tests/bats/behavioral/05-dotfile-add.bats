@@ -33,7 +33,7 @@ setup() {
 
   run plonk add "$HOME/$testfile" --dry-run
   assert_success
-  assert_output --partial "would add"
+  assert_output --partial "Would add"
 
   # Verify not actually added
   run plonk status
@@ -43,7 +43,7 @@ setup() {
 @test "add non-existent dotfile shows error" {
   run plonk add "$HOME/.definitely-does-not-exist-xyz"
   assert_failure
-  assert_output --partial "not found"
+  assert_output --partial "does not exist"
 }
 
 @test "add directory with nested structure" {
@@ -122,5 +122,5 @@ setup() {
   # Try to add again
   run plonk add "$HOME/$testfile"
   assert_success
-  assert_output --partial "already"
+  assert_output --partial "Updated existing"
 }
