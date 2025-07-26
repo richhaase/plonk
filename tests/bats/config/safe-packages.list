@@ -12,10 +12,13 @@ npm:left-pad     # Pads strings, ~4KB, famous tiny package
 
 # Python packages
 pip:cowsay       # ASCII cow, harmless fun tool
-pip:fortune      # Fortune cookie messages
+pip:six          # Python 2/3 compatibility, very small
 
 # Ruby gems
-gem:lolcat       # Rainbow text colorizer
+gem:colorize     # Terminal color output, small utility
 
 # Go packages
 go:github.com/rakyll/hey  # HTTP load generator, small tool
+
+# Cargo packages (Rust)
+cargo:ripgrep    # Fast grep replacement, useful tool

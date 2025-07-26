@@ -15,22 +15,19 @@
 ### Running Tests Safely
 
 ```bash
-# Basic run (leaves test packages installed)
+# Basic run (cleans up after tests)
 bats tests/bats/behavioral/
 
-# Run with automatic cleanup of packages
-PLONK_TEST_CLEANUP_PACKAGES=1 bats tests/bats/
+# Run without cleanup (keep test packages/dotfiles)
+PLONK_TEST_CLEANUP_PACKAGES=0 PLONK_TEST_CLEANUP_DOTFILES=0 bats tests/bats/
 
 # Run with custom safe lists
 export PLONK_TEST_SAFE_PACKAGES="brew:jq"
 export PLONK_TEST_SAFE_DOTFILES=".plonk-test-rc"
 bats tests/bats/
 
-# Skip destructive tests
-PLONK_TEST_SKIP_DANGEROUS=1 bats tests/bats/
-
-# Dry run - see what would be tested
-PLONK_TEST_DRY_RUN=1 bats tests/bats/
+# Run only specific test files
+bats tests/bats/behavioral/01-basic-commands.bats
 ```
 
 ### After Running Tests
@@ -55,20 +52,17 @@ plonk uninstall brew:jq brew:tree npm:is-odd pip:cowsay
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PLONK_TEST_CLEANUP_PACKAGES` | `0` | Set to `1` to auto-remove test packages |
+| `PLONK_TEST_CLEANUP_PACKAGES` | `1` | Set to `0` to keep test packages |
 | `PLONK_TEST_CLEANUP_DOTFILES` | `1` | Set to `0` to keep test dotfiles |
-| `PLONK_TEST_SKIP_DANGEROUS` | `0` | Set to `1` to skip destructive tests |
 | `PLONK_TEST_SAFE_PACKAGES` | See safe-packages.list | Comma-separated list of allowed packages |
 | `PLONK_TEST_SAFE_DOTFILES` | See safe-dotfiles.list | Comma-separated list of allowed dotfiles |
-| `PLONK_TEST_VERBOSE` | `0` | Set to `1` for verbose output |
 
 ### Test Development Guidelines
 
 1. **Only use packages/dotfiles from the safe lists**
 2. **Always track created artifacts for cleanup**
 3. **Test on a non-critical system first**
-4. **Mark destructive tests with `skip_if_dangerous`**
-5. **Provide clear test descriptions**
+4. **Provide clear test descriptions**
 
 ### Directory Structure
 
@@ -86,11 +80,8 @@ tests/bats/
 │   ├── 00-smoke.bats     # Basic setup verification
 │   ├── 01-basic-commands.bats
 │   └── ...
-├── cleanup/              # Cleanup tests
-│   └── 99-cleanup-all.bats
-└── fixtures/             # Test data
-    ├── configs/          # Sample config files
-    └── dotfiles/         # Sample dotfiles
+└── cleanup/              # Cleanup tests
+    └── 99-cleanup-all.bats
 ```
 
 ### Troubleshooting
@@ -104,8 +95,9 @@ tests/bats/
 - Or skip tests for unavailable managers
 
 **Tests leave artifacts**
-- Run the cleanup test: `bats tests/bats/cleanup/99-cleanup-all.bats`
-- Set `PLONK_TEST_CLEANUP_PACKAGES=1` for auto-cleanup
+- Tests should cleanup automatically
+- If not, run: `bats tests/bats/cleanup/99-cleanup-all.bats`
+- Or set `PLONK_TEST_CLEANUP_PACKAGES=0` to intentionally keep packages
 
 **Permission errors**
 - Some tests may require sudo (though we try to avoid this)

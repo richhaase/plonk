@@ -16,7 +16,7 @@ load '../lib/assertions'
 
   # Verify it's our test binary, not system plonk
   run which plonk
-  assert_output --partial "$BATS_TEST_TMPDIR"
+  assert_output --partial "/tmp/plonk-bats"
 }
 
 @test "test environment setup works correctly" {

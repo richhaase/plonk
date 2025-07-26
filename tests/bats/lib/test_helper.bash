@@ -66,36 +66,9 @@ export PLONK_TEST_DIR="$BATS_TEST_DIRNAME/.."
 export SAFE_PACKAGES_FILE="$PLONK_TEST_DIR/config/safe-packages.list"
 export SAFE_DOTFILES_FILE="$PLONK_TEST_DIR/config/safe-dotfiles.list"
 
-# Build plonk binary for testing
-build_test_plonk() {
-  # Find project root (where go.mod is)
-  local project_root="$PLONK_TEST_DIR/../.."
-
-  # Build plonk to a test-specific location
-  export PLONK_TEST_BINARY="$BATS_TEST_TMPDIR/plonk"
-
-  # Always build fresh to ensure we're testing current code
-  echo "# Building plonk from source..." >&3
-  (cd "$project_root" && go build -o "$PLONK_TEST_BINARY" ./cmd/plonk) || {
-    echo "Failed to build plonk binary" >&2
-    return 1
-  }
-
-  # Verify build succeeded
-  if [[ ! -f "$PLONK_TEST_BINARY" ]]; then
-    echo "Build succeeded but binary not found at $PLONK_TEST_BINARY" >&2
-    return 1
-  fi
-
-  # Add test binary to PATH (prepend so it takes precedence)
-  export PATH="$BATS_TEST_TMPDIR:$PATH"
-}
 
 # Initialize test environment
 setup_test_env() {
-  # Build test plonk binary first
-  build_test_plonk || return 1
-
   # Create isolated plonk config directory
   export PLONK_DIR="$BATS_TEST_TMPDIR/plonk-config"
   mkdir -p "$PLONK_DIR"
@@ -106,9 +79,6 @@ setup_test_env() {
 
   # Load safe lists
   load_safe_lists
-
-  # Set test mode flag
-  export PLONK_TEST_MODE=1
 }
 
 # Load safe lists from files or environment
@@ -175,12 +145,6 @@ is_safe_dotfile() {
 }
 export -f is_safe_dotfile
 
-# Skip test if dangerous tests are disabled
-skip_if_dangerous() {
-  if [[ "$PLONK_TEST_SKIP_DANGEROUS" == "1" ]]; then
-    skip "Skipping dangerous test (PLONK_TEST_SKIP_DANGEROUS=1)"
-  fi
-}
 
 # Require a safe package or skip
 require_safe_package() {
@@ -232,7 +196,7 @@ cleanup_test_artifacts() {
         rm -rf "$HOME/$name" 2>/dev/null || true
         ;;
       package)
-        if [[ "$PLONK_TEST_CLEANUP_PACKAGES" == "1" ]]; then
+        if [[ "$PLONK_TEST_CLEANUP_PACKAGES" != "0" ]]; then
           plonk uninstall "$name" --force 2>/dev/null || true
         fi
         ;;
@@ -244,29 +208,5 @@ cleanup_test_artifacts() {
 teardown() {
   if [[ "$PLONK_TEST_CLEANUP_DOTFILES" != "0" ]]; then
     cleanup_test_artifacts
-  fi
-}
-
-# File-level setup - build plonk once per file
-setup_file() {
-  # Use BATS-provided temp directory or create unique one
-  if [[ -n "$BATS_FILE_TMPDIR" ]]; then
-    export BATS_TEST_TMPDIR="$BATS_FILE_TMPDIR"
-  else
-    # Create unique temp directory for this test run
-    export BATS_TEST_TMPDIR="$(mktemp -d /tmp/plonk-bats-XXXXXX)"
-  fi
-
-  mkdir -p "$BATS_TEST_TMPDIR"
-  build_test_plonk || return 1
-}
-
-# File-level teardown
-teardown_file() {
-  cleanup_test_artifacts
-
-  # Clean up test binary
-  if [[ -n "$PLONK_TEST_BINARY" ]] && [[ -f "$PLONK_TEST_BINARY" ]]; then
-    rm -f "$PLONK_TEST_BINARY"
   fi
 }

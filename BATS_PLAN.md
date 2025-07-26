@@ -216,19 +216,20 @@ EOF
 3. Add cleanup/removal tests (uninstall, rm)
 4. Full workflow tests (apply with failures)
 
-## Implementation Priority
+## Implementation Status
 
-### Phase 1: Foundation
+### Phase 1: Foundation ✅
 - Test helper infrastructure
 - Basic command tests (help, version, status)
-- Cleanup mechanisms
+- Cleanup mechanisms (default enabled)
 
-### Phase 2: Core Behaviors
-- Package install/uninstall
-- Dotfile add/rm
-- Output format testing
+### Phase 2: Core Behaviors ✅
+- Package install/uninstall for all managers
+- Output format testing (table format)
+- Single binary build per test suite using setup_suite.bash
 
-### Phase 3: Complex Workflows
+### Phase 3: Complex Workflows (Next)
+- Dotfile add/rm operations
 - Apply with partial failures
 - Search across managers
 - Error recovery scenarios

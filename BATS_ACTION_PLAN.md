@@ -20,8 +20,16 @@ This document provides a detailed, step-by-step action plan for implementing BAT
   - Created output format tests (table format only)
   - All tests passing (7/7)
 
+- [x] **Phase 3: State-Changing Tests** ✅ (Completed)
+  - Created package install tests for all managers (brew, npm, pip, gem, go, cargo)
+  - Created package uninstall tests for all managers
+  - Implemented setup_suite.bash for single binary build per test run
+  - Removed unnecessary features (skip_if_dangerous, PLONK_TEST_MODE, etc.)
+  - Changed cleanup to default enabled
+  - Removed duplicate multiple-package tests (kept only brew as example)
+  - All tests passing
+
 ### Remaining Phases
-- [ ] Phase 3: State-Changing Tests (Package install/uninstall)
 - [ ] Phase 4: Dotfile Tests (Add/remove)
 - [ ] Phase 5: Apply Command Tests
 - [ ] Phase 6: Error Handling Tests
