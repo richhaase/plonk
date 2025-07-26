@@ -129,12 +129,12 @@ internal/
 
 **Result**: 1,550+ lines of dead code removed through two passes. Initial cleanup reduced from 55+ to 16 dead code items (70% improvement), followed by additional cleanup reducing to just 2 test helpers (87.5% total improvement). Major parser cleanup (parsers.go reduced 86%). Standardized function naming throughout codebase. All tests passing with clean linter results.
 
-### Phase 8: Comprehensive UX Review (Day 11) - IN PROGRESS
+### Phase 8: Comprehensive UX Review (Day 11) - ✅ COMPLETE
 - [x] Review all CLI commands and patterns with stakeholder
 - [x] Identify opportunities to simplify without sacrificing functionality
-- [ ] Document UX improvement recommendations
-- [ ] Prioritize changes based on user impact and implementation effort
-- [ ] Create detailed plan for UX improvements
+- [x] Document UX improvement recommendations
+- [x] Prioritize changes based on user impact and implementation effort
+- [x] Create detailed plan for UX improvements
 
 #### UX Decisions Made:
 
@@ -168,6 +168,12 @@ internal/
    - Focus on standardizing output content rather than flag optimization
    - Add dedicated phase for output standardization before documentation
 
+6. **Sync → Apply Command Rename**
+   - Rename `plonk sync` to `plonk apply`
+   - Remove sync entirely (no alias)
+   - Update internal function names to reflect the change (e.g., SyncPackages → ApplyPackages)
+   - Keep existing `--dry-run` flag functionality
+
 ### Phase 9: UX Implementation - Command Consolidation (Day 12)
 - [ ] Delete `ls.go` command file
 - [ ] Remove `ls` command registration
@@ -198,12 +204,20 @@ internal/
 - [ ] Support prefix syntax in info command
 - [ ] Update help text and examples
 
-### Phase 13+: Additional UX Improvements (Day 13)
+### Phase 13: UX Implementation - Sync to Apply Rename (Day 13)
+- [ ] Rename `sync.go` to `apply.go`
+- [ ] Update command registration and help text
+- [ ] Rename internal sync functions (SyncPackages → ApplyPackages, etc.)
+- [ ] Update all references to sync in commands and tests
+- [ ] Update hook names if needed (pre_sync → pre_apply)
+- [ ] Update documentation and examples
+
+### Phase 14: Additional UX Improvements (Day 14)
 - [ ] Implement remaining UX improvements from Phase 8
 - [ ] Update integration tests for new patterns
 - [ ] Update documentation
 
-### Phase 14: Output Standardization (Day 14)
+### Phase 15: Output Standardization (Day 14)
 - [ ] Review all command outputs for consistency
 - [ ] Standardize table formatting across commands
 - [ ] Ensure consistent JSON/YAML structure
