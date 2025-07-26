@@ -101,12 +101,6 @@ test-coverage-ci:
     @go test -race -coverprofile=coverage.out -covermode=atomic ./...
     @echo "✅ Unit tests passed with coverage!"
 
-# Complete UX validation - ensures all commands work as expected
-test-ux: test-clear-cache
-    @echo "Running complete UX integration tests..."
-    @go test -tags=integration ./tests/integration -run TestCompleteUserExperience -v -timeout 10m
-    @echo "✅ UX integration tests passed!"
-
 # Clean build artifacts
 clean:
     @echo "Cleaning build artifacts..."

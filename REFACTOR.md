@@ -207,12 +207,12 @@ internal/
 - [x] Update help text and documentation
 - [x] Fixed build issues (dotfiles.go function reference)
 
-### Phase 12: UX Implementation - Package Manager Selection (Day 13)
-- [ ] Implement prefix syntax parsing (e.g., `brew:package`)
-- [ ] Remove `--<manager>` flag definitions from install/uninstall commands
-- [ ] Update package resolution logic to handle prefixes
-- [ ] Update help text to show new syntax
-- [ ] Update command examples in documentation
+### Phase 12: UX Implementation - Package Manager Selection (Day 13) ✅ COMPLETE
+- [x] Implement prefix syntax parsing (e.g., `brew:package`)
+- [x] Remove `--<manager>` flag definitions from install/uninstall commands
+- [x] Update package resolution logic to handle prefixes
+- [x] Update help text to show new syntax
+- [x] Update command examples in documentation
 
 ### Phase 13: UX Implementation - Search/Info Enhancement (Day 14)
 - [ ] Implement parallel search across all managers
