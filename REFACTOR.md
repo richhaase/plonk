@@ -136,45 +136,60 @@ internal/
 - [x] Prioritize changes based on user impact and implementation effort
 - [x] Create detailed plan for UX improvements
 
-#### UX Decisions Made:
+#### UX Decisions Made (in implementation order):
 
-1. **Command Consolidation**
-   - Remove `plonk ls` command (redundant with status)
-   - Change `plonk` (no args) to show help instead of status
-   - Add `plonk st` as alias for `plonk status`
-   - Keep separation: add/rm for dotfiles, install/uninstall for packages
-
-2. **Package Manager Selection**
-   - Replace `--<manager>` flags with prefix syntax: `brew:ripgrep`, `npm:typescript`
-   - No prefix = use default_manager from config
-   - Remove old flag-based selection (e.g., `--brew`, `--cargo`)
-   - Search/info behavior to be refined separately
-
-3. **Config Command Simplification**
+1. **Config Command Simplification** [FOUNDATIONAL - Phase 9]
    - Add auto-validation on every config read (fail fast with clear errors)
    - Remove `plonk config validate` command (validation happens automatically)
    - Keep `plonk config show` and `plonk config edit` subcommands
    - Make `config show` display the file path at the top of output
 
-4. **Search and Info Commands Enhancement**
+2. **Sync → Apply Command Rename** [Phase 10]
+   - Rename `plonk sync` to `plonk apply`
+   - Remove sync entirely (no alias)
+   - Update internal function names to reflect the change (e.g., SyncPackages → ApplyPackages)
+   - Keep existing `--dry-run` flag functionality
+
+3. **Command Consolidation** [Phase 11]
+   - Remove `plonk ls` command (redundant with status)
+   - Change `plonk` (no args) to show help instead of status
+   - Add `plonk st` as alias for `plonk status`
+   - Keep separation: add/rm for dotfiles, install/uninstall for packages
+
+4. **Package Manager Selection** [Phase 12]
+   - Replace `--<manager>` flags with prefix syntax: `brew:ripgrep`, `npm:typescript`
+   - No prefix = use default_manager from config
+   - Remove old flag-based selection (e.g., `--brew`, `--cargo`)
+   - Search/info behavior to be refined separately
+
+5. **Search and Info Commands Enhancement** [Phase 13]
    - Search should query all managers in parallel (2-3 second timeout acceptable)
    - Display results in clear table format showing manager source
    - Info command priority: managed by plonk → installed → all available
    - Support prefix syntax for specific queries: `plonk info brew:ripgrep`
    - Implementation details to be refined during development
 
-5. **Output Format Flag**
+6. **Output Format Flag** [Phase 15]
    - Keep current `-o table|json|yaml` flag on all commands
    - Focus on standardizing output content rather than flag optimization
    - Add dedicated phase for output standardization before documentation
 
-6. **Sync → Apply Command Rename**
-   - Rename `plonk sync` to `plonk apply`
-   - Remove sync entirely (no alias)
-   - Update internal function names to reflect the change (e.g., SyncPackages → ApplyPackages)
-   - Keep existing `--dry-run` flag functionality
+### Phase 9: UX Implementation - Config Command Updates (Day 12) [FOUNDATIONAL]
+- [ ] Add auto-validation to config loading functions
+- [ ] Remove `config_validate.go` command file
+- [ ] Update `config show` to display file path at top
+- [ ] Ensure clear error messages on validation failures
+- [ ] Update config error handling throughout codebase
 
-### Phase 9: UX Implementation - Command Consolidation (Day 12)
+### Phase 10: UX Implementation - Sync to Apply Rename (Day 12)
+- [ ] Rename `sync.go` to `apply.go`
+- [ ] Update command registration and help text
+- [ ] Rename internal sync functions (SyncPackages → ApplyPackages, etc.)
+- [ ] Update all references to sync in commands and tests
+- [ ] Update hook names if needed (pre_sync → pre_apply)
+- [ ] Update documentation and examples
+
+### Phase 11: UX Implementation - Command Consolidation (Day 13)
 - [ ] Delete `ls.go` command file
 - [ ] Remove `ls` command registration
 - [ ] Update root command to show help (not status) when no args
@@ -182,35 +197,20 @@ internal/
 - [ ] Update help text and documentation
 - [ ] Update integration tests
 
-### Phase 10: UX Implementation - Package Manager Selection (Day 12)
+### Phase 12: UX Implementation - Package Manager Selection (Day 13)
 - [ ] Implement prefix syntax parsing (e.g., `brew:package`)
 - [ ] Remove `--<manager>` flag definitions from install/uninstall commands
 - [ ] Update package resolution logic to handle prefixes
 - [ ] Update help text to show new syntax
 - [ ] Update command examples in documentation
 
-### Phase 11: UX Implementation - Config Command Updates (Day 13)
-- [ ] Add auto-validation to config loading functions
-- [ ] Remove `config_validate.go` command file
-- [ ] Update `config show` to display file path at top
-- [ ] Ensure clear error messages on validation failures
-- [ ] Update config error handling throughout codebase
-
-### Phase 12: UX Implementation - Search/Info Enhancement (Day 13)
+### Phase 13: UX Implementation - Search/Info Enhancement (Day 14)
 - [ ] Implement parallel search across all managers
 - [ ] Add timeout handling (2-3 seconds)
 - [ ] Update search output to show manager sources clearly
 - [ ] Implement info command priority logic (managed → installed → all)
 - [ ] Support prefix syntax in info command
 - [ ] Update help text and examples
-
-### Phase 13: UX Implementation - Sync to Apply Rename (Day 13)
-- [ ] Rename `sync.go` to `apply.go`
-- [ ] Update command registration and help text
-- [ ] Rename internal sync functions (SyncPackages → ApplyPackages, etc.)
-- [ ] Update all references to sync in commands and tests
-- [ ] Update hook names if needed (pre_sync → pre_apply)
-- [ ] Update documentation and examples
 
 ### Phase 14: Additional UX Improvements (Day 14)
 - [ ] Implement remaining UX improvements from Phase 8
