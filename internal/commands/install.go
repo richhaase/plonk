@@ -6,7 +6,6 @@ package commands
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -71,20 +70,22 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 		// Validate package specification
 		if packageName == "" {
+			errorMsg := FormatValidationError("package specification", packageSpec, "package name cannot be empty")
 			allResults = append(allResults, resources.OperationResult{
 				Name:   packageSpec,
 				Status: "failed",
-				Error:  fmt.Errorf("invalid package specification %q: empty package name", packageSpec),
+				Error:  fmt.Errorf("%s", errorMsg),
 			})
 			continue
 		}
 
 		if manager == "" && packageSpec != packageName {
 			// This means there was a colon but empty prefix
+			errorMsg := FormatValidationError("package specification", packageSpec, "manager prefix cannot be empty")
 			allResults = append(allResults, resources.OperationResult{
 				Name:   packageSpec,
 				Status: "failed",
-				Error:  fmt.Errorf("invalid package specification %q: empty manager prefix", packageSpec),
+				Error:  fmt.Errorf("%s", errorMsg),
 			})
 			continue
 		}
@@ -100,11 +101,12 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 		// Validate manager
 		if !IsValidManager(manager) {
+			errorMsg := FormatNotFoundError("package manager", manager, GetValidManagers())
 			allResults = append(allResults, resources.OperationResult{
 				Name:    packageSpec,
 				Manager: manager,
 				Status:  "failed",
-				Error:   fmt.Errorf("unknown package manager %q. Valid managers: %s", manager, strings.Join(GetValidManagers(), ", ")),
+				Error:   fmt.Errorf("%s", errorMsg),
 			})
 			continue
 		}
@@ -140,12 +142,14 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		fmt.Printf("%s %s %s\n", icon, result.Status, result.Name)
 	}
 
-	// Create output data
-	summary := calculatePackageSummary(allResults)
-	outputData := PackageInstallOutput{
-		TotalPackages: len(allResults),
-		Results:       allResults,
-		Summary:       summary,
+	// Create output data using standardized format
+	summary := CalculatePackageOperationSummary(allResults)
+	outputData := PackageOperationOutput{
+		Command:    "install",
+		TotalItems: len(allResults),
+		Results:    ConvertOperationResults(allResults),
+		Summary:    summary,
+		DryRun:     dryRun,
 	}
 
 	// Render output
@@ -155,56 +159,4 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 	// Check if all operations failed and return appropriate error
 	return resources.ValidateOperationResults(allResults, "install packages")
-}
-
-// PackageInstallOutput represents the output for package installation
-type PackageInstallOutput struct {
-	TotalPackages int                         `json:"total_packages" yaml:"total_packages"`
-	Results       []resources.OperationResult `json:"results" yaml:"results"`
-	Summary       PackageInstallSummary       `json:"summary" yaml:"summary"`
-}
-
-// PackageInstallSummary provides summary for package installation
-type PackageInstallSummary struct {
-	Added   int `json:"added" yaml:"added"`
-	Skipped int `json:"skipped" yaml:"skipped"`
-	Failed  int `json:"failed" yaml:"failed"`
-}
-
-// calculatePackageSummary calculates summary from results using generic operations summary
-func calculatePackageSummary(results []resources.OperationResult) PackageInstallSummary {
-	genericSummary := resources.CalculateSummary(results)
-	return PackageInstallSummary{
-		Added:   genericSummary.Added,
-		Skipped: genericSummary.Skipped,
-		Failed:  genericSummary.Failed,
-	}
-}
-
-// TableOutput generates human-friendly output
-func (p PackageInstallOutput) TableOutput() string {
-	tb := NewTableBuilder()
-
-	tb.AddTitle("Package Installation")
-	tb.AddNewline()
-
-	if p.Summary.Added > 0 {
-		tb.AddLine("%s Added %d packages", IconPackage, p.Summary.Added)
-	}
-	if p.Summary.Skipped > 0 {
-		tb.AddLine("⏭️ %d skipped", p.Summary.Skipped)
-	}
-	if p.Summary.Failed > 0 {
-		tb.AddLine("%s %d failed", IconUnhealthy, p.Summary.Failed)
-	}
-
-	tb.AddNewline()
-	tb.AddLine("Total: %d packages processed", p.TotalPackages)
-
-	return tb.Build()
-}
-
-// StructuredData returns the structured data for serialization
-func (p PackageInstallOutput) StructuredData() any {
-	return p
 }

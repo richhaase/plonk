@@ -778,7 +778,6 @@ func (m *Manager) GetConfiguredDotfiles() ([]resources.Item, error) {
 			name := m.DestinationToName(destination)
 			items = append(items, resources.Item{
 				Name:   name,
-				State:  resources.StateMissing,
 				Domain: "dotfile",
 				Path:   destination,
 				Metadata: map[string]interface{}{
@@ -794,7 +793,6 @@ func (m *Manager) GetConfiguredDotfiles() ([]resources.Item, error) {
 			name := m.DestinationToName(destination)
 			items = append(items, resources.Item{
 				Name:   name,
-				State:  resources.StateManaged,
 				Domain: "dotfile",
 				Path:   destination,
 				Metadata: map[string]interface{}{
@@ -808,7 +806,6 @@ func (m *Manager) GetConfiguredDotfiles() ([]resources.Item, error) {
 			name := m.DestinationToName(destination)
 			items = append(items, resources.Item{
 				Name:   name,
-				State:  resources.StateManaged,
 				Domain: "dotfile",
 				Path:   destination,
 				Metadata: map[string]interface{}{

@@ -39,12 +39,24 @@ func (d *DotfileResource) SetDesired(items []resources.Item) {
 
 // Actual returns the actual state (dotfiles currently present)
 func (d *DotfileResource) Actual(ctx context.Context) []resources.Item {
-	items, err := d.manager.GetActualDotfiles(ctx)
-	if err != nil {
-		// Return empty slice on error to allow reconciliation to continue
-		return []resources.Item{}
+	// We need to check which of our desired files actually exist
+	var actualItems []resources.Item
+
+	for _, desired := range d.desired {
+		// Check if the destination file exists
+		destPath, err := d.manager.GetDestinationPath(desired.Path)
+		if err != nil {
+			continue // Skip invalid paths
+		}
+		if d.manager.FileExists(destPath) {
+			// File exists, so it's in the actual state
+			actualItem := desired
+			actualItem.State = resources.StateUntracked // Will be reconciled to StateManaged
+			actualItems = append(actualItems, actualItem)
+		}
 	}
-	return items
+
+	return actualItems
 }
 
 // Apply performs the necessary action to move an item to its desired state

@@ -6,6 +6,9 @@ package commands
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/orchestrator"
@@ -18,26 +21,27 @@ import (
 var statusCmd = &cobra.Command{
 	Use:     "status",
 	Aliases: []string{"st"},
-	Short:   "Show the current state of plonk-managed resources",
-	Long: `Display a summary of all packages and dotfiles managed by plonk,
-including any that are missing and need to be installed.
+	Short:   "Display overall plonk status",
+	Long: `Display a detailed list of all plonk-managed items and their status.
 
 Shows:
-- Summary of managed packages (count by manager)
-- Summary of managed dotfiles (count)
-- Missing packages/dotfiles that need to be installed/linked
-- Quick overview of plonk's current state
+- All managed packages and dotfiles
+- Missing items that need to be installed
+- Configuration and lock file status
 
 Examples:
-  plonk status         # Show managed resource status
-  plonk st             # Same as above (alias)
-  plonk status -o json # Show as JSON
-  plonk status -o yaml # Show as YAML`,
+  plonk status              # Show all managed items
+  plonk status --packages   # Show only packages
+  plonk status --dotfiles   # Show only dotfiles
+  plonk status -o json      # Show as JSON
+  plonk status -o yaml      # Show as YAML`,
 	RunE: runStatus,
 }
 
 func init() {
 	rootCmd.AddCommand(statusCmd)
+	statusCmd.Flags().Bool("packages", false, "Show only package status")
+	statusCmd.Flags().Bool("dotfiles", false, "Show only dotfile status")
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {
@@ -48,47 +52,109 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Get filter flags
+	showPackages, _ := cmd.Flags().GetBool("packages")
+	showDotfiles, _ := cmd.Flags().GetBool("dotfiles")
+
+	// If neither flag is set, show both
+	if !showPackages && !showDotfiles {
+		showPackages = true
+		showDotfiles = true
+	}
+
 	// Get directories
 	homeDir := config.GetHomeDir()
 	configDir := config.GetConfigDir()
 
-	// Reconcile all domains to get managed state
+	// Load configuration (may fail if config is invalid, but we handle this gracefully)
+	_, configLoadErr := config.Load(configDir)
+
+	// Reconcile all domains
 	ctx := context.Background()
 	results, err := orchestrator.ReconcileAll(ctx, homeDir, configDir)
 	if err != nil {
 		return err
 	}
 
-	// Convert results to summary
+	// Convert results to summary for compatibility with existing output logic
 	summary := resources.ConvertResultsToSummary(results)
 
-	// Prepare focused status output
+	// Check file existence and validity
+	configPath := filepath.Join(configDir, "plonk.yaml")
+	lockPath := filepath.Join(configDir, "plonk.lock")
+
+	configExists := false
+	configValid := false
+	if _, err := os.Stat(configPath); err == nil {
+		configExists = true
+		// Config is valid only if it loaded without error
+		configValid = (configLoadErr == nil)
+	}
+
+	lockExists := false
+	if _, err := os.Stat(lockPath); err == nil {
+		lockExists = true
+	}
+
+	// Prepare output
 	outputData := StatusOutput{
+		ConfigPath:   configPath,
+		LockPath:     lockPath,
+		ConfigExists: configExists,
+		ConfigValid:  configValid,
+		LockExists:   lockExists,
 		StateSummary: summary,
+		ShowPackages: showPackages,
+		ShowDotfiles: showDotfiles,
 	}
 
 	return RenderOutput(outputData, format)
+}
+
+// convertManagedItems converts resources.ManagedItem to command-specific ManagedItem
+func convertManagedItems(items []resources.ManagedItem) []ManagedItem {
+	result := make([]ManagedItem, len(items))
+	for i, item := range items {
+		result[i] = ManagedItem{
+			Name:    item.Name,
+			Domain:  item.Domain,
+			Manager: item.Manager,
+		}
+	}
+	return result
 }
 
 // Removed - using config.ConfigAdapter instead
 
 // StatusOutput represents the output structure for status command
 type StatusOutput struct {
+	ConfigPath   string            `json:"config_path" yaml:"config_path"`
+	LockPath     string            `json:"lock_path" yaml:"lock_path"`
+	ConfigExists bool              `json:"config_exists" yaml:"config_exists"`
+	ConfigValid  bool              `json:"config_valid" yaml:"config_valid"`
+	LockExists   bool              `json:"lock_exists" yaml:"lock_exists"`
 	StateSummary resources.Summary `json:"state_summary" yaml:"state_summary"`
+	ShowPackages bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
+	ShowDotfiles bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
 }
 
-// PackageStatus represents package management status
-type PackageStatus struct {
-	Managed   int            `json:"managed" yaml:"managed"`
-	Missing   int            `json:"missing" yaml:"missing"`
-	ByManager map[string]int `json:"by_manager" yaml:"by_manager"`
+// StatusOutputSummary represents a summary-focused version for JSON/YAML output
+type StatusOutputSummary struct {
+	ConfigPath   string            `json:"config_path" yaml:"config_path"`
+	LockPath     string            `json:"lock_path" yaml:"lock_path"`
+	ConfigExists bool              `json:"config_exists" yaml:"config_exists"`
+	ConfigValid  bool              `json:"config_valid" yaml:"config_valid"`
+	LockExists   bool              `json:"lock_exists" yaml:"lock_exists"`
+	Summary      StatusSummaryData `json:"summary" yaml:"summary"`
+	ManagedItems []ManagedItem     `json:"managed_items" yaml:"managed_items"`
 }
 
-// DotfileStatus represents dotfile management status
-type DotfileStatus struct {
-	Managed int `json:"managed" yaml:"managed"`
-	Missing int `json:"missing" yaml:"missing"`
-	Linked  int `json:"linked" yaml:"linked"`
+// StatusSummaryData represents aggregate counts and domain summaries
+type StatusSummaryData struct {
+	TotalManaged   int                       `json:"total_managed" yaml:"total_managed"`
+	TotalMissing   int                       `json:"total_missing" yaml:"total_missing"`
+	TotalUntracked int                       `json:"total_untracked" yaml:"total_untracked"`
+	Domains        []resources.DomainSummary `json:"domains" yaml:"domains"`
 }
 
 // ManagedItem represents a currently managed item
@@ -100,76 +166,128 @@ type ManagedItem struct {
 
 // TableOutput generates human-friendly table output for status
 func (s StatusOutput) TableOutput() string {
+	var output strings.Builder
+
+	// Title
+	output.WriteString("Plonk Status\n")
+	output.WriteString("============\n\n")
+
+	// Process results by domain
+	var packageResult, dotfileResult *resources.Result
+	for i := range s.StateSummary.Results {
+		if s.StateSummary.Results[i].Domain == "package" {
+			packageResult = &s.StateSummary.Results[i]
+		} else if s.StateSummary.Results[i].Domain == "dotfile" {
+			dotfileResult = &s.StateSummary.Results[i]
+		}
+	}
+
+	// Show packages table if requested
+	if s.ShowPackages && packageResult != nil {
+		// Group packages by manager
+		packagesByManager := make(map[string][]resources.Item)
+		missingPackages := []resources.Item{}
+
+		for _, item := range packageResult.Managed {
+			packagesByManager[item.Manager] = append(packagesByManager[item.Manager], item)
+		}
+		for _, item := range packageResult.Missing {
+			missingPackages = append(missingPackages, item)
+		}
+
+		// Build packages table
+		if len(packagesByManager) > 0 || len(missingPackages) > 0 {
+			output.WriteString("PACKAGES\n")
+			output.WriteString("--------\n")
+
+			// Create a table for packages
+			pkgBuilder := NewStandardTableBuilder("")
+			pkgBuilder.SetHeaders("NAME", "MANAGER", "STATUS")
+
+			// Show managed packages by manager
+			for manager, packages := range packagesByManager {
+				for _, pkg := range packages {
+					pkgBuilder.AddRow(pkg.Name, manager, "✅ managed")
+				}
+			}
+
+			// Show missing packages
+			for _, pkg := range missingPackages {
+				pkgBuilder.AddRow(pkg.Name, pkg.Manager, "❌ missing")
+			}
+
+			output.WriteString(pkgBuilder.Build())
+			output.WriteString("\n")
+		}
+	}
+
+	// Show dotfiles table if requested
+	if s.ShowDotfiles && dotfileResult != nil {
+		if len(dotfileResult.Managed) > 0 || len(dotfileResult.Missing) > 0 {
+			output.WriteString("DOTFILES\n")
+			output.WriteString("--------\n")
+
+			// Create a table for dotfiles
+			dotBuilder := NewStandardTableBuilder("")
+			dotBuilder.SetHeaders("PATH", "TARGET", "STATUS")
+
+			// Show managed dotfiles
+			for _, item := range dotfileResult.Managed {
+				path := item.Name
+				target := ""
+				if dest, ok := item.Metadata["destination"].(string); ok {
+					target = dest
+				}
+				dotBuilder.AddRow(path, target, "✅ deployed")
+			}
+
+			// Show missing dotfiles
+			for _, item := range dotfileResult.Missing {
+				path := item.Name
+				target := ""
+				if dest, ok := item.Metadata["destination"].(string); ok {
+					target = dest
+				}
+				dotBuilder.AddRow(path, target, "❌ missing")
+			}
+
+			output.WriteString(dotBuilder.Build())
+			output.WriteString("\n")
+		}
+	}
+
+	// Add summary
 	summary := s.StateSummary
-	output := "Plonk Status\n\n"
-
-	// Package summary
-	packagesByManager := make(map[string]int)
-	packagesMissing := 0
-	for _, result := range summary.Results {
-		if result.Domain == "packages" {
-			packagesMissing += len(result.Missing)
-			for _, item := range result.Managed {
-				packagesByManager[item.Manager]++
-			}
-		}
-	}
-
-	totalPackages := 0
-	for _, count := range packagesByManager {
-		totalPackages += count
-	}
-
-	if totalPackages > 0 || packagesMissing > 0 {
-		output += fmt.Sprintf("Packages: %d managed", totalPackages)
-		if packagesMissing > 0 {
-			output += fmt.Sprintf(", %d missing", packagesMissing)
-		}
-		output += "\n"
-
-		for manager, count := range packagesByManager {
-			output += fmt.Sprintf("  %s: %d packages\n", manager, count)
-		}
-		output += "\n"
-	}
-
-	// Dotfile summary
-	dotfilesManaged := 0
-	dotfilesMissing := 0
-	dotfilesLinked := 0
-	for _, result := range summary.Results {
-		if result.Domain == "dotfiles" {
-			dotfilesManaged += len(result.Managed)
-			dotfilesMissing += len(result.Missing)
-			for range result.Managed {
-				// For dotfiles, assume managed means linked
-				dotfilesLinked++
-			}
-		}
-	}
-
-	if dotfilesManaged > 0 || dotfilesMissing > 0 {
-		output += fmt.Sprintf("Dotfiles: %d managed", dotfilesManaged)
-		if dotfilesMissing > 0 {
-			output += fmt.Sprintf(", %d missing", dotfilesMissing)
-		}
-		output += "\n"
-		output += fmt.Sprintf("  linked: %d files\n", dotfilesLinked)
-		if dotfilesMissing > 0 {
-			output += fmt.Sprintf("  missing: %d files\n", dotfilesMissing)
-		}
-		output += "\n"
-	}
-
-	// Action item
+	output.WriteString("Summary: ")
+	output.WriteString(fmt.Sprintf("%d managed", summary.TotalManaged))
 	if summary.TotalMissing > 0 {
-		output += "Run 'plonk apply' to install missing items.\n"
+		output.WriteString(fmt.Sprintf(", %d missing", summary.TotalMissing))
+	}
+	output.WriteString("\n")
+
+	// Add action hint if there are missing items
+	if summary.TotalMissing > 0 {
+		output.WriteString("\n💡 Run 'plonk apply' to install missing items\n")
 	}
 
-	return output
+	return output.String()
 }
 
 // StructuredData returns the structured data for serialization
 func (s StatusOutput) StructuredData() any {
-	return s
+	// Create a summary-focused version for structured output
+	return StatusOutputSummary{
+		ConfigPath:   s.ConfigPath,
+		LockPath:     s.LockPath,
+		ConfigExists: s.ConfigExists,
+		ConfigValid:  s.ConfigValid,
+		LockExists:   s.LockExists,
+		Summary: StatusSummaryData{
+			TotalManaged:   s.StateSummary.TotalManaged,
+			TotalMissing:   s.StateSummary.TotalMissing,
+			TotalUntracked: s.StateSummary.TotalUntracked,
+			Domains:        resources.CreateDomainSummary(s.StateSummary.Results),
+		},
+		ManagedItems: convertManagedItems(resources.ExtractManagedItems(s.StateSummary.Results)),
+	}
 }

@@ -6,7 +6,6 @@ package commands
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
@@ -55,7 +54,8 @@ func runInfo(cmd *cobra.Command, args []string) error {
 
 	// Validate manager if prefix specified
 	if manager != "" && !IsValidManager(manager) {
-		return fmt.Errorf("unknown package manager %q. Valid managers: %s", manager, strings.Join(GetValidManagers(), ", "))
+		errorMsg := FormatNotFoundError("package manager", manager, GetValidManagers())
+		return fmt.Errorf("%s", errorMsg)
 	}
 
 	// Create context
@@ -255,83 +255,79 @@ type InfoOutput struct {
 
 // TableOutput generates human-friendly table output for info command
 func (i InfoOutput) TableOutput() string {
-	var output strings.Builder
+	builder := NewStandardTableBuilder("")
 
+	// Add package name
+	builder.AddRow("Package:", i.Package)
+
+	// Add status and details based on status
 	switch i.Status {
 	case "managed":
-		output.WriteString(fmt.Sprintf("🎯 %s\n", i.Message))
+		builder.AddRow("Status:", "🎯 Managed by plonk")
 		if i.PackageInfo != nil {
-			output.WriteString(i.formatPackageInfo())
+			builder.AddRow("Manager:", i.PackageInfo.Manager)
+			if i.PackageInfo.Version != "" {
+				builder.AddRow("Version:", i.PackageInfo.Version)
+			}
+			if i.PackageInfo.Description != "" {
+				builder.AddRow("Description:", i.PackageInfo.Description)
+			}
+			if i.PackageInfo.Homepage != "" {
+				builder.AddRow("Homepage:", i.PackageInfo.Homepage)
+			}
+			if i.PackageInfo.InstalledSize != "" {
+				builder.AddRow("Size:", i.PackageInfo.InstalledSize)
+			}
+			if len(i.PackageInfo.Dependencies) > 0 {
+				builder.AddRow("", "")
+				builder.AddRow("Dependencies:", fmt.Sprintf("%d packages", len(i.PackageInfo.Dependencies)))
+				for _, dep := range i.PackageInfo.Dependencies {
+					builder.AddRow("", fmt.Sprintf("• %s", dep))
+				}
+			}
 		}
 
 	case "installed":
-		output.WriteString(fmt.Sprintf("✅ %s\n", i.Message))
+		builder.AddRow("Status:", "✅ Installed (not managed)")
 		if i.PackageInfo != nil {
-			output.WriteString(i.formatPackageInfo())
+			builder.AddRow("Manager:", i.PackageInfo.Manager)
+			if i.PackageInfo.Version != "" {
+				builder.AddRow("Version:", i.PackageInfo.Version)
+			}
+			if i.PackageInfo.Description != "" {
+				builder.AddRow("Description:", i.PackageInfo.Description)
+			}
+			builder.AddRow("", "")
+			builder.AddRow("Note:", fmt.Sprintf("Run 'plonk install %s:%s' to manage this package", i.PackageInfo.Manager, i.Package))
 		}
 
 	case "available":
-		output.WriteString(fmt.Sprintf("📦 %s\n", i.Message))
+		builder.AddRow("Status:", "📦 Available")
 		if i.PackageInfo != nil {
-			output.WriteString(i.formatPackageInfo())
+			builder.AddRow("Manager:", i.PackageInfo.Manager)
+			if i.PackageInfo.Description != "" {
+				builder.AddRow("Description:", i.PackageInfo.Description)
+			}
+			builder.AddRow("", "")
+			builder.AddRow("Install:", fmt.Sprintf("plonk install %s:%s", i.PackageInfo.Manager, i.Package))
 		}
 
 	case "not-found":
-		output.WriteString(fmt.Sprintf("❌ %s\n", i.Message))
+		builder.AddRow("Status:", "❌ Not found")
 
 	case "no-managers":
-		output.WriteString(fmt.Sprintf("⚠️  %s\n", i.Message))
-		output.WriteString("\nPlease install a package manager (Homebrew or NPM) to get package information.\n")
+		builder.AddRow("Status:", "⚠️ No package managers available")
+		builder.AddRow("", "")
+		builder.AddRow("Note:", "Please install a package manager (Homebrew or NPM)")
 
 	case "manager-unavailable":
-		output.WriteString(fmt.Sprintf("⚠️  %s\n", i.Message))
+		builder.AddRow("Status:", "⚠️ Manager unavailable")
 
 	default:
-		output.WriteString(fmt.Sprintf("❓ %s\n", i.Message))
+		builder.AddRow("Status:", "❓ Unknown")
 	}
 
-	return output.String()
-}
-
-// formatPackageInfo formats the package information for display
-func (i InfoOutput) formatPackageInfo() string {
-	if i.PackageInfo == nil {
-		return ""
-	}
-
-	var output strings.Builder
-	info := i.PackageInfo
-
-	output.WriteString("\n")
-	output.WriteString(fmt.Sprintf("Name: %s\n", info.Name))
-
-	if info.Version != "" {
-		output.WriteString(fmt.Sprintf("Version: %s\n", info.Version))
-	}
-
-	if info.Description != "" {
-		output.WriteString(fmt.Sprintf("Description: %s\n", info.Description))
-	}
-
-	if info.Homepage != "" {
-		output.WriteString(fmt.Sprintf("Homepage: %s\n", info.Homepage))
-	}
-
-	output.WriteString(fmt.Sprintf("Manager: %s\n", info.Manager))
-	output.WriteString(fmt.Sprintf("Installed: %t\n", info.Installed))
-
-	if info.InstalledSize != "" {
-		output.WriteString(fmt.Sprintf("Size: %s\n", info.InstalledSize))
-	}
-
-	if len(info.Dependencies) > 0 {
-		output.WriteString(fmt.Sprintf("Dependencies (%d):\n", len(info.Dependencies)))
-		for _, dep := range info.Dependencies {
-			output.WriteString(fmt.Sprintf("  • %s\n", dep))
-		}
-	}
-
-	return output.String()
+	return builder.Build()
 }
 
 // StructuredData returns the structured data for serialization

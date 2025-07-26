@@ -50,7 +50,8 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 	// Validate manager if prefix specified
 	if manager != "" && !IsValidManager(manager) {
-		return fmt.Errorf("unknown package manager %q. Valid managers: %s", manager, strings.Join(GetValidManagers(), ", "))
+		errorMsg := FormatNotFoundError("package manager", manager, GetValidManagers())
+		return fmt.Errorf("%s", errorMsg)
 	}
 
 	// Create context with timeout

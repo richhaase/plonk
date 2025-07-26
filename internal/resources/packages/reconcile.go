@@ -33,11 +33,17 @@ func Reconcile(ctx context.Context, configDir string) (resources.Result, error) 
 	// Convert lock file entries to desired items
 	desired := make([]resources.Item, 0)
 	for manager, pkgs := range lockFile.Packages {
+		// Normalize manager name (homebrew -> brew)
+		normalizedManager := manager
+		if manager == "homebrew" {
+			normalizedManager = "brew"
+		}
+
 		for _, pkg := range pkgs {
 			desired = append(desired, resources.Item{
 				Name:    pkg.Name,
 				Domain:  "package",
-				Manager: manager,
+				Manager: normalizedManager,
 				Metadata: map[string]interface{}{
 					"version": pkg.Version,
 				},

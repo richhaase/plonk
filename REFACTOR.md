@@ -245,14 +245,23 @@ internal/
 - [ ] Polish command behavior and consistency
 **Note**: Deferred until after Phase 15 to ensure consistent output format for testing
 
-### Phase 15: Output Standardization (Day 14) - READY TO START
-- [ ] Review all command outputs for consistency
-- [ ] Standardize table formatting across commands
-- [ ] Ensure consistent JSON/YAML structure
-- [ ] Standardize error message formats
-- [ ] Create output guidelines for future commands
-- [ ] Test all output formats (-o table|json|yaml) for each command
+### Phase 15: Output Standardization (Day 14) ✅ COMPLETE
+- [x] Review all command outputs for consistency
+- [x] Standardize table formatting across commands
+- [x] Ensure consistent JSON/YAML structure
+- [x] Standardize error message formats
+- [x] Create output guidelines for future commands
+- [x] Test all output formats (-o table|json|yaml) for each command
 **Note**: Critical for integration testing - standardize output before writing tests
+
+### Phase 15.5: Fix Status and Info Commands (Day 14) ✅ COMPLETE
+- [x] Fix lint errors from Phase 15 (non-constant format strings)
+- [x] Fix package reconciliation (homebrew vs brew naming)
+- [x] Fix dotfile reconciliation (all 22 files now detected)
+- [x] Update status command to show detailed listings
+- [x] Add --packages and --dotfiles filter flags
+- [x] Remove --health and --check flags
+- [x] Update info command to use StandardTableBuilder
 
 ### Final Phase: Testing & Documentation (Day 15)
 - [ ] Update all tests for new structure and UX
