@@ -89,14 +89,23 @@ func runApply(cmd *cobra.Command, args []string) error {
 
 	// Run apply with hooks and v2 lock
 	result, err := orch.Apply(ctx)
-	if err != nil {
-		return fmt.Errorf("apply failed: %w", err)
-	}
 
-	// Convert to legacy output format for now
+	// Convert to legacy output format
 	outputData := convertApplyResult(result, getApplyScope(packagesOnly, dotfilesOnly))
 
-	return RenderOutput(outputData, format)
+	// Render output first
+	renderErr := RenderOutput(outputData, format)
+	if renderErr != nil {
+		return renderErr
+	}
+
+	// Now handle any errors from apply
+	if err != nil {
+		// The apply completed with some errors, exit with non-zero
+		return err
+	}
+
+	return nil
 }
 
 // runScopedApply handles packages-only or dotfiles-only apply using legacy functions
@@ -139,20 +148,6 @@ func runScopedApply(ctx context.Context, configDir, homeDir string, cfg *config.
 		}
 
 		packageOutput = &pkgOutput
-
-		// Print summary for table format
-		if format == OutputTable {
-			if result.TotalMissing == 0 {
-				fmt.Println("📦 All packages up to date")
-			} else {
-				if dryRun {
-					fmt.Printf("📦 Package summary: %d packages would be installed\n", pkgOutput.TotalWouldInstall)
-				} else {
-					fmt.Printf("📦 Package summary: %d installed, %d failed\n", pkgOutput.TotalInstalled, pkgOutput.TotalFailed)
-				}
-			}
-			fmt.Println()
-		}
 	}
 
 	// Apply dotfiles (unless packages-only)
@@ -181,19 +176,6 @@ func runScopedApply(ctx context.Context, configDir, homeDir string, cfg *config.
 		}
 
 		dotfileOutput = &dotOutput
-
-		// Print summary for table format
-		if format == OutputTable {
-			if result.TotalFiles == 0 {
-				fmt.Println("📄 No dotfiles configured")
-			} else {
-				if dryRun {
-					fmt.Printf("📄 Dotfile summary: %d dotfiles would be deployed, %d would be skipped\n", dotOutput.Deployed, dotOutput.Skipped)
-				} else {
-					fmt.Printf("📄 Dotfile summary: %d deployed, %d skipped\n", dotOutput.Deployed, dotOutput.Skipped)
-				}
-			}
-		}
 	}
 
 	// Prepare combined output - handle nil pointers
@@ -218,10 +200,13 @@ func runScopedApply(ctx context.Context, configDir, homeDir string, cfg *config.
 // convertApplyResult converts new ApplyResult to legacy CombinedApplyOutput
 func convertApplyResult(result orchestrator.ApplyResult, scope string) CombinedApplyOutput {
 	return CombinedApplyOutput{
-		DryRun:   result.DryRun,
-		Packages: result.Packages,
-		Dotfiles: result.Dotfiles,
-		Scope:    scope,
+		DryRun:        result.DryRun,
+		Packages:      result.Packages,
+		Dotfiles:      result.Dotfiles,
+		Scope:         scope,
+		PackageErrors: result.PackageErrors,
+		DotfileErrors: result.DotfileErrors,
+		Success:       result.Success,
 	}
 }
 
@@ -238,10 +223,13 @@ func getApplyScope(packagesOnly, dotfilesOnly bool) string {
 
 // CombinedApplyOutput represents the output structure for the apply command
 type CombinedApplyOutput struct {
-	DryRun   bool        `json:"dry_run" yaml:"dry_run"`
-	Scope    string      `json:"scope" yaml:"scope"`
-	Packages interface{} `json:"packages,omitempty" yaml:"packages,omitempty"`
-	Dotfiles interface{} `json:"dotfiles,omitempty" yaml:"dotfiles,omitempty"`
+	DryRun        bool        `json:"dry_run" yaml:"dry_run"`
+	Scope         string      `json:"scope" yaml:"scope"`
+	Packages      interface{} `json:"packages,omitempty" yaml:"packages,omitempty"`
+	Dotfiles      interface{} `json:"dotfiles,omitempty" yaml:"dotfiles,omitempty"`
+	PackageErrors []string    `json:"package_errors,omitempty" yaml:"package_errors,omitempty"`
+	DotfileErrors []string    `json:"dotfile_errors,omitempty" yaml:"dotfile_errors,omitempty"`
+	Success       bool        `json:"success" yaml:"success"`
 }
 
 // TableOutput generates human-friendly table output for apply
@@ -256,35 +244,96 @@ func (c CombinedApplyOutput) TableOutput() string {
 		output += "===========\n\n"
 	}
 
-	// Show scope
-	switch c.Scope {
-	case "packages":
-		output += "📦 Applying packages only\n\n"
-	case "dotfiles":
-		output += "📄 Applying dotfiles only\n\n"
-	default:
-		output += "📦📄 Applying packages and dotfiles\n\n"
+	// Show detailed results if available
+
+	// Package details
+	if c.Packages != nil {
+		if pkgResult, ok := c.Packages.(orchestrator.PackageApplyResult); ok && len(pkgResult.Managers) > 0 {
+			for _, mgr := range pkgResult.Managers {
+				if len(mgr.Packages) > 0 {
+					output += fmt.Sprintf("%s:\n", mgr.Name)
+					for _, pkg := range mgr.Packages {
+						switch pkg.Status {
+						case "installed":
+							output += fmt.Sprintf("  ✓ %s\n", pkg.Name)
+						case "would-install":
+							output += fmt.Sprintf("  → %s (would install)\n", pkg.Name)
+						case "failed":
+							output += fmt.Sprintf("  ✗ %s: %s\n", pkg.Name, pkg.Error)
+						}
+					}
+					output += "\n"
+				}
+			}
+		}
 	}
+
+	// Dotfile details
+	if c.Dotfiles != nil {
+		if dotResult, ok := c.Dotfiles.(orchestrator.DotfileApplyResult); ok && len(dotResult.Actions) > 0 {
+			output += "Dotfiles:\n"
+			for _, action := range dotResult.Actions {
+				switch action.Status {
+				case "added":
+					output += fmt.Sprintf("  ✓ %s\n", action.Destination)
+				case "would-add":
+					output += fmt.Sprintf("  → %s (would deploy)\n", action.Destination)
+				case "failed":
+					output += fmt.Sprintf("  ✗ %s: %s\n", action.Destination, action.Error)
+				}
+			}
+			output += "\n"
+		}
+	}
+
+	// Summary section
+	output += "Summary:\n"
+	output += "--------\n"
+
+	totalSucceeded := 0
+	totalFailed := 0
 
 	// Package summary
 	if c.Packages != nil {
-		if pkgResult, ok := c.Packages.(ApplyOutput); ok {
+		if pkgResult, ok := c.Packages.(orchestrator.PackageApplyResult); ok {
 			if c.DryRun {
 				output += fmt.Sprintf("📦 Packages: %d would be installed\n", pkgResult.TotalWouldInstall)
 			} else {
-				output += fmt.Sprintf("📦 Packages: %d installed, %d failed\n", pkgResult.TotalInstalled, pkgResult.TotalFailed)
+				if pkgResult.TotalInstalled > 0 || pkgResult.TotalFailed > 0 {
+					output += fmt.Sprintf("📦 Packages: %d installed, %d failed\n", pkgResult.TotalInstalled, pkgResult.TotalFailed)
+					totalSucceeded += pkgResult.TotalInstalled
+					totalFailed += pkgResult.TotalFailed
+				} else if pkgResult.TotalMissing == 0 {
+					output += "📦 Packages: All up to date\n"
+				}
 			}
 		}
 	}
 
 	// Dotfile summary
 	if c.Dotfiles != nil {
-		if dotResult, ok := c.Dotfiles.(DotfileApplyOutput); ok {
+		if dotResult, ok := c.Dotfiles.(orchestrator.DotfileApplyResult); ok {
 			if c.DryRun {
-				output += fmt.Sprintf("📄 Dotfiles: %d would be deployed, %d would be skipped\n", dotResult.Deployed, dotResult.Skipped)
+				output += fmt.Sprintf("📄 Dotfiles: %d would be deployed\n", dotResult.Summary.Added)
 			} else {
-				output += fmt.Sprintf("📄 Dotfiles: %d deployed, %d skipped\n", dotResult.Deployed, dotResult.Skipped)
+				if dotResult.Summary.Added > 0 || dotResult.Summary.Failed > 0 {
+					output += fmt.Sprintf("📄 Dotfiles: %d deployed, %d failed\n", dotResult.Summary.Added, dotResult.Summary.Failed)
+					totalSucceeded += dotResult.Summary.Added
+					totalFailed += dotResult.Summary.Failed
+				} else if dotResult.TotalFiles == 0 {
+					output += "📄 Dotfiles: None configured\n"
+				} else {
+					output += "📄 Dotfiles: All up to date\n"
+				}
 			}
+		}
+	}
+
+	// Overall result
+	if !c.DryRun && (totalSucceeded > 0 || totalFailed > 0) {
+		output += fmt.Sprintf("\nTotal: %d succeeded, %d failed\n", totalSucceeded, totalFailed)
+		if totalFailed > 0 {
+			output += "\n⚠️  Some operations failed. Check the errors above.\n"
 		}
 	}
 

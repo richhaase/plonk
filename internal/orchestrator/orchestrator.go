@@ -58,11 +58,13 @@ func WithDryRun(dryRun bool) Option {
 
 // ApplyResult represents the result of an apply operation
 type ApplyResult struct {
-	DryRun   bool        `json:"dry_run" yaml:"dry_run"`
-	Success  bool        `json:"success" yaml:"success"`
-	Packages interface{} `json:"packages,omitempty" yaml:"packages,omitempty"`
-	Dotfiles interface{} `json:"dotfiles,omitempty" yaml:"dotfiles,omitempty"`
-	Error    string      `json:"error,omitempty" yaml:"error,omitempty"`
+	DryRun        bool        `json:"dry_run" yaml:"dry_run"`
+	Success       bool        `json:"success" yaml:"success"`
+	Packages      interface{} `json:"packages,omitempty" yaml:"packages,omitempty"`
+	Dotfiles      interface{} `json:"dotfiles,omitempty" yaml:"dotfiles,omitempty"`
+	Error         string      `json:"error,omitempty" yaml:"error,omitempty"`
+	PackageErrors []string    `json:"package_errors,omitempty" yaml:"package_errors,omitempty"`
+	DotfileErrors []string    `json:"dotfile_errors,omitempty" yaml:"dotfile_errors,omitempty"`
 }
 
 // New creates a new orchestrator instance with options
@@ -100,31 +102,51 @@ func (o *Orchestrator) Apply(ctx context.Context) (ApplyResult, error) {
 		}
 	}
 
-	// Apply packages using existing function
+	// Apply packages using existing function - continue on error
 	packageResult, err := ApplyPackages(ctx, o.configDir, o.config, o.dryRun)
-	if err != nil {
-		result.Error = fmt.Sprintf("package apply failed: %v", err)
-		return result, fmt.Errorf("package apply failed: %w", err)
-	}
 	result.Packages = packageResult
-
-	// Apply dotfiles using existing function
-	dotfileResult, err := ApplyDotfiles(ctx, o.configDir, o.homeDir, o.config, o.dryRun, false)
 	if err != nil {
-		result.Error = fmt.Sprintf("dotfile apply failed: %v", err)
-		return result, fmt.Errorf("dotfile apply failed: %w", err)
+		result.PackageErrors = append(result.PackageErrors, fmt.Sprintf("package apply failed: %v", err))
 	}
-	result.Dotfiles = dotfileResult
 
-	// Run post-apply hooks
+	// Apply dotfiles using existing function - continue on error
+	dotfileResult, err := ApplyDotfiles(ctx, o.configDir, o.homeDir, o.config, o.dryRun, false)
+	result.Dotfiles = dotfileResult
+	if err != nil {
+		result.DotfileErrors = append(result.DotfileErrors, fmt.Sprintf("dotfile apply failed: %v", err))
+	}
+
+	// Run post-apply hooks only if we had some success
 	if o.config != nil && len(o.config.Hooks.PostApply) > 0 {
 		if err := o.hookRunner.RunPostApply(ctx, o.config.Hooks.PostApply); err != nil {
+			// Post-apply hook failure is not fatal, just add to errors
 			result.Error = fmt.Sprintf("post-apply hook failed: %v", err)
-			return result, fmt.Errorf("post-apply hook failed: %w", err)
 		}
 	}
 
-	result.Success = true
+	// Determine overall success
+	// Success if we had no critical errors and at least some operations succeeded
+	if packageResult, ok := result.Packages.(PackageApplyResult); ok {
+		if !o.dryRun && packageResult.TotalInstalled > 0 {
+			result.Success = true
+		} else if o.dryRun && packageResult.TotalWouldInstall > 0 {
+			result.Success = true
+		}
+	}
+	if dotfileResult, ok := result.Dotfiles.(DotfileApplyResult); ok {
+		if !o.dryRun && dotfileResult.Summary.Added > 0 {
+			result.Success = true
+		} else if o.dryRun && dotfileResult.Summary.Added > 0 {
+			result.Success = true
+		}
+	}
+
+	// If we had any failures, return an error even if some succeeded
+	if len(result.PackageErrors) > 0 || len(result.DotfileErrors) > 0 {
+		totalErrors := len(result.PackageErrors) + len(result.DotfileErrors)
+		return result, fmt.Errorf("apply completed with %d error(s)", totalErrors)
+	}
+
 	return result, nil
 }
 

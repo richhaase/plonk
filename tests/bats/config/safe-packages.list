@@ -1,0 +1,21 @@
+# Safe packages for BATS testing
+# Format: manager:package
+# These packages are small, harmless, and unlikely to conflict with development
+
+# Homebrew packages (macOS/Linux)
+brew:jq          # JSON processor, ~1MB, no dependencies
+brew:tree        # Directory viewer, ~50KB, read-only tool
+
+# NPM packages (Node.js)
+npm:is-odd       # Checks if number is odd, ~4KB, no deps
+npm:left-pad     # Pads strings, ~4KB, famous tiny package
+
+# Python packages
+pip:cowsay       # ASCII cow, harmless fun tool
+pip:fortune      # Fortune cookie messages
+
+# Ruby gems
+gem:lolcat       # Rainbow text colorizer
+
+# Go packages
+go:github.com/rakyll/hey  # HTTP load generator, small tool

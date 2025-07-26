@@ -154,33 +154,17 @@ func DetermineExitCode(results []resources.OperationResult, domain string, opera
 	return nil
 }
 
-// SimpleFlags represents basic command flags without detection logic
+// SimpleFlags represents basic command flags
 type SimpleFlags struct {
-	Manager string
 	DryRun  bool
 	Force   bool
 	Verbose bool
 	Output  string
 }
 
-// ParseSimpleFlags parses basic flags for package commands
+// ParseSimpleFlags parses basic flags for commands
 func ParseSimpleFlags(cmd *cobra.Command) (*SimpleFlags, error) {
 	flags := &SimpleFlags{}
-
-	// Parse manager flags with precedence
-	if brew, _ := cmd.Flags().GetBool("brew"); brew {
-		flags.Manager = "homebrew"
-	} else if npm, _ := cmd.Flags().GetBool("npm"); npm {
-		flags.Manager = "npm"
-	} else if cargo, _ := cmd.Flags().GetBool("cargo"); cargo {
-		flags.Manager = "cargo"
-	} else if pip, _ := cmd.Flags().GetBool("pip"); pip {
-		flags.Manager = "pip"
-	} else if gem, _ := cmd.Flags().GetBool("gem"); gem {
-		flags.Manager = "gem"
-	} else if goFlag, _ := cmd.Flags().GetBool("go"); goFlag {
-		flags.Manager = "go"
-	}
 
 	// Parse common flags
 	flags.DryRun, _ = cmd.Flags().GetBool("dry-run")

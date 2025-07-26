@@ -25,7 +25,7 @@ Plonk manages your development environment by tracking packages and dotfiles aut
 - **Cross-platform**: Works on macOS, Linux, and Windows
 
 **🚀 CLI Benefits:**
-- **Unix-style commands**: Familiar `add`, `rm`, `ls`, `sync` commands
+- **Unix-style commands**: Familiar `add`, `rm`, `status`, `apply` commands
 - **Smart operations**: Mixed package/dotfile operations in single commands
 - **Zero-argument status**: Just type `plonk` for system overview (like git)
 - **One-command workflows**: `plonk install` = install package + add to management
@@ -71,7 +71,7 @@ plonk                    # Zero-argument status (like git)
 plonk add git ~/.vimrc   # Mixed operations
 
 # Apply all changes
-plonk sync
+plonk apply
 
 # One-command install (installs package and adds to management)
 plonk install htop
@@ -141,12 +141,12 @@ plonk status
 plonk install git neovim ripgrep htop
 
 # Install packages with specific manager
-plonk install typescript --npm       # NPM packages
-plonk install ripgrep --cargo        # Rust/Cargo packages
-plonk install black --pip            # Python/Pip packages
-plonk install bundler --gem          # Ruby/Gem packages
-plonk install htop --apt             # APT packages (Linux)
-plonk install golangci-lint --go     # Go packages
+plonk install npm:typescript         # NPM packages
+plonk install cargo:ripgrep          # Rust/Cargo packages
+plonk install pip:black              # Python/Pip packages
+plonk install gem:bundler            # Ruby/Gem packages
+plonk install apt:htop               # APT packages (Linux)
+plonk install go:golangci-lint       # Go packages
 
 # Add dotfiles to management
 plonk add ~/.vimrc ~/.zshrc ~/.gitconfig
@@ -155,7 +155,7 @@ plonk add ~/.vimrc ~/.zshrc ~/.gitconfig
 plonk add ~/.config/nvim/
 
 # See what's available to manage
-plonk ls --verbose            # See everything including untracked
+plonk status --verbose            # See everything including untracked
 ```
 
 4. **Check system health:**
@@ -180,7 +180,7 @@ plonk config edit    # Edit configuration file
 
 ```bash
 plonk status           # Check what needs attention (or just 'plonk')
-plonk sync             # Install missing packages, sync dotfiles
+plonk apply             # Install missing packages, sync dotfiles
 plonk install <pkg>    # Install packages and add to management
 plonk add <dotfile>    # Add dotfiles to management
 plonk uninstall <pkg>  # Uninstall packages and remove from management
@@ -194,15 +194,15 @@ plonk doctor           # Health check when something seems wrong
 # Essential workflows
 plonk                                             # Check system state (zero-argument)
 plonk status                                      # Check system state (explicit)
-plonk sync                                        # Apply all changes
+plonk apply                                        # Apply all changes
 
 # Package management
 plonk install git neovim ripgrep                 # Install packages and add to management
-plonk install typescript --npm                   # Install with specific manager
-plonk install black --pip                        # Python packages
-plonk install bundler --gem                      # Ruby packages
-plonk install htop --apt                         # APT packages (Linux)
-plonk install golangci-lint --go                 # Go packages
+plonk install npm:typescript                     # Install with specific manager
+plonk install pip:black                          # Python packages
+plonk install gem:bundler                        # Ruby packages
+plonk install apt:htop                           # APT packages (Linux)
+plonk install go:golangci-lint                   # Go packages
 plonk uninstall htop                             # Uninstall package and remove from management
 
 # Dotfile management
@@ -211,10 +211,10 @@ plonk add ~/.config/nvim/                        # Add directory of dotfiles
 plonk rm ~/.vimrc                                # Remove dotfile from management
 
 # System overview
-plonk ls                                          # Smart overview of managed items
-plonk ls --packages                               # Show packages only
-plonk ls --dotfiles                               # Show dotfiles only
-plonk ls --manager homebrew                       # Show Homebrew packages only
+plonk status                                          # Smart overview of managed items
+plonk status --packages                               # Show packages only
+plonk status --dotfiles                               # Show dotfiles only
+plonk status --manager homebrew                       # Show Homebrew packages only
 plonk doctor                                      # Health check
 ```
 

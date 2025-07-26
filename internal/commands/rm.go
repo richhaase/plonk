@@ -4,8 +4,6 @@
 package commands
 
 import (
-	"fmt"
-
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/resources/dotfiles"
@@ -72,12 +70,6 @@ func runRm(cmd *cobra.Command, args []string) error {
 	results, err := manager.RemoveFiles(cfg, args, opts)
 	if err != nil {
 		return err
-	}
-
-	// Show progress for each result
-	for _, result := range results {
-		icon := GetStatusIcon(result.Status)
-		fmt.Printf("%s %s %s\n", icon, result.Status, result.Name)
 	}
 
 	// Create output data
