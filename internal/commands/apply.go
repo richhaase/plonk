@@ -12,43 +12,44 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var syncCmd = &cobra.Command{
-	Use:   "sync",
-	Short: "Sync all pending changes",
-	Long: `Apply all pending changes from your plonk configuration to your system.
+var applyCmd = &cobra.Command{
+	Use:   "apply",
+	Short: "Apply configuration to reconcile system state",
+	Long: `Apply reads your plonk configuration and reconciles the system state
+to match, installing missing packages and managing dotfiles.
 
 This command will:
 1. Install all missing packages from your configuration
 2. Deploy all dotfiles from your configuration
 3. Report the results for both operations
 
-This syncs all configured packages and dotfiles in a single operation.
-Think of it like 'git pull' - it brings your system in sync with your configuration.
+This applies all configured packages and dotfiles in a single operation.
+Think of it like 'git pull' - it brings your system state in line with your configuration.
 
 Examples:
-  plonk sync             # Sync all configuration changes
-  plonk sync --dry-run   # Show what would be synced without making changes
-  plonk sync --backup    # Create backups before overwriting existing dotfiles
-  plonk sync --packages  # Sync packages only
-  plonk sync --dotfiles  # Sync dotfiles only`,
-	RunE: runSync,
+  plonk apply             # Apply all configuration changes
+  plonk apply --dry-run   # Show what would be applied without making changes
+  plonk apply --backup    # Create backups before overwriting existing dotfiles
+  plonk apply --packages  # Apply packages only
+  plonk apply --dotfiles  # Apply dotfiles only`,
+	RunE: runApply,
 	Args: cobra.NoArgs,
 }
 
 func init() {
-	rootCmd.AddCommand(syncCmd)
+	rootCmd.AddCommand(applyCmd)
 
 	// Scope flags (mutually exclusive)
-	syncCmd.Flags().Bool("packages", false, "Sync packages only")
-	syncCmd.Flags().Bool("dotfiles", false, "Sync dotfiles only")
-	syncCmd.MarkFlagsMutuallyExclusive("packages", "dotfiles")
+	applyCmd.Flags().Bool("packages", false, "Apply packages only")
+	applyCmd.Flags().Bool("dotfiles", false, "Apply dotfiles only")
+	applyCmd.MarkFlagsMutuallyExclusive("packages", "dotfiles")
 
 	// Behavior flags
-	syncCmd.Flags().BoolP("dry-run", "n", false, "Show what would be synced without making changes")
-	syncCmd.Flags().Bool("backup", false, "Create backups before overwriting existing dotfiles")
+	applyCmd.Flags().BoolP("dry-run", "n", false, "Show what would be applied without making changes")
+	applyCmd.Flags().Bool("backup", false, "Create backups before overwriting existing dotfiles")
 }
 
-func runSync(cmd *cobra.Command, args []string) error {
+func runApply(cmd *cobra.Command, args []string) error {
 	// Parse flags
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	backup, _ := cmd.Flags().GetBool("backup")
@@ -71,11 +72,11 @@ func runSync(cmd *cobra.Command, args []string) error {
 
 	ctx := context.Background()
 
-	// For now, maintain backward compatibility by using the old sync functions
+	// For now, maintain backward compatibility by using the old apply functions
 	// TODO: After Task 6.2, update to use scope flags (packages-only, dotfiles-only)
 	if packagesOnly || dotfilesOnly {
-		// Handle scoped sync using legacy functions
-		return runScopedSync(ctx, configDir, homeDir, cfg, dryRun, backup, packagesOnly, dotfilesOnly, format)
+		// Handle scoped apply using legacy functions
+		return runScopedApply(ctx, configDir, homeDir, cfg, dryRun, backup, packagesOnly, dotfilesOnly, format)
 	}
 
 	// Create new orchestrator
@@ -86,26 +87,26 @@ func runSync(cmd *cobra.Command, args []string) error {
 		orchestrator.WithDryRun(dryRun),
 	)
 
-	// Run sync with hooks and v2 lock
-	result, err := orch.Sync(ctx)
+	// Run apply with hooks and v2 lock
+	result, err := orch.Apply(ctx)
 	if err != nil {
-		return fmt.Errorf("sync failed: %w", err)
+		return fmt.Errorf("apply failed: %w", err)
 	}
 
 	// Convert to legacy output format for now
-	outputData := convertSyncResult(result, getSyncScope(packagesOnly, dotfilesOnly))
+	outputData := convertApplyResult(result, getApplyScope(packagesOnly, dotfilesOnly))
 
 	return RenderOutput(outputData, format)
 }
 
-// runScopedSync handles packages-only or dotfiles-only sync using legacy functions
-func runScopedSync(ctx context.Context, configDir, homeDir string, cfg *config.Config, dryRun, backup, packagesOnly, dotfilesOnly bool, format OutputFormat) error {
+// runScopedApply handles packages-only or dotfiles-only apply using legacy functions
+func runScopedApply(ctx context.Context, configDir, homeDir string, cfg *config.Config, dryRun, backup, packagesOnly, dotfilesOnly bool, format OutputFormat) error {
 	var packageOutput *ApplyOutput
 	var dotfileOutput *DotfileApplyOutput
 
-	// Sync packages (unless dotfiles-only)
+	// Apply packages (unless dotfiles-only)
 	if !dotfilesOnly {
-		result, err := orchestrator.SyncPackages(ctx, configDir, cfg, dryRun)
+		result, err := orchestrator.ApplyPackages(ctx, configDir, cfg, dryRun)
 		if err != nil {
 			return err
 		}
@@ -154,9 +155,9 @@ func runScopedSync(ctx context.Context, configDir, homeDir string, cfg *config.C
 		}
 	}
 
-	// Sync dotfiles (unless packages-only)
+	// Apply dotfiles (unless packages-only)
 	if !packagesOnly {
-		result, err := orchestrator.SyncDotfiles(ctx, configDir, homeDir, cfg, dryRun, backup)
+		result, err := orchestrator.ApplyDotfiles(ctx, configDir, homeDir, cfg, dryRun, backup)
 		if err != nil {
 			return err
 		}
@@ -204,19 +205,19 @@ func runScopedSync(ctx context.Context, configDir, homeDir string, cfg *config.C
 		dotInterface = *dotfileOutput
 	}
 
-	outputData := CombinedSyncOutput{
+	outputData := CombinedApplyOutput{
 		DryRun:   dryRun,
 		Packages: pkgInterface,
 		Dotfiles: dotInterface,
-		Scope:    getSyncScope(packagesOnly, dotfilesOnly),
+		Scope:    getApplyScope(packagesOnly, dotfilesOnly),
 	}
 
 	return RenderOutput(outputData, format)
 }
 
-// convertSyncResult converts new SyncResult to legacy CombinedSyncOutput
-func convertSyncResult(result orchestrator.SyncResult, scope string) CombinedSyncOutput {
-	return CombinedSyncOutput{
+// convertApplyResult converts new ApplyResult to legacy CombinedApplyOutput
+func convertApplyResult(result orchestrator.ApplyResult, scope string) CombinedApplyOutput {
+	return CombinedApplyOutput{
 		DryRun:   result.DryRun,
 		Packages: result.Packages,
 		Dotfiles: result.Dotfiles,
@@ -224,8 +225,8 @@ func convertSyncResult(result orchestrator.SyncResult, scope string) CombinedSyn
 	}
 }
 
-// getSyncScope returns a description of what's being synced
-func getSyncScope(packagesOnly, dotfilesOnly bool) string {
+// getApplyScope returns a description of what's being applied
+func getApplyScope(packagesOnly, dotfilesOnly bool) string {
 	if packagesOnly {
 		return "packages"
 	}
@@ -235,34 +236,34 @@ func getSyncScope(packagesOnly, dotfilesOnly bool) string {
 	return "all"
 }
 
-// CombinedSyncOutput represents the output structure for the sync command
-type CombinedSyncOutput struct {
+// CombinedApplyOutput represents the output structure for the apply command
+type CombinedApplyOutput struct {
 	DryRun   bool        `json:"dry_run" yaml:"dry_run"`
 	Scope    string      `json:"scope" yaml:"scope"`
 	Packages interface{} `json:"packages,omitempty" yaml:"packages,omitempty"`
 	Dotfiles interface{} `json:"dotfiles,omitempty" yaml:"dotfiles,omitempty"`
 }
 
-// TableOutput generates human-friendly table output for sync
-func (c CombinedSyncOutput) TableOutput() string {
+// TableOutput generates human-friendly table output for apply
+func (c CombinedApplyOutput) TableOutput() string {
 	output := ""
 
 	if c.DryRun {
-		output += "Plonk Sync (Dry Run)\n"
-		output += "====================\n\n"
+		output += "Plonk Apply (Dry Run)\n"
+		output += "=====================\n\n"
 	} else {
-		output += "Plonk Sync\n"
-		output += "==========\n\n"
+		output += "Plonk Apply\n"
+		output += "===========\n\n"
 	}
 
 	// Show scope
 	switch c.Scope {
 	case "packages":
-		output += "📦 Syncing packages only\n\n"
+		output += "📦 Applying packages only\n\n"
 	case "dotfiles":
-		output += "📄 Syncing dotfiles only\n\n"
+		output += "📄 Applying dotfiles only\n\n"
 	default:
-		output += "📦📄 Syncing packages and dotfiles\n\n"
+		output += "📦📄 Applying packages and dotfiles\n\n"
 	}
 
 	// Package summary
@@ -288,13 +289,13 @@ func (c CombinedSyncOutput) TableOutput() string {
 	}
 
 	if c.DryRun {
-		output += "\nUse 'plonk sync' without --dry-run to apply these changes\n"
+		output += "\nUse 'plonk apply' without --dry-run to apply these changes\n"
 	}
 
 	return output
 }
 
 // StructuredData returns the structured data for serialization
-func (c CombinedSyncOutput) StructuredData() any {
+func (c CombinedApplyOutput) StructuredData() any {
 	return c
 }

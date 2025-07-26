@@ -51,12 +51,12 @@ func (h *HookRunner) Run(ctx context.Context, hooks []config.Hook, phase string)
 	return nil
 }
 
-// RunPreSync executes pre-sync hooks
-func (h *HookRunner) RunPreSync(ctx context.Context, hooks []config.Hook) error {
-	return h.Run(ctx, hooks, "pre_sync")
+// RunPreApply executes pre-apply hooks
+func (h *HookRunner) RunPreApply(ctx context.Context, hooks []config.Hook) error {
+	return h.Run(ctx, hooks, "pre_apply")
 }
 
-// RunPostSync executes post-sync hooks
-func (h *HookRunner) RunPostSync(ctx context.Context, hooks []config.Hook) error {
-	return h.Run(ctx, hooks, "post_sync")
+// RunPostApply executes post-apply hooks
+func (h *HookRunner) RunPostApply(ctx context.Context, hooks []config.Hook) error {
+	return h.Run(ctx, hooks, "post_apply")
 }

@@ -64,9 +64,18 @@ Reviewed all CLI commands and created detailed UX improvement plan
 ### Phase 9: UX Implementation - Config Command Updates (Day 12) - ✅ COMPLETE
 Added auto-validation to config loading (already existed), removed config validate command, updated config show to display file path
 
-### Phase 10-14: UX Implementation (Days 12-14) - IN PROGRESS
-Phase 10: Sync→apply rename (ready to start)
-Phases 11-14: Command consolidation, prefix syntax, search/info improvements
+### Phase 10: UX Implementation - Sync to Apply Rename (Day 12) - ✅ COMPLETE*
+Successfully renamed sync→apply throughout codebase, updated all functions/hooks/help text
+*Critical issue discovered: `plonk apply --dry-run` hangs - requires fix in Phase 10.5
+
+### Phase 10.5: Fix Apply Command Hanging (Day 12) - IN PROGRESS
+Debug and fix the hanging issue with apply command before proceeding
+
+### Phase 11-14: UX Implementation (Days 13-14) - PLANNED
+Phase 11: Command consolidation (remove ls, add st alias)
+Phase 12: Package manager prefix syntax
+Phase 13: Search/info enhancements
+Phase 14: Integration and polish
 
 ### Phase 15: Output Standardization (Day 14) - NOT STARTED
 Standardize output formatting across all commands

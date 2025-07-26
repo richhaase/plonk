@@ -181,13 +181,21 @@ internal/
 - [x] Ensure clear error messages on validation failures (already existed)
 - [x] Update config error handling throughout codebase (already handled)
 
-### Phase 10: UX Implementation - Sync to Apply Rename (Day 12)
-- [ ] Rename `sync.go` to `apply.go`
-- [ ] Update command registration and help text
-- [ ] Rename internal sync functions (SyncPackages → ApplyPackages, etc.)
-- [ ] Update all references to sync in commands and tests
-- [ ] Update hook names if needed (pre_sync → pre_apply)
-- [ ] Update documentation and examples
+### Phase 10: UX Implementation - Sync to Apply Rename (Day 12) ✅ COMPLETE*
+- [x] Rename `sync.go` to `apply.go`
+- [x] Update command registration and help text
+- [x] Rename internal sync functions (SyncPackages → ApplyPackages, etc.)
+- [x] Update all references to sync in commands and tests
+- [x] Update hook names if needed (pre_sync → pre_apply)
+- [x] Update documentation and examples
+
+**Note**: Discovered critical issue - `plonk apply --dry-run` hangs. Fix required in Phase 10.5.
+
+### Phase 10.5: Fix Apply Command Hanging Issue (Day 12) [CRITICAL]
+- [ ] Identify root cause of `plonk apply --dry-run` hanging
+- [ ] Implement fix without breaking existing functionality
+- [ ] Add regression tests to prevent recurrence
+- [ ] Verify all apply command variations work correctly
 
 ### Phase 11: UX Implementation - Command Consolidation (Day 13)
 - [ ] Delete `ls.go` command file

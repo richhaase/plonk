@@ -298,9 +298,9 @@ func TestCompleteUserExperience(t *testing.T) {
 				"Info should show package is installed")
 		}
 
-		// 18. Sync command - syncs current state
-		output = run(t, PlonkBinary, "sync")
-		// Sync shows current state, not necessarily changes
+		// 18. Apply command - applies current state
+		output = run(t, PlonkBinary, "apply")
+		// Apply shows current state, not necessarily changes
 
 		// 19. Test reinstallation after uninstall
 		uninstallArgs := []string{"uninstall"}
