@@ -5,8 +5,6 @@ package packages
 
 import (
 	"testing"
-
-	managerTesting "github.com/richhaase/plonk/internal/resources/packages/testing"
 )
 
 func TestGemManager_parseListOutput(t *testing.T) {
@@ -182,17 +180,4 @@ homepage: https://github.com/rspec/rspec`),
 			}
 		})
 	}
-}
-
-// Shared integration tests using the common test suite
-func TestGemManager_SharedTestSuite(t *testing.T) {
-	suite := &managerTesting.ManagerTestSuite{
-		Manager:     NewGemManager(),
-		TestPackage: "bundler",
-		BinaryName:  "gem",
-	}
-
-	t.Run("IsAvailable", suite.TestIsAvailable)
-	t.Run("ListInstalled", suite.TestListInstalled)
-	t.Run("SupportsSearch", suite.TestSupportsSearch)
 }

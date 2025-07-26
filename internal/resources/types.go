@@ -136,17 +136,6 @@ func CalculateSummary(results []OperationResult) ResultSummary {
 	return summary
 }
 
-// CountByStatus counts results with a specific status
-func CountByStatus(results []OperationResult, status string) int {
-	count := 0
-	for _, result := range results {
-		if result.Status == status {
-			count++
-		}
-	}
-	return count
-}
-
 // Status display utilities for CLI commands
 
 // DomainSummary represents counts for a specific domain/manager
@@ -238,14 +227,4 @@ func ValidateOperationResults(results []OperationResult, operationType string) e
 	}
 
 	return nil
-}
-
-// HasFailures returns true if any operations failed
-func HasFailures(results []OperationResult) bool {
-	for _, result := range results {
-		if result.Status == "failed" {
-			return true
-		}
-	}
-	return false
 }

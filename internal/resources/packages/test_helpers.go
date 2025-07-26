@@ -3,6 +3,8 @@
 
 package packages
 
+// Test helper functions
+
 // stringSlicesEqual compares two string slices for equality
 func stringSlicesEqual(a, b []string) bool {
 	if len(a) != len(b) {

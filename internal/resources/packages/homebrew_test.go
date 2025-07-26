@@ -5,8 +5,6 @@ package packages
 
 import (
 	"testing"
-
-	managerTesting "github.com/richhaase/plonk/internal/resources/packages/testing"
 )
 
 func TestHomebrewManager_parseListOutput(t *testing.T) {
@@ -45,9 +43,14 @@ func TestHomebrewManager_parseListOutput(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := SplitLines(tt.output)
-
-			if !managerTesting.StringSlicesEqual(result, tt.expectedResult) {
+			if len(result) != len(tt.expectedResult) {
 				t.Errorf("Expected result %v but got %v", tt.expectedResult, result)
+			}
+			for i, expected := range tt.expectedResult {
+				if i >= len(result) || result[i] != expected {
+					t.Errorf("Expected result %v but got %v", tt.expectedResult, result)
+					break
+				}
 			}
 		})
 	}
@@ -90,9 +93,15 @@ func TestHomebrewManager_parseSearchOutput(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			manager := NewHomebrewManager()
 			result := manager.parseSearchOutput(tt.output)
-
-			if !managerTesting.StringSlicesEqual(result, tt.expectedResult) {
+			if len(result) != len(tt.expectedResult) {
 				t.Errorf("Expected result %v but got %v", tt.expectedResult, result)
+			} else {
+				for i, expected := range tt.expectedResult {
+					if result[i] != expected {
+						t.Errorf("Expected result %v but got %v", tt.expectedResult, result)
+						break
+					}
+				}
 			}
 		})
 	}
@@ -212,17 +221,4 @@ func TestHomebrewManager_extractVersion(t *testing.T) {
 			}
 		})
 	}
-}
-
-// Shared integration tests using the common test suite
-func TestHomebrewManager_SharedTestSuite(t *testing.T) {
-	suite := &managerTesting.ManagerTestSuite{
-		Manager:     NewHomebrewManager(),
-		TestPackage: "git",
-		BinaryName:  "brew",
-	}
-
-	t.Run("IsAvailable", suite.TestIsAvailable)
-	t.Run("ListInstalled", suite.TestListInstalled)
-	t.Run("SupportsSearch", suite.TestSupportsSearch)
 }

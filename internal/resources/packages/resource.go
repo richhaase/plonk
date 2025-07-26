@@ -21,27 +21,6 @@ func NewPackageResource(manager PackageManager) *PackageResource {
 	return &PackageResource{manager: manager}
 }
 
-// ID returns a unique identifier for this resource
-func (p *PackageResource) ID() string {
-	// Determine manager name based on type
-	switch p.manager.(type) {
-	case *HomebrewManager:
-		return "packages:homebrew"
-	case *NpmManager:
-		return "packages:npm"
-	case *CargoManager:
-		return "packages:cargo"
-	case *PipManager:
-		return "packages:pip"
-	case *GemManager:
-		return "packages:gem"
-	case *GoInstallManager:
-		return "packages:go"
-	default:
-		return "packages:unknown"
-	}
-}
-
 // Desired returns the desired state (packages that should be installed)
 func (p *PackageResource) Desired() []resources.Item {
 	return p.desired
@@ -119,11 +98,6 @@ func NewMultiPackageResource() *MultiPackageResource {
 		resources: make(map[string]*PackageResource),
 		registry:  NewManagerRegistry(),
 	}
-}
-
-// ID returns a unique identifier for this resource
-func (m *MultiPackageResource) ID() string {
-	return "packages:all"
 }
 
 // Desired returns all desired packages across all managers
