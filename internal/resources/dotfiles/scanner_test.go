@@ -56,53 +56,6 @@ func TestScanner_ScanDotfiles(t *testing.T) {
 	}
 }
 
-func TestScanner_ScanDirectory(t *testing.T) {
-	// Create temp directory structure
-	tmpDir := t.TempDir()
-
-	testFiles := []string{
-		"file1.txt",
-		"subdir/file2.txt",
-		"subdir/nested/file3.txt",
-	}
-
-	for _, file := range testFiles {
-		path := filepath.Join(tmpDir, file)
-		dir := filepath.Dir(path)
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(path, []byte("test"), 0644); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	// Create scanner
-	scanner := NewScanner(tmpDir, nil)
-
-	// Test with max depth 1
-	results, err := scanner.ScanDirectory(context.Background(), tmpDir, 1)
-	if err != nil {
-		t.Fatalf("ScanDirectory failed: %v", err)
-	}
-
-	// Should get file1.txt, subdir (dir), subdir/file2.txt, and subdir/nested (dir)
-	if len(results) != 4 {
-		t.Errorf("Expected 4 results with depth 1, got %d", len(results))
-	}
-
-	// Test with max depth 2
-	results, err = scanner.ScanDirectory(context.Background(), tmpDir, 2)
-	if err != nil {
-		t.Fatalf("ScanDirectory failed: %v", err)
-	}
-
-	// Should get all files and directories
-	if len(results) < 5 { // At least 3 files + 2 directories
-		t.Errorf("Expected at least 5 results with depth 2, got %d", len(results))
-	}
-}
-
 func TestScanner_WithFilter(t *testing.T) {
 	// Create temp directory
 	tmpDir := t.TempDir()

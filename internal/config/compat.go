@@ -49,11 +49,6 @@ type ValidationResult struct {
 	Warnings []string `json:"warnings,omitempty"`
 }
 
-// IsValid returns whether the validation passed
-func (vr *ValidationResult) IsValid() bool {
-	return vr.Valid
-}
-
 // GetSummary returns a summary of the validation result
 func (vr *ValidationResult) GetSummary() string {
 	if vr.Valid {
@@ -84,25 +79,6 @@ type SimpleValidator struct {
 func NewSimpleValidator() *SimpleValidator {
 	v := validator.New()
 	return &SimpleValidator{validator: v}
-}
-
-// ValidateConfig validates a parsed config struct
-func (v *SimpleValidator) ValidateConfig(config *Config) *ValidationResult {
-	// Convert to NewConfig for validation
-	resolved := config
-	err := v.validator.Struct(resolved)
-
-	result := &ValidationResult{
-		Valid:    err == nil,
-		Errors:   []string{},
-		Warnings: []string{},
-	}
-
-	if err != nil {
-		result.Errors = append(result.Errors, err.Error())
-	}
-
-	return result
 }
 
 // ValidateConfigFromYAML validates configuration from YAML content

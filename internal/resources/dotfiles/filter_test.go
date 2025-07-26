@@ -106,19 +106,3 @@ func TestFilter_ShouldSkip(t *testing.T) {
 		})
 	}
 }
-
-func TestFilter_ShouldSkipFilesOnly(t *testing.T) {
-	filter := NewFilter([]string{}, "", false)
-
-	// Test directory - should be skipped
-	dirInfo := mockFileInfo{name: "dir", isDir: true}
-	if !filter.ShouldSkipFilesOnly("dir", dirInfo) {
-		t.Error("Expected directory to be skipped in files-only mode")
-	}
-
-	// Test file - should not be skipped
-	fileInfo := mockFileInfo{name: "file", isDir: false}
-	if filter.ShouldSkipFilesOnly("file", fileInfo) {
-		t.Error("Expected file to not be skipped in files-only mode")
-	}
-}

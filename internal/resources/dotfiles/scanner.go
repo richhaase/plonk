@@ -31,18 +31,6 @@ func NewScanner(homeDir string, filter *Filter) *Scanner {
 	}
 }
 
-// ScanDirectory scans a directory for dotfiles
-func (s *Scanner) ScanDirectory(ctx context.Context, dir string, maxDepth int) ([]ScanResult, error) {
-	var results []ScanResult
-
-	err := s.walkDirectory(ctx, dir, dir, 0, maxDepth, &results)
-	if err != nil {
-		return nil, err
-	}
-
-	return results, nil
-}
-
 // ScanDotfiles scans for dotfiles in the home directory
 func (s *Scanner) ScanDotfiles(ctx context.Context) ([]ScanResult, error) {
 	var results []ScanResult
@@ -81,59 +69,4 @@ func (s *Scanner) ScanDotfiles(ctx context.Context) ([]ScanResult, error) {
 	}
 
 	return results, nil
-}
-
-// walkDirectory recursively walks a directory up to maxDepth
-func (s *Scanner) walkDirectory(ctx context.Context, root, dir string, currentDepth, maxDepth int, results *[]ScanResult) error {
-	if currentDepth > maxDepth {
-		return nil
-	}
-
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		// Skip directories we can't read
-		return nil
-	}
-
-	for _, entry := range entries {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		fullPath := filepath.Join(dir, entry.Name())
-		relPath, err := filepath.Rel(root, fullPath)
-		if err != nil {
-			continue
-		}
-
-		info, err := entry.Info()
-		if err != nil {
-			continue
-		}
-
-		// Apply filter
-		if s.filter != nil && s.filter.ShouldSkip(relPath, info) {
-			continue
-		}
-
-		*results = append(*results, ScanResult{
-			Name: relPath,
-			Path: fullPath,
-			Info: info,
-			Metadata: map[string]interface{}{
-				"path": fullPath,
-			},
-		})
-
-		// Recurse into directories
-		if entry.IsDir() && currentDepth < maxDepth {
-			if err := s.walkDirectory(ctx, root, fullPath, currentDepth+1, maxDepth, results); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
 }

@@ -49,14 +49,6 @@ func (f *Filter) ShouldSkip(relPath string, info os.FileInfo) bool {
 	return false
 }
 
-// ShouldSkipFilesOnly is like ShouldSkip but also skips directories
-func (f *Filter) ShouldSkipFilesOnly(relPath string, info os.FileInfo) bool {
-	if info.IsDir() {
-		return true
-	}
-	return f.ShouldSkip(relPath, info)
-}
-
 // isConfigPath checks if a path is within the config directory
 func (f *Filter) isConfigPath(relPath string) bool {
 	// Extract the relative path pattern from the config directory
