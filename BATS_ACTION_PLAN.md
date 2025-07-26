@@ -3,14 +3,40 @@
 ## Overview
 This document provides a detailed, step-by-step action plan for implementing BATS behavioral testing for plonk. Each phase includes specific tasks, code examples, and validation checkpoints.
 
+## Implementation Status
+
+### Completed Phases
+- [x] **Phase 1: Foundation Setup** ✅ (Completed)
+  - Created directory structure
+  - Created safety documentation
+  - Created safe lists
+  - Created test helpers with build functionality
+  - Created initial smoke test
+  - Fixed portability issues (mapfile, assert functions)
+  - All smoke tests passing (7/7)
+
+- [x] **Phase 2: Basic Command Tests** ✅ (Completed)
+  - Created basic command tests (help, status, aliases)
+  - Created output format tests (table format only)
+  - All tests passing (7/7)
+
+### Remaining Phases
+- [ ] Phase 3: State-Changing Tests (Package install/uninstall)
+- [ ] Phase 4: Dotfile Tests (Add/remove)
+- [ ] Phase 5: Apply Command Tests
+- [ ] Phase 6: Error Handling Tests
+- [ ] Phase 7: Integration Tests
+- [ ] Phase 8: CI/CD Integration
+- [ ] Phase 9: Documentation Updates
+
 ## Pre-Implementation Checklist
 
-- [ ] Install BATS locally: `brew install bats-core`
-- [ ] Review existing plonk commands to understand current behavior
-- [ ] Backup your plonk config if you have one: `cp -r ~/.config/plonk ~/.config/plonk.backup`
-- [ ] Ensure you have test package managers installed (brew, npm, etc.)
+- [x] Install BATS locally: `brew install bats-core`
+- [x] Review existing plonk commands to understand current behavior
+- [x] Backup your plonk config if you have one: `cp -r ~/.config/plonk ~/.config/plonk.backup`
+- [x] Ensure you have test package managers installed (brew, npm, etc.)
 
-## Phase 1: Foundation Setup (Day 1-2)
+## Phase 1: Foundation Setup (Day 1-2) ✅ COMPLETED
 
 ### 1.1 Create Directory Structure
 
@@ -507,11 +533,11 @@ load '../lib/assertions'
 }
 ```
 
-## Phase 2: Basic Command Tests (Day 3-4)
+## Phase 2: Basic Command Tests (Day 3-4) ✅ COMPLETED
 
 ### 2.1 Basic Commands Test
 
-**File: `tests/bats/behavioral/01-basic-commands.bats`**
+**File: `tests/bats/behavioral/01-basic-commands.bats`** ✅
 ```bash
 #!/usr/bin/env bats
 
@@ -541,18 +567,7 @@ setup() {
   assert_output --partial "0 managed"
 }
 
-@test "plonk doctor shows system health" {
-  run plonk doctor
-  assert_success
-  assert_output_contains_all "Overall Status:" "Package Managers"
-}
-
-@test "unknown command shows helpful error" {
-  run plonk definitely-not-a-command
-  assert_failure
-  assert_output --partial "unknown command"
-  refute_output --partial "panic"
-}
+# Removed doctor and error handling tests per user request
 
 @test "help for specific command works" {
   run plonk help install
@@ -564,7 +579,7 @@ setup() {
 
 ### 2.2 Output Format Tests
 
-**File: `tests/bats/behavioral/02-output-formats.bats`**
+**File: `tests/bats/behavioral/02-output-formats.bats`** ✅
 ```bash
 #!/usr/bin/env bats
 
@@ -582,49 +597,20 @@ setup() {
   assert_output --partial "Plonk Status"
 }
 
-@test "status supports JSON format" {
-  run plonk status --output json
+# Only testing table format per user request
+@test "info supports table format" {
+  run plonk info jq
   assert_success
-
-  # Validate JSON structure
-  run echo "$output" | jq .
-  assert_success
-
-  # Check expected fields
-  assert_json_field_exists ".config_path"
-  assert_json_field_exists ".summary.total_managed"
+  # Table format should show package details
+  assert_output --partial "Package:"
+  assert_output --partial "jq"
 }
 
-@test "status supports YAML format" {
-  run plonk status --output yaml
+@test "search supports table format" {
+  run plonk search jq
   assert_success
-
-  # Check YAML markers
-  assert_output --partial "config_path:"
-  assert_output --partial "summary:"
-}
-
-@test "invalid output format shows error" {
-  run plonk status --output xml
-  assert_failure
-  assert_output --partial "invalid output format"
-}
-
-@test "all commands support output formats" {
-  local commands=("status" "info jq" "doctor")
-
-  for cmd in "${commands[@]}"; do
-    # Test JSON
-    run plonk $cmd --output json
-    assert_success
-    run echo "$output" | jq .
-    assert_success
-
-    # Test YAML
-    run plonk $cmd --output yaml
-    assert_success
-    assert_output --partial ":"
-  done
+  # Table format shows search results
+  assert_output --partial "jq"
 }
 ```
 
