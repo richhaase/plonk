@@ -34,7 +34,7 @@ func TestOrchestratorApplyWithResources(t *testing.T) {
 
 	// Create a test config file
 	cfg := &config.Config{
-		DefaultManager: "homebrew",
+		DefaultManager: "brew",
 		IgnorePatterns: []string{"*.tmp", "*.swp"},
 	}
 

@@ -13,7 +13,7 @@ import (
 
 // Config represents the plonk configuration
 type Config struct {
-	DefaultManager    string   `yaml:"default_manager,omitempty" validate:"omitempty,oneof=homebrew npm pip gem go cargo test-unavailable"`
+	DefaultManager    string   `yaml:"default_manager,omitempty" validate:"omitempty,oneof=brew npm pip gem go cargo test-unavailable"`
 	OperationTimeout  int      `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"`
 	PackageTimeout    int      `yaml:"package_timeout,omitempty" validate:"omitempty,min=0,max=1800"`
 	DotfileTimeout    int      `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`
@@ -37,7 +37,7 @@ type Hook struct {
 
 // defaultConfig holds the default configuration values
 var defaultConfig = Config{
-	DefaultManager:   "homebrew",
+	DefaultManager:   "brew",
 	OperationTimeout: 300, // 5 minutes
 	PackageTimeout:   180, // 3 minutes
 	DotfileTimeout:   60,  // 1 minute

@@ -47,21 +47,21 @@ func getOSPackageManagerSupport() map[string]bool {
 	switch runtime.GOOS {
 	case "darwin":
 		return map[string]bool{
-			"homebrew": true,
-			"npm":      true,
-			"cargo":    true,
-			"gem":      true,
-			"go":       true,
-			"pip":      true,
+			"brew":  true,
+			"npm":   true,
+			"cargo": true,
+			"gem":   true,
+			"go":    true,
+			"pip":   true,
 		}
 	case "linux":
 		return map[string]bool{
-			"homebrew": true, // Supported on Linux
-			"npm":      true,
-			"cargo":    true,
-			"gem":      true,
-			"go":       true,
-			"pip":      true,
+			"brew":  true, // Homebrew supported on Linux
+			"npm":   true,
+			"cargo": true,
+			"gem":   true,
+			"go":    true,
+			"pip":   true,
 			// apt would go here when implemented
 		}
 	default:
@@ -80,7 +80,7 @@ func getManagerInstallSuggestion(manager string) string {
 	}
 
 	switch manager {
-	case "homebrew":
+	case "brew":
 		switch runtime.GOOS {
 		case "darwin":
 			return "Install Homebrew: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""

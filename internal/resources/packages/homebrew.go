@@ -117,7 +117,7 @@ func (h *HomebrewManager) Info(ctx context.Context, name string) (*PackageInfo, 
 	}
 
 	info := h.parseInfoOutput(output, name)
-	info.Manager = "homebrew"
+	info.Manager = "brew"
 	info.Installed = installed
 
 	return info, nil

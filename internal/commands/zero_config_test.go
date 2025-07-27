@@ -26,8 +26,8 @@ func TestConfigResolutionInCommands(t *testing.T) {
 		}
 
 		// Verify config works
-		if cfg.DefaultManager != "homebrew" {
-			t.Errorf("Expected default manager 'homebrew', got '%s'", cfg.DefaultManager)
+		if cfg.DefaultManager != "brew" {
+			t.Errorf("Expected default manager 'brew', got '%s'", cfg.DefaultManager)
 		}
 
 		if cfg.OperationTimeout != 300 {

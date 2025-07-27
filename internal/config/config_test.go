@@ -20,8 +20,8 @@ func TestLoad_MissingFile(t *testing.T) {
 	}
 
 	// Check all defaults are applied
-	if cfg.DefaultManager != "homebrew" {
-		t.Errorf("Expected default manager 'homebrew', got %s", cfg.DefaultManager)
+	if cfg.DefaultManager != "brew" {
+		t.Errorf("Expected default manager 'brew', got %s", cfg.DefaultManager)
 	}
 	if cfg.OperationTimeout != 300 {
 		t.Errorf("Expected operation timeout 300, got %d", cfg.OperationTimeout)
@@ -226,7 +226,7 @@ func TestLoadWithDefaults(t *testing.T) {
 	if cfg == nil {
 		t.Fatal("LoadWithDefaults should never return nil")
 	}
-	if cfg.DefaultManager != "homebrew" {
+	if cfg.DefaultManager != "brew" {
 		t.Error("Should return defaults for missing file")
 	}
 
@@ -240,7 +240,7 @@ func TestLoadWithDefaults(t *testing.T) {
 	if cfg == nil {
 		t.Fatal("LoadWithDefaults should never return nil")
 	}
-	if cfg.DefaultManager != "homebrew" {
+	if cfg.DefaultManager != "brew" {
 		t.Error("Should return defaults for invalid file")
 	}
 }

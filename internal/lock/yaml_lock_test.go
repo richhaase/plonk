@@ -38,7 +38,7 @@ func TestYAMLLockService_SaveAndLoad(t *testing.T) {
 	testLock := &LockFile{
 		Version: LockFileVersion,
 		Packages: map[string][]PackageEntry{
-			"homebrew": {
+			"brew": {
 				{Name: "git", Version: "2.43.0", InstalledAt: time.Now()},
 				{Name: "vim", Version: "9.0", InstalledAt: time.Now()},
 			},
@@ -69,8 +69,8 @@ func TestYAMLLockService_SaveAndLoad(t *testing.T) {
 		t.Errorf("Version mismatch: expected %d, got %d", testLock.Version, loaded.Version)
 	}
 
-	if len(loaded.Packages["homebrew"]) != 2 {
-		t.Errorf("Homebrew packages mismatch: expected 2, got %d", len(loaded.Packages["homebrew"]))
+	if len(loaded.Packages["brew"]) != 2 {
+		t.Errorf("Homebrew packages mismatch: expected 2, got %d", len(loaded.Packages["brew"]))
 	}
 
 	if len(loaded.Packages["npm"]) != 1 {
@@ -88,27 +88,27 @@ func TestYAMLLockService_AddPackage(t *testing.T) {
 	service := NewYAMLLockService(tmpDir)
 
 	// Add first package
-	if err := service.AddPackage("homebrew", "git", "2.43.0"); err != nil {
+	if err := service.AddPackage("brew", "git", "2.43.0"); err != nil {
 		t.Fatalf("AddPackage failed: %v", err)
 	}
 
 	// Verify package was added
-	if !service.HasPackage("homebrew", "git") {
+	if !service.HasPackage("brew", "git") {
 		t.Error("Package not found after adding")
 	}
 
 	// Add another package
-	if err := service.AddPackage("homebrew", "vim", "9.0"); err != nil {
+	if err := service.AddPackage("brew", "vim", "9.0"); err != nil {
 		t.Fatalf("AddPackage failed: %v", err)
 	}
 
 	// Update existing package
-	if err := service.AddPackage("homebrew", "git", "2.44.0"); err != nil {
+	if err := service.AddPackage("brew", "git", "2.44.0"); err != nil {
 		t.Fatalf("Update package failed: %v", err)
 	}
 
 	// Verify update
-	packages, err := service.GetPackages("homebrew")
+	packages, err := service.GetPackages("brew")
 	if err != nil {
 		t.Fatalf("GetPackages failed: %v", err)
 	}
@@ -130,36 +130,36 @@ func TestYAMLLockService_RemovePackage(t *testing.T) {
 	service := NewYAMLLockService(tmpDir)
 
 	// Add packages
-	service.AddPackage("homebrew", "git", "2.43.0")
-	service.AddPackage("homebrew", "vim", "9.0")
+	service.AddPackage("brew", "git", "2.43.0")
+	service.AddPackage("brew", "vim", "9.0")
 	service.AddPackage("npm", "typescript", "5.3.3")
 
 	// Remove package
-	if err := service.RemovePackage("homebrew", "git"); err != nil {
+	if err := service.RemovePackage("brew", "git"); err != nil {
 		t.Fatalf("RemovePackage failed: %v", err)
 	}
 
 	// Verify removal
-	if service.HasPackage("homebrew", "git") {
+	if service.HasPackage("brew", "git") {
 		t.Error("Package still exists after removal")
 	}
 
 	// Verify other packages remain
-	if !service.HasPackage("homebrew", "vim") {
+	if !service.HasPackage("brew", "vim") {
 		t.Error("Other package was removed")
 	}
 
 	// Remove all packages from a manager
-	service.RemovePackage("homebrew", "vim")
+	service.RemovePackage("brew", "vim")
 
 	// Verify manager entry is removed when empty
-	packages, _ := service.GetPackages("homebrew")
+	packages, _ := service.GetPackages("brew")
 	if len(packages) != 0 {
 		t.Error("Manager entry not removed when empty")
 	}
 
 	// Remove non-existent package should not error
-	if err := service.RemovePackage("homebrew", "nonexistent"); err != nil {
+	if err := service.RemovePackage("brew", "nonexistent"); err != nil {
 		t.Errorf("Removing non-existent package should not error: %v", err)
 	}
 }
@@ -174,7 +174,7 @@ func TestYAMLLockService_ReadV1(t *testing.T) {
 	// Create a v1 lock file manually
 	v1Content := `version: 1
 packages:
-  homebrew:
+  brew:
     - name: git
       version: 2.43.0
       installed_at: 2025-01-01T12:00:00Z
@@ -204,8 +204,8 @@ packages:
 		t.Errorf("Expected version 1, got %d", lockData.Version)
 	}
 
-	if len(lockData.Packages["homebrew"]) != 2 {
-		t.Errorf("Expected 2 homebrew packages, got %d", len(lockData.Packages["homebrew"]))
+	if len(lockData.Packages["brew"]) != 2 {
+		t.Errorf("Expected 2 brew packages, got %d", len(lockData.Packages["brew"]))
 	}
 
 	if len(lockData.Packages["npm"]) != 1 {
@@ -213,7 +213,7 @@ packages:
 	}
 
 	// Verify package data
-	gitPkg := lockData.Packages["homebrew"][0]
+	gitPkg := lockData.Packages["brew"][0]
 	if gitPkg.Name != "git" || gitPkg.Version != "2.43.0" {
 		t.Errorf("Git package data incorrect: %+v", gitPkg)
 	}
@@ -229,17 +229,17 @@ func TestYAMLLockService_ReadV2(t *testing.T) {
 	// Create a v2 lock file manually
 	v2Content := `version: 2
 packages:
-  homebrew:
+  brew:
     - name: git
       version: 2.43.0
       installed_at: "2025-01-01T12:00:00Z"
 resources:
   - type: package
-    id: "homebrew:git"
+    id: "brew:git"
     state: managed
     installed_at: "2025-01-01T12:00:00Z"
     metadata:
-      manager: homebrew
+      manager: brew
       name: git
       version: 2.43.0
   - type: dotfile
@@ -274,7 +274,7 @@ resources:
 
 	// Verify resource data
 	pkgResource := lockData.Resources[0]
-	if pkgResource.Type != "package" || pkgResource.ID != "homebrew:git" {
+	if pkgResource.Type != "package" || pkgResource.ID != "brew:git" {
 		t.Errorf("Package resource data incorrect: %+v", pkgResource)
 	}
 
@@ -294,7 +294,7 @@ func TestYAMLLockService_Migration(t *testing.T) {
 	// Create a v1 lock file
 	v1Content := `version: 1
 packages:
-  homebrew:
+  brew:
     - name: git
       version: 2.43.0
       installed_at: 2025-01-01T12:00:00Z
@@ -358,7 +358,7 @@ func TestYAMLLockService_RoundTrip(t *testing.T) {
 	originalData := &LockData{
 		Version: CurrentVersion,
 		Packages: map[string][]Package{
-			"homebrew": {{Name: "git", Version: "2.43.0", InstalledAt: "2025-01-01T12:00:00Z"}},
+			"brew": {{Name: "git", Version: "2.43.0", InstalledAt: "2025-01-01T12:00:00Z"}},
 		},
 		Resources: []ResourceEntry{
 			{
@@ -387,7 +387,7 @@ func TestYAMLLockService_RoundTrip(t *testing.T) {
 		t.Errorf("Version mismatch: expected %d, got %d", originalData.Version, readData.Version)
 	}
 
-	if len(readData.Packages["homebrew"]) != len(originalData.Packages["homebrew"]) {
+	if len(readData.Packages["brew"]) != len(originalData.Packages["brew"]) {
 		t.Error("Package count mismatch after round-trip")
 	}
 

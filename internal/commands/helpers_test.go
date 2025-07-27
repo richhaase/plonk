@@ -17,12 +17,12 @@ func TestGetOSPackageManagerSupport(t *testing.T) {
 	case "darwin":
 		// macOS should support all implemented managers
 		expectedSupport := map[string]bool{
-			"homebrew": true,
-			"npm":      true,
-			"cargo":    true,
-			"gem":      true,
-			"go":       true,
-			"pip":      true,
+			"brew":  true,
+			"npm":   true,
+			"cargo": true,
+			"gem":   true,
+			"go":    true,
+			"pip":   true,
 		}
 		for manager, expected := range expectedSupport {
 			if support[manager] != expected {
@@ -31,7 +31,7 @@ func TestGetOSPackageManagerSupport(t *testing.T) {
 		}
 	case "linux":
 		// Linux should support all implemented managers
-		for _, manager := range []string{"homebrew", "npm", "cargo", "gem", "go", "pip"} {
+		for _, manager := range []string{"brew", "npm", "cargo", "gem", "go", "pip"} {
 			if !support[manager] {
 				t.Errorf("Linux: expected %s to be supported", manager)
 			}
@@ -46,7 +46,7 @@ func TestGetOSPackageManagerSupport(t *testing.T) {
 
 func TestGetManagerInstallSuggestion(t *testing.T) {
 	// Test that all managers return useful suggestions
-	managers := []string{"homebrew", "npm", "cargo", "gem", "go", "pip", "unknown"}
+	managers := []string{"brew", "npm", "cargo", "gem", "go", "pip", "unknown"}
 
 	for _, manager := range managers {
 		t.Run(manager, func(t *testing.T) {

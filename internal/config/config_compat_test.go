@@ -70,7 +70,7 @@ default_manager: pip
 unknown_field: should be ignored
 packages:
   - name: git
-    manager: homebrew
+    manager: brew
 `,
 			check: func(t *testing.T, cfg *Config) {
 				if cfg.DefaultManager != "pip" {
@@ -84,8 +84,8 @@ packages:
 			content: ``,
 			check: func(t *testing.T, cfg *Config) {
 				// Should get all defaults
-				if cfg.DefaultManager != "homebrew" {
-					t.Errorf("Expected default homebrew, got %s", cfg.DefaultManager)
+				if cfg.DefaultManager != "brew" {
+					t.Errorf("Expected default brew, got %s", cfg.DefaultManager)
 				}
 			},
 		},

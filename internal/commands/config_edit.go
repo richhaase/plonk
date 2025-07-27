@@ -170,11 +170,11 @@ func createDefaultConfig(configPath string) error {
 # https://github.com/your-repo/plonk
 
 settings:
-  default_manager: homebrew
+  default_manager: brew
   operation_timeout: 600  # 10 minutes
 
 # Package definitions
-homebrew: []
+brew: []
 
 npm: []
 
@@ -182,7 +182,7 @@ npm: []
 dotfiles: []
 
 # Example configuration:
-# homebrew:
+# brew:
 #   - git
 #   - neovim
 #   - firefox
