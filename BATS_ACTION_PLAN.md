@@ -59,6 +59,7 @@ This document provides a detailed, step-by-step action plan for implementing BAT
 ### Known Issues/Bugs Discovered
 1. **Directory removal bug** (Phase 4): `plonk rm ~/.config/myapp/` fails with "directory not empty" instead of performing `rm -rf` on the plonk-managed copy
 2. **System binary detection bug** (Phase 5): `plonk apply` incorrectly treats system-installed binaries (e.g., /usr/bin/jq) as "managed" and shows "All up to date"
+3. **Go package installation bug** (Phase 3): `plonk install go:package` reports success but doesn't actually install the binary. The package appears in plonk's status and lock file, but the binary is not installed to GOPATH/bin/
 
 ## Pre-Implementation Checklist
 
