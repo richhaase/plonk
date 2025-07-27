@@ -68,7 +68,7 @@ type ConfigShowOutput struct {
 
 // TableOutput generates human-friendly table output for config show
 func (c ConfigShowOutput) TableOutput() string {
-	output := fmt.Sprintf("# Configuration: %s\n\n", c.ConfigPath)
+	output := fmt.Sprintf("Config file: %s\n\n", c.ConfigPath)
 
 	if c.Config != nil {
 		// Convert config to YAML for display (shows effective config with defaults)

@@ -26,15 +26,15 @@ const (
 // GetStatusIcon returns the appropriate icon for a given status
 func GetStatusIcon(status string) string {
 	switch status {
-	case "managed", "added", "installed", "removed", "success", "completed":
+	case "managed", "added", "installed", "removed", "success", "completed", "deployed":
 		return IconSuccess
-	case "missing", "warn", "warning":
+	case "missing", "warn", "warning", "would-install", "would-remove", "would-add", "would-update":
 		return IconWarning
 	case "failed", "error", "fail":
 		return IconError
-	case "untracked", "unknown":
+	case "untracked", "unknown", "available":
 		return IconUnknown
-	case "skipped", "already-configured", "already-installed":
+	case "skipped", "already-configured", "already-installed", "already-managed":
 		return IconInfo
 	default:
 		return IconSkipped
@@ -109,4 +109,74 @@ func TruncateString(s string, maxLen int) string {
 		return s[:maxLen]
 	}
 	return s[:maxLen-3] + "..."
+}
+
+// Error formatting utilities
+
+// FormatValidationError creates a standardized validation error message
+func FormatValidationError(field, value, expected string) string {
+	return fmt.Sprintf("invalid %s %q: %s", field, value, expected)
+}
+
+// FormatNotFoundError creates a standardized "not found" error message
+func FormatNotFoundError(itemType, name string, suggestions []string) string {
+	msg := fmt.Sprintf("%s %q not found", itemType, name)
+	if len(suggestions) > 0 {
+		if len(suggestions) == 1 {
+			msg += fmt.Sprintf("\nDid you mean: %s", suggestions[0])
+		} else {
+			msg += fmt.Sprintf("\nValid options: %s", strings.Join(suggestions, ", "))
+		}
+	}
+	return msg
+}
+
+// FormatUnavailableError creates a standardized "unavailable" error message
+func FormatUnavailableError(service, reason, solution string) string {
+	msg := fmt.Sprintf("%s is not available", service)
+	if reason != "" {
+		msg += fmt.Sprintf(": %s", reason)
+	}
+	if solution != "" {
+		msg += fmt.Sprintf("\n%s", solution)
+	}
+	return msg
+}
+
+// Status text helpers
+
+// FormatStatusText creates consistent status text with icon
+func FormatStatusText(status string) string {
+	icon := GetStatusIcon(status)
+	return fmt.Sprintf("%s %s", icon, status)
+}
+
+// FormatItemSummary creates consistent item count summaries
+func FormatItemSummary(total int, statusCounts map[string]int) string {
+	parts := []string{fmt.Sprintf("%d total", total)}
+
+	// Common status types in preferred order
+	statusOrder := []string{"managed", "installed", "deployed", "missing", "failed", "skipped"}
+
+	for _, status := range statusOrder {
+		if count, exists := statusCounts[status]; exists && count > 0 {
+			parts = append(parts, fmt.Sprintf("%d %s", count, status))
+		}
+	}
+
+	// Add any remaining statuses not in the standard order
+	for status, count := range statusCounts {
+		found := false
+		for _, standardStatus := range statusOrder {
+			if status == standardStatus {
+				found = true
+				break
+			}
+		}
+		if !found && count > 0 {
+			parts = append(parts, fmt.Sprintf("%d %s", count, status))
+		}
+	}
+
+	return strings.Join(parts, ", ")
 }

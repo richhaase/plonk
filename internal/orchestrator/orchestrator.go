@@ -56,13 +56,15 @@ func WithDryRun(dryRun bool) Option {
 	}
 }
 
-// SyncResult represents the result of a sync operation
-type SyncResult struct {
-	DryRun   bool        `json:"dry_run" yaml:"dry_run"`
-	Success  bool        `json:"success" yaml:"success"`
-	Packages interface{} `json:"packages,omitempty" yaml:"packages,omitempty"`
-	Dotfiles interface{} `json:"dotfiles,omitempty" yaml:"dotfiles,omitempty"`
-	Error    string      `json:"error,omitempty" yaml:"error,omitempty"`
+// ApplyResult represents the result of an apply operation
+type ApplyResult struct {
+	DryRun        bool        `json:"dry_run" yaml:"dry_run"`
+	Success       bool        `json:"success" yaml:"success"`
+	Packages      interface{} `json:"packages,omitempty" yaml:"packages,omitempty"`
+	Dotfiles      interface{} `json:"dotfiles,omitempty" yaml:"dotfiles,omitempty"`
+	Error         string      `json:"error,omitempty" yaml:"error,omitempty"`
+	PackageErrors []string    `json:"package_errors,omitempty" yaml:"package_errors,omitempty"`
+	DotfileErrors []string    `json:"dotfile_errors,omitempty" yaml:"dotfile_errors,omitempty"`
 }
 
 // New creates a new orchestrator instance with options
@@ -82,9 +84,9 @@ func New(opts ...Option) *Orchestrator {
 	return o
 }
 
-// Sync orchestrates the synchronization of all resources
-func (o *Orchestrator) Sync(ctx context.Context) (SyncResult, error) {
-	result := SyncResult{
+// Apply orchestrates the application of all resources
+func (o *Orchestrator) Apply(ctx context.Context) (ApplyResult, error) {
+	result := ApplyResult{
 		DryRun:  o.dryRun,
 		Success: false,
 	}
@@ -92,39 +94,59 @@ func (o *Orchestrator) Sync(ctx context.Context) (SyncResult, error) {
 	// Store context
 	o.ctx = ctx
 
-	// Run pre-sync hooks
-	if o.config != nil && len(o.config.Hooks.PreSync) > 0 {
-		if err := o.hookRunner.RunPreSync(ctx, o.config.Hooks.PreSync); err != nil {
-			result.Error = fmt.Sprintf("pre-sync hook failed: %v", err)
-			return result, fmt.Errorf("pre-sync hook failed: %w", err)
+	// Run pre-apply hooks
+	if o.config != nil && len(o.config.Hooks.PreApply) > 0 {
+		if err := o.hookRunner.RunPreApply(ctx, o.config.Hooks.PreApply); err != nil {
+			result.Error = fmt.Sprintf("pre-apply hook failed: %v", err)
+			return result, fmt.Errorf("pre-apply hook failed: %w", err)
 		}
 	}
 
-	// Sync packages using existing function
-	packageResult, err := SyncPackages(ctx, o.configDir, o.config, o.dryRun)
-	if err != nil {
-		result.Error = fmt.Sprintf("package sync failed: %v", err)
-		return result, fmt.Errorf("package sync failed: %w", err)
-	}
+	// Apply packages using existing function - continue on error
+	packageResult, err := ApplyPackages(ctx, o.configDir, o.config, o.dryRun)
 	result.Packages = packageResult
-
-	// Sync dotfiles using existing function
-	dotfileResult, err := SyncDotfiles(ctx, o.configDir, o.homeDir, o.config, o.dryRun, false)
 	if err != nil {
-		result.Error = fmt.Sprintf("dotfile sync failed: %v", err)
-		return result, fmt.Errorf("dotfile sync failed: %w", err)
+		result.PackageErrors = append(result.PackageErrors, fmt.Sprintf("package apply failed: %v", err))
 	}
-	result.Dotfiles = dotfileResult
 
-	// Run post-sync hooks
-	if o.config != nil && len(o.config.Hooks.PostSync) > 0 {
-		if err := o.hookRunner.RunPostSync(ctx, o.config.Hooks.PostSync); err != nil {
-			result.Error = fmt.Sprintf("post-sync hook failed: %v", err)
-			return result, fmt.Errorf("post-sync hook failed: %w", err)
+	// Apply dotfiles using existing function - continue on error
+	dotfileResult, err := ApplyDotfiles(ctx, o.configDir, o.homeDir, o.config, o.dryRun, false)
+	result.Dotfiles = dotfileResult
+	if err != nil {
+		result.DotfileErrors = append(result.DotfileErrors, fmt.Sprintf("dotfile apply failed: %v", err))
+	}
+
+	// Run post-apply hooks only if we had some success
+	if o.config != nil && len(o.config.Hooks.PostApply) > 0 {
+		if err := o.hookRunner.RunPostApply(ctx, o.config.Hooks.PostApply); err != nil {
+			// Post-apply hook failure is not fatal, just add to errors
+			result.Error = fmt.Sprintf("post-apply hook failed: %v", err)
 		}
 	}
 
-	result.Success = true
+	// Determine overall success
+	// Success if we had no critical errors and at least some operations succeeded
+	if packageResult, ok := result.Packages.(PackageApplyResult); ok {
+		if !o.dryRun && packageResult.TotalInstalled > 0 {
+			result.Success = true
+		} else if o.dryRun && packageResult.TotalWouldInstall > 0 {
+			result.Success = true
+		}
+	}
+	if dotfileResult, ok := result.Dotfiles.(DotfileApplyResult); ok {
+		if !o.dryRun && dotfileResult.Summary.Added > 0 {
+			result.Success = true
+		} else if o.dryRun && dotfileResult.Summary.Added > 0 {
+			result.Success = true
+		}
+	}
+
+	// If we had any failures, return an error even if some succeeded
+	if len(result.PackageErrors) > 0 || len(result.DotfileErrors) > 0 {
+		totalErrors := len(result.PackageErrors) + len(result.DotfileErrors)
+		return result, fmt.Errorf("apply completed with %d error(s)", totalErrors)
+	}
+
 	return result, nil
 }
 

@@ -22,20 +22,14 @@ type VersionInfo struct {
 
 var rootCmd = &cobra.Command{
 	Use:   "plonk",
-	Short: "Package and dotfiles management across machines",
-	Long: `Plonk manages packages and dotfiles consistently across multiple machines
-using Homebrew and NPM package managers.`,
+	Short: "A developer environment manager",
+	Long: `Plonk manages your development environment by installing packages
+and managing dotfiles across multiple package managers.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if version, _ := cmd.Flags().GetBool("version"); version {
 			fmt.Printf("plonk %s\n", formatVersion())
 			return nil
 		}
-
-		// No arguments = show status
-		if len(args) == 0 {
-			return runStatus(cmd, args)
-		}
-
 		return cmd.Help()
 	},
 }

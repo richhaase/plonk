@@ -22,10 +22,10 @@ type Config struct {
 	Hooks             Hooks    `yaml:"hooks,omitempty"`
 }
 
-// Hooks contains pre and post sync hooks
+// Hooks contains pre and post apply hooks
 type Hooks struct {
-	PreSync  []Hook `yaml:"pre_sync,omitempty"`
-	PostSync []Hook `yaml:"post_sync,omitempty"`
+	PreApply  []Hook `yaml:"pre_apply,omitempty"`
+	PostApply []Hook `yaml:"post_apply,omitempty"`
 }
 
 // Hook represents a single hook command

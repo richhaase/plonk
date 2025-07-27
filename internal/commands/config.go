@@ -14,7 +14,6 @@ var configCmd = &cobra.Command{
 
 Commands:
   show      Display current configuration
-  validate  Validate configuration file
   edit      Edit configuration file`,
 }
 

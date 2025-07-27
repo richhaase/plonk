@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/diagnostics"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/resources"
 	"github.com/spf13/cobra"
@@ -20,29 +19,29 @@ import (
 // Status command implementation using unified state management system
 
 var statusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "Display overall plonk status",
-	Long: `Display a compact overview of your plonk-managed environment.
+	Use:     "status",
+	Aliases: []string{"st"},
+	Short:   "Display overall plonk status",
+	Long: `Display a detailed list of all plonk-managed items and their status.
 
 Shows:
-- Overall health status
+- All managed packages and dotfiles
+- Missing items that need to be installed
 - Configuration and lock file status
-- Summary of managed and untracked items
-
-For detailed lists, use 'plonk dot list' or 'plonk pkg list'.
 
 Examples:
-  plonk status           # Show compact status
-  plonk status --health  # Include comprehensive health checks (doctor mode)
-  plonk status -o json   # Show as JSON
-  plonk status -o yaml   # Show as YAML`,
+  plonk status              # Show all managed items
+  plonk status --packages   # Show only packages
+  plonk status --dotfiles   # Show only dotfiles
+  plonk status -o json      # Show as JSON
+  plonk status -o yaml      # Show as YAML`,
 	RunE: runStatus,
 }
 
 func init() {
 	rootCmd.AddCommand(statusCmd)
-	statusCmd.Flags().Bool("health", false, "Include comprehensive health checks (doctor mode)")
-	statusCmd.Flags().Bool("check", false, "Alias for --health")
+	statusCmd.Flags().Bool("packages", false, "Show only package status")
+	statusCmd.Flags().Bool("dotfiles", false, "Show only dotfile status")
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {
@@ -53,15 +52,14 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Check if health/check flag is set
-	checkHealth, _ := cmd.Flags().GetBool("health")
-	if !checkHealth {
-		checkHealth, _ = cmd.Flags().GetBool("check")
-	}
+	// Get filter flags
+	showPackages, _ := cmd.Flags().GetBool("packages")
+	showDotfiles, _ := cmd.Flags().GetBool("dotfiles")
 
-	// If health check requested, run doctor functionality
-	if checkHealth {
-		return runHealthChecks(format)
+	// If neither flag is set, show both
+	if !showPackages && !showDotfiles {
+		showPackages = true
+		showDotfiles = true
 	}
 
 	// Get directories
@@ -106,23 +104,11 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		ConfigValid:  configValid,
 		LockExists:   lockExists,
 		StateSummary: summary,
+		ShowPackages: showPackages,
+		ShowDotfiles: showDotfiles,
 	}
 
 	return RenderOutput(outputData, format)
-}
-
-// runHealthChecks runs the doctor functionality when --health flag is set
-func runHealthChecks(format OutputFormat) error {
-	// Run comprehensive health checks using diagnostics
-	healthReport := diagnostics.RunHealthChecks()
-
-	// Convert to command output type
-	doctorOutput := DoctorOutput{
-		Overall: healthReport.Overall,
-		Checks:  healthReport.Checks,
-	}
-
-	return RenderOutput(doctorOutput, format)
 }
 
 // convertManagedItems converts resources.ManagedItem to command-specific ManagedItem
@@ -148,6 +134,8 @@ type StatusOutput struct {
 	ConfigValid  bool              `json:"config_valid" yaml:"config_valid"`
 	LockExists   bool              `json:"lock_exists" yaml:"lock_exists"`
 	StateSummary resources.Summary `json:"state_summary" yaml:"state_summary"`
+	ShowPackages bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
+	ShowDotfiles bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
 }
 
 // StatusOutputSummary represents a summary-focused version for JSON/YAML output
@@ -178,39 +166,111 @@ type ManagedItem struct {
 
 // TableOutput generates human-friendly table output for status
 func (s StatusOutput) TableOutput() string {
-	// Determine overall health status
-	healthStatus := "✅ Healthy"
-	if s.StateSummary.TotalMissing > 0 {
-		healthStatus = "⚠️ Issues"
-	}
-	if !s.ConfigValid && s.ConfigExists {
-		healthStatus = "❌ Error"
-	}
+	var output strings.Builder
 
-	// Configuration status
-	configStatus := "ℹ️ defaults"
-	if s.ConfigExists {
-		if s.ConfigValid {
-			configStatus = "✅ valid"
-		} else {
-			configStatus = "❌ invalid"
+	// Title
+	output.WriteString("Plonk Status\n")
+	output.WriteString("============\n\n")
+
+	// Process results by domain
+	var packageResult, dotfileResult *resources.Result
+	for i := range s.StateSummary.Results {
+		if s.StateSummary.Results[i].Domain == "package" {
+			packageResult = &s.StateSummary.Results[i]
+		} else if s.StateSummary.Results[i].Domain == "dotfile" {
+			dotfileResult = &s.StateSummary.Results[i]
 		}
 	}
 
-	// Lock status
-	lockStatus := "ℹ️ defaults"
-	if s.LockExists {
-		lockStatus = "✅ exists"
+	// Show packages table if requested
+	if s.ShowPackages && packageResult != nil {
+		// Group packages by manager
+		packagesByManager := make(map[string][]resources.Item)
+		missingPackages := []resources.Item{}
+
+		for _, item := range packageResult.Managed {
+			packagesByManager[item.Manager] = append(packagesByManager[item.Manager], item)
+		}
+		for _, item := range packageResult.Missing {
+			missingPackages = append(missingPackages, item)
+		}
+
+		// Build packages table
+		if len(packagesByManager) > 0 || len(missingPackages) > 0 {
+			output.WriteString("PACKAGES\n")
+			output.WriteString("--------\n")
+
+			// Create a table for packages
+			pkgBuilder := NewStandardTableBuilder("")
+			pkgBuilder.SetHeaders("NAME", "MANAGER", "STATUS")
+
+			// Show managed packages by manager
+			for manager, packages := range packagesByManager {
+				for _, pkg := range packages {
+					pkgBuilder.AddRow(pkg.Name, manager, "✅ managed")
+				}
+			}
+
+			// Show missing packages
+			for _, pkg := range missingPackages {
+				pkgBuilder.AddRow(pkg.Name, pkg.Manager, "❌ missing")
+			}
+
+			output.WriteString(pkgBuilder.Build())
+			output.WriteString("\n")
+		}
 	}
 
-	// Build compact output
-	summary := s.StateSummary
-	output := fmt.Sprintf("Plonk Status: %s\n", healthStatus)
-	output += fmt.Sprintf("Config: %s | Lock: %s | Managing: %d items |\n",
-		configStatus, lockStatus, summary.TotalManaged)
-	output += fmt.Sprintf("Available: %d untracked\n", summary.TotalUntracked)
+	// Show dotfiles table if requested
+	if s.ShowDotfiles && dotfileResult != nil {
+		if len(dotfileResult.Managed) > 0 || len(dotfileResult.Missing) > 0 {
+			output.WriteString("DOTFILES\n")
+			output.WriteString("--------\n")
 
-	return output
+			// Create a table for dotfiles
+			dotBuilder := NewStandardTableBuilder("")
+			dotBuilder.SetHeaders("PATH", "TARGET", "STATUS")
+
+			// Show managed dotfiles
+			for _, item := range dotfileResult.Managed {
+				path := item.Name
+				target := ""
+				if dest, ok := item.Metadata["destination"].(string); ok {
+					target = dest
+				}
+				dotBuilder.AddRow(path, target, "✅ deployed")
+			}
+
+			// Show missing dotfiles
+			for _, item := range dotfileResult.Missing {
+				path := item.Name
+				target := ""
+				if dest, ok := item.Metadata["destination"].(string); ok {
+					target = dest
+				}
+				dotBuilder.AddRow(path, target, "❌ missing")
+			}
+
+			output.WriteString(dotBuilder.Build())
+			output.WriteString("\n")
+		}
+	}
+
+	// Add summary
+	summary := s.StateSummary
+	output.WriteString("Summary: ")
+	output.WriteString(fmt.Sprintf("%d managed", summary.TotalManaged))
+	if summary.TotalMissing > 0 {
+		output.WriteString(fmt.Sprintf(", %d missing", summary.TotalMissing))
+	}
+	output.WriteString("\n")
+
+	// Add action hint if there are missing items
+	if summary.TotalMissing > 0 {
+		output.WriteString("\n💡 Run 'plonk apply' to install missing items\n")
+	}
+
+	return output.String()
 }
 
 // StructuredData returns the structured data for serialization
@@ -230,93 +290,4 @@ func (s StatusOutput) StructuredData() any {
 		},
 		ManagedItems: convertManagedItems(resources.ExtractManagedItems(s.StateSummary.Results)),
 	}
-}
-
-// DoctorOutput represents the output of the doctor command (health checks)
-type DoctorOutput struct {
-	Overall diagnostics.HealthStatus  `json:"overall" yaml:"overall"`
-	Checks  []diagnostics.HealthCheck `json:"checks" yaml:"checks"`
-}
-
-// TableOutput generates human-friendly table output for doctor command
-func (d DoctorOutput) TableOutput() string {
-	var output strings.Builder
-
-	// Overall status
-	output.WriteString("# Plonk Health Report\n\n")
-
-	switch d.Overall.Status {
-	case "healthy":
-		output.WriteString("🟢 Overall Status: HEALTHY\n")
-	case "warning":
-		output.WriteString("🟡 Overall Status: WARNING\n")
-	case "unhealthy":
-		output.WriteString("🔴 Overall Status: UNHEALTHY\n")
-	}
-	output.WriteString(fmt.Sprintf("   %s\n\n", d.Overall.Message))
-
-	// Group checks by category
-	categories := make(map[string][]diagnostics.HealthCheck)
-	for _, check := range d.Checks {
-		categories[check.Category] = append(categories[check.Category], check)
-	}
-
-	// Display each category
-	categoryOrder := []string{"system", "environment", "permissions", "configuration", "package-managers", "installation"}
-	for _, category := range categoryOrder {
-		if checks, exists := categories[category]; exists {
-			output.WriteString(fmt.Sprintf("## %s\n", strings.Title(strings.ReplaceAll(category, "-", " "))))
-
-			for _, check := range checks {
-				// Status icon
-				var icon string
-				switch check.Status {
-				case "pass":
-					icon = "✅"
-				case "warn":
-					icon = "⚠️"
-				case "fail":
-					icon = "❌"
-				case "info":
-					icon = "ℹ️"
-				default:
-					icon = "❓"
-				}
-
-				output.WriteString(fmt.Sprintf("### %s %s\n", icon, check.Name))
-				output.WriteString(fmt.Sprintf("**Status**: %s\n", strings.ToUpper(check.Status)))
-				output.WriteString(fmt.Sprintf("**Message**: %s\n", check.Message))
-
-				if len(check.Details) > 0 {
-					output.WriteString("\n**Details:**\n")
-					for _, detail := range check.Details {
-						output.WriteString(fmt.Sprintf("- %s\n", detail))
-					}
-				}
-
-				if len(check.Issues) > 0 {
-					output.WriteString("\n**Issues:**\n")
-					for _, issue := range check.Issues {
-						output.WriteString(fmt.Sprintf("- ❌ %s\n", issue))
-					}
-				}
-
-				if len(check.Suggestions) > 0 {
-					output.WriteString("\n**Suggestions:**\n")
-					for _, suggestion := range check.Suggestions {
-						output.WriteString(fmt.Sprintf("- 💡 %s\n", suggestion))
-					}
-				}
-
-				output.WriteString("\n")
-			}
-		}
-	}
-
-	return output.String()
-}
-
-// StructuredData returns the structured data for serialization
-func (d DoctorOutput) StructuredData() any {
-	return d
 }

@@ -19,7 +19,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestOrchestratorSyncWithResources(t *testing.T) {
+func TestOrchestratorApplyWithResources(t *testing.T) {
 	// This test focuses on the Resource abstraction and doesn't require actual package managers
 
 	// Test setup with temp directory
@@ -101,21 +101,21 @@ func TestOrchestratorSyncWithResources(t *testing.T) {
 		assert.True(t, foundMissing, "should find missing .testrc")
 	})
 
-	// Test 3: Test dotfile sync operation
-	t.Run("DotfileSync", func(t *testing.T) {
-		// Run sync in dry-run mode
-		syncResult, err := orchestrator.SyncDotfiles(ctx, configDir, homeDir, cfg, true, false)
+	// Test 3: Test dotfile apply operation
+	t.Run("DotfileApply", func(t *testing.T) {
+		// Run apply in dry-run mode
+		applyResult, err := orchestrator.ApplyDotfiles(ctx, configDir, homeDir, cfg, true, false)
 		require.NoError(t, err)
 
-		// Verify sync result
-		assert.True(t, syncResult.DryRun)
-		assert.Equal(t, 1, syncResult.TotalFiles)
-		assert.Equal(t, 1, syncResult.Summary.Added)
-		assert.Equal(t, 0, syncResult.Summary.Failed)
-		assert.Len(t, syncResult.Actions, 1)
+		// Verify apply result
+		assert.True(t, applyResult.DryRun)
+		assert.Equal(t, 1, applyResult.TotalFiles)
+		assert.Equal(t, 1, applyResult.Summary.Added)
+		assert.Equal(t, 0, applyResult.Summary.Failed)
+		assert.Len(t, applyResult.Actions, 1)
 
-		if len(syncResult.Actions) > 0 {
-			action := syncResult.Actions[0]
+		if len(applyResult.Actions) > 0 {
+			action := applyResult.Actions[0]
 			assert.Equal(t, "would-copy", action.Action)
 			assert.Equal(t, "would-add", action.Status)
 		}

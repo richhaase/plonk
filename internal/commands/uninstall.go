@@ -20,11 +20,14 @@ var uninstallCmd = &cobra.Command{
 	Long: `Uninstall packages from your system and remove them from your lock file.
 
 This command uninstalls packages from your system using the appropriate package
-manager and removes them from plonk management.
+manager and removes them from plonk management. Use prefix syntax to specify
+the package manager, or omit the prefix to use your default manager.
 
 Examples:
-  plonk uninstall htop                    # Uninstall htop and remove from lock file
+  plonk uninstall htop                    # Uninstall htop using default manager
   plonk uninstall git neovim              # Uninstall multiple packages
+  plonk uninstall brew:git                # Uninstall git specifically with Homebrew
+  plonk uninstall npm:lodash              # Uninstall lodash from npm global packages
   plonk uninstall --dry-run htop          # Preview what would be uninstalled`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: runUninstall,
@@ -32,15 +35,6 @@ Examples:
 
 func init() {
 	rootCmd.AddCommand(uninstallCmd)
-
-	// Manager-specific flags (mutually exclusive)
-	uninstallCmd.Flags().Bool("brew", false, "Use Homebrew package manager")
-	uninstallCmd.Flags().Bool("npm", false, "Use NPM package manager")
-	uninstallCmd.Flags().Bool("cargo", false, "Use Cargo package manager")
-	uninstallCmd.Flags().Bool("pip", false, "Use pip package manager")
-	uninstallCmd.Flags().Bool("gem", false, "Use gem package manager")
-	uninstallCmd.Flags().Bool("go", false, "Use go install package manager")
-	uninstallCmd.MarkFlagsMutuallyExclusive("brew", "npm", "cargo", "pip", "gem", "go")
 
 	// Common flags
 	uninstallCmd.Flags().BoolP("dry-run", "n", false, "Show what would be removed without making changes")
@@ -55,42 +49,101 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Get flags
-	flags, err := ParseSimpleFlags(cmd)
-	if err != nil {
-		return err
-	}
+	// Get flags (only common flags now)
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
 
-	// Get directories
+	// Get directories and config
 	configDir := config.GetDefaultConfigDirectory()
+	cfg := config.LoadWithDefaults(configDir)
 
-	// Configure uninstallation options
-	opts := packages.UninstallOptions{
-		Manager: flags.Manager,
-		DryRun:  flags.DryRun,
-	}
+	// Process each package with prefix parsing
+	var allResults []resources.OperationResult
 
-	// Process packages using managers package
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
-	defer cancel()
+	for _, packageSpec := range args {
+		// Parse the package specification
+		manager, packageName := ParsePackageSpec(packageSpec)
 
-	results, err := packages.UninstallPackages(ctx, configDir, args, opts)
-	if err != nil {
-		return err
+		// Validate package specification
+		if packageName == "" {
+			errorMsg := FormatValidationError("package specification", packageSpec, "package name cannot be empty")
+			allResults = append(allResults, resources.OperationResult{
+				Name:   packageSpec,
+				Status: "failed",
+				Error:  fmt.Errorf("%s", errorMsg),
+			})
+			continue
+		}
+
+		if manager == "" && packageSpec != packageName {
+			// This means there was a colon but empty prefix
+			errorMsg := FormatValidationError("package specification", packageSpec, "manager prefix cannot be empty")
+			allResults = append(allResults, resources.OperationResult{
+				Name:   packageSpec,
+				Status: "failed",
+				Error:  fmt.Errorf("%s", errorMsg),
+			})
+			continue
+		}
+
+		// Use default manager if no prefix specified
+		if manager == "" {
+			if cfg.DefaultManager != "" {
+				manager = cfg.DefaultManager
+			} else {
+				manager = packages.DefaultManager
+			}
+		}
+
+		// Validate manager
+		if !IsValidManager(manager) {
+			errorMsg := FormatNotFoundError("package manager", manager, GetValidManagers())
+			allResults = append(allResults, resources.OperationResult{
+				Name:    packageSpec,
+				Manager: manager,
+				Status:  "failed",
+				Error:   fmt.Errorf("%s", errorMsg),
+			})
+			continue
+		}
+
+		// Configure uninstallation options for this package
+		opts := packages.UninstallOptions{
+			Manager: manager,
+			DryRun:  dryRun,
+		}
+
+		// Process this package
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+		results, err := packages.UninstallPackages(ctx, configDir, []string{packageName}, opts)
+		cancel()
+
+		if err != nil {
+			allResults = append(allResults, resources.OperationResult{
+				Name:    packageSpec,
+				Manager: manager,
+				Status:  "failed",
+				Error:   err,
+			})
+			continue
+		}
+
+		allResults = append(allResults, results...)
 	}
 
 	// Show progress for each result
-	for _, result := range results {
+	for _, result := range allResults {
 		icon := GetStatusIcon(result.Status)
 		fmt.Printf("%s %s %s\n", icon, result.Status, result.Name)
 	}
 
-	// Create output data
-	summary := calculateUninstallSummary(results)
-	outputData := PackageUninstallOutput{
-		TotalPackages: len(results),
-		Results:       results,
-		Summary:       summary,
+	// Create output data using standardized format
+	summary := CalculatePackageOperationSummary(allResults)
+	outputData := PackageOperationOutput{
+		Command:    "uninstall",
+		TotalItems: len(allResults),
+		Results:    ConvertOperationResults(allResults),
+		Summary:    summary,
+		DryRun:     dryRun,
 	}
 
 	// Render output
@@ -98,63 +151,6 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Determine exit code based on results
-	exitErr := DetermineExitCode(results, "packages", "uninstall")
-	if exitErr != nil {
-		return exitErr
-	}
-
-	return nil
-}
-
-// PackageUninstallOutput represents the output for package uninstallation
-type PackageUninstallOutput struct {
-	TotalPackages int                         `json:"total_packages" yaml:"total_packages"`
-	Results       []resources.OperationResult `json:"results" yaml:"results"`
-	Summary       PackageUninstallSummary     `json:"summary" yaml:"summary"`
-}
-
-// PackageUninstallSummary provides summary for package uninstallation
-type PackageUninstallSummary struct {
-	Removed int `json:"removed" yaml:"removed"`
-	Skipped int `json:"skipped" yaml:"skipped"`
-	Failed  int `json:"failed" yaml:"failed"`
-}
-
-// calculateUninstallSummary calculates summary from uninstall results using generic operations summary
-func calculateUninstallSummary(results []resources.OperationResult) PackageUninstallSummary {
-	genericSummary := resources.CalculateSummary(results)
-	return PackageUninstallSummary{
-		Removed: genericSummary.Removed,
-		Skipped: genericSummary.Skipped,
-		Failed:  genericSummary.Failed,
-	}
-}
-
-// TableOutput generates human-friendly output
-func (p PackageUninstallOutput) TableOutput() string {
-	tb := NewTableBuilder()
-
-	tb.AddTitle("Package Uninstallation")
-	tb.AddNewline()
-
-	if p.Summary.Removed > 0 {
-		tb.AddLine("%s Removed %d packages", IconPackage, p.Summary.Removed)
-	}
-	if p.Summary.Skipped > 0 {
-		tb.AddLine("⏭️ %d skipped", p.Summary.Skipped)
-	}
-	if p.Summary.Failed > 0 {
-		tb.AddLine("%s %d failed", IconUnhealthy, p.Summary.Failed)
-	}
-
-	tb.AddNewline()
-	tb.AddLine("Total: %d packages processed", p.TotalPackages)
-
-	return tb.Build()
-}
-
-// StructuredData returns the structured data for serialization
-func (p PackageUninstallOutput) StructuredData() any {
-	return p
+	// Check if all operations failed and return appropriate error
+	return resources.ValidateOperationResults(allResults, "uninstall packages")
 }

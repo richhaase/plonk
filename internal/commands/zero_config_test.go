@@ -31,18 +31,32 @@ func TestZeroConfigCommands(t *testing.T) {
 		}
 	}()
 
-	t.Run("init command creates config from zero state", func(t *testing.T) {
+	t.Run("setup command creates config from zero state", func(t *testing.T) {
+		// Create a fresh temp directory for this test
+		testDir := t.TempDir()
+
+		// Set PLONK_DIR to the fresh directory
+		originalPlonkDir := os.Getenv("PLONK_DIR")
+		os.Setenv("PLONK_DIR", testDir)
+		defer func() {
+			if originalPlonkDir != "" {
+				os.Setenv("PLONK_DIR", originalPlonkDir)
+			} else {
+				os.Unsetenv("PLONK_DIR")
+			}
+		}()
+
 		// Ensure no config exists
-		configPath := filepath.Join(tmpDir, "plonk.yaml")
+		configPath := filepath.Join(testDir, "plonk.yaml")
 		os.Remove(configPath)
 
-		// Reset init command state
-		initForce = false
+		// Reset setup command state
+		setupYes = true // Non-interactive mode for tests
 
-		// Run init command
-		err := runInit(initCmd, []string{})
+		// Run setup command
+		err := runSetup(setupCmd, []string{})
 		if err != nil {
-			t.Errorf("Expected init to succeed with no existing config, got: %v", err)
+			t.Errorf("Expected setup to succeed with no existing config, got: %v", err)
 		}
 
 		// Verify config file was created
@@ -66,54 +80,38 @@ func TestZeroConfigCommands(t *testing.T) {
 		}
 	})
 
-	t.Run("init command fails when config exists without force", func(t *testing.T) {
-		// Config should exist from previous test
-		// Reset init command state
-		initForce = false
+	t.Run("setup command exits early when config exists", func(t *testing.T) {
+		// Create a directory with existing config
+		testDir := t.TempDir()
+		configPath := filepath.Join(testDir, "plonk.yaml")
 
-		// Run init command again
-		err := runInit(initCmd, []string{})
-		if err == nil {
-			t.Error("Expected init to fail when config already exists")
-		}
-
-		if !strings.Contains(err.Error(), "already exists") {
-			t.Errorf("Expected 'already exists' error, got: %v", err)
-		}
-	})
-
-	t.Run("init command with force overwrites existing config", func(t *testing.T) {
-		configPath := filepath.Join(tmpDir, "plonk.yaml")
-
-		// Write custom content
-		customContent := "# Custom config\nsettings:\n  default_manager: npm\n"
-		err := os.WriteFile(configPath, []byte(customContent), 0644)
+		// Create existing config
+		err := os.WriteFile(configPath, []byte("default_manager: npm\n"), 0644)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		// Reset init command state with force
-		initForce = true
+		// Set PLONK_DIR to the directory with existing config
+		originalPlonkDir := os.Getenv("PLONK_DIR")
+		os.Setenv("PLONK_DIR", testDir)
+		defer func() {
+			if originalPlonkDir != "" {
+				os.Setenv("PLONK_DIR", originalPlonkDir)
+			} else {
+				os.Unsetenv("PLONK_DIR")
+			}
+		}()
 
-		// Run init command with force
-		err = runInit(initCmd, []string{})
+		// Reset setup command state
+		setupYes = true
+
+		// Run setup command again - should exit gracefully
+		err = runSetup(setupCmd, []string{})
 		if err != nil {
-			t.Errorf("Expected init --force to succeed, got: %v", err)
+			t.Errorf("Expected setup to exit gracefully when config already exists, got: %v", err)
 		}
 
-		// Verify config was overwritten
-		content, err := os.ReadFile(configPath)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if strings.Contains(string(content), "# Custom config") {
-			t.Error("Expected original config to be overwritten")
-		}
-
-		if !strings.Contains(string(content), "# Plonk Configuration File") {
-			t.Error("Expected new config template to be written")
-		}
+		// Note: setup exits early with a message, no error
 	})
 }
 

@@ -47,6 +47,7 @@ func (p *PackageResource) Actual(ctx context.Context) []resources.Item {
 
 	// Convert to resources.Item
 	items := make([]resources.Item, 0, len(installed))
+
 	for _, pkgName := range installed {
 		item := resources.Item{
 			Name:   pkgName,
@@ -54,14 +55,9 @@ func (p *PackageResource) Actual(ctx context.Context) []resources.Item {
 			Domain: "package",
 		}
 
-		// Get version if possible
-		version, err := p.manager.InstalledVersion(ctx, pkgName)
-		if err == nil && version != "" {
-			if item.Metadata == nil {
-				item.Metadata = make(map[string]interface{})
-			}
-			item.Metadata["version"] = version
-		}
+		// Skip version checking during reconciliation for performance and to avoid hangs
+		// Version information is not needed for determining what packages are installed
+		// TODO: If version info is needed later, implement batch version checking or make it optional
 
 		items = append(items, item)
 	}

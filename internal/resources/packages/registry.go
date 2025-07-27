@@ -9,16 +9,16 @@ import (
 
 // SupportedManagers contains all package packages supported by plonk
 var SupportedManagers = []string{
+	"brew",
 	"cargo",
 	"gem",
 	"go",
-	"homebrew",
 	"npm",
 	"pip",
 }
 
 // DefaultManager is the fallback manager when none is configured
-const DefaultManager = "homebrew"
+const DefaultManager = "brew"
 
 // ManagerFactory defines a function that creates a package manager instance
 type ManagerFactory func() PackageManager
@@ -32,12 +32,12 @@ type ManagerRegistry struct {
 func NewManagerRegistry() *ManagerRegistry {
 	return &ManagerRegistry{
 		managers: map[string]ManagerFactory{
-			"homebrew": func() PackageManager { return NewHomebrewManager() },
-			"npm":      func() PackageManager { return NewNpmManager() },
-			"cargo":    func() PackageManager { return NewCargoManager() },
-			"pip":      func() PackageManager { return NewPipManager() },
-			"gem":      func() PackageManager { return NewGemManager() },
-			"go":       func() PackageManager { return NewGoInstallManager() },
+			"brew":  func() PackageManager { return NewHomebrewManager() },
+			"npm":   func() PackageManager { return NewNpmManager() },
+			"cargo": func() PackageManager { return NewCargoManager() },
+			"pip":   func() PackageManager { return NewPipManager() },
+			"gem":   func() PackageManager { return NewGemManager() },
+			"go":    func() PackageManager { return NewGoInstallManager() },
 		},
 	}
 }
