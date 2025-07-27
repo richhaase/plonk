@@ -852,18 +852,49 @@ func (m *Manager) GetActualDotfiles(ctx context.Context) ([]resources.Item, erro
 			}
 		}
 		if result.Info.IsDir() && shouldExpand {
-			// For expanded directories, treat as single item
-			expander.CheckDuplicate(result.Name)
-			items = append(items, resources.Item{
-				Name:   result.Name,
-				State:  resources.StateUntracked,
-				Domain: "dotfile",
-				Path:   result.Path,
-				Metadata: map[string]interface{}{
-					"isDirectory": true,
-					"expanded":    true,
-				},
+			// For expanded directories, scan inside them
+			err := filepath.Walk(result.Path, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return nil // Skip files we can't read
+				}
+
+				// Skip the directory itself
+				if path == result.Path {
+					return nil
+				}
+
+				// Skip directories (we want files)
+				if info.IsDir() {
+					return nil
+				}
+
+				// Get relative path from home
+				relPath, err := filepath.Rel(m.homeDir, path)
+				if err != nil {
+					return nil
+				}
+
+				// Apply filter
+				if filter != nil && filter.ShouldSkip(relPath, info) {
+					return nil
+				}
+
+				items = append(items, resources.Item{
+					Name:   relPath,
+					State:  resources.StateUntracked,
+					Domain: "dotfile",
+					Path:   path,
+					Metadata: map[string]interface{}{
+						"path": path,
+					},
+				})
+
+				return nil
 			})
+			if err != nil {
+				// If we can't walk the directory, just skip it
+				continue
+			}
 		} else {
 			// Single file or unexpanded directory
 			expander.CheckDuplicate(result.Name)
