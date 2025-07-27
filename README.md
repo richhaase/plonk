@@ -65,19 +65,24 @@ just install    # Installs plonk globally
 
 ```bash
 # Check your current environment
-plonk                    # Zero-argument status (like git)
+plonk status             # Show managed packages and dotfiles
+plonk st                 # Short alias for status
 
-# Add packages and dotfiles intelligently
-plonk add git ~/.vimrc   # Mixed operations
+# Install packages (automatically adds to management)
+plonk install ripgrep    # Install with default manager
+plonk install brew:htop  # Install with specific manager
 
-# Apply all changes
-plonk apply
+# Manage dotfiles
+plonk add ~/.vimrc       # Add dotfile to management
+plonk rm ~/.vimrc        # Remove dotfile from management
 
-# One-command install (installs package and adds to management)
-plonk install htop
+# Apply all changes (reinstall missing packages, restore dotfiles)
+plonk apply              # Apply everything
+plonk apply --dry-run    # See what would happen
 
 # Get help
-plonk --help
+plonk --help             # Show all commands
+plonk help install       # Get help for specific command
 ```
 
 See [CLI Reference](docs/CLI.md) for complete command documentation.
@@ -122,17 +127,20 @@ plonk config edit    # Edit your settings
 
 ## Getting Started Guide
 
-### First Time Setup (Zero-Config!)
+### First Time Setup
 
 1. **Install Plonk** (see Installation section above)
 
-2. **Check what's already on your system:**
+2. **Set up your environment:**
 ```bash
-plonk status
-# Shows:
-# - Untracked packages (already installed but not managed by Plonk)
-# - Auto-discovered dotfiles
-# - Overall system health
+plonk setup              # Initialize plonk and install missing tools
+plonk doctor             # Check system health
+```
+
+3. **Check what's managed:**
+```bash
+plonk status             # Shows managed packages and dotfiles
+plonk st                 # Short alias
 ```
 
 3. **Start managing packages and dotfiles:**
@@ -169,32 +177,29 @@ plonk doctor
 
 5. **Optional: Customize settings** (only if needed)
 ```bash
-plonk init           # Creates config template with helpful comments
-plonk config show    # Show effective config (defaults merged with user settings)
+plonk config show    # Show current configuration
 plonk config edit    # Edit configuration file
 ```
-
-**Note:** `plonk config show` always displays the complete effective configuration that plonk is using, including all defaults merged with any user overrides.
 
 ### Daily Workflow
 
 ```bash
-plonk status           # Check what needs attention (or just 'plonk')
-plonk apply             # Install missing packages, sync dotfiles
-plonk install <pkg>    # Install packages and add to management
+plonk status           # Check managed packages and dotfiles
+plonk apply            # Reinstall missing packages, restore dotfiles
+plonk install <pkg>    # Install new packages
 plonk add <dotfile>    # Add dotfiles to management
-plonk uninstall <pkg>  # Uninstall packages and remove from management
+plonk uninstall <pkg>  # Uninstall packages
 plonk rm <dotfile>     # Remove dotfiles from management
-plonk doctor           # Health check when something seems wrong
+plonk doctor           # System health check
 ```
 
 ## Common Commands
 
 ```bash
 # Essential workflows
-plonk                                             # Check system state (zero-argument)
-plonk status                                      # Check system state (explicit)
-plonk apply                                        # Apply all changes
+plonk status                                      # Check managed packages and dotfiles
+plonk st                                          # Short alias for status
+plonk apply                                       # Apply all changes
 
 # Package management
 plonk install git neovim ripgrep                 # Install packages and add to management
@@ -210,12 +215,17 @@ plonk add ~/.vimrc ~/.zshrc ~/.gitconfig         # Add dotfiles to management
 plonk add ~/.config/nvim/                        # Add directory of dotfiles
 plonk rm ~/.vimrc                                # Remove dotfile from management
 
+# Search and info
+plonk search ripgrep                              # Search all package managers
+plonk search brew:ripgrep                         # Search specific manager
+plonk info ripgrep                                # Show package details
+
 # System overview
-plonk status                                          # Smart overview of managed items
-plonk status --packages                               # Show packages only
-plonk status --dotfiles                               # Show dotfiles only
-plonk status --manager homebrew                       # Show Homebrew packages only
-plonk doctor                                      # Health check
+plonk status                                      # Show all managed items
+plonk status --packages                           # Show packages only
+plonk status --dotfiles                           # Show dotfiles only
+plonk doctor                                      # System health check
+plonk doctor --fix                                # Fix common issues
 ```
 
 > **📖 Complete Command Reference**: See [docs/CLI.md](docs/CLI.md) for comprehensive command documentation with examples and options.
@@ -235,11 +245,27 @@ plonk status --output table  # default
 - `PLONK_DIR` - Config directory (default: `~/.config/plonk`)
 - `EDITOR` - Editor for `plonk config edit`
 
+## Testing
+
+Plonk uses two testing approaches:
+
+1. **Go Unit Tests**: Test internal logic and functions
+   ```bash
+   go test ./...
+   ```
+
+2. **BATS Behavioral Tests**: Test CLI behavior and user experience
+   ```bash
+   just test-bats
+   ```
+
+⚠️ **WARNING**: BATS tests install real packages and create real files. See `tests/bats/README.md` for details.
+
 ## Documentation
 
 - **[CLI Reference](docs/CLI.md)** - Complete command documentation
 - **[Configuration Guide](docs/CONFIGURATION.md)** - Configuration file format
-- **[Architecture](docs/ARCHITECTURE.md)** - Technical architecture
+- **[Architecture](ARCHITECTURE.md)** - Technical architecture and extension guide
 - **[Development](docs/DEVELOPMENT.md)** - Contributing and development setup
 
 ## System Requirements
