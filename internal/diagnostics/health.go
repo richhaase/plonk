@@ -482,16 +482,32 @@ func checkPathConfiguration() HealthCheck {
 
 	path := os.Getenv("PATH")
 	pathDirs := strings.Split(path, string(os.PathListSeparator))
+	homeDir := config.GetHomeDir()
 
-	// Check common binary directories
-	importantPaths := []string{
-		"/usr/local/bin",
-		"/opt/homebrew/bin",
-		filepath.Join(config.GetHomeDir(), ".cargo/bin"),
-		filepath.Join(config.GetHomeDir(), "go/bin"),
+	// Check for Python user bin directory
+	pythonUserBin := getPythonUserBinDir()
+
+	// Check for Go bin directory (GOBIN or GOPATH/bin)
+	goBinDir := getGoBinDir()
+
+	// Define important paths for each package manager
+	importantPaths := map[string]string{
+		"System":     "/usr/local/bin",
+		"Homebrew":   "/opt/homebrew/bin",
+		"Cargo":      filepath.Join(homeDir, ".cargo/bin"),
+		"Go":         goBinDir,
+		"Python/pip": pythonUserBin,
+		"Gem":        filepath.Join(homeDir, ".gem/ruby/bin"),
+		"NPM":        filepath.Join(homeDir, ".npm-global/bin"),
 	}
 
-	for _, importantPath := range importantPaths {
+	missingPaths := []string{}
+	for name, importantPath := range importantPaths {
+		// Skip empty paths
+		if importantPath == "" {
+			continue
+		}
+
 		found := false
 		for _, pathDir := range pathDirs {
 			if pathDir == importantPath {
@@ -500,16 +516,91 @@ func checkPathConfiguration() HealthCheck {
 			}
 		}
 
+		// Check if directory exists
+		dirExists := false
+		if _, err := os.Stat(importantPath); err == nil {
+			dirExists = true
+		}
+
 		if found {
-			check.Details = append(check.Details, fmt.Sprintf("✅ %s", importantPath))
+			check.Details = append(check.Details, fmt.Sprintf("✅ %s: %s", name, importantPath))
+		} else if dirExists {
+			check.Details = append(check.Details, fmt.Sprintf("⚠️  %s: %s (exists but not in PATH)", name, importantPath))
+			missingPaths = append(missingPaths, importantPath)
+			check.Status = "warn"
 		} else {
-			check.Details = append(check.Details, fmt.Sprintf("❌ %s", importantPath))
+			check.Details = append(check.Details, fmt.Sprintf("ℹ️  %s: %s (directory does not exist)", name, importantPath))
 		}
 	}
 
-	check.Details = append(check.Details, fmt.Sprintf("Total PATH directories: %d", len(pathDirs)))
+	check.Details = append(check.Details, fmt.Sprintf("\nTotal PATH directories: %d", len(pathDirs)))
+
+	if len(missingPaths) > 0 {
+		check.Status = "warn"
+		check.Message = "Some package directories are not in PATH"
+		check.Issues = append(check.Issues, "The following directories exist but are not in PATH:")
+		for _, path := range missingPaths {
+			check.Issues = append(check.Issues, fmt.Sprintf("  - %s", path))
+		}
+		check.Suggestions = append(check.Suggestions, "Add missing directories to your PATH in your shell configuration file (~/.zshrc, ~/.bashrc, etc.)")
+
+		// Provide specific examples for common shells
+		check.Suggestions = append(check.Suggestions, "\nFor example, add these lines to your shell config:")
+		for _, path := range missingPaths {
+			check.Suggestions = append(check.Suggestions, fmt.Sprintf("  export PATH=\"%s:$PATH\"", path))
+		}
+	}
 
 	return check
+}
+
+// getPythonUserBinDir returns the Python user bin directory
+func getPythonUserBinDir() string {
+	// Try to get Python user base directory
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "python3", "-m", "site", "--user-base")
+	output, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+
+	userBase := strings.TrimSpace(string(output))
+	if userBase == "" {
+		return ""
+	}
+
+	return filepath.Join(userBase, "bin")
+}
+
+// getGoBinDir returns the Go bin directory (GOBIN or GOPATH/bin)
+func getGoBinDir() string {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// First check GOBIN
+	cmd := exec.CommandContext(ctx, "go", "env", "GOBIN")
+	output, err := cmd.Output()
+	if err == nil {
+		gobin := strings.TrimSpace(string(output))
+		if gobin != "" {
+			return gobin
+		}
+	}
+
+	// Fall back to GOPATH/bin
+	cmd = exec.CommandContext(ctx, "go", "env", "GOPATH")
+	output, err = cmd.Output()
+	if err == nil {
+		gopath := strings.TrimSpace(string(output))
+		if gopath != "" {
+			return filepath.Join(gopath, "bin")
+		}
+	}
+
+	// Default to ~/go/bin
+	return filepath.Join(config.GetHomeDir(), "go/bin")
 }
 
 // calculateOverallHealth determines overall system health from individual checks
