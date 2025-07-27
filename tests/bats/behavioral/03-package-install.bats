@@ -114,7 +114,7 @@ setup() {
   track_artifact "package" "pip:six"
 
   # Verify it's actually installed by pip
-  run pip show six
+  run pip3 show six
   assert_success
 
   # Verify it's in lock file

@@ -97,7 +97,7 @@ setup() {
   track_artifact "package" "pip:cowsay"
 
   # Verify it's installed
-  run pip show cowsay
+  run pip3 show cowsay
   assert_success
 
   # Then uninstall
@@ -106,7 +106,7 @@ setup() {
   assert_output --partial "removed"
 
   # Verify actually uninstalled by pip
-  run pip show cowsay
+  run pip3 show cowsay
   assert_failure
 
   # Verify gone from lock file
