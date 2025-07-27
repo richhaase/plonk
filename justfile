@@ -101,6 +101,16 @@ test-coverage-ci:
     @go test -race -coverprofile=coverage.out -covermode=atomic ./...
     @echo "✅ Unit tests passed with coverage!"
 
+# Run BATS behavioral tests
+test-bats:
+    @echo "Running BATS behavioral tests..."
+    @if ! command -v bats &> /dev/null; then \
+        echo "❌ BATS not found. Install with: brew install bats-core"; \
+        exit 1; \
+    fi
+    @cd tests/bats && PLONK_TEST_CLEANUP_PACKAGES=1 PLONK_TEST_CLEANUP_DOTFILES=1 bats behavioral/
+    @echo "✅ BATS tests completed!"
+
 # Clean build artifacts
 clean:
     @echo "Cleaning build artifacts..."

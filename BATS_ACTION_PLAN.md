@@ -55,9 +55,15 @@ This document provides a detailed, step-by-step action plan for implementing BAT
     - Apply with --packages flag (fails - UI bug, shows empty output)
     - Apply with --dotfiles flag (fails - functional bug, doesn't restore files)
 
+- [x] **Phase 6: Error Handling Tests** - Skipped per user request
+
+- [x] **Phase 7: Integration Tests** ✅ (Completed)
+  - Created cleanup test suite for removing test artifacts
+  - Cleanup test checks for leftover packages and dotfiles
+  - Respects environment variables for conditional cleanup
+  - Decided not to use fixtures as they add no value
+
 ### Remaining Phases
-- [ ] Phase 6: Error Handling Tests
-- [ ] Phase 7: Integration Tests
 - [ ] Phase 8: CI/CD Integration
 - [ ] Phase 9: Documentation Updates
 
