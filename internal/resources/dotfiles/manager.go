@@ -657,26 +657,26 @@ func (m *Manager) RemoveSingleDotfile(cfg *config.Config, dotfilePath string, dr
 		return result
 	}
 
-	// Remove the deployed file first (if it exists)
-	if _, err := os.Stat(resolvedPath); err == nil {
-		err = os.Remove(resolvedPath)
+	// Only remove the source file from config directory
+	// We never touch the deployed file in the user's environment
+	if info, err := os.Stat(sourcePath); err == nil {
+		if info.IsDir() {
+			err = os.RemoveAll(sourcePath)
+		} else {
+			err = os.Remove(sourcePath)
+		}
 		if err != nil {
 			result.Status = "failed"
-			result.Error = fmt.Errorf("failed to remove deployed dotfile %s: %w", dotfilePath, err)
+			result.Error = fmt.Errorf("failed to remove source file %s from config: %w", source, err)
 			return result
 		}
-	}
-
-	// Remove the source file from config directory
-	if err := os.Remove(sourcePath); err != nil {
-		result.Status = "removed"
-		result.Error = fmt.Errorf("deployed file removed but failed to remove source file %s from config: %w", source, err)
-		result.Metadata = map[string]interface{}{
-			"source":      source,
-			"destination": destination,
-			"path":        resolvedPath,
-			"partial":     true,
-		}
+	} else if os.IsNotExist(err) {
+		result.Status = "skipped"
+		result.Error = fmt.Errorf("dotfile '%s' is not managed by plonk", dotfilePath)
+		return result
+	} else {
+		result.Status = "failed"
+		result.Error = fmt.Errorf("failed to check source file %s: %w", source, err)
 		return result
 	}
 

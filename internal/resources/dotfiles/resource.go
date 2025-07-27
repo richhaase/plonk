@@ -6,7 +6,6 @@ package dotfiles
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"github.com/richhaase/plonk/internal/resources"
 )
@@ -84,23 +83,30 @@ func (d *DotfileResource) applyMissing(ctx context.Context, item resources.Item)
 		return fmt.Errorf("missing path information for dotfile %s", item.Name)
 	}
 
+	// Get source from metadata
+	source, ok := item.Metadata["source"].(string)
+	if !ok || source == "" {
+		return fmt.Errorf("missing source information for dotfile %s", item.Name)
+	}
+
+	// Get destination from metadata
+	destination, ok := item.Metadata["destination"].(string)
+	if !ok || destination == "" {
+		destination = item.Path // Fallback to Path if destination not in metadata
+	}
+
 	// Use the manager's ProcessDotfileForApply method
 	opts := ApplyOptions{
 		DryRun: false,
 		Backup: true,
 	}
 
-	// Convert the item path to source and destination
-	// item.Path is the destination path relative to home
-	destination := item.Path
-	source := filepath.Join(".config", "plonk", item.Path)
-
 	result, err := d.manager.ProcessDotfileForApply(ctx, source, destination, opts)
 	if err != nil {
 		return fmt.Errorf("applying dotfile %s: %w", item.Name, err)
 	}
 
-	if result.Status != "copied" && result.Status != "exists" {
+	if result.Status != "added" && result.Status != "updated" {
 		return fmt.Errorf("unexpected status %s when applying dotfile %s", result.Status, item.Name)
 	}
 

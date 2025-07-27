@@ -32,8 +32,8 @@ load '../lib/assertions'
 @test "cleanup all test packages" {
   setup_test_env
 
-  if [[ "$PLONK_TEST_CLEANUP_PACKAGES" != "1" ]]; then
-    skip "Package cleanup not requested (set PLONK_TEST_CLEANUP_PACKAGES=1)"
+  if [[ "$PLONK_TEST_CLEANUP_PACKAGES" == "0" ]]; then
+    skip "Package cleanup disabled (set PLONK_TEST_CLEANUP_PACKAGES=0 to skip)"
   fi
 
   run cleanup_all_test_packages

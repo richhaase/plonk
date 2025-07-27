@@ -13,16 +13,16 @@ import (
 var rmCmd = &cobra.Command{
 	Use:   "rm <files...>",
 	Short: "Remove dotfiles from plonk management",
-	Long: `Remove dotfiles from plonk management completely.
+	Long: `Remove dotfiles from plonk management.
 
-This command unlinks dotfiles from your home directory and removes them from
-your plonk configuration directory. The dotfiles will no longer be managed by
-plonk and cannot be re-linked without adding them again.
+This command removes dotfiles from your plonk configuration directory only.
+The dotfiles in your home directory are NOT affected - they remain in place.
+The dotfiles will no longer be managed by plonk.
 
 Examples:
-  plonk rm ~/.zshrc                    # Remove single file
-  plonk rm ~/.zshrc ~/.vimrc           # Remove multiple files
-  plonk rm ~/.config/nvim/init.lua     # Remove specific file
+  plonk rm ~/.zshrc                    # Remove single file from management
+  plonk rm ~/.zshrc ~/.vimrc           # Remove multiple files from management
+  plonk rm ~/.config/nvim/init.lua     # Remove specific file from management
   plonk rm --dry-run ~/.zshrc ~/.vimrc # Preview what would be removed`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: runRm,
