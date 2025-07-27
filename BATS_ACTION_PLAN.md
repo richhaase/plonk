@@ -42,13 +42,16 @@ This document provides a detailed, step-by-step action plan for implementing BAT
   - Documented directory removal bug with failing test
   - 12/13 tests passing (1 failure documents expected behavior)
 
-### In Progress
-- [ ] **Phase 5: Apply Command Tests** 🚧 (In Progress)
-  - Created initial apply tests
-  - Discovered bug: plonk apply shows "All up to date" for system-installed binaries (e.g., jq at /usr/bin/jq)
-  - Discovered test isolation issues - need proper cleanup between tests
-  - Added cleanup to setup() but still seeing state persistence
-  - User suggested using more obscure packages since jq is system-installed on macOS
+- [x] **Phase 5: Apply Command Tests** ✅ (Completed)
+  - Created comprehensive apply command tests
+  - Replaced system packages with obscure packages to avoid conflicts
+  - Added proper behavioral validation:
+    - Verify packages are actually installed by their managers
+    - Verify lock file is updated correctly
+    - Verify dotfiles exist in plonk directory
+    - Verify dry-run doesn't make actual changes
+  - Added specific test for system binary detection bug
+  - Tests now properly fail to highlight bugs in plonk's apply command
 
 ### Remaining Phases
 - [ ] Phase 6: Error Handling Tests
