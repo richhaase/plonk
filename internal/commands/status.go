@@ -112,6 +112,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		ShowPackages:  showPackages,
 		ShowDotfiles:  showDotfiles,
 		ShowUnmanaged: showUnmanaged,
+		ConfigDir:     configDir,
 	}
 
 	return RenderOutput(outputData, format)
@@ -143,6 +144,7 @@ type StatusOutput struct {
 	ShowPackages  bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
 	ShowDotfiles  bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
 	ShowUnmanaged bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
+	ConfigDir     string            `json:"-" yaml:"-"` // Not included in JSON/YAML output
 }
 
 // StatusOutputSummary represents a summary-focused version for JSON/YAML output
@@ -260,37 +262,45 @@ func (s StatusOutput) TableOutput() string {
 
 			// Create a table for dotfiles
 			dotBuilder := NewStandardTableBuilder("")
-			dotBuilder.SetHeaders("PATH", "TARGET", "STATUS")
+			dotBuilder.SetHeaders("SOURCE", "TARGET", "STATUS")
 
 			if s.ShowUnmanaged {
 				// Show untracked dotfiles
 				for _, item := range dotfileResult.Untracked {
-					path := item.Name
-					target := ""
-					if dest, ok := item.Metadata["destination"].(string); ok {
-						target = dest
+					// For unmanaged items, show where they would be stored in plonk
+					// Remove leading dot from name for source path
+					sourceName := item.Name
+					if len(sourceName) > 0 && sourceName[0] == '.' {
+						sourceName = sourceName[1:]
 					}
-					dotBuilder.AddRow(path, target, "⚠️  unmanaged")
+					// Convert to relative path with ~
+					homeDir := config.GetHomeDir()
+					source := filepath.Join(s.ConfigDir, sourceName)
+					if strings.HasPrefix(source, homeDir) {
+						source = "~" + strings.TrimPrefix(source, homeDir)
+					}
+					target := "~/" + item.Name
+					dotBuilder.AddRow(source, target, "⚠️  unmanaged")
 				}
 			} else {
 				// Show managed dotfiles
 				for _, item := range dotfileResult.Managed {
-					path := item.Name
+					source := item.Name
 					target := ""
 					if dest, ok := item.Metadata["destination"].(string); ok {
 						target = dest
 					}
-					dotBuilder.AddRow(path, target, "✅ deployed")
+					dotBuilder.AddRow(source, target, "✅ deployed")
 				}
 
 				// Show missing dotfiles
 				for _, item := range dotfileResult.Missing {
-					path := item.Name
+					source := item.Name
 					target := ""
 					if dest, ok := item.Metadata["destination"].(string); ok {
 						target = dest
 					}
-					dotBuilder.AddRow(path, target, "❌ missing")
+					dotBuilder.AddRow(source, target, "❌ missing")
 				}
 			}
 

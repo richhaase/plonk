@@ -35,8 +35,8 @@ func TestLoad_MissingFile(t *testing.T) {
 	if len(cfg.ExpandDirectories) != 7 {
 		t.Errorf("Expected 7 expand directories, got %d", len(cfg.ExpandDirectories))
 	}
-	if len(cfg.IgnorePatterns) != 6 {
-		t.Errorf("Expected 6 ignore patterns, got %d", len(cfg.IgnorePatterns))
+	if len(cfg.IgnorePatterns) != 29 {
+		t.Errorf("Expected 29 ignore patterns, got %d", len(cfg.IgnorePatterns))
 	}
 }
 
@@ -128,7 +128,7 @@ operation_timeout: 400
 	if len(cfg.ExpandDirectories) != 7 {
 		t.Errorf("Expected default expand directories, got %d items", len(cfg.ExpandDirectories))
 	}
-	if len(cfg.IgnorePatterns) != 6 {
+	if len(cfg.IgnorePatterns) != 29 {
 		t.Errorf("Expected default ignore patterns, got %d items", len(cfg.IgnorePatterns))
 	}
 }

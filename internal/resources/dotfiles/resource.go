@@ -38,7 +38,23 @@ func (d *DotfileResource) SetDesired(items []resources.Item) {
 
 // Actual returns the actual state (dotfiles currently present)
 func (d *DotfileResource) Actual(ctx context.Context) []resources.Item {
-	// We need to check which of our desired files actually exist
+	// Use the manager's GetActualDotfiles method which scans based on config
+	actualItems, err := d.manager.GetActualDotfiles(ctx)
+	if err != nil {
+		// If scanning fails, fall back to only checking configured files
+		return d.actualFromDesired(ctx)
+	}
+
+	// Set state to untracked for all items (will be reconciled)
+	for i := range actualItems {
+		actualItems[i].State = resources.StateUntracked
+	}
+
+	return actualItems
+}
+
+// actualFromDesired is a fallback that only checks desired files
+func (d *DotfileResource) actualFromDesired(ctx context.Context) []resources.Item {
 	var actualItems []resources.Item
 
 	for _, desired := range d.desired {

@@ -51,12 +51,52 @@ var defaultConfig = Config{
 		".local",
 	},
 	IgnorePatterns: []string{
+		// System files
 		".DS_Store",
+		".Trash",
+		".CFUserTextEncoding",
+		".cups",
+
+		// Version control
 		".git",
+
+		// Backup/temp files
 		"*.backup",
 		"*.tmp",
 		"*.swp",
+
+		// Plonk files
 		"plonk.lock",
+
+		// Tool caches/data (usually not meant to be tracked)
+		".cache",
+		".npm",
+		".gem",
+		".cargo",
+		".rustup",
+		".bundle",
+		".local",
+		".ollama",
+
+		// History files
+		"*_history",
+		"*.lesshst",
+
+		// Application data
+		".cursor",
+		".lima",
+		".colima",
+		".cdk",
+		".magefile",
+
+		// Security sensitive (should be managed separately)
+		".ssh",
+		".gnupg",
+
+		// Tokens and auth
+		"*_token",
+		"*.pem",
+		"*.key",
 	},
 }
 
