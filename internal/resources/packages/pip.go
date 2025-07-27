@@ -20,14 +20,8 @@ type PipManager struct {
 
 // NewPipManager creates a new pip manager.
 func NewPipManager() *PipManager {
-	// Try to find pip or pip3
-	binary := FindAvailableBinary(context.Background(), []string{"pip", "pip3"}, []string{"--version"})
-	if binary == "" {
-		binary = "pip" // fallback
-	}
-
 	return &PipManager{
-		binary: binary,
+		binary: "pip3",
 	}
 }
 
@@ -125,14 +119,14 @@ func (p *PipManager) listInstalledFallback(ctx context.Context) ([]string, error
 
 // Install installs a pip package for the user with custom retry logic for --user flag issues.
 func (p *PipManager) Install(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, p.binary, "install", "--user", name)
+	output, err := ExecuteCommandCombined(ctx, p.binary, "install", "--user", "--break-system-packages", name)
 	if err != nil {
 		outputStr := string(output)
 
 		// Check for --user flag issues first
 		if strings.Contains(outputStr, "--user") && strings.Contains(outputStr, "error") {
 			// Try without --user flag
-			output, err = ExecuteCommandCombined(ctx, p.binary, "install", name)
+			output, err = ExecuteCommandCombined(ctx, p.binary, "install", "--break-system-packages", name)
 			if err == nil {
 				return nil
 			}
@@ -145,7 +139,7 @@ func (p *PipManager) Install(ctx context.Context, name string) error {
 
 // Uninstall removes a pip package.
 func (p *PipManager) Uninstall(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, p.binary, "uninstall", "-y", name)
+	output, err := ExecuteCommandCombined(ctx, p.binary, "uninstall", "-y", "--break-system-packages", name)
 	if err != nil {
 		return p.handleUninstallError(err, output, name)
 	}
@@ -322,7 +316,7 @@ func (p *PipManager) normalizeName(name string) string {
 	return normalized
 }
 
-// IsAvailable checks if pip is installed and accessible
+// IsAvailable checks if pip3 is installed and accessible
 func (p *PipManager) IsAvailable(ctx context.Context) (bool, error) {
 	if !CheckCommandAvailable(p.binary) {
 		return false, nil
