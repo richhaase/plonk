@@ -44,14 +44,16 @@ This document provides a detailed, step-by-step action plan for implementing BAT
 
 - [x] **Phase 5: Apply Command Tests** ✅ (Completed)
   - Created comprehensive apply command tests
-  - Replaced system packages with obscure packages to avoid conflicts
-  - Added proper behavioral validation:
-    - Verify packages are actually installed by their managers
-    - Verify lock file is updated correctly
-    - Verify dotfiles exist in plonk directory
-    - Verify dry-run doesn't make actual changes
-  - Added specific test for system binary detection bug
-  - Tests now properly fail to highlight bugs in plonk's apply command
+  - Fixed tests to use correct plonk workflow (install → remove → apply)
+  - Tests correctly expect proper behavior and document bugs:
+    - Apply reinstalls packages from lock file ✅
+    - Apply with multiple managers ✅
+    - Apply reports when packages are already installed ✅
+    - Apply with dry-run shows what would happen ✅
+    - Apply with empty lock file succeeds ✅
+    - Apply with mixed packages and dotfiles (fails - dotfile bug)
+    - Apply with --packages flag (fails - UI bug, shows empty output)
+    - Apply with --dotfiles flag (fails - functional bug, doesn't restore files)
 
 ### Remaining Phases
 - [ ] Phase 6: Error Handling Tests
@@ -63,6 +65,8 @@ This document provides a detailed, step-by-step action plan for implementing BAT
 1. **Directory removal bug** (Phase 4): `plonk rm ~/.config/myapp/` fails with "directory not empty" instead of performing `rm -rf` on the plonk-managed copy
 2. **Go package installation bug** (Phase 3): `plonk install go:package` reports success but doesn't actually install the binary. The package appears in plonk's status and lock file, but the binary is not installed to GOPATH/bin/
 3. **Dotfile apply bug** (Phase 5): `plonk apply` fails to restore dotfiles with error "unexpected status failed when applying dotfile". The dotfile is correctly stored in plonk's config directory but apply cannot restore it to the home directory
+4. **Apply --packages output bug** (Phase 5): `plonk apply --packages` successfully installs packages but shows empty output instead of listing the packages being installed
+5. **Apply --dotfiles functional bug** (Phase 5): `plonk apply --dotfiles` is completely non-functional - it shows empty output and doesn't restore any dotfiles
 
 ## Pre-Implementation Checklist
 
