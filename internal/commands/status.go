@@ -28,11 +28,14 @@ Shows:
 - All managed packages and dotfiles
 - Missing items that need to be installed
 - Configuration and lock file status
+- Unmanaged items (with --unmanaged flag)
 
 Examples:
   plonk status              # Show all managed items
   plonk status --packages   # Show only packages
   plonk status --dotfiles   # Show only dotfiles
+  plonk status --unmanaged  # Show only unmanaged items
+  plonk status --unmanaged --packages  # Show only unmanaged packages
   plonk status -o json      # Show as JSON
   plonk status -o yaml      # Show as YAML`,
 	RunE: runStatus,
@@ -42,6 +45,7 @@ func init() {
 	rootCmd.AddCommand(statusCmd)
 	statusCmd.Flags().Bool("packages", false, "Show only package status")
 	statusCmd.Flags().Bool("dotfiles", false, "Show only dotfile status")
+	statusCmd.Flags().Bool("unmanaged", false, "Show only unmanaged items")
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {
@@ -55,6 +59,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	// Get filter flags
 	showPackages, _ := cmd.Flags().GetBool("packages")
 	showDotfiles, _ := cmd.Flags().GetBool("dotfiles")
+	showUnmanaged, _ := cmd.Flags().GetBool("unmanaged")
 
 	// If neither flag is set, show both
 	if !showPackages && !showDotfiles {
@@ -98,14 +103,15 @@ func runStatus(cmd *cobra.Command, args []string) error {
 
 	// Prepare output
 	outputData := StatusOutput{
-		ConfigPath:   configPath,
-		LockPath:     lockPath,
-		ConfigExists: configExists,
-		ConfigValid:  configValid,
-		LockExists:   lockExists,
-		StateSummary: summary,
-		ShowPackages: showPackages,
-		ShowDotfiles: showDotfiles,
+		ConfigPath:    configPath,
+		LockPath:      lockPath,
+		ConfigExists:  configExists,
+		ConfigValid:   configValid,
+		LockExists:    lockExists,
+		StateSummary:  summary,
+		ShowPackages:  showPackages,
+		ShowDotfiles:  showDotfiles,
+		ShowUnmanaged: showUnmanaged,
 	}
 
 	return RenderOutput(outputData, format)
@@ -128,14 +134,15 @@ func convertManagedItems(items []resources.ManagedItem) []ManagedItem {
 
 // StatusOutput represents the output structure for status command
 type StatusOutput struct {
-	ConfigPath   string            `json:"config_path" yaml:"config_path"`
-	LockPath     string            `json:"lock_path" yaml:"lock_path"`
-	ConfigExists bool              `json:"config_exists" yaml:"config_exists"`
-	ConfigValid  bool              `json:"config_valid" yaml:"config_valid"`
-	LockExists   bool              `json:"lock_exists" yaml:"lock_exists"`
-	StateSummary resources.Summary `json:"state_summary" yaml:"state_summary"`
-	ShowPackages bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
-	ShowDotfiles bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
+	ConfigPath    string            `json:"config_path" yaml:"config_path"`
+	LockPath      string            `json:"lock_path" yaml:"lock_path"`
+	ConfigExists  bool              `json:"config_exists" yaml:"config_exists"`
+	ConfigValid   bool              `json:"config_valid" yaml:"config_valid"`
+	LockExists    bool              `json:"lock_exists" yaml:"lock_exists"`
+	StateSummary  resources.Summary `json:"state_summary" yaml:"state_summary"`
+	ShowPackages  bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
+	ShowDotfiles  bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
+	ShowUnmanaged bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
 }
 
 // StatusOutputSummary represents a summary-focused version for JSON/YAML output
@@ -187,16 +194,25 @@ func (s StatusOutput) TableOutput() string {
 		// Group packages by manager
 		packagesByManager := make(map[string][]resources.Item)
 		missingPackages := []resources.Item{}
+		untrackedPackages := make(map[string][]resources.Item)
 
-		for _, item := range packageResult.Managed {
-			packagesByManager[item.Manager] = append(packagesByManager[item.Manager], item)
-		}
-		for _, item := range packageResult.Missing {
-			missingPackages = append(missingPackages, item)
+		if s.ShowUnmanaged {
+			// Show only untracked items
+			for _, item := range packageResult.Untracked {
+				untrackedPackages[item.Manager] = append(untrackedPackages[item.Manager], item)
+			}
+		} else {
+			// Show managed and missing items
+			for _, item := range packageResult.Managed {
+				packagesByManager[item.Manager] = append(packagesByManager[item.Manager], item)
+			}
+			for _, item := range packageResult.Missing {
+				missingPackages = append(missingPackages, item)
+			}
 		}
 
 		// Build packages table
-		if len(packagesByManager) > 0 || len(missingPackages) > 0 {
+		if len(packagesByManager) > 0 || len(missingPackages) > 0 || len(untrackedPackages) > 0 {
 			output.WriteString("PACKAGES\n")
 			output.WriteString("--------\n")
 
@@ -216,6 +232,13 @@ func (s StatusOutput) TableOutput() string {
 				pkgBuilder.AddRow(pkg.Name, pkg.Manager, "❌ missing")
 			}
 
+			// Show untracked packages when --unmanaged flag is set
+			for manager, packages := range untrackedPackages {
+				for _, pkg := range packages {
+					pkgBuilder.AddRow(pkg.Name, manager, "⚠️  unmanaged")
+				}
+			}
+
 			output.WriteString(pkgBuilder.Build())
 			output.WriteString("\n")
 		}
@@ -223,7 +246,15 @@ func (s StatusOutput) TableOutput() string {
 
 	// Show dotfiles table if requested
 	if s.ShowDotfiles && dotfileResult != nil {
-		if len(dotfileResult.Managed) > 0 || len(dotfileResult.Missing) > 0 {
+		// Determine which items to show based on ShowUnmanaged flag
+		var itemsToShow []resources.Item
+		if s.ShowUnmanaged {
+			itemsToShow = dotfileResult.Untracked
+		} else {
+			itemsToShow = append(dotfileResult.Managed, dotfileResult.Missing...)
+		}
+
+		if len(itemsToShow) > 0 {
 			output.WriteString("DOTFILES\n")
 			output.WriteString("--------\n")
 
@@ -231,24 +262,36 @@ func (s StatusOutput) TableOutput() string {
 			dotBuilder := NewStandardTableBuilder("")
 			dotBuilder.SetHeaders("PATH", "TARGET", "STATUS")
 
-			// Show managed dotfiles
-			for _, item := range dotfileResult.Managed {
-				path := item.Name
-				target := ""
-				if dest, ok := item.Metadata["destination"].(string); ok {
-					target = dest
+			if s.ShowUnmanaged {
+				// Show untracked dotfiles
+				for _, item := range dotfileResult.Untracked {
+					path := item.Name
+					target := ""
+					if dest, ok := item.Metadata["destination"].(string); ok {
+						target = dest
+					}
+					dotBuilder.AddRow(path, target, "⚠️  unmanaged")
 				}
-				dotBuilder.AddRow(path, target, "✅ deployed")
-			}
+			} else {
+				// Show managed dotfiles
+				for _, item := range dotfileResult.Managed {
+					path := item.Name
+					target := ""
+					if dest, ok := item.Metadata["destination"].(string); ok {
+						target = dest
+					}
+					dotBuilder.AddRow(path, target, "✅ deployed")
+				}
 
-			// Show missing dotfiles
-			for _, item := range dotfileResult.Missing {
-				path := item.Name
-				target := ""
-				if dest, ok := item.Metadata["destination"].(string); ok {
-					target = dest
+				// Show missing dotfiles
+				for _, item := range dotfileResult.Missing {
+					path := item.Name
+					target := ""
+					if dest, ok := item.Metadata["destination"].(string); ok {
+						target = dest
+					}
+					dotBuilder.AddRow(path, target, "❌ missing")
 				}
-				dotBuilder.AddRow(path, target, "❌ missing")
 			}
 
 			output.WriteString(dotBuilder.Build())
@@ -259,14 +302,20 @@ func (s StatusOutput) TableOutput() string {
 	// Add summary
 	summary := s.StateSummary
 	output.WriteString("Summary: ")
-	output.WriteString(fmt.Sprintf("%d managed", summary.TotalManaged))
-	if summary.TotalMissing > 0 {
-		output.WriteString(fmt.Sprintf(", %d missing", summary.TotalMissing))
+	if s.ShowUnmanaged {
+		output.WriteString(fmt.Sprintf("%d unmanaged", summary.TotalUntracked))
+	} else {
+		output.WriteString(fmt.Sprintf("%d managed", summary.TotalManaged))
+		if summary.TotalMissing > 0 {
+			output.WriteString(fmt.Sprintf(", %d missing", summary.TotalMissing))
+		}
 	}
 	output.WriteString("\n")
 
-	// Add action hint if there are missing items
-	if summary.TotalMissing > 0 {
+	// Add action hint
+	if s.ShowUnmanaged && summary.TotalUntracked > 0 {
+		output.WriteString("\n💡 Run 'plonk install <package>' to manage these items\n")
+	} else if summary.TotalMissing > 0 {
 		output.WriteString("\n💡 Run 'plonk apply' to install missing items\n")
 	}
 
