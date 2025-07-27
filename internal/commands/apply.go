@@ -72,19 +72,15 @@ func runApply(cmd *cobra.Command, args []string) error {
 
 	ctx := context.Background()
 
-	// For now, maintain backward compatibility by using the old apply functions
-	// TODO: After Task 6.2, update to use scope flags (packages-only, dotfiles-only)
-	if packagesOnly || dotfilesOnly {
-		// Handle scoped apply using legacy functions
-		return runScopedApply(ctx, configDir, homeDir, cfg, dryRun, backup, packagesOnly, dotfilesOnly, format)
-	}
-
-	// Create new orchestrator
+	// Create new orchestrator with all options
 	orch := orchestrator.New(
 		orchestrator.WithConfig(cfg),
 		orchestrator.WithConfigDir(configDir),
 		orchestrator.WithHomeDir(homeDir),
 		orchestrator.WithDryRun(dryRun),
+		orchestrator.WithPackagesOnly(packagesOnly),
+		orchestrator.WithDotfilesOnly(dotfilesOnly),
+		orchestrator.WithBackup(backup),
 	)
 
 	// Run apply with hooks and v2 lock
@@ -106,95 +102,6 @@ func runApply(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-// runScopedApply handles packages-only or dotfiles-only apply using legacy functions
-func runScopedApply(ctx context.Context, configDir, homeDir string, cfg *config.Config, dryRun, backup, packagesOnly, dotfilesOnly bool, format OutputFormat) error {
-	var packageOutput *ApplyOutput
-	var dotfileOutput *DotfileApplyOutput
-
-	// Apply packages (unless dotfiles-only)
-	if !dotfilesOnly {
-		result, err := orchestrator.ApplyPackages(ctx, configDir, cfg, dryRun)
-		if err != nil {
-			return err
-		}
-
-		// Convert to command output format
-		pkgOutput := ApplyOutput{
-			DryRun:            result.DryRun,
-			TotalMissing:      result.TotalMissing,
-			TotalInstalled:    result.TotalInstalled,
-			TotalFailed:       result.TotalFailed,
-			TotalWouldInstall: result.TotalWouldInstall,
-			Managers:          make([]ManagerApplyResult, len(result.Managers)),
-		}
-
-		// Convert manager results
-		for i, mgr := range result.Managers {
-			packages := make([]PackageApplyResult, len(mgr.Packages))
-			for j, pkg := range mgr.Packages {
-				packages[j] = PackageApplyResult{
-					Name:   pkg.Name,
-					Status: pkg.Status,
-					Error:  pkg.Error,
-				}
-			}
-			pkgOutput.Managers[i] = ManagerApplyResult{
-				Name:         mgr.Name,
-				MissingCount: mgr.MissingCount,
-				Packages:     packages,
-			}
-		}
-
-		packageOutput = &pkgOutput
-	}
-
-	// Apply dotfiles (unless packages-only)
-	if !packagesOnly {
-		result, err := orchestrator.ApplyDotfiles(ctx, configDir, homeDir, cfg, dryRun, backup)
-		if err != nil {
-			return err
-		}
-
-		// Convert to command output format
-		actions := make([]DotfileAction, len(result.Actions))
-		for i, action := range result.Actions {
-			actions[i] = DotfileAction{
-				Source:      action.Source,
-				Destination: action.Destination,
-				Status:      action.Status,
-				Reason:      "", // Not used in this context
-			}
-		}
-
-		dotOutput := DotfileApplyOutput{
-			DryRun:   result.DryRun,
-			Deployed: result.Summary.Added + result.Summary.Updated,
-			Skipped:  result.Summary.Unchanged,
-			Actions:  actions,
-		}
-
-		dotfileOutput = &dotOutput
-	}
-
-	// Prepare combined output - handle nil pointers
-	var pkgInterface, dotInterface interface{}
-	if packageOutput != nil {
-		pkgInterface = *packageOutput
-	}
-	if dotfileOutput != nil {
-		dotInterface = *dotfileOutput
-	}
-
-	outputData := CombinedApplyOutput{
-		DryRun:   dryRun,
-		Packages: pkgInterface,
-		Dotfiles: dotInterface,
-		Scope:    getApplyScope(packagesOnly, dotfilesOnly),
-	}
-
-	return RenderOutput(outputData, format)
 }
 
 // convertApplyResult converts new ApplyResult to legacy CombinedApplyOutput

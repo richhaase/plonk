@@ -175,7 +175,12 @@ setup() {
   track_artifact "package" "go:github.com/rakyll/hey"
 
   # Verify it's installed by go - check binary exists
-  run test -f "$(go env GOPATH)/bin/hey"
+  # Go installs to GOBIN if set, otherwise GOPATH/bin
+  local gobin="$(go env GOBIN)"
+  if [[ -z "$gobin" ]]; then
+    gobin="$(go env GOPATH)/bin"
+  fi
+  run test -f "$gobin/hey"
   assert_success
 
   # Then uninstall
@@ -184,7 +189,12 @@ setup() {
   assert_output --partial "removed"
 
   # Verify actually uninstalled by go - binary should be gone
-  run test -f "$(go env GOPATH)/bin/hey"
+  # Go installs to GOBIN if set, otherwise GOPATH/bin
+  local gobin="$(go env GOBIN)"
+  if [[ -z "$gobin" ]]; then
+    gobin="$(go env GOPATH)/bin"
+  fi
+  run test -f "$gobin/hey"
   assert_failure
 
   # Verify gone from lock file

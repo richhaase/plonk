@@ -16,13 +16,16 @@ import (
 
 // Orchestrator manages resources and their lock file state
 type Orchestrator struct {
-	ctx        context.Context
-	config     *config.Config
-	lock       lock.LockWriter
-	configDir  string
-	homeDir    string
-	hookRunner *HookRunner
-	dryRun     bool
+	ctx          context.Context
+	config       *config.Config
+	lock         lock.LockWriter
+	configDir    string
+	homeDir      string
+	hookRunner   *HookRunner
+	dryRun       bool
+	packagesOnly bool
+	dotfilesOnly bool
+	backup       bool
 }
 
 // Option is a functional option for configuring the orchestrator
@@ -53,6 +56,27 @@ func WithHomeDir(dir string) Option {
 func WithDryRun(dryRun bool) Option {
 	return func(o *Orchestrator) {
 		o.dryRun = dryRun
+	}
+}
+
+// WithPackagesOnly applies packages only
+func WithPackagesOnly(packagesOnly bool) Option {
+	return func(o *Orchestrator) {
+		o.packagesOnly = packagesOnly
+	}
+}
+
+// WithDotfilesOnly applies dotfiles only
+func WithDotfilesOnly(dotfilesOnly bool) Option {
+	return func(o *Orchestrator) {
+		o.dotfilesOnly = dotfilesOnly
+	}
+}
+
+// WithBackup enables backup mode for dotfiles
+func WithBackup(backup bool) Option {
+	return func(o *Orchestrator) {
+		o.backup = backup
 	}
 }
 
@@ -102,18 +126,22 @@ func (o *Orchestrator) Apply(ctx context.Context) (ApplyResult, error) {
 		}
 	}
 
-	// Apply packages using existing function - continue on error
-	packageResult, err := ApplyPackages(ctx, o.configDir, o.config, o.dryRun)
-	result.Packages = packageResult
-	if err != nil {
-		result.PackageErrors = append(result.PackageErrors, fmt.Sprintf("package apply failed: %v", err))
+	// Apply packages (unless dotfiles-only)
+	if !o.dotfilesOnly {
+		packageResult, err := ApplyPackages(ctx, o.configDir, o.config, o.dryRun)
+		result.Packages = packageResult
+		if err != nil {
+			result.PackageErrors = append(result.PackageErrors, fmt.Sprintf("package apply failed: %v", err))
+		}
 	}
 
-	// Apply dotfiles using existing function - continue on error
-	dotfileResult, err := ApplyDotfiles(ctx, o.configDir, o.homeDir, o.config, o.dryRun, false)
-	result.Dotfiles = dotfileResult
-	if err != nil {
-		result.DotfileErrors = append(result.DotfileErrors, fmt.Sprintf("dotfile apply failed: %v", err))
+	// Apply dotfiles (unless packages-only)
+	if !o.packagesOnly {
+		dotfileResult, err := ApplyDotfiles(ctx, o.configDir, o.homeDir, o.config, o.dryRun, o.backup)
+		result.Dotfiles = dotfileResult
+		if err != nil {
+			result.DotfileErrors = append(result.DotfileErrors, fmt.Sprintf("dotfile apply failed: %v", err))
+		}
 	}
 
 	// Run post-apply hooks only if we had some success

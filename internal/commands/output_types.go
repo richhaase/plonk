@@ -171,7 +171,12 @@ type PackageOperationSummary struct {
 
 // TableOutput generates human-friendly output for package operations
 func (p PackageOperationOutput) TableOutput() string {
-	title := fmt.Sprintf("Package %s", strings.Title(p.Command))
+	// strings.Title is deprecated, use simple capitalization
+	commandTitle := p.Command
+	if len(commandTitle) > 0 {
+		commandTitle = strings.ToUpper(commandTitle[:1]) + commandTitle[1:]
+	}
+	title := fmt.Sprintf("Package %s", commandTitle)
 	if p.DryRun {
 		title += " (Dry Run)"
 	}

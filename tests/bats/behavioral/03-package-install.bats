@@ -176,8 +176,13 @@ setup() {
 
   track_artifact "package" "go:github.com/rakyll/hey"
 
-  # Verify it's actually installed by go - check binary exists in GOPATH
-  run test -f "$(go env GOPATH)/bin/hey"
+  # Verify it's actually installed by go - check binary exists
+  # Go installs to GOBIN if set, otherwise GOPATH/bin
+  local gobin="$(go env GOBIN)"
+  if [[ -z "$gobin" ]]; then
+    gobin="$(go env GOPATH)/bin"
+  fi
+  run test -f "$gobin/hey"
   assert_success
 
   # Verify it's in lock file
