@@ -327,24 +327,24 @@ setup() {
 # Test multiple package uninstallation - only testing with brew since
 # the logic is the same for all managers (just loops over single uninstalls)
 @test "uninstall multiple packages" {
-  require_safe_package "brew:jq"
-  require_safe_package "brew:tree"
+  require_safe_package "brew:cowsay"
+  require_safe_package "brew:figlet"
 
   # Install both first
-  run plonk install brew:jq brew:tree
+  run plonk install brew:cowsay brew:figlet
   assert_success
-  track_artifact "package" "brew:jq"
-  track_artifact "package" "brew:tree"
+  track_artifact "package" "brew:cowsay"
+  track_artifact "package" "brew:figlet"
 
   # Uninstall both
-  run plonk uninstall brew:jq brew:tree
+  run plonk uninstall brew:cowsay brew:figlet
   assert_success
-  assert_output_contains_all "jq" "tree" "removed"
+  assert_output_contains_all "cowsay" "figlet" "removed"
 
   # Verify both gone from status
   run plonk status
-  refute_output --partial "jq"
-  refute_output --partial "tree"
+  refute_output --partial "cowsay"
+  refute_output --partial "figlet"
 }
 
 @test "uninstall without prefix uses manager from lock file" {
