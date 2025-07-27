@@ -5,6 +5,7 @@ package packages
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -13,6 +14,18 @@ import (
 // HomebrewManager manages Homebrew packages.
 type HomebrewManager struct {
 	binary string
+}
+
+// brewInfoJSON represents the JSON structure from brew info --json
+type brewInfoJSON struct {
+	Name      string   `json:"name"`
+	Aliases   []string `json:"aliases"`
+	Installed []struct {
+		Version string `json:"version"`
+	} `json:"installed"`
+	Versions struct {
+		Stable string `json:"stable"`
+	} `json:"versions"`
 }
 
 // NewHomebrewManager creates a new homebrew manager.
@@ -24,12 +37,36 @@ func NewHomebrewManager() *HomebrewManager {
 
 // ListInstalled lists all installed Homebrew packages.
 func (h *HomebrewManager) ListInstalled(ctx context.Context) ([]string, error) {
+	// Get basic list first
 	output, err := ExecuteCommand(ctx, h.binary, "list")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list installed packages: %w", err)
 	}
 
-	return SplitLines(output), nil
+	packages := SplitLines(output)
+
+	// Try to enrich with aliases from JSON
+	packagesInfo, err := h.getInstalledPackagesInfo(ctx)
+	if err == nil {
+		// Build a set of all names and aliases
+		packageSet := make(map[string]bool)
+		for _, pkg := range packagesInfo {
+			packageSet[pkg.Name] = true
+			for _, alias := range pkg.Aliases {
+				packageSet[alias] = true
+			}
+		}
+
+		// Convert to slice
+		var allPackages []string
+		for name := range packageSet {
+			allPackages = append(allPackages, name)
+		}
+		return allPackages, nil
+	}
+
+	// Fallback to simple list if JSON fails
+	return packages, nil
 }
 
 // Install installs a Homebrew package.
@@ -50,16 +87,47 @@ func (h *HomebrewManager) Uninstall(ctx context.Context, name string) error {
 	return nil
 }
 
+// getInstalledPackagesInfo returns detailed information about all installed packages
+func (h *HomebrewManager) getInstalledPackagesInfo(ctx context.Context) ([]brewInfoJSON, error) {
+	cmd := exec.CommandContext(ctx, h.binary, "info", "--installed", "--json=v1")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get installed packages info: %w", err)
+	}
+
+	var packages []brewInfoJSON
+	if err := json.Unmarshal(output, &packages); err != nil {
+		return nil, fmt.Errorf("failed to parse brew info JSON: %w", err)
+	}
+
+	return packages, nil
+}
+
 // IsInstalled checks if a specific package is installed.
 func (h *HomebrewManager) IsInstalled(ctx context.Context, name string) (bool, error) {
-	packages, err := h.ListInstalled(ctx)
+	packages, err := h.getInstalledPackagesInfo(ctx)
 	if err != nil {
+		// Fallback to simple brew list check
+		cmd := exec.CommandContext(ctx, h.binary, "list", name)
+		err := cmd.Run()
+		if err == nil {
+			return true, nil
+		}
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+			return false, nil
+		}
 		return false, err
 	}
 
+	// Check both package names and aliases
 	for _, pkg := range packages {
-		if pkg == name {
+		if pkg.Name == name {
 			return true, nil
+		}
+		for _, alias := range pkg.Aliases {
+			if alias == name {
+				return true, nil
+			}
 		}
 	}
 
@@ -193,28 +261,36 @@ func (h *HomebrewManager) parseInfoOutput(output []byte, name string) *PackageIn
 
 // InstalledVersion retrieves the installed version of a package
 func (h *HomebrewManager) InstalledVersion(ctx context.Context, name string) (string, error) {
-	// First check if package is installed
-	installed, err := h.IsInstalled(ctx, name)
+	packages, err := h.getInstalledPackagesInfo(ctx)
 	if err != nil {
-		return "", fmt.Errorf("failed to check package installation status for %s: %w", name, err)
-	}
-	if !installed {
-		return "", fmt.Errorf("package '%s' is not installed", name)
-	}
-
-	// Get version using brew list --versions
-	cmd := exec.CommandContext(ctx, h.binary, "list", "--versions", name)
-	output, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("failed to get package version information for %s: %w", name, err)
-	}
-
-	version := h.extractVersion(output, name)
-	if version == "" {
-		return "", fmt.Errorf("could not extract version for package '%s'", name)
+		// Fallback to brew list --versions
+		cmd := exec.CommandContext(ctx, h.binary, "list", "--versions", name)
+		output, err := cmd.Output()
+		if err != nil {
+			return "", fmt.Errorf("failed to get package version information for %s: %w", name, err)
+		}
+		version := h.extractVersion(output, name)
+		if version == "" {
+			return "", fmt.Errorf("could not extract version for package '%s'", name)
+		}
+		return version, nil
 	}
 
-	return version, nil
+	// Find package by name or alias
+	for _, pkg := range packages {
+		if pkg.Name == name || contains(pkg.Aliases, name) {
+			if len(pkg.Installed) > 0 && pkg.Installed[0].Version != "" {
+				return pkg.Installed[0].Version, nil
+			}
+			// No installed version info, return stable version
+			if pkg.Versions.Stable != "" {
+				return pkg.Versions.Stable, nil
+			}
+			return "", fmt.Errorf("no version information available for package '%s'", name)
+		}
+	}
+
+	return "", fmt.Errorf("package '%s' is not installed", name)
 }
 
 // extractVersion extracts version from brew list --versions output
@@ -305,4 +381,14 @@ func (h *HomebrewManager) handleUninstallError(err error, output []byte, package
 	}
 
 	return fmt.Errorf("failed to execute uninstall command: %w", err)
+}
+
+// contains checks if a string slice contains a specific string
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }
