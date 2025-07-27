@@ -262,10 +262,38 @@ setup() {
   run brew list cowsay
   assert_success
 
-  # Try to install again
+  # Try to install again - should skip but still succeed
   run plonk install brew:cowsay
   assert_success
   assert_output --partial "skipped"
+}
+
+@test "install already-installed but unmanaged package adds to lock file" {
+  require_safe_package "brew:fortune"
+
+  # Ensure it's not already managed by removing from lock if present
+  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
+    grep -v "name: fortune" "$PLONK_DIR/plonk.lock" > "$PLONK_DIR/plonk.lock.tmp" || true
+    mv "$PLONK_DIR/plonk.lock.tmp" "$PLONK_DIR/plonk.lock"
+  fi
+
+  # Install directly with brew (not via plonk)
+  run brew install fortune
+
+  # Verify it's not in plonk's management
+  run plonk status
+  refute_output --partial "fortune"
+
+  # Install via plonk - should succeed and add to lock
+  run plonk install brew:fortune
+  assert_success
+  assert_output --partial "added"
+
+  # Verify it's now managed
+  run plonk status
+  assert_output --partial "fortune"
+
+  track_artifact "package" "brew:fortune"
 }
 
 @test "install shows error for non-existent package" {

@@ -63,15 +63,11 @@ func UninstallPackages(ctx context.Context, configDir string, packages []string,
 	// Initialize lock file service
 	lockService := lock.NewYAMLLockService(configDir)
 
-	// Get manager - use default if not specified
-	manager := opts.Manager
-	if manager == "" {
-		cfg := config.LoadWithDefaults(configDir)
-		if cfg.DefaultManager != "" {
-			manager = cfg.DefaultManager
-		} else {
-			manager = DefaultManager // fallback default
-		}
+	// Load config for default manager
+	cfg := config.LoadWithDefaults(configDir)
+	defaultManager := cfg.DefaultManager
+	if defaultManager == "" {
+		defaultManager = DefaultManager // fallback default
 	}
 
 	var results []resources.OperationResult
@@ -80,6 +76,20 @@ func UninstallPackages(ctx context.Context, configDir string, packages []string,
 		// Check if context was canceled
 		if ctx.Err() != nil {
 			break
+		}
+
+		// Determine which manager to use
+		manager := opts.Manager
+		if manager == "" {
+			// Check if package exists in lock file first
+			locations := lockService.FindPackage(packageName)
+			if len(locations) > 0 {
+				// Use the manager from the lock file
+				manager = locations[0].Manager
+			} else {
+				// Package not managed, use default manager as pass-through
+				manager = defaultManager
+			}
 		}
 
 		// Uninstall single package
@@ -189,11 +199,7 @@ func uninstallSinglePackage(ctx context.Context, configDir string, lockService *
 	}
 
 	// Check if package is managed
-	if !lockService.HasPackage(manager, checkPackageName) {
-		result.Status = "skipped"
-		result.Error = fmt.Errorf("package '%s' is not managed by plonk", packageName)
-		return result
-	}
+	isManaged := lockService.HasPackage(manager, checkPackageName)
 
 	if dryRun {
 		result.Status = "would-remove"
@@ -226,22 +232,42 @@ func uninstallSinglePackage(ctx context.Context, configDir string, lockService *
 	}
 
 	// Uninstall the package
-	err = pkgManager.Uninstall(uninstallCtx, packageName)
-	if err != nil {
-		result.Status = "failed"
-		result.Error = fmt.Errorf("uninstall %s via %s: %w", packageName, manager, err)
-		return result
+	uninstallErr := pkgManager.Uninstall(uninstallCtx, packageName)
+
+	// If package is managed, remove from lock file
+	if isManaged {
+		lockErr := lockService.RemovePackage(manager, checkPackageName)
+		if lockErr != nil {
+			// If we removed from system but failed to update lock, still partial success
+			if uninstallErr == nil {
+				result.Status = "removed"
+				result.Error = fmt.Errorf("package uninstalled but failed to update lock file: %w", lockErr)
+			} else {
+				result.Status = "failed"
+				result.Error = fmt.Errorf("uninstall failed and couldn't update lock: %w", uninstallErr)
+			}
+			return result
+		}
+
+		// Successfully removed from lock file
+		if uninstallErr != nil {
+			// Removed from lock but system uninstall failed - this is still success per spec
+			result.Status = "removed"
+			result.Error = fmt.Errorf("removed from plonk management (system uninstall failed: %w)", uninstallErr)
+		} else {
+			// Both succeeded
+			result.Status = "removed"
+		}
+	} else {
+		// Package not managed - pure pass-through
+		if uninstallErr != nil {
+			result.Status = "failed"
+			result.Error = fmt.Errorf("uninstall %s via %s: %w", packageName, manager, uninstallErr)
+		} else {
+			result.Status = "removed"
+		}
 	}
 
-	// Remove from lock file
-	err = lockService.RemovePackage(manager, checkPackageName)
-	if err != nil {
-		result.Status = "failed"
-		result.Error = fmt.Errorf("uninstall %s: failed to remove from lock file: %w", packageName, err)
-		return result
-	}
-
-	result.Status = "removed"
 	return result
 }
 

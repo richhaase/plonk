@@ -249,10 +249,25 @@ setup() {
 }
 
 # General uninstall behavior tests
-@test "uninstall non-managed package shows error" {
-  run plonk uninstall brew:not-managed-package
-  assert_success  # plonk returns success but skips the package
-  assert_output --partial "skipped"
+@test "uninstall non-managed package acts as pass-through" {
+  require_safe_package "brew:fortune"
+
+  # Install directly with brew (not via plonk)
+  run brew install fortune
+  assert_success
+
+  # Verify it's not managed by plonk
+  run plonk status
+  refute_output --partial "fortune"
+
+  # Uninstall via plonk - should pass through to brew
+  run plonk uninstall brew:fortune
+  assert_success
+  assert_output --partial "removed"
+
+  # Verify it was actually uninstalled
+  run brew list fortune
+  assert_failure
 }
 
 @test "uninstall with dry-run shows what would happen" {
@@ -330,4 +345,48 @@ setup() {
   run plonk status
   refute_output --partial "jq"
   refute_output --partial "tree"
+}
+
+@test "uninstall without prefix uses manager from lock file" {
+  require_safe_package "brew:sl"
+
+  # Install with brew
+  run plonk install brew:sl
+  assert_success
+  track_artifact "package" "brew:sl"
+
+  # Set default manager to something else
+  cat > "$PLONK_DIR/plonk.yaml" <<EOF
+default_manager: npm
+EOF
+
+  # Uninstall without prefix - should use brew from lock file
+  run plonk uninstall sl
+  assert_success
+  assert_output --partial "removed"
+
+  # Verify it was uninstalled with brew (not npm)
+  run brew list sl
+  assert_failure
+}
+
+@test "uninstall succeeds when package removed from lock even if system uninstall fails" {
+  require_safe_package "brew:figlet"
+
+  # Install package
+  run plonk install brew:figlet
+  assert_success
+  track_artifact "package" "brew:figlet"
+
+  # Manually uninstall from system
+  run brew uninstall figlet --force
+
+  # Now plonk uninstall should still succeed (removes from lock)
+  run plonk uninstall brew:figlet
+  assert_success
+  assert_output --partial "removed"
+
+  # Verify it's gone from lock file
+  run grep "name: figlet" "$PLONK_DIR/plonk.lock"
+  assert_failure
 }

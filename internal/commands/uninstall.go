@@ -52,9 +52,8 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	// Get flags (only common flags now)
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 
-	// Get directories and config
+	// Get config directory
 	configDir := config.GetDefaultConfigDirectory()
-	cfg := config.LoadWithDefaults(configDir)
 
 	// Process each package with prefix parsing
 	var allResults []resources.OperationResult
@@ -85,17 +84,8 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
-		// Use default manager if no prefix specified
-		if manager == "" {
-			if cfg.DefaultManager != "" {
-				manager = cfg.DefaultManager
-			} else {
-				manager = packages.DefaultManager
-			}
-		}
-
-		// Validate manager
-		if !IsValidManager(manager) {
+		// Only validate manager if explicitly specified
+		if manager != "" && !IsValidManager(manager) {
 			errorMsg := FormatNotFoundError("package manager", manager, GetValidManagers())
 			allResults = append(allResults, resources.OperationResult{
 				Name:    packageSpec,
@@ -107,6 +97,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 		}
 
 		// Configure uninstallation options for this package
+		// Pass empty manager if not specified to let UninstallPackages determine it
 		opts := packages.UninstallOptions{
 			Manager: manager,
 			DryRun:  dryRun,
