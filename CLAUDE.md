@@ -40,7 +40,7 @@ Each file has the following sections:
 | apply.md | ✅ Completed | 2025-07-28 | Added implementation section, found 4 behavior discrepancies |
 | config.md | ✅ Completed | 2025-07-28 | Added implementation section, found 3 behavior discrepancies |
 | status.md | ⏳ Pending | - | Need to review code and add implementation section |
-| doctor.md | ⏳ Pending | - | Need to review code and add implementation section |
+| doctor.md | ✅ Completed | 2025-07-28 | Added implementation section, found 5 behavior discrepancies |
 | package_management.md | ⏳ Pending | - | Need to review code and add implementation section |
 | dotfile_management.md | ⏳ Pending | - | Need to review code and add implementation section |
 
@@ -112,10 +112,17 @@ For each file, we will follow this process:
   3. Checks for specific plonk files (not just "empty directory")
   4. Supports additional git:// protocol (undocumented)
   5. Missing PATH configuration guidance in docs
+- **Doctor Command**: Found 5 discrepancies:
+  1. Status terminology mismatch (pass/warn/fail vs PASS/WARN/ERROR)
+  2. Overall status values differ (healthy/warning/unhealthy vs PASS/WARNING/ERROR)
+  3. Package Manager Functionality identical to Availability (not differentiated)
+  4. Uses emoji icons not color coding as documented
+  5. Missing 30-second timeout in documentation
 - **Pattern**: Use "DISCREPANCY" to clearly mark behavior differences
 - **Structure**: Organize by Command Structure, Key Details, Bugs Identified
 - **Complex Commands**: Apply and Setup show layered architecture with orchestration patterns
 - **Modular Design**: Setup shows good separation with dedicated files for git, tools, prompts
+- **Consistent Issues**: Status terminology and timeout documentation frequently missing
 
 ### Other Learnings
 - Pre-commit hooks are active and will auto-fix formatting issues (end-of-file, trailing whitespace)
