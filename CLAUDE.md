@@ -22,7 +22,7 @@ Each file has the following sections:
 
 | Document | Status | Last Updated | Notes |
 |----------|--------|--------------|-------|
-| setup.md | Not Started | - | |
+| setup.md | ✅ Completed | 2025-07-28 | Documented dual modes and doctor integration |
 | apply.md | ✅ Completed | 2025-07-28 | Documented reconciliation and resource states |
 | config.md | ✅ Completed | 2025-07-28 | Documented show/edit subcommands |
 | status.md | Not Started | - | |
@@ -56,7 +56,8 @@ For each file, we will follow this process:
 - Group related commands (e.g., install/uninstall/search/info)
 
 ### Known Component References
-- TBD as we document
+- `plonk doctor --fix` - Used by setup for health checks and package manager installation
+- `plonk apply` - Automatically run by setup after cloning repository
 
 ### Other Learnings
 - Pre-commit hooks are active and will auto-fix formatting issues (end-of-file, trailing whitespace)
@@ -72,3 +73,8 @@ For each file, we will follow this process:
 - Plonk.lock absence is valid (dotfiles-only mode)
 - Dotfile mapping: automatic dot-prefix handling ($PLONK_DIR/vimrc → $HOME/.vimrc)
 - Features marked for review should be noted in documentation (e.g., --backup flag)
+- Setup has dual modes: fresh initialization vs clone + apply workflow
+- Package managers categorized as bootstrap (Homebrew, Cargo) vs language (npm, pip, gem, go)
+- Required vs optional package managers: Homebrew is required, others are optional
+- plonk.lock is only created by install/uninstall commands, never by setup
+- Clone operations require empty $PLONK_DIR directory
