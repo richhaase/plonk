@@ -22,6 +22,18 @@ The leading dot is removed when storing in `$PLONK_DIR` and re-added when deploy
 - Files in `$PLONK_DIR` (except plonk.yaml/plonk.lock) are managed dotfiles
 - Dotfiles within `$PLONK_DIR` (e.g., `.git`, `.gitignore`) are ignored to prevent incorrect deployment
 
+**File System Example**:
+```
+$PLONK_DIR/                          $HOME/
+├── zshrc                     →      ├── .zshrc
+├── gitconfig                 →      ├── .gitconfig
+├── config/                   →      └── .config/
+│   └── nvim/                 →          └── nvim/
+│       └── init.lua          →              └── init.lua
+├── plonk.yaml                       (not deployed)
+└── plonk.lock                       (not deployed)
+```
+
 ### Add Command
 
 Copies dotfiles from their current location to `$PLONK_DIR` for management. Accepts single files, multiple files, or entire directories.
@@ -86,6 +98,20 @@ Removes dotfiles from plonk management by deleting them from `$PLONK_DIR`. Accep
 - Use `plonk status` to see managed dotfiles
 - Files added are immediately reflected in status output
 - No lock file updates needed (filesystem is the state)
+
+### State Impact
+
+**Add Command**:
+- Modifies: `$PLONK_DIR` filesystem (copies file)
+- System changes: None (original file unchanged)
+- Immediate effect: File available for deployment via `apply`
+
+**Remove Command**:
+- Modifies: `$PLONK_DIR` filesystem (deletes file)
+- System changes: None (deployed file in `$HOME` unchanged)
+- Immediate effect: File no longer managed or deployable
+
+Both commands directly modify the filesystem which IS the state tracking mechanism for dotfiles.
 
 ## Implementation Notes
 

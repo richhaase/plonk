@@ -64,6 +64,23 @@ Without prefix, uses `default_manager` from configuration.
 - Output formats: table (default), json, yaml
 - plonk.lock updated atomically per operation
 
+### State Impact
+
+**Install Command**:
+- Modifies: `plonk.lock` (adds package entry)
+- System changes: Package installed via manager
+- Atomic: Lock file updated only on successful install
+
+**Uninstall Command**:
+- Modifies: `plonk.lock` (removes package entry)
+- System changes: Package removed via manager
+- Atomic: Lock file updated only on successful uninstall
+
+**Search/Info Commands**:
+- Read-only operations
+- No state modifications
+- Query package managers directly
+
 ## Implementation Notes
 
 ## Improvements

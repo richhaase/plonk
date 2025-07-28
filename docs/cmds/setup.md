@@ -6,6 +6,13 @@ The `plonk setup` command initializes plonk or clones an existing dotfiles repos
 
 The setup command provides two primary workflows: initializing a fresh plonk installation or cloning an existing dotfiles repository. It ensures the system has necessary package managers installed and creates required configuration files. When cloning a repository, setup automatically runs `plonk apply` to configure the system according to the cloned configuration.
 
+## Prerequisites
+
+- **Git**: Required for cloning repositories (clone mode only)
+- **Package Manager**: At least one supported package manager should be available
+- **Empty Directory**: For clone mode, `$PLONK_DIR` must not exist or be empty
+- **Network Access**: Required for cloning repositories and installing package managers
+
 ## Behavior
 
 ### Two Primary Modes

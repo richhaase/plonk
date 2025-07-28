@@ -126,6 +126,55 @@ Instead of tracking operations (install X, remove Y), Plonk tracks desired state
 - Easy sharing of configurations
 - Clear understanding of system state
 
+#### State Storage Model
+
+Plonk uses two distinct storage mechanisms:
+
+**Package State** (`plonk.lock`):
+- YAML file containing detailed package information
+- Updated atomically with each install/uninstall operation
+- Tracks name, version, and installation timestamp
+- Example structure:
+  ```yaml
+  version: 1
+  packages:
+    brew:
+      - name: ripgrep
+        installed_at: 2025-07-27T11:01:03.519704-06:00
+        version: 14.1.1
+      - name: neovim
+        installed_at: 2025-07-27T11:00:51.028708-06:00
+        version: 0.11.3
+    npm:
+      - name: '@google/gemini-cli'
+        installed_at: 2025-07-28T15:11:08.74692-06:00
+        version: 0.1.14
+  ```
+
+**Dotfile State** (filesystem-based):
+- The `$PLONK_DIR` filesystem IS the state
+- No separate tracking file needed
+- Directory structure mirrors home directory without leading dots:
+  ```
+  $PLONK_DIR/
+  ├── plonk.yaml        # Configuration (not a dotfile)
+  ├── plonk.lock        # Package state (not a dotfile)
+  ├── zshrc             # From ~/.zshrc
+  ├── gitconfig         # From ~/.gitconfig
+  └── config/
+      └── nvim/
+          └── init.lua  # From ~/.config/nvim/init.lua
+  ```
+
+#### Resource States
+
+All resources exist in one of three states:
+- **Managed**: Known to plonk AND exists in environment
+- **Missing**: Known to plonk BUT doesn't exist in environment
+- **Unmanaged**: Unknown to plonk BUT exists in environment
+
+The reconciliation process identifies missing resources and applies them.
+
 ### 4. Structured Output
 
 All commands support multiple output formats (table, JSON, YAML) to support:
