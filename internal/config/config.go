@@ -43,12 +43,6 @@ var defaultConfig = Config{
 	DotfileTimeout:   60,  // 1 minute
 	ExpandDirectories: []string{
 		".config",
-		".ssh",
-		".aws",
-		".kube",
-		".docker",
-		".gnupg",
-		".local",
 	},
 	IgnorePatterns: []string{
 		// System files
