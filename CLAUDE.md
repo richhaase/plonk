@@ -28,7 +28,7 @@ Each file has the following sections:
 | status.md | ✅ Completed | 2025-07-28 | Documented resource states and output formats |
 | doctor.md | ✅ Completed | 2025-07-28 | Documented health checks and fix behavior |
 | package_management.md | Not Started | - | |
-| dotfile_management.md | Not Started | - | |
+| dotfile_management.md | ✅ Completed | 2025-07-28 | Documented add/rm with filesystem-as-state |
 
 ## Documentation Process
 
@@ -90,3 +90,9 @@ For each file, we will follow this process:
 - Current bug: --unmanaged flag doesn't affect JSON/YAML output
 - Status uses "domain" terminology in structured output (dotfile/package)
 - Always shows summary counts regardless of filters
+- Dotfile state is filesystem-based: contents of $PLONK_DIR ARE the state
+- File mapping removes/adds leading dot: ~/.zshrc ↔ $PLONK_DIR/zshrc
+- Dotfiles within $PLONK_DIR (like .git) are ignored to prevent deployment as ..git
+- Add command always overwrites (no warnings) - assumes git backup
+- Remove only affects $PLONK_DIR, never touches files in $HOME
+- --force flags are non-functional and should be removed
