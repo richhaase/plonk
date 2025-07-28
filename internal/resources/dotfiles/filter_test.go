@@ -22,6 +22,84 @@ func (m mockFileInfo) ModTime() time.Time { return time.Now() }
 func (m mockFileInfo) IsDir() bool        { return m.isDir }
 func (m mockFileInfo) Sys() interface{}   { return nil }
 
+func TestFilter_UnmanagedPatterns(t *testing.T) {
+	// Test patterns specifically for unmanaged filtering
+	tests := []struct {
+		name     string
+		pattern  string
+		relPath  string
+		fileInfo os.FileInfo
+		expected bool
+	}{
+		{
+			name:     "skip log files",
+			pattern:  "*.log",
+			relPath:  "gcloud/logs/2025.04.16/17.57.27.876860.log",
+			fileInfo: mockFileInfo{name: "17.57.27.876860.log", isDir: false},
+			expected: true,
+		},
+		{
+			name:     "skip map files",
+			pattern:  "*.map",
+			relPath:  "raycast/extensions/uuid/file.js.map",
+			fileInfo: mockFileInfo{name: "file.js.map", isDir: false},
+			expected: true,
+		},
+		{
+			name:     "skip node_modules directories",
+			pattern:  "**/node_modules/**",
+			relPath:  "project/node_modules/package/file.js",
+			fileInfo: mockFileInfo{name: "file.js", isDir: false},
+			expected: true,
+		},
+		{
+			name:     "skip UUID directories",
+			pattern:  "**/*-*-*-*-*/**",
+			relPath:  "raycast/extensions/4d342edf-4371-498e-8ead-a424d65f933f/file.js",
+			fileInfo: mockFileInfo{name: "file.js", isDir: false},
+			expected: true,
+		},
+		{
+			name:     "skip cache directories",
+			pattern:  "**/*cache*/**",
+			relPath:  "app/cache/data/file.tmp",
+			fileInfo: mockFileInfo{name: "file.tmp", isDir: false},
+			expected: true,
+		},
+		{
+			name:     "skip git internals",
+			pattern:  "**/.git/**",
+			relPath:  "repo/.git/objects/pack/pack-abc.pack",
+			fileInfo: mockFileInfo{name: "pack-abc.pack", isDir: false},
+			expected: true,
+		},
+		{
+			name:     "don't skip regular files",
+			pattern:  "*.log",
+			relPath:  "config/app.conf",
+			fileInfo: mockFileInfo{name: "app.conf", isDir: false},
+			expected: false,
+		},
+		{
+			name:     "don't skip UUID-like but not matching pattern",
+			pattern:  "**/*-*-*-*-*/**",
+			relPath:  "file-with-dashes.txt",
+			fileInfo: mockFileInfo{name: "file-with-dashes.txt", isDir: false},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			filter := NewFilter([]string{tt.pattern}, "", true)
+			result := filter.ShouldSkip(tt.relPath, tt.fileInfo)
+			if result != tt.expected {
+				t.Errorf("ShouldSkip(%q) with pattern %q = %v, want %v", tt.relPath, tt.pattern, result, tt.expected)
+			}
+		})
+	}
+}
+
 func TestFilter_ShouldSkip(t *testing.T) {
 	tests := []struct {
 		name           string

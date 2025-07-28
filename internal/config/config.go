@@ -19,6 +19,7 @@ type Config struct {
 	DotfileTimeout    int      `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`
 	ExpandDirectories []string `yaml:"expand_directories,omitempty"`
 	IgnorePatterns    []string `yaml:"ignore_patterns,omitempty"`
+	Dotfiles          Dotfiles `yaml:"dotfiles,omitempty"`
 	Hooks             Hooks    `yaml:"hooks,omitempty"`
 }
 
@@ -33,6 +34,11 @@ type Hook struct {
 	Command         string `yaml:"command" validate:"required"`
 	Timeout         string `yaml:"timeout,omitempty"`
 	ContinueOnError bool   `yaml:"continue_on_error,omitempty"`
+}
+
+// Dotfiles contains dotfile-specific configuration
+type Dotfiles struct {
+	UnmanagedFilters []string `yaml:"unmanaged_filters,omitempty"`
 }
 
 // defaultConfig holds the default configuration values
@@ -91,6 +97,63 @@ var defaultConfig = Config{
 		"*_token",
 		"*.pem",
 		"*.key",
+	},
+	Dotfiles: Dotfiles{
+		UnmanagedFilters: []string{
+			// File patterns for unmanaged filtering only
+			"*.log",
+			"*.lock",
+			"*.db",
+			"*.cache",
+			"*.map",
+			"*.pid",
+			"*.sock",
+			"*.socket",
+			"*.sqlite",
+			"*.sqlite3",
+			"*.wasm",
+			"*.idx",
+			"*.pack",
+
+			// Directory patterns
+			"**/node_modules/**",
+			"**/plugins/**",
+			"**/extensions/**",
+			"**/__pycache__/**",
+			"**/logs/**",
+			"**/tmp/**",
+			"**/temp/**",
+			"**/dist/**",
+			"**/build/**",
+			"**/out/**",
+			"**/.git/**",
+
+			// Cache patterns
+			"**/*cache*/**",
+			"**/Cache/**",
+			"**/Caches/**",
+
+			// UUID-like directory patterns (generic for extensions, etc.)
+			"**/*-*-*-*-*/**",
+
+			// State/session patterns
+			"**/*state*",
+			"**/*session*",
+			"**/*State*",
+
+			// Git internals
+			"**/.git*",
+			"**/hooks/**",
+			"**/objects/**",
+			"**/refs/**",
+
+			// Tool-specific patterns
+			"**/spec/**",
+			"**/test/**",
+			"**/tests/**",
+			"**/assets/**",
+			"**/tools/**",
+		},
 	},
 }
 

@@ -38,6 +38,10 @@ func TestLoad_MissingFile(t *testing.T) {
 	if len(cfg.IgnorePatterns) != 29 {
 		t.Errorf("Expected 29 ignore patterns, got %d", len(cfg.IgnorePatterns))
 	}
+	// Check default dotfiles unmanaged filters
+	if len(cfg.Dotfiles.UnmanagedFilters) == 0 {
+		t.Error("Expected default unmanaged filters to be set")
+	}
 }
 
 func TestLoad_ValidConfig(t *testing.T) {
@@ -130,6 +134,10 @@ operation_timeout: 400
 	}
 	if len(cfg.IgnorePatterns) != 29 {
 		t.Errorf("Expected default ignore patterns, got %d items", len(cfg.IgnorePatterns))
+	}
+	// Check default dotfiles unmanaged filters
+	if len(cfg.Dotfiles.UnmanagedFilters) == 0 {
+		t.Error("Expected default unmanaged filters to be set")
 	}
 }
 
@@ -288,6 +296,93 @@ func TestConfig_Resolve(t *testing.T) {
 	// Config should work directly without resolution
 	if cfg.DefaultManager != "pip" {
 		t.Error("Config should work directly")
+	}
+}
+
+func TestLoad_DotfilesConfig(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "plonk.yaml")
+
+	// Write config with dotfiles section
+	configContent := `
+default_manager: npm
+dotfiles:
+  unmanaged_filters:
+    - "*.log"
+    - "**/node_modules/**"
+    - "**/*-*-*-*-*/**"
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load(tempDir)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+
+	// Verify dotfiles configuration is loaded
+	expectedFilters := []string{"*.log", "**/node_modules/**", "**/*-*-*-*-*/**"}
+	if !reflect.DeepEqual(cfg.Dotfiles.UnmanagedFilters, expectedFilters) {
+		t.Errorf("Expected unmanaged filters %v, got %v", expectedFilters, cfg.Dotfiles.UnmanagedFilters)
+	}
+}
+
+func TestLoad_EmptyDotfilesConfig(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "plonk.yaml")
+
+	// Write config with empty dotfiles section
+	configContent := `
+default_manager: npm
+dotfiles:
+  unmanaged_filters: []
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load(tempDir)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+
+	// Verify empty unmanaged filters
+	if len(cfg.Dotfiles.UnmanagedFilters) != 0 {
+		t.Errorf("Expected empty unmanaged filters, got %d items", len(cfg.Dotfiles.UnmanagedFilters))
+	}
+}
+
+func TestLoad_BackwardCompatibility(t *testing.T) {
+	// Test that configs without dotfiles section still work
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "plonk.yaml")
+
+	// Write old-style config without dotfiles section
+	configContent := `
+default_manager: brew
+ignore_patterns:
+  - "*.tmp"
+  - ".DS_Store"
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load(tempDir)
+	if err != nil {
+		t.Fatalf("Load failed: %v", err)
+	}
+
+	// Verify defaults are applied for dotfiles section
+	if len(cfg.Dotfiles.UnmanagedFilters) == 0 {
+		t.Error("Expected default unmanaged filters to be applied")
+	}
+
+	// Verify ignore patterns still work
+	expectedPatterns := []string{"*.tmp", ".DS_Store"}
+	if !reflect.DeepEqual(cfg.IgnorePatterns, expectedPatterns) {
+		t.Errorf("Expected ignore patterns %v, got %v", expectedPatterns, cfg.IgnorePatterns)
 	}
 }
 
