@@ -83,6 +83,94 @@ Without prefix, uses `default_manager` from configuration.
 
 ## Implementation Notes
 
+The package management commands provide unified package operations across multiple package managers through a registry-based system:
+
+**Command Structure:**
+- Entry points: `internal/commands/install.go`, `internal/commands/uninstall.go`, `internal/commands/search.go`, `internal/commands/info.go`
+- Core operations: `internal/resources/packages/operations.go`
+- Manager registry: `internal/resources/packages/registry.go`
+- Lock file management: `internal/lock/yaml_lock.go`
+
+**Key Implementation Flow:**
+
+1. **Install Command Processing:**
+   - Entry point parses package specifications with `ParsePackageSpec()`
+   - Uses 5-minute timeout per package installation
+   - **DISCREPANCY**: Documentation doesn't mention individual package timeouts
+   - Validates manager and checks availability before installation
+   - Updates `plonk.lock` atomically after successful installation
+
+2. **Uninstall Command Processing:**
+   - **DISCREPANCY**: `--force` flag is defined but never used in implementation
+   - Implementation: Flag is parsed but never passed to `UninstallOptions`
+   - Uses 3-minute timeout per package removal
+   - Automatically determines manager from lock file if no prefix specified
+   - Only removes from lock file if package was actually managed
+
+3. **Search Command Implementation:**
+   - Uses exactly 3-second timeout for parallel manager search
+   - **DISCREPANCY**: Skips cargo manager entirely in search operations
+   - Implementation: Hardcoded exclusion of cargo in `getAvailableManagersMap()`
+   - Documentation doesn't mention this cargo limitation
+   - Parallel goroutines with per-manager 3-second timeouts
+
+4. **Info Command Priority Logic:**
+   - Implements exact priority: managed → installed → available
+   - Uses `lock.FindPackage()` to check managed status first
+   - Falls back to checking installation across all available managers
+   - Returns first available package if not installed anywhere
+
+5. **Package Manager Registry:**
+   - Central registry pattern for all 6 supported managers
+   - `IsAvailable()` checks performed before all operations
+   - Manager instances created per-operation (not cached)
+   - Supports dynamic manager discovery and validation
+
+6. **Lock File State Management:**
+   - Uses `YAMLLockService` for atomic updates
+   - **DISCREPANCY**: Go packages use binary name in lock file, not full module path
+   - Implementation: `ExtractBinaryNameFromPath()` converts `golang.org/x/tools/cmd/gopls` → `gopls`
+   - Documentation doesn't explain this Go package name transformation
+   - Updates happen immediately after successful package operations
+
+7. **Error Handling and Timeouts:**
+   - Install operations: 5-minute timeout per package
+   - Uninstall operations: 3-minute timeout per package
+   - Search operations: 3-second timeout total and per-manager
+   - Info operations: No timeout (blocking)
+   - Failed operations don't prevent other packages from processing
+
+8. **Validation and Fallbacks:**
+   - Empty package names rejected with validation errors
+   - Invalid managers rejected with helpful error messages
+   - Default manager fallback: configuration → `DefaultManager` constant
+   - Manager availability checked before each operation
+
+**Architecture Patterns:**
+- Registry pattern for package manager abstraction
+- Individual package processing with independent error handling
+- Atomic lock file updates with rollback on failure
+- Context-based timeout management with cancellation
+- Standardized operation result format across all commands
+
+**Error Conditions:**
+- Manager unavailability results in operation failure
+- Package not found errors are command-specific
+- Lock file corruption prevents operations
+- Network timeouts are handled gracefully in search
+
+**Integration Points:**
+- Uses `config.LoadWithDefaults()` for consistent configuration loading
+- Shares `resources.OperationResult` format with dotfile commands
+- Lock file service used by status command for reconciliation
+- Manager registry used by doctor command for availability checks
+
+**Bugs Identified:**
+1. **Non-functional --force flag in uninstall**: Flag defined but never used in `UninstallOptions`
+2. **Undocumented cargo search exclusion**: Search command skips cargo manager without documentation
+3. **Missing timeout documentation**: Individual operation timeouts not mentioned in behavior docs
+4. **Go package name transformation undocumented**: Binary name extraction not explained
+
 ## Improvements
 
 - Consider making search timeout configurable
