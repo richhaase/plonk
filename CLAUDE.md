@@ -27,7 +27,7 @@ Each file has the following sections:
 | config.md | ✅ Completed | 2025-07-28 | Documented show/edit subcommands |
 | status.md | ✅ Completed | 2025-07-28 | Documented resource states and output formats |
 | doctor.md | ✅ Completed | 2025-07-28 | Documented health checks and fix behavior |
-| package_management.md | Not Started | - | |
+| package_management.md | ✅ Completed | 2025-07-28 | Documented four commands with prefix syntax |
 | dotfile_management.md | ✅ Completed | 2025-07-28 | Documented add/rm with filesystem-as-state |
 
 ## Documentation Process
@@ -96,3 +96,8 @@ For each file, we will follow this process:
 - Add command always overwrites (no warnings) - assumes git backup
 - Remove only affects $PLONK_DIR, never touches files in $HOME
 - --force flags are non-functional and should be removed
+- Package management supports 6 managers with prefix syntax (brew:, npm:, etc.)
+- Install gracefully handles already-installed packages (adds to management)
+- Search has 3-second timeout per manager when searching all
+- Info command has 3-tier priority: managed > installed > available
+- Keep documentation concise and behavior-focused (not implementation-focused)
