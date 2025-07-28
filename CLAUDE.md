@@ -38,7 +38,7 @@ Each file has the following sections:
 |----------|--------|--------------|-------|
 | setup.md | ⏳ Pending | - | Need to review code and add implementation section |
 | apply.md | ⏳ Pending | - | Need to review code and add implementation section |
-| config.md | ⏳ Pending | - | Need to review code and add implementation section |
+| config.md | ✅ Completed | 2025-07-28 | Added implementation section, found 3 behavior discrepancies |
 | status.md | ⏳ Pending | - | Need to review code and add implementation section |
 | doctor.md | ⏳ Pending | - | Need to review code and add implementation section |
 | package_management.md | ⏳ Pending | - | Need to review code and add implementation section |
@@ -95,6 +95,14 @@ For each file, we will follow this process:
 - Use ASCII diagrams for complex flows (ask user first)
 - Document discrepancies between documented and actual behavior
 - Note any bugs found during code review but don't fix them
+
+### Implementation Review Learnings
+- **Config Command**: Found 3 discrepancies:
+  1. Edit command validates and shows errors (not silently ignored as documented)
+  2. Edit creates template config file, not actual defaults
+  3. Documentation missing `$VISUAL` environment variable
+- **Pattern**: Use "DISCREPANCY" to clearly mark behavior differences
+- **Structure**: Organize by Command Structure, Key Details, Bugs Identified
 
 ### Other Learnings
 - Pre-commit hooks are active and will auto-fix formatting issues (end-of-file, trailing whitespace)
