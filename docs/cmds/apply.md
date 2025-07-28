@@ -71,6 +71,67 @@ Files matching `ignore_patterns` in configuration are excluded from deployment.
 
 ## Implementation Notes
 
+The apply command orchestrates package installation and dotfile deployment through a layered architecture:
+
+**Command Structure:**
+- Entry point: `internal/commands/apply.go`
+- Orchestration: `internal/orchestrator/orchestrator.go` and `apply.go`
+- Resource management: `internal/resources/packages/` and `internal/resources/dotfiles/`
+
+**Key Implementation Flow:**
+
+1. **Command Processing:**
+   - Parses flags: `--dry-run`, `--backup`, `--packages`, `--dotfiles`
+   - **DISCREPANCY**: `--packages` and `--dotfiles` marked as mutually exclusive, but docs say "redundant"
+   - Creates orchestrator with functional options pattern
+   - Calls orchestrator.Apply() and converts result for output
+
+2. **Orchestration Layer:**
+   - Runs pre-apply hooks if configured
+   - Conditionally applies packages (unless `--dotfiles` only)
+   - Conditionally applies dotfiles (unless `--packages` only)
+   - Runs post-apply hooks if configured
+   - Aggregates results and error handling
+
+3. **Package Apply Flow:**
+   - Uses `packages.Reconcile()` to identify missing packages from lock file
+   - Groups missing packages by manager type
+   - Applies packages through `MultiPackageResource`
+   - **DISCREPANCY**: Updates lock file during apply (docs don't mention this)
+
+4. **Dotfile Apply Flow:**
+   - Uses `manager.GetConfiguredDotfiles()` to scan `$PLONK_DIR`
+   - Creates dotfile resource and sets desired state
+   - Uses `resources.ReconcileResource()` to find missing deployments
+   - Performs file operations (copy with dot-prefix transformation)
+
+**Backup Implementation:**
+- **DISCREPANCY**: `--backup` flag exists and is functional, but docs mark as "under review"
+- Creates backup files before overwriting existing dotfiles
+- Backup naming follows pattern: `{original}.backup.{timestamp}`
+
+**Execution Order:**
+- Pre-apply hooks → Packages → Dotfiles → Post-apply hooks
+- **DISCREPANCY**: Documentation doesn't mention hook execution
+
+**Error Handling:**
+- Partial failure support: continues operation despite individual failures
+- Aggregates errors by type (package vs dotfile)
+- Post-apply hook failures are non-fatal
+- Returns non-zero exit code if any operation failed
+
+**Output Structure:**
+- Complex result types with detailed operation status
+- Table output shows per-item results with status icons
+- Summary section with counts and overall status
+- **DISCREPANCY**: More detailed output than documented
+
+**Bugs Identified:**
+1. Documentation says `--packages` and `--dotfiles` together is "redundant" but code marks them mutually exclusive
+2. Missing documentation of hook execution in apply flow
+3. `--backup` flag is functional but documented as "under review"
+4. Lock file updates during apply not documented
+
 ## Improvements
 
 - Review and properly document the `--backup` flag behavior

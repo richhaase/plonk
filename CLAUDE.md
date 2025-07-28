@@ -37,7 +37,7 @@ Each file has the following sections:
 | Document | Status | Last Updated | Notes |
 |----------|--------|--------------|-------|
 | setup.md | ⏳ Pending | - | Need to review code and add implementation section |
-| apply.md | ⏳ Pending | - | Need to review code and add implementation section |
+| apply.md | ✅ Completed | 2025-07-28 | Added implementation section, found 4 behavior discrepancies |
 | config.md | ✅ Completed | 2025-07-28 | Added implementation section, found 3 behavior discrepancies |
 | status.md | ⏳ Pending | - | Need to review code and add implementation section |
 | doctor.md | ⏳ Pending | - | Need to review code and add implementation section |
@@ -101,8 +101,14 @@ For each file, we will follow this process:
   1. Edit command validates and shows errors (not silently ignored as documented)
   2. Edit creates template config file, not actual defaults
   3. Documentation missing `$VISUAL` environment variable
+- **Apply Command**: Found 4 discrepancies:
+  1. `--packages` and `--dotfiles` are mutually exclusive (not redundant as documented)
+  2. `--backup` flag is functional (not "under review" as documented)
+  3. Hook execution not mentioned in documented flow
+  4. Lock file updates during apply not documented
 - **Pattern**: Use "DISCREPANCY" to clearly mark behavior differences
 - **Structure**: Organize by Command Structure, Key Details, Bugs Identified
+- **Complex Commands**: Apply shows layered architecture with orchestration patterns
 
 ### Other Learnings
 - Pre-commit hooks are active and will auto-fix formatting issues (end-of-file, trailing whitespace)
