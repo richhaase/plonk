@@ -23,7 +23,7 @@ Each file has the following sections:
 | Document | Status | Last Updated | Notes |
 |----------|--------|--------------|-------|
 | setup.md | Not Started | - | |
-| apply.md | Not Started | - | |
+| apply.md | ✅ Completed | 2025-07-28 | Documented reconciliation and resource states |
 | config.md | ✅ Completed | 2025-07-28 | Documented show/edit subcommands |
 | status.md | Not Started | - | |
 | doctor.md | Not Started | - | |
@@ -59,7 +59,7 @@ For each file, we will follow this process:
 - TBD as we document
 
 ### Other Learnings
-- Pre-commit hooks are active and will auto-fix formatting issues (end-of-file)
+- Pre-commit hooks are active and will auto-fix formatting issues (end-of-file, trailing whitespace)
 - Include "Improvements" section in each document for future enhancement ideas
 - Configuration uses zero-config approach with sensible defaults
 - Output formats (table/json/yaml) have different field naming conventions:
@@ -67,3 +67,8 @@ For each file, we will follow this process:
   - YAML uses snake_case
   - Table format is human-readable YAML-like
 - Environment variables: PLONK_DIR controls config location, EDITOR controls edit command
+- Resource states: managed (known + exists), missing (known + doesn't exist), unmanaged (unknown + exists)
+- Apply command executes packages first, then dotfiles
+- Plonk.lock absence is valid (dotfiles-only mode)
+- Dotfile mapping: automatic dot-prefix handling ($PLONK_DIR/vimrc → $HOME/.vimrc)
+- Features marked for review should be noted in documentation (e.g., --backup flag)
