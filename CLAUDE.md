@@ -36,7 +36,7 @@ Each file has the following sections:
 ### Implementation Documentation Phase (In Progress)
 | Document | Status | Last Updated | Notes |
 |----------|--------|--------------|-------|
-| setup.md | ⏳ Pending | - | Need to review code and add implementation section |
+| setup.md | ✅ Completed | 2025-07-28 | Added implementation section, found 5 behavior discrepancies |
 | apply.md | ✅ Completed | 2025-07-28 | Added implementation section, found 4 behavior discrepancies |
 | config.md | ✅ Completed | 2025-07-28 | Added implementation section, found 3 behavior discrepancies |
 | status.md | ⏳ Pending | - | Need to review code and add implementation section |
@@ -106,9 +106,16 @@ For each file, we will follow this process:
   2. `--backup` flag is functional (not "under review" as documented)
   3. Hook execution not mentioned in documented flow
   4. Lock file updates during apply not documented
+- **Setup Command**: Found 5 discrepancies:
+  1. Does NOT delegate to `plonk doctor --fix` (uses custom implementation)
+  2. Apply requires user confirmation (not automatic after clone)
+  3. Checks for specific plonk files (not just "empty directory")
+  4. Supports additional git:// protocol (undocumented)
+  5. Missing PATH configuration guidance in docs
 - **Pattern**: Use "DISCREPANCY" to clearly mark behavior differences
 - **Structure**: Organize by Command Structure, Key Details, Bugs Identified
-- **Complex Commands**: Apply shows layered architecture with orchestration patterns
+- **Complex Commands**: Apply and Setup show layered architecture with orchestration patterns
+- **Modular Design**: Setup shows good separation with dedicated files for git, tools, prompts
 
 ### Other Learnings
 - Pre-commit hooks are active and will auto-fix formatting issues (end-of-file, trailing whitespace)

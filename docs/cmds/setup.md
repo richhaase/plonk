@@ -103,6 +103,82 @@ With `--yes` flag:
 
 ## Implementation Notes
 
+The setup command provides initialization and repository cloning through a modular architecture:
+
+**Command Structure:**
+- Entry point: `internal/commands/setup.go`
+- Core logic: `internal/setup/setup.go`
+- Git operations: `internal/setup/git.go`
+- Tool installation: `internal/setup/tools.go`
+- User prompts: `internal/setup/prompts.go`
+
+**Key Implementation Flow:**
+
+1. **Command Processing:**
+   - Accepts optional git repository argument
+   - `--yes` flag enables non-interactive mode
+   - Routes to `SetupWithoutRepo()` or `SetupWithRepo()` based on arguments
+
+2. **Repository URL Parsing:**
+   - **DISCREPANCY**: Supports additional formats beyond documented ones
+   - Handles: GitHub shorthand, HTTPS URLs, SSH URLs, git:// protocol
+   - Auto-appends `.git` to HTTPS URLs if missing
+   - Uses regex validation for GitHub shorthand format
+
+3. **Directory Management:**
+   - Checks for existing plonk files (plonk.yaml OR plonk.lock)
+   - **DISCREPANCY**: Fails if ANY plonk file exists, not just "not empty"
+   - Uses atomic cleanup on clone failure
+   - Creates directory structure with 0750 permissions
+
+4. **Fresh Setup Flow:**
+   - Creates `$PLONK_DIR` directory
+   - **DISCREPANCY**: Creates actual config file with all defaults (not just "default plonk.yaml")
+   - Generates complete plonk.yaml with expanded defaults
+   - **DISCREPANCY**: Does NOT create plonk.lock during setup (docs are correct)
+   - Runs health checks and tool installation
+
+5. **Clone Repository Flow:**
+   - Validates and parses git URL
+   - Clones directly into `$PLONK_DIR` using git command
+   - Preserves existing plonk.yaml if present
+   - Only creates default config if plonk.yaml missing
+   - **DISCREPANCY**: Prompts user before running apply (not automatic)
+   - Runs orchestrator.Apply() directly (not shell command)
+
+6. **Tool Installation:**
+   - Uses `diagnostics.RunHealthChecks()` for system analysis
+   - **DISCREPANCY**: Does NOT delegate to `plonk doctor --fix` as documented
+   - Implements custom installation logic for each manager:
+     - Homebrew: Uses official installer script
+     - Cargo: Uses rustup installer script
+   - Provides PATH configuration guidance for Apple Silicon and standard installs
+   - Handles network connectivity checks
+
+7. **Interactive Behavior:**
+   - Uses `promptYesNo()` for user confirmations
+   - `--yes` flag bypasses all prompts including apply confirmation
+   - Shows detailed PATH setup instructions when tools install outside PATH
+
+**Configuration File Creation:**
+- **DISCREPANCY**: Creates complete plonk.yaml with all default values expanded
+- Includes detailed comments and structure
+- Uses actual default values from config.GetDefaults()
+- Does NOT create plonk.lock file during setup
+
+**Error Handling:**
+- Git clone failures trigger directory cleanup
+- Network connectivity validation before downloads
+- Detailed error messages with command output
+- Graceful handling of existing installations
+
+**Bugs Identified:**
+1. Documentation says setup delegates to `plonk doctor --fix` but actually uses custom implementation
+2. Documentation says apply runs automatically after clone, but actually prompts user first
+3. Documentation says "empty directory required" but code checks for specific plonk files
+4. Missing documentation of git:// protocol support
+5. Documentation doesn't mention PATH configuration guidance provided
+
 ## Improvements
 
 - Add flags to skip specific package managers during setup (e.g., `--no-cargo`, `--no-npm`)
