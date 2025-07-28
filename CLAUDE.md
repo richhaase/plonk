@@ -39,7 +39,7 @@ Each file has the following sections:
 | setup.md | ✅ Completed | 2025-07-28 | Added implementation section, found 5 behavior discrepancies |
 | apply.md | ✅ Completed | 2025-07-28 | Added implementation section, found 4 behavior discrepancies |
 | config.md | ✅ Completed | 2025-07-28 | Added implementation section, found 3 behavior discrepancies |
-| status.md | ⏳ Pending | - | Need to review code and add implementation section |
+| status.md | ✅ Completed | 2025-07-28 | Added implementation section, found 3 behavior discrepancies |
 | doctor.md | ✅ Completed | 2025-07-28 | Added implementation section, found 5 behavior discrepancies |
 | package_management.md | ⏳ Pending | - | Need to review code and add implementation section |
 | dotfile_management.md | ⏳ Pending | - | Need to review code and add implementation section |
@@ -118,6 +118,10 @@ For each file, we will follow this process:
   3. Package Manager Functionality identical to Availability (not differentiated)
   4. Uses emoji icons not color coding as documented
   5. Missing 30-second timeout in documentation
+- **Status Command**: Found 3 discrepancies:
+  1. JSON/YAML output ignores `--unmanaged` flag (always shows managed items)
+  2. Flag combination behavior differs (`--packages --dotfiles` not redundant)
+  3. Summary hidden completely for --unmanaged instead of showing untracked counts
 - **Pattern**: Use "DISCREPANCY" to clearly mark behavior differences
 - **Structure**: Organize by Command Structure, Key Details, Bugs Identified
 - **Complex Commands**: Apply and Setup show layered architecture with orchestration patterns

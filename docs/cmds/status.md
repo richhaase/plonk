@@ -91,6 +91,83 @@ With `--unmanaged`, shows untracked counts in structured output.
 
 ## Implementation Notes
 
+The status command provides comprehensive resource state management through a unified reconciliation system:
+
+**Command Structure:**
+- Entry point: `internal/commands/status.go`
+- Orchestration layer: `internal/orchestrator/orchestrator.go`
+- Domain reconciliation: `internal/resources/dotfiles/reconcile.go`, `internal/resources/packages/reconcile.go`
+- Core reconciliation engine: `internal/resources/reconcile.go`
+
+**Key Implementation Flow:**
+
+1. **Command Processing:**
+   - Parses filter flags (`--packages`, `--dotfiles`, `--unmanaged`)
+   - **DISCREPANCY**: Flag combination behavior differs from documentation
+   - Implementation: If neither `--packages` nor `--dotfiles` is set, both are enabled
+   - Documentation suggests `--packages --dotfiles` is redundant, but implementation treats this as explicit selection
+   - Loads configuration gracefully (continues even if config is invalid)
+
+2. **State Reconciliation:**
+   - Calls `orchestrator.ReconcileAll()` with 30-second implicit timeout via context
+   - Reconciles all domains (packages and dotfiles) in parallel
+   - Uses unified reconciliation engine with three states:
+     - `StateManaged`: Resource in config AND present in environment
+     - `StateMissing`: Resource in config BUT not present in environment
+     - `StateUntracked`: Resource present in environment BUT not in config
+
+3. **Domain-Specific Reconciliation:**
+   - **Packages**: Uses composite keys (`manager:name`) from plonk.lock file
+   - **Dotfiles**: Uses filesystem-as-state from $PLONK_DIR contents
+   - Each domain handles its own discovery and state comparison
+   - Metadata merging preserves actual resource details
+
+4. **Output Formatting:**
+   - Table format shows hierarchical sections (PACKAGES, DOTFILES)
+   - **DISCREPANCY**: JSON/YAML output ignores `--unmanaged` flag
+   - Implementation: StructuredData() method doesn't filter based on ShowUnmanaged flag
+   - Documentation correctly identifies this as a bug
+   - Structured output includes summary counts and managed items only
+
+5. **Table Display Logic:**
+   - Groups packages by manager for organized display
+   - Shows different column layouts for managed vs unmanaged dotfiles
+   - **DISCREPANCY**: Summary calculation behavior
+   - Implementation: Summary is skipped entirely when `--unmanaged` is used
+   - Documentation suggests untracked counts are shown in structured output
+
+6. **Configuration and File Status:**
+   - Checks existence and validity of `plonk.yaml` and `plonk.lock`
+   - Gracefully handles missing or invalid configuration files
+   - Missing plonk.lock is treated as valid (dotfiles-only mode)
+
+7. **Filter Processing:**
+   - `--packages`: Shows only package-related results
+   - `--dotfiles`: Shows only dotfile-related results
+   - `--unmanaged`: Shows only untracked items (changes table format)
+   - Multiple filters can be combined (e.g., `--packages --unmanaged`)
+
+**Architecture Patterns:**
+- Uses functional options pattern for orchestrator configuration
+- Implements unified resource interface across domains
+- Employs state-based reconciliation with explicit item categorization
+- Graceful degradation when components are missing or invalid
+
+**Error Conditions:**
+- Continues operation even with invalid configuration
+- Missing lock file treated as informational, not error
+- Reconciliation errors are propagated but don't prevent partial results
+
+**Integration Points:**
+- Shares reconciliation engine with apply command
+- Uses same configuration loading as other commands
+- Output formatting consistent with other commands
+
+**Bugs Identified:**
+1. **JSON/YAML --unmanaged flag bug**: `StructuredData()` method ignores `ShowUnmanaged` flag, always returns managed items only
+2. **Flag combination documentation mismatch**: `--packages --dotfiles` behavior differs from documented "redundancy"
+3. **Summary display inconsistency**: Summary is completely hidden for --unmanaged rather than showing untracked counts
+
 ## Improvements
 
 - Sort items alphabetically instead of by package manager
