@@ -25,7 +25,7 @@ Each file has the following sections:
 | setup.md | ✅ Completed | 2025-07-28 | Documented dual modes and doctor integration |
 | apply.md | ✅ Completed | 2025-07-28 | Documented reconciliation and resource states |
 | config.md | ✅ Completed | 2025-07-28 | Documented show/edit subcommands |
-| status.md | Not Started | - | |
+| status.md | ✅ Completed | 2025-07-28 | Documented resource states and output formats |
 | doctor.md | ✅ Completed | 2025-07-28 | Documented health checks and fix behavior |
 | package_management.md | Not Started | - | |
 | dotfile_management.md | Not Started | - | |
@@ -84,3 +84,9 @@ For each file, we will follow this process:
 - PATH configuration issues are informational only (not auto-fixable)
 - Package manager "availability" and "functionality" checks are currently redundant
 - Doctor output formats preserve different structures (table is hierarchical, json/yaml are flat arrays)
+- Status command is NOT the default (plain `plonk` shows help)
+- Status has alias `st` for convenience
+- Status shows different columns for unmanaged dotfiles (simplified view)
+- Current bug: --unmanaged flag doesn't affect JSON/YAML output
+- Status uses "domain" terminology in structured output (dotfile/package)
+- Always shows summary counts regardless of filters
