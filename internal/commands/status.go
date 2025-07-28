@@ -267,10 +267,32 @@ func (s StatusOutput) TableOutput() string {
 				// For unmanaged, use single column showing just the path
 				dotBuilder.SetHeaders("UNMANAGED DOTFILES")
 
+				// Load config to check expand directories
+				cfg := config.LoadWithDefaults(s.ConfigDir)
+
 				// Show untracked dotfiles
 				for _, item := range dotfileResult.Untracked {
 					// Show the dotfile path with ~ notation
 					path := "~/" + item.Name
+
+					// Add trailing slash for unexpanded directories
+					if itemPath, ok := item.Metadata["path"].(string); ok {
+						if info, err := os.Stat(itemPath); err == nil && info.IsDir() {
+							// Check if this directory is in ExpandDirectories
+							isExpanded := false
+							for _, expandDir := range cfg.ExpandDirectories {
+								if item.Name == expandDir {
+									isExpanded = true
+									break
+								}
+							}
+							// Add trailing slash if not expanded
+							if !isExpanded {
+								path += "/"
+							}
+						}
+					}
+
 					dotBuilder.AddRow(path)
 				}
 			} else {
@@ -303,24 +325,20 @@ func (s StatusOutput) TableOutput() string {
 		}
 	}
 
-	// Add summary
-	summary := s.StateSummary
-	output.WriteString("Summary: ")
-	if s.ShowUnmanaged {
-		output.WriteString(fmt.Sprintf("%d unmanaged", summary.TotalUntracked))
-	} else {
+	// Add summary (skip for unmanaged to avoid misleading counts)
+	if !s.ShowUnmanaged {
+		summary := s.StateSummary
+		output.WriteString("Summary: ")
 		output.WriteString(fmt.Sprintf("%d managed", summary.TotalManaged))
 		if summary.TotalMissing > 0 {
 			output.WriteString(fmt.Sprintf(", %d missing", summary.TotalMissing))
 		}
-	}
-	output.WriteString("\n")
+		output.WriteString("\n")
 
-	// Add action hint
-	if s.ShowUnmanaged && summary.TotalUntracked > 0 {
-		output.WriteString("\n💡 Run 'plonk install <package>' to manage these items\n")
-	} else if summary.TotalMissing > 0 {
-		output.WriteString("\n💡 Run 'plonk apply' to install missing items\n")
+		// Add action hint
+		if summary.TotalMissing > 0 {
+			output.WriteString("\n💡 Run 'plonk apply' to install missing items\n")
+		}
 	}
 
 	return output.String()
