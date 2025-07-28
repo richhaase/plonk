@@ -14,12 +14,13 @@ Created documentation structure in `/docs/cmds/` with 7 files:
 Each file has the following sections:
 1. **Title** (completed)
 2. **One-line summary** (completed)
-3. **Description** (empty - optional expansion of summary)
-4. **Behavior** (empty - main content explaining expected behavior)
-5. **Implementation Notes** (empty - high-level implementation details)
+3. **Description** (completed)
+4. **Behavior** (completed)
+5. **Implementation Notes** (in progress - adding implementation details)
 
 ## Progress Tracking
 
+### Behavior Documentation Phase (Completed)
 | Document | Status | Last Updated | Notes |
 |----------|--------|--------------|-------|
 | setup.md | ✅ Completed | 2025-07-28 | Documented dual modes and doctor integration |
@@ -29,23 +30,49 @@ Each file has the following sections:
 | doctor.md | ✅ Completed | 2025-07-28 | Documented health checks and fix behavior |
 | package_management.md | ✅ Completed | 2025-07-28 | Documented four commands with prefix syntax |
 | dotfile_management.md | ✅ Completed | 2025-07-28 | Documented add/rm with filesystem-as-state |
-| architecture.md | 🚧 In Progress | 2025-07-28 | Documenting project architecture and design principles |
-| why-plonk.md | 🚧 In Progress | 2025-07-28 | Explaining project motivation and unique value proposition |
+| architecture.md | ✅ Completed | 2025-07-28 | Documented project architecture and design principles |
+| why-plonk.md | ✅ Completed | 2025-07-28 | Explained project motivation and unique value proposition |
+
+### Implementation Documentation Phase (In Progress)
+| Document | Status | Last Updated | Notes |
+|----------|--------|--------------|-------|
+| setup.md | ⏳ Pending | - | Need to review code and add implementation section |
+| apply.md | ⏳ Pending | - | Need to review code and add implementation section |
+| config.md | ⏳ Pending | - | Need to review code and add implementation section |
+| status.md | ⏳ Pending | - | Need to review code and add implementation section |
+| doctor.md | ⏳ Pending | - | Need to review code and add implementation section |
+| package_management.md | ⏳ Pending | - | Need to review code and add implementation section |
+| dotfile_management.md | ⏳ Pending | - | Need to review code and add implementation section |
 
 ## Documentation Process
 
-For each file, we will follow this process:
-
+### Phase 1: Behavior Documentation (Completed)
+For each file, we followed this process:
 1. **Review Progress**: Present user with documents needing updates and ask which to work on next
 2. **User Interview**: Ask user to describe how the command should behave
 3. **Clarification**: Ask clarifying questions to fully understand the behavior
 4. **Write Content**: Complete the Description and Behavior sections (skip Implementation Notes)
 5. **Refinement**: Work with user to improve the document
 6. **Commit Document**: When complete, commit the documented file
-7. **Update CLAUDE.md**:
-   - Update progress tracking status
-   - Document any learnings (style preferences, component references, etc.)
+7. **Update CLAUDE.md**: Update progress tracking status and document learnings
 8. **Commit CLAUDE.md**: Save progress and learnings
+9. **Repeat**: Continue with next document
+
+### Phase 2: Implementation Documentation (Current)
+For each file, we will follow this process:
+1. **Select Document**: Choose which command documentation to work on
+2. **Code Review**: Perform complete review of existing implementation code
+3. **Behavior Comparison**: Compare documented behavior vs actual code behavior
+   - Document any discrepancies as bugs to fix
+   - Note any undocumented features or behaviors
+4. **Generate Implementation Section**: Create brief, complete implementation notes
+   - Focus on high-level architecture and flow
+   - Avoid code examples unless absolutely necessary
+   - Use ASCII diagrams for complex flows (ask when in doubt)
+5. **Review & Approval**: Present implementation section for user approval
+6. **Write to Document**: Add approved implementation section
+7. **Update CLAUDE.md**: Document learnings and implementation patterns
+8. **Commit**: Save the updated document
 9. **Repeat**: Continue with next document
 
 ## Documentation Guidelines and Learnings
@@ -60,6 +87,14 @@ For each file, we will follow this process:
 ### Known Component References
 - `plonk doctor --fix` - Used by setup for health checks and package manager installation
 - `plonk apply` - Automatically run by setup after cloning repository
+
+### Implementation Documentation Guidelines
+- Keep implementation notes brief and architecture-focused
+- Avoid code examples unless absolutely necessary for clarity
+- Focus on high-level flow and component interactions
+- Use ASCII diagrams for complex flows (ask user first)
+- Document discrepancies between documented and actual behavior
+- Note any bugs found during code review but don't fix them
 
 ### Other Learnings
 - Pre-commit hooks are active and will auto-fix formatting issues (end-of-file, trailing whitespace)
