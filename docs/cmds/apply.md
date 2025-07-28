@@ -34,53 +34,19 @@ Note: Using `--packages` and `--dotfiles` together is redundant and equivalent t
 
 ### Execution Flow
 
-```
-1. Read plonk.lock (if exists) → determine packages to install
-2. Read $PLONK_DIR contents → determine dotfiles to deploy
-3. If --packages or no flags:
-   - Query package managers for installed packages
-   - Install missing packages via appropriate managers
-4. If --dotfiles or no flags:
-   - Check existing dotfiles in $HOME
-   - Deploy missing/changed dotfiles from $PLONK_DIR
-5. Report results
-```
+1. Read plonk.lock (if exists) to determine packages to install
+2. Read $PLONK_DIR contents to determine dotfiles to deploy
+3. Apply packages first (if --packages or no flags)
+4. Apply dotfiles second (if --dotfiles or no flags)
+5. Report results with summary counts
 
 ### Dry Run Behavior
 
-With `--dry-run`, apply shows what would be changed without making modifications:
+With `--dry-run`, apply shows what would be changed without making modifications. Output includes a summary of packages and dotfiles that would be affected.
 
-```
-Plonk Apply (Dry Run)
-=====================
+### Output
 
-Dotfiles:
-  → .config/nvim/lua/plugins/disabled.lua (would deploy)
-
-Summary:
---------
-📦 Packages: 0 would be installed
-📄 Dotfiles: 1 would be deployed
-```
-
-### Success Output
-
-A successful apply operation reports results for both packages and dotfiles:
-
-```
-Plonk Apply
-===========
-
-Dotfiles:
-  ✓ .config/nvim/lua/plugins/disabled.lua
-
-Summary:
---------
-📦 Packages: All up to date
-📄 Dotfiles: 1 deployed, 0 failed
-
-Total: 1 succeeded, 0 failed
-```
+Apply reports results for both packages and dotfiles, showing successful operations and any failures. Always displays summary counts at the end.
 
 ### Error Handling
 

@@ -24,14 +24,7 @@ The leading dot is removed when storing in `$PLONK_DIR` and re-added when deploy
 
 ### Add Command
 
-Copies dotfiles from their current location to `$PLONK_DIR` for management.
-
-**Basic Operation**:
-```bash
-plonk add ~/.zshrc                    # Add single file
-plonk add ~/.zshrc ~/.vimrc           # Add multiple files
-plonk add ~/.config/nvim/             # Add entire directory
-```
+Copies dotfiles from their current location to `$PLONK_DIR` for management. Accepts single files, multiple files, or entire directories.
 
 **Command Options**:
 - `--dry-run, -n` - Preview what would be added without making changes
@@ -54,37 +47,9 @@ plonk add ~/.config/nvim/             # Add entire directory
 - Original file in `$HOME` remains unchanged
 - No symlinks are created or used
 
-**Success Output** (table format):
-```
-Dotfile Add
-===========
-
-✅ Added dotfile to plonk configuration
-   Source: foo.txt
-   Destination: ~/.foo.txt
-   Original: /Users/rdh/.foo.txt
-
-The dotfile has been copied to your plonk config directory
-```
-
-**Structured Output** (yaml):
-```yaml
-source: foo.txt
-destination: ~/.foo.txt
-action: added
-path: /Users/rdh/.foo.txt
-```
-
 ### Remove Command
 
-Removes dotfiles from plonk management by deleting them from `$PLONK_DIR`.
-
-**Basic Operation**:
-```bash
-plonk rm ~/.zshrc                    # Remove single file
-plonk rm ~/.zshrc ~/.vimrc           # Remove multiple files
-plonk rm ~/.config/nvim/init.lua     # Remove specific file
-```
+Removes dotfiles from plonk management by deleting them from `$PLONK_DIR`. Accepts single or multiple file paths.
 
 **Command Options**:
 - `--dry-run, -n` - Preview what would be removed without making changes
@@ -95,29 +60,6 @@ plonk rm ~/.config/nvim/init.lua     # Remove specific file
 - Original file in `$HOME` is never touched
 - File is no longer managed by plonk after removal
 - No backups are created (relies on user's git repo)
-
-**Success Output** (json):
-```json
-{
-  "total_files": 1,
-  "results": [
-    {
-      "name": "/Users/rdh/.foo.txt",
-      "status": "removed",
-      "metadata": {
-        "destination": "~/.foo.txt",
-        "path": "/Users/rdh/.foo.txt",
-        "source": "foo.txt"
-      }
-    }
-  ],
-  "summary": {
-    "removed": 1,
-    "skipped": 0,
-    "failed": 0
-  }
-}
-```
 
 ### Special Behaviors
 

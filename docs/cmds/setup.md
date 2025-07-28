@@ -51,22 +51,16 @@ Setup delegates health checking and package manager installation to `plonk docto
 ### Execution Flow
 
 **Fresh Setup:**
-```
 1. Create $PLONK_DIR if not exists
 2. Generate plonk.yaml with defaults
 3. Run doctor --fix to check/install package managers
-   - Prompt for each missing manager (unless --yes)
 4. Complete setup (no apply needed)
-```
 
 **Clone Repository:**
-```
 1. Verify $PLONK_DIR doesn't exist or is empty
 2. Clone repository to $PLONK_DIR
 3. Run doctor --fix to check/install package managers
-   - Prompt for each missing manager (unless --yes)
 4. Run plonk apply to sync system state
-```
 
 ### Interactive Behavior
 

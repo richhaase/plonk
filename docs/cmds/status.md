@@ -17,28 +17,11 @@ Status displays resources in three possible states:
 
 ### Default Display
 
-Without flags, status shows all managed and missing resources:
+Without flags, status shows all managed and missing resources in two sections:
+- **PACKAGES**: Shows name, manager, and status
+- **DOTFILES**: Shows source (in $PLONK_DIR), target (in $HOME), and status
 
-```
-Plonk Status
-============
-
-PACKAGES
---------
-NAME          MANAGER  STATUS
-aichat        brew     ✅ managed
-bat           brew     ✅ managed
-...
-
-DOTFILES
---------
-SOURCE                                 TARGET                                   STATUS
-.config/nvim/init.lua                  ~/.config/nvim/init.lua                  ✅ deployed
-.config/nvim/lua/plugins/disabled.lua  ~/.config/nvim/lua/plugins/disabled.lua  ❌ missing
-...
-
-Summary: 55 managed, 1 missing
-```
+Always displays summary counts at the end.
 
 ### Command Options
 
@@ -74,54 +57,13 @@ Note: Using `--packages --dotfiles` together is redundant (shows both, same as n
 
 ### JSON/YAML Output Structure
 
-Structured output includes additional metadata:
-
-```json
-{
-  "config_path": "/path/to/plonk.yaml",
-  "lock_path": "/path/to/plonk.lock",
-  "config_exists": true,
-  "config_valid": true,
-  "lock_exists": true,
-  "summary": {
-    "total_managed": 55,
-    "total_missing": 1,
-    "total_untracked": 296,
-    "domains": [
-      {
-        "domain": "dotfile",
-        "managed_count": 20,
-        "missing_count": 1,
-        "untracked_count": 41
-      },
-      {
-        "domain": "package",
-        "managed_count": 35,
-        "missing_count": 0,
-        "untracked_count": 255
-      }
-    ]
-  },
-  "managed_items": [
-    {
-      "name": ".config/nvim/init.lua",
-      "domain": "dotfile"
-    },
-    {
-      "name": "ripgrep",
-      "domain": "package",
-      "manager": "brew"
-    }
-  ]
-}
-```
-
-Key differences from table format:
-- Includes configuration file paths and validity
-- Provides detailed summary with counts by domain
-- Uses "domain" terminology (dotfile/package) instead of separate sections
+Structured output includes:
+- Configuration file paths and validity
+- Detailed summary with counts by domain (dotfile/package)
 - Managed items in flat array with domain field
-- Unmanaged items not included (even with --unmanaged flag)
+- Uses "domain" terminology instead of separate sections
+
+Key difference: Unmanaged items not included even with --unmanaged flag.
 
 **Bug**: Currently `plonk status --unmanaged -o json|yaml` outputs the same information as without the --unmanaged flag, showing only managed items instead of unmanaged ones.
 
