@@ -334,11 +334,6 @@ func (s StatusOutput) TableOutput() string {
 			output.WriteString(fmt.Sprintf(", %d missing", summary.TotalMissing))
 		}
 		output.WriteString("\n")
-
-		// Add action hint
-		if summary.TotalMissing > 0 {
-			output.WriteString("\n💡 Run 'plonk apply' to install missing items\n")
-		}
 	}
 
 	return output.String()

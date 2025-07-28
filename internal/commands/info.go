@@ -297,8 +297,6 @@ func (i InfoOutput) TableOutput() string {
 			if i.PackageInfo.Description != "" {
 				builder.AddRow("Description:", i.PackageInfo.Description)
 			}
-			builder.AddRow("", "")
-			builder.AddRow("Note:", fmt.Sprintf("Run 'plonk install %s:%s' to manage this package", i.PackageInfo.Manager, i.Package))
 		}
 
 	case "available":
@@ -317,8 +315,6 @@ func (i InfoOutput) TableOutput() string {
 
 	case "no-managers":
 		builder.AddRow("Status:", "⚠️ No package managers available")
-		builder.AddRow("", "")
-		builder.AddRow("Note:", "Please install a package manager (Homebrew or NPM)")
 
 	case "manager-unavailable":
 		builder.AddRow("Status:", "⚠️ Manager unavailable")

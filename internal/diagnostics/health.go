@@ -204,7 +204,6 @@ func checkConfigurationFile() HealthCheck {
 		check.Status = "info"
 		check.Message = "Configuration file does not exist (using defaults)"
 		check.Details = append(check.Details, "Will use default configuration")
-		check.Details = append(check.Details, "Run 'plonk init' to create a configuration file")
 		return check
 	}
 
