@@ -33,7 +33,7 @@ Each file has the following sections:
 | architecture.md | ✅ Completed | 2025-07-28 | Documented project architecture and design principles |
 | why-plonk.md | ✅ Completed | 2025-07-28 | Explained project motivation and unique value proposition |
 
-### Implementation Documentation Phase (In Progress)
+### Implementation Documentation Phase (Completed)
 | Document | Status | Last Updated | Notes |
 |----------|--------|--------------|-------|
 | setup.md | ✅ Completed | 2025-07-28 | Added implementation section, found 5 behavior discrepancies |
@@ -43,6 +43,19 @@ Each file has the following sections:
 | doctor.md | ✅ Completed | 2025-07-28 | Added implementation section, found 5 behavior discrepancies |
 | package_management.md | ✅ Completed | 2025-07-28 | Added implementation section, found 4 behavior discrepancies |
 | dotfile_management.md | ✅ Completed | 2025-07-28 | Added implementation section, found 3 behavior discrepancies |
+
+**Total**: 27 behavior discrepancies identified across all commands
+
+### Discrepancy Resolution Phase (Current)
+| Document | Total Discrepancies | Resolved | Remaining | Status |
+|----------|-------------------|----------|-----------|--------|
+| setup.md | 5 | 0 | 5 | ⏳ Pending |
+| apply.md | 4 | 0 | 4 | ⏳ Pending |
+| config.md | 3 | 0 | 3 | ⏳ Pending |
+| status.md | 3 | 0 | 3 | ⏳ Pending |
+| doctor.md | 5 | 0 | 5 | ⏳ Pending |
+| package_management.md | 4 | 0 | 4 | ⏳ Pending |
+| dotfile_management.md | 3 | 0 | 3 | ⏳ Pending |
 
 ## Documentation Process
 
@@ -58,8 +71,8 @@ For each file, we followed this process:
 8. **Commit CLAUDE.md**: Save progress and learnings
 9. **Repeat**: Continue with next document
 
-### Phase 2: Implementation Documentation (Current)
-For each file, we will follow this process:
+### Phase 2: Implementation Documentation (Completed)
+For each file, we followed this process:
 1. **Select Document**: Choose which command documentation to work on
 2. **Code Review**: Perform complete review of existing implementation code
 3. **Behavior Comparison**: Compare documented behavior vs actual code behavior
@@ -74,6 +87,21 @@ For each file, we will follow this process:
 7. **Update CLAUDE.md**: Document learnings and implementation patterns
 8. **Commit**: Save the updated document
 9. **Repeat**: Continue with next document
+
+### Phase 3: Discrepancy Resolution (Current)
+For each file, we will follow this process:
+1. **Pick File**: Choose which command documentation to address
+2. **Review Discrepancies**: Examine all documented discrepancies for the file
+3. **For Each Discrepancy**:
+   a. **Determine Resolution**: Decide whether to adjust code, documentation, or other solution
+   b. **Plan Resolution**: Create specific plan for implementing the fix
+   c. **Execute Resolution**: Implement the planned changes
+   d. **Update Documentation**: Reflect changes in documentation as needed
+   e. **Commit Fix**: Commit changes to docs, code, or both
+   f. **Update Progress**: Mark discrepancy as resolved in tracking
+4. **Repeat**: Continue until all discrepancies addressed for the file
+5. **Next File**: Move to next file with discrepancies
+6. **Complete**: All 27 discrepancies across 7 files resolved
 
 ## Documentation Guidelines and Learnings
 
