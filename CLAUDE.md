@@ -42,7 +42,7 @@ Each file has the following sections:
 | status.md | ✅ Completed | 2025-07-28 | Added implementation section, found 3 behavior discrepancies |
 | doctor.md | ✅ Completed | 2025-07-28 | Added implementation section, found 5 behavior discrepancies |
 | package_management.md | ⏳ Pending | - | Need to review code and add implementation section |
-| dotfile_management.md | ⏳ Pending | - | Need to review code and add implementation section |
+| dotfile_management.md | ✅ Completed | 2025-07-28 | Added implementation section, found 3 behavior discrepancies |
 
 ## Documentation Process
 
@@ -122,6 +122,10 @@ For each file, we will follow this process:
   1. JSON/YAML output ignores `--unmanaged` flag (always shows managed items)
   2. Flag combination behavior differs (`--packages --dotfiles` not redundant)
   3. Summary hidden completely for --unmanaged instead of showing untracked counts
+- **Dotfile Management Commands**: Found 3 discrepancies:
+  1. Non-functional `--force` flags defined but never used in implementation
+  2. Help text mentions "preserve original files" but implementation always copies
+  3. Inconsistent config loading between add (can fail) and remove (never fails)
 - **Pattern**: Use "DISCREPANCY" to clearly mark behavior differences
 - **Structure**: Organize by Command Structure, Key Details, Bugs Identified
 - **Complex Commands**: Apply and Setup show layered architecture with orchestration patterns

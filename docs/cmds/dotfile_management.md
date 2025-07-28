@@ -115,6 +115,91 @@ Both commands directly modify the filesystem which IS the state tracking mechani
 
 ## Implementation Notes
 
+The dotfile management commands provide filesystem-based state management through a comprehensive file operations system:
+
+**Command Structure:**
+- Entry points: `internal/commands/add.go`, `internal/commands/rm.go`
+- Core logic: `internal/resources/dotfiles/manager.go`
+- File operations: `internal/resources/dotfiles/fileops.go`
+- Path utilities: `internal/resources/dotfiles/scanner.go`, `internal/resources/dotfiles/filter.go`
+
+**Key Implementation Flow:**
+
+1. **Add Command Processing:**
+   - Entry point parses flags and validates arguments
+   - **DISCREPANCY**: Help text mentions "preserve original files" but implementation always copies (never moves)
+   - Uses `dotfiles.Manager.AddFiles()` for batch processing
+   - Each path resolved through `ResolveDotfilePath()` with fallback logic
+   - Supports both single files and recursive directory processing
+
+2. **Path Resolution Logic:**
+   - Tilde paths (`~/file`) → `$HOME/file`
+   - Absolute paths used as-is
+   - Relative paths: tries current directory first, then `$HOME`
+   - All paths validated to be within `$HOME` boundary
+   - **DISCREPANCY**: Documentation doesn't mention current directory fallback
+
+3. **File Mapping System:**
+   - Uses `TargetToSource()` and `SourceToTarget()` functions
+   - Target `~/.zshrc` → Source `zshrc` (removes `~/.` prefix)
+   - Source `config/nvim/init.lua` → Target `~/.config/nvim/init.lua` (adds `~/.` prefix)
+   - Maintains directory structure in both directions
+
+4. **Add Operation Flow:**
+   - Single files: Direct processing via `AddSingleFile()`
+   - Directories: Recursive walk via `AddDirectoryFiles()` with ignore pattern filtering
+   - Always copies to `$PLONK_DIR` (never moves original)
+   - Creates parent directories as needed with 0750 permissions
+   - Uses `CopyFileWithAttributes()` for attribute preservation
+
+5. **Remove Command Processing:**
+   - Entry point uses `ParseSimpleFlags()` for flag parsing
+   - **DISCREPANCY**: `--force` flag is defined but completely non-functional
+   - Implementation: `opts.Force` is never set from command flags
+   - Uses `dotfiles.Manager.RemoveFiles()` for batch processing
+   - Only removes files from `$PLONK_DIR`, never touches `$HOME`
+
+6. **State Management:**
+   - No lock file involvement - filesystem IS the state
+   - `GetConfiguredDotfiles()` scans `$PLONK_DIR` to determine managed files
+   - Excludes `plonk.yaml` and `plonk.lock` from being treated as dotfiles
+   - Uses `ExpandConfigDirectory()` to walk and categorize files
+
+7. **Error Handling:**
+   - Individual file failures don't stop batch operations
+   - Returns `resources.OperationResult` arrays for detailed per-file status
+   - `ValidateOperationResults()` determines overall command exit status
+   - File not found, permission errors, and ignore pattern skips are differentiated
+
+8. **Directory Processing:**
+   - Add: Uses `ExpandDirectoryPaths()` to find all files recursively
+   - Respects `ignore_patterns` from configuration during directory walks
+   - Remove: Not supported for directories (only individual file paths)
+   - Skips directories themselves, only processes leaf files
+
+**Architecture Patterns:**
+- Manager pattern centralizes path resolution and validation
+- Atomic file operations for reliable copying
+- Comprehensive path validation with security checks
+- Graceful error handling with detailed result tracking
+
+**Error Conditions:**
+- Path resolution failures result in operation failure
+- Permission denied errors are captured per-file
+- Files outside `$HOME` boundary are rejected
+- Ignore pattern matches are silently skipped (not errors)
+
+**Integration Points:**
+- Uses `config.Load()` for ignore patterns in add operations
+- Uses `config.LoadWithDefaults()` for remove operations (more permissive)
+- Results compatible with generic `resources.OperationResult` system
+- File operations support backup creation for apply command
+
+**Bugs Identified:**
+1. **Non-functional --force flags**: Both add and rm define `--force` flags that are never used in implementation
+2. **Documentation mismatch**: Help text mentions "preserve original files" but implementation always copies
+3. **Inconsistent config loading**: Add uses `config.Load()` (can fail), remove uses `config.LoadWithDefaults()` (never fails)
+
 ## Improvements
 
 - Remove non-functional --force flag from both commands
