@@ -262,27 +262,21 @@ func (s StatusOutput) TableOutput() string {
 
 			// Create a table for dotfiles
 			dotBuilder := NewStandardTableBuilder("")
-			dotBuilder.SetHeaders("SOURCE", "TARGET", "STATUS")
 
 			if s.ShowUnmanaged {
+				// For unmanaged, use single column showing just the path
+				dotBuilder.SetHeaders("UNMANAGED DOTFILES")
+
 				// Show untracked dotfiles
 				for _, item := range dotfileResult.Untracked {
-					// For unmanaged items, show where they would be stored in plonk
-					// Remove leading dot from name for source path
-					sourceName := item.Name
-					if len(sourceName) > 0 && sourceName[0] == '.' {
-						sourceName = sourceName[1:]
-					}
-					// Convert to relative path with ~
-					homeDir := config.GetHomeDir()
-					source := filepath.Join(s.ConfigDir, sourceName)
-					if strings.HasPrefix(source, homeDir) {
-						source = "~" + strings.TrimPrefix(source, homeDir)
-					}
-					target := "~/" + item.Name
-					dotBuilder.AddRow(source, target, "⚠️  unmanaged")
+					// Show the dotfile path with ~ notation
+					path := "~/" + item.Name
+					dotBuilder.AddRow(path)
 				}
 			} else {
+				// For managed/missing, use the three-column format
+				dotBuilder.SetHeaders("SOURCE", "TARGET", "STATUS")
+
 				// Show managed dotfiles
 				for _, item := range dotfileResult.Managed {
 					source := item.Name
