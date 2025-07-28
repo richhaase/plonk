@@ -74,7 +74,7 @@ Supported package managers:
 
 #### Dotfiles (`internal/resources/dotfiles/`)
 - Dotfile scanning and discovery
-- Symlink management
+- File copying and deployment
 - Atomic file operations
 - Backup and restore functionality
 

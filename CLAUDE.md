@@ -29,6 +29,8 @@ Each file has the following sections:
 | doctor.md | ✅ Completed | 2025-07-28 | Documented health checks and fix behavior |
 | package_management.md | ✅ Completed | 2025-07-28 | Documented four commands with prefix syntax |
 | dotfile_management.md | ✅ Completed | 2025-07-28 | Documented add/rm with filesystem-as-state |
+| architecture.md | 🚧 In Progress | 2025-07-28 | Documenting project architecture and design principles |
+| why-plonk.md | 🚧 In Progress | 2025-07-28 | Explaining project motivation and unique value proposition |
 
 ## Documentation Process
 

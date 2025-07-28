@@ -6,25 +6,45 @@
 [![Security](https://github.com/richhaase/plonk/workflows/Security%20Check/badge.svg)](https://github.com/richhaase/plonk/actions)
 [![codecov](https://codecov.io/gh/richhaase/plonk/branch/main/graph/badge.svg)](https://codecov.io/gh/richhaase/plonk)
 
-A unified package and dotfile manager that simplifies developer environment setup and maintenance across multiple machines.
+**The unified package and dotfile manager for developers who tinker.** One command to set up your entire development environment.
+
+```bash
+# Clone your dotfiles and set up everything
+plonk setup github-user/dotfiles
+# Done. Seriously.
+```
 
 ## What is Plonk?
 
-Plonk is a development environment manager that unifies package installation and dotfile management. It enables one-command setup of new development machines by tracking your packages and configuration files in a simple YAML format.
+Plonk is the missing link between dotfile managers and package managers. Born from the frustration of maintaining separate tools for configuration files and installed packages, plonk unifies both in a single, simple tool.
 
-**Why Plonk?**
-- **One tool, everything managed**: No more separate dotfile managers and package lists
-- **True zero-config**: Works immediately without any setup files
-- **Smart state reconciliation**: Knows what's missing and only installs what's needed
-- **Cross-machine consistency**: Keep multiple development environments in sync
-- **AI-friendly operations**: Structured outputs and predictable command patterns
+**Why another dotfile manager?** [→ Read the full story](docs/why-plonk.md)
 
-**Key features:**
-- **Unified management**: Handles packages (Homebrew, NPM, Cargo, Pip, Gem, Go) and dotfiles together
-- **Automatic tracking**: `plonk install` both installs and tracks packages in one step
-- **State-based approach**: Compares desired vs actual state, only changes what's needed
-- **Simple commands**: Unix-style `add`, `rm`, `status`, `apply` that just work
-- **Cross-platform**: Supports macOS, Linux, and Windows with appropriate package managers
+After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber/dotter), and [chezmoi](https://www.chezmoi.io/), I wanted something that:
+- Manages packages as a first-class concern alongside dotfiles
+- Has zero configuration complexity (no templates, no YAML manifestos)
+- Adapts quickly to my constantly changing toolset
+- Just works
+
+**Key innovations:**
+- **Package Manager Manager™**: One interface for brew, npm, cargo, pip, gem, and go
+- **Filesystem as truth**: Your dotfiles directory IS the state - no sync issues
+- **Copy, don't symlink**: Cleaner, simpler, and more compatible
+- **State-based**: Track what should exist, not what commands were run
+- **AI-friendly**: Built with and for AI coding assistants
+
+**For developers who:**
+- Set up new machines/VMs regularly
+- Experiment with new CLI/TUI tools constantly
+- Want their environment manager to keep up with their tinkering
+- Value simplicity over features
+
+## Core Philosophy
+
+✅ **Just works** - Zero configuration required
+✅ **Unified** - Packages and dotfiles together
+✅ **Simple** - Your filesystem IS the state
+✅ **Fast** - One command from fresh OS to ready
 
 ## Quick Start
 
@@ -41,21 +61,22 @@ go install github.com/richhaase/plonk/cmd/plonk@latest
 ### Basic Usage
 
 ```bash
-# Install and track packages in one command
-plonk install ripgrep fd bat              # Install with default manager (Homebrew)
-plonk install npm:prettier cargo:exa      # Install with specific managers
+# Track your existing setup
+plonk add ~/.zshrc ~/.vimrc ~/.config/nvim/    # Add dotfiles
+plonk install ripgrep fd bat                   # Install & track packages
 
-# Manage your dotfiles
-plonk add ~/.vimrc ~/.zshrc              # Start tracking dotfiles
-plonk add ~/.config/nvim/                # Track entire directories
+# See what plonk manages
+plonk status                                   # Show all resources
 
-# Check what's being managed
-plonk status                             # See all packages and dotfiles
-plonk                                    # Same as status (like git)
-
-# Set up a new machine
-plonk apply                              # Install missing packages, deploy dotfiles
+# Replicate on a new machine
+plonk setup your-github/dotfiles              # Clone and apply everything
 ```
+
+The beauty is in what you don't need to do:
+- No configuration files to write
+- No symlinks to manage
+- No separate package lists to maintain
+- No complex templating languages to learn
 
 ## Setting Up a New Machine
 
@@ -118,12 +139,14 @@ plonk install pip:black gem:rubocop go:golangci-lint
 ## Configuration
 
 Plonk stores its data in `~/.config/plonk/`:
-- **`plonk.lock`** - Automatically maintained list of packages and dotfiles
+- **`plonk.lock`** - Automatically maintained list of packages
 - **`plonk.yaml`** - Optional configuration (only create if needed)
+- **Dotfiles** - Stored directly in the config directory (e.g., `zshrc`, `vimrc`)
 
 The lock file is automatically updated when you:
 - Install/uninstall packages via plonk
-- Add/remove dotfiles from management
+
+Dotfiles are managed by the filesystem itself - files in `$PLONK_DIR` are your tracked dotfiles
 
 Share your `plonk.lock` file (e.g., in a dotfiles repo) to replicate your environment on other machines.
 
@@ -157,8 +180,18 @@ just install
 
 ## Documentation
 
-- **[Architecture](docs/ARCHITECTURE.md)** - Technical design and implementation details
-- **[Why Plonk?](docs/why-plonk.md)** - Project motivation and goals
+### Core Documentation
+- **[Why Plonk?](docs/why-plonk.md)** - The journey that led to plonk and what makes it different
+- **[Architecture](docs/ARCHITECTURE.md)** - Technical design, state model, and implementation details
+
+### Command Documentation
+- **[Setup](docs/cmds/setup.md)** - Initialize plonk or clone existing dotfiles
+- **[Apply](docs/cmds/apply.md)** - Sync your system to desired state
+- **[Status](docs/cmds/status.md)** - View managed packages and dotfiles
+- **[Package Management](docs/cmds/package_management.md)** - install, uninstall, search, info
+- **[Dotfile Management](docs/cmds/dotfile_management.md)** - add, rm
+- **[Config](docs/cmds/config.md)** - Manage plonk configuration
+- **[Doctor](docs/cmds/doctor.md)** - Check system health
 
 ## Requirements
 
