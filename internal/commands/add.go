@@ -27,9 +27,21 @@ ignore patterns configured in your plonk.yaml. After adding files, use 'plonk ap
 to deploy them from the configuration directory to your home directory.
 
 Path Resolution:
-- Absolute paths: /home/user/.vimrc
-- Tilde paths: ~/.vimrc
-- Relative paths: First tries current directory, then home directory
+Plonk accepts paths in multiple formats and intelligently resolves them:
+
+- Absolute paths: /home/user/.vimrc → Used as-is
+- Tilde paths: ~/.vimrc → Expands to /home/user/.vimrc
+- Relative paths: .vimrc → Tries:
+  1. Current directory: /current/dir/.vimrc
+  2. Home directory: /home/user/.vimrc
+- Plain names: vimrc → Tries:
+  1. Current directory: /current/dir/vimrc
+  2. Home with dot: /home/user/.vimrc
+
+Special Cases:
+- Directories: Recursively processes all files (add only)
+- Symlinks: Follows links and copies target file
+- Hidden files: Automatically handled (dot removed in plonk dir)
 
 File Mapping:
 - ~/.zshrc → $PLONK_DIR/zshrc (leading dot removed)
@@ -38,8 +50,9 @@ File Mapping:
 Examples:
   plonk add ~/.zshrc                    # Add single file
   plonk add ~/.zshrc ~/.vimrc           # Add multiple files
-  plonk add .zshrc .vimrc               # Finds files in home directory
-  plonk add ~/.config/nvim/ ~/.tmux.conf # Add directory and file
+  plonk add vimrc                       # Finds ~/.vimrc automatically
+  plonk add .config/nvim                # Adds entire nvim config directory
+  plonk add ../myfile                   # Relative to current directory
   plonk add --dry-run ~/.zshrc ~/.vimrc # Preview what would be added`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: runAdd,

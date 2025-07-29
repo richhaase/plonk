@@ -165,6 +165,9 @@ For each file, we will follow this process:
 - **Zero-Config Philosophy**: Removing init command reinforces zero-config principle - users just start using plonk
 - **Simplification**: Sometimes the best solution is removal - init command was unnecessary complexity
 - **Lock File Creation**: Lock files should only be created by install/uninstall, never by setup/init
+- **Shell Detection**: Supporting multiple shells with specific syntax (fish_add_path) improves user experience
+- **Filter Combinations**: Making flags work together (--missing --packages) provides flexible views
+- **Bug Fixes Over Removal**: Fixing JSON/YAML filtering was better than removing the feature entirely
 
 ### Implementation Review Learnings
 - **Config Command**: Found 3 discrepancies:
@@ -289,6 +292,26 @@ Phase for implementing improvements identified during documentation review. Item
   - Cleaner codebase with single setup path
 - **Note**: Skip flags were not implemented as init was removed entirely
 
+#### Task 4: Quick Wins (Completed - 2025-07-29)
+- **Implemented**: All 3 requested quick wins plus bonus bug fix
+- **Task 1 - Doctor PATH Commands**:
+  - Shell detection (zsh, bash, fish, ksh, tcsh)
+  - Copy-paste commands for PATH fixes
+  - Special fish shell syntax handling
+- **Task 2 - Status --missing Flag**:
+  - Filter to show only missing resources
+  - Works with other filters (--packages, --dotfiles)
+  - Clean output without misleading summaries
+- **Task 3 - Improved Path Documentation**:
+  - Enhanced help text for add/rm commands
+  - Clear path resolution explanations
+  - Special cases and practical examples
+- **Bonus - Fixed JSON/YAML Filtering**:
+  - StructuredData() now respects all filter flags
+  - Resolved the unmanaged flag bug
+  - Consistent behavior across output formats
+- **Note**: JSON/YAML removal (original Task 4) not implemented per user guidance
+
 ### Dependency Analysis
 
 Key dependencies identified through code structure review:
@@ -318,12 +341,12 @@ Key dependencies identified through code structure review:
 | setup | Intelligent clone + apply | Only install managers for tracked packages | Needs auto-detect | `internal/setup/setup.go` | ✅ Completed |
 
 #### Phase 3: Quick Wins (Independent Items)
-| Command | Item | Description | Dependency | Location |
-|---------|------|-------------|------------|----------|
-| doctor | Copy-paste PATH commands | Provide shell-specific PATH export commands | None | `internal/diagnostics/health.go` |
-| status | Add --missing flag | Filter to show only missing resources | None | `internal/commands/status.go` |
-| dotfile_management | Improve path docs | Better path resolution documentation | None | Help text only |
-| global | Remove JSON/YAML output | Remove structured output formats until real use case emerges | None | `internal/commands/output.go` and all commands |
+| Command | Item | Description | Dependency | Location | Status |
+|---------|------|-------------|------------|----------|--------|
+| doctor | Copy-paste PATH commands | Provide shell-specific PATH export commands | None | `internal/diagnostics/health.go` | ✅ Completed |
+| status | Add --missing flag | Filter to show only missing resources | None | `internal/commands/status.go` | ✅ Completed |
+| dotfile_management | Improve path docs | Better path resolution documentation | None | Help text only | ✅ Completed |
+| global | Remove JSON/YAML output | Remove structured output formats until real use case emerges | None | `internal/commands/output.go` and all commands | ❌ Not implemented |
 
 #### Phase 4: UI/UX Improvements (Medium Priority)
 | Command | Item | Description | Dependency | Location |

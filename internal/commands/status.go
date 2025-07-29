@@ -35,7 +35,8 @@ Examples:
   plonk status --packages   # Show only packages
   plonk status --dotfiles   # Show only dotfiles
   plonk status --unmanaged  # Show only unmanaged items
-  plonk status --unmanaged --packages  # Show only unmanaged packages
+  plonk status --missing    # Show only missing resources
+  plonk status --missing --packages  # Show only missing packages
   plonk status -o json      # Show as JSON
   plonk status -o yaml      # Show as YAML`,
 	RunE: runStatus,
@@ -46,6 +47,7 @@ func init() {
 	statusCmd.Flags().Bool("packages", false, "Show only package status")
 	statusCmd.Flags().Bool("dotfiles", false, "Show only dotfile status")
 	statusCmd.Flags().Bool("unmanaged", false, "Show only unmanaged items")
+	statusCmd.Flags().Bool("missing", false, "Show only missing resources")
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {
@@ -60,6 +62,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	showPackages, _ := cmd.Flags().GetBool("packages")
 	showDotfiles, _ := cmd.Flags().GetBool("dotfiles")
 	showUnmanaged, _ := cmd.Flags().GetBool("unmanaged")
+	showMissing, _ := cmd.Flags().GetBool("missing")
 
 	// If neither flag is set, show both
 	if !showPackages && !showDotfiles {
@@ -112,23 +115,11 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		ShowPackages:  showPackages,
 		ShowDotfiles:  showDotfiles,
 		ShowUnmanaged: showUnmanaged,
+		ShowMissing:   showMissing,
 		ConfigDir:     configDir,
 	}
 
 	return RenderOutput(outputData, format)
-}
-
-// convertManagedItems converts resources.ManagedItem to command-specific ManagedItem
-func convertManagedItems(items []resources.ManagedItem) []ManagedItem {
-	result := make([]ManagedItem, len(items))
-	for i, item := range items {
-		result[i] = ManagedItem{
-			Name:    item.Name,
-			Domain:  item.Domain,
-			Manager: item.Manager,
-		}
-	}
-	return result
 }
 
 // Removed - using config.ConfigAdapter instead
@@ -144,6 +135,7 @@ type StatusOutput struct {
 	ShowPackages  bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
 	ShowDotfiles  bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
 	ShowUnmanaged bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
+	ShowMissing   bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
 	ConfigDir     string            `json:"-" yaml:"-"` // Not included in JSON/YAML output
 }
 
@@ -203,6 +195,11 @@ func (s StatusOutput) TableOutput() string {
 			for _, item := range packageResult.Untracked {
 				untrackedPackages[item.Manager] = append(untrackedPackages[item.Manager], item)
 			}
+		} else if s.ShowMissing {
+			// Show only missing items
+			for _, item := range packageResult.Missing {
+				missingPackages = append(missingPackages, item)
+			}
 		} else {
 			// Show managed and missing items
 			for _, item := range packageResult.Managed {
@@ -222,10 +219,12 @@ func (s StatusOutput) TableOutput() string {
 			pkgBuilder := NewStandardTableBuilder("")
 			pkgBuilder.SetHeaders("NAME", "MANAGER", "STATUS")
 
-			// Show managed packages by manager
-			for manager, packages := range packagesByManager {
-				for _, pkg := range packages {
-					pkgBuilder.AddRow(pkg.Name, manager, "✅ managed")
+			// Show managed packages by manager (unless showing only missing)
+			if !s.ShowMissing {
+				for manager, packages := range packagesByManager {
+					for _, pkg := range packages {
+						pkgBuilder.AddRow(pkg.Name, manager, "✅ managed")
+					}
 				}
 			}
 
@@ -248,10 +247,12 @@ func (s StatusOutput) TableOutput() string {
 
 	// Show dotfiles table if requested
 	if s.ShowDotfiles && dotfileResult != nil {
-		// Determine which items to show based on ShowUnmanaged flag
+		// Determine which items to show based on flags
 		var itemsToShow []resources.Item
 		if s.ShowUnmanaged {
 			itemsToShow = dotfileResult.Untracked
+		} else if s.ShowMissing {
+			itemsToShow = dotfileResult.Missing
 		} else {
 			itemsToShow = append(dotfileResult.Managed, dotfileResult.Missing...)
 		}
@@ -299,14 +300,16 @@ func (s StatusOutput) TableOutput() string {
 				// For managed/missing, use the three-column format
 				dotBuilder.SetHeaders("SOURCE", "TARGET", "STATUS")
 
-				// Show managed dotfiles
-				for _, item := range dotfileResult.Managed {
-					source := item.Name
-					target := ""
-					if dest, ok := item.Metadata["destination"].(string); ok {
-						target = dest
+				// Show managed dotfiles (unless showing only missing)
+				if !s.ShowMissing {
+					for _, item := range dotfileResult.Managed {
+						source := item.Name
+						target := ""
+						if dest, ok := item.Metadata["destination"].(string); ok {
+							target = dest
+						}
+						dotBuilder.AddRow(source, target, "✅ deployed")
 					}
-					dotBuilder.AddRow(source, target, "✅ deployed")
 				}
 
 				// Show missing dotfiles
@@ -325,8 +328,8 @@ func (s StatusOutput) TableOutput() string {
 		}
 	}
 
-	// Add summary (skip for unmanaged to avoid misleading counts)
-	if !s.ShowUnmanaged {
+	// Add summary (skip for unmanaged or missing to avoid misleading counts)
+	if !s.ShowUnmanaged && !s.ShowMissing {
 		summary := s.StateSummary
 		output.WriteString("Summary: ")
 		output.WriteString(fmt.Sprintf("%d managed", summary.TotalManaged))
@@ -341,6 +344,49 @@ func (s StatusOutput) TableOutput() string {
 
 // StructuredData returns the structured data for serialization
 func (s StatusOutput) StructuredData() any {
+	// Filter items based on flags
+	var items []ManagedItem
+
+	for _, result := range s.StateSummary.Results {
+		// Apply domain filter
+		if result.Domain == "package" && !s.ShowPackages {
+			continue
+		}
+		if result.Domain == "dotfile" && !s.ShowDotfiles {
+			continue
+		}
+
+		// Apply status filter
+		if s.ShowUnmanaged {
+			// Show only untracked items
+			for _, item := range result.Untracked {
+				items = append(items, ManagedItem{
+					Name:    item.Name,
+					Domain:  result.Domain,
+					Manager: item.Manager,
+				})
+			}
+		} else if s.ShowMissing {
+			// Show only missing items
+			for _, item := range result.Missing {
+				items = append(items, ManagedItem{
+					Name:    item.Name,
+					Domain:  result.Domain,
+					Manager: item.Manager,
+				})
+			}
+		} else {
+			// Show managed items
+			for _, item := range result.Managed {
+				items = append(items, ManagedItem{
+					Name:    item.Name,
+					Domain:  result.Domain,
+					Manager: item.Manager,
+				})
+			}
+		}
+	}
+
 	// Create a summary-focused version for structured output
 	return StatusOutputSummary{
 		ConfigPath:   s.ConfigPath,
@@ -354,6 +400,6 @@ func (s StatusOutput) StructuredData() any {
 			TotalUntracked: s.StateSummary.TotalUntracked,
 			Domains:        resources.CreateDomainSummary(s.StateSummary.Results),
 		},
-		ManagedItems: convertManagedItems(resources.ExtractManagedItems(s.StateSummary.Results)),
+		ManagedItems: items,
 	}
 }

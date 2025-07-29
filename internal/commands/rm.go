@@ -23,6 +23,23 @@ After removal, the dotfiles will no longer be managed by plonk and won't be
 affected by 'plonk apply' operations. Use 'plonk status' to see which files
 are currently managed.
 
+Path Resolution:
+Plonk accepts paths in multiple formats and intelligently resolves them:
+
+- Absolute paths: /home/user/.vimrc → Used as-is
+- Tilde paths: ~/.vimrc → Expands to /home/user/.vimrc
+- Relative paths: .vimrc → Tries:
+  1. Current directory: /current/dir/.vimrc
+  2. Home directory: /home/user/.vimrc
+- Plain names: vimrc → Tries:
+  1. Current directory: /current/dir/vimrc
+  2. Home with dot: /home/user/.vimrc
+
+Special Cases:
+- Only removes from $PLONK_DIR, never touches files in $HOME
+- Cannot remove directories (individual files only)
+- Dotfiles within $PLONK_DIR (like .git) are protected
+
 File Mapping (what gets removed):
 - ~/.zshrc removes → $PLONK_DIR/zshrc
 - ~/.config/nvim/init.lua removes → $PLONK_DIR/config/nvim/init.lua
@@ -30,7 +47,8 @@ File Mapping (what gets removed):
 Examples:
   plonk rm ~/.zshrc                    # Remove single file from management
   plonk rm ~/.zshrc ~/.vimrc           # Remove multiple files from management
-  plonk rm ~/.config/nvim/init.lua     # Remove specific file from management
+  plonk rm vimrc                       # Finds ~/.vimrc automatically
+  plonk rm .config/nvim/init.lua       # Remove specific nested file
   plonk rm --dry-run ~/.zshrc ~/.vimrc # Preview what would be removed`,
 	Args: cobra.MinimumNArgs(1),
 	RunE: runRm,

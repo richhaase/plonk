@@ -488,16 +488,132 @@ func checkPathConfiguration() HealthCheck {
 		for _, path := range missingPaths {
 			check.Issues = append(check.Issues, fmt.Sprintf("  - %s", path))
 		}
-		check.Suggestions = append(check.Suggestions, "Add missing directories to your PATH in your shell configuration file (~/.zshrc, ~/.bashrc, etc.)")
 
-		// Provide specific examples for common shells
-		check.Suggestions = append(check.Suggestions, "\nFor example, add these lines to your shell config:")
-		for _, path := range missingPaths {
-			check.Suggestions = append(check.Suggestions, fmt.Sprintf("  export PATH=\"%s:$PATH\"", path))
+		// Detect user's shell and provide exact commands
+		shellPath := os.Getenv("SHELL")
+		shell := detectShell(shellPath)
+
+		check.Suggestions = append(check.Suggestions, fmt.Sprintf("Detected shell: %s", shell.name))
+		check.Suggestions = append(check.Suggestions, "\nCopy and run these commands to fix your PATH:")
+
+		// Generate the PATH export line
+		pathExport := generatePathExport(missingPaths)
+
+		// Provide shell-specific commands
+		commands := generateShellCommands(shell, pathExport)
+		for _, cmd := range commands {
+			check.Suggestions = append(check.Suggestions, fmt.Sprintf("  %s", cmd))
 		}
+
+		// Add instructions for immediate effect
+		check.Suggestions = append(check.Suggestions, "\nOr for immediate effect in this session only:")
+		check.Suggestions = append(check.Suggestions, fmt.Sprintf("  %s", pathExport))
 	}
 
 	return check
+}
+
+// shellInfo represents shell detection information
+type shellInfo struct {
+	name       string
+	configFile string
+	reload     string
+}
+
+// detectShell detects the user's shell from SHELL environment variable
+func detectShell(shellPath string) shellInfo {
+	// Default to bash if detection fails
+	defaultShell := shellInfo{
+		name:       "bash",
+		configFile: "~/.bashrc",
+		reload:     "source ~/.bashrc",
+	}
+
+	if shellPath == "" {
+		return defaultShell
+	}
+
+	// Extract shell name from path
+	shellName := filepath.Base(shellPath)
+
+	switch shellName {
+	case "zsh":
+		return shellInfo{
+			name:       "zsh",
+			configFile: "~/.zshrc",
+			reload:     "source ~/.zshrc",
+		}
+	case "bash":
+		return defaultShell
+	case "fish":
+		return shellInfo{
+			name:       "fish",
+			configFile: "~/.config/fish/config.fish",
+			reload:     "source ~/.config/fish/config.fish",
+		}
+	case "ksh":
+		return shellInfo{
+			name:       "ksh",
+			configFile: "~/.kshrc",
+			reload:     ". ~/.kshrc",
+		}
+	case "tcsh":
+		return shellInfo{
+			name:       "tcsh",
+			configFile: "~/.tcshrc",
+			reload:     "source ~/.tcshrc",
+		}
+	default:
+		// Try to infer from common patterns
+		if strings.Contains(shellPath, "zsh") {
+			return shellInfo{
+				name:       "zsh",
+				configFile: "~/.zshrc",
+				reload:     "source ~/.zshrc",
+			}
+		}
+		return defaultShell
+	}
+}
+
+// generatePathExport creates the PATH export line for missing paths
+func generatePathExport(missingPaths []string) string {
+	if len(missingPaths) == 0 {
+		return ""
+	}
+
+	// Join all paths with colon
+	pathString := strings.Join(missingPaths, ":")
+	return fmt.Sprintf("export PATH=\"%s:$PATH\"", pathString)
+}
+
+// generateShellCommands generates shell-specific commands for PATH configuration
+func generateShellCommands(shell shellInfo, pathExport string) []string {
+	if shell.name == "fish" {
+		// Fish shell has special syntax
+		commands := []string{}
+		// Extract paths from the export command
+		// pathExport looks like: export PATH="/path1:/path2:$PATH"
+		if strings.HasPrefix(pathExport, "export PATH=\"") && strings.HasSuffix(pathExport, ":$PATH\"") {
+			pathString := strings.TrimPrefix(pathExport, "export PATH=\"")
+			pathString = strings.TrimSuffix(pathString, ":$PATH\"")
+			paths := strings.Split(pathString, ":")
+			for _, path := range paths {
+				if path != "" {
+					commands = append(commands, fmt.Sprintf("fish_add_path %s", path))
+				}
+			}
+		}
+		return commands
+	}
+
+	// For most shells, we can append to config file
+	commands := []string{
+		fmt.Sprintf("echo '%s' >> %s", pathExport, shell.configFile),
+		shell.reload,
+	}
+
+	return commands
 }
 
 // getPythonUserBinDir returns the Python user bin directory
