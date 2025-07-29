@@ -64,16 +64,7 @@ Without prefix, uses `default_manager` from configuration.
 
 ### Timeout Configuration
 
-Package management operations have configurable timeouts through plonk.yaml:
-
-- **`package_timeout`** - Timeout for install/uninstall operations (default: 180 seconds)
-- **`operation_timeout`** - Timeout for search operations (default: 300 seconds)
-
-Example configuration:
-```yaml
-package_timeout: 300      # 5 minutes for package operations
-operation_timeout: 60     # 1 minute for search operations
-```
+Package management operations have configurable timeouts. For complete timeout configuration examples and details, see [Configuration Guide](../configuration.md#timeout-configuration).
 
 ### Cross-Command Behaviors
 

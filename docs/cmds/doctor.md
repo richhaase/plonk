@@ -78,7 +78,7 @@ With `--fix` flag:
 - Installs via official methods:
   - Homebrew: Official installer script
   - Cargo: rustup installer
-  - Others: Via default_manager
+  - Others: Via default_manager (see [Configuration Guide](../configuration.md#package-manager-settings))
 
 Currently limited to package manager installation only.
 

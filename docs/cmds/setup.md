@@ -45,7 +45,7 @@ Setup uses custom tool installation logic that analyzes system health and instal
 - Homebrew (required on macOS/Linux) - uses official installer script
 - Cargo/Rust (via rustup) - uses rustup installer script
 
-**Language Package Managers** (installed via default_manager):
+**Language Package Managers** (installed via default_manager, see [Configuration Guide](../configuration.md#package-manager-settings)):
 - npm (Node.js) - installs `node` package via default package manager
 - pip (Python) - installs `python` package via default package manager
 - gem (Ruby) - installs `ruby` package via default package manager
