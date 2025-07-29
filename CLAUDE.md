@@ -52,7 +52,7 @@ Each file has the following sections:
 | setup.md | 5 | 0 | 5 | ⏳ Pending |
 | apply.md | 4 | 0 | 4 | ⏳ Pending |
 | config.md | 3 | 3 | 0 | ✅ Completed |
-| status.md | 3 | 0 | 3 | ⏳ Pending |
+| status.md | 3 | 3 | 0 | ✅ Completed |
 | doctor.md | 5 | 0 | 5 | ⏳ Pending |
 | package_management.md | 4 | 0 | 4 | ⏳ Pending |
 | dotfile_management.md | 3 | 0 | 3 | ⏳ Pending |
