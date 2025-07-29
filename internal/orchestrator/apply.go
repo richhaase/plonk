@@ -39,7 +39,6 @@ type PackageOperationApplyResult struct {
 // DotfileApplyResult represents the result of dotfile apply operations
 type DotfileApplyResult struct {
 	DryRun     bool                       `json:"dry_run" yaml:"dry_run"`
-	Backup     bool                       `json:"backup" yaml:"backup"`
 	TotalFiles int                        `json:"total_files" yaml:"total_files"`
 	Actions    []DotfileActionApplyResult `json:"actions" yaml:"actions"`
 	Summary    DotfileSummaryApplyResult  `json:"summary" yaml:"summary"`
@@ -146,7 +145,7 @@ func ApplyPackages(ctx context.Context, configDir string, cfg *config.Config, dr
 }
 
 // ApplyDotfiles applies dotfile configuration and returns the result
-func ApplyDotfiles(ctx context.Context, configDir, homeDir string, cfg *config.Config, dryRun, backup bool) (DotfileApplyResult, error) {
+func ApplyDotfiles(ctx context.Context, configDir, homeDir string, cfg *config.Config, dryRun bool) (DotfileApplyResult, error) {
 	// Create dotfile resource
 	manager := dotfiles.NewManager(homeDir, configDir)
 	dotfileResource := dotfiles.NewDotfileResource(manager)
@@ -208,7 +207,6 @@ func ApplyDotfiles(ctx context.Context, configDir, homeDir string, cfg *config.C
 
 	return DotfileApplyResult{
 		DryRun:     dryRun,
-		Backup:     backup,
 		TotalFiles: len(configuredItems),
 		Actions:    actions,
 		Summary:    summary,

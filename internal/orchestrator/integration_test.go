@@ -104,7 +104,7 @@ func TestOrchestratorApplyWithResources(t *testing.T) {
 	// Test 3: Test dotfile apply operation
 	t.Run("DotfileApply", func(t *testing.T) {
 		// Run apply in dry-run mode
-		applyResult, err := orchestrator.ApplyDotfiles(ctx, configDir, homeDir, cfg, true, false)
+		applyResult, err := orchestrator.ApplyDotfiles(ctx, configDir, homeDir, cfg, true)
 		require.NoError(t, err)
 
 		// Verify apply result

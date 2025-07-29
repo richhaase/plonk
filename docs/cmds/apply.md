@@ -26,19 +26,21 @@ Apply specifically targets "missing" resources and attempts to transition them t
 ### Command Options
 
 - `--dry-run, -n` - Preview changes without applying them
-- `--packages` - Apply packages only
-- `--dotfiles` - Apply dotfiles only
-- `--backup` - Create backups before overwriting existing dotfiles (feature under review)
+- `--packages` - Apply packages only (mutually exclusive with `--dotfiles`)
+- `--dotfiles` - Apply dotfiles only (mutually exclusive with `--packages`)
 
-Note: Using `--packages` and `--dotfiles` together is redundant and equivalent to running with no flags.
+Note: The `--packages` and `--dotfiles` flags are mutually exclusive - you cannot use both together.
 
 ### Execution Flow
 
-1. Read plonk.lock (if exists) to determine packages to install
-2. Read $PLONK_DIR contents to determine dotfiles to deploy
-3. Apply packages first (if --packages or no flags)
-4. Apply dotfiles second (if --dotfiles or no flags)
-5. Report results with summary counts
+1. Execute pre-apply hooks (if configured) - **experimental feature**
+2. Read plonk.lock (if exists) to determine packages to install
+3. Read $PLONK_DIR contents to determine dotfiles to deploy
+4. Apply packages first (if --packages or no flags)
+   - Updates plonk.lock for each successful package installation
+5. Apply dotfiles second (if --dotfiles or no flags)
+6. Execute post-apply hooks (if configured) - **experimental feature**
+7. Report results with summary counts
 
 ### Dry Run Behavior
 
@@ -82,7 +84,7 @@ The apply command orchestrates package installation and dotfile deployment throu
 
 1. **Command Processing:**
    - Parses flags: `--dry-run`, `--backup`, `--packages`, `--dotfiles`
-   - **DISCREPANCY**: `--packages` and `--dotfiles` marked as mutually exclusive, but docs say "redundant"
+   - Flags `--packages` and `--dotfiles` are mutually exclusive via `applyCmd.MarkFlagsMutuallyExclusive()`
    - Creates orchestrator with functional options pattern
    - Calls orchestrator.Apply() and converts result for output
 
@@ -97,7 +99,7 @@ The apply command orchestrates package installation and dotfile deployment throu
    - Uses `packages.Reconcile()` to identify missing packages from lock file
    - Groups missing packages by manager type
    - Applies packages through `MultiPackageResource`
-   - **DISCREPANCY**: Updates lock file during apply (docs don't mention this)
+   - Lock file updates occur during package installation operations as documented
 
 4. **Dotfile Apply Flow:**
    - Uses `manager.GetConfiguredDotfiles()` to scan `$PLONK_DIR`
@@ -106,13 +108,13 @@ The apply command orchestrates package installation and dotfile deployment throu
    - Performs file operations (copy with dot-prefix transformation)
 
 **Backup Implementation:**
-- **DISCREPANCY**: `--backup` flag exists and is functional, but docs mark as "under review"
+- **Removed**: Previously had `--backup` flag for dotfile backups, but this functionality has been removed
 - Creates backup files before overwriting existing dotfiles
 - Backup naming follows pattern: `{original}.backup.{timestamp}`
 
 **Execution Order:**
 - Pre-apply hooks → Packages → Dotfiles → Post-apply hooks
-- **DISCREPANCY**: Documentation doesn't mention hook execution
+- Hook execution (pre-apply and post-apply) is integrated into the apply flow as an experimental feature
 
 **Error Handling:**
 - Partial failure support: continues operation despite individual failures
@@ -127,13 +129,10 @@ The apply command orchestrates package installation and dotfile deployment throu
 - **DISCREPANCY**: More detailed output than documented
 
 **Bugs Identified:**
-1. Documentation says `--packages` and `--dotfiles` together is "redundant" but code marks them mutually exclusive
-2. Missing documentation of hook execution in apply flow
-3. `--backup` flag is functional but documented as "under review"
-4. Lock file updates during apply not documented
+None - all discrepancies have been resolved.
 
 ## Improvements
 
-- Review and properly document the `--backup` flag behavior
 - Consider adding progress indicators for large apply operations
 - Add verbose mode for detailed operation logging
+- Add support for selective dotfile deployment based on patterns

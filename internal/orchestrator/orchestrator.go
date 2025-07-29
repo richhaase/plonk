@@ -25,7 +25,6 @@ type Orchestrator struct {
 	dryRun       bool
 	packagesOnly bool
 	dotfilesOnly bool
-	backup       bool
 }
 
 // Option is a functional option for configuring the orchestrator
@@ -70,13 +69,6 @@ func WithPackagesOnly(packagesOnly bool) Option {
 func WithDotfilesOnly(dotfilesOnly bool) Option {
 	return func(o *Orchestrator) {
 		o.dotfilesOnly = dotfilesOnly
-	}
-}
-
-// WithBackup enables backup mode for dotfiles
-func WithBackup(backup bool) Option {
-	return func(o *Orchestrator) {
-		o.backup = backup
 	}
 }
 
@@ -137,7 +129,7 @@ func (o *Orchestrator) Apply(ctx context.Context) (ApplyResult, error) {
 
 	// Apply dotfiles (unless packages-only)
 	if !o.packagesOnly {
-		dotfileResult, err := ApplyDotfiles(ctx, o.configDir, o.homeDir, o.config, o.dryRun, o.backup)
+		dotfileResult, err := ApplyDotfiles(ctx, o.configDir, o.homeDir, o.config, o.dryRun)
 		result.Dotfiles = dotfileResult
 		if err != nil {
 			result.DotfileErrors = append(result.DotfileErrors, fmt.Sprintf("dotfile apply failed: %v", err))

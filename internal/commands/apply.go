@@ -29,7 +29,6 @@ Think of it like 'git pull' - it brings your system state in line with your conf
 Examples:
   plonk apply             # Apply all configuration changes
   plonk apply --dry-run   # Show what would be applied without making changes
-  plonk apply --backup    # Create backups before overwriting existing dotfiles
   plonk apply --packages  # Apply packages only
   plonk apply --dotfiles  # Apply dotfiles only`,
 	RunE: runApply,
@@ -46,13 +45,11 @@ func init() {
 
 	// Behavior flags
 	applyCmd.Flags().BoolP("dry-run", "n", false, "Show what would be applied without making changes")
-	applyCmd.Flags().Bool("backup", false, "Create backups before overwriting existing dotfiles")
 }
 
 func runApply(cmd *cobra.Command, args []string) error {
 	// Parse flags
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
-	backup, _ := cmd.Flags().GetBool("backup")
 	packagesOnly, _ := cmd.Flags().GetBool("packages")
 	dotfilesOnly, _ := cmd.Flags().GetBool("dotfiles")
 
@@ -80,7 +77,6 @@ func runApply(cmd *cobra.Command, args []string) error {
 		orchestrator.WithDryRun(dryRun),
 		orchestrator.WithPackagesOnly(packagesOnly),
 		orchestrator.WithDotfilesOnly(dotfilesOnly),
-		orchestrator.WithBackup(backup),
 	)
 
 	// Run apply with hooks and v2 lock
