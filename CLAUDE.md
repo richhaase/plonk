@@ -251,26 +251,52 @@ For each file, we will follow this process:
 
 ## Implementation Enhancement Phase (Planning)
 
-Phase for implementing improvements identified during documentation review. Items have been prioritized based on impact and classified as immediately actionable or long-term.
+Phase for implementing improvements identified during documentation review. Items have been analyzed for dependencies and organized into implementation phases.
 
-### Immediately Actionable Items
+### Dependency Analysis
 
-| Command | Item | Description | Priority |
-|---------|------|-------------|----------|
-| package_management | Enhance lock file format | Store both binary name and full source path for Go/npm packages | High |
-| doctor | Copy-paste PATH commands | Provide shell-specific PATH export commands | Medium |
-| setup | Skip package manager flags | Add --no-cargo, --no-npm, etc. flags | High |
-| setup | Auto-detect from plonk.lock | Detect required managers from cloned repository | High |
-| setup | Intelligent clone + apply | Only install managers for tracked packages | High |
-| setup | Split init/setup commands | Separate initialization from clone workflow | Medium |
-| config | Complete file editing | Edit full config, save only non-defaults | Medium |
-| config | Highlight user values | Distinguish user-defined from defaults in show output | Low |
-| dotfile_management | Improve path docs | Better path resolution documentation in help text | Low |
-| status | Sort alphabetically | Change default sort from package manager to alphabetical | Medium |
-| status | Review flag combinations | Fix --packages --dotfiles redundancy behavior | Medium |
-| status | Fix JSON/YAML bug | Include unmanaged items with --unmanaged flag | High |
-| status | Add --missing flag | Filter to show only missing resources | Low |
-| status | Color coding | Visual grouping by package manager | Low |
+Key dependencies identified through code structure review:
+
+1. **Lock File Format Enhancement** blocks intelligent setup features (needs package source info)
+2. **Setup Command Items** are interdependent and should be implemented together
+3. **Status/Config/Doctor improvements** are largely independent
+4. **Location mapping**:
+   - Lock file: `internal/lock/yaml_lock.go`
+   - Setup: `internal/setup/setup.go`, `internal/commands/setup.go`
+   - Status: `internal/commands/status.go`
+   - Config: `internal/commands/config_show.go`, `config_edit.go`
+
+### Implementation Phases
+
+#### Phase 1: Foundation (Immediate Priority)
+| Command | Item | Description | Dependency | Location |
+|---------|------|-------------|------------|----------|
+| status | Fix JSON/YAML bug | Include unmanaged items with --unmanaged flag | None | `internal/commands/status.go` |
+| package_management | Enhance lock file format | Store both binary name and full source path | Blocks setup features | `internal/lock/yaml_lock.go` |
+
+#### Phase 2: Setup Refactoring (High Priority - Implement Together)
+| Command | Item | Description | Dependency | Location |
+|---------|------|-------------|------------|----------|
+| setup | Split init/setup commands | Separate initialization from clone workflow | Core refactor | `internal/commands/setup.go` |
+| setup | Skip package manager flags | Add --no-cargo, --no-npm, etc. flags | Depends on split | `internal/setup/tools.go` |
+| setup | Auto-detect from plonk.lock | Detect required managers from cloned repository | Needs lock v2 | `internal/setup/setup.go` |
+| setup | Intelligent clone + apply | Only install managers for tracked packages | Needs auto-detect | `internal/setup/setup.go` |
+
+#### Phase 3: Quick Wins (Independent Items)
+| Command | Item | Description | Dependency | Location |
+|---------|------|-------------|------------|----------|
+| doctor | Copy-paste PATH commands | Provide shell-specific PATH export commands | None | `internal/diagnostics/health.go` |
+| status | Add --missing flag | Filter to show only missing resources | None | `internal/commands/status.go` |
+| dotfile_management | Improve path docs | Better path resolution documentation | None | Help text only |
+
+#### Phase 4: UI/UX Improvements (Medium Priority)
+| Command | Item | Description | Dependency | Location |
+|---------|------|-------------|------------|----------|
+| config | Complete file editing | Edit full config, save only non-defaults | None | `internal/commands/config_edit.go` |
+| config | Highlight user values | Distinguish user-defined from defaults | None | `internal/commands/config_show.go` |
+| status | Sort alphabetically | Change default sort order | None | `internal/commands/status.go` |
+| status | Review flag combinations | Fix --packages --dotfiles behavior | None | `internal/commands/status.go` |
+| status | Color coding | Visual grouping by package manager | None | `internal/output/formatters.go` |
 
 ### Long-Term Improvements
 
