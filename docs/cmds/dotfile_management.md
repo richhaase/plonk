@@ -40,7 +40,6 @@ Copies dotfiles from their current location to `$PLONK_DIR` for management. Acce
 
 **Command Options**:
 - `--dry-run, -n` - Preview what would be added without making changes
-- `--force, -f` - (Currently non-functional, should be removed)
 
 **Directory Handling**:
 - Recursively walks directory tree
@@ -65,7 +64,6 @@ Removes dotfiles from plonk management by deleting them from `$PLONK_DIR`. Accep
 
 **Command Options**:
 - `--dry-run, -n` - Preview what would be removed without making changes
-- `--force, -f` - (Currently non-functional, should be removed)
 
 **Remove Behavior**:
 - Deletes file from `$PLONK_DIR` only
@@ -127,7 +125,6 @@ The dotfile management commands provide filesystem-based state management throug
 
 1. **Add Command Processing:**
    - Entry point parses flags and validates arguments
-   - **DISCREPANCY**: Help text mentions "preserve original files" but implementation always copies (never moves)
    - Uses `dotfiles.Manager.AddFiles()` for batch processing
    - Each path resolved through `ResolveDotfilePath()` with fallback logic
    - Supports both single files and recursive directory processing
@@ -137,7 +134,7 @@ The dotfile management commands provide filesystem-based state management throug
    - Absolute paths used as-is
    - Relative paths: tries current directory first, then `$HOME`
    - All paths validated to be within `$HOME` boundary
-   - **DISCREPANCY**: Documentation doesn't mention current directory fallback
+   - All paths validated to be within `$HOME` boundary
 
 3. **File Mapping System:**
    - Uses `TargetToSource()` and `SourceToTarget()` functions
@@ -154,8 +151,6 @@ The dotfile management commands provide filesystem-based state management throug
 
 5. **Remove Command Processing:**
    - Entry point uses `ParseSimpleFlags()` for flag parsing
-   - **DISCREPANCY**: `--force` flag is defined but completely non-functional
-   - Implementation: `opts.Force` is never set from command flags
    - Uses `dotfiles.Manager.RemoveFiles()` for batch processing
    - Only removes files from `$PLONK_DIR`, never touches `$HOME`
 
@@ -190,20 +185,15 @@ The dotfile management commands provide filesystem-based state management throug
 - Ignore pattern matches are silently skipped (not errors)
 
 **Integration Points:**
-- Uses `config.Load()` for ignore patterns in add operations
-- Uses `config.LoadWithDefaults()` for remove operations (more permissive)
+- Both commands use `config.LoadWithDefaults()` for consistent zero-config behavior
 - Results compatible with generic `resources.OperationResult` system
 - File operations support backup creation for apply command
 
 **Bugs Identified:**
-1. **Non-functional --force flags**: Both add and rm define `--force` flags that are never used in implementation
-2. **Documentation mismatch**: Help text mentions "preserve original files" but implementation always copies
-3. **Inconsistent config loading**: Add uses `config.Load()` (can fail), remove uses `config.LoadWithDefaults()` (never fails)
+None - all discrepancies have been resolved.
 
 ## Improvements
 
-- Remove non-functional --force flag from both commands
-- Update add command help to remove "preserve original files" language
 - Improve path resolution documentation in help text
 - Consider adding --backup flag for rm command
 - Add verbose output option to show ignore pattern matches

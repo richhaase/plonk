@@ -58,7 +58,6 @@ type DirectoryEntry struct {
 // AddOptions configures dotfile addition operations
 type AddOptions struct {
 	DryRun bool
-	Force  bool
 }
 
 // RemoveOptions configures dotfile removal operations

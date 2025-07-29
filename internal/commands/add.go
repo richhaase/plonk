@@ -16,19 +16,24 @@ import (
 var addCmd = &cobra.Command{
 	Use:   "add <files...>",
 	Short: "Add dotfiles to plonk management",
-	Long: `Add dotfiles to plonk configuration and import them.
+	Long: `Add dotfiles to plonk management by copying them to the configuration directory.
 
-This command adds dotfiles to your plonk configuration directory and manages them.
-It will copy the dotfiles from their current locations to your plonk dotfiles
-directory and preserve the original files in case you need to revert.
+This command copies dotfiles from their current locations to your plonk configuration
+directory ($PLONK_DIR) for management. The original files remain unchanged in their
+current locations.
 
-For directories, plonk will recursively add all files individually, respecting
-ignore patterns configured in your plonk.yaml.
+For directories, plonk will recursively process all files individually, respecting
+ignore patterns configured in your plonk.yaml. After adding files, use 'plonk apply'
+to deploy them from the configuration directory to your home directory.
 
 Path Resolution:
 - Absolute paths: /home/user/.vimrc
 - Tilde paths: ~/.vimrc
 - Relative paths: First tries current directory, then home directory
+
+File Mapping:
+- ~/.zshrc → $PLONK_DIR/zshrc (leading dot removed)
+- ~/.config/nvim/init.lua → $PLONK_DIR/config/nvim/init.lua
 
 Examples:
   plonk add ~/.zshrc                    # Add single file
@@ -43,7 +48,6 @@ Examples:
 func init() {
 	rootCmd.AddCommand(addCmd)
 	addCmd.Flags().BoolP("dry-run", "n", false, "Show what would be added without making changes")
-	addCmd.Flags().BoolP("force", "f", false, "Force addition even if already managed")
 
 	// Add file path completion
 	addCmd.ValidArgsFunction = CompleteDotfilePaths
@@ -59,18 +63,13 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 	// Get flags
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
-	// TODO: force flag is defined but not currently used in core.AddSingleDotfile
-	// force, _ := cmd.Flags().GetBool("force")
 
 	// Get directories
 	homeDir := config.GetHomeDir()
 	configDir := config.GetConfigDir()
 
-	// Load config for ignore patterns
-	cfg, err := config.Load(configDir)
-	if err != nil {
-		return err
-	}
+	// Load config for ignore patterns with defaults
+	cfg := config.LoadWithDefaults(configDir)
 
 	// Create dotfile manager
 	manager := dotfiles.NewManager(homeDir, configDir)
@@ -78,7 +77,6 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	// Configure options
 	opts := dotfiles.AddOptions{
 		DryRun: dryRun,
-		Force:  false, // TODO: implement force flag
 	}
 
 	// Process dotfiles using domain package

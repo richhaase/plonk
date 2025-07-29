@@ -13,11 +13,19 @@ import (
 var rmCmd = &cobra.Command{
 	Use:   "rm <files...>",
 	Short: "Remove dotfiles from plonk management",
-	Long: `Remove dotfiles from plonk management.
+	Long: `Remove dotfiles from plonk management by deleting them from the configuration directory.
 
-This command removes dotfiles from your plonk configuration directory only.
-The dotfiles in your home directory are NOT affected - they remain in place.
-The dotfiles will no longer be managed by plonk.
+This command removes dotfiles from plonk management by deleting them from your
+plonk configuration directory ($PLONK_DIR). The original files in your home
+directory are NOT affected and remain in place unchanged.
+
+After removal, the dotfiles will no longer be managed by plonk and won't be
+affected by 'plonk apply' operations. Use 'plonk status' to see which files
+are currently managed.
+
+File Mapping (what gets removed):
+- ~/.zshrc removes → $PLONK_DIR/zshrc
+- ~/.config/nvim/init.lua removes → $PLONK_DIR/config/nvim/init.lua
 
 Examples:
   plonk rm ~/.zshrc                    # Remove single file from management
@@ -31,7 +39,6 @@ Examples:
 func init() {
 	rootCmd.AddCommand(rmCmd)
 	rmCmd.Flags().BoolP("dry-run", "n", false, "Show what would be removed without making changes")
-	rmCmd.Flags().BoolP("force", "f", false, "Force removal even if not managed")
 
 	// Add file path completion
 	rmCmd.ValidArgsFunction = CompleteDotfilePaths
