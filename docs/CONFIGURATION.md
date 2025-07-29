@@ -13,17 +13,38 @@ packages:
   brew:
     - name: ripgrep
       version: 14.0.3
+      installed_at: 2025-07-27T11:01:03.519704-06:00
     - name: fd
       version: 8.7.0
+      installed_at: 2025-07-27T11:00:51.028708-06:00
   npm:
     - name: prettier
       version: 3.1.0
-dotfiles:
-  - source: /Users/you/.config/plonk/.vimrc
-    destination: /Users/you/.vimrc
-  - source: /Users/you/.config/plonk/.zshrc
-    destination: /Users/you/.zshrc
+      installed_at: 2025-07-28T15:11:08.74692-06:00
 ```
+
+**Note:** Dotfiles are not tracked in the lock file. Instead, the filesystem structure of `$PLONK_DIR` itself represents the dotfile state (see [Filesystem as State](#filesystem-as-state)).
+
+## Filesystem as State
+
+Plonk uses the filesystem structure of `$PLONK_DIR` to represent dotfile state. The contents of this directory define what dotfiles are managed:
+
+```
+$PLONK_DIR/
+├── plonk.yaml        # Configuration (not a dotfile)
+├── plonk.lock        # Package state (not a dotfile)
+├── zshrc             # Deployed to ~/.zshrc
+├── gitconfig         # Deployed to ~/.gitconfig
+└── config/
+    └── nvim/
+        └── init.lua  # Deployed to ~/.config/nvim/init.lua
+```
+
+This approach provides several benefits:
+- No separate tracking file needed for dotfiles
+- Easy to see what's managed by examining the directory
+- Git-native workflow (the directory is your repository)
+- Impossible for tracking and filesystem to get out of sync
 
 ## plonk.yaml (Optional)
 

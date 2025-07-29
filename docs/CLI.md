@@ -12,10 +12,10 @@ All commands support these options:
 
 ### plonk
 
-Show status of all managed packages and dotfiles (alias for `plonk status`).
+Show help information for plonk commands.
 
 ```bash
-plonk
+plonk                                     # Show help and available commands
 ```
 
 ### plonk setup
@@ -37,7 +37,6 @@ Install packages and add them to management.
 plonk install ripgrep                 # Default manager
 plonk install brew:wget npm:prettier  # Specific managers
 plonk install --dry-run ripgrep       # Preview changes
-plonk install --force ripgrep         # Force reinstall
 ```
 
 ### plonk uninstall

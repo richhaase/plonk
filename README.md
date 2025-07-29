@@ -10,7 +10,7 @@
 
 ```bash
 # Clone your dotfiles and set up everything
-plonk setup github-user/dotfiles
+plonk setup user/dotfiles
 # Done. Seriously.
 ```
 
@@ -84,7 +84,7 @@ The fastest way to set up a new development machine:
 
 ```bash
 # Clone existing dotfiles and set up environment
-plonk setup github-user/dotfiles         # Uses GitHub shorthand
+plonk setup user/dotfiles                # Uses GitHub shorthand
 plonk setup https://github.com/user/dotfiles.git
 
 # Or start fresh
