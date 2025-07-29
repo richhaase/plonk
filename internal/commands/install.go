@@ -118,8 +118,9 @@ func runInstall(cmd *cobra.Command, args []string) error {
 			Force:   force,
 		}
 
-		// Process this package
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		// Process this package with configurable timeout
+		timeout := time.Duration(cfg.PackageTimeout) * time.Second
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		results, err := packages.InstallPackages(ctx, configDir, []string{packageName}, opts)
 		cancel()
 

@@ -38,7 +38,6 @@ func init() {
 
 	// Common flags
 	uninstallCmd.Flags().BoolP("dry-run", "n", false, "Show what would be removed without making changes")
-	uninstallCmd.Flags().BoolP("force", "f", false, "Force removal even if not managed")
 }
 
 func runUninstall(cmd *cobra.Command, args []string) error {
@@ -52,8 +51,9 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	// Get flags (only common flags now)
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 
-	// Get config directory
+	// Get config directory and load configuration
 	configDir := config.GetDefaultConfigDirectory()
+	cfg := config.LoadWithDefaults(configDir)
 
 	// Process each package with prefix parsing
 	var allResults []resources.OperationResult
@@ -103,8 +103,9 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 			DryRun:  dryRun,
 		}
 
-		// Process this package
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+		// Process this package with configurable timeout
+		timeout := time.Duration(cfg.PackageTimeout) * time.Second
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		results, err := packages.UninstallPackages(ctx, configDir, []string{packageName}, opts)
 		cancel()
 

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/resources/packages"
 	"github.com/spf13/cobra"
 )
@@ -54,8 +55,13 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("%s", errorMsg)
 	}
 
-	// Create context with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	// Load configuration for timeout settings
+	configDir := config.GetDefaultConfigDirectory()
+	cfg := config.LoadWithDefaults(configDir)
+
+	// Create context with configurable timeout
+	searchTimeout := time.Duration(cfg.OperationTimeout) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), searchTimeout)
 	defer cancel()
 
 	// Perform search
@@ -65,7 +71,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		searchResult, err = searchSpecificManager(ctx, manager, packageName)
 	} else {
 		// Search all managers in parallel
-		searchResult, err = searchAllManagersParallel(ctx, packageName)
+		searchResult, err = searchAllManagersParallel(ctx, cfg, packageName)
 	}
 
 	if err != nil {
@@ -125,7 +131,7 @@ func searchSpecificManager(ctx context.Context, managerName, packageName string)
 }
 
 // searchAllManagersParallel searches all managers in parallel with timeout
-func searchAllManagersParallel(ctx context.Context, packageName string) (SearchOutput, error) {
+func searchAllManagersParallel(ctx context.Context, cfg *config.Config, packageName string) (SearchOutput, error) {
 	// Get available managers
 	availableManagers, err := getAvailableManagersMap(ctx)
 	if err != nil {
@@ -156,8 +162,9 @@ func searchAllManagersParallel(ctx context.Context, packageName string) (SearchO
 		go func(managerName string, mgr packages.PackageManager) {
 			defer wg.Done()
 
-			// Create a child context for this manager
-			managerCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			// Create a child context for this manager with configurable timeout
+			managerTimeout := time.Duration(cfg.OperationTimeout) * time.Second
+			managerCtx, cancel := context.WithTimeout(ctx, managerTimeout)
 			defer cancel()
 
 			results, err := mgr.Search(managerCtx, packageName)
@@ -239,11 +246,6 @@ func getAvailableManagersMap(ctx context.Context) (map[string]packages.PackageMa
 	availableManagers := make(map[string]packages.PackageManager)
 
 	for _, name := range registry.GetAllManagerNames() {
-		// Skip cargo for search since it doesn't support search well
-		if name == "cargo" {
-			continue
-		}
-
 		manager, err := registry.GetManager(name)
 		if err != nil {
 			continue // Skip unsupported managers

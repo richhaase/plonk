@@ -32,20 +32,21 @@ Without prefix, uses `default_manager` from configuration.
 ### Uninstall Command
 
 - **Purpose**: Remove packages from system and plonk management
-- **Flags**: `--dry-run`, `--force` (remove even if not managed)
+- **Flags**: `--dry-run`
 - **Behavior**:
   - Removes package and plonk.lock entry
   - Dependency handling by package manager
-  - Fails if not managed unless --force
+  - Only removes packages that are currently managed by plonk
 
 ### Search Command
 
 - **Purpose**: Find packages across package managers
 - **Behavior**:
-  - Without prefix: searches all managers in parallel (3-second timeout)
+  - Without prefix: searches all managers in parallel (configurable timeout)
   - With prefix: searches only specified manager
   - Shows package names only
   - Slow managers may not return results due to timeout
+  - Timeout controlled by `operation_timeout` configuration (default: 5 minutes)
 
 ### Info Command
 
@@ -55,6 +56,19 @@ Without prefix, uses `default_manager` from configuration.
   2. Installed but not managed
   3. Available but not installed
 - **Shows**: name, status, manager, description, homepage, install command
+
+### Timeout Configuration
+
+Package management operations have configurable timeouts through plonk.yaml:
+
+- **`package_timeout`** - Timeout for install/uninstall operations (default: 180 seconds)
+- **`operation_timeout`** - Timeout for search operations (default: 300 seconds)
+
+Example configuration:
+```yaml
+package_timeout: 300      # 5 minutes for package operations
+operation_timeout: 60     # 1 minute for search operations
+```
 
 ### Cross-Command Behaviors
 
@@ -95,24 +109,19 @@ The package management commands provide unified package operations across multip
 
 1. **Install Command Processing:**
    - Entry point parses package specifications with `ParsePackageSpec()`
-   - Uses 5-minute timeout per package installation
-   - **DISCREPANCY**: Documentation doesn't mention individual package timeouts
+   - Uses configurable timeout per package installation (from `package_timeout` config)
    - Validates manager and checks availability before installation
    - Updates `plonk.lock` atomically after successful installation
 
 2. **Uninstall Command Processing:**
-   - **DISCREPANCY**: `--force` flag is defined but never used in implementation
-   - Implementation: Flag is parsed but never passed to `UninstallOptions`
-   - Uses 3-minute timeout per package removal
+   - Uses configurable timeout per package removal (from `package_timeout` config)
    - Automatically determines manager from lock file if no prefix specified
    - Only removes from lock file if package was actually managed
 
 3. **Search Command Implementation:**
-   - Uses exactly 3-second timeout for parallel manager search
-   - **DISCREPANCY**: Skips cargo manager entirely in search operations
-   - Implementation: Hardcoded exclusion of cargo in `getAvailableManagersMap()`
-   - Documentation doesn't mention this cargo limitation
-   - Parallel goroutines with per-manager 3-second timeouts
+   - Uses configurable timeout for parallel manager search (from `operation_timeout` config)
+   - Includes all available package managers in search operations
+   - Parallel goroutines with per-manager configurable timeouts
 
 4. **Info Command Priority Logic:**
    - Implements exact priority: managed → installed → available
@@ -128,15 +137,16 @@ The package management commands provide unified package operations across multip
 
 6. **Lock File State Management:**
    - Uses `YAMLLockService` for atomic updates
-   - **DISCREPANCY**: Go packages use binary name in lock file, not full module path
+   - **Known Limitation**: Go packages store binary name only, not full module path
    - Implementation: `ExtractBinaryNameFromPath()` converts `golang.org/x/tools/cmd/gopls` → `gopls`
-   - Documentation doesn't explain this Go package name transformation
+   - This design choice prioritizes binary management but loses reinstallation information
    - Updates happen immediately after successful package operations
+   - **Future Enhancement**: v2 lock format could store both binary name and source path in metadata
 
 7. **Error Handling and Timeouts:**
-   - Install operations: 5-minute timeout per package
-   - Uninstall operations: 3-minute timeout per package
-   - Search operations: 3-second timeout total and per-manager
+   - Install operations: Configurable timeout per package (default: 3 minutes)
+   - Uninstall operations: Configurable timeout per package (default: 3 minutes)
+   - Search operations: Configurable timeout total and per-manager (default: 5 minutes)
    - Info operations: No timeout (blocking)
    - Failed operations don't prevent other packages from processing
 
@@ -166,14 +176,11 @@ The package management commands provide unified package operations across multip
 - Manager registry used by doctor command for availability checks
 
 **Bugs Identified:**
-1. **Non-functional --force flag in uninstall**: Flag defined but never used in `UninstallOptions`
-2. **Undocumented cargo search exclusion**: Search command skips cargo manager without documentation
-3. **Missing timeout documentation**: Individual operation timeouts not mentioned in behavior docs
-4. **Go package name transformation undocumented**: Binary name extraction not explained
+None - all discrepancies have been resolved.
 
 ## Improvements
 
-- Consider making search timeout configurable
+- **Enhance lock file format**: Store both binary name and full source path for Go packages and npm scoped packages
 - Add verbose search mode showing descriptions and versions
 - Support version pinning in install command
 - Add update command to upgrade managed packages
