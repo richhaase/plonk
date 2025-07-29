@@ -158,6 +158,11 @@ For each file, we will follow this process:
 - Document discrepancies between documented and actual behavior
 - Note any bugs found during code review but don't fix them
 
+### Implementation Learnings
+- **Lock File v2**: Breaking changes can lead to cleaner implementations - removed 50% of lock code by eliminating v1 support
+- **Metadata Design**: Using `map[string]interface{}` provides flexibility without schema changes
+- **Source Path Storage**: Critical for Go packages (`source_path`) and NPM scoped packages (`scope`, `full_name`)
+
 ### Implementation Review Learnings
 - **Config Command**: Found 3 discrepancies:
   1. Edit command validates and shows errors (not silently ignored as documented)
@@ -249,9 +254,21 @@ For each file, we will follow this process:
 - **Cross-Reference Strategy**: Link between docs rather than repeat information
 - **Process Iteration**: Present → Query → Synthesize → Apply → Repeat ensures user alignment
 
-## Implementation Enhancement Phase (Planning)
+## Implementation Enhancement Phase (In Progress)
 
 Phase for implementing improvements identified during documentation review. Items have been analyzed for dependencies and organized into implementation phases.
+
+### Completed Tasks
+
+#### Task 2: Lock File Format Enhancement (Completed - 2025-07-29)
+- **Implemented**: Lock file v2 with metadata support for package source paths
+- **Approach**: Clean break from v1 (no migration) - users must remove old lock files
+- **Benefits**: ~50% reduction in lock code complexity, cleaner API
+- **Key Features**:
+  - Go packages store `source_path` metadata (e.g., "golang.org/x/tools/cmd/gopls")
+  - NPM scoped packages store `scope` and `full_name` metadata
+  - Extensible metadata field for future enhancements
+- **Impact**: Enables Phase 2 setup features that need package source information
 
 ### Dependency Analysis
 
@@ -269,9 +286,9 @@ Key dependencies identified through code structure review:
 ### Implementation Phases
 
 #### Phase 1: Foundation (Immediate Priority)
-| Command | Item | Description | Dependency | Location |
-|---------|------|-------------|------------|----------|
-| package_management | Enhance lock file format | Store both binary name and full source path | Blocks setup features | `internal/lock/yaml_lock.go` |
+| Command | Item | Description | Dependency | Location | Status |
+|---------|------|-------------|------------|----------|--------|
+| package_management | Enhance lock file format | Store both binary name and full source path | Blocks setup features | `internal/lock/yaml_lock.go` | ✅ Completed |
 
 #### Phase 2: Setup Refactoring (High Priority - Implement Together)
 | Command | Item | Description | Dependency | Location |
