@@ -32,23 +32,26 @@ The setup command provides two primary workflows: initializing a fresh plonk ins
 ### Repository URL Support
 
 Accepts multiple Git repository formats:
-- **GitHub shorthand**: `user/repo`
+- **GitHub shorthand**: `user/repo` (defaults to HTTPS)
 - **HTTPS URL**: `https://github.com/user/repo.git`
 - **SSH URL**: `git@github.com:user/repo.git`
+- **Git protocol**: `git://github.com/user/repo.git`
 
 ### Package Manager Installation
 
-Setup delegates health checking and package manager installation to `plonk doctor --fix`:
+Setup uses custom tool installation logic that analyzes system health and installs missing package managers:
 
 **Bootstrap Managers** (installed via official installers):
-- Homebrew (required on macOS/Linux)
-- Cargo/Rust (via rustup)
+- Homebrew (required on macOS/Linux) - uses official installer script
+- Cargo/Rust (via rustup) - uses rustup installer script
 
 **Language Package Managers** (installed via default_manager):
-- npm (Node.js)
-- pip (Python)
-- gem (Ruby)
-- go
+- npm (Node.js) - installs `node` package via default package manager
+- pip (Python) - installs `python` package via default package manager
+- gem (Ruby) - installs `ruby` package via default package manager
+- go - installs `go` package via default package manager
+
+Note: Both `plonk setup` and `plonk doctor --fix` use the same underlying tool installation logic.
 
 ### Command Options
 
@@ -58,16 +61,17 @@ Setup delegates health checking and package manager installation to `plonk docto
 ### Execution Flow
 
 **Fresh Setup:**
-1. Create $PLONK_DIR if not exists
-2. Generate plonk.yaml with defaults
-3. Run doctor --fix to check/install package managers
-4. Complete setup (no apply needed)
+1. Verify $PLONK_DIR doesn't exist
+2. Create $PLONK_DIR directory
+3. Generate plonk.yaml with defaults
+4. Run health checks and install missing package managers
+5. Complete setup (no apply needed)
 
 **Clone Repository:**
-1. Verify $PLONK_DIR doesn't exist or is empty
+1. Verify $PLONK_DIR doesn't exist
 2. Clone repository to $PLONK_DIR
-3. Run doctor --fix to check/install package managers
-4. Run plonk apply to sync system state
+3. Run health checks and install missing package managers
+4. Automatically run plonk apply to sync system state
 
 ### Interactive Behavior
 
@@ -82,12 +86,38 @@ With `--yes` flag:
 
 ### Error Handling
 
-- **Directory exists**: Fails if `$PLONK_DIR` is not empty when cloning
+- **Directory exists**: Fails if `$PLONK_DIR` already exists
 - **Clone failures**: Exits with error (bad URL, network issues, auth problems)
 - **Package manager failures**:
   - Homebrew (required): Exits with error
   - Others (optional): Reports failure and continues
 - **Atomic operation**: On failure, attempts to leave system in clean state
+
+### PATH Configuration Guidance
+
+When package managers are installed but not immediately available in PATH, setup provides detailed configuration instructions:
+
+**Homebrew on Apple Silicon (ARM64 Macs)**:
+- Installed to `/opt/homebrew/bin/brew`
+- Setup shows commands to add `/opt/homebrew/bin` to PATH
+- Provides shell profile instructions for bash and zsh
+
+**Cargo/Rust Installation**:
+- Installed to `~/.cargo/bin/cargo`
+- Setup shows commands to add `~/.cargo/bin` to PATH
+- Provides shell profile instructions for bash and zsh
+- Notes that restarting shell will automatically source `~/.cargo/env`
+
+**Shell Profile Examples**:
+```bash
+# For bash users
+echo 'export PATH="/opt/homebrew/bin:$PATH"' >> ~/.bashrc
+echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bashrc
+
+# For zsh users
+echo 'export PATH="/opt/homebrew/bin:$PATH"' >> ~/.zshrc
+echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.zshrc
+```
 
 ### Special Behaviors
 
@@ -98,8 +128,8 @@ With `--yes` flag:
 
 ### Cross-References
 
-- Uses `plonk doctor --fix` internally for health checks and package manager installation
-- Runs `plonk apply` after successful repository clone
+- Uses same tool installation logic as `plonk doctor --fix` for health checks and package manager installation
+- Automatically runs `plonk apply` after successful repository clone
 
 ## Implementation Notes
 
@@ -120,14 +150,14 @@ The setup command provides initialization and repository cloning through a modul
    - Routes to `SetupWithoutRepo()` or `SetupWithRepo()` based on arguments
 
 2. **Repository URL Parsing:**
-   - **DISCREPANCY**: Supports additional formats beyond documented ones
    - Handles: GitHub shorthand, HTTPS URLs, SSH URLs, git:// protocol
    - Auto-appends `.git` to HTTPS URLs if missing
    - Uses regex validation for GitHub shorthand format
+   - GitHub shorthand defaults to HTTPS URLs
 
 3. **Directory Management:**
-   - Checks for existing plonk files (plonk.yaml OR plonk.lock)
-   - **DISCREPANCY**: Fails if ANY plonk file exists, not just "not empty"
+   - Checks for existing plonk directory
+   - Fails if `$PLONK_DIR` already exists (ensures clean clone environment)
    - Uses atomic cleanup on clone failure
    - Creates directory structure with 0750 permissions
 
@@ -143,12 +173,12 @@ The setup command provides initialization and repository cloning through a modul
    - Clones directly into `$PLONK_DIR` using git command
    - Preserves existing plonk.yaml if present
    - Only creates default config if plonk.yaml missing
-   - **DISCREPANCY**: Prompts user before running apply (not automatic)
+   - Automatically runs orchestrator.Apply() after successful clone
    - Runs orchestrator.Apply() directly (not shell command)
 
 6. **Tool Installation:**
    - Uses `diagnostics.RunHealthChecks()` for system analysis
-   - **DISCREPANCY**: Does NOT delegate to `plonk doctor --fix` as documented
+   - Uses same logic as `plonk doctor --fix` but called directly
    - Implements custom installation logic for each manager:
      - Homebrew: Uses official installer script
      - Cargo: Uses rustup installer script
@@ -173,11 +203,7 @@ The setup command provides initialization and repository cloning through a modul
 - Graceful handling of existing installations
 
 **Bugs Identified:**
-1. Documentation says setup delegates to `plonk doctor --fix` but actually uses custom implementation
-2. Documentation says apply runs automatically after clone, but actually prompts user first
-3. Documentation says "empty directory required" but code checks for specific plonk files
-4. Missing documentation of git:// protocol support
-5. Documentation doesn't mention PATH configuration guidance provided
+None - all discrepancies have been resolved.
 
 ## Improvements
 

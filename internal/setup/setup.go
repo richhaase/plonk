@@ -29,22 +29,9 @@ func SetupWithoutRepo(ctx context.Context, cfg Config) error {
 	// Get plonk directory
 	plonkDir := config.GetConfigDir()
 
-	// Check if PLONK_DIR already exists with plonk files
-	configPath := filepath.Join(plonkDir, "plonk.yaml")
-	lockPath := filepath.Join(plonkDir, "plonk.lock")
-
-	configExists := false
-	lockExists := false
-
-	if _, err := os.Stat(configPath); err == nil {
-		configExists = true
-	}
-	if _, err := os.Stat(lockPath); err == nil {
-		lockExists = true
-	}
-
-	if configExists || lockExists {
-		fmt.Printf("Plonk appears to be already set up at: %s\n", plonkDir)
+	// Check if PLONK_DIR already exists
+	if _, err := os.Stat(plonkDir); err == nil {
+		fmt.Printf("Plonk directory already exists at: %s\n", plonkDir)
 		fmt.Printf("If you want to start fresh, manually delete the directory and run setup again.\n")
 		return nil
 	}
@@ -83,23 +70,10 @@ func SetupWithRepo(ctx context.Context, gitRepo string, cfg Config) error {
 	// Get plonk directory
 	plonkDir := config.GetConfigDir()
 
-	// Check if PLONK_DIR already exists with plonk files
-	configPath := filepath.Join(plonkDir, "plonk.yaml")
-	lockPath := filepath.Join(plonkDir, "plonk.lock")
-
-	configExists := false
-	lockExists := false
-
-	if _, err := os.Stat(configPath); err == nil {
-		configExists = true
-	}
-	if _, err := os.Stat(lockPath); err == nil {
-		lockExists = true
-	}
-
-	if configExists || lockExists {
-		fmt.Printf("Plonk appears to be already set up at: %s\n", plonkDir)
-		fmt.Printf("If you want to clone a different repository, manually delete the directory and run setup again.\n")
+	// Check if PLONK_DIR already exists
+	if _, err := os.Stat(plonkDir); err == nil {
+		fmt.Printf("Plonk directory already exists at: %s\n", plonkDir)
+		fmt.Printf("If you want to clone a repository, manually delete the directory and run setup again.\n")
 		return nil
 	}
 
@@ -132,13 +106,6 @@ func SetupWithRepo(ctx context.Context, gitRepo string, cfg Config) error {
 
 	// If we had existing config, run plonk apply
 	if hasConfig {
-		if cfg.Interactive {
-			if !promptYesNo("Run 'plonk apply' to configure your system?", true) {
-				fmt.Printf("✅ Setup complete! Run 'plonk apply' when ready to configure your system.\n")
-				return nil
-			}
-		}
-
 		fmt.Println("Running 'plonk apply' to configure your system...")
 
 		// Run apply

@@ -49,8 +49,8 @@ Each file has the following sections:
 ### Discrepancy Resolution Phase (Current)
 | Document | Total Discrepancies | Resolved | Remaining | Status |
 |----------|-------------------|----------|-----------|--------|
-| setup.md | 5 | 0 | 5 | ⏳ Pending |
-| apply.md | 4 | 0 | 4 | ⏳ Pending |
+| setup.md | 5 | 5 | 0 | ✅ Completed |
+| apply.md | 4 | 4 | 0 | ✅ Completed |
 | config.md | 3 | 3 | 0 | ✅ Completed |
 | status.md | 3 | 3 | 0 | ✅ Completed |
 | doctor.md | 5 | 5 | 0 | ✅ Completed |

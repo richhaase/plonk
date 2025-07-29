@@ -39,9 +39,10 @@ Supported package managers:
 - npm (Node.js), pip (Python), gem (Ruby), go - installed via default_manager
 
 Git repository formats supported:
-- GitHub shorthand: user/repo
+- GitHub shorthand: user/repo (defaults to HTTPS)
 - HTTPS URL: https://github.com/user/repo.git
 - SSH URL: git@github.com:user/repo.git
+- Git protocol: git://github.com/user/repo.git
 
 Examples:
   plonk setup                        # Initialize new plonk setup
