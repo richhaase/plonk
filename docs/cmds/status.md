@@ -167,5 +167,5 @@ The status command provides comprehensive resource state management through a un
 - Review flag combination behavior (e.g., --packages --dotfiles redundancy)
 - Consider built-in pagination for very long lists
 - Add --missing flag to show only missing resources
-- Fix bug: Include unmanaged items in JSON/YAML output when --unmanaged is used
 - Consider adding color coding to package manager column for visual grouping
+- Remove JSON/YAML output format support until there's a real use case

@@ -271,7 +271,6 @@ Key dependencies identified through code structure review:
 #### Phase 1: Foundation (Immediate Priority)
 | Command | Item | Description | Dependency | Location |
 |---------|------|-------------|------------|----------|
-| status | Fix JSON/YAML bug | Include unmanaged items with --unmanaged flag | None | `internal/commands/status.go` |
 | package_management | Enhance lock file format | Store both binary name and full source path | Blocks setup features | `internal/lock/yaml_lock.go` |
 
 #### Phase 2: Setup Refactoring (High Priority - Implement Together)
@@ -288,6 +287,7 @@ Key dependencies identified through code structure review:
 | doctor | Copy-paste PATH commands | Provide shell-specific PATH export commands | None | `internal/diagnostics/health.go` |
 | status | Add --missing flag | Filter to show only missing resources | None | `internal/commands/status.go` |
 | dotfile_management | Improve path docs | Better path resolution documentation | None | Help text only |
+| global | Remove JSON/YAML output | Remove structured output formats until real use case emerges | None | `internal/commands/output.go` and all commands |
 
 #### Phase 4: UI/UX Improvements (Medium Priority)
 | Command | Item | Description | Dependency | Location |
