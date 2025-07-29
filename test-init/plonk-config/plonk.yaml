@@ -1,0 +1,46 @@
+# Plonk Configuration File
+# This file contains your plonk settings. Modify as needed.
+
+# Default package manager to use when installing packages
+default_manager: brew
+
+# Timeout settings (in seconds)
+operation_timeout: 300
+package_timeout: 180
+dotfile_timeout: 60
+
+# Directories to expand when listing dotfiles
+expand_directories:
+  - .config
+
+# Files and patterns to ignore when discovering dotfiles
+ignore_patterns:
+  - ".DS_Store"
+  - ".Trash"
+  - ".CFUserTextEncoding"
+  - ".cups"
+  - ".git"
+  - "*.backup"
+  - "*.tmp"
+  - "*.swp"
+  - "plonk.lock"
+  - ".cache"
+  - ".npm"
+  - ".gem"
+  - ".cargo"
+  - ".rustup"
+  - ".bundle"
+  - ".local"
+  - ".ollama"
+  - "*_history"
+  - "*.lesshst"
+  - ".cursor"
+  - ".lima"
+  - ".colima"
+  - ".cdk"
+  - ".magefile"
+  - ".ssh"
+  - ".gnupg"
+  - "*_token"
+  - "*.pem"
+  - "*.key"

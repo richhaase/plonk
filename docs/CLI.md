@@ -18,17 +18,6 @@ Show help information for plonk commands.
 plonk                                     # Show help and available commands
 ```
 
-### plonk init
-
-Initialize a fresh plonk configuration.
-
-```bash
-plonk init                            # Initialize with all package managers
-plonk init --no-cargo --no-gem        # Skip specific managers
-plonk init --yes                      # Non-interactive mode
-plonk init --no-npm --no-pip          # Skip multiple managers
-```
-
 ### plonk clone
 
 Clone a dotfiles repository and intelligently set up plonk.

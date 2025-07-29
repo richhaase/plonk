@@ -162,6 +162,9 @@ For each file, we will follow this process:
 - **Lock File v2**: Breaking changes can lead to cleaner implementations - removed 50% of lock code by eliminating v1 support
 - **Metadata Design**: Using `map[string]interface{}` provides flexibility without schema changes
 - **Source Path Storage**: Critical for Go packages (`source_path`) and NPM scoped packages (`scope`, `full_name`)
+- **Zero-Config Philosophy**: Removing init command reinforces zero-config principle - users just start using plonk
+- **Simplification**: Sometimes the best solution is removal - init command was unnecessary complexity
+- **Lock File Creation**: Lock files should only be created by install/uninstall, never by setup/init
 
 ### Implementation Review Learnings
 - **Config Command**: Found 3 discrepancies:
@@ -270,6 +273,22 @@ Phase for implementing improvements identified during documentation review. Item
   - Extensible metadata field for future enhancements
 - **Impact**: Enables Phase 2 setup features that need package source information
 
+#### Task 3: Setup Command Refactoring (Completed - 2025-07-29)
+- **Implemented**: Major refactoring of setup workflow with focus on simplicity
+- **Final Design**: Removed `init` command entirely, kept only `clone`
+  - Original plan: Split setup into init/clone commands
+  - Final decision: Remove init to maintain zero-config philosophy
+- **Key Features Delivered**:
+  - Intelligent clone that detects required managers from lock file
+  - Auto-installs only necessary package managers
+  - Runs apply automatically (with `--no-apply` option)
+  - No more empty lock file creation
+- **Benefits**:
+  - Simpler mental model: clone existing or just start using plonk
+  - True zero-config: no initialization step required
+  - Cleaner codebase with single setup path
+- **Note**: Skip flags were not implemented as init was removed entirely
+
 ### Dependency Analysis
 
 Key dependencies identified through code structure review:
@@ -291,12 +310,12 @@ Key dependencies identified through code structure review:
 | package_management | Enhance lock file format | Store both binary name and full source path | Blocks setup features | `internal/lock/yaml_lock.go` | ✅ Completed |
 
 #### Phase 2: Setup Refactoring (High Priority - Implement Together)
-| Command | Item | Description | Dependency | Location |
-|---------|------|-------------|------------|----------|
-| setup | Split init/setup commands | Separate initialization from clone workflow | Core refactor | `internal/commands/setup.go` |
-| setup | Skip package manager flags | Add --no-cargo, --no-npm, etc. flags | Depends on split | `internal/setup/tools.go` |
-| setup | Auto-detect from plonk.lock | Detect required managers from cloned repository | Needs lock v2 | `internal/setup/setup.go` |
-| setup | Intelligent clone + apply | Only install managers for tracked packages | Needs auto-detect | `internal/setup/setup.go` |
+| Command | Item | Description | Dependency | Location | Status |
+|---------|------|-------------|------------|----------|--------|
+| setup | Split init/setup commands | Separate initialization from clone workflow | Core refactor | `internal/commands/setup.go` | ✅ Modified: Removed init entirely |
+| setup | Skip package manager flags | Add --no-cargo, --no-npm, etc. flags | Depends on split | `internal/setup/tools.go` | ❌ Not implemented (init removed) |
+| setup | Auto-detect from plonk.lock | Detect required managers from cloned repository | Needs lock v2 | `internal/setup/setup.go` | ✅ Completed |
+| setup | Intelligent clone + apply | Only install managers for tracked packages | Needs auto-detect | `internal/setup/setup.go` | ✅ Completed |
 
 #### Phase 3: Quick Wins (Independent Items)
 | Command | Item | Description | Dependency | Location |

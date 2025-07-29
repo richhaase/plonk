@@ -81,8 +81,7 @@ go install github.com/richhaase/plonk/cmd/plonk@latest
 # Verify and auto-install missing tools
 plonk doctor --fix
 
-# Initialize or clone your dotfiles
-plonk init                     # Fresh start
+# Clone your dotfiles
 plonk clone user/dotfiles      # Clone existing setup
 ```
 
@@ -163,8 +162,8 @@ This will:
 To begin tracking your current setup:
 
 ```bash
-# Initialize plonk
-plonk init
+# Create plonk directory
+mkdir -p ~/.config/plonk
 
 # Add your existing dotfiles
 plonk add ~/.zshrc ~/.vimrc ~/.gitconfig
@@ -222,7 +221,7 @@ plonk doctor
 
 After successful installation:
 
-1. **Initialize your setup**: `plonk init` or `plonk clone user/dotfiles`
+1. **Clone existing setup** or **start tracking files**: `plonk clone user/dotfiles` or use `plonk add`
 2. **Learn the commands**: See [CLI Reference](cli.md)
 3. **Configure behavior**: See [Configuration Guide](configuration.md)
 4. **Understand the architecture**: See [Architecture Overview](architecture.md)

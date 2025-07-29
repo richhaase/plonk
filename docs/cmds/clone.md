@@ -29,7 +29,7 @@ The key feature of clone is automatic detection:
 
 If no lock file exists or it cannot be read:
 - No package managers are installed
-- User can run `plonk init` later if needed
+- User can manually install package managers if needed
 
 ### Repository URL Support
 
@@ -134,9 +134,9 @@ Clone will:
 
 ### Cross-References
 
-- Companion to `plonk init` for fresh setups
 - Automatically runs `plonk apply` after setup
 - Uses lock file format from `plonk install`
+- Works with `plonk doctor` for package manager health checks
 
 ## Implementation Notes
 
