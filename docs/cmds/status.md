@@ -38,7 +38,7 @@ Filters can be combined:
 - `--packages --unmanaged` - Show only unmanaged packages
 - `--dotfiles --unmanaged` - Show only unmanaged dotfiles
 
-Note: Using `--packages --dotfiles` together is redundant (shows both, same as no flags).
+Note: Using `--packages --dotfiles` together explicitly selects both domains (same effect as no flags).
 
 ### Table Format Display
 
@@ -63,9 +63,7 @@ Structured output includes:
 - Managed items in flat array with domain field
 - Uses "domain" terminology instead of separate sections
 
-Key difference: Unmanaged items not included even with --unmanaged flag.
-
-**Bug**: Currently `plonk status --unmanaged -o json|yaml` outputs the same information as without the --unmanaged flag, showing only managed items instead of unmanaged ones.
+**Bug**: JSON/YAML output formats do not support the `--unmanaged` flag and will always show managed items only, regardless of the flag. Use table format to view unmanaged items.
 
 ### Summary Information
 
@@ -73,7 +71,7 @@ Always displays total counts:
 - Managed: Resources tracked and present
 - Missing: Resources tracked but not present
 
-With `--unmanaged`, shows untracked counts in structured output.
+With `--unmanaged`, summary is hidden entirely in table format. Structured output (JSON/YAML) does not support unmanaged filtering.
 
 ### Special Behaviors
 
@@ -103,9 +101,8 @@ The status command provides comprehensive resource state management through a un
 
 1. **Command Processing:**
    - Parses filter flags (`--packages`, `--dotfiles`, `--unmanaged`)
-   - **DISCREPANCY**: Flag combination behavior differs from documentation
    - Implementation: If neither `--packages` nor `--dotfiles` is set, both are enabled
-   - Documentation suggests `--packages --dotfiles` is redundant, but implementation treats this as explicit selection
+   - Using `--packages --dotfiles` together explicitly selects both domains (same effect as default)
    - Loads configuration gracefully (continues even if config is invalid)
 
 2. **State Reconciliation:**
@@ -124,17 +121,15 @@ The status command provides comprehensive resource state management through a un
 
 4. **Output Formatting:**
    - Table format shows hierarchical sections (PACKAGES, DOTFILES)
-   - **DISCREPANCY**: JSON/YAML output ignores `--unmanaged` flag
-   - Implementation: StructuredData() method doesn't filter based on ShowUnmanaged flag
-   - Documentation correctly identifies this as a bug
+   - Implementation: StructuredData() method doesn't support ShowUnmanaged flag
+   - JSON/YAML formats only show managed items regardless of --unmanaged flag
    - Structured output includes summary counts and managed items only
 
 5. **Table Display Logic:**
    - Groups packages by manager for organized display
    - Shows different column layouts for managed vs unmanaged dotfiles
-   - **DISCREPANCY**: Summary calculation behavior
-   - Implementation: Summary is skipped entirely when `--unmanaged` is used
-   - Documentation suggests untracked counts are shown in structured output
+   - Implementation: Summary is completely hidden when `--unmanaged` is used in table format
+   - Structured output (JSON/YAML) always includes summary but doesn't support unmanaged filtering
 
 6. **Configuration and File Status:**
    - Checks existence and validity of `plonk.yaml` and `plonk.lock`
@@ -164,9 +159,7 @@ The status command provides comprehensive resource state management through a un
 - Output formatting consistent with other commands
 
 **Bugs Identified:**
-1. **JSON/YAML --unmanaged flag bug**: `StructuredData()` method ignores `ShowUnmanaged` flag, always returns managed items only
-2. **Flag combination documentation mismatch**: `--packages --dotfiles` behavior differs from documented "redundancy"
-3. **Summary display inconsistency**: Summary is completely hidden for --unmanaged rather than showing untracked counts
+1. **JSON/YAML --unmanaged flag limitation**: `StructuredData()` method doesn't support `ShowUnmanaged` flag, always returns managed items only
 
 ## Improvements
 
