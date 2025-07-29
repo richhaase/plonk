@@ -248,3 +248,57 @@ For each file, we will follow this process:
 - **Single Source of Truth**: Eliminate duplication by designating canonical locations for information types
 - **Cross-Reference Strategy**: Link between docs rather than repeat information
 - **Process Iteration**: Present → Query → Synthesize → Apply → Repeat ensures user alignment
+
+## Implementation Enhancement Phase (Planning)
+
+Phase for implementing improvements identified during documentation review. Items have been prioritized based on impact and classified as immediately actionable or long-term.
+
+### Immediately Actionable Items
+
+| Command | Item | Description | Priority |
+|---------|------|-------------|----------|
+| package_management | Enhance lock file format | Store both binary name and full source path for Go/npm packages | High |
+| doctor | Copy-paste PATH commands | Provide shell-specific PATH export commands | Medium |
+| setup | Skip package manager flags | Add --no-cargo, --no-npm, etc. flags | High |
+| setup | Auto-detect from plonk.lock | Detect required managers from cloned repository | High |
+| setup | Intelligent clone + apply | Only install managers for tracked packages | High |
+| setup | Split init/setup commands | Separate initialization from clone workflow | Medium |
+| config | Complete file editing | Edit full config, save only non-defaults | Medium |
+| config | Highlight user values | Distinguish user-defined from defaults in show output | Low |
+| dotfile_management | Improve path docs | Better path resolution documentation in help text | Low |
+| status | Sort alphabetically | Change default sort from package manager to alphabetical | Medium |
+| status | Review flag combinations | Fix --packages --dotfiles redundancy behavior | Medium |
+| status | Fix JSON/YAML bug | Include unmanaged items with --unmanaged flag | High |
+| status | Add --missing flag | Filter to show only missing resources | Low |
+| status | Color coding | Visual grouping by package manager | Low |
+
+### Long-Term Improvements
+
+#### Apply Command
+- Add progress indicators for large apply operations
+- Add verbose mode for detailed operation logging
+- Add support for selective dotfile deployment based on patterns
+
+#### Package Management
+- Add verbose search mode showing descriptions and versions
+- Support version pinning in install command
+- Add update command to upgrade managed packages
+- Show installation progress for long-running operations
+- Add --all flag to uninstall all packages from a manager
+- Consider showing dependencies in info output
+
+#### Doctor Command
+- Extend --fix to address all fixable issues, not just package managers
+- Review and standardize all health check behaviors
+- Revisit check categories for better organization
+- Extend package manager checks to include actual functionality testing
+- Consider having setup directly call doctor instead of duplicating code
+- Add auto-fix capabilities for PATH configuration issues
+
+#### Dotfile Management
+- Add verbose output option to show ignore pattern matches
+- Consider warning when re-adding files that differ from current version
+- Add drift detection system to identify when deployed dotfiles differ from source
+
+#### Status Command
+- Consider built-in pagination for very long lists

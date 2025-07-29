@@ -183,4 +183,3 @@ None - all discrepancies have been resolved.
 - Show installation progress for long-running operations
 - Add --all flag to uninstall all packages from a manager
 - Consider showing dependencies in info output
-- Add package count to search results per manager

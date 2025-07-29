@@ -195,6 +195,6 @@ None - all discrepancies have been resolved.
 ## Improvements
 
 - Improve path resolution documentation in help text
-- Consider adding --backup flag for rm command
 - Add verbose output option to show ignore pattern matches
 - Consider warning when re-adding files that differ from current version
+- Add drift detection system to identify when deployed dotfiles differ from source
