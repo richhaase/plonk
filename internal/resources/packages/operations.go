@@ -6,6 +6,7 @@ package packages
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -85,7 +86,11 @@ func UninstallPackages(ctx context.Context, configDir string, packages []string,
 			locations := lockService.FindPackage(packageName)
 			if len(locations) > 0 {
 				// Use the manager from the lock file
-				manager = locations[0].Manager
+				if mgr, ok := locations[0].Metadata["manager"].(string); ok {
+					manager = mgr
+				} else {
+					manager = defaultManager
+				}
 			} else {
 				// Package not managed, use default manager as pass-through
 				manager = defaultManager
@@ -173,8 +178,30 @@ func installSinglePackage(ctx context.Context, configDir string, lockService *lo
 		result.Version = version
 	}
 
+	// Create metadata for the package
+	metadata := map[string]interface{}{
+		"manager": manager,
+		"name":    lockPackageName,
+		"version": version,
+	}
+
+	// Add source path for Go packages
+	if manager == "go" {
+		metadata["source_path"] = packageName
+	}
+
+	// Handle npm scoped packages
+	if manager == "npm" && strings.HasPrefix(packageName, "@") {
+		// Extract scope from scoped package name
+		parts := strings.SplitN(packageName, "/", 2)
+		if len(parts) == 2 {
+			metadata["scope"] = parts[0]
+			metadata["full_name"] = packageName
+		}
+	}
+
 	// Add to lock file
-	err = lockService.AddPackage(manager, lockPackageName, version)
+	err = lockService.AddPackage(manager, lockPackageName, version, metadata)
 	if err != nil {
 		result.Status = "failed"
 		result.Error = fmt.Errorf("install %s: failed to add to lock file (manager: %s, version: %s): %w", packageName, manager, version, err)

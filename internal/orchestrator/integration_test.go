@@ -51,11 +51,11 @@ func TestOrchestratorApplyWithResources(t *testing.T) {
 
 	// Create an empty lock file v2 (no packages to avoid external dependencies)
 	lockService := lock.NewYAMLLockService(configDir)
-	lockFile := &lock.LockFile{
-		Version:  2,
-		Packages: make(map[string][]lock.PackageEntry),
+	lockFile := &lock.Lock{
+		Version:   2,
+		Resources: []lock.ResourceEntry{},
 	}
-	require.NoError(t, lockService.Save(lockFile))
+	require.NoError(t, lockService.Write(lockFile))
 
 	// Create context
 	ctx := context.Background()
@@ -124,12 +124,12 @@ func TestOrchestratorApplyWithResources(t *testing.T) {
 	// Test 4: Verify lock file v2 structure
 	t.Run("LockFileV2Structure", func(t *testing.T) {
 		// Load the lock file we created
-		loadedLock, err := lockService.Load()
+		loadedLock, err := lockService.Read()
 		require.NoError(t, err)
 
-		// Verify v2 structure with empty packages
+		// Verify v2 structure with empty resources
 		assert.Equal(t, 2, loadedLock.Version)
-		assert.NotNil(t, loadedLock.Packages)
-		assert.Empty(t, loadedLock.Packages, "should have no packages configured")
+		assert.NotNil(t, loadedLock.Resources)
+		assert.Empty(t, loadedLock.Resources, "should have no resources configured")
 	})
 }

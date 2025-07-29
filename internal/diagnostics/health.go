@@ -312,15 +312,8 @@ func checkLockFileValidity() HealthCheck {
 	lockService := lock.NewYAMLLockService(configDir)
 
 	// Try to load the lock file
-	lockFile, err := lockService.Load()
+	lockFile, err := lockService.Read()
 	if err != nil {
-		// If file doesn't exist, that's okay
-		if os.IsNotExist(err) {
-			check.Status = "info"
-			check.Message = "No lock file found (packages will be tracked when added)"
-			return check
-		}
-
 		check.Status = "fail"
 		check.Issues = append(check.Issues, fmt.Sprintf("Lock file is invalid: %v", err))
 		check.Suggestions = append(check.Suggestions, "Validate lock file format or regenerate by running 'plonk pkg add' commands")
@@ -330,9 +323,18 @@ func checkLockFileValidity() HealthCheck {
 
 	// Count packages by manager
 	totalPackages := 0
-	for manager, packages := range lockFile.Packages {
-		count := len(packages)
-		totalPackages += count
+	managerCounts := make(map[string]int)
+	for _, resource := range lockFile.Resources {
+		if resource.Type == "package" {
+			if manager, ok := resource.Metadata["manager"].(string); ok {
+				managerCounts[manager]++
+				totalPackages++
+			}
+		}
+	}
+
+	// Add manager counts to details
+	for manager, count := range managerCounts {
 		check.Details = append(check.Details, fmt.Sprintf("%s packages: %d", manager, count))
 	}
 

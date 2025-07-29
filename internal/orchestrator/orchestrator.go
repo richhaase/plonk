@@ -18,7 +18,7 @@ import (
 type Orchestrator struct {
 	ctx          context.Context
 	config       *config.Config
-	lock         lock.LockWriter
+	lock         lock.LockService
 	configDir    string
 	homeDir      string
 	hookRunner   *HookRunner

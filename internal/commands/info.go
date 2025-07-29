@@ -144,13 +144,17 @@ func getInfoWithPriorityLogic(ctx context.Context, packageName string) (InfoOutp
 		// Use the first location found
 		location := packageLocations[0]
 
+		// Extract manager and version from metadata
+		managerName, _ := location.Metadata["manager"].(string)
+		version, _ := location.Metadata["version"].(string)
+
 		// Try to get more detailed info from the manager
 		registry := packages.NewManagerRegistry()
-		if manager, err := registry.GetManager(location.Manager); err == nil {
+		if manager, err := registry.GetManager(managerName); err == nil {
 			if available, err := manager.IsAvailable(ctx); err == nil && available {
 				if info, err := manager.Info(ctx, packageName); err == nil {
 					info.Installed = true // Override to reflect managed status
-					message := fmt.Sprintf("Package '%s' is managed by plonk via %s", packageName, location.Manager)
+					message := fmt.Sprintf("Package '%s' is managed by plonk via %s", packageName, managerName)
 					if len(packageLocations) > 1 {
 						message += fmt.Sprintf(" (and %d other manager(s))", len(packageLocations)-1)
 					}
@@ -165,7 +169,7 @@ func getInfoWithPriorityLogic(ctx context.Context, packageName string) (InfoOutp
 		}
 
 		// Fallback to lock file info if manager call fails
-		message := fmt.Sprintf("Package '%s' is managed by plonk via %s", packageName, location.Manager)
+		message := fmt.Sprintf("Package '%s' is managed by plonk via %s", packageName, managerName)
 		if len(packageLocations) > 1 {
 			message += fmt.Sprintf(" (and %d other manager(s))", len(packageLocations)-1)
 		}
@@ -175,8 +179,8 @@ func getInfoWithPriorityLogic(ctx context.Context, packageName string) (InfoOutp
 			Message: message,
 			PackageInfo: &packages.PackageInfo{
 				Name:      packageName,
-				Version:   location.Entry.Version,
-				Manager:   location.Manager,
+				Version:   version,
+				Manager:   managerName,
 				Installed: true,
 			},
 		}, nil

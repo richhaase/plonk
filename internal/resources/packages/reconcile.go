@@ -5,7 +5,6 @@ package packages
 
 import (
 	"context"
-	"os"
 
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/resources"
@@ -15,16 +14,9 @@ import (
 func Reconcile(ctx context.Context, configDir string) (resources.Result, error) {
 	// Get configured packages from lock file
 	lockService := lock.NewYAMLLockService(configDir)
-	lockFile, err := lockService.Load()
+	lockData, err := lockService.Read()
 	if err != nil {
-		if !os.IsNotExist(err) {
-			return resources.Result{}, err
-		}
-		// No lock file means no configured packages
-		lockFile = &lock.LockFile{
-			Version:  1,
-			Packages: make(map[string][]lock.PackageEntry),
-		}
+		return resources.Result{}, err
 	}
 
 	// Create multi-package resource
@@ -32,20 +24,25 @@ func Reconcile(ctx context.Context, configDir string) (resources.Result, error) 
 
 	// Convert lock file entries to desired items
 	desired := make([]resources.Item, 0)
-	for manager, pkgs := range lockFile.Packages {
-		// Normalize manager name (homebrew -> brew)
-		normalizedManager := manager
-		if manager == "homebrew" {
-			normalizedManager = "brew"
-		}
+	for _, resource := range lockData.Resources {
+		if resource.Type == "package" {
+			// Extract manager and name from metadata
+			manager, _ := resource.Metadata["manager"].(string)
+			name, _ := resource.Metadata["name"].(string)
+			version, _ := resource.Metadata["version"].(string)
 
-		for _, pkg := range pkgs {
+			// Normalize manager name (homebrew -> brew)
+			normalizedManager := manager
+			if manager == "homebrew" {
+				normalizedManager = "brew"
+			}
+
 			desired = append(desired, resources.Item{
-				Name:    pkg.Name,
+				Name:    name,
 				Domain:  "package",
 				Manager: normalizedManager,
 				Metadata: map[string]interface{}{
-					"version": pkg.Version,
+					"version": version,
 				},
 			})
 		}
