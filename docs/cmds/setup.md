@@ -1,8 +1,14 @@
-# Setup Command
+# Setup Command (Deprecated)
+
+**⚠️ DEPRECATED**: The `plonk setup` command is deprecated. Use `plonk init` or `plonk clone` instead.
 
 The `plonk setup` command initializes plonk or clones an existing dotfiles repository.
 
 ## Description
+
+**This command is deprecated and will be removed in a future version.**
+- For initializing fresh plonk configuration, use `plonk init`
+- For cloning dotfiles repositories, use `plonk clone`
 
 The setup command provides two primary workflows: initializing a fresh plonk installation or cloning an existing dotfiles repository. It ensures the system has necessary package managers installed and creates required configuration files. When cloning a repository, setup automatically runs `plonk apply` to configure the system according to the cloned configuration.
 

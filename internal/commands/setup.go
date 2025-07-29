@@ -5,6 +5,7 @@ package commands
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/richhaase/plonk/internal/setup"
 	"github.com/spf13/cobra"
@@ -16,8 +17,8 @@ var (
 
 var setupCmd = &cobra.Command{
 	Use:   "setup [git-repo]",
-	Short: "Set up plonk configuration and install required tools",
-	Long: `Set up plonk for first-time use or clone an existing dotfiles repository.
+	Short: "DEPRECATED: Use 'plonk init' or 'plonk clone' instead",
+	Long: `DEPRECATED: The 'plonk setup' command is deprecated.
 
 Without arguments, this command:
 - Creates the plonk configuration directory
@@ -60,19 +61,45 @@ func init() {
 }
 
 func runSetup(cmd *cobra.Command, args []string) error {
+	// Show deprecation warning
+	fmt.Println("⚠️  WARNING: The 'plonk setup' command is deprecated and will be removed in a future version.")
+	fmt.Println()
+
+	if len(args) == 0 {
+		fmt.Println("Please use 'plonk init' instead to initialize a new plonk configuration.")
+		fmt.Println()
+		fmt.Println("Example:")
+		fmt.Println("  plonk init                        # Initialize with all package managers")
+		fmt.Println("  plonk init --no-cargo --no-gem   # Skip specific managers")
+		fmt.Println()
+		fmt.Println("Run 'plonk init --help' for more information.")
+	} else {
+		fmt.Println("Please use 'plonk clone' instead to clone a dotfiles repository.")
+		fmt.Println()
+		fmt.Println("Example:")
+		fmt.Printf("  plonk clone %s\n", args[0])
+		fmt.Println()
+		fmt.Println("Run 'plonk clone --help' for more information.")
+	}
+
+	fmt.Println()
+	fmt.Println("Continuing with deprecated command for backward compatibility...")
+	fmt.Println()
+
+	// Continue with old behavior for now
 	ctx := context.Background()
 
 	setupConfig := setup.Config{
 		Interactive: !setupYes,
-		Verbose:     false, // Could add --verbose flag later
+		Verbose:     false,
 	}
 
 	if len(args) == 0 {
-		// Setup without repository
-		return setup.SetupWithoutRepo(ctx, setupConfig)
+		// Setup without repository - use InitializeNew
+		return setup.InitializeNew(ctx, setupConfig)
 	} else {
-		// Setup with repository
+		// Setup with repository - use CloneAndSetup
 		gitRepo := args[0]
-		return setup.SetupWithRepo(ctx, gitRepo, setupConfig)
+		return setup.CloneAndSetup(ctx, gitRepo, setupConfig)
 	}
 }

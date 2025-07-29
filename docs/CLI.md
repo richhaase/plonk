@@ -18,15 +18,35 @@ Show help information for plonk commands.
 plonk                                     # Show help and available commands
 ```
 
-### plonk setup
+### plonk init
 
-Initialize plonk or clone an existing dotfiles repository.
+Initialize a fresh plonk configuration.
 
 ```bash
-plonk setup                           # Initialize plonk
-plonk setup user/dotfiles             # Clone from GitHub
-plonk setup https://github.com/user/dotfiles.git
-plonk setup --yes user/dotfiles       # Non-interactive mode
+plonk init                            # Initialize with all package managers
+plonk init --no-cargo --no-gem        # Skip specific managers
+plonk init --yes                      # Non-interactive mode
+plonk init --no-npm --no-pip          # Skip multiple managers
+```
+
+### plonk clone
+
+Clone a dotfiles repository and intelligently set up plonk.
+
+```bash
+plonk clone user/dotfiles             # Clone and auto-detect managers
+plonk clone richhaase/dotfiles        # Clone specific user's dotfiles
+plonk clone user/repo --no-apply      # Clone without running apply
+plonk clone --yes user/dotfiles       # Non-interactive mode
+```
+
+### plonk setup (deprecated)
+
+**⚠️ DEPRECATED**: Use `plonk init` or `plonk clone` instead.
+
+```bash
+plonk setup                           # Use 'plonk init' instead
+plonk setup user/dotfiles             # Use 'plonk clone' instead
 ```
 
 ### plonk install
