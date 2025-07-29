@@ -46,7 +46,7 @@ Each file has the following sections:
 
 **Total**: 27 behavior discrepancies identified across all commands
 
-### Discrepancy Resolution Phase (Current)
+### Discrepancy Resolution Phase (Completed)
 | Document | Total Discrepancies | Resolved | Remaining | Status |
 |----------|-------------------|----------|-----------|--------|
 | setup.md | 5 | 5 | 0 | ✅ Completed |
@@ -56,6 +56,38 @@ Each file has the following sections:
 | doctor.md | 5 | 5 | 0 | ✅ Completed |
 | package_management.md | 4 | 4 | 0 | ✅ Completed |
 | dotfile_management.md | 3 | 3 | 0 | ✅ Completed |
+
+### Documentation Improvement Phase (Current)
+For each documentation improvement item, we follow this process:
+1. **Present Item**: Show the duplication/issue and proposed resolution(s)
+2. **Query User**: Ask for additional context and resolution preferences
+3. **Synthesize Response**: Refine resolution based on user feedback (repeat until approved)
+4. **Apply Resolution**: Implement the user-approved solution
+5. **Update Progress**: Mark item as resolved in tracking
+6. **Repeat**: Continue with next item
+
+#### Medium Priority Items (Eliminate Duplication)
+| Item | Status | Description |
+|------|--------|-------------|
+| Package Manager Lists | ⏳ Pending | Consolidate repeated lists across README, cli.md, architecture.md |
+| Command Syntax Duplication | ⏳ Pending | Use cli.md as canonical reference, link from detailed docs |
+| Configuration Examples | ⏳ Pending | Single comprehensive example in configuration.md |
+| Installation Instructions | ⏳ Pending | Unify setup guides with clear variations |
+| Output Format Examples | ⏳ Pending | Standardize flag format and consolidate examples |
+| Repository URL Formats | ⏳ Pending | Consolidate in setup.md, reference elsewhere |
+
+#### Low Priority Items (Content Enhancement)
+| Item | Status | Description |
+|------|--------|-------------|
+| Add Troubleshooting Guide | ⏳ Pending | Common errors, solutions, debugging tips |
+| Create Migration Guide | ⏳ Pending | Version upgrade procedures and breaking changes |
+| Document Performance | ⏳ Pending | Timeouts, limits, scaling considerations |
+| Add Integration Examples | ⏳ Pending | Real-world dotfiles repository structures |
+| Improve Structure | ⏳ Pending | Clear user vs developer sections |
+| Add Cross-References | ⏳ Pending | Better linking between related topics |
+| Add Visual Aids | ⏳ Pending | Diagrams for state model and architecture |
+| Expand Examples | ⏳ Pending | More real-world scenarios and use cases |
+| Add FAQ Section | ⏳ Pending | Common questions and answers |
 
 ## Documentation Process
 
@@ -208,3 +240,9 @@ For each file, we will follow this process:
 - Search has 3-second timeout per manager when searching all
 - Info command has 3-tier priority: managed > installed > available
 - Keep documentation concise and behavior-focused (not implementation-focused)
+
+### Documentation Improvement Learnings
+- **Critical vs Medium Priority**: User-facing inaccuracies (wrong commands, incorrect behavior) are critical; duplication and organization are medium priority
+- **Single Source of Truth**: Eliminate duplication by designating canonical locations for information types
+- **Cross-Reference Strategy**: Link between docs rather than repeat information
+- **Process Iteration**: Present → Query → Synthesize → Apply → Repeat ensures user alignment
