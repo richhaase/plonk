@@ -119,10 +119,18 @@ resources:
    - Any design decisions made
 
 ## Important Considerations
-- **Backward Compatibility**: Must continue reading v1 files
+- **Breaking Change Acceptable**: Since there is only one plonk user, we can make breaking changes if it simplifies implementation
+- **Backward Compatibility**: Still useful to read v1 files for migration, but not required if it adds complexity
 - **Forward Compatibility**: Design metadata to be extensible
 - **Migration Safety**: Never lose data during migration
 - **Performance**: Migration should be fast even for large lock files
+
+## Simplification Opportunities
+Given that breaking changes are acceptable:
+- Can remove v1 reading code after migration if it simplifies the codebase
+- Can change the default lock file name if desired (e.g., `plonk.lock` → `plonk.yaml`)
+- Can restructure the entire format if a better design emerges during implementation
+- Don't need to maintain dual code paths for v1/v2 compatibility
 
 ## Example Metadata Uses
 ```yaml
