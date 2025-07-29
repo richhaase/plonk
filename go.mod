@@ -3,6 +3,7 @@ module github.com/richhaase/plonk
 go 1.24.4
 
 require (
+	github.com/fatih/color v1.18.0
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/golangci/golangci-lint v1.64.8
 	github.com/spf13/cobra v1.9.1
@@ -52,7 +53,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/denis-tingaikin/go-header v0.5.0 // indirect
 	github.com/ettle/strcase v0.2.0 // indirect
-	github.com/fatih/color v1.18.0 // indirect
 	github.com/fatih/structtag v1.2.0 // indirect
 	github.com/firefart/nonamedreturns v1.0.5 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect

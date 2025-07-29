@@ -10,12 +10,18 @@ The doctor command performs comprehensive health checks on your plonk installati
 
 ### Core Function
 
-Doctor runs a series of health checks across six categories and reports findings with three status levels:
-- **PASS** (✅): Everything working correctly
-- **WARN** (⚠️): Possible degraded behavior or issues needing attention
-- **ERROR** (❌): Critical issues preventing plonk from functioning
+Doctor runs a series of health checks across six categories and reports findings with four individual check status levels:
+- **PASS**: Everything working correctly
+- **WARN**: Possible degraded behavior or issues needing attention
+- **FAIL**: Critical issues preventing plonk from functioning
+- **INFO**: Informational messages (not affecting overall health)
 
-Overall status reflects the most severe issue found: ERROR > WARNING > PASS.
+Overall system health uses different terminology:
+- **healthy**: All checks pass or only have warnings/info
+- **warning**: Some checks have warnings but no failures
+- **unhealthy**: One or more checks have failures
+
+All health checks run within a 30-second timeout.
 
 ### Check Categories
 
@@ -35,7 +41,6 @@ Overall status reflects the most severe issue found: ERROR > WARNING > PASS.
 
 5. **Package Managers**
    - Availability of each package manager
-   - Functionality verification (currently redundant with availability)
 
 6. **Installation**
    - Plonk executable accessibility
@@ -51,7 +56,7 @@ Overall status reflects the most severe issue found: ERROR > WARNING > PASS.
 
 **Table Format** (default):
 - Hierarchical display with categories and checks
-- Color-coded status indicators
+- Color-coded status indicators (green=pass, yellow=warn, red=fail, blue=info)
 - Detailed messages, issues, and suggestions
 - Human-readable with formatting
 
@@ -98,7 +103,7 @@ The `plonk setup` command uses the same code as `doctor --fix` internally for pa
 
 ### Special Behaviors
 
-- Package manager "availability" and "functionality" are currently equivalent
+- Package manager checks only verify availability (installation and basic functionality)
 - PATH suggestions are informational only - not auto-fixable
 - Missing plonk.lock is not an error (valid for dotfiles-only usage)
 - Configuration file issues result in fallback to defaults
@@ -121,15 +126,11 @@ The doctor command provides comprehensive system health checking through a struc
    - Re-runs health checks after fixes to show updated status
 
 2. **Health Check Categories:**
-   - **DISCREPANCY**: Uses different status terminology than documented
-   - Implementation uses: `pass`, `warn`, `fail`, `info`
-   - Documentation says: `PASS`, `WARN`, `ERROR`
+   - Individual check statuses: `pass`, `warn`, `fail`, `info`
    - Categories: `system`, `environment`, `permissions`, `configuration`, `package-managers`, `installation`
 
 3. **Overall Status Calculation:**
-   - **DISCREPANCY**: Uses different overall status values
-   - Implementation: `healthy`, `warning`, `unhealthy`
-   - Documentation: `PASS`, `WARNING`, `ERROR`
+   - Overall system health values: `healthy`, `warning`, `unhealthy`
    - Priority: `fail` > `warn` > `pass` (any failure makes overall unhealthy)
 
 4. **Individual Health Checks:**
@@ -141,7 +142,7 @@ The doctor command provides comprehensive system health checking through a struc
    - Lock File: Existence and validity of plonk.lock
    - Lock File Validity: YAML parsing and structure validation
    - Package Manager Availability: Tests each manager via registry
-   - **DISCREPANCY**: Package Manager Functionality is identical to availability (not differentiated)
+   - Package Manager checks only verify availability (no separate functionality check)
    - Executable Path: Plonk binary accessibility
    - PATH Configuration: Package manager directories in PATH
 
@@ -155,8 +156,7 @@ The doctor command provides comprehensive system health checking through a struc
 6. **Output Formatting:**
    - Table format uses hierarchical display with fixed category ordering
    - JSON/YAML formats use flat check arrays
-   - **DISCREPANCY**: Documentation mentions color coding but implementation uses emoji icons
-   - Status icons: ✅ (pass), ⚠️ (warn), ❌ (fail), ℹ️ (info), ❓ (unknown)
+   - Status display: Color-coded text (green=pass, yellow=warn, red=fail, blue=info)
 
 **Category Organization:**
 - Fixed ordering: system → environment → permissions → configuration → package-managers → installation
@@ -170,23 +170,19 @@ The doctor command provides comprehensive system health checking through a struc
 - Package manager unavailability results in warnings, not failures
 
 **Integration Details:**
-- **DISCREPANCY**: Shares code with setup via `setup.CheckAndInstallToolsFromReport()`
+- Shares code with setup via `setup.CheckAndInstallToolsFromReport()`
 - Does not call `plonk doctor --fix` as a subprocess
 - Uses same package manager installation logic as setup command
 
 **Bugs Identified:**
-1. Status terminology mismatch between docs (`PASS`/`WARN`/`ERROR`) and implementation (`pass`/`warn`/`fail`)
-2. Overall status values differ: docs use `PASS`/`WARNING`/`ERROR`, implementation uses `healthy`/`warning`/`unhealthy`
-3. Package Manager Functionality check is identical to Availability check (no differentiation)
-4. Documentation says "color-coded" but implementation uses emoji icons
-5. Documentation doesn't mention 30-second timeout for all checks
+None - all discrepancies have been resolved.
 
 ## Improvements
 
 - Extend `--fix` to address all fixable issues, not just package managers
 - Review and standardize all health check behaviors
 - Revisit check categories for better organization
-- Remove redundant "functionality" check or differentiate from "availability"
+- Extend package manager checks to include actual functionality testing beyond availability
 - Consider having setup directly call doctor instead of duplicating code
 - Add auto-fix capabilities for PATH configuration issues
 - Provide copy-paste ready PATH export commands for user's specific shell

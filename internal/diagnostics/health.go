@@ -69,7 +69,6 @@ func RunHealthChecks() HealthReport {
 
 	// Package manager checks
 	report.Checks = append(report.Checks, checkPackageManagerAvailability(ctx))
-	report.Checks = append(report.Checks, checkPackageManagerFunctionality(ctx))
 
 	// Path and executable checks
 	report.Checks = append(report.Checks, checkExecutablePath())
@@ -388,60 +387,6 @@ func checkPackageManagerAvailability(ctx context.Context) HealthCheck {
 		if len(unavailableManagers) > 0 {
 			check.Suggestions = append(check.Suggestions, "Consider installing additional package managers for broader package support")
 		}
-	}
-
-	return check
-}
-
-// checkPackageManagerFunctionality tests basic functionality of available package managers
-func checkPackageManagerFunctionality(ctx context.Context) HealthCheck {
-	check := HealthCheck{
-		Name:     "Package Manager Functionality",
-		Category: "package-managers",
-		Status:   "pass",
-		Message:  "Package managers are functional",
-	}
-
-	registry := packages.NewManagerRegistry()
-	functionalManagers := 0
-	totalTested := 0
-
-	for _, managerName := range packages.SupportedManagers {
-		mgr, err := registry.GetManager(managerName)
-		if err != nil {
-			continue
-		}
-
-		available, err := mgr.IsAvailable(ctx)
-		if err != nil || !available {
-			continue
-		}
-
-		totalTested++
-
-		// Test basic functionality (list installed packages)
-		_, err = mgr.ListInstalled(ctx)
-		if err != nil {
-			check.Details = append(check.Details, fmt.Sprintf("%s: ❌ (list failed: %v)", managerName, err))
-		} else {
-			check.Details = append(check.Details, fmt.Sprintf("%s: ✅ (functional)", managerName))
-			functionalManagers++
-		}
-	}
-
-	if totalTested == 0 {
-		check.Status = "warn"
-		check.Message = "No package managers to test"
-	} else if functionalManagers == 0 {
-		check.Status = "fail"
-		check.Message = "Package managers are not functional"
-		check.Issues = append(check.Issues, "All tested package managers failed functionality checks")
-		check.Suggestions = append(check.Suggestions, "Check package manager installations and permissions")
-	} else if functionalManagers < totalTested {
-		check.Status = "warn"
-		check.Message = fmt.Sprintf("%d of %d package managers functional", functionalManagers, totalTested)
-	} else {
-		check.Message = fmt.Sprintf("All %d package managers functional", functionalManagers)
 	}
 
 	return check

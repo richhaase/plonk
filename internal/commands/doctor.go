@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/richhaase/plonk/internal/diagnostics"
 	"github.com/richhaase/plonk/internal/setup"
 	"github.com/spf13/cobra"
@@ -101,11 +102,14 @@ func (d DoctorOutput) TableOutput() string {
 
 	switch d.Overall.Status {
 	case "healthy":
-		output.WriteString("🟢 Overall Status: HEALTHY\n")
+		green := color.New(color.FgGreen, color.Bold)
+		output.WriteString(green.Sprintf("Overall Status: HEALTHY\n"))
 	case "warning":
-		output.WriteString("🟡 Overall Status: WARNING\n")
+		yellow := color.New(color.FgYellow, color.Bold)
+		output.WriteString(yellow.Sprintf("Overall Status: WARNING\n"))
 	case "unhealthy":
-		output.WriteString("🔴 Overall Status: UNHEALTHY\n")
+		red := color.New(color.FgRed, color.Bold)
+		output.WriteString(red.Sprintf("Overall Status: UNHEALTHY\n"))
 	}
 	output.WriteString(fmt.Sprintf("   %s\n\n", d.Overall.Message))
 
@@ -122,23 +126,32 @@ func (d DoctorOutput) TableOutput() string {
 			output.WriteString(fmt.Sprintf("## %s\n", strings.Title(strings.ReplaceAll(category, "-", " "))))
 
 			for _, check := range checks {
-				// Status icon
-				var icon string
+				// Color-coded status
+				var statusColor *color.Color
+				var statusText string
 				switch check.Status {
 				case "pass":
-					icon = "✅"
+					statusColor = color.New(color.FgGreen)
+					statusText = "PASS"
 				case "warn":
-					icon = "⚠️"
+					statusColor = color.New(color.FgYellow)
+					statusText = "WARN"
 				case "fail":
-					icon = "❌"
+					statusColor = color.New(color.FgRed)
+					statusText = "FAIL"
 				case "info":
-					icon = "ℹ️"
+					statusColor = color.New(color.FgBlue)
+					statusText = "INFO"
 				default:
-					icon = "❓"
+					statusColor = color.New(color.FgWhite)
+					statusText = "UNKNOWN"
 				}
 
-				output.WriteString(fmt.Sprintf("### %s %s\n", icon, check.Name))
-				output.WriteString(fmt.Sprintf("**Status**: %s\n", strings.ToUpper(check.Status)))
+				coloredName := statusColor.Sprintf("### %s", check.Name)
+				coloredStatus := statusColor.Sprintf("**Status**: %s", statusText)
+
+				output.WriteString(fmt.Sprintf("%s\n", coloredName))
+				output.WriteString(fmt.Sprintf("%s\n", coloredStatus))
 				output.WriteString(fmt.Sprintf("**Message**: %s\n", check.Message))
 
 				if len(check.Details) > 0 {
