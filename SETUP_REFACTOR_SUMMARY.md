@@ -1,5 +1,7 @@
 # Setup Command Refactoring Summary
 
+**UPDATE**: The `plonk setup` command has been completely removed as requested. The refactoring is now complete with only `plonk init` and `plonk clone` commands.
+
 ## Overview
 
 Successfully refactored the `plonk setup` command into two distinct commands: `plonk init` and `plonk clone`. This provides better user control and intelligent package manager detection.
@@ -42,20 +44,23 @@ Successfully refactored the `plonk setup` command into two distinct commands: `p
 - Falls back to ID prefix parsing if needed
 - Returns empty list if no lock file exists
 
-### 3. Deprecated Command Handling
+### 3. Complete Removal of Setup Command
 
-The original `plonk setup` command:
-- Shows clear deprecation warning
-- Suggests appropriate replacement command
-- Still functions for backward compatibility
-- Internally calls new InitializeNew() or CloneAndSetup()
+The original `plonk setup` command has been:
+- Completely removed from the codebase
+- Documentation deleted (setup.md)
+- All references updated in other documentation
+- No backward compatibility maintained
 
 ### 4. Documentation Updates
 
 - Created `docs/cmds/init.md` - comprehensive init command docs
 - Created `docs/cmds/clone.md` - comprehensive clone command docs
-- Updated `docs/cmds/setup.md` - added deprecation notices
-- Updated `docs/cli.md` - added new commands, marked setup as deprecated
+- Deleted `docs/cmds/setup.md` - removed entirely
+- Updated `docs/cli.md` - added new commands, removed setup
+- Updated `docs/installation.md` - replaced setup with init/clone
+- Updated `docs/why-plonk.md` - replaced setup example with clone
+- Updated `docs/cmds/doctor.md` - updated integration references
 - All documentation follows existing format conventions
 
 ## Design Decisions
@@ -83,7 +88,7 @@ The whole point of clone is intelligent detection. Adding skip flags would:
 
 ## Migration Guide for Users
 
-### Previous Commands
+### Previous Commands (No Longer Available)
 ```bash
 # Old way - initialize
 plonk setup
@@ -92,7 +97,7 @@ plonk setup
 plonk setup user/dotfiles
 ```
 
-### New Commands
+### New Commands (Required)
 ```bash
 # New way - initialize with control
 plonk init
@@ -102,6 +107,8 @@ plonk init --no-cargo --no-gem
 plonk clone user/dotfiles
 plonk clone user/repo --no-apply
 ```
+
+**Note**: The `plonk setup` command has been completely removed. Users must use the new commands.
 
 ## Technical Benefits
 

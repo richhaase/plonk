@@ -33,7 +33,7 @@ Next came the symlink approach - keep everything in a git repo and symlink to `$
 [Dotter](https://github.com/SuperCuber/dotter) was a breath of fresh air. I loved its minimalism and simplicity. The global vs local configurations seemed promising, but I never really used them - just meant storing multiple sets of files.
 
 ### Chezmoi
-[Chezmoi](https://www.chezmoi.io/) is powerful and has excellent setup features (which inspired `plonk setup`). But I wanted something simpler and more opinionated. The templating system, while powerful, added complexity I didn't need. And crucially - it still didn't handle packages.
+[Chezmoi](https://www.chezmoi.io/) is powerful and has excellent setup features. But I wanted something simpler and more opinionated. The templating system, while powerful, added complexity I didn't need. And crucially - it still didn't handle packages.
 
 ### The Missing Piece
 Every solution I tried solved dotfiles well, but none addressed the other half of my setup: packages. In today's world of amazing CLI/TUI tools, I'm constantly trying new things. I need my package management to be as fluid as my dotfile management.
@@ -44,7 +44,7 @@ Plonk is the unified solution I wanted but couldn't find. It manages both packag
 
 ```bash
 # Clone your environment to a new machine
-plonk setup github.com/yourusername/dotfiles
+plonk clone yourusername/dotfiles
 # Done. Seriously.
 ```
 

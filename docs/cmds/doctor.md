@@ -97,9 +97,9 @@ Doctor provides detailed PATH analysis:
 - Notes directories that don't exist yet (ℹ️)
 - Provides shell configuration suggestions for missing paths
 
-### Integration with Setup
+### Integration with Init/Clone
 
-The `plonk setup` command uses the same code as `doctor --fix` internally for package manager installation. This ensures consistency between initial setup and later health checks.
+The `plonk init` and `plonk clone` commands use the same code as `doctor --fix` internally for package manager installation. This ensures consistency between initial setup and later health checks.
 
 ### Special Behaviors
 
@@ -148,7 +148,7 @@ The doctor command provides comprehensive system health checking through a struc
 
 5. **Fix Behavior:**
    - **DISCREPANCY**: Actually delegates to `setup.CheckAndInstallToolsFromReport()`, not direct `doctor --fix`
-   - Uses same setup infrastructure as `plonk setup`
+   - Uses same setup infrastructure as `plonk init`/`plonk clone`
    - Only fixes package manager installation issues
    - `--yes` flag bypasses interactive prompts
    - Re-runs all health checks after fixes

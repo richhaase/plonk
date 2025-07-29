@@ -82,8 +82,8 @@ go install github.com/richhaase/plonk/cmd/plonk@latest
 plonk doctor --fix
 
 # Initialize or clone your dotfiles
-plonk setup                    # Fresh start
-plonk setup user/dotfiles      # Clone existing setup
+plonk init                     # Fresh start
+plonk clone user/dotfiles      # Clone existing setup
 ```
 
 **macOS Notes:**
@@ -101,7 +101,7 @@ go install github.com/richhaase/plonk/cmd/plonk@latest
 plonk doctor --fix
 
 # Initialize or clone your dotfiles
-plonk setup user/dotfiles
+plonk clone user/dotfiles
 ```
 
 **Linux Notes:**
@@ -148,8 +148,8 @@ export PLONK_DIR="/path/to/your/config"
 If you have an existing dotfiles repository:
 
 ```bash
-plonk setup user/dotfiles                    # GitHub shorthand
-plonk setup https://github.com/user/repo.git # Full URL
+plonk clone user/dotfiles                    # GitHub shorthand
+plonk clone https://github.com/user/repo.git # Full URL
 ```
 
 This will:
@@ -164,7 +164,7 @@ To begin tracking your current setup:
 
 ```bash
 # Initialize plonk
-plonk setup
+plonk init
 
 # Add your existing dotfiles
 plonk add ~/.zshrc ~/.vimrc ~/.gitconfig
@@ -222,7 +222,7 @@ plonk doctor
 
 After successful installation:
 
-1. **Initialize your setup**: `plonk setup` or `plonk setup user/dotfiles`
+1. **Initialize your setup**: `plonk init` or `plonk clone user/dotfiles`
 2. **Learn the commands**: See [CLI Reference](cli.md)
 3. **Configure behavior**: See [Configuration Guide](configuration.md)
 4. **Understand the architecture**: See [Architecture Overview](architecture.md)

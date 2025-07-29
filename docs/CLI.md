@@ -40,14 +40,6 @@ plonk clone user/repo --no-apply      # Clone without running apply
 plonk clone --yes user/dotfiles       # Non-interactive mode
 ```
 
-### plonk setup (deprecated)
-
-**⚠️ DEPRECATED**: Use `plonk init` or `plonk clone` instead.
-
-```bash
-plonk setup                           # Use 'plonk init' instead
-plonk setup user/dotfiles             # Use 'plonk clone' instead
-```
 
 ### plonk install
 
