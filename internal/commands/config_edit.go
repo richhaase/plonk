@@ -12,6 +12,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 var configEditCmd = &cobra.Command{
@@ -87,26 +88,9 @@ func runConfigEdit(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// getEditor returns the editor to use, checking environment variables
+// getEditor returns the editor to use from EDITOR environment variable
 func getEditor() string {
-	// Check environment variables in order of preference
-	editors := []string{
-		os.Getenv("EDITOR"),
-		os.Getenv("VISUAL"),
-		"nano", // Fallback to nano
-		"vi",   // Last resort
-	}
-
-	for _, editor := range editors {
-		if editor != "" {
-			// Check if the editor is available
-			if _, err := exec.LookPath(strings.Fields(editor)[0]); err == nil {
-				return editor
-			}
-		}
-	}
-
-	return "nano" // Final fallback
+	return os.Getenv("EDITOR")
 }
 
 // openEditor opens the specified file in the editor
@@ -166,39 +150,16 @@ func validateEditedConfig(configPath string) error {
 
 // createDefaultConfig creates a default configuration file
 func createDefaultConfig(configPath string) error {
-	defaultConfig := `# Plonk Configuration
-# https://github.com/your-repo/plonk
+	// Get the actual default config
+	cfg := config.GetDefaults()
 
-settings:
-  default_manager: brew
-  operation_timeout: 600  # 10 minutes
+	// Marshal to YAML
+	yamlData, err := yaml.Marshal(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to marshal default config: %w", err)
+	}
 
-# Package definitions
-brew: []
-
-npm: []
-
-# Dotfile definitions
-dotfiles: []
-
-# Example configuration:
-# brew:
-#   - git
-#   - neovim
-#   - firefox
-#   - visual-studio-code
-#
-# npm:
-#   - prettier
-#   - typescript
-#
-# dotfiles:
-#   - zshrc
-#   - gitconfig
-#   - config/nvim
-`
-
-	return os.WriteFile(configPath, []byte(defaultConfig), 0600)
+	return os.WriteFile(configPath, yamlData, 0600)
 }
 
 // promptEditAgain asks the user if they want to edit the config again

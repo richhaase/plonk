@@ -41,7 +41,8 @@ Opens the configuration file for editing:
 
 - Uses system editor (determined by `$EDITOR` environment variable)
 - If `plonk.yaml` doesn't exist, creates it with default values
-- No validation on save - invalid YAML entries are silently ignored
+- Validates configuration after editing and reports any errors
+- If validation fails, offers option to re-edit or cancel changes
 - Changes take effect immediately (no restart required)
 
 ### Configuration Precedence
@@ -49,7 +50,7 @@ Opens the configuration file for editing:
 1. Built-in defaults (hardcoded)
 2. User overrides from `plonk.yaml`
 
-Invalid configuration entries in `plonk.yaml` are ignored and defaults are used instead. No warnings or error messages are displayed for invalid entries.
+Configuration validation occurs during editing. Invalid entries are reported with specific error messages, and users can choose to fix errors or cancel the edit operation.
 
 ### Default Configuration Values
 
@@ -91,14 +92,14 @@ The config command is implemented as a parent command with two subcommands:
 
 3. **Edit Command:**
    - Creates config directory if missing
-   - **DISCREPANCY**: Creates a template config file with example content, not actual defaults
+   - Creates config file with complete default configuration values
    - Validates configuration after editing using `SimpleValidator`
-   - **DISCREPANCY**: Shows validation errors and allows re-editing (documented as "silently ignored")
-   - Editor selection: `$EDITOR` → `$VISUAL` → `nano` → `vi`
+   - Shows validation errors and allows re-editing when validation fails
+   - Editor selection: Uses `$EDITOR` environment variable only
 
 4. **Validation:**
    - Uses `go-playground/validator` for struct validation
-   - **DISCREPANCY**: Edit command actively validates and reports errors
+   - Edit command actively validates and reports errors with detailed messages
    - Validation includes field constraints (e.g., timeout ranges)
    - Returns structured `ValidationResult` with errors and warnings
 
@@ -109,9 +110,7 @@ The config command is implemented as a parent command with two subcommands:
 - All fields are optional with `omitempty` tags
 
 **Bugs Identified:**
-1. Documentation states invalid entries are "silently ignored" but edit command shows validation errors
-2. Edit command creates template config, not file with actual default values
-3. Documentation doesn't mention `$VISUAL` environment variable check
+None - all discrepancies have been resolved.
 
 ## Improvements
 
