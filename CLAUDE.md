@@ -70,7 +70,7 @@ For each documentation improvement item, we follow this process:
 | Item | Status | Description |
 |------|--------|-------------|
 | Package Manager Lists | ⏳ Pending | Consolidate repeated lists across README, cli.md, architecture.md |
-| Command Syntax Duplication | ⏳ Pending | Use cli.md as canonical reference, link from detailed docs |
+| Command Syntax Duplication | 🔄 In Progress | Use cli.md as canonical reference, link from detailed docs |
 | Configuration Examples | ⏳ Pending | Single comprehensive example in configuration.md |
 | Installation Instructions | ⏳ Pending | Unify setup guides with clear variations |
 | Output Format Examples | ⏳ Pending | Standardize flag format and consolidate examples |

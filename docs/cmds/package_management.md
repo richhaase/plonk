@@ -2,6 +2,8 @@
 
 Commands for managing packages: `install`, `uninstall`, `search`, and `info`.
 
+For CLI syntax and flags, see [CLI Reference](../cli.md#package-manager-prefixes).
+
 ## Description
 
 The package management commands handle system package operations across multiple package managers. All commands support package manager prefixes (e.g., `brew:htop`) to target specific managers, defaulting to the configured `default_manager` when no prefix is specified. Package state is tracked in plonk.lock, which is updated atomically with each operation.
@@ -21,27 +23,28 @@ Without prefix, uses `default_manager` from configuration.
 
 ### Install Command
 
-- **Purpose**: Install packages and add to plonk management
-- **Flags**: `--dry-run`, `--force` (reinstall if already managed)
-- **Behavior**:
+**Purpose**: Install packages and add to plonk management
+
+**Behavior**:
   - Not installed → installs package, adds to plonk.lock
   - Already installed → adds to plonk.lock (success)
-  - Already managed → skips unless --force
+  - Already managed → skips (no reinstall)
   - Updates plonk.lock atomically with each success
 
 ### Uninstall Command
 
-- **Purpose**: Remove packages from system and plonk management
-- **Flags**: `--dry-run`
-- **Behavior**:
+**Purpose**: Remove packages from system and plonk management
+
+**Behavior**:
   - Removes package and plonk.lock entry
   - Dependency handling by package manager
   - Only removes packages that are currently managed by plonk
 
 ### Search Command
 
-- **Purpose**: Find packages across package managers
-- **Behavior**:
+**Purpose**: Find packages across package managers
+
+**Behavior**:
   - Without prefix: searches all managers in parallel (configurable timeout)
   - With prefix: searches only specified manager
   - Shows package names only
@@ -50,12 +53,14 @@ Without prefix, uses `default_manager` from configuration.
 
 ### Info Command
 
-- **Purpose**: Show package details and installation status
-- **Priority order**:
+**Purpose**: Show package details and installation status
+
+**Priority order**:
   1. Managed by plonk
   2. Installed but not managed
   3. Available but not installed
-- **Shows**: name, status, manager, description, homepage, install command
+
+**Information displayed**: name, status, manager, description, homepage, install command
 
 ### Timeout Configuration
 

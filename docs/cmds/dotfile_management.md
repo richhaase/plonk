@@ -2,6 +2,8 @@
 
 Commands for managing dotfiles: `add` and `rm`.
 
+For CLI syntax and flags, see [CLI Reference](../cli.md#plonk-add).
+
 ## Description
 
 The dotfile management commands handle the addition and removal of configuration files in plonk. The `add` command copies files from their current locations (typically in `$HOME`) to the plonk configuration directory (`$PLONK_DIR`), while `rm` removes files from plonk management by deleting them from `$PLONK_DIR`. The dotfiles themselves are the source of truth - any file in `$PLONK_DIR` (excluding plonk.yaml and plonk.lock) is considered a managed dotfile.
@@ -38,8 +40,6 @@ $PLONK_DIR/                          $HOME/
 
 Copies dotfiles from their current location to `$PLONK_DIR` for management. Accepts single files, multiple files, or entire directories.
 
-**Command Options**:
-- `--dry-run, -n` - Preview what would be added without making changes
 
 **Directory Handling**:
 - Recursively walks directory tree

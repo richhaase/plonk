@@ -2,6 +2,8 @@
 
 The `plonk apply` command installs missing packages and deploys missing dotfiles.
 
+For CLI syntax and flags, see [CLI Reference](../cli.md#plonk-apply).
+
 ## Description
 
 The apply command reconciles the system state with the desired configuration by installing packages listed in `plonk.lock` and deploying dotfiles from `$PLONK_DIR`. It acts like a sync operation, bringing the local environment in line with the managed configuration. The command uses plonk's internal reconciliation system to identify missing resources and applies them using the appropriate resource managers.

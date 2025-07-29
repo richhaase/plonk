@@ -86,6 +86,8 @@ Install missing packages and deploy missing dotfiles.
 ```bash
 plonk apply                           # Apply all changes
 plonk apply --dry-run                 # Preview changes
+plonk apply --packages               # Apply packages only
+plonk apply --dotfiles               # Apply dotfiles only
 ```
 
 ### plonk search
