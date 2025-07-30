@@ -14,7 +14,7 @@ This guide covers installing plonk and setting up your development environment.
 
 ### Required
 
-- **Go 1.24.4 or later** - For building and installing plonk
+- **Go 1.23 or later** - For building and installing plonk
 - **Git** - For cloning dotfiles repositories (setup command)
 
 ### Recommended Package Managers
@@ -187,7 +187,7 @@ plonk apply
 - Try `~/go/bin/plonk` directly to verify installation
 
 **"Go version too old"**
-- Update Go to 1.24.4 or later
+- Update Go to 1.23 or later
 - Use `go version` to check current version
 
 **Permission denied errors**

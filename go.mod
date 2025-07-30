@@ -1,6 +1,8 @@
 module github.com/richhaase/plonk
 
-go 1.24.4
+go 1.23.0
+
+toolchain go1.24.5
 
 require (
 	github.com/fatih/color v1.18.0

@@ -54,7 +54,7 @@ After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber
 go install github.com/richhaase/plonk/cmd/plonk@latest
 ```
 
-**Requirements:** Go 1.24.4+, Git
+**Requirements:** Go 1.23+, Git
 
 **📖 [Complete Installation Guide →](docs/installation.md)**
 
@@ -206,7 +206,7 @@ just install
 
 ## Requirements
 
-- Go 1.24.4+ (for installation)
+- Go 1.23+ (for installation)
 - Git (for setup with repositories)
 - At least one supported package manager
 - macOS, Linux, or Windows
