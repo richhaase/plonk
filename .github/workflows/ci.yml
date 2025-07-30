@@ -76,12 +76,7 @@ jobs:
         install-homebrew: 'true'
         install-just: 'true'
 
-    - name: Update APT cache
-      run: sudo apt-get update
-
     - name: Run integration tests
       env:
         CI: 'true'
-      run: |
-        # Run integration tests with sudo available
-        sudo -E just test-integration
+      run: just test-integration

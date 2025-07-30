@@ -306,21 +306,8 @@ func getPackageManager(manager string) (PackageManager, error) {
 
 // getManagerInstallSuggestion returns installation suggestion for a manager
 func getManagerInstallSuggestion(manager string) string {
-	// Check if the manager is even supported on this platform
-	if !IsPackageManagerSupportedOnPlatform(manager) {
-		switch manager {
-		case "apt":
-			return "APT is only available on Debian-based Linux distributions (Ubuntu, Debian, etc.)"
-		case "brew":
-			return "Homebrew is only supported on macOS and Linux"
-		default:
-			return fmt.Sprintf("%s is not supported on this platform", manager)
-		}
-	}
-
-	// Manager is supported but not installed
+	// All supported package managers are cross-platform
 	suggestions := map[string]string{
-		"apt":   "APT should be pre-installed on Debian/Ubuntu. Try: sudo apt-get update",
 		"brew":  "install with: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"",
 		"npm":   "install Node.js from https://nodejs.org/",
 		"pip":   "install Python from https://python.org/",

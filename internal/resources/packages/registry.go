@@ -9,7 +9,6 @@ import (
 
 // SupportedManagers contains all package packages supported by plonk
 var SupportedManagers = []string{
-	"apt",
 	"brew",
 	"cargo",
 	"gem",
@@ -33,7 +32,6 @@ type ManagerRegistry struct {
 func NewManagerRegistry() *ManagerRegistry {
 	return &ManagerRegistry{
 		managers: map[string]ManagerFactory{
-			"apt":   func() PackageManager { return NewAptManager() },
 			"brew":  func() PackageManager { return NewHomebrewManager() },
 			"npm":   func() PackageManager { return NewNpmManager() },
 			"cargo": func() PackageManager { return NewCargoManager() },
