@@ -24,10 +24,10 @@ Plonk is a "package manager manager" that helps users manage multiple package ma
    - Requires Go and Git
    - More steps for end users
 
-3. **Pre-built Releases** (configured but not active)
-   - GoReleaser configuration exists
-   - No GitHub Actions workflow yet
-   - No releases published
+3. **Pre-built Releases** (fully configured and active)
+   - GoReleaser configuration exists (.goreleaser.yaml)
+   - GitHub Actions workflow ready (triggers on tag push)
+   - Releases created automatically when pushing tags like `v*`
 
 ### Version Management
 - Version info injected via ldflags during build
@@ -90,29 +90,26 @@ plonk update v1.2.3       # Update to specific version
 - Show changelog between versions
 - Backup current binary before update
 
-### Solution 3: GitHub Releases Automation
+### Solution 3: GitHub Releases (Already Implemented)
 
-Set up automated release pipeline using GitHub Actions.
+The automated release pipeline is already set up and functional:
 
-**Workflow Components:**
-1. **Release Trigger:**
-   - On tag push (v*.*.*)
-   - Manual workflow dispatch
+**Current Implementation:**
+- **Trigger:** Push tags matching `v*` pattern
+- **Workflow:** `.github/workflows/release.yml` using GoReleaser v2.11.0
+- **GoReleaser Config:** `.goreleaser.yaml` with full build matrix
+- **Build targets:** Linux, macOS, Windows (amd64, arm64)
+- **Assets created:**
+  - Binary archives (tar.gz, zip)
+  - checksums.txt with SHA256 hashes
+  - Changelog from commit messages
+  - Installation instructions in release notes
 
-2. **Build Matrix:**
-   - OS: linux, darwin, windows
-   - Arch: amd64, arm64
-   - Exclude unsupported combinations
-
-3. **Release Assets:**
-   - Binary archives (tar.gz, zip)
-   - checksums.txt
-   - Installation script
-   - Release notes
-
-4. **Version Embedding:**
-   - Use ldflags to embed version info
-   - Include commit hash and build date
+**To create a release:**
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
 
 ### Solution 4: Update Awareness
 
@@ -155,11 +152,11 @@ Plonk Version:
 
 ## Implementation Plan
 
-### Phase 1: Enable Releases (Week 1)
-- [ ] Create GitHub Actions workflow for releases
-- [ ] Test GoReleaser configuration
-- [ ] Create first test release (v0.1.0-alpha)
-- [ ] Verify binary artifacts work correctly
+### Phase 1: First Release (Week 1)
+- [ ] Create first official release (v0.1.0)
+- [ ] Verify binary artifacts work correctly on all platforms
+- [ ] Test download and installation process
+- [ ] Update installation documentation with release URLs
 
 ### Phase 2: Bootstrap Script (Week 2)
 - [ ] Write install.sh script
