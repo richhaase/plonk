@@ -176,10 +176,11 @@ None - all discrepancies have been resolved.
 
 ## Improvements
 
-- **Enhance lock file format**: Store both binary name and full source path for Go packages and npm scoped packages
 - Add verbose search mode showing descriptions and versions
 - Support version pinning in install command
 - Add update command to upgrade managed packages
 - Show installation progress for long-running operations
 - Add --all flag to uninstall all packages from a manager
 - Consider showing dependencies in info output
+
+Note: Lock file format enhancement completed in v2 (2025-07-29)

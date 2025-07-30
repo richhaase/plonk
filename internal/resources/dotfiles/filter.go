@@ -32,6 +32,11 @@ func (f *Filter) ShouldSkip(relPath string, info os.FileInfo) bool {
 		return true
 	}
 
+	// Always skip .plonk/ directory (reserved for future plonk metadata)
+	if relPath == ".plonk" || strings.HasPrefix(relPath, ".plonk/") {
+		return true
+	}
+
 	// Skip plonk config directory when requested
 	if f.skipConfigDir && f.configDir != "" {
 		if f.isConfigPath(relPath) {

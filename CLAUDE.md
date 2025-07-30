@@ -282,9 +282,20 @@ For each file, we will follow this process:
 - **Cross-Reference Strategy**: Link between docs rather than repeat information
 - **Process Iteration**: Present → Query → Synthesize → Apply → Repeat ensures user alignment
 
-## Implementation Enhancement Phase (In Progress)
+## Implementation Enhancement Phase (Completed - 2025-07-30)
 
-Phase for implementing improvements identified during documentation review. Items have been analyzed for dependencies and organized into implementation phases.
+This phase implemented critical improvements identified during documentation review, focusing on UI/UX enhancements and core functionality fixes.
+
+### Summary of Completed Work
+
+1. **Lock File v2** - Implemented metadata support for package source paths
+2. **Setup Refactoring** - Removed init command, kept only clone for zero-config approach
+3. **Quick Wins** - PATH commands, --missing flag, improved documentation
+4. **UI/UX Overhaul** - Replaced all emojis with minimal colorization
+5. **Config Improvements** - Visudo-style editing, user-defined highlighting
+6. **Status Improvements** - Alphabetical sorting, flag validation
+7. **Go Version** - Lowered requirement from 1.24.4 to 1.23
+8. **Documentation** - Fixed broken links, created planning docs
 
 ### Completed Tasks
 
@@ -445,33 +456,77 @@ Key dependencies identified through code structure review:
 - **Professional appearance**: Similar to git, docker, kubectl
 - **Universal compatibility**: Works in all terminals without Unicode issues
 
-### Long-Term Improvements
+## v1.0 Readiness Phase (Current - Starting 2025-07-30)
 
-#### Apply Command
-- Add progress indicators for large apply operations
-- Add verbose mode for detailed operation logging
-- Add support for selective dotfile deployment based on patterns
+### Overview
+Focus on implementing the minimum required features for a stable v1.0 release that delivers on plonk's core promise: one-command setup that works across platforms.
 
-#### Package Management
-- Add verbose search mode showing descriptions and versions
-- Support version pinning in install command
-- Add update command to upgrade managed packages
-- Show installation progress for long-running operations
-- Add --all flag to uninstall all packages from a manager
-- Consider showing dependencies in info output
+### Planning Documents
+- **[v1-readiness.md](docs/planning/v1-readiness.md)** - Comprehensive checklist and requirements
+- **[v1-summary.md](docs/planning/v1-summary.md)** - Executive summary with timeline
+- **[ideas.md](docs/planning/ideas.md)** - Complete list of improvements with user priorities
 
-#### Doctor Command
-- Extend --fix to address all fixable issues, not just package managers
-- Review and standardize all health check behaviors
-- Revisit check categories for better organization
-- Extend package manager checks to include actual functionality testing
-- Consider having setup directly call doctor instead of duplicating code
-- Add auto-fix capabilities for PATH configuration issues
+### Critical Features for v1.0
 
-#### Dotfile Management
-- Add verbose output option to show ignore pattern matches
-- Consider warning when re-adding files that differ from current version
-- Add drift detection system to identify when deployed dotfiles differ from source
+#### 1. Dotfile Drift Detection (TOP PRIORITY)
+- Add "out-of-sync" state to reconciliation
+- Show in status when deployed != source
+- User identified as "critical gap"
+- 2-3 days effort
 
-#### Status Command
-- Consider built-in pagination for very long lists
+#### 2. APT Package Manager Support
+- Required for Linux support
+- Handle sudo requirements gracefully
+- Test on Ubuntu/Debian minimum
+- 3-5 days effort (most complex)
+
+#### 3. Progress Indicators
+- Periodic status output during operations
+- Most urgent for: install, apply, search
+- 1-2 days effort
+
+#### 4. Linux Platform Testing
+- Test on major distributions
+- Ensure identical behavior to macOS
+- 2-3 days effort
+
+### Important Features for v1.0
+
+#### 5. `.plonk/` Directory Exclusion
+- Reserve for future metadata (hooks, etc.)
+- Simple exclusion logic change
+- Future-proofs the design
+- 0.5 days effort
+
+#### 6. Doctor Code Consolidation
+- Extract shared logic from clone/init
+- Reduce code duplication
+- 1-2 days effort
+
+#### 7. Documentation Updates
+- Remove setup command references
+- Update installation guide
+- Document `.plonk/` as reserved
+- 1-2 days effort
+
+### Total Timeline
+**2-3 weeks** of focused development to reach v1.0
+
+### Success Criteria
+- ✅ One command setup works on Mac/Linux
+- ✅ Core commands have stable interfaces
+- ✅ New users can start immediately
+- ✅ Cross-platform behavior is identical
+
+### Post-v1.0 Roadmap
+1. Package update command
+2. Verbose/debug modes
+3. Additional Linux package managers
+4. Hook system (using `.plonk/`)
+5. Performance optimizations
+
+### Key Decisions Made
+- **Exclusion pattern** chosen over prefix system for dotfiles
+- **APT required** for v1.0 (not deferred)
+- **Progress over verbose** - simple status output sufficient
+- **Drift in status** - integrated, not separate command

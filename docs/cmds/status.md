@@ -164,9 +164,10 @@ The status command provides comprehensive resource state management through a un
 
 ## Improvements
 
-- Sort items alphabetically instead of by package manager
-- Review flag combination behavior (e.g., --packages --dotfiles redundancy)
 - Consider built-in pagination for very long lists
-- Add --missing flag to show only missing resources
-- Consider adding color coding to package manager column for visual grouping
-- Remove JSON/YAML output format support until there's a real use case
+
+Note: The following improvements have been completed:
+- Alphabetical sorting (2025-07-30)
+- Flag combination review (2025-07-30)
+- --missing flag (2025-07-29)
+- JSON/YAML --unmanaged bug fixed (2025-07-29)

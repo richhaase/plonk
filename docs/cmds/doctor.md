@@ -185,6 +185,7 @@ None - all discrepancies have been resolved.
 - Review and standardize all health check behaviors
 - Revisit check categories for better organization
 - Extend package manager checks to include actual functionality testing beyond availability
-- Consider having setup directly call doctor instead of duplicating code
+- Consider having clone/init directly call doctor instead of duplicating code
 - Add auto-fix capabilities for PATH configuration issues
-- Provide copy-paste ready PATH export commands for user's specific shell
+
+Note: Copy-paste ready PATH commands completed (2025-07-29)

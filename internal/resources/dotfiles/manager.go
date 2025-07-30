@@ -190,6 +190,11 @@ func (m *Manager) ShouldSkipPath(relPath string, info os.FileInfo, ignorePattern
 		return true
 	}
 
+	// Always skip .plonk/ directory (reserved for future plonk metadata)
+	if relPath == ".plonk" || strings.HasPrefix(relPath, ".plonk/") {
+		return true
+	}
+
 	// Check against ignore patterns
 	for _, pattern := range ignorePatterns {
 		if strings.HasSuffix(pattern, "/") {

@@ -23,6 +23,7 @@ The leading dot is removed when storing in `$PLONK_DIR` and re-added when deploy
 - No separate tracking file - the filesystem IS the state
 - Files in `$PLONK_DIR` (except plonk.yaml/plonk.lock) are managed dotfiles
 - Dotfiles within `$PLONK_DIR` (e.g., `.git`, `.gitignore`) are ignored to prevent incorrect deployment
+- The `.plonk/` directory is always excluded (reserved for future plonk metadata)
 
 **File System Example**:
 ```

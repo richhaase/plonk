@@ -60,6 +60,10 @@ This approach provides several benefits:
 - Git-native workflow (the directory is your repository)
 - Impossible for tracking and filesystem to get out of sync
 
+**Always Excluded**:
+- `plonk.yaml` and `plonk.lock` - Configuration and package state files
+- `.plonk/` directory - Reserved for future plonk metadata (hooks, templates, etc.)
+
 ## Configuration File (plonk.yaml)
 
 User configuration file for customizing plonk behavior. This file is optional - plonk works with sensible defaults.

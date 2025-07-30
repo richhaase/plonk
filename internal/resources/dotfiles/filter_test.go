@@ -118,6 +118,27 @@ func TestFilter_ShouldSkip(t *testing.T) {
 			expected:       true,
 		},
 		{
+			name:           "always skip .plonk directory",
+			ignorePatterns: []string{},
+			relPath:        ".plonk",
+			fileInfo:       mockFileInfo{name: ".plonk", isDir: true},
+			expected:       true,
+		},
+		{
+			name:           "always skip files in .plonk directory",
+			ignorePatterns: []string{},
+			relPath:        ".plonk/hooks/pre-apply.sh",
+			fileInfo:       mockFileInfo{name: "pre-apply.sh", isDir: false},
+			expected:       true,
+		},
+		{
+			name:           "always skip subdirectories in .plonk",
+			ignorePatterns: []string{},
+			relPath:        ".plonk/templates/config",
+			fileInfo:       mockFileInfo{name: "config", isDir: false},
+			expected:       true,
+		},
+		{
 			name:           "skip config directory",
 			ignorePatterns: []string{},
 			configDir:      "/home/user/.config/plonk",
