@@ -3,6 +3,10 @@
 ## Overview
 Test plonk on Linux using Homebrew as the primary package manager, ensuring feature parity with macOS.
 
+## Prerequisites
+- Homebrew must be installed before plonk (this is now a requirement)
+- Git must be installed
+
 ## Testing Scope
 
 ### Supported Platforms
@@ -30,7 +34,14 @@ limactl shell plonk-linux-test
 sudo apt update
 sudo apt install -y build-essential curl git
 
-# Install Go
+# Install Homebrew (required prerequisite)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Add Homebrew to PATH (Linux specific)
+echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.bashrc
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
+# Install Go (if testing via go install)
 wget https://go.dev/dl/go1.23.0.linux-amd64.tar.gz
 sudo tar -C /usr/local -xzf go1.23.0.linux-amd64.tar.gz
 echo 'export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin' >> ~/.bashrc
@@ -44,10 +55,10 @@ plonk --version
 ```
 
 ### 2. Doctor Command Testing
-Test that doctor correctly identifies missing Homebrew and can install it.
+Test that doctor correctly identifies Homebrew as available.
 
 ```bash
-# Initial doctor check (should show no Homebrew)
+# Doctor check (should show Homebrew available)
 plonk doctor
 
 # Check specific messages

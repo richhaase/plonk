@@ -13,9 +13,9 @@ Per [why-plonk.md](../why-plonk.md), v1.0 must deliver on the core promise:
 ## Success Criteria
 
 v1.0 is ready when:
-1. ✅ A user can set up a new Mac/Linux machine with minimal effort (install git + homebrew, then `plonk clone`)
+1. ✅ A user can set up a new Mac/Linux machine with minimal effort (install homebrew, then plonk, then `plonk clone`)
 2. ✅ Core commands work reliably without surprises
-3. ✅ New users can start using plonk immediately after installation
+3. ✅ New users can start using plonk immediately after installation (zero-config)
 4. ✅ The tool works equally well on macOS and Linux (including WSL)
 
 ## Required Features for v1.0

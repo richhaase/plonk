@@ -6,6 +6,17 @@
 **Remaining**: 2 tasks (3-5 days)
 **Target**: v1.0.0 release
 
+## Setup Philosophy Change
+
+Plonk now assumes Homebrew is installed as a prerequisite. This simplifies our architecture and aligns with developer expectations:
+
+**New Setup Flow**:
+1. Install Homebrew (one-time, per machine)
+2. Install plonk via `brew install plonk` (once Homebrew formula is available)
+3. Either `plonk clone user/dotfiles` or just start using plonk
+
+This removes complexity while maintaining the "zero-config" philosophy.
+
 ## Remaining Tasks
 
 ### 1. Linux Platform Testing (2-3 days)
@@ -20,7 +31,7 @@
 **Test Plan**: See [linux-homebrew-testing-plan.md](linux-homebrew-testing-plan.md)
 
 **Key Validation Points**:
-1. Homebrew installation via `plonk doctor --fix`
+1. Document Homebrew installation process on Linux
 2. All package managers work (brew, npm, cargo, pip, gem, go)
 3. Dotfile management works identically
 4. `plonk clone` full journey succeeds
@@ -58,16 +69,31 @@ The unified package and dotfile manager is ready for production use!
 - 🌍 Cross-platform support (macOS, Linux, WSL)
 - 🚀 Progress indicators for long operations
 
-## Stability Commitment
-Core commands and behaviors are now stable. Future changes will maintain backwards compatibility.
+## Prerequisites
+- Homebrew (install from https://brew.sh)
+- Git
 
 ## Installation
 ```bash
+# Via Homebrew (coming soon)
+brew install plonk
+
+# Via Go
 go install github.com/richhaase/plonk/cmd/plonk@v1.0.0
 ```
 
-## Getting Started
-See the [quickstart guide](https://github.com/richhaase/plonk#quick-start)
+## Quick Start
+```bash
+# Clone existing dotfiles
+plonk clone user/dotfiles
+
+# Or just start using plonk
+plonk add ~/.zshrc
+plonk install ripgrep
+```
+
+## Stability Commitment
+Core commands and behaviors are now stable. Future changes will maintain backwards compatibility.
 ```
 
 ## Daily Plan
@@ -111,6 +137,19 @@ v1.0 ships when:
 - [ ] Release notes explain stability
 - [ ] Tagged and released on GitHub
 
+## Implications of Homebrew Prerequisite
+
+This simplification has several benefits:
+1. **Removes complexity** - No need for plonk to manage Homebrew installation
+2. **Cleaner error messages** - "Homebrew not found" vs complex installation failures
+3. **Better user experience** - Homebrew's installer handles PATH setup correctly
+4. **Simplifies doctor --fix** - May only need to install language package managers
+
+### Consider for v1.0:
+- Should `doctor --fix` still install language package managers (npm, cargo, etc.)?
+- Or should it be removed entirely in favor of manual installation?
+- Update all documentation to reflect Homebrew as prerequisite
+
 ## Not Blocking v1.0
 
 These can wait:
@@ -119,6 +158,7 @@ These can wait:
 - Verbose/debug modes
 - Native Windows support
 - Hook system implementation
+- Homebrew formula creation (nice to have for v1.0 but not blocking)
 
 ## Risk Mitigation
 
