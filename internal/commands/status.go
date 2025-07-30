@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -29,6 +30,11 @@ Shows:
 - Missing items that need to be installed
 - Configuration and lock file status
 - Unmanaged items (with --unmanaged flag)
+
+Flag Behavior:
+- --packages and --dotfiles: Filter by resource type (both shown if neither specified)
+- --unmanaged and --missing: Filter by state (mutually exclusive)
+- Combinations work as expected: --packages --missing shows only missing packages
 
 Examples:
   plonk status              # Show all managed items
@@ -63,6 +69,11 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	showDotfiles, _ := cmd.Flags().GetBool("dotfiles")
 	showUnmanaged, _ := cmd.Flags().GetBool("unmanaged")
 	showMissing, _ := cmd.Flags().GetBool("missing")
+
+	// Validate mutually exclusive flags
+	if showUnmanaged && showMissing {
+		return fmt.Errorf("--unmanaged and --missing are mutually exclusive: items cannot be both untracked and missing")
+	}
 
 	// If neither flag is set, show both
 	if !showPackages && !showDotfiles {
@@ -120,6 +131,30 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	}
 
 	return RenderOutput(outputData, format)
+}
+
+// sortItems sorts a slice of resources.Item alphabetically by name (case-insensitive)
+func sortItems(items []resources.Item) {
+	sort.Slice(items, func(i, j int) bool {
+		return strings.ToLower(items[i].Name) < strings.ToLower(items[j].Name)
+	})
+}
+
+// sortItemsByManager sorts items first by manager, then by name (case-insensitive)
+func sortItemsByManager(items map[string][]resources.Item) []string {
+	// Get sorted manager names
+	managers := make([]string, 0, len(items))
+	for manager := range items {
+		managers = append(managers, manager)
+	}
+	sort.Strings(managers)
+
+	// Sort items within each manager
+	for _, manager := range managers {
+		sortItems(items[manager])
+	}
+
+	return managers
 }
 
 // Removed - using config.ConfigAdapter instead
@@ -210,6 +245,9 @@ func (s StatusOutput) TableOutput() string {
 			}
 		}
 
+		// Sort missing packages
+		sortItems(missingPackages)
+
 		// Build packages table
 		if len(packagesByManager) > 0 || len(missingPackages) > 0 || len(untrackedPackages) > 0 {
 			output.WriteString("PACKAGES\n")
@@ -221,7 +259,9 @@ func (s StatusOutput) TableOutput() string {
 
 			// Show managed packages by manager (unless showing only missing)
 			if !s.ShowMissing {
-				for manager, packages := range packagesByManager {
+				sortedManagers := sortItemsByManager(packagesByManager)
+				for _, manager := range sortedManagers {
+					packages := packagesByManager[manager]
 					for _, pkg := range packages {
 						pkgBuilder.AddRow(pkg.Name, manager, "✅ managed")
 					}
@@ -234,7 +274,9 @@ func (s StatusOutput) TableOutput() string {
 			}
 
 			// Show untracked packages when --unmanaged flag is set
-			for manager, packages := range untrackedPackages {
+			sortedUntrackedManagers := sortItemsByManager(untrackedPackages)
+			for _, manager := range sortedUntrackedManagers {
+				packages := untrackedPackages[manager]
 				for _, pkg := range packages {
 					pkgBuilder.AddRow(pkg.Name, manager, "⚠️  unmanaged")
 				}
@@ -271,6 +313,9 @@ func (s StatusOutput) TableOutput() string {
 				// Load config to check expand directories
 				cfg := config.LoadWithDefaults(s.ConfigDir)
 
+				// Sort untracked dotfiles
+				sortItems(dotfileResult.Untracked)
+
 				// Show untracked dotfiles
 				for _, item := range dotfileResult.Untracked {
 					// Show the dotfile path with ~ notation
@@ -299,6 +344,10 @@ func (s StatusOutput) TableOutput() string {
 			} else {
 				// For managed/missing, use the three-column format
 				dotBuilder.SetHeaders("SOURCE", "TARGET", "STATUS")
+
+				// Sort managed and missing dotfiles
+				sortItems(dotfileResult.Managed)
+				sortItems(dotfileResult.Missing)
 
 				// Show managed dotfiles (unless showing only missing)
 				if !s.ShowMissing {
@@ -339,6 +388,18 @@ func (s StatusOutput) TableOutput() string {
 		output.WriteString("\n")
 	}
 
+	// If no output was generated (except for title), show helpful message
+	outputStr := output.String()
+	if outputStr == "Plonk Status\n============\n\n" || outputStr == "" {
+		output.Reset()
+		output.WriteString("Plonk Status\n")
+		output.WriteString("============\n\n")
+		output.WriteString("No items match the specified filters.\n")
+		if s.ShowMissing {
+			output.WriteString("(Great! Everything tracked is installed/deployed)\n")
+		}
+	}
+
 	return output.String()
 }
 
@@ -346,6 +407,13 @@ func (s StatusOutput) TableOutput() string {
 func (s StatusOutput) StructuredData() any {
 	// Filter items based on flags
 	var items []ManagedItem
+
+	// Sort all items in results first
+	for i := range s.StateSummary.Results {
+		sortItems(s.StateSummary.Results[i].Managed)
+		sortItems(s.StateSummary.Results[i].Missing)
+		sortItems(s.StateSummary.Results[i].Untracked)
+	}
 
 	for _, result := range s.StateSummary.Results {
 		// Apply domain filter
@@ -386,6 +454,20 @@ func (s StatusOutput) StructuredData() any {
 			}
 		}
 	}
+
+	// Sort the final items list
+	sort.Slice(items, func(i, j int) bool {
+		// First sort by domain
+		if items[i].Domain != items[j].Domain {
+			return items[i].Domain < items[j].Domain
+		}
+		// Then by manager (for packages)
+		if items[i].Manager != items[j].Manager {
+			return items[i].Manager < items[j].Manager
+		}
+		// Finally by name (case-insensitive)
+		return strings.ToLower(items[i].Name) < strings.ToLower(items[j].Name)
+	})
 
 	// Create a summary-focused version for structured output
 	return StatusOutputSummary{

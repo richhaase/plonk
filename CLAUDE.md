@@ -312,6 +312,12 @@ Phase for implementing improvements identified during documentation review. Item
   - Consistent behavior across output formats
 - **Note**: JSON/YAML removal (original Task 4) not implemented per user guidance
 
+#### Task 5: Status UI/UX Improvements (Completed - 2025-07-30)
+- **Implemented**: Both status command improvements
+- **Sort Alphabetically**: Case-insensitive sorting within logical groups
+- **Flag Combinations**: Mutually exclusive validation with clear error messages
+- **Enhanced UX**: Empty result messages and better help documentation
+
 ### Dependency Analysis
 
 Key dependencies identified through code structure review:
@@ -340,7 +346,7 @@ Key dependencies identified through code structure review:
 | setup | Auto-detect from plonk.lock | Detect required managers from cloned repository | Needs lock v2 | `internal/setup/setup.go` | ✅ Completed |
 | setup | Intelligent clone + apply | Only install managers for tracked packages | Needs auto-detect | `internal/setup/setup.go` | ✅ Completed |
 
-#### Phase 3: Quick Wins (Independent Items)
+#### Phase 3: Quick Wins (Independent Items) (Completed - 2025-07-29)
 | Command | Item | Description | Dependency | Location | Status |
 |---------|------|-------------|------------|----------|--------|
 | doctor | Copy-paste PATH commands | Provide shell-specific PATH export commands | None | `internal/diagnostics/health.go` | ✅ Completed |
@@ -348,14 +354,31 @@ Key dependencies identified through code structure review:
 | dotfile_management | Improve path docs | Better path resolution documentation | None | Help text only | ✅ Completed |
 | global | Remove JSON/YAML output | Remove structured output formats until real use case emerges | None | `internal/commands/output.go` and all commands | ❌ Not implemented |
 
+**Note**: JSON/YAML removal not implemented per user guidance. Instead, fixed the filtering bug to make structured output properly respect all flags.
+
 #### Phase 4: UI/UX Improvements (Medium Priority)
-| Command | Item | Description | Dependency | Location |
-|---------|------|-------------|------------|----------|
-| config | Complete file editing | Edit full config, save only non-defaults | None | `internal/commands/config_edit.go` |
-| config | Highlight user values | Distinguish user-defined from defaults | None | `internal/commands/config_show.go` |
-| status | Sort alphabetically | Change default sort order | None | `internal/commands/status.go` |
-| status | Review flag combinations | Fix --packages --dotfiles behavior | None | `internal/commands/status.go` |
-| status | Color coding | Visual grouping by package manager | None | `internal/output/formatters.go` |
+| Command | Item | Description | Dependency | Location | Status |
+|---------|------|-------------|------------|----------|--------|
+| config | Complete file editing | Edit full config, save only non-defaults | None | `internal/commands/config_edit.go` | ⏳ Pending |
+| config | Highlight user values | Distinguish user-defined from defaults | None | `internal/commands/config_show.go` | ⏳ Pending |
+| config | Sort alphabetically | Sort configuration values for easier reading | None | `internal/commands/config_show.go` | ⏳ Pending |
+| config | Review flag combinations | Validate and handle all possible flag combinations | None | `internal/commands/config_*.go` | ⏳ Pending |
+| config | Color coding for edit | Use color coding in error messages for better visibility | None | `internal/commands/config_edit.go` | ⏳ Pending |
+| status | Sort alphabetically | Change default sort order | None | `internal/commands/status.go` | ✅ Completed |
+| status | Review flag combinations | Fix --packages --dotfiles behavior | None | `internal/commands/status.go` | ✅ Completed |
+| ~~status~~ | ~~Color coding~~ | ~~Visual grouping by package manager~~ | ~~None~~ | ~~`internal/output/formatters.go`~~ | ~~Removed~~ |
+
+#### Task 5: Status UI/UX Improvements (Completed - 2025-07-30)
+- **Task 1 - Sort Alphabetically**:
+  - Implemented case-insensitive sorting for all categories
+  - Maintains logical grouping (packages by manager)
+  - Applied to all output formats (table, JSON, YAML)
+- **Task 2 - Review Flag Combinations**:
+  - Added validation for mutually exclusive flags (--unmanaged and --missing)
+  - Clear error messages for invalid combinations
+  - Empty result handling with helpful messages
+  - Updated help text with "Flag Behavior" section
+- **Note**: Color coding removed from improvements as it conflicts with CLI best practices
 
 ### Long-Term Improvements
 
