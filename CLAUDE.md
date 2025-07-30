@@ -512,22 +512,27 @@ Focus on implementing the minimum required features for a stable v1.0 release th
 - Needs decisions on: file structure, interface design, flag handling, error messages
 - Will revisit after other v1.0 features are complete
 
-#### In Progress: Dotfile Drift Detection Planning (2025-07-30)
+#### Completed: Dotfile Drift Detection Phase 1 (2025-07-30)
 - Created comprehensive plan in [drift-detection-plan.md](docs/planning/drift-detection-plan.md)
 - Created implementation tasks in [drift-detection-tasks.md](docs/planning/drift-detection-tasks.md)
 - Created proof of concept in [drift-detection-poc.md](docs/planning/drift-detection-poc.md)
-- Key decisions:
-  - Use SHA256 checksums for fast comparison
-  - Repurpose existing `StateDegraded` as drift state
-  - Store comparison function in item metadata
-  - Phase 1: Basic detection and status display
-  - Phase 2: Diff tools and preview features
-- Estimated effort: 2-3 days for Phase 1 MVP
+- Implemented Phase 1 features:
+  - SHA256 checksum computation in dotfiles manager
+  - Drift detection during reconciliation using StateDegraded
+  - Status command shows "drifted" with yellow color
+  - Summary includes drift count
+  - Apply command restores drifted files
+  - Comprehensive test coverage
+- Key architecture decisions:
+  - Comparison function stored in item metadata
+  - Minimal changes to existing architecture
+  - Backward compatible with existing Result structure
+- Ready for Phase 2 enhancements (diff tools, preview)
 
 ### Progress Summary
 - **Start Date**: 2025-07-30
 - **Target Completion**: Mid-August 2025 (2-3 weeks total)
-- **Current Status**: 2 of 7 tasks complete, 1 skipped (29%)
+- **Current Status**: 3 of 7 tasks complete, 1 skipped (43%)
 - **Current Phase**: Foundation (Week 1)
 - **Days Elapsed**: 1
 
