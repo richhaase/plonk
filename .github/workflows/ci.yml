@@ -60,3 +60,28 @@ jobs:
 
     - name: Test build
       run: go build ./cmd/plonk
+
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: test  # Run after basic tests pass
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Go environment
+      uses: ./.github/actions/setup-go-env
+      with:
+        install-homebrew: 'true'
+        install-just: 'true'
+
+    - name: Update APT cache
+      run: sudo apt-get update
+
+    - name: Run integration tests
+      env:
+        CI: 'true'
+      run: |
+        # Run integration tests with sudo available
+        sudo -E just test-integration

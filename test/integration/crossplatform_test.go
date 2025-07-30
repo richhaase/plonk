@@ -1,0 +1,121 @@
+//go:build integration
+// +build integration
+
+package integration_test
+
+import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
+)
+
+func TestCrossPlatformIntegration(t *testing.T) {
+	// Skip if not on CI
+	if os.Getenv("CI") != "true" {
+		t.Skip("Integration tests only run in CI")
+	}
+
+	// Create a temporary directory for testing
+	tempDir := t.TempDir()
+	plonkDir := filepath.Join(tempDir, ".plonk")
+
+	// Set PLONK_DIR for isolation
+	t.Setenv("PLONK_DIR", plonkDir)
+	t.Setenv("HOME", tempDir)
+
+	// Build plonk binary for testing
+	plonkBinary := buildPlonk(t)
+
+	// Create a mixed-platform config
+	require.NoError(t, os.MkdirAll(plonkDir, 0755))
+
+	config := map[string]interface{}{
+		"default_manager": "brew",
+	}
+
+	configData, err := yaml.Marshal(config)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(plonkDir, "plonk.yaml"), configData, 0644))
+
+	// Create a lock file with both APT and Homebrew packages
+	lockContent := `version: 2
+packages:
+  apt:
+    - name: tree
+      version: "1.8.0"
+  brew:
+    - name: jq
+      version: "1.6"
+`
+	require.NoError(t, os.WriteFile(filepath.Join(plonkDir, "plonk.lock"), []byte(lockContent), 0644))
+
+	t.Run("DoctorShowsPlatformSpecific", func(t *testing.T) {
+		cmd := exec.Command(plonkBinary, "doctor")
+		output, err := cmd.CombinedOutput()
+		require.NoError(t, err, "Doctor should succeed: %s", output)
+
+		outputStr := string(output)
+
+		if runtime.GOOS == "linux" {
+			// On Linux, APT should be available
+			require.Contains(t, outputStr, "apt: available")
+		} else {
+			// On macOS, APT should not be available
+			require.Contains(t, outputStr, "apt: not available (not supported on this platform)")
+		}
+
+		// Homebrew availability depends on whether it's installed
+		require.Contains(t, outputStr, "brew:")
+	})
+
+	t.Run("StatusShowsOnlyRelevantPackages", func(t *testing.T) {
+		cmd := exec.Command(plonkBinary, "status", "--packages")
+		output, err := cmd.CombinedOutput()
+		require.NoError(t, err, "Status should succeed: %s", output)
+
+		outputStr := string(output)
+
+		if runtime.GOOS == "linux" {
+			// On Linux with APT available
+			if _, err := exec.LookPath("apt-get"); err == nil {
+				require.Contains(t, outputStr, "tree")
+			}
+		}
+
+		// Homebrew packages shown if Homebrew is available
+		if _, err := exec.LookPath("brew"); err == nil {
+			require.Contains(t, outputStr, "jq")
+		}
+	})
+}
+
+func TestPackageManagerDetection(t *testing.T) {
+	// Skip if not on CI
+	if os.Getenv("CI") != "true" {
+		t.Skip("Integration tests only run in CI")
+	}
+
+	// Build plonk binary for testing
+	plonkBinary := buildPlonk(t)
+
+	t.Run("SearchWithUnavailableManager", func(t *testing.T) {
+		if runtime.GOOS == "darwin" {
+			// Try to use APT on macOS
+			cmd := exec.Command(plonkBinary, "search", "apt:nginx")
+			output, err := cmd.CombinedOutput()
+			require.Error(t, err, "APT search should fail on macOS")
+			require.Contains(t, string(output), "not available")
+		} else if runtime.GOOS == "linux" {
+			// Try to use a fake manager on Linux
+			cmd := exec.Command(plonkBinary, "search", "fake:nginx")
+			output, err := cmd.CombinedOutput()
+			require.Error(t, err, "Fake manager search should fail")
+			require.Contains(t, string(output), "unsupported")
+		}
+	})
+}

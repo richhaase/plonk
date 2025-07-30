@@ -111,6 +111,17 @@ test-bats:
     @cd tests/bats && PLONK_TEST_CLEANUP_PACKAGES=1 PLONK_TEST_CLEANUP_DOTFILES=1 bats behavioral/
     @echo "✅ BATS tests completed!"
 
+# Run integration tests (CI only - requires real package managers)
+test-integration:
+    @echo "Running integration tests..."
+    @if [ -z "$CI" ]; then \
+        echo "❌ Integration tests should only run in CI to protect your system"; \
+        echo "   Set CI=true to override (at your own risk)"; \
+        exit 1; \
+    fi
+    go test -v -tags=integration ./test/integration/...
+    @echo "✅ Integration tests completed!"
+
 # Clean build artifacts
 clean:
     @echo "Cleaning build artifacts..."
