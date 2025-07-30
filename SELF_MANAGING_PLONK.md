@@ -152,11 +152,11 @@ Plonk Version:
 
 ## Implementation Plan
 
-### Phase 1: First Release (Week 1)
-- [ ] Create first official release (v0.1.0)
-- [ ] Verify binary artifacts work correctly on all platforms
-- [ ] Test download and installation process
-- [ ] Update installation documentation with release URLs
+### Phase 1: Update Installation Documentation (Immediate)
+- [ ] Update installation docs to reference existing releases
+- [ ] Add direct download instructions using current release (v0.8.9)
+- [ ] Document binary installation process for users without Go
+- [ ] Add release download URLs to README and installation guide
 
 ### Phase 2: Bootstrap Script (Week 2)
 - [ ] Write install.sh script
