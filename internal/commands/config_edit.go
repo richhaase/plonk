@@ -4,14 +4,17 @@
 package commands
 
 import (
+	"bufio"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 
-	"github.com/fatih/color"
 	"github.com/richhaase/plonk/internal/config"
+	plonkoutput "github.com/richhaase/plonk/internal/output"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -21,14 +24,14 @@ var configEditCmd = &cobra.Command{
 	Short: "Edit configuration file",
 	Long: `Edit the plonk configuration file using your preferred editor.
 
-This command:
-- Opens the configuration file in $EDITOR (or nano if not set)
+This command works like visudo:
+- Shows the full runtime configuration (defaults + your overrides)
+- Opens it in your preferred editor ($VISUAL, $EDITOR, or vim)
 - Validates the configuration after editing
-- Reports any validation errors
-- Creates the configuration file if it doesn't exist
+- Saves only non-default values to plonk.yaml
+- Supports edit/revert/quit on validation errors
 
-The file will be validated automatically after editing. If validation fails,
-you'll see the errors and can choose to edit again or cancel.
+Only values that differ from defaults are saved to keep your config minimal.
 
 Examples:
   plonk config edit               # Edit configuration file
@@ -42,69 +45,85 @@ func init() {
 }
 
 func runConfigEdit(cmd *cobra.Command, args []string) error {
-	// Get config directory and file path
-	configDir := config.GetDefaultConfigDirectory()
-	configPath := filepath.Join(configDir, "plonk.yaml")
+	configDir := config.GetConfigDir()
 
 	// Create config directory if it doesn't exist
 	if err := os.MkdirAll(configDir, 0750); err != nil {
-		return err
+		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
-	// Create default config file if it doesn't exist
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		if err := createDefaultConfig(configPath); err != nil {
-			return err
-		}
-		fmt.Printf("Created default configuration file: %s\n", configPath)
+	return editConfigVisudoStyle(configDir)
+}
+
+// editConfigVisudoStyle implements the visudo-style edit workflow
+func editConfigVisudoStyle(configDir string) error {
+	// Create temp file with merged runtime config
+	tempFile, err := createTempConfigFile(configDir)
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %w", err)
 	}
+	defer os.Remove(tempFile) // Always clean up
 
 	// Get editor
 	editor := getEditor()
-	fmt.Printf("Opening configuration file with %s...\n", editor)
 
-	// Loop until valid config or user cancels
+	// Edit loop
 	for {
-		// Open editor
-		if err := openEditor(editor, configPath); err != nil {
-			return err
+		// Open in editor
+		fmt.Printf("Opening configuration with %s...\n", editor)
+		if err := openInEditor(editor, tempFile); err != nil {
+			return fmt.Errorf("failed to open editor: %w", err)
 		}
 
-		// Validate the edited config
-		if err := validateEditedConfig(configPath); err != nil {
-			red := color.New(color.FgRed)
-			fmt.Printf("\n%s:\n%s\n", red.Sprint("Configuration validation failed"), err.Error())
+		// Parse and validate
+		editedConfig, validationErr := parseAndValidateConfig(tempFile)
+		if validationErr != nil {
+			fmt.Fprintf(os.Stderr, "\n%s\n%s\n", plonkoutput.ColorError("Configuration validation failed:"), validationErr)
 
-			// Ask if user wants to edit again
-			if !promptEditAgain() {
-				return fmt.Errorf("configuration validation failed")
+			// Prompt for action
+			action := promptAction()
+			switch action {
+			case 'e':
+				continue // Edit again
+			case 'r':
+				fmt.Println("Changes reverted.")
+				return nil // Revert (don't save)
+			case 'q':
+				return fmt.Errorf("configuration invalid, changes discarded")
 			}
-			continue
 		}
 
-		// Success
-		green := color.New(color.FgGreen)
-		fmt.Printf("\n%s: %s\n", green.Sprint("Configuration is valid and saved to"), configPath)
-		break
+		// Success - save only non-defaults
+		if err := saveNonDefaultValues(configDir, editedConfig); err != nil {
+			return fmt.Errorf("failed to save configuration: %w", err)
+		}
+
+		fmt.Printf("%s Configuration saved (only non-default values)\n", plonkoutput.Success())
+		return nil
 	}
-
-	return nil
 }
 
-// getEditor returns the editor to use from EDITOR environment variable
+// getEditor returns the editor to use, checking VISUAL then EDITOR
 func getEditor() string {
-	return os.Getenv("EDITOR")
+	editor := os.Getenv("VISUAL")
+	if editor == "" {
+		editor = os.Getenv("EDITOR")
+	}
+	if editor == "" {
+		editor = "vim"
+	}
+	return editor
 }
 
-// openEditor opens the specified file in the editor
-func openEditor(editor, filepath string) error {
+// openInEditor opens the file in user's preferred editor
+func openInEditor(editor, filename string) error {
 	// Split editor command in case it has arguments
 	parts := strings.Fields(editor)
 	if len(parts) == 0 {
-		return fmt.Errorf("no editor specified: set EDITOR environment variable or specify editor with --editor flag")
+		return fmt.Errorf("invalid editor: %s", editor)
 	}
 
-	cmd := exec.Command(parts[0], append(parts[1:], filepath)...)
+	cmd := exec.Command(parts[0], append(parts[1:], filename)...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -112,66 +131,258 @@ func openEditor(editor, filepath string) error {
 	return cmd.Run()
 }
 
-// validateEditedConfig validates the configuration file after editing
-func validateEditedConfig(configPath string) error {
-	// Read config file
-	content, err := os.ReadFile(configPath)
+// createTempConfigFile creates a temp file with the merged runtime config
+func createTempConfigFile(configDir string) (string, error) {
+	// Load current runtime config (defaults + user overrides)
+	cfg := config.LoadWithDefaults(configDir)
+
+	// Create temp file
+	tempFile, err := ioutil.TempFile("", "plonk-config-*.yaml")
 	if err != nil {
-		return fmt.Errorf("failed to read config file %s: %w", configPath, err)
+		return "", err
 	}
 
-	// Validate configuration
-	validator := config.NewSimpleValidator()
-	result := validator.ValidateConfigFromYAML(content)
+	// Write header
+	header := `# Plonk Configuration Editor
+# - Delete any line to revert to default
+# - Only values different from defaults will be saved to plonk.yaml
+# - Save and exit to apply, or exit without saving to cancel
 
-	if !result.Valid {
-		var errorMsg strings.Builder
-		for _, err := range result.Errors {
-			errorMsg.WriteString(fmt.Sprintf("  %s\n", err))
-		}
-
-		if len(result.Warnings) > 0 {
-			errorMsg.WriteString("\nWarnings:\n")
-			for _, warning := range result.Warnings {
-				errorMsg.WriteString(fmt.Sprintf("  %s\n", warning))
-			}
-		}
-
-		return fmt.Errorf("configuration validation failed: %d errors found", len(result.Errors))
+`
+	if _, err := tempFile.WriteString(header); err != nil {
+		os.Remove(tempFile.Name())
+		return "", err
 	}
 
-	// Show warnings if any
-	if len(result.Warnings) > 0 {
-		fmt.Printf("\nWarnings:\n")
-		for _, warning := range result.Warnings {
-			fmt.Printf("  %s\n", warning)
+	// Generate YAML with annotations
+	if err := writeAnnotatedConfig(tempFile, cfg, configDir); err != nil {
+		os.Remove(tempFile.Name())
+		return "", err
+	}
+
+	tempFile.Close()
+	return tempFile.Name(), nil
+}
+
+// writeAnnotatedConfig writes the config with (user-defined) annotations
+func writeAnnotatedConfig(w *os.File, cfg *config.Config, configDir string) error {
+	// Get defaults for comparison
+	defaults := config.GetDefaults()
+
+	// Load user config to check what's actually user-defined
+	userConfig, _ := config.Load(configDir) // May fail if no user config exists
+
+	// Helper to check if a value is user-defined
+	isUserDefined := func(actualValue, defaultValue interface{}) bool {
+		// If we don't have a user config, nothing is user-defined
+		if userConfig == nil {
+			return false
 		}
+		// Use reflect.DeepEqual to compare values
+		return !reflect.DeepEqual(actualValue, defaultValue)
+	}
+
+	// Helper to write a field with optional annotation
+	writeField := func(name string, value interface{}, isUserDef bool) {
+		// Marshal just this field
+		fieldMap := map[string]interface{}{name: value}
+		data, _ := yaml.Marshal(fieldMap)
+		// Remove the trailing newline as we'll add it ourselves
+		line := strings.TrimSpace(string(data))
+
+		fmt.Fprint(w, line)
+		if isUserDef {
+			fmt.Fprint(w, "  # (user-defined)")
+		}
+		fmt.Fprintln(w)
+	}
+
+	// Write each field
+	writeField("default_manager", cfg.DefaultManager,
+		isUserDefined(cfg.DefaultManager, defaults.DefaultManager))
+
+	writeField("operation_timeout", cfg.OperationTimeout,
+		isUserDefined(cfg.OperationTimeout, defaults.OperationTimeout))
+
+	writeField("package_timeout", cfg.PackageTimeout,
+		isUserDefined(cfg.PackageTimeout, defaults.PackageTimeout))
+
+	writeField("dotfile_timeout", cfg.DotfileTimeout,
+		isUserDefined(cfg.DotfileTimeout, defaults.DotfileTimeout))
+
+	// For lists, check if the entire list differs
+	writeField("expand_directories", cfg.ExpandDirectories,
+		isUserDefined(cfg.ExpandDirectories, defaults.ExpandDirectories))
+
+	writeField("ignore_patterns", cfg.IgnorePatterns,
+		isUserDefined(cfg.IgnorePatterns, defaults.IgnorePatterns))
+
+	// Handle nested structures
+	if !reflect.DeepEqual(cfg.Dotfiles, defaults.Dotfiles) {
+		writeField("dotfiles", cfg.Dotfiles, true)
+	} else if len(cfg.Dotfiles.UnmanagedFilters) > 0 {
+		writeField("dotfiles", cfg.Dotfiles, false)
+	}
+
+	if !reflect.DeepEqual(cfg.Hooks, defaults.Hooks) {
+		writeField("hooks", cfg.Hooks, true)
+	} else if len(cfg.Hooks.PreApply) > 0 || len(cfg.Hooks.PostApply) > 0 {
+		writeField("hooks", cfg.Hooks, false)
 	}
 
 	return nil
 }
 
-// createDefaultConfig creates a default configuration file
-func createDefaultConfig(configPath string) error {
-	// Get the actual default config
-	cfg := config.GetDefaults()
-
-	// Marshal to YAML
-	yamlData, err := yaml.Marshal(cfg)
+// parseAndValidateConfig reads and validates the temp file
+func parseAndValidateConfig(filename string) (*config.Config, error) {
+	// Read file
+	data, err := ioutil.ReadFile(filename)
 	if err != nil {
-		return fmt.Errorf("failed to marshal default config: %w", err)
+		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
 
-	return os.WriteFile(configPath, yamlData, 0600)
+	// Remove header comments before parsing
+	lines := strings.Split(string(data), "\n")
+	var configLines []string
+	for _, line := range lines {
+		// Skip header comment lines (but keep inline comments)
+		if strings.HasPrefix(strings.TrimSpace(line), "#") && !strings.Contains(line, "# (user-defined)") {
+			continue
+		}
+		// Remove the (user-defined) annotations before parsing
+		line = strings.Replace(line, "  # (user-defined)", "", 1)
+		configLines = append(configLines, line)
+	}
+	cleanData := []byte(strings.Join(configLines, "\n"))
+
+	// Use plonk's validator which provides detailed errors
+	validator := config.NewSimpleValidator()
+	result := validator.ValidateConfigFromYAML(cleanData)
+
+	if !result.Valid {
+		// Build detailed error message with all errors
+		var errorMsg strings.Builder
+		for i, err := range result.Errors {
+			if i > 0 {
+				errorMsg.WriteString("\n")
+			}
+			errorMsg.WriteString(fmt.Sprintf("  - %s", err))
+		}
+		return nil, fmt.Errorf("%s", errorMsg.String())
+	}
+
+	// Parse again to get the actual config object
+	var cfg config.Config
+	if err := yaml.Unmarshal(cleanData, &cfg); err != nil {
+		return nil, fmt.Errorf("failed to parse YAML: %w", err)
+	}
+
+	// Apply defaults to ensure we have complete config
+	if cfg.DefaultManager == "" {
+		cfg.DefaultManager = config.GetDefaults().DefaultManager
+	}
+	if cfg.OperationTimeout == 0 {
+		cfg.OperationTimeout = config.GetDefaults().OperationTimeout
+	}
+	if cfg.PackageTimeout == 0 {
+		cfg.PackageTimeout = config.GetDefaults().PackageTimeout
+	}
+	if cfg.DotfileTimeout == 0 {
+		cfg.DotfileTimeout = config.GetDefaults().DotfileTimeout
+	}
+	if len(cfg.ExpandDirectories) == 0 {
+		cfg.ExpandDirectories = config.GetDefaults().ExpandDirectories
+	}
+	if len(cfg.IgnorePatterns) == 0 {
+		cfg.IgnorePatterns = config.GetDefaults().IgnorePatterns
+	}
+
+	return &cfg, nil
 }
 
-// promptEditAgain asks the user if they want to edit the config again
-func promptEditAgain() bool {
-	fmt.Print("\nDo you want to edit the configuration again? (y/N): ")
+// saveNonDefaultValues writes only non-default values to plonk.yaml
+func saveNonDefaultValues(configDir string, cfg *config.Config) error {
+	defaults := config.GetDefaults()
 
-	var response string
-	_, _ = fmt.Scanln(&response)
-	response = strings.ToLower(strings.TrimSpace(response))
+	// Create a map to hold only non-default values
+	nonDefaults := make(map[string]interface{})
 
-	return response == "y" || response == "yes"
+	// Compare each field and add non-defaults to map
+	if cfg.DefaultManager != defaults.DefaultManager {
+		nonDefaults["default_manager"] = cfg.DefaultManager
+	}
+
+	if cfg.OperationTimeout != defaults.OperationTimeout {
+		nonDefaults["operation_timeout"] = cfg.OperationTimeout
+	}
+
+	if cfg.PackageTimeout != defaults.PackageTimeout {
+		nonDefaults["package_timeout"] = cfg.PackageTimeout
+	}
+
+	if cfg.DotfileTimeout != defaults.DotfileTimeout {
+		nonDefaults["dotfile_timeout"] = cfg.DotfileTimeout
+	}
+
+	// For lists, save entire list if ANY element differs
+	if !reflect.DeepEqual(cfg.ExpandDirectories, defaults.ExpandDirectories) {
+		nonDefaults["expand_directories"] = cfg.ExpandDirectories
+	}
+
+	if !reflect.DeepEqual(cfg.IgnorePatterns, defaults.IgnorePatterns) {
+		nonDefaults["ignore_patterns"] = cfg.IgnorePatterns
+	}
+
+	// Handle nested structures
+	if !reflect.DeepEqual(cfg.Dotfiles, defaults.Dotfiles) {
+		nonDefaults["dotfiles"] = cfg.Dotfiles
+	}
+
+	if !reflect.DeepEqual(cfg.Hooks, defaults.Hooks) {
+		nonDefaults["hooks"] = cfg.Hooks
+	}
+
+	// If everything is default, write empty file
+	configPath := filepath.Join(configDir, "plonk.yaml")
+	if len(nonDefaults) == 0 {
+		// Write empty file (or minimal comment)
+		return ioutil.WriteFile(configPath, []byte(""), 0644)
+	}
+
+	// Marshal to minimal YAML
+	data, err := yaml.Marshal(nonDefaults)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	// Write to plonk.yaml
+	if err := ioutil.WriteFile(configPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write config: %w", err)
+	}
+
+	return nil
+}
+
+// promptAction prompts user for edit/revert/quit decision
+func promptAction() rune {
+	reader := bufio.NewReader(os.Stdin)
+
+	for {
+		fmt.Print("\nWhat would you like to do? (e)dit again, (r)evert changes, (q)uit: ")
+
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			continue
+		}
+
+		input = strings.TrimSpace(strings.ToLower(input))
+		if len(input) > 0 {
+			switch input[0] {
+			case 'e', 'r', 'q':
+				return rune(input[0])
+			}
+		}
+
+		fmt.Println("Please enter 'e', 'r', or 'q'")
+	}
 }
