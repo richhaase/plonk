@@ -11,10 +11,10 @@ The doctor command performs comprehensive health checks on your plonk installati
 ### Core Function
 
 Doctor runs a series of health checks across six categories and reports findings with four individual check status levels:
-- **PASS**: Everything working correctly
-- **WARN**: Possible degraded behavior or issues needing attention
-- **FAIL**: Critical issues preventing plonk from functioning
-- **INFO**: Informational messages (not affecting overall health)
+- **PASS** (green): Everything working correctly
+- **WARN** (yellow): Possible degraded behavior or issues needing attention
+- **FAIL** (red): Critical issues preventing plonk from functioning
+- **INFO** (blue): Informational messages (not affecting overall health)
 
 Overall system health uses different terminology:
 - **healthy**: All checks pass or only have warnings/info
@@ -56,9 +56,10 @@ All health checks run within a 30-second timeout.
 
 **Table Format** (default):
 - Hierarchical display with categories and checks
-- Color-coded status indicators (green=pass, yellow=warn, red=fail, blue=info)
+- Color-coded status text (green=PASS, yellow=WARN, red=FAIL, blue=INFO)
 - Detailed messages, issues, and suggestions
 - Human-readable with formatting
+- Respects NO_COLOR environment variable
 
 **JSON Format**:
 - Structured with `overall` status and `checks` array
@@ -92,9 +93,9 @@ ERROR status occurs when:
 ### PATH Configuration Check
 
 Doctor provides detailed PATH analysis:
-- Shows which package directories are in PATH (✅)
-- Warns about directories that exist but aren't in PATH (⚠️)
-- Notes directories that don't exist yet (ℹ️)
+- Shows which package directories are in PATH (marked as available)
+- Warns about directories that exist but aren't in PATH (marked as warning)
+- Notes directories that don't exist yet (marked as info)
 - Provides shell configuration suggestions for missing paths
 
 ### Integration with Init/Clone
@@ -156,7 +157,8 @@ The doctor command provides comprehensive system health checking through a struc
 6. **Output Formatting:**
    - Table format uses hierarchical display with fixed category ordering
    - JSON/YAML formats use flat check arrays
-   - Status display: Color-coded text (green=pass, yellow=warn, red=fail, blue=info)
+   - Status display: Color-coded text words only (green=PASS, yellow=WARN, red=FAIL, blue=INFO)
+   - Colors respect NO_COLOR environment variable for accessibility
 
 **Category Organization:**
 - Fixed ordering: system → environment → permissions → configuration → package-managers → installation

@@ -35,14 +35,18 @@ Output structure differences:
 - JSON format: Wrapped in object with `config_path` and `config` fields
 - YAML format: Same structure as JSON but in YAML syntax
 
+User-defined values are highlighted with blue "(user-defined)" annotations in table format, making it easy to see which settings you've customized. JSON and YAML output formats remain clean without annotations for scripting compatibility.
+
 ### Edit Command Behavior
 
-Opens the configuration file for editing:
+Works like visudo - opens a temporary file with the full runtime configuration for editing:
 
-- Uses system editor (determined by `$EDITOR` environment variable)
-- If `plonk.yaml` doesn't exist, creates it with default values
-- Validates configuration after editing and reports any errors
-- If validation fails, offers option to re-edit or cancel changes
+- Shows all configuration values (defaults merged with user overrides)
+- User-defined values are marked with `# (user-defined)` annotations
+- Uses system editor (determined by `$VISUAL`, then `$EDITOR`, then fallback to vim)
+- Validates configuration after editing
+- If validation fails, offers options to (e)dit again, (r)evert changes, or (q)uit
+- On successful save, writes only non-default values to `plonk.yaml`
 - Changes take effect immediately (no restart required)
 
 ### Configuration Precedence
@@ -61,6 +65,10 @@ The system provides defaults for:
 - Hook configuration (pre/post apply hooks)
 
 User overrides in `plonk.yaml` only need to specify values that differ from defaults.
+
+### Minimal Configuration Philosophy
+
+Plonk follows a minimal configuration approach. When you run `plonk config edit`, you see all available options with their current values, but only settings that differ from defaults are saved to `plonk.yaml`. This keeps your configuration file clean and makes it clear what you've actually customized.
 
 ## Implementation Notes
 
@@ -90,12 +98,14 @@ The config command is implemented as a parent command with two subcommands:
    - Table format displays YAML representation
    - JSON/YAML formats wrap config in structured output
 
-3. **Edit Command:**
+3. **Edit Command (Visudo-style):**
    - Creates config directory if missing
-   - Creates config file with complete default configuration values
-   - Validates configuration after editing using `SimpleValidator`
-   - Shows validation errors and allows re-editing when validation fails
-   - Editor selection: Uses `$EDITOR` environment variable only
+   - Generates temporary file with full runtime configuration
+   - Marks user-defined values with `# (user-defined)` annotations
+   - Validates edited configuration using `SimpleValidator`
+   - Provides edit/revert/quit loop on validation failures
+   - Editor selection: Checks `$VISUAL`, then `$EDITOR`, then defaults to vim
+   - Saves only non-default values to maintain minimal config files
 
 4. **Validation:**
    - Uses `go-playground/validator` for struct validation
@@ -111,8 +121,3 @@ The config command is implemented as a parent command with two subcommands:
 
 **Bugs Identified:**
 None - all discrepancies have been resolved.
-
-## Improvements
-
-- Make `plonk config edit` work with a complete config file at all times so users can easily see all the options, then on save it would only write the non-default values to plonk.yaml
-- Highlight user-defined values in `plonk config show` output to distinguish them from defaults

@@ -126,10 +126,11 @@ The status command provides comprehensive resource state management through a un
    - Structured output includes summary counts and managed items only
 
 5. **Table Display Logic:**
-   - Groups packages by manager for organized display
+   - Displays packages sorted alphabetically within each manager group
    - Shows different column layouts for managed vs unmanaged dotfiles
    - Implementation: Summary is completely hidden when `--unmanaged` is used in table format
-   - Structured output (JSON/YAML) always includes summary but doesn't support unmanaged filtering
+   - Colors are applied to status words only, not full lines
+   - Respects NO_COLOR environment variable for accessibility
 
 6. **Configuration and File Status:**
    - Checks existence and validity of `plonk.yaml` and `plonk.lock`

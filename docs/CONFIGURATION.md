@@ -228,8 +228,9 @@ dotfile_timeout: 60       # 1 minute for file operations
 ## Environment Variables
 
 - `PLONK_DIR` - Override config directory location (default: `~/.config/plonk`)
-- `EDITOR` - Editor to use for `plonk config edit` command
-- `VISUAL` - Alternative editor variable (checked if EDITOR not set)
+- `VISUAL` - Primary editor for `plonk config edit` command
+- `EDITOR` - Fallback editor if VISUAL not set
+- `NO_COLOR` - Disable colored output when set to any value
 
 ## Configuration Precedence
 
@@ -302,3 +303,54 @@ plonk config edit
 plonk config show --output yaml
 plonk config show --output json
 ```
+
+## Viewing Configuration
+
+The `plonk config show` command displays your effective configuration with user-defined values highlighted:
+
+```bash
+# Show configuration with (user-defined) annotations in blue
+plonk config show
+
+# Output in JSON format (clean, no annotations)
+plonk config show -o json
+```
+
+This makes it easy to see at a glance which settings you've customized versus which are using defaults.
+
+## Configuration Editing
+
+The `plonk config edit` command provides a visudo-style editing experience:
+
+1. **Full Runtime View**: Shows all available configuration options with their current values (defaults + your overrides)
+2. **User-Defined Annotations**: Values you've customized are marked with `# (user-defined)` comments
+3. **Validation Loop**: If you save invalid configuration, you'll get options to:
+   - (e)dit again to fix errors
+   - (r)evert changes and exit
+   - (q)uit without saving
+4. **Minimal Saving**: Only values that differ from defaults are written to `plonk.yaml`
+
+This approach keeps your configuration file clean and makes it immediately clear what you've customized.
+
+### Example Edit Session
+
+When you run `plonk config edit`, you'll see something like:
+
+```yaml
+# Plonk Configuration Editor
+# - Delete any line to revert to default
+# - Only values different from defaults will be saved to plonk.yaml
+# - Save and exit to apply, or exit without saving to cancel
+
+default_manager: brew
+operation_timeout: 300
+package_timeout: 600  # (user-defined)
+dotfile_timeout: 60
+
+expand_directories:
+  - .config
+  - .local
+  - .ssh  # (user-defined)
+```
+
+In this example, only `package_timeout` and the `expand_directories` list would be saved to plonk.yaml.

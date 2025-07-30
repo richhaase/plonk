@@ -41,10 +41,10 @@ After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber
 
 ## Core Philosophy
 
-✅ **Just works** - Zero configuration required
-✅ **Unified** - Packages and dotfiles together
-✅ **Simple** - Your filesystem IS the state
-✅ **Fast** - One command from fresh OS to ready
+**Just works** - Zero configuration required
+**Unified** - Packages and dotfiles together
+**Simple** - Your filesystem IS the state
+**Fast** - One command from fresh OS to ready
 
 ## Quick Start
 
@@ -161,6 +161,16 @@ plonk status --output json       # JSON output for scripts/tools
 plonk status --output yaml       # YAML output
 plonk status --output table      # Human-readable table (default)
 ```
+
+## Output
+
+Plonk uses minimal colorization for status indicators:
+- **Green**: Success/managed/available states
+- **Red**: Error/missing/failed states
+- **Yellow**: Warning/unmanaged states
+- **Blue**: Informational annotations
+
+Respects the standard `NO_COLOR` environment variable for color-free output.
 
 ## Development
 

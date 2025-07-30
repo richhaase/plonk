@@ -18,6 +18,18 @@ Show help information for plonk commands.
 plonk                                     # Show help and available commands
 ```
 
+### plonk init
+
+Initialize plonk and install required tools.
+
+```bash
+plonk init                            # Initialize plonk with health checks
+plonk init --yes                      # Auto-install tools without prompts
+```
+
+Options:
+- `--yes` - Auto-install missing package managers without prompts
+
 ### plonk clone
 
 Clone a dotfiles repository and intelligently set up plonk.
@@ -28,6 +40,10 @@ plonk clone richhaase/dotfiles        # Clone specific user's dotfiles
 plonk clone user/repo --no-apply      # Clone without running apply
 plonk clone --yes user/dotfiles       # Non-interactive mode
 ```
+
+Options:
+- `--no-apply` - Skip running apply after clone
+- `--yes` - Auto-install tools without prompts
 
 
 ### plonk install
@@ -123,8 +139,8 @@ plonk doctor --fix                    # Auto-fix issues
 Manage plonk configuration.
 
 ```bash
-plonk config show                     # Show current config
-plonk config edit                     # Edit config file
+plonk config show                     # Show current config with user-defined values highlighted
+plonk config edit                     # Edit config in visudo-style (only saves non-defaults)
 ```
 
 ### plonk env
@@ -166,6 +182,19 @@ plonk install cargo:ripgrep
 plonk install pip:black
 plonk install gem:bundler
 plonk install go:golang.org/x/tools/cmd/goimports
+```
+
+## Output and Colors
+
+Plonk uses minimal colorization for status indicators:
+- Green: Success, managed, available states
+- Red: Error, missing, failed states
+- Yellow: Warning, unmanaged states
+- Blue: Informational annotations
+
+To disable colors, set the `NO_COLOR` environment variable:
+```bash
+NO_COLOR=1 plonk status
 ```
 
 ## Exit Codes
