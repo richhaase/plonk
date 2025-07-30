@@ -191,21 +191,6 @@ func CreateDomainSummary(results []Result) []DomainSummary {
 	return domains
 }
 
-// ExtractManagedItems extracts only the managed items without full metadata
-func ExtractManagedItems(results []Result) []ManagedItem {
-	var items []ManagedItem
-	for _, result := range results {
-		for _, managed := range result.Managed {
-			items = append(items, ManagedItem{
-				Name:    managed.Name,
-				Domain:  managed.Domain,
-				Manager: managed.Manager,
-			})
-		}
-	}
-	return items
-}
-
 // Operation validation utilities for CLI commands
 
 // ValidateOperationResults checks if all operations failed and returns appropriate error

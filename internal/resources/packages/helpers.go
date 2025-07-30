@@ -79,22 +79,3 @@ func VerifyBinary(ctx context.Context, binary string, versionArgs []string) erro
 func IsContextError(err error) bool {
 	return err == context.Canceled || err == context.DeadlineExceeded
 }
-
-// FindAvailableBinary checks a list of binary names and returns the first one that is
-// available and functional. Returns empty string if none are found.
-func FindAvailableBinary(ctx context.Context, binaries []string, versionArgs []string) string {
-	for _, binary := range binaries {
-		if _, err := exec.LookPath(binary); err == nil {
-			// Verify the binary works
-			cmd := exec.CommandContext(ctx, binary, versionArgs...)
-			if _, err := cmd.Output(); err == nil {
-				return binary
-			}
-			// Check for context cancellation
-			if ctx.Err() != nil {
-				return ""
-			}
-		}
-	}
-	return ""
-}

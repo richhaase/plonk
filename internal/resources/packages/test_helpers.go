@@ -3,7 +3,7 @@
 
 package packages
 
-// Test helper functions
+// Test helper functions that are only used in tests
 
 // stringSlicesEqual compares two string slices for equality
 func stringSlicesEqual(a, b []string) bool {

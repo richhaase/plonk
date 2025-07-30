@@ -11,25 +11,6 @@ import (
 	"github.com/richhaase/plonk/internal/resources"
 )
 
-// StandardOutput provides consistent output formatting across all commands
-type StandardOutput struct {
-	Command string      `json:"command" yaml:"command"`
-	Summary interface{} `json:"summary" yaml:"summary"`
-	Items   interface{} `json:"items,omitempty" yaml:"items,omitempty"`
-	Errors  []string    `json:"errors,omitempty" yaml:"errors,omitempty"`
-}
-
-// TableOutput generates standardized table output
-func (s StandardOutput) TableOutput() string {
-	// This will be implemented by specific command outputs
-	return ""
-}
-
-// StructuredData returns the structured data for serialization
-func (s StandardOutput) StructuredData() any {
-	return s
-}
-
 // StandardTableBuilder provides consistent table formatting across commands
 type StandardTableBuilder struct {
 	title   string
@@ -62,12 +43,6 @@ func (t *StandardTableBuilder) AddRow(values ...string) *StandardTableBuilder {
 // SetSummary sets the summary line displayed after the table
 func (t *StandardTableBuilder) SetSummary(summary string) *StandardTableBuilder {
 	t.summary = summary
-	return t
-}
-
-// AddError adds an error message to be displayed
-func (t *StandardTableBuilder) AddError(error string) *StandardTableBuilder {
-	t.errors = append(t.errors, error)
 	return t
 }
 
@@ -223,108 +198,6 @@ func (p PackageOperationOutput) StructuredData() any {
 	return p
 }
 
-// StatusOperationOutput standardized output for status-type commands
-type StatusOperationOutput struct {
-	Command    string             `json:"command" yaml:"command"`
-	Summary    StatusSummaryInfo  `json:"summary" yaml:"summary"`
-	Details    []StatusDetailInfo `json:"details,omitempty" yaml:"details,omitempty"`
-	ActionHint string             `json:"action_hint,omitempty" yaml:"action_hint,omitempty"`
-}
-
-// StatusSummaryInfo provides summary for status operations
-type StatusSummaryInfo struct {
-	Total     int `json:"total" yaml:"total"`
-	Managed   int `json:"managed" yaml:"managed"`
-	Missing   int `json:"missing" yaml:"missing"`
-	Untracked int `json:"untracked,omitempty" yaml:"untracked,omitempty"`
-}
-
-// StatusDetailInfo provides detail for status operations
-type StatusDetailInfo struct {
-	Category string           `json:"category" yaml:"category"`
-	Items    []StatusItemInfo `json:"items" yaml:"items"`
-	Summary  map[string]int   `json:"summary" yaml:"summary"`
-}
-
-// StatusItemInfo represents individual status items
-type StatusItemInfo struct {
-	Name    string `json:"name" yaml:"name"`
-	Manager string `json:"manager,omitempty" yaml:"manager,omitempty"`
-	Status  string `json:"status" yaml:"status"`
-	Version string `json:"version,omitempty" yaml:"version,omitempty"`
-	Target  string `json:"target,omitempty" yaml:"target,omitempty"`
-}
-
-// TableOutput generates human-friendly output for status operations
-func (s StatusOperationOutput) TableOutput() string {
-	builder := NewStandardTableBuilder("Plonk Status")
-
-	for _, detail := range s.Details {
-		if len(detail.Items) == 0 {
-			continue
-		}
-
-		// Category header with summary
-		categoryTitle := strings.ToUpper(detail.Category)
-		if summary := detail.Summary; len(summary) > 0 {
-			var parts []string
-			for key, count := range summary {
-				if count > 0 {
-					parts = append(parts, fmt.Sprintf("%d %s", count, key))
-				}
-			}
-			if len(parts) > 0 {
-				categoryTitle += fmt.Sprintf(" (%s)", strings.Join(parts, ", "))
-			}
-		}
-
-		builder.AddRow(categoryTitle, "", "")
-
-		// Set appropriate headers based on category
-		if detail.Category == "packages" {
-			builder.SetHeaders("NAME", "MANAGER", "STATUS")
-			for _, item := range detail.Items {
-				icon := GetStatusIcon(item.Status)
-				statusText := fmt.Sprintf("%s %s", icon, item.Status)
-				builder.AddRow(item.Name, item.Manager, statusText)
-			}
-		} else if detail.Category == "dotfiles" {
-			builder.SetHeaders("PATH", "TARGET", "STATUS")
-			for _, item := range detail.Items {
-				icon := GetStatusIcon(item.Status)
-				statusText := fmt.Sprintf("%s %s", icon, item.Status)
-				builder.AddRow(item.Name, item.Target, statusText)
-			}
-		}
-
-		builder.AddRow("", "", "") // Empty row between categories
-	}
-
-	// Summary
-	summaryText := fmt.Sprintf("Total: %d managed", s.Summary.Managed)
-	if s.Summary.Missing > 0 {
-		summaryText += fmt.Sprintf(", %d missing", s.Summary.Missing)
-	}
-	if s.Summary.Untracked > 0 {
-		summaryText += fmt.Sprintf(", %d untracked", s.Summary.Untracked)
-	}
-
-	builder.SetSummary(summaryText)
-
-	// Action hint
-	if s.ActionHint != "" {
-		builder.AddRow("", "", "")
-		builder.AddRow(s.ActionHint, "", "")
-	}
-
-	return builder.Build()
-}
-
-// StructuredData returns the structured data for serialization
-func (s StatusOperationOutput) StructuredData() any {
-	return s
-}
-
 // Calculation helpers
 
 // CalculatePackageOperationSummary calculates summary from operation results
@@ -341,90 +214,4 @@ func CalculatePackageOperationSummary(results []resources.OperationResult) Packa
 		}
 	}
 	return summary
-}
-
-// StandardizeErrorMessage creates consistent error messages
-func StandardizeErrorMessage(operation, input, issue, suggestion string) string {
-	var msg strings.Builder
-
-	msg.WriteString(fmt.Sprintf("Error: %s", issue))
-	if input != "" {
-		msg.WriteString(fmt.Sprintf(" '%s'", input))
-	}
-	msg.WriteString("\n")
-
-	if suggestion != "" {
-		msg.WriteString(suggestion)
-		msg.WriteString("\n")
-	}
-
-	return msg.String()
-}
-
-// CreateDidYouMeanSuggestion creates "did you mean" suggestions for typos
-func CreateDidYouMeanSuggestion(input string, validOptions []string) string {
-	// Simple similarity check - find closest match
-	var closest string
-	minDistance := len(input) + 1
-
-	for _, option := range validOptions {
-		distance := calculateLevenshteinDistance(input, option)
-		if distance < minDistance && distance <= 2 { // Max 2 character difference
-			minDistance = distance
-			closest = option
-		}
-	}
-
-	if closest != "" {
-		return fmt.Sprintf("Did you mean: %s", closest)
-	}
-
-	return fmt.Sprintf("Valid options: %s", strings.Join(validOptions, ", "))
-}
-
-// Simple Levenshtein distance calculation for typo suggestions
-func calculateLevenshteinDistance(a, b string) int {
-	if len(a) == 0 {
-		return len(b)
-	}
-	if len(b) == 0 {
-		return len(a)
-	}
-
-	matrix := make([][]int, len(a)+1)
-	for i := range matrix {
-		matrix[i] = make([]int, len(b)+1)
-		matrix[i][0] = i
-	}
-
-	for j := 0; j <= len(b); j++ {
-		matrix[0][j] = j
-	}
-
-	for i := 1; i <= len(a); i++ {
-		for j := 1; j <= len(b); j++ {
-			cost := 0
-			if a[i-1] != b[j-1] {
-				cost = 1
-			}
-
-			matrix[i][j] = min(
-				matrix[i-1][j]+1,      // deletion
-				matrix[i][j-1]+1,      // insertion
-				matrix[i-1][j-1]+cost, // substitution
-			)
-		}
-	}
-
-	return matrix[len(a)][len(b)]
-}
-
-func min(a, b, c int) int {
-	if a < b && a < c {
-		return a
-	}
-	if b < c {
-		return b
-	}
-	return c
 }

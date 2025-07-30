@@ -15,11 +15,9 @@ import (
 )
 
 // Type aliases for UI types (these have been moved to internal/output/formatters.go)
-type ApplyOutput = output.ApplyOutput
 type ManagerApplyResult = output.ManagerApplyResult
 type PackageApplyResult = output.PackageApplyResult
 
-type DotfileApplyOutput = output.DotfileApplyOutput
 type DotfileAction = output.DotfileAction
 
 // TableOutput and StructuredData methods have been moved to internal/output/formatters.go

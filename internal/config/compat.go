@@ -49,27 +49,6 @@ type ValidationResult struct {
 	Warnings []string `json:"warnings,omitempty"`
 }
 
-// GetSummary returns a summary of the validation result
-func (vr *ValidationResult) GetSummary() string {
-	if vr.Valid {
-		return "Configuration is valid"
-	}
-
-	summary := "Configuration is invalid:\n"
-	for _, err := range vr.Errors {
-		summary += fmt.Sprintf("  - %s\n", err)
-	}
-
-	if len(vr.Warnings) > 0 {
-		summary += "\nWarnings:\n"
-		for _, warn := range vr.Warnings {
-			summary += fmt.Sprintf("  - %s\n", warn)
-		}
-	}
-
-	return summary
-}
-
 // SimpleValidator provides validation for configuration
 type SimpleValidator struct {
 	validator *validator.Validate
