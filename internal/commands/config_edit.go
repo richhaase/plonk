@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -71,7 +72,8 @@ func runConfigEdit(cmd *cobra.Command, args []string) error {
 
 		// Validate the edited config
 		if err := validateEditedConfig(configPath); err != nil {
-			fmt.Printf("\n❌ Configuration validation failed:\n%s\n", err.Error())
+			red := color.New(color.FgRed)
+			fmt.Printf("\n%s:\n%s\n", red.Sprint("Configuration validation failed"), err.Error())
 
 			// Ask if user wants to edit again
 			if !promptEditAgain() {
@@ -81,7 +83,8 @@ func runConfigEdit(cmd *cobra.Command, args []string) error {
 		}
 
 		// Success
-		fmt.Printf("\n✅ Configuration is valid and saved to: %s\n", configPath)
+		green := color.New(color.FgGreen)
+		fmt.Printf("\n%s: %s\n", green.Sprint("Configuration is valid and saved to"), configPath)
 		break
 	}
 
@@ -124,13 +127,13 @@ func validateEditedConfig(configPath string) error {
 	if !result.Valid {
 		var errorMsg strings.Builder
 		for _, err := range result.Errors {
-			errorMsg.WriteString(fmt.Sprintf("  ❌ %s\n", err))
+			errorMsg.WriteString(fmt.Sprintf("  %s\n", err))
 		}
 
 		if len(result.Warnings) > 0 {
 			errorMsg.WriteString("\nWarnings:\n")
 			for _, warning := range result.Warnings {
-				errorMsg.WriteString(fmt.Sprintf("  ⚠️  %s\n", warning))
+				errorMsg.WriteString(fmt.Sprintf("  %s\n", warning))
 			}
 		}
 
@@ -141,7 +144,7 @@ func validateEditedConfig(configPath string) error {
 	if len(result.Warnings) > 0 {
 		fmt.Printf("\nWarnings:\n")
 		for _, warning := range result.Warnings {
-			fmt.Printf("  ⚠️  %s\n", warning)
+			fmt.Printf("  %s\n", warning)
 		}
 	}
 
