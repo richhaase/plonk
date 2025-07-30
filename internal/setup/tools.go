@@ -9,57 +9,10 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"runtime"
 	"time"
 )
 
-// installHomebrew installs Homebrew package manager
-func installHomebrew(ctx context.Context, cfg Config) error {
-	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
-		return fmt.Errorf("homebrew is only supported on macOS and Linux, detected: %s", runtime.GOOS)
-	}
-
-	// Check if already installed
-	if _, err := exec.LookPath("brew"); err == nil {
-		return nil // Already installed
-	}
-
-	// Check for network connectivity
-	if err := checkNetworkConnectivity(ctx); err != nil {
-		return fmt.Errorf("network connectivity required for Homebrew installation: %w", err)
-	}
-
-	// Install Homebrew using the official installer
-	installScript := `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
-
-	cmd := exec.CommandContext(ctx, "bash", "-c", installScript)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("homebrew installation failed - this may require manual intervention or sudo access: %w", err)
-	}
-
-	// Verify installation
-	if _, err := exec.LookPath("brew"); err != nil {
-		// On Apple Silicon Macs, Homebrew installs to /opt/homebrew
-		if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
-			brewPath := "/opt/homebrew/bin/brew"
-			if _, err := os.Stat(brewPath); err == nil {
-				fmt.Printf("Note: Homebrew installed to /opt/homebrew but not in PATH\n")
-				fmt.Printf("   To use brew immediately, run: export PATH=\"/opt/homebrew/bin:$PATH\"\n")
-				fmt.Printf("   To make this permanent, add this line to your shell profile:\n")
-				fmt.Printf("   - For bash: echo 'export PATH=\"/opt/homebrew/bin:$PATH\"' >> ~/.bashrc\n")
-				fmt.Printf("   - For zsh:  echo 'export PATH=\"/opt/homebrew/bin:$PATH\"' >> ~/.zshrc\n")
-				return nil
-			}
-		}
-		return fmt.Errorf("homebrew installation completed but 'brew' command not found in PATH - please restart your shell or update PATH")
-	}
-
-	return nil
-}
+// Note: Homebrew installation has been removed. Homebrew is now a prerequisite for plonk.
 
 // installCargo installs Rust and Cargo package manager
 func installCargo(ctx context.Context, cfg Config) error {

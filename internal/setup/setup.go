@@ -257,17 +257,17 @@ func getManagerDescription(manager string) string {
 func getManualInstallInstructions(manager string) string {
 	switch manager {
 	case "homebrew", "brew":
-		return "curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | bash"
+		return "Visit https://brew.sh for installation instructions (prerequisite)"
 	case "cargo":
 		return "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
 	case "npm":
-		return "Install Node.js from https://nodejs.org/ or use package manager"
+		return "Install Node.js from https://nodejs.org/ or use brew install node"
 	case "pip":
-		return "Install Python from https://python.org/ or use system package manager"
+		return "Install Python from https://python.org/ or use brew install python"
 	case "gem":
-		return "Install Ruby from https://ruby-lang.org/ or use system package manager"
+		return "Install Ruby from https://ruby-lang.org/ or use brew install ruby"
 	case "go":
-		return "Install Go from https://golang.org/dl/ or use package manager"
+		return "Install Go from https://golang.org/dl/ or use brew install go"
 	default:
 		return "See official documentation for installation instructions"
 	}
@@ -277,7 +277,7 @@ func getManualInstallInstructions(manager string) string {
 func installSingleManager(ctx context.Context, manager string, cfg Config) error {
 	switch manager {
 	case "homebrew", "brew":
-		return installHomebrew(ctx, cfg)
+		return fmt.Errorf("homebrew must be installed manually as a prerequisite - see https://brew.sh")
 	case "cargo":
 		return installCargo(ctx, cfg)
 	case "npm", "pip", "gem", "go":

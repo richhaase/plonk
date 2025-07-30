@@ -362,6 +362,7 @@ func checkPackageManagerAvailability(ctx context.Context) HealthCheck {
 	registry := packages.NewManagerRegistry()
 	availableManagers := []string{}
 	unavailableManagers := []string{}
+	homebrewAvailable := false
 
 	for _, managerName := range packages.SupportedManagers {
 		mgr, err := registry.GetManager(managerName)
@@ -377,16 +378,23 @@ func checkPackageManagerAvailability(ctx context.Context) HealthCheck {
 		} else {
 			availableManagers = append(availableManagers, managerName)
 			check.Details = append(check.Details, fmt.Sprintf("%s: %s", managerName, output.Available()))
+			if managerName == "brew" {
+				homebrewAvailable = true
+			}
 		}
 	}
 
-	if len(availableManagers) == 0 {
+	// Homebrew is now a prerequisite
+	if !homebrewAvailable {
 		check.Status = "fail"
-		check.Message = "No package managers available"
-		check.Issues = append(check.Issues, "No supported package managers found")
-		// Suggest Homebrew as the primary package manager
+		check.Message = "Homebrew not found (required prerequisite)"
+		check.Issues = append(check.Issues, "Homebrew is required for plonk to function properly")
 		check.Suggestions = append(check.Suggestions, "Install Homebrew: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"")
-		check.Suggestions = append(check.Suggestions, "Or install a language-specific package manager (npm, pip, cargo, gem, or go)")
+		check.Suggestions = append(check.Suggestions, "After installation, ensure brew is in your PATH")
+	} else if len(availableManagers) == 1 {
+		check.Status = "warn"
+		check.Message = "Only Homebrew available"
+		check.Suggestions = append(check.Suggestions, "Consider installing language-specific package managers as needed (npm, pip, cargo, gem, or go)")
 	} else {
 		check.Message = fmt.Sprintf("%d package managers available", len(availableManagers))
 		if len(unavailableManagers) > 0 {
