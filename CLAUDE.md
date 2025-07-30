@@ -511,11 +511,12 @@ Focus on implementing the minimum required features for a stable v1.0 release th
 |------|----------|-----------|--------|-------|
 | APT Package Manager | High | 3-5 | ✅ Removed | Built then removed - wrong approach |
 
-#### Phase 3: Polish & Release (Week 3) - NOT STARTED
+#### Phase 3: Polish & Release (Week 3) - IN PROGRESS
 | Task | Priority | Est. Days | Status | Notes |
 |------|----------|-----------|--------|-------|
-| Linux Platform Testing | High | 2-3 | ⏳ Pending | Ubuntu, Fedora, Arch |
+| Linux Platform Testing | High | 2-3 | ⏳ Pending | Ubuntu, Debian via Lima VM |
 | Documentation Updates | Medium | 1-2 | ⏳ Pending | Remove outdated refs |
+| Dead Code Cleanup | Medium | 0.5 | ✅ Complete | Removed 600+ lines |
 
 ### Implementation Notes
 
@@ -573,8 +574,8 @@ Rejected features:
 ### Progress Summary
 - **Start Date**: 2025-07-30
 - **Target Completion**: Mid-August 2025 (2-3 weeks total)
-- **Current Status**: 4 of 7 tasks complete, 1 skipped (57%)
-- **Current Phase**: Core Features (Week 2)
+- **Current Status**: 5 of 8 tasks complete, 1 skipped (62.5%)
+- **Current Phase**: Polish & Release (Week 3)
 - **Days Elapsed**: 1
 
 ### Success Criteria
@@ -618,27 +619,29 @@ Rejected features:
    - Drifted files restored with `plonk apply`
    - Backward-compatible implementation
 
-4. **Plonk Diff Command** ✅
+4. **plonk diff Command** ✅
    - Shows differences for drifted dotfiles
-   - Configurable diff tool (default: `git diff --no-index`)
-   - Robust path resolution:
-     - Tilde expansion (~/)
-     - Environment variables ($HOME, $CUSTOM_VAR)
-     - Absolute and relative paths
-   - Filters by specific file or shows all drifted
-   - Created comprehensive documentation and unit tests
+   - Uses configurable diff tool (defaults to git diff --no-index)
+   - Environment variables: PLONK_DIFF_TOOL and PLONK_DIFF_ARGS
+   - Supports both specific file and all drifted files
 
-5. **APT Support Removed** ✅ (Completed 2025-07-30)
-   - **Initial Implementation**: Built full APT support with all 5 phases
-   - **Decision to Remove**: APT doesn't align with plonk's philosophy
-     - Requires system-wide changes (sudo)
-     - Not portable across developer environments
-     - Breaks the dotfiles repository model
-   - **Refactoring**: Removed 1,100+ lines of APT-specific code
-   - **New Direction**: Focus on user-space package managers
-     - Homebrew works on both macOS and Linux
-     - Language package managers are truly cross-platform
-     - Consistent experience across all platforms
+5. **Homebrew Prerequisite** ✅
+   - Removed all Homebrew installation logic
+   - Homebrew is now a required prerequisite
+   - Simplified setup: install Homebrew → install plonk → plonk clone
+   - Doctor shows error if Homebrew missing
+
+6. **Doctor Simplification** ✅
+   - Removed --fix flag entirely
+   - Doctor is now a pure diagnostic tool
+   - Only `plonk clone` can install package managers
+   - Clear separation of concerns
+
+7. **Dead Code Cleanup** ✅
+   - Removed 600+ lines of unused code
+   - Used deadcode tool to identify unused functions and types
+   - Cleaned up unused color functions, formatting helpers, and types
+   - All tests pass after cleanup
 
 ### Implementation Learnings
 - **State Model**: Successfully repurposed StateDegraded for drift without breaking changes
@@ -649,12 +652,25 @@ Rejected features:
 - **Platform Detection**: Created comprehensive platform detection for package managers
 - **APT Design**: Clean separation of read operations (no sudo) vs write operations (sudo)
 
-### Remaining v1.0 Tasks
-1. **APT Package Manager Support**
-   - ✅ Phase 1: Basic structure and registration
-   - ✅ Phase 2: Read operations (search, info, check)
-   - ⏳ Phase 3: Write operations (install, uninstall)
-   - ⏳ Phase 4: Integration and testing
-   - ⏳ Phase 5: Documentation
-2. **Linux Platform Testing** - Ensure cross-platform parity
-3. **Documentation Updates** - Final polish for v1.0 release
+### Remaining v1.0 Tasks (2025-07-30)
+
+Based on [v1-final-sprint.md](docs/planning/v1-final-sprint.md):
+
+1. **Linux Platform Testing** (2-3 days)
+   - Test on Ubuntu 22.04 LTS and Debian 12 via Lima VM
+   - Verify Homebrew installation process on Linux
+   - Ensure all package managers work identically to macOS
+   - Document any Linux-specific setup requirements
+   - Test WSL2 compatibility
+
+2. **Documentation Updates & Release Prep** (1-2 days)
+   - ✅ Remove stability warning from README (already done)
+   - Update version to 1.0.0 in cmd/plonk/main.go
+   - Create v1.0.0 release notes using template
+   - Review all command documentation for accuracy
+   - Ensure installation guide is current
+   - Tag v1.0.0 and create GitHub release with binaries
+
+3. **Optional: Homebrew Formula** (not blocking)
+   - Create formula for easy installation via `brew install plonk`
+   - Can be done post-v1.0 release
