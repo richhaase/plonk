@@ -381,7 +381,7 @@ Key dependencies identified through code structure review:
 #### Phase 4: UI/UX Improvements (Medium Priority) (Partially Complete)
 | Command | Item | Description | Dependency | Location | Status |
 |---------|------|-------------|------------|----------|--------|
-| config | Complete file editing | Edit full config, save only non-defaults | None | `internal/commands/config_edit.go` | ⏳ Pending |
+| config | Complete file editing | Edit full config, save only non-defaults | None | `internal/commands/config_edit.go` | ✅ Completed |
 | config | Highlight user values | Distinguish user-defined from defaults | None | `internal/commands/config_show.go` | ⏳ Pending |
 | config | Sort alphabetically | Sort configuration values for easier reading | None | `internal/commands/config_show.go` | ❌ Skipped |
 | config | Review flag combinations | Validate and handle all possible flag combinations | None | `internal/commands/config_*.go` | ✅ Verified |
@@ -389,6 +389,16 @@ Key dependencies identified through code structure review:
 | status | Sort alphabetically | Change default sort order | None | `internal/commands/status.go` | ✅ Completed |
 | status | Review flag combinations | Fix --packages --dotfiles behavior | None | `internal/commands/status.go` | ✅ Completed |
 | ~~status~~ | ~~Color coding~~ | ~~Visual grouping by package manager~~ | ~~None~~ | ~~`internal/output/formatters.go`~~ | ~~Removed~~ |
+
+#### Task 8: Visudo-style Config Edit (Completed - 2025-07-30)
+- **Implementation**: Created visudo-style editing workflow for configuration
+- **Show runtime config**: Display full merged configuration with defaults + user overrides
+- **User-defined annotations**: Mark values that differ from defaults with `# (user-defined)`
+- **Validation loop**: Edit/revert/quit options on validation failure
+- **Minimal saving**: Only save non-default values to plonk.yaml
+- **Editor support**: Check VISUAL, then EDITOR, then fallback to vim
+- **Temp file cleanup**: Always clean up temporary files
+- **Benefits**: Better user experience, minimal config files, clear visibility of customizations
 
 #### Task 7: Emoji Replacement with Colorization (Completed - 2025-07-30)
 - **High Priority Task**: Replace all emojis with professional colored text
