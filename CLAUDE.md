@@ -91,6 +91,23 @@ For each documentation improvement item, we follow this process:
 | Expand Examples | ⏳ Pending | More real-world scenarios and use cases |
 | Add FAQ Section | ⏳ Pending | Common questions and answers |
 
+## Critical Implementation Guidelines
+
+### STRICT RULE: No Unauthorized Features
+**NEVER EVER independently add features or enhancements that were not explicitly requested.**
+- You MAY propose improvements, but that is all
+- Do NOT implement anything beyond the exact scope requested
+- Do NOT add "helpful" extras without explicit approval
+- Do NOT skip requested features without explicit approval
+- When in doubt, implement ONLY what was explicitly requested
+
+### Examples of Unauthorized Changes to Avoid:
+- Adding emojis when not requested
+- Creating new abstractions or structures beyond the task scope
+- Adding terminal detection or environment variable checks when not specified
+- Extending functionality to related areas (e.g., adding warning colors when only error colors were requested)
+- Skipping tasks because you think they don't add value
+
 ## Documentation Process
 
 ### Phase 1: Behavior Documentation (Completed)
