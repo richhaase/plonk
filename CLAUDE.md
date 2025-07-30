@@ -512,6 +512,18 @@ Focus on implementing the minimum required features for a stable v1.0 release th
 - Needs decisions on: file structure, interface design, flag handling, error messages
 - Will revisit after other v1.0 features are complete
 
+#### In Progress: Dotfile Drift Detection Planning (2025-07-30)
+- Created comprehensive plan in [drift-detection-plan.md](docs/planning/drift-detection-plan.md)
+- Created implementation tasks in [drift-detection-tasks.md](docs/planning/drift-detection-tasks.md)
+- Created proof of concept in [drift-detection-poc.md](docs/planning/drift-detection-poc.md)
+- Key decisions:
+  - Use SHA256 checksums for fast comparison
+  - Repurpose existing `StateDegraded` as drift state
+  - Store comparison function in item metadata
+  - Phase 1: Basic detection and status display
+  - Phase 2: Diff tools and preview features
+- Estimated effort: 2-3 days for Phase 1 MVP
+
 ### Progress Summary
 - **Start Date**: 2025-07-30
 - **Target Completion**: Mid-August 2025 (2-3 weeks total)
