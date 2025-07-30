@@ -7,7 +7,7 @@ Working through v1.0 readiness tasks. Major accomplishments:
 - ✅ Implemented dotfile drift detection and `plonk diff` command
 - ✅ Added progress indicators for long-running operations
 - ✅ Excluded .plonk/ directory from dotfile deployment
-- ⏳ APT package manager support pending
+- 🚧 APT package manager support (Phase 1 & 2 complete)
 - ⏳ Linux platform testing pending
 
 ### Recently Completed (2025-07-30)
@@ -21,6 +21,13 @@ Working through v1.0 readiness tasks. Major accomplishments:
    - Supports various path formats (~/, $HOME/, absolute, env vars)
    - Configurable diff tool (default: `git diff --no-index`)
    - Created comprehensive documentation and tests
+
+3. **APT Package Manager Support (Phase 1 & 2)**:
+   - Platform detection for package managers
+   - APT only available on Debian-based Linux distributions
+   - Implemented read operations (search, info, check installed)
+   - Updated doctor command to show platform-specific availability
+   - Remaining: Phase 3 (install/uninstall), Phase 4 (integration), Phase 5 (docs)
 
 ## Summary of Setup Completed
 
@@ -627,8 +634,15 @@ Rejected features:
 - **Dotfile Mapping**: Clear separation between source (no dot) and deployed (with dot)
 - **Testing Philosophy**: Unit tests for business logic only, no mocks for CLIs
 - **Zero-Config**: Maintained philosophy with sensible defaults (git diff)
+- **Platform Detection**: Created comprehensive platform detection for package managers
+- **APT Design**: Clean separation of read operations (no sudo) vs write operations (sudo)
 
 ### Remaining v1.0 Tasks
-1. **APT Package Manager Support** - Core requirement for Linux
+1. **APT Package Manager Support**
+   - ✅ Phase 1: Basic structure and registration
+   - ✅ Phase 2: Read operations (search, info, check)
+   - ⏳ Phase 3: Write operations (install, uninstall)
+   - ⏳ Phase 4: Integration and testing
+   - ⏳ Phase 5: Documentation
 2. **Linux Platform Testing** - Ensure cross-platform parity
 3. **Documentation Updates** - Final polish for v1.0 release
