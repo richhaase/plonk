@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -166,21 +165,8 @@ func createTempConfigFile(configDir string) (string, error) {
 
 // writeAnnotatedConfig writes the config with (user-defined) annotations
 func writeAnnotatedConfig(w *os.File, cfg *config.Config, configDir string) error {
-	// Get defaults for comparison
-	defaults := config.GetDefaults()
-
-	// Load user config to check what's actually user-defined
-	userConfig, _ := config.Load(configDir) // May fail if no user config exists
-
-	// Helper to check if a value is user-defined
-	isUserDefined := func(actualValue, defaultValue interface{}) bool {
-		// If we don't have a user config, nothing is user-defined
-		if userConfig == nil {
-			return false
-		}
-		// Use reflect.DeepEqual to compare values
-		return !reflect.DeepEqual(actualValue, defaultValue)
-	}
+	// Create checker to identify user-defined values
+	checker := config.NewUserDefinedChecker(configDir)
 
 	// Helper to write a field with optional annotation
 	writeField := func(name string, value interface{}, isUserDef bool) {
@@ -199,32 +185,32 @@ func writeAnnotatedConfig(w *os.File, cfg *config.Config, configDir string) erro
 
 	// Write each field
 	writeField("default_manager", cfg.DefaultManager,
-		isUserDefined(cfg.DefaultManager, defaults.DefaultManager))
+		checker.IsFieldUserDefined("default_manager", cfg.DefaultManager))
 
 	writeField("operation_timeout", cfg.OperationTimeout,
-		isUserDefined(cfg.OperationTimeout, defaults.OperationTimeout))
+		checker.IsFieldUserDefined("operation_timeout", cfg.OperationTimeout))
 
 	writeField("package_timeout", cfg.PackageTimeout,
-		isUserDefined(cfg.PackageTimeout, defaults.PackageTimeout))
+		checker.IsFieldUserDefined("package_timeout", cfg.PackageTimeout))
 
 	writeField("dotfile_timeout", cfg.DotfileTimeout,
-		isUserDefined(cfg.DotfileTimeout, defaults.DotfileTimeout))
+		checker.IsFieldUserDefined("dotfile_timeout", cfg.DotfileTimeout))
 
 	// For lists, check if the entire list differs
 	writeField("expand_directories", cfg.ExpandDirectories,
-		isUserDefined(cfg.ExpandDirectories, defaults.ExpandDirectories))
+		checker.IsFieldUserDefined("expand_directories", cfg.ExpandDirectories))
 
 	writeField("ignore_patterns", cfg.IgnorePatterns,
-		isUserDefined(cfg.IgnorePatterns, defaults.IgnorePatterns))
+		checker.IsFieldUserDefined("ignore_patterns", cfg.IgnorePatterns))
 
 	// Handle nested structures
-	if !reflect.DeepEqual(cfg.Dotfiles, defaults.Dotfiles) {
+	if checker.IsFieldUserDefined("dotfiles", cfg.Dotfiles) {
 		writeField("dotfiles", cfg.Dotfiles, true)
 	} else if len(cfg.Dotfiles.UnmanagedFilters) > 0 {
 		writeField("dotfiles", cfg.Dotfiles, false)
 	}
 
-	if !reflect.DeepEqual(cfg.Hooks, defaults.Hooks) {
+	if checker.IsFieldUserDefined("hooks", cfg.Hooks) {
 		writeField("hooks", cfg.Hooks, true)
 	} else if len(cfg.Hooks.PreApply) > 0 || len(cfg.Hooks.PostApply) > 0 {
 		writeField("hooks", cfg.Hooks, false)
@@ -302,45 +288,11 @@ func parseAndValidateConfig(filename string) (*config.Config, error) {
 
 // saveNonDefaultValues writes only non-default values to plonk.yaml
 func saveNonDefaultValues(configDir string, cfg *config.Config) error {
-	defaults := config.GetDefaults()
+	// Create checker to get non-default fields
+	checker := config.NewUserDefinedChecker(configDir)
 
-	// Create a map to hold only non-default values
-	nonDefaults := make(map[string]interface{})
-
-	// Compare each field and add non-defaults to map
-	if cfg.DefaultManager != defaults.DefaultManager {
-		nonDefaults["default_manager"] = cfg.DefaultManager
-	}
-
-	if cfg.OperationTimeout != defaults.OperationTimeout {
-		nonDefaults["operation_timeout"] = cfg.OperationTimeout
-	}
-
-	if cfg.PackageTimeout != defaults.PackageTimeout {
-		nonDefaults["package_timeout"] = cfg.PackageTimeout
-	}
-
-	if cfg.DotfileTimeout != defaults.DotfileTimeout {
-		nonDefaults["dotfile_timeout"] = cfg.DotfileTimeout
-	}
-
-	// For lists, save entire list if ANY element differs
-	if !reflect.DeepEqual(cfg.ExpandDirectories, defaults.ExpandDirectories) {
-		nonDefaults["expand_directories"] = cfg.ExpandDirectories
-	}
-
-	if !reflect.DeepEqual(cfg.IgnorePatterns, defaults.IgnorePatterns) {
-		nonDefaults["ignore_patterns"] = cfg.IgnorePatterns
-	}
-
-	// Handle nested structures
-	if !reflect.DeepEqual(cfg.Dotfiles, defaults.Dotfiles) {
-		nonDefaults["dotfiles"] = cfg.Dotfiles
-	}
-
-	if !reflect.DeepEqual(cfg.Hooks, defaults.Hooks) {
-		nonDefaults["hooks"] = cfg.Hooks
-	}
+	// Get only non-default values
+	nonDefaults := checker.GetNonDefaultFields(cfg)
 
 	// If everything is default, write empty file
 	configPath := filepath.Join(configDir, "plonk.yaml")

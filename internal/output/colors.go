@@ -68,4 +68,5 @@ func Info() string { return "INFO" }
 func ColorSuccess(text string) string { return colorize(text, color.FgGreen) }
 func ColorError(text string) string   { return colorize(text, color.FgRed) }
 func ColorWarning(text string) string { return colorize(text, color.FgYellow) }
+func ColorInfo(text string) string    { return colorize(text, color.FgBlue) }
 func ColorDim(text string) string     { return colorize(text, color.Faint) }
