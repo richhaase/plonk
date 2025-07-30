@@ -473,7 +473,7 @@ Focus on implementing the minimum required features for a stable v1.0 release th
 |------|----------|-----------|--------|-----------|
 | .plonk/ Directory Exclusion | Medium | 0.5 | ✅ Complete | 2025-07-30 |
 | Progress Indicators | High | 1-2 | ✅ Complete | 2025-07-30 |
-| Doctor Code Consolidation | Medium | 1-2 | ⏳ Next | - |
+| Doctor Code Consolidation | Medium | 1-2 | ⏸️ Skipped | 2025-07-30 |
 
 #### Phase 2: Core Features (Week 2) - NOT STARTED
 | Task | Priority | Est. Days | Status | Notes |
@@ -504,10 +504,18 @@ Focus on implementing the minimum required features for a stable v1.0 release th
 - Format: `[2/5] Installing: htop` for consistent user experience
 - No progress shown for single-item operations (clean output)
 
+#### Skipped: Doctor Code Consolidation (2025-07-30)
+- Planned to consolidate shared package manager installation code
+- Location should be `internal/resources/packages/` (not new packagemanager directory)
+- Remove ALL interactive prompting - use `--no-npm`, `--no-cargo` flags instead
+- Outstanding design questions documented in [doctor-consolidation-plan.md](docs/planning/doctor-consolidation-plan.md)
+- Needs decisions on: file structure, interface design, flag handling, error messages
+- Will revisit after other v1.0 features are complete
+
 ### Progress Summary
 - **Start Date**: 2025-07-30
 - **Target Completion**: Mid-August 2025 (2-3 weeks total)
-- **Current Status**: 2 of 7 tasks complete (29%)
+- **Current Status**: 2 of 7 tasks complete, 1 skipped (29%)
 - **Current Phase**: Foundation (Week 1)
 - **Days Elapsed**: 1
 

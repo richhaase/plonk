@@ -65,11 +65,12 @@ v1.0 is ready when:
 - Only create directory when actually needed
 
 #### 6. Doctor Code Consolidation
-**Status**: Not implemented
+**Status**: ⏸️ Skipped - Needs design decisions (2025-07-30)
 **Priority**: MEDIUM - Technical debt
 - Extract shared logic from clone/init and doctor
 - Use same internal functions (not shelling out)
 - Reduces maintenance and ensures consistency
+- See: [doctor-consolidation-plan.md](doctor-consolidation-plan.md) for details
 
 #### 7. Documentation Updates
 **Status**: Partially complete
@@ -125,7 +126,7 @@ Before tagging v1.0.0:
 - [x] Implement progress indicators
 - [ ] Complete Linux platform testing
 - [x] Add `.plonk/` directory exclusion
-- [ ] Consolidate doctor/setup shared code
+- [⏸️] Consolidate doctor/setup shared code (skipped - needs design decisions)
 - [ ] Update all documentation
 - [ ] Remove stability warning from README
 - [ ] Document `.plonk/` as reserved directory
