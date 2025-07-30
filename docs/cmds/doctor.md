@@ -4,7 +4,7 @@ The `plonk doctor` command checks system health and configuration.
 
 ## Description
 
-The doctor command performs comprehensive health checks on your plonk installation and system configuration. It verifies system requirements, package manager availability, configuration validity, and PATH setup. With the `--fix` flag, doctor can automatically install missing language package managers (but not Homebrew, which is a prerequisite), making it an essential tool for both troubleshooting issues and initial system setup.
+The doctor command performs comprehensive health checks on your plonk installation and system configuration. It verifies system requirements, package manager availability, configuration validity, and PATH setup. Doctor provides detailed suggestions for fixing any issues found, making it an essential tool for troubleshooting.
 
 ## Behavior
 
@@ -50,8 +50,6 @@ All health checks run within a 30-second timeout.
 
 ### Command Options
 
-- `--fix` - Offer to install missing language package managers (not Homebrew)
-- `--yes` - Auto-install without prompts (requires `--fix`)
 - `-o, --output` - Output format (table/json/yaml)
 
 ### Output Formats
@@ -73,17 +71,15 @@ All health checks run within a 30-second timeout.
 - Same structure as JSON but in YAML syntax
 - Preserves all fields including multi-line suggestions
 
-### Fix Behavior
+### Fix Suggestions
 
-With `--fix` flag:
-- Identifies missing package managers
-- Prompts user to install each missing manager (unless `--yes`)
-- Installs via official methods:
-  - Homebrew: Official installer script
-  - Cargo: rustup installer
-  - Others: Via default_manager (see [Configuration Guide](../configuration.md#package-manager-settings))
+When issues are detected, doctor provides:
+- Clear descriptions of the problem
+- Specific commands to run for manual fixes
+- References to relevant documentation
+- Notes about prerequisites (e.g., Homebrew must be installed first)
 
-Currently limited to language package manager installation only (Homebrew must be installed manually).
+For automatic package manager installation during setup, use `plonk clone` which will install any managers needed by your dotfiles repository.
 
 ### Error Conditions
 
@@ -102,7 +98,7 @@ Doctor provides detailed PATH analysis:
 
 ### Integration with Init/Clone
 
-The `plonk clone` command uses the same code as `doctor --fix` internally for language package manager installation. This ensures consistency between initial setup and later health checks. Note that Homebrew must be installed before using either command.
+The `plonk clone` command can automatically install language package managers needed by your dotfiles repository. This happens during the clone process when it detects which managers are required. Note that Homebrew must be installed before using plonk.
 
 ### Special Behaviors
 
@@ -123,10 +119,8 @@ The doctor command provides comprehensive system health checking through a struc
 **Key Implementation Flow:**
 
 1. **Command Processing:**
-   - Parses `--fix` and `--yes` flags
    - Runs `diagnostics.RunHealthChecks()` with 30-second timeout
-   - Delegates fix behavior to setup package
-   - Re-runs health checks after fixes to show updated status
+   - Displays results with appropriate formatting
 
 2. **Health Check Categories:**
    - Individual check statuses: `pass`, `warn`, `fail`, `info`
@@ -149,12 +143,10 @@ The doctor command provides comprehensive system health checking through a struc
    - Executable Path: Plonk binary accessibility
    - PATH Configuration: Package manager directories in PATH
 
-5. **Fix Behavior:**
-   - **DISCREPANCY**: Actually delegates to `setup.CheckAndInstallToolsFromReport()`, not direct `doctor --fix`
-   - Uses same setup infrastructure as `plonk clone`
-   - Only fixes package manager installation issues
-   - `--yes` flag bypasses interactive prompts
-   - Re-runs all health checks after fixes
+5. **Diagnostic Output:**
+   - Provides clear issue descriptions
+   - Includes actionable fix suggestions
+   - Shows manual commands for fixes
 
 6. **Output Formatting:**
    - Table format uses hierarchical display with fixed category ordering
@@ -174,20 +166,18 @@ The doctor command provides comprehensive system health checking through a struc
 - Package manager unavailability results in warnings, not failures
 
 **Integration Details:**
-- Shares code with setup via `setup.CheckAndInstallToolsFromReport()`
-- Does not call `plonk doctor --fix` as a subprocess
-- Uses same package manager installation logic as setup command
+- Pure diagnostic tool - no system modifications
+- Package manager installation handled by `plonk clone` only
 
 **Bugs Identified:**
 None - all discrepancies have been resolved.
 
 ## Improvements
 
-- Extend `--fix` to address all fixable issues, not just package managers
 - Review and standardize all health check behaviors
 - Revisit check categories for better organization
 - Extend package manager checks to include actual functionality testing beyond availability
 - Consider having clone/init directly call doctor instead of duplicating code
-- Add auto-fix capabilities for PATH configuration issues
+- Enhance fix suggestions with more platform-specific guidance
 
 Note: Copy-paste ready PATH commands completed (2025-07-29)

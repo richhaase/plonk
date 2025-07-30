@@ -98,13 +98,13 @@ The fastest way to set up a new development machine:
 plonk clone user/dotfiles                # GitHub shorthand
 plonk clone https://github.com/user/dotfiles.git
 
-# Or start fresh
-plonk init                               # Initialize plonk, install missing tools
+# Or start fresh - just start using plonk
+plonk add ~/.zshrc                       # Start tracking your dotfiles
 ```
 
 The `clone` command:
-1. Clones your dotfiles repository (if provided)
-2. Installs missing package managers (Homebrew, Cargo, etc.)
+1. Clones your dotfiles repository
+2. Installs missing language package managers needed by your dotfiles
 3. Runs `plonk apply` to install all packages and deploy dotfiles
 4. Gets your machine ready for development in minutes
 

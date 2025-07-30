@@ -171,67 +171,8 @@ ignore_patterns:`
 	return nil
 }
 
-// CheckAndInstallToolsFromReport analyzes a health report and installs missing tools
-func CheckAndInstallToolsFromReport(ctx context.Context, healthReport diagnostics.HealthReport, cfg Config) error {
-	// Find missing package managers
-	missingManagers := findMissingPackageManagers(healthReport)
-
-	if len(missingManagers) == 0 {
-		fmt.Printf("All required tools are available\n")
-		return nil
-	}
-
-	fmt.Printf("Missing package managers:\n")
-	for _, manager := range missingManagers {
-		description := getManagerDescription(manager)
-		fmt.Printf("- %s (%s)\n", manager, description)
-	}
-
-	if cfg.Interactive {
-		if !promptYesNo("Install missing package managers?", true) {
-			fmt.Printf("Some tools are missing. You can install them later with 'plonk doctor --fix'\n")
-			fmt.Printf("Manual installation options:\n")
-			for _, manager := range missingManagers {
-				instructions := getManualInstallInstructions(manager)
-				fmt.Printf("   %s: %s\n", manager, instructions)
-			}
-			return nil
-		}
-	}
-
-	// Install missing tools with detailed progress
-	successful := 0
-	failed := 0
-
-	for _, manager := range missingManagers {
-		fmt.Printf("🔄 Installing %s...\n", getManagerDescription(manager))
-
-		if err := installSingleManager(ctx, manager, cfg); err != nil {
-			failed++
-			fmt.Printf("Failed to install %s: %v\n", manager, err)
-			fmt.Printf("Manual installation: %s\n", getManualInstallInstructions(manager))
-
-			// Continue with other managers instead of failing completely
-			continue
-		}
-
-		successful++
-		fmt.Printf("%s installed successfully\n", getManagerDescription(manager))
-	}
-
-	// Provide summary
-	if failed > 0 {
-		fmt.Printf("Installation summary: %d successful, %d failed\n", successful, failed)
-		fmt.Printf("You can retry failed installations with 'plonk doctor --fix'\n")
-		if successful > 0 {
-			return nil // Don't treat partial success as failure
-		}
-		return fmt.Errorf("failed to install %d package managers", failed)
-	}
-
-	fmt.Printf("All tools installed successfully (%d managers)\n", successful)
-	return nil
-}
+// Note: The doctor command no longer supports --fix flag.
+// Package manager installation is only done by clone command when needed.
 
 // getManagerDescription returns a user-friendly description of the package manager
 func getManagerDescription(manager string) string {
@@ -448,7 +389,7 @@ func installDetectedManagers(ctx context.Context, managers []string, cfg Config)
 
 	if cfg.Interactive {
 		if !promptYesNo("Install missing package managers?", true) {
-			fmt.Printf("Some required tools are missing. You can install them later with 'plonk doctor --fix'\n")
+			fmt.Printf("Some required tools are missing. You can install them manually\n")
 			return nil
 		}
 	}
@@ -474,7 +415,7 @@ func installDetectedManagers(ctx context.Context, managers []string, cfg Config)
 
 	if failed > 0 {
 		fmt.Printf("Installation summary: %d successful, %d failed\n", successful, failed)
-		fmt.Printf("You can retry failed installations with 'plonk doctor --fix'\n")
+		fmt.Printf("You can retry failed installations manually\n")
 		if successful > 0 {
 			return nil // Don't treat partial success as failure
 		}

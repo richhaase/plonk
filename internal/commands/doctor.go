@@ -4,20 +4,15 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/richhaase/plonk/internal/diagnostics"
-	"github.com/richhaase/plonk/internal/setup"
 	"github.com/spf13/cobra"
 )
 
-var (
-	doctorFix bool
-	doctorYes bool
-)
+// No flags needed for doctor command anymore
 
 var doctorCmd = &cobra.Command{
 	Use:   "doctor",
@@ -33,20 +28,17 @@ Shows:
 - Environment variables (PLONK_DIR, etc.)
 - Any issues that would prevent plonk from working
 
-With --fix flag, offers to install missing package managers.
+Doctor reports issues with suggestions on how to fix them.
+To automatically install missing package managers, use 'plonk clone'.
 
 Examples:
   plonk doctor           # Run health checks
-  plonk doctor --fix     # Run checks and offer to fix issues
-  plonk doctor --fix --yes  # Auto-fix issues without prompts
   plonk doctor -o json   # Show as JSON
   plonk doctor -o yaml   # Show as YAML`,
 	RunE: runDoctor,
 }
 
 func init() {
-	doctorCmd.Flags().BoolVar(&doctorFix, "fix", false, "Offer to install missing package managers")
-	doctorCmd.Flags().BoolVar(&doctorYes, "yes", false, "Auto-install missing tools without prompts (requires --fix)")
 	rootCmd.AddCommand(doctorCmd)
 }
 
@@ -60,23 +52,6 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 
 	// Run comprehensive health checks using diagnostics
 	healthReport := diagnostics.RunHealthChecks()
-
-	// If --fix flag is set, try to fix issues
-	if doctorFix {
-		ctx := context.Background()
-		setupConfig := setup.Config{
-			Interactive: !doctorYes,
-			Verbose:     false,
-		}
-
-		if err := setup.CheckAndInstallToolsFromReport(ctx, healthReport, setupConfig); err != nil {
-			return fmt.Errorf("failed to fix issues: %w", err)
-		}
-
-		// Re-run health checks to show updated status
-		fmt.Println("\nRe-running health checks after fixes...")
-		healthReport = diagnostics.RunHealthChecks()
-	}
 
 	// Convert to command output type
 	doctorOutput := DoctorOutput{

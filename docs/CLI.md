@@ -18,18 +18,6 @@ Show help information for plonk commands.
 plonk                                     # Show help and available commands
 ```
 
-### plonk init
-
-Initialize plonk and install language package managers.
-
-```bash
-plonk init                            # Initialize plonk with health checks
-plonk init --yes                      # Auto-install language tools without prompts
-```
-
-Options:
-- `--yes` - Auto-install missing language package managers without prompts
-
 ### plonk clone
 
 Clone a dotfiles repository and intelligently set up plonk.
@@ -140,8 +128,7 @@ plonk info brew:ripgrep
 Check system health and configuration.
 
 ```bash
-plonk doctor                          # Check system
-plonk doctor --fix                    # Install missing language package managers
+plonk doctor                          # Check system health
 ```
 
 ### plonk config

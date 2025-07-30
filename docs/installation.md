@@ -71,9 +71,6 @@ plonk --version
 
 # Check system health and configuration
 plonk doctor
-
-# Install missing language package managers (not Homebrew)
-plonk doctor --fix
 ```
 
 The `plonk doctor` command will identify any missing dependencies and can automatically install supported package managers.
@@ -86,10 +83,10 @@ The `plonk doctor` command will identify any missing dependencies and can automa
 # Install plonk
 go install github.com/richhaase/plonk/cmd/plonk@latest
 
-# Verify and auto-install missing tools
-plonk doctor --fix
+# Verify system health
+plonk doctor
 
-# Clone your dotfiles
+# Clone your dotfiles (installs needed package managers)
 plonk clone user/dotfiles      # Clone existing setup
 ```
 
@@ -104,10 +101,10 @@ plonk clone user/dotfiles      # Clone existing setup
 # Install plonk
 go install github.com/richhaase/plonk/cmd/plonk@latest
 
-# Verify and auto-install missing tools
-plonk doctor --fix
+# Verify system health
+plonk doctor
 
-# Initialize or clone your dotfiles
+# Clone your dotfiles (installs needed package managers)
 plonk clone user/dotfiles
 ```
 
@@ -126,7 +123,7 @@ Plonk has limited Windows support. Use WSL2 for best experience:
 ```bash
 # In WSL2
 go install github.com/richhaase/plonk/cmd/plonk@latest
-plonk doctor --fix
+plonk doctor
 ```
 
 ## Environment Setup
@@ -206,16 +203,15 @@ plonk apply
 - Run `plonk doctor` to diagnose permission issues
 
 **Package manager not found**
-- For Homebrew: Install manually from https://brew.sh
-- For language package managers: Run `plonk doctor --fix`
+- For Homebrew: Install manually from https://brew.sh (required prerequisite)
+- For language package managers: Install manually or use `plonk clone` for automatic installation
 - See [Configuration Guide](CONFIGURATION.md#package-manager-settings) for manual setup
 
 ### Getting Help
 
 ```bash
 plonk --help                 # General help
-plonk doctor                 # System health check
-plonk doctor --fix           # Auto-fix common issues
+plonk doctor                 # System health check with fix suggestions
 ```
 
 For detailed command usage, see the [CLI Reference](cli.md).
