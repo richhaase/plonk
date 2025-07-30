@@ -196,7 +196,7 @@ plonk apply
 
 **Package manager not found**
 - Run `plonk doctor --fix` to auto-install missing managers
-- See [Configuration Guide](configuration.md#package-manager-settings) for manual setup
+- See [Configuration Guide](CONFIGURATION.md#package-manager-settings) for manual setup
 
 ### Getting Help
 
@@ -223,5 +223,5 @@ After successful installation:
 
 1. **Clone existing setup** or **start tracking files**: `plonk clone user/dotfiles` or use `plonk add`
 2. **Learn the commands**: See [CLI Reference](cli.md)
-3. **Configure behavior**: See [Configuration Guide](configuration.md)
+3. **Configure behavior**: See [Configuration Guide](CONFIGURATION.md)
 4. **Understand the architecture**: See [Architecture Overview](architecture.md)

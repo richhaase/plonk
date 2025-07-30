@@ -71,7 +71,7 @@ Dotfiles are deployed with automatic dot-prefix handling:
 - `$PLONK_DIR/vimrc` → `$HOME/.vimrc`
 - `$PLONK_DIR/config/nvim/init.lua` → `$HOME/.config/nvim/init.lua`
 
-Files matching `ignore_patterns` are excluded from deployment. For configuration details, see [Configuration Guide](../configuration.md#ignore-patterns).
+Files matching `ignore_patterns` are excluded from deployment. For configuration details, see [Configuration Guide](../CONFIGURATION.md#ignore-patterns).
 
 ## Implementation Notes
 

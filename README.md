@@ -10,7 +10,7 @@
 
 ```bash
 # Clone your dotfiles and set up everything
-plonk setup user/dotfiles
+plonk clone user/dotfiles
 # Done. Seriously.
 ```
 
@@ -84,16 +84,14 @@ The fastest way to set up a new development machine:
 
 ```bash
 # Clone existing dotfiles and set up environment
-plonk setup user/dotfiles                # GitHub shorthand
-plonk setup https://github.com/user/dotfiles.git
+plonk clone user/dotfiles                # GitHub shorthand
+plonk clone https://github.com/user/dotfiles.git
 
 # Or start fresh
-plonk setup                              # Initialize plonk, install missing tools
+plonk init                               # Initialize plonk, install missing tools
 ```
 
-**📖 [Complete URL Format Guide →](docs/cmds/setup.md#repository-url-support)**
-
-The `setup` command:
+The `clone` command:
 1. Clones your dotfiles repository (if provided)
 2. Installs missing package managers (Homebrew, Cargo, etc.)
 3. Runs `plonk apply` to install all packages and deploy dotfiles
@@ -194,10 +192,11 @@ just install
 
 ### Core Documentation
 - **[Why Plonk?](docs/why-plonk.md)** - The journey that led to plonk and what makes it different
-- **[Architecture](docs/ARCHITECTURE.md)** - Technical design, state model, and implementation details
+- **[Architecture](docs/architecture.md)** - Technical design, state model, and implementation details
 
 ### Command Documentation
-- **[Setup](docs/cmds/setup.md)** - Initialize plonk or clone existing dotfiles
+- **[Clone](docs/cmds/clone.md)** - Clone and set up existing dotfiles
+- **[Init](docs/cli.md#plonk-init)** - Initialize plonk and install tools
 - **[Apply](docs/cmds/apply.md)** - Sync your system to desired state
 - **[Status](docs/cmds/status.md)** - View managed packages and dotfiles
 - **[Package Management](docs/cmds/package_management.md)** - install, uninstall, search, info
