@@ -41,8 +41,7 @@ All health checks run within a 30-second timeout.
 
 5. **Package Managers**
    - Availability of each package manager
-   - Platform-specific availability (e.g., APT only on Debian/Ubuntu)
-   - Shows "not supported on this platform" for incompatible managers
+   - All supported managers work cross-platform
 
 6. **Installation**
    - Plonk executable accessibility

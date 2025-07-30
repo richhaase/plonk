@@ -177,8 +177,7 @@ plonk completion powershell           # PowerShell completion
 
 Use prefixes to specify package managers:
 
-- `apt:` - APT (Debian/Ubuntu Linux only)
-- `brew:` - Homebrew
+- `brew:` - Homebrew (macOS and Linux)
 - `npm:` - NPM (global packages)
 - `cargo:` - Cargo (Rust)
 - `pip:` - Pip (Python)
@@ -187,7 +186,6 @@ Use prefixes to specify package managers:
 
 Examples:
 ```bash
-plonk install apt:nginx
 plonk install brew:wget
 plonk install npm:typescript
 plonk install cargo:ripgrep

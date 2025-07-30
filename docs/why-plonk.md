@@ -75,7 +75,7 @@ Plonk's vision for package management is to be the "package manager manager" - o
 
 Today, plonk provides a unified interface for common operations. Tomorrow, it could enable:
 - Transitioning tools between package managers (e.g., moving from npm to cargo-based tools)
-- Cross-platform package lists (same tools whether on macOS with Homebrew or Linux with apt)
+- Cross-platform package lists (same tools on macOS and Linux via Homebrew)
 - Smart package manager selection based on availability and performance
 
 But first, we need to get the core abstraction just right.

@@ -7,7 +7,7 @@ Working through v1.0 readiness tasks. Major accomplishments:
 - ✅ Implemented dotfile drift detection and `plonk diff` command
 - ✅ Added progress indicators for long-running operations
 - ✅ Excluded .plonk/ directory from dotfile deployment
-- ✅ APT package manager support with platform detection
+- ✅ Removed APT - focus on Homebrew for cross-platform consistency
 - ⏳ Linux platform testing pending
 
 ### Recently Completed (2025-07-30)
@@ -509,7 +509,7 @@ Focus on implementing the minimum required features for a stable v1.0 release th
 #### Phase 2: Core Features (Week 2) - COMPLETE
 | Task | Priority | Est. Days | Status | Notes |
 |------|----------|-----------|--------|-------|
-| APT Package Manager | High | 3-5 | ✅ Complete | Platform detection, all phases done |
+| APT Package Manager | High | 3-5 | ✅ Removed | Built then removed - wrong approach |
 
 #### Phase 3: Polish & Release (Week 3) - NOT STARTED
 | Task | Priority | Est. Days | Status | Notes |
@@ -628,24 +628,17 @@ Rejected features:
    - Filters by specific file or shows all drifted
    - Created comprehensive documentation and unit tests
 
-5. **APT Package Manager Support** ✅ (Completed 2025-07-30)
-   - **Platform Detection**: Created platform.go to detect Linux distributions
-   - **Manager Availability**: APT only available on Debian-based systems
-   - **Full Implementation**: All 5 phases completed successfully
-   - **Phase 1**: Basic structure and registration
-   - **Phase 2**: Read operations (search, info, check)
-   - **Phase 3**: Write operations (install/uninstall with sudo handling)
-   - **Phase 4**: Integration testing (CI-only to protect developer systems)
-   - **Phase 5**: Documentation updates across all relevant files
-   - **Key Design Decisions**:
-     - Fail with clear messages for sudo (no password prompts)
-     - Use `remove` not `purge` to preserve configs
-     - Never auto-update package lists
-     - Platform-specific availability in doctor command
-   - **Testing Strategy**:
-     - Unit tests for all operations
-     - Integration tests run only in GitHub Actions
-     - Real package operations tested with "tree" package
+5. **APT Support Removed** ✅ (Completed 2025-07-30)
+   - **Initial Implementation**: Built full APT support with all 5 phases
+   - **Decision to Remove**: APT doesn't align with plonk's philosophy
+     - Requires system-wide changes (sudo)
+     - Not portable across developer environments
+     - Breaks the dotfiles repository model
+   - **Refactoring**: Removed 1,100+ lines of APT-specific code
+   - **New Direction**: Focus on user-space package managers
+     - Homebrew works on both macOS and Linux
+     - Language package managers are truly cross-platform
+     - Consistent experience across all platforms
 
 ### Implementation Learnings
 - **State Model**: Successfully repurposed StateDegraded for drift without breaking changes

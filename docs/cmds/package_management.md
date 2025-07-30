@@ -12,8 +12,7 @@ The package management commands handle system package operations across multiple
 
 ### Package Manager Prefixes
 
-- `apt:` - APT (Debian/Ubuntu Linux only)
-- `brew:` - Homebrew
+- `brew:` - Homebrew (macOS and Linux)
 - `npm:` - NPM (global packages)
 - `cargo:` - Cargo (Rust)
 - `pip:` - Pip (Python)
@@ -32,10 +31,6 @@ Without prefix, uses `default_manager` from configuration.
   - Already managed → skips (no reinstall)
   - Updates plonk.lock atomically with each success
 
-**APT-specific**:
-  - Requires sudo permissions (will fail with clear message if not)
-  - Uses `--no-install-recommends` to minimize installation
-  - Never runs `apt-get update` automatically
 
 ### Uninstall Command
 
@@ -132,11 +127,10 @@ The package management commands provide unified package operations across multip
    - Returns first available package if not installed anywhere
 
 5. **Package Manager Registry:**
-   - Central registry pattern for all 7 supported managers
+   - Central registry pattern for all 6 supported managers
    - `IsAvailable()` checks performed before all operations
    - Manager instances created per-operation (not cached)
    - Supports dynamic manager discovery and validation
-   - Platform-specific availability (e.g., APT only on Debian-based Linux)
 
 6. **Lock File State Management:**
    - Uses `YAMLLockService` for atomic updates

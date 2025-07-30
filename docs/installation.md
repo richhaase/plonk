@@ -104,9 +104,9 @@ plonk clone user/dotfiles
 ```
 
 **Linux Notes:**
-- APT is automatically available on Debian/Ubuntu systems
-- Homebrew can be installed with `plonk doctor --fix` if desired
-- Other package managers may require manual installation first
+- Homebrew is the primary package manager - install with `plonk doctor --fix`
+- Homebrew on Linux installs to `/home/linuxbrew/.linuxbrew`
+- Language package managers (npm, pip, etc.) work identically to macOS
 - Ensure your PATH includes `$GOPATH/bin` (usually `~/go/bin`)
 - Docker/container environments are supported
 

@@ -74,10 +74,9 @@ User configuration file for customizing plonk behavior. This file is optional - 
 
 ```yaml
 # Default package manager when no prefix is specified
-default_manager: brew    # Options: apt, brew, npm, cargo, pip, gem, go
+default_manager: brew    # Options: brew, npm, cargo, pip, gem, go
 
 # Alternative examples:
-# default_manager: apt    # Use APT on Debian/Ubuntu systems
 # default_manager: npm    # Use npm for global JavaScript tools
 # default_manager: cargo  # Use cargo for Rust-based CLI tools
 ```
@@ -301,19 +300,7 @@ hooks:
     - "plonk doctor"      # Verify system health
 ```
 
-### Scenario 4: Linux Server Environment
-For Debian/Ubuntu systems:
-```yaml
-default_manager: apt      # System packages via APT
-package_timeout: 300      # APT can be slower
-operation_timeout: 180    # Allow more time for searches
-dotfiles:
-  expand_directories:
-    - "~/.config"
-    - "~/.local/share"
-```
-
-### Scenario 5: Multi-Language Development
+### Scenario 4: Multi-Language Development
 For polyglot developers:
 ```yaml
 default_manager: brew     # System tools via Homebrew

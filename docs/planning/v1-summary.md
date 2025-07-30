@@ -8,7 +8,7 @@ As of 2025-07-30, plonk has completed most v1.0 requirements. Only 2 tasks remai
 
 ### 🔴 Critical (Must Have) - STATUS
 1. **Dotfile Drift Detection** - ✅ COMPLETE
-2. **APT Package Manager** - ✅ COMPLETE
+2. **Linux Support** - ✅ COMPLETE (via Homebrew)
 3. **Progress Indicators** - ✅ COMPLETE
 4. **Linux Platform Testing** - ⏳ PENDING
 
@@ -25,7 +25,7 @@ As of 2025-07-30, plonk has completed most v1.0 requirements. Only 2 tasks remai
 3. **Doctor Code Consolidation** - SKIPPED
 
 ### Phase 2: Core Features ✅
-4. **APT Package Manager Support** - COMPLETE
+4. **Linux Support via Homebrew** - COMPLETE
 5. **Dotfile Drift Detection** - COMPLETE
 
 ### Phase 3: Polish & Release (IN PROGRESS)
@@ -46,7 +46,7 @@ As of 2025-07-30, plonk has completed most v1.0 requirements. Only 2 tasks remai
 | `.plonk/` Directory Exclusion | ✅ Complete | 0.5 |
 | Progress Indicators | ✅ Complete | 1 |
 | Doctor Code Consolidation | ⏸️ Skipped | 0 |
-| APT Package Manager Support | ✅ Complete | 1 |
+| Linux Support (Homebrew) | ✅ Complete | 1 |
 | Dotfile Drift Detection | ✅ Complete | 3 |
 | Linux Platform Testing | ⏳ Pending | 2-3 |
 | Documentation Updates | ⏳ Pending | 1-2 |

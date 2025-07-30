@@ -30,13 +30,13 @@ v1.0 is ready when:
 - Implemented `plonk diff` command to show changes
 - SHA256 checksum-based comparison for performance
 
-#### 2. APT Package Manager Support
+#### 2. Linux Support via Homebrew
 **Status**: ✅ Completed (2025-07-30)
 **Priority**: HIGH - Required for Linux support
-- Added apt manager to package manager registry with platform detection
-- Handles sudo requirements with clear error messages
-- Uniform experience across brew/apt
-- Integration tests run in CI on Ubuntu
+- Removed APT in favor of Homebrew on Linux
+- Homebrew provides consistent cross-platform experience
+- No sudo required - true user-space package management
+- Same dotfiles work on macOS and Linux
 
 #### 3. Progress Indicators
 **Status**: ✅ Completed (2025-07-30)
@@ -122,7 +122,7 @@ Acceptable limitations that don't block v1:
 Before tagging v1.0.0:
 
 - [x] Implement dotfile drift detection
-- [x] Implement APT package manager support
+- [x] Implement Linux support (via Homebrew)
 - [x] Implement progress indicators
 - [ ] Complete Linux platform testing
 - [x] Add `.plonk/` directory exclusion
@@ -179,7 +179,7 @@ High-value features to implement after v1.0:
 
 Based on completed work and remaining tasks:
 - ✅ Dotfile drift detection: COMPLETE
-- ✅ APT support: COMPLETE
+- ✅ Linux support (Homebrew): COMPLETE
 - ✅ Progress indicators: COMPLETE
 - ✅ `.plonk/` exclusion: COMPLETE
 - [ ] Linux testing: 2-3 days
