@@ -378,17 +378,25 @@ Key dependencies identified through code structure review:
 
 **Note**: JSON/YAML removal not implemented per user guidance. Instead, fixed the filtering bug to make structured output properly respect all flags.
 
-#### Phase 4: UI/UX Improvements (Medium Priority) (Partially Complete)
+#### Phase 4: UI/UX Improvements (Medium Priority) ✅ (Complete)
 | Command | Item | Description | Dependency | Location | Status |
 |---------|------|-------------|------------|----------|--------|
 | config | Complete file editing | Edit full config, save only non-defaults | None | `internal/commands/config_edit.go` | ✅ Completed |
-| config | Highlight user values | Distinguish user-defined from defaults | None | `internal/commands/config_show.go` | ⏳ Pending |
+| config | Highlight user values | Distinguish user-defined from defaults | None | `internal/commands/config_show.go` | ✅ Completed |
 | config | Sort alphabetically | Sort configuration values for easier reading | None | `internal/commands/config_show.go` | ❌ Skipped |
 | config | Review flag combinations | Validate and handle all possible flag combinations | None | `internal/commands/config_*.go` | ✅ Verified |
 | config | Color coding for edit | Use color coding in error messages for better visibility | None | `internal/commands/config_edit.go` | ✅ Completed |
 | status | Sort alphabetically | Change default sort order | None | `internal/commands/status.go` | ✅ Completed |
 | status | Review flag combinations | Fix --packages --dotfiles behavior | None | `internal/commands/status.go` | ✅ Completed |
 | ~~status~~ | ~~Color coding~~ | ~~Visual grouping by package manager~~ | ~~None~~ | ~~`internal/output/formatters.go`~~ | ~~Removed~~ |
+
+#### Task 9: Config Show User-Defined Highlighting (Completed - 2025-07-30)
+- **Implementation**: Added blue highlighting for user-defined values in config show
+- **Shared logic**: Created UserDefinedChecker to share detection logic with config edit
+- **Clean output**: JSON/YAML output remains clean without annotations
+- **Color support**: Uses blue color for "(user-defined)" annotations
+- **Refactoring**: Both config edit and show now use the same user-defined detection
+- **Benefits**: Clear visibility of customizations, consistent behavior across commands
 
 #### Task 8: Visudo-style Config Edit (Completed - 2025-07-30)
 - **Implementation**: Created visudo-style editing workflow for configuration
