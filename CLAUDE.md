@@ -7,7 +7,7 @@ Working through v1.0 readiness tasks. Major accomplishments:
 - ✅ Implemented dotfile drift detection and `plonk diff` command
 - ✅ Added progress indicators for long-running operations
 - ✅ Excluded .plonk/ directory from dotfile deployment
-- 🚧 APT package manager support (Phase 1 & 2 complete)
+- ✅ APT package manager support with platform detection
 - ⏳ Linux platform testing pending
 
 ### Recently Completed (2025-07-30)
@@ -506,10 +506,10 @@ Focus on implementing the minimum required features for a stable v1.0 release th
 | Doctor Code Consolidation | Medium | 1-2 | ⏸️ Skipped | 2025-07-30 |
 | Dotfile Drift Detection | TOP | 2-3 | ✅ Complete | 2025-07-30 |
 
-#### Phase 2: Core Features (Week 2) - IN PROGRESS
+#### Phase 2: Core Features (Week 2) - COMPLETE
 | Task | Priority | Est. Days | Status | Notes |
 |------|----------|-----------|--------|-------|
-| APT Package Manager | High | 3-5 | ⏳ Pending | Most complex feature |
+| APT Package Manager | High | 3-5 | ✅ Complete | Platform detection, all phases done |
 
 #### Phase 3: Polish & Release (Week 3) - NOT STARTED
 | Task | Priority | Est. Days | Status | Notes |
@@ -627,6 +627,25 @@ Rejected features:
      - Absolute and relative paths
    - Filters by specific file or shows all drifted
    - Created comprehensive documentation and unit tests
+
+5. **APT Package Manager Support** ✅ (Completed 2025-07-30)
+   - **Platform Detection**: Created platform.go to detect Linux distributions
+   - **Manager Availability**: APT only available on Debian-based systems
+   - **Full Implementation**: All 5 phases completed successfully
+   - **Phase 1**: Basic structure and registration
+   - **Phase 2**: Read operations (search, info, check)
+   - **Phase 3**: Write operations (install/uninstall with sudo handling)
+   - **Phase 4**: Integration testing (CI-only to protect developer systems)
+   - **Phase 5**: Documentation updates across all relevant files
+   - **Key Design Decisions**:
+     - Fail with clear messages for sudo (no password prompts)
+     - Use `remove` not `purge` to preserve configs
+     - Never auto-update package lists
+     - Platform-specific availability in doctor command
+   - **Testing Strategy**:
+     - Unit tests for all operations
+     - Integration tests run only in GitHub Actions
+     - Real package operations tested with "tree" package
 
 ### Implementation Learnings
 - **State Model**: Successfully repurposed StateDegraded for drift without breaking changes

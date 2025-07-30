@@ -104,7 +104,9 @@ plonk clone user/dotfiles
 ```
 
 **Linux Notes:**
-- Some package managers may require manual installation first
+- APT is automatically available on Debian/Ubuntu systems
+- Homebrew can be installed with `plonk doctor --fix` if desired
+- Other package managers may require manual installation first
 - Ensure your PATH includes `$GOPATH/bin` (usually `~/go/bin`)
 - Docker/container environments are supported
 

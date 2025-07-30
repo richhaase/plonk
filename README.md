@@ -27,7 +27,7 @@ After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber
 - Just works
 
 **Key innovations:**
-- **Package Manager Manager™**: One interface for brew, npm, cargo, pip, gem, and go
+- **Package Manager Manager™**: One interface for apt, brew, npm, cargo, pip, gem, and go
 - **Filesystem as truth**: Your dotfiles directory IS the state - no sync issues
 - **Copy, don't symlink**: Cleaner, simpler, and more compatible
 - **State-based**: Track what should exist, not what commands were run
@@ -124,6 +124,7 @@ plonk config edit                     # Edit configuration
 ## Supported Package Managers
 
 Plonk supports the following package managers:
+- **APT** (apt) - Debian/Ubuntu Linux packages
 - **Homebrew** (brew) - macOS/Linux packages
 - **NPM** (npm) - Node.js packages (global)
 - **Cargo** (cargo) - Rust packages
@@ -133,8 +134,9 @@ Plonk supports the following package managers:
 
 Package manager prefixes in commands:
 ```bash
-plonk install brew:wget npm:prettier cargo:ripgrep
-plonk install pip:black gem:rubocop go:golangci-lint
+plonk install apt:nginx brew:wget npm:prettier
+plonk install cargo:ripgrep pip:black gem:rubocop
+plonk install go:golangci-lint
 ```
 
 ## Configuration

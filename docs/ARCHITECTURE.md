@@ -65,6 +65,7 @@ Resources are organized by type:
 - Reconciliation logic for package state
 
 Supported package managers:
+- APT (apt) - Debian/Ubuntu Linux only
 - Homebrew (brew)
 - NPM (npm)
 - Cargo (cargo)
