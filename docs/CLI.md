@@ -20,15 +20,15 @@ plonk                                     # Show help and available commands
 
 ### plonk init
 
-Initialize plonk and install required tools.
+Initialize plonk and install language package managers.
 
 ```bash
 plonk init                            # Initialize plonk with health checks
-plonk init --yes                      # Auto-install tools without prompts
+plonk init --yes                      # Auto-install language tools without prompts
 ```
 
 Options:
-- `--yes` - Auto-install missing package managers without prompts
+- `--yes` - Auto-install missing language package managers without prompts
 
 ### plonk clone
 
@@ -141,7 +141,7 @@ Check system health and configuration.
 
 ```bash
 plonk doctor                          # Check system
-plonk doctor --fix                    # Auto-fix issues
+plonk doctor --fix                    # Install missing language package managers
 ```
 
 ### plonk config

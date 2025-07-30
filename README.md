@@ -49,13 +49,23 @@ After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber
 
 ## Quick Start
 
-### Installation
+### Prerequisites
 
-```bash
-go install github.com/richhaase/plonk/cmd/plonk@latest
-```
+1. **Install Homebrew** (if not already installed):
+   ```bash
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   ```
 
-**Requirements:** Go 1.23+, Git
+2. **Install plonk**:
+   ```bash
+   # Via Go (requires Go 1.23+)
+   go install github.com/richhaase/plonk/cmd/plonk@latest
+
+   # Via Homebrew (coming soon)
+   brew install plonk
+   ```
+
+**Requirements:** Homebrew, Git
 
 **📖 [Complete Installation Guide →](docs/installation.md)**
 
@@ -207,10 +217,10 @@ just install
 
 ## Requirements
 
-- Go 1.23+ (for installation)
-- Git (for setup with repositories)
-- At least one supported package manager
-- macOS, Linux, or Windows
+- Homebrew (required prerequisite)
+- Git (for cloning repositories)
+- Go 1.23+ (only if installing via `go install`)
+- macOS, Linux, or Windows (WSL)
 
 ## License
 

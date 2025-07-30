@@ -4,7 +4,7 @@ The `plonk doctor` command checks system health and configuration.
 
 ## Description
 
-The doctor command performs comprehensive health checks on your plonk installation and system configuration. It verifies system requirements, package manager availability, configuration validity, and PATH setup. With the `--fix` flag, doctor can automatically install missing package managers, making it an essential tool for both troubleshooting issues and initial system setup.
+The doctor command performs comprehensive health checks on your plonk installation and system configuration. It verifies system requirements, package manager availability, configuration validity, and PATH setup. With the `--fix` flag, doctor can automatically install missing language package managers (but not Homebrew, which is a prerequisite), making it an essential tool for both troubleshooting issues and initial system setup.
 
 ## Behavior
 
@@ -41,7 +41,8 @@ All health checks run within a 30-second timeout.
 
 5. **Package Managers**
    - Availability of each package manager
-   - All supported managers work cross-platform
+   - Homebrew is required (prerequisite)
+   - Language package managers are optional
 
 6. **Installation**
    - Plonk executable accessibility
@@ -49,7 +50,7 @@ All health checks run within a 30-second timeout.
 
 ### Command Options
 
-- `--fix` - Offer to install missing package managers
+- `--fix` - Offer to install missing language package managers (not Homebrew)
 - `--yes` - Auto-install without prompts (requires `--fix`)
 - `-o, --output` - Output format (table/json/yaml)
 
@@ -82,7 +83,7 @@ With `--fix` flag:
   - Cargo: rustup installer
   - Others: Via default_manager (see [Configuration Guide](../configuration.md#package-manager-settings))
 
-Currently limited to package manager installation only.
+Currently limited to language package manager installation only (Homebrew must be installed manually).
 
 ### Error Conditions
 
@@ -101,7 +102,7 @@ Doctor provides detailed PATH analysis:
 
 ### Integration with Init/Clone
 
-The `plonk clone` command uses the same code as `doctor --fix` internally for package manager installation. This ensures consistency between initial setup and later health checks.
+The `plonk clone` command uses the same code as `doctor --fix` internally for language package manager installation. This ensures consistency between initial setup and later health checks. Note that Homebrew must be installed before using either command.
 
 ### Special Behaviors
 

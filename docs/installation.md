@@ -14,15 +14,15 @@ This guide covers installing plonk and setting up your development environment.
 
 ### Required
 
-- **Go 1.23 or later** - For building and installing plonk
-- **Git** - For cloning dotfiles repositories (setup command)
+- **Homebrew** - The primary package manager (install from https://brew.sh)
+- **Git** - For cloning dotfiles repositories
+- **Go 1.23 or later** - Only if installing via `go install`
 
-### Recommended Package Managers
+### Optional Language Package Managers
 
-At least one package manager should be available on your system:
+Plonk can manage packages from these language-specific package managers:
 
-- **Homebrew** (macOS/Linux) - Primary package manager, installed automatically by plonk if missing
-- **Cargo** (Rust) - For Rust-based CLI tools, installed automatically by plonk if missing
+- **Cargo** (Rust) - For Rust-based CLI tools, can be installed by `plonk doctor --fix`
 - **npm** (Node.js) - For global JavaScript packages
 - **pip** (Python) - For Python packages
 - **gem** (Ruby) - For Ruby gems
@@ -30,7 +30,15 @@ At least one package manager should be available on your system:
 
 ## Installation Methods
 
-### Method 1: Direct Go Install (Recommended)
+### Method 1: Homebrew (Coming Soon)
+
+Once the Homebrew formula is available:
+
+```bash
+brew install plonk
+```
+
+### Method 2: Direct Go Install
 
 Install the latest version directly from source:
 
@@ -38,7 +46,7 @@ Install the latest version directly from source:
 go install github.com/richhaase/plonk/cmd/plonk@latest
 ```
 
-### Method 2: Clone and Build
+### Method 3: Clone and Build
 
 For development or if you need to modify the source:
 
@@ -49,7 +57,7 @@ go build -o plonk cmd/plonk/main.go
 sudo mv plonk /usr/local/bin/  # Or add to your PATH
 ```
 
-### Method 3: Pre-built Releases (Future)
+### Method 4: Pre-built Releases (Future)
 
 Pre-built binaries will be available for major platforms in future releases.
 
@@ -64,7 +72,7 @@ plonk --version
 # Check system health and configuration
 plonk doctor
 
-# Install missing package managers automatically
+# Install missing language package managers (not Homebrew)
 plonk doctor --fix
 ```
 
@@ -86,7 +94,7 @@ plonk clone user/dotfiles      # Clone existing setup
 ```
 
 **macOS Notes:**
-- Homebrew will be installed automatically if missing
+- Homebrew must be installed first (https://brew.sh)
 - Xcode Command Line Tools may be required for some packages
 - System Integrity Protection (SIP) may affect some operations
 
@@ -104,8 +112,9 @@ plonk clone user/dotfiles
 ```
 
 **Linux Notes:**
-- Homebrew is the primary package manager - install with `plonk doctor --fix`
+- Homebrew must be installed first (https://brew.sh)
 - Homebrew on Linux installs to `/home/linuxbrew/.linuxbrew`
+- Ensure Homebrew is in your PATH after installation
 - Language package managers (npm, pip, etc.) work identically to macOS
 - Ensure your PATH includes `$GOPATH/bin` (usually `~/go/bin`)
 - Docker/container environments are supported
@@ -155,7 +164,7 @@ plonk clone https://github.com/user/repo.git # Full URL
 
 This will:
 1. Clone your repository to `~/.config/plonk/`
-2. Install missing package managers
+2. Install missing language package managers (if needed)
 3. Install all packages from `plonk.lock`
 4. Deploy all dotfiles to your home directory
 
@@ -197,7 +206,8 @@ plonk apply
 - Run `plonk doctor` to diagnose permission issues
 
 **Package manager not found**
-- Run `plonk doctor --fix` to auto-install missing managers
+- For Homebrew: Install manually from https://brew.sh
+- For language package managers: Run `plonk doctor --fix`
 - See [Configuration Guide](CONFIGURATION.md#package-manager-settings) for manual setup
 
 ### Getting Help

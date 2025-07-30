@@ -114,7 +114,7 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - Logic: `internal/setup/setup.go`
 - Git operations: `internal/setup/git.go`
 - Tool installation: `internal/setup/tools.go`
-- Uses: `internal/diagnostics/health.go` (via doctor --fix)
+- Uses: `internal/diagnostics/health.go` (via doctor --fix for language package managers only)
 
 ### apply command
 - Entry: `internal/commands/apply.go`
