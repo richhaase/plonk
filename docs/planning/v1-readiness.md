@@ -56,7 +56,7 @@ v1.0 is ready when:
 ### 🟡 Important - Should Have
 
 #### 5. Add `.plonk/` Directory Exclusion
-**Status**: Not implemented
+**Status**: ✅ Completed (2025-07-30)
 **Priority**: MEDIUM - Future flexibility
 - Exclude `.plonk/` directory from dotfile deployment
 - Reserve for future plonk metadata (hooks, templates, etc.)
@@ -124,7 +124,7 @@ Before tagging v1.0.0:
 - [ ] Implement APT package manager support
 - [ ] Implement progress indicators
 - [ ] Complete Linux platform testing
-- [ ] Add `.plonk/` directory exclusion
+- [x] Add `.plonk/` directory exclusion
 - [ ] Consolidate doctor/setup shared code
 - [ ] Update all documentation
 - [ ] Remove stability warning from README
