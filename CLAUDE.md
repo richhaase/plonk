@@ -472,8 +472,8 @@ Focus on implementing the minimum required features for a stable v1.0 release th
 | Task | Priority | Est. Days | Status | Completed |
 |------|----------|-----------|--------|-----------|
 | .plonk/ Directory Exclusion | Medium | 0.5 | ✅ Complete | 2025-07-30 |
-| Progress Indicators | High | 1-2 | ⏳ Next | - |
-| Doctor Code Consolidation | Medium | 1-2 | ⏳ Pending | - |
+| Progress Indicators | High | 1-2 | ✅ Complete | 2025-07-30 |
+| Doctor Code Consolidation | Medium | 1-2 | ⏳ Next | - |
 
 #### Phase 2: Core Features (Week 2) - NOT STARTED
 | Task | Priority | Est. Days | Status | Notes |
@@ -496,10 +496,18 @@ Focus on implementing the minimum required features for a stable v1.0 release th
 - Updated documentation in CONFIGURATION.md and dotfile_management.md
 - This directory is reserved for future plonk metadata (hooks, templates, etc.)
 
+#### Completed: Progress Indicators (2025-07-30)
+- Created new `output/progress.go` with `ProgressUpdate()` and `StageUpdate()` functions
+- Added progress to `install` and `uninstall` commands for multi-package operations
+- Added two-phase progress to `apply` command (packages phase, then dotfiles phase)
+- Added multi-stage progress to `clone` command
+- Format: `[2/5] Installing: htop` for consistent user experience
+- No progress shown for single-item operations (clean output)
+
 ### Progress Summary
 - **Start Date**: 2025-07-30
 - **Target Completion**: Mid-August 2025 (2-3 weeks total)
-- **Current Status**: 1 of 7 tasks complete (14%)
+- **Current Status**: 2 of 7 tasks complete (29%)
 - **Current Phase**: Foundation (Week 1)
 - **Days Elapsed**: 1
 

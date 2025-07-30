@@ -14,6 +14,7 @@ import (
 	"github.com/richhaase/plonk/internal/diagnostics"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/orchestrator"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources/packages"
 )
 
@@ -45,6 +46,7 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 	}
 
 	// Clone repository
+	output.StageUpdate("Cloning repository...")
 	if err := cloneRepository(gitURL, plonkDir); err != nil {
 		// Clean up on failure
 		os.RemoveAll(plonkDir)
@@ -67,6 +69,7 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 	}
 
 	// For clone command, detect required managers from lock file
+	output.StageUpdate("Detecting required package managers...")
 	lockPath := filepath.Join(plonkDir, "plonk.lock")
 	detectedManagers, err := DetectRequiredManagers(lockPath)
 	if err != nil {
@@ -91,7 +94,7 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 
 	// If we had existing config and not skipping apply, run plonk apply
 	if hasConfig && !cfg.NoApply {
-		fmt.Println("Running 'plonk apply' to configure your system...")
+		output.StageUpdate("Running plonk apply...")
 
 		// Run apply
 		homeDir := config.GetHomeDir()
@@ -414,7 +417,7 @@ func installDetectedManagers(ctx context.Context, managers []string, cfg Config)
 		return nil
 	}
 
-	fmt.Println("Installing detected package managers...")
+	output.StageUpdate(fmt.Sprintf("Installing package managers (%d required)...", len(managers)))
 
 	// Run doctor checks to get current state
 	healthReport := diagnostics.RunHealthChecks()
@@ -454,8 +457,9 @@ func installDetectedManagers(ctx context.Context, managers []string, cfg Config)
 	successful := 0
 	failed := 0
 
-	for _, manager := range missingManagers {
-		fmt.Printf("🔄 Installing %s...\n", getManagerDescription(manager))
+	for i, manager := range missingManagers {
+		// Show progress for each manager
+		output.ProgressUpdate(i+1, len(missingManagers), "Installing", getManagerDescription(manager))
 
 		if err := installSingleManager(ctx, manager, cfg); err != nil {
 			failed++

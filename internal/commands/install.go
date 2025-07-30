@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/resources/packages"
 	"github.com/spf13/cobra"
@@ -64,7 +65,9 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	// Process each package with prefix parsing
 	var allResults []resources.OperationResult
 
-	for _, packageSpec := range args {
+	for i, packageSpec := range args {
+		// Show progress for multi-package operations
+		output.ProgressUpdate(i+1, len(args), "Installing", packageSpec)
 		// Parse the package specification
 		manager, packageName := ParsePackageSpec(packageSpec)
 

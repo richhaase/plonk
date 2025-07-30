@@ -39,7 +39,7 @@ v1.0 is ready when:
 - Test on Ubuntu, Debian at minimum
 
 #### 3. Progress Indicators
-**Status**: Not implemented
+**Status**: ✅ Completed (2025-07-30)
 **Priority**: HIGH - Critical for user feedback
 - Periodic status output: "Installing package 2 of 5..."
 - Most urgent for: install, apply, search operations
@@ -122,7 +122,7 @@ Before tagging v1.0.0:
 
 - [ ] Implement dotfile drift detection
 - [ ] Implement APT package manager support
-- [ ] Implement progress indicators
+- [x] Implement progress indicators
 - [ ] Complete Linux platform testing
 - [x] Add `.plonk/` directory exclusion
 - [ ] Consolidate doctor/setup shared code

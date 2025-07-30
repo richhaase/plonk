@@ -5,8 +5,10 @@ package orchestrator
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/resources/dotfiles"
 	"github.com/richhaase/plonk/internal/resources/packages"
@@ -89,7 +91,13 @@ func ApplyPackages(ctx context.Context, configDir string, cfg *config.Config, dr
 	totalFailed := 0
 	totalWouldInstall := 0
 
+	// Show overall progress for packages
+	if totalMissing > 0 {
+		output.StageUpdate(fmt.Sprintf("Applying packages (%d missing)...", totalMissing))
+	}
+
 	// Process each manager's missing packages
+	packageIndex := 0
 	for managerName, missingItems := range missingByManager {
 		var packageResults []PackageOperationApplyResult
 		installedCount := 0
@@ -97,6 +105,10 @@ func ApplyPackages(ctx context.Context, configDir string, cfg *config.Config, dr
 		wouldInstallCount := 0
 
 		for _, item := range missingItems {
+			packageIndex++
+			// Show progress for each package
+			output.ProgressUpdate(packageIndex, totalMissing, "Installing", item.Name)
+
 			if dryRun {
 				packageResults = append(packageResults, PackageOperationApplyResult{
 					Name:   item.Name,
@@ -166,9 +178,27 @@ func ApplyDotfiles(ctx context.Context, configDir, homeDir string, cfg *config.C
 	var actions []DotfileActionApplyResult
 	summary := DotfileSummaryApplyResult{}
 
-	// Process missing dotfiles (need to be created/linked)
+	// Count missing dotfiles
+	missingCount := 0
 	for _, item := range reconciled {
 		if item.State == resources.StateMissing {
+			missingCount++
+		}
+	}
+
+	// Show overall progress for dotfiles
+	if missingCount > 0 {
+		output.StageUpdate(fmt.Sprintf("Applying dotfiles (%d missing)...", missingCount))
+	}
+
+	// Process missing dotfiles (need to be created/linked)
+	dotfileIndex := 0
+	for _, item := range reconciled {
+		if item.State == resources.StateMissing {
+			dotfileIndex++
+			// Show progress for each dotfile
+			output.ProgressUpdate(dotfileIndex, missingCount, "Deploying", item.Name)
+
 			if !dryRun {
 				// Apply the change using the resource interface
 				err := dotfileResource.Apply(ctx, item)
