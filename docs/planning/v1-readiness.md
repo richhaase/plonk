@@ -48,9 +48,9 @@ v1.0 is ready when:
 #### 4. Linux Platform Testing & Support
 **Status**: Partial - needs verification
 **Priority**: HIGH - Core platform requirement
-- Test on major distributions (Ubuntu, Fedora, Arch)
+- Test on Debian-based distributions only (Ubuntu, Debian)
 - Ensure all commands work identically to macOS
-- Handle Linux-specific paths and conventions
+- Verify APT package manager functionality
 - Document any Linux-specific setup requirements
 
 ### 🟡 Important - Should Have

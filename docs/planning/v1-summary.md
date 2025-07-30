@@ -30,9 +30,9 @@ As of 2025-07-30, plonk has completed most v1.0 requirements. Only 2 tasks remai
 
 ### Phase 3: Polish & Release (IN PROGRESS)
 6. **Linux Platform Testing** (2-3 days) - PENDING
-   - Test on Ubuntu, Fedora, Arch
-   - Verify APT functionality
-   - Fix platform-specific issues
+   - Test on Ubuntu and Debian only
+   - Verify APT functionality with sudo
+   - Test WSL2 compatibility
 
 7. **Documentation Updates** (1-2 days) - PENDING
    - Update all references
