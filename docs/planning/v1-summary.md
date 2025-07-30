@@ -2,69 +2,58 @@
 
 ## Executive Summary
 
-To reach v1.0, plonk needs 5 critical features and 3 important improvements. The total effort is estimated at **2-3 weeks** of focused development.
+As of 2025-07-30, plonk has completed most v1.0 requirements. Only 2 tasks remain: Linux platform testing and documentation updates. The remaining effort is estimated at **3-5 days** of focused work.
 
 ## Priority Overview
 
-### 🔴 Critical (Must Have)
-1. **Dotfile Drift Detection** - Show when deployed files differ from source
-2. **APT Package Manager** - Linux support via apt
-3. **Progress Indicators** - User feedback during operations
-4. **Linux Platform Testing** - Ensure cross-platform compatibility
+### 🔴 Critical (Must Have) - STATUS
+1. **Dotfile Drift Detection** - ✅ COMPLETE
+2. **APT Package Manager** - ✅ COMPLETE
+3. **Progress Indicators** - ✅ COMPLETE
+4. **Linux Platform Testing** - ⏳ PENDING
 
-### 🟡 Important (Should Have)
-5. **`.plonk/` Directory Exclusion** - Future-proof metadata storage
-6. **Doctor Code Consolidation** - Reduce code duplication
-7. **Documentation Updates** - Remove outdated references
+### 🟡 Important (Should Have) - STATUS
+5. **`.plonk/` Directory Exclusion** - ✅ COMPLETE
+6. **Doctor Code Consolidation** - ⏸️ SKIPPED (needs design decisions)
+7. **Documentation Updates** - ⏳ PENDING
 
-## Proposed Execution Order
+## Completed Work (as of 2025-07-30)
 
-### Phase 1: Foundation (Week 1)
-1. **`.plonk/` Directory Exclusion** (0.5 days)
-   - Simplest change, enables future features
-   - No breaking changes
+### Phase 1: Foundation ✅
+1. **`.plonk/` Directory Exclusion** - COMPLETE
+2. **Progress Indicators** - COMPLETE
+3. **Doctor Code Consolidation** - SKIPPED
 
-2. **Progress Indicators** (1-2 days)
-   - Improves UX immediately
-   - Helps debug subsequent work
+### Phase 2: Core Features ✅
+4. **APT Package Manager Support** - COMPLETE
+5. **Dotfile Drift Detection** - COMPLETE
 
-3. **Doctor Code Consolidation** (1-2 days)
-   - Reduces technical debt
-   - Makes APT implementation cleaner
-
-### Phase 2: Core Features (Week 2)
-4. **APT Package Manager Support** (3-5 days)
-   - Most complex feature (sudo handling)
-   - Enables Linux support
-
-5. **Dotfile Drift Detection** (2-3 days)
-   - Top user priority
-   - Requires new reconciliation state
-
-### Phase 3: Polish & Release (Week 3)
-6. **Linux Platform Testing** (2-3 days)
+### Phase 3: Polish & Release (IN PROGRESS)
+6. **Linux Platform Testing** (2-3 days) - PENDING
    - Test on Ubuntu, Fedora, Arch
+   - Verify APT functionality
    - Fix platform-specific issues
 
-7. **Documentation Updates** (1-2 days)
+7. **Documentation Updates** (1-2 days) - PENDING
    - Update all references
-   - Document new features
-   - Remove stability warnings
+   - Remove outdated information
+   - Prepare for v1.0 release
 
 ## Level of Effort Summary
 
-| Task | Estimated Days |
-|------|----------------|
-| `.plonk/` Directory Exclusion | 0.5 |
-| Progress Indicators | 1.5 |
-| Doctor Code Consolidation | 1.5 |
-| APT Package Manager Support | 4.0 |
-| Dotfile Drift Detection | 2.5 |
-| Linux Platform Testing | 2.5 |
-| Documentation Updates | 1.5 |
-| **TOTAL** | **14 days** |
+| Task | Status | Actual Days |
+|------|--------|-------------|
+| `.plonk/` Directory Exclusion | ✅ Complete | 0.5 |
+| Progress Indicators | ✅ Complete | 1 |
+| Doctor Code Consolidation | ⏸️ Skipped | 0 |
+| APT Package Manager Support | ✅ Complete | 1 |
+| Dotfile Drift Detection | ✅ Complete | 3 |
+| Linux Platform Testing | ⏳ Pending | 2-3 |
+| Documentation Updates | ⏳ Pending | 1-2 |
+| **COMPLETED** | **5 tasks** | **5.5 days** |
+| **REMAINING** | **2 tasks** | **3-5 days** |
 
-**Total Timeline: 2-3 weeks** (accounting for context switching, review, and testing)
+**Remaining Timeline: 3-5 days** to reach v1.0
 
 ## Why This Order?
 

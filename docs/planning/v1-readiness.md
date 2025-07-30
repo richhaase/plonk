@@ -23,27 +23,27 @@ v1.0 is ready when:
 ### 🔴 Critical - Must Have
 
 #### 1. Dotfile Drift Detection
-**Status**: Not implemented
+**Status**: ✅ Completed (2025-07-30)
 **Priority**: TOP - User identified as "critical gap"
-- Add "out-of-sync" state to reconciliation system
-- Show in `plonk status` when deployed dotfiles differ from source
-- Provide clear indication of what will change on `plonk apply`
-- Future: Same concept for package updates
+- Added "drifted" state to reconciliation system
+- Shows in `plonk status` when deployed dotfiles differ from source
+- Implemented `plonk diff` command to show changes
+- SHA256 checksum-based comparison for performance
 
 #### 2. APT Package Manager Support
-**Status**: Not implemented
+**Status**: ✅ Completed (2025-07-30)
 **Priority**: HIGH - Required for Linux support
-- Add apt manager to package manager registry
-- Handle sudo requirements gracefully
-- Ensure uniform experience across brew/apt
-- Test on Ubuntu, Debian at minimum
+- Added apt manager to package manager registry with platform detection
+- Handles sudo requirements with clear error messages
+- Uniform experience across brew/apt
+- Integration tests run in CI on Ubuntu
 
 #### 3. Progress Indicators
 **Status**: ✅ Completed (2025-07-30)
 **Priority**: HIGH - Critical for user feedback
-- Periodic status output: "Installing package 2 of 5..."
-- Most urgent for: install, apply, search operations
-- Simple implementation sufficient for v1
+- Spinner-based progress for operations > 100ms
+- Shows progress for: install, apply, search operations
+- Clean implementation using briandowns/spinner library
 
 #### 4. Linux Platform Testing & Support
 **Status**: Partial - needs verification
@@ -121,15 +121,15 @@ Acceptable limitations that don't block v1:
 
 Before tagging v1.0.0:
 
-- [ ] Implement dotfile drift detection
-- [ ] Implement APT package manager support
+- [x] Implement dotfile drift detection
+- [x] Implement APT package manager support
 - [x] Implement progress indicators
 - [ ] Complete Linux platform testing
 - [x] Add `.plonk/` directory exclusion
 - [⏸️] Consolidate doctor/setup shared code (skipped - needs design decisions)
 - [ ] Update all documentation
 - [ ] Remove stability warning from README
-- [ ] Document `.plonk/` as reserved directory
+- [x] Document `.plonk/` as reserved directory
 - [ ] Test full user journey on fresh macOS
 - [ ] Test full user journey on fresh Ubuntu
 - [ ] Test full user journey on WSL
@@ -175,17 +175,17 @@ High-value features to implement after v1.0:
 - [ ] Release notes explain stability commitments
 - [ ] Tagged and released with pre-built binaries
 
-## Timeline Estimate
+## Remaining Work
 
-Based on the scope above:
-- Dotfile drift detection: 2-3 days
-- APT support: 3-5 days (including testing)
-- Progress indicators: 1-2 days
-- Linux testing: 2-3 days
-- `.plonk/` exclusion: 0.5 days
-- Documentation & cleanup: 1-2 days
+Based on completed work and remaining tasks:
+- ✅ Dotfile drift detection: COMPLETE
+- ✅ APT support: COMPLETE
+- ✅ Progress indicators: COMPLETE
+- ✅ `.plonk/` exclusion: COMPLETE
+- [ ] Linux testing: 2-3 days
+- [ ] Documentation & cleanup: 1-2 days
 
-**Total estimate**: 2-3 weeks of focused development
+**Remaining estimate**: 3-5 days of focused work
 
 ---
 
