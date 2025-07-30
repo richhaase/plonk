@@ -456,7 +456,7 @@ Key dependencies identified through code structure review:
 - **Professional appearance**: Similar to git, docker, kubectl
 - **Universal compatibility**: Works in all terminals without Unicode issues
 
-## v1.0 Readiness Phase (Current - Starting 2025-07-30)
+## v1.0 Readiness Phase (Current - Started 2025-07-30)
 
 ### Overview
 Focus on implementing the minimum required features for a stable v1.0 release that delivers on plonk's core promise: one-command setup that works across platforms.
@@ -466,51 +466,42 @@ Focus on implementing the minimum required features for a stable v1.0 release th
 - **[v1-summary.md](docs/planning/v1-summary.md)** - Executive summary with timeline
 - **[ideas.md](docs/planning/ideas.md)** - Complete list of improvements with user priorities
 
-### Critical Features for v1.0
+### Implementation Progress
 
-#### 1. Dotfile Drift Detection (TOP PRIORITY)
-- Add "out-of-sync" state to reconciliation
-- Show in status when deployed != source
-- User identified as "critical gap"
-- 2-3 days effort
+#### Phase 1: Foundation (Week 1) - IN PROGRESS
+| Task | Priority | Est. Days | Status | Completed |
+|------|----------|-----------|--------|-----------|
+| .plonk/ Directory Exclusion | Medium | 0.5 | ✅ Complete | 2025-07-30 |
+| Progress Indicators | High | 1-2 | ⏳ Next | - |
+| Doctor Code Consolidation | Medium | 1-2 | ⏳ Pending | - |
 
-#### 2. APT Package Manager Support
-- Required for Linux support
-- Handle sudo requirements gracefully
-- Test on Ubuntu/Debian minimum
-- 3-5 days effort (most complex)
+#### Phase 2: Core Features (Week 2) - NOT STARTED
+| Task | Priority | Est. Days | Status | Notes |
+|------|----------|-----------|--------|-------|
+| APT Package Manager | High | 3-5 | ⏳ Pending | Most complex feature |
+| Dotfile Drift Detection | TOP | 2-3 | ⏳ Pending | User's critical gap |
 
-#### 3. Progress Indicators
-- Periodic status output during operations
-- Most urgent for: install, apply, search
-- 1-2 days effort
+#### Phase 3: Polish & Release (Week 3) - NOT STARTED
+| Task | Priority | Est. Days | Status | Notes |
+|------|----------|-----------|--------|-------|
+| Linux Platform Testing | High | 2-3 | ⏳ Pending | Ubuntu, Fedora, Arch |
+| Documentation Updates | Medium | 1-2 | ⏳ Pending | Remove outdated refs |
 
-#### 4. Linux Platform Testing
-- Test on major distributions
-- Ensure identical behavior to macOS
-- 2-3 days effort
+### Implementation Notes
 
-### Important Features for v1.0
+#### Completed: .plonk/ Directory Exclusion (2025-07-30)
+- Added exclusion logic to `ShouldSkipPath()` in manager.go
+- Added exclusion logic to `ShouldSkip()` in filter.go
+- Added comprehensive tests for all exclusion scenarios
+- Updated documentation in CONFIGURATION.md and dotfile_management.md
+- This directory is reserved for future plonk metadata (hooks, templates, etc.)
 
-#### 5. `.plonk/` Directory Exclusion
-- Reserve for future metadata (hooks, etc.)
-- Simple exclusion logic change
-- Future-proofs the design
-- 0.5 days effort
-
-#### 6. Doctor Code Consolidation
-- Extract shared logic from clone/init
-- Reduce code duplication
-- 1-2 days effort
-
-#### 7. Documentation Updates
-- Remove setup command references
-- Update installation guide
-- Document `.plonk/` as reserved
-- 1-2 days effort
-
-### Total Timeline
-**2-3 weeks** of focused development to reach v1.0
+### Progress Summary
+- **Start Date**: 2025-07-30
+- **Target Completion**: Mid-August 2025 (2-3 weeks total)
+- **Current Status**: 1 of 7 tasks complete (14%)
+- **Current Phase**: Foundation (Week 1)
+- **Days Elapsed**: 1
 
 ### Success Criteria
 - ✅ One command setup works on Mac/Linux
@@ -530,3 +521,4 @@ Focus on implementing the minimum required features for a stable v1.0 release th
 - **APT required** for v1.0 (not deferred)
 - **Progress over verbose** - simple status output sufficient
 - **Drift in status** - integrated, not separate command
+- **Claude's Role**: Planning and documentation only (no code changes)
