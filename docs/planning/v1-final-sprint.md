@@ -145,10 +145,10 @@ This simplification has several benefits:
 3. **Better user experience** - Homebrew's installer handles PATH setup correctly
 4. **Simplifies doctor --fix** - May only need to install language package managers
 
-### Consider for v1.0:
-- Should `doctor --fix` still install language package managers (npm, cargo, etc.)?
-- Or should it be removed entirely in favor of manual installation?
-- Update all documentation to reflect Homebrew as prerequisite
+### Completed for v1.0:
+- ✅ Removed `doctor --fix` entirely - doctor is now a pure diagnostic tool
+- ✅ Only `plonk clone` installs package managers (when needed for the repository)
+- ✅ Updated all documentation to reflect Homebrew as prerequisite
 
 ## Not Blocking v1.0
 
