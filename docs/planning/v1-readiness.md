@@ -13,7 +13,7 @@ Per [why-plonk.md](../why-plonk.md), v1.0 must deliver on the core promise:
 ## Success Criteria
 
 v1.0 is ready when:
-1. ✅ A user can set up a new Mac/Linux machine with minimal effort (install git + homebrew/apt, then `plonk clone`)
+1. ✅ A user can set up a new Mac/Linux machine with minimal effort (install git + homebrew, then `plonk clone`)
 2. ✅ Core commands work reliably without surprises
 3. ✅ New users can start using plonk immediately after installation
 4. ✅ The tool works equally well on macOS and Linux (including WSL)
@@ -48,9 +48,9 @@ v1.0 is ready when:
 #### 4. Linux Platform Testing & Support
 **Status**: Partial - needs verification
 **Priority**: HIGH - Core platform requirement
-- Test on Debian-based distributions only (Ubuntu, Debian)
+- Test on Ubuntu and Debian distributions
 - Ensure all commands work identically to macOS
-- Verify APT package manager functionality
+- Verify Homebrew installation and functionality on Linux
 - Document any Linux-specific setup requirements
 
 ### 🟡 Important - Should Have
@@ -144,25 +144,23 @@ Before tagging v1.0.0:
 High-value features to implement after v1.0:
 1. Package update command
 2. Verbose/debug modes
-3. Additional Linux package managers (yum, pacman, dnf)
-4. Doctor --fix for more issues
-5. Better error messages with remediation hints
-6. Performance optimizations
-7. Hook system (using `.plonk/hooks/`)
+3. Doctor --fix for more issues
+4. Better error messages with remediation hints
+5. Performance optimizations
+6. Hook system (using `.plonk/hooks/`)
+7. Native Windows support (beyond WSL)
 
 ## Risk Assessment
 
-### High Risk Items
-1. **APT implementation** - Different security model than brew
-   - Mitigation: Careful design of sudo handling
+### Completed Items (No Longer Risks)
+1. **Drift detection** - Implemented with SHA256 checksums, performs well
+2. **Progress indicators** - Completed using spinner library
+3. **Linux support** - Simplified by using Homebrew only
 
-2. **Drift detection** - Performance on large dotfile sets
-   - Mitigation: Start simple, optimize later
-
-### Low Risk Items
-1. Progress indicators - Straightforward to implement
-2. Documentation updates - No code changes
-3. Linux testing - Mostly validation work
+### Remaining Low Risk Items
+1. **Linux testing** - Mostly validation work
+2. **Documentation updates** - Final cleanup only
+3. **Edge case handling** - May discover issues during testing
 
 ## Definition of Done for v1.0
 

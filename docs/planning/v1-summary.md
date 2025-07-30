@@ -31,7 +31,7 @@ As of 2025-07-30, plonk has completed most v1.0 requirements. Only 2 tasks remai
 ### Phase 3: Polish & Release (IN PROGRESS)
 6. **Linux Platform Testing** (2-3 days) - PENDING
    - Test on Ubuntu and Debian only
-   - Verify APT functionality with sudo
+   - Verify Homebrew installation and functionality
    - Test WSL2 compatibility
 
 7. **Documentation Updates** (1-2 days) - PENDING
@@ -59,9 +59,9 @@ As of 2025-07-30, plonk has completed most v1.0 requirements. Only 2 tasks remai
 
 1. **Quick Wins First**: `.plonk/` exclusion and progress indicators provide immediate value with low risk
 
-2. **Technical Debt Before Features**: Consolidating doctor code makes APT implementation cleaner
+2. **Cross-Platform Support**: Linux support via Homebrew ensures true portability
 
-3. **Complex Features Mid-Sprint**: APT and drift detection when focus is highest
+3. **Complex Features Mid-Sprint**: Drift detection when focus is highest
 
 4. **Testing & Polish Last**: Ensures all features are complete before final validation
 
@@ -77,9 +77,9 @@ v1.0 ships when:
 
 - Package update command
 - Verbose/debug modes
-- Additional package managers (yum, pacman)
 - Hook system implementation
 - Performance optimizations
+- Native Windows support (beyond WSL)
 
 ---
 
