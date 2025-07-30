@@ -18,12 +18,13 @@ Apply performs two main operations in sequence:
 
 ### Resource States
 
-Plonk tracks resources in three states:
+Plonk tracks resources in four states:
 - **managed** - Resource is known to plonk and exists in the user's environment
 - **missing** - Resource is known to plonk but does NOT exist in the user's environment
+- **drifted** - Dotfile is known to plonk and exists but has been modified
 - **unmanaged** - Resource exists in the user's environment but is not known to plonk
 
-Apply specifically targets "missing" resources and attempts to transition them to "managed" state.
+Apply specifically targets "missing" and "drifted" resources and attempts to transition them to "managed" state. Drifted dotfiles are restored from their source in `$PLONK_DIR`.
 
 ### Command Options
 
@@ -58,6 +59,7 @@ Apply reports results for both packages and dotfiles, showing successful operati
 - Failed resources remain in "missing" state for retry on next apply
 - Package conflicts (already installed) are considered successful
 - Dotfile conflicts result in overwriting the existing file
+- Drifted dotfiles are backed up before restoration (with timestamp)
 
 ### Special Cases
 

@@ -10,9 +10,10 @@ The status command provides a comprehensive view of all plonk-managed resources,
 
 ### Core Function
 
-Status displays resources in three possible states:
+Status displays resources in four possible states:
 - **✅ managed/deployed** - Resource is tracked by plonk and exists in the environment
 - **❌ missing** - Resource is tracked by plonk but doesn't exist in the environment
+- **⚠️ drifted** - Dotfile is tracked and exists but content has been modified
 - **⚠ unmanaged** - Resource exists in the environment but isn't tracked by plonk
 
 ### Default Display
@@ -68,8 +69,9 @@ Structured output includes:
 ### Summary Information
 
 Always displays total counts:
-- Managed: Resources tracked and present
+- Managed: Resources tracked and present (unchanged)
 - Missing: Resources tracked but not present
+- Drifted: Dotfiles tracked and present but modified (shown separately)
 
 With `--unmanaged`, summary is hidden entirely in table format. Structured output (JSON/YAML) does not support unmanaged filtering.
 
@@ -85,6 +87,7 @@ With `--unmanaged`, summary is hidden entirely in table format. Structured outpu
 - NOT the default command (plain `plonk` shows help)
 - Works with resources tracked in `plonk.lock` and `$PLONK_DIR`
 - Missing items can be resolved with `plonk apply`
+- Drifted dotfiles can be restored with `plonk apply`
 - Unmanaged items can be added with `plonk install` or `plonk add`
 
 ## Implementation Notes
@@ -108,14 +111,17 @@ The status command provides comprehensive resource state management through a un
 2. **State Reconciliation:**
    - Calls `orchestrator.ReconcileAll()` with 30-second implicit timeout via context
    - Reconciles all domains (packages and dotfiles) in parallel
-   - Uses unified reconciliation engine with three states:
+   - Uses unified reconciliation engine with four states:
      - `StateManaged`: Resource in config AND present in environment
      - `StateMissing`: Resource in config BUT not present in environment
      - `StateUntracked`: Resource present in environment BUT not in config
+     - `StateDegraded`: Dotfile in config AND present BUT content differs (drifted)
 
 3. **Domain-Specific Reconciliation:**
    - **Packages**: Uses composite keys (`manager:name`) from plonk.lock file
    - **Dotfiles**: Uses filesystem-as-state from $PLONK_DIR contents
+     - Drift detection: SHA256 checksums compare source vs deployed files
+     - Comparison functions stored in item metadata during reconciliation
    - Each domain handles its own discovery and state comparison
    - Metadata merging preserves actual resource details
 
@@ -128,6 +134,7 @@ The status command provides comprehensive resource state management through a un
 5. **Table Display Logic:**
    - Displays packages sorted alphabetically within each manager group
    - Shows different column layouts for managed vs unmanaged dotfiles
+   - Drifted dotfiles shown with yellow "drifted" status
    - Implementation: Summary is completely hidden when `--unmanaged` is used in table format
    - Colors are applied to status words only, not full lines
    - Respects NO_COLOR environment variable for accessibility

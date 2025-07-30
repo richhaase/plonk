@@ -31,6 +31,7 @@ After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber
 - **Filesystem as truth**: Your dotfiles directory IS the state - no sync issues
 - **Copy, don't symlink**: Cleaner, simpler, and more compatible
 - **State-based**: Track what should exist, not what commands were run
+- **Drift detection**: Know when deployed dotfiles have been modified
 - **AI-friendly**: Built with and for AI coding assistants
 
 **For developers who:**
@@ -111,7 +112,7 @@ plonk add ~/.vimrc ~/.zshrc           # Start tracking dotfiles
 plonk rm ~/.vimrc                     # Stop tracking (doesn't delete file)
 
 # System state
-plonk status                          # Show all managed items
+plonk status                          # Show all managed items (including drift)
 plonk apply                           # Sync system to desired state
 plonk doctor                          # Check system health
 

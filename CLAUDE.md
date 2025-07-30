@@ -468,18 +468,18 @@ Focus on implementing the minimum required features for a stable v1.0 release th
 
 ### Implementation Progress
 
-#### Phase 1: Foundation (Week 1) - IN PROGRESS
+#### Phase 1: Foundation (Week 1) - COMPLETE
 | Task | Priority | Est. Days | Status | Completed |
 |------|----------|-----------|--------|-----------|
 | .plonk/ Directory Exclusion | Medium | 0.5 | ✅ Complete | 2025-07-30 |
 | Progress Indicators | High | 1-2 | ✅ Complete | 2025-07-30 |
 | Doctor Code Consolidation | Medium | 1-2 | ⏸️ Skipped | 2025-07-30 |
+| Dotfile Drift Detection | TOP | 2-3 | ✅ Complete | 2025-07-30 |
 
-#### Phase 2: Core Features (Week 2) - NOT STARTED
+#### Phase 2: Core Features (Week 2) - IN PROGRESS
 | Task | Priority | Est. Days | Status | Notes |
 |------|----------|-----------|--------|-------|
 | APT Package Manager | High | 3-5 | ⏳ Pending | Most complex feature |
-| Dotfile Drift Detection | TOP | 2-3 | ⏳ Pending | User's critical gap |
 
 #### Phase 3: Polish & Release (Week 3) - NOT STARTED
 | Task | Priority | Est. Days | Status | Notes |
@@ -532,8 +532,8 @@ Focus on implementing the minimum required features for a stable v1.0 release th
 ### Progress Summary
 - **Start Date**: 2025-07-30
 - **Target Completion**: Mid-August 2025 (2-3 weeks total)
-- **Current Status**: 3 of 7 tasks complete, 1 skipped (43%)
-- **Current Phase**: Foundation (Week 1)
+- **Current Status**: 4 of 7 tasks complete, 1 skipped (57%)
+- **Current Phase**: Core Features (Week 2)
 - **Days Elapsed**: 1
 
 ### Success Criteria
