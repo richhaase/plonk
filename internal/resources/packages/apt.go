@@ -49,14 +49,39 @@ func (a *AptManager) ListInstalled(ctx context.Context) ([]string, error) {
 
 // Install installs a package using apt-get.
 func (a *AptManager) Install(ctx context.Context, name string) error {
-	// TODO: Implement in Phase 3
-	return fmt.Errorf("not implemented")
+	packageName := a.formatPackageName(name)
+
+	// Build the apt-get install command
+	// Using --yes for non-interactive, --no-install-recommends to minimize installs
+	args := []string{"install", "--yes", "--no-install-recommends", packageName}
+
+	cmd := exec.CommandContext(ctx, "apt-get", args...)
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		return a.handleInstallError(err, output, packageName)
+	}
+
+	return nil
 }
 
 // Uninstall removes a package using apt-get.
 func (a *AptManager) Uninstall(ctx context.Context, name string) error {
-	// TODO: Implement in Phase 3
-	return fmt.Errorf("not implemented")
+	packageName := a.formatPackageName(name)
+
+	// Build the apt-get remove command
+	// Using remove (not purge) to leave config files
+	// Using --yes for non-interactive
+	args := []string{"remove", "--yes", packageName}
+
+	cmd := exec.CommandContext(ctx, "apt-get", args...)
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		return a.handleUninstallError(err, output, packageName)
+	}
+
+	return nil
 }
 
 // IsInstalled checks if a package is installed using dpkg-query.
@@ -212,4 +237,93 @@ func (a *AptManager) formatPackageName(name string) string {
 	// - Architecture suffixes (package:amd64)
 	// - Any special APT naming
 	return strings.TrimSpace(name)
+}
+
+// handleInstallError processes install command errors
+func (a *AptManager) handleInstallError(err error, output []byte, packageName string) error {
+	outputStr := string(output)
+
+	// Check for permission denied
+	if strings.Contains(outputStr, "Permission denied") ||
+		strings.Contains(outputStr, "are you root?") ||
+		strings.Contains(outputStr, "E: Could not open lock file") {
+		return fmt.Errorf("permission denied: apt-get install requires sudo privileges. Try: sudo plonk install apt:%s", packageName)
+	}
+
+	// Check for package not found
+	if strings.Contains(outputStr, "E: Unable to locate package") ||
+		strings.Contains(outputStr, "has no installation candidate") {
+		return fmt.Errorf("package '%s' not found", packageName)
+	}
+
+	// Check if already installed
+	if strings.Contains(outputStr, "is already the newest version") {
+		return nil // Already installed is success
+	}
+
+	// Check for dependency issues
+	if strings.Contains(outputStr, "E: Broken packages") ||
+		strings.Contains(outputStr, "depends on") && strings.Contains(outputStr, "but it is not going to be installed") {
+		return fmt.Errorf("dependency conflict installing package '%s'", packageName)
+	}
+
+	// Check for network issues
+	if strings.Contains(outputStr, "Could not resolve") ||
+		strings.Contains(outputStr, "Failed to fetch") {
+		return fmt.Errorf("network error: failed to download package information")
+	}
+
+	// Generic error with output
+	if exitCode, ok := ExtractExitCode(err); ok && exitCode != 0 {
+		// Extract meaningful error line from output
+		lines := strings.Split(strings.TrimSpace(outputStr), "\n")
+		for i := len(lines) - 1; i >= 0; i-- {
+			line := strings.TrimSpace(lines[i])
+			if strings.HasPrefix(line, "E:") {
+				return fmt.Errorf("apt-get install failed: %s", line)
+			}
+		}
+		return fmt.Errorf("package installation failed (exit code %d)", exitCode)
+	}
+
+	return fmt.Errorf("failed to execute install command: %w", err)
+}
+
+// handleUninstallError processes uninstall command errors
+func (a *AptManager) handleUninstallError(err error, output []byte, packageName string) error {
+	outputStr := string(output)
+
+	// Check for permission denied
+	if strings.Contains(outputStr, "Permission denied") ||
+		strings.Contains(outputStr, "are you root?") ||
+		strings.Contains(outputStr, "E: Could not open lock file") {
+		return fmt.Errorf("permission denied: apt-get remove requires sudo privileges. Try: sudo plonk uninstall apt:%s", packageName)
+	}
+
+	// Check if package is not installed (this is success for uninstall)
+	if strings.Contains(outputStr, "is not installed") ||
+		strings.Contains(outputStr, "Unable to locate package") {
+		return nil // Not installed is success for uninstall
+	}
+
+	// Check for dependency issues
+	if strings.Contains(outputStr, "is depended on by") ||
+		strings.Contains(outputStr, "E: Broken packages") {
+		return fmt.Errorf("cannot uninstall package '%s' due to dependency conflicts", packageName)
+	}
+
+	// Generic error with output
+	if exitCode, ok := ExtractExitCode(err); ok && exitCode != 0 {
+		// Extract meaningful error line from output
+		lines := strings.Split(strings.TrimSpace(outputStr), "\n")
+		for i := len(lines) - 1; i >= 0; i-- {
+			line := strings.TrimSpace(lines[i])
+			if strings.HasPrefix(line, "E:") {
+				return fmt.Errorf("apt-get remove failed: %s", line)
+			}
+		}
+		return fmt.Errorf("package uninstallation failed (exit code %d)", exitCode)
+	}
+
+	return fmt.Errorf("failed to execute uninstall command: %w", err)
 }

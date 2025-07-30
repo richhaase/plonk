@@ -5,6 +5,7 @@ package packages
 
 import (
 	"context"
+	"fmt"
 	"runtime"
 	"strings"
 	"testing"
@@ -228,4 +229,153 @@ Task: lamp-server, ubuntu-wsl`
 	if info.Description != "small, powerful, scalable web/proxy server" {
 		t.Errorf("Description = %q, want %q", info.Description, "small, powerful, scalable web/proxy server")
 	}
+}
+
+func TestAptManager_handleInstallError(t *testing.T) {
+	apt := NewAptManager()
+
+	tests := []struct {
+		name        string
+		output      string
+		packageName string
+		wantErr     string
+	}{
+		{
+			name:        "permission denied",
+			output:      "E: Could not open lock file /var/lib/dpkg/lock - open (13: Permission denied)",
+			packageName: "nginx",
+			wantErr:     "permission denied: apt-get install requires sudo privileges. Try: sudo plonk install apt:nginx",
+		},
+		{
+			name:        "are you root",
+			output:      "are you root?",
+			packageName: "nginx",
+			wantErr:     "permission denied: apt-get install requires sudo privileges. Try: sudo plonk install apt:nginx",
+		},
+		{
+			name:        "package not found",
+			output:      "E: Unable to locate package foobar123",
+			packageName: "foobar123",
+			wantErr:     "package 'foobar123' not found",
+		},
+		{
+			name:        "no installation candidate",
+			output:      "Package foobar has no installation candidate",
+			packageName: "foobar",
+			wantErr:     "package 'foobar' not found",
+		},
+		{
+			name:        "already installed",
+			output:      "nginx is already the newest version (1.18.0-6ubuntu14.4)",
+			packageName: "nginx",
+			wantErr:     "", // No error expected
+		},
+		{
+			name:        "broken packages",
+			output:      "E: Broken packages",
+			packageName: "nginx",
+			wantErr:     "dependency conflict installing package 'nginx'",
+		},
+		{
+			name:        "network error",
+			output:      "Could not resolve 'archive.ubuntu.com'",
+			packageName: "nginx",
+			wantErr:     "network error: failed to download package information",
+		},
+		{
+			name:        "failed to fetch",
+			output:      "Failed to fetch http://archive.ubuntu.com/ubuntu/pool/main/n/nginx/nginx_1.18.0-6ubuntu14.4_all.deb",
+			packageName: "nginx",
+			wantErr:     "network error: failed to download package information",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a mock error with exit code 1
+			mockErr := &testExitError{exitCode: 1}
+			err := apt.handleInstallError(mockErr, []byte(tt.output), tt.packageName)
+
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Errorf("Expected no error, got: %v", err)
+				}
+			} else {
+				if err == nil {
+					t.Errorf("Expected error containing %q, got nil", tt.wantErr)
+				} else if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Errorf("Expected error containing %q, got: %v", tt.wantErr, err)
+				}
+			}
+		})
+	}
+}
+
+func TestAptManager_handleUninstallError(t *testing.T) {
+	apt := NewAptManager()
+
+	tests := []struct {
+		name        string
+		output      string
+		packageName string
+		wantErr     string
+	}{
+		{
+			name:        "permission denied",
+			output:      "E: Could not open lock file /var/lib/dpkg/lock - open (13: Permission denied)",
+			packageName: "nginx",
+			wantErr:     "permission denied: apt-get remove requires sudo privileges. Try: sudo plonk uninstall apt:nginx",
+		},
+		{
+			name:        "package not installed",
+			output:      "Package 'nginx' is not installed, so not removed",
+			packageName: "nginx",
+			wantErr:     "", // No error expected - success
+		},
+		{
+			name:        "unable to locate",
+			output:      "E: Unable to locate package foobar123",
+			packageName: "foobar123",
+			wantErr:     "", // No error expected - success
+		},
+		{
+			name:        "dependency conflict",
+			output:      "nginx is depended on by nginx-common",
+			packageName: "nginx",
+			wantErr:     "cannot uninstall package 'nginx' due to dependency conflicts",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a mock error with exit code 1
+			mockErr := &testExitError{exitCode: 1}
+			err := apt.handleUninstallError(mockErr, []byte(tt.output), tt.packageName)
+
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Errorf("Expected no error, got: %v", err)
+				}
+			} else {
+				if err == nil {
+					t.Errorf("Expected error containing %q, got nil", tt.wantErr)
+				} else if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Errorf("Expected error containing %q, got: %v", tt.wantErr, err)
+				}
+			}
+		})
+	}
+}
+
+// testExitError is a mock implementation of exec.ExitError for testing
+type testExitError struct {
+	exitCode int
+}
+
+func (e *testExitError) Error() string {
+	return fmt.Sprintf("exit status %d", e.exitCode)
+}
+
+func (e *testExitError) ExitCode() int {
+	return e.exitCode
 }
