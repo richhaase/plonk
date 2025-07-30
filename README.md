@@ -31,7 +31,7 @@ After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber
 - **Filesystem as truth**: Your dotfiles directory IS the state - no sync issues
 - **Copy, don't symlink**: Cleaner, simpler, and more compatible
 - **State-based**: Track what should exist, not what commands were run
-- **Drift detection**: Know when deployed dotfiles have been modified
+- **Drift detection**: Know when deployed dotfiles have been modified (`plonk diff`)
 - **AI-friendly**: Built with and for AI coding assistants
 
 **For developers who:**

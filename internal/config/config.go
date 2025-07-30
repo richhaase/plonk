@@ -13,7 +13,7 @@ import (
 
 // Config represents the plonk configuration
 type Config struct {
-	DefaultManager    string   `yaml:"default_manager,omitempty" validate:"omitempty,oneof=brew npm pip gem go cargo test-unavailable"`
+	DefaultManager    string   `yaml:"default_manager,omitempty" validate:"omitempty,oneof=apt brew npm pip gem go cargo test-unavailable"`
 	OperationTimeout  int      `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"`
 	PackageTimeout    int      `yaml:"package_timeout,omitempty" validate:"omitempty,min=0,max=1800"`
 	DotfileTimeout    int      `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`
@@ -21,6 +21,7 @@ type Config struct {
 	IgnorePatterns    []string `yaml:"ignore_patterns,omitempty"`
 	Dotfiles          Dotfiles `yaml:"dotfiles,omitempty"`
 	Hooks             Hooks    `yaml:"hooks,omitempty"`
+	DiffTool          string   `yaml:"diff_tool,omitempty"`
 }
 
 // Hooks contains pre and post apply hooks

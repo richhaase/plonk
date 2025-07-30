@@ -364,6 +364,13 @@ func checkPackageManagerAvailability(ctx context.Context) HealthCheck {
 	unavailableManagers := []string{}
 
 	for _, managerName := range packages.SupportedManagers {
+		// Check platform support first
+		if !packages.IsPackageManagerSupportedOnPlatform(managerName) {
+			unavailableManagers = append(unavailableManagers, managerName)
+			check.Details = append(check.Details, fmt.Sprintf("%s: %s (not supported on this platform)", managerName, output.NotAvailable()))
+			continue
+		}
+
 		mgr, err := registry.GetManager(managerName)
 		if err != nil {
 			unavailableManagers = append(unavailableManagers, managerName)
@@ -384,7 +391,13 @@ func checkPackageManagerAvailability(ctx context.Context) HealthCheck {
 		check.Status = "fail"
 		check.Message = "No package managers available"
 		check.Issues = append(check.Issues, "No supported package managers found")
-		check.Suggestions = append(check.Suggestions, "Install at least one package manager (brew, npm, pip, cargo, gem, or go)")
+		// Suggest native package manager for the platform
+		nativeManager := packages.GetNativePackageManager()
+		if nativeManager != "" {
+			check.Suggestions = append(check.Suggestions, fmt.Sprintf("Install %s (native package manager for your platform)", nativeManager))
+		} else {
+			check.Suggestions = append(check.Suggestions, "Install at least one package manager (brew, npm, pip, cargo, gem, or go)")
+		}
 	} else {
 		check.Message = fmt.Sprintf("%d package managers available", len(availableManagers))
 		if len(unavailableManagers) > 0 {

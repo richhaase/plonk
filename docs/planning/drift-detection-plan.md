@@ -202,12 +202,18 @@ Would deploy 1 dotfile (1 drifted)
 4. Update apply to handle drifted files
 5. Add tests for drift detection
 
-### Phase 2: Enhanced Features
-1. Add diff tool configuration
-2. Implement internal diff display
-3. Add `--preview` flag to apply
-4. Support external diff tools
-5. Add `plonk diff` command
+### Phase 2: Enhanced Features (Revised 2025-07-30)
+After Phase 1 completion and review, decided to implement only:
+1. Add `plonk diff` command - Show differences for drifted files
+2. Add diff tool configuration - Simple `diff_tool` in plonk.yaml
+3. Default to `git diff --no-index` for zero-config experience
+
+Rejected features:
+- Internal diff display - Too complex, users have diff tools
+- `--preview` flag - Not worth the complexity
+- Selective apply - Users can use `plonk add` to re-add files
+- Reverse sync - Too dangerous and complex
+- Three-way merge - Very complex, rare use case
 
 ## Testing Plan
 

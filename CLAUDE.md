@@ -1,22 +1,45 @@
 # Plonk Command Documentation Project
 
+## v1.0 Readiness Phase (Started 2025-07-30)
+
+### Current Status
+Working through v1.0 readiness tasks. Major accomplishments:
+- ✅ Implemented dotfile drift detection and `plonk diff` command
+- ✅ Added progress indicators for long-running operations
+- ✅ Excluded .plonk/ directory from dotfile deployment
+- ⏳ APT package manager support pending
+- ⏳ Linux platform testing pending
+
+### Recently Completed (2025-07-30)
+1. **Dotfile Drift Detection**:
+   - SHA256 checksum-based comparison
+   - Integrated into status command (shows "drifted" state)
+   - Drifted files restored with `plonk apply`
+
+2. **Plonk Diff Command**:
+   - Shows differences for drifted dotfiles
+   - Supports various path formats (~/, $HOME/, absolute, env vars)
+   - Configurable diff tool (default: `git diff --no-index`)
+   - Created comprehensive documentation and tests
+
 ## Summary of Setup Completed
 
-Created documentation structure in `/docs/cmds/` with 7 files:
+Created documentation structure in `/docs/cmds/` with 8 files:
 - **setup.md** - Initialize plonk or clone dotfiles repository
 - **apply.md** - Install missing packages and deploy dotfiles
 - **config.md** - Manage plonk configuration
-- **status.md** - Show managed packages and dotfiles
+- **status.md** - Show managed packages and dotfiles (now shows drift)
 - **doctor.md** - Check system health and configuration
 - **package_management.md** - Commands for install/uninstall/search/info
 - **dotfile_management.md** - Commands for add/rm
+- **diff.md** - Show differences for drifted dotfiles (NEW)
 
 Each file has the following sections:
 1. **Title** (completed)
 2. **One-line summary** (completed)
 3. **Description** (completed)
 4. **Behavior** (completed)
-5. **Implementation Notes** (in progress - adding implementation details)
+5. **Implementation Notes** (completed)
 
 ## Progress Tracking
 
@@ -529,6 +552,17 @@ Focus on implementing the minimum required features for a stable v1.0 release th
   - Backward compatible with existing Result structure
 - Ready for Phase 2 enhancements (diff tools, preview)
 
+### Phase 2 Review Decision (2025-07-30)
+After reviewing Phase 2 features, decided to implement only:
+- **plonk diff command** - Show differences for drifted files
+- **Configurable diff tool** - With sensible default (git diff --no-index)
+
+Rejected features:
+- Internal diff display - Too complex, users have diff tools
+- Preview flag - Not worth the complexity
+- Selective apply - Users can use plonk add to re-add modified files
+- Other complex features - Not worth implementation effort
+
 ### Progress Summary
 - **Start Date**: 2025-07-30
 - **Target Completion**: Mid-August 2025 (2-3 weeks total)
@@ -555,3 +589,46 @@ Focus on implementing the minimum required features for a stable v1.0 release th
 - **Progress over verbose** - simple status output sufficient
 - **Drift in status** - integrated, not separate command
 - **Claude's Role**: Planning and documentation only (no code changes)
+
+## v1.0 Implementation Progress (2025-07-30)
+
+### Completed Features
+1. **Progress Indicators** ✅
+   - Spinner for operations longer than 100ms
+   - Uses briandowns/spinner library
+   - Integrated into package operations (install, uninstall, search)
+   - Progress messages shown during reconciliation
+
+2. **.plonk/ Directory Exclusion** ✅
+   - Added to default ignore patterns
+   - Prevents recursive deployment issues
+   - Reserved for future metadata/hooks
+
+3. **Dotfile Drift Detection** ✅
+   - SHA256 checksum-based comparison
+   - StateDegraded repurposed for drift
+   - Shows "drifted" status in yellow
+   - Drifted files restored with `plonk apply`
+   - Backward-compatible implementation
+
+4. **Plonk Diff Command** ✅
+   - Shows differences for drifted dotfiles
+   - Configurable diff tool (default: `git diff --no-index`)
+   - Robust path resolution:
+     - Tilde expansion (~/)
+     - Environment variables ($HOME, $CUSTOM_VAR)
+     - Absolute and relative paths
+   - Filters by specific file or shows all drifted
+   - Created comprehensive documentation and unit tests
+
+### Implementation Learnings
+- **State Model**: Successfully repurposed StateDegraded for drift without breaking changes
+- **Path Resolution**: Created normalizePath() that handles all POSIX path formats
+- **Dotfile Mapping**: Clear separation between source (no dot) and deployed (with dot)
+- **Testing Philosophy**: Unit tests for business logic only, no mocks for CLIs
+- **Zero-Config**: Maintained philosophy with sensible defaults (git diff)
+
+### Remaining v1.0 Tasks
+1. **APT Package Manager Support** - Core requirement for Linux
+2. **Linux Platform Testing** - Ensure cross-platform parity
+3. **Documentation Updates** - Final polish for v1.0 release

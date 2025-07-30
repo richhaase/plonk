@@ -187,6 +187,25 @@ dotfile_timeout: 30       # Dotfile operations (30 seconds)
 # operation_timeout: 120  # 2 minutes
 ```
 
+## Diff Tool Configuration
+
+### Custom Diff Tool
+
+Configure which tool is used to display differences for drifted dotfiles:
+
+```yaml
+# Default: git diff --no-index (zero-config)
+diff_tool: "delta"
+
+# Other examples:
+# diff_tool: "vimdiff"              # Vim's diff mode
+# diff_tool: "code --diff --wait"   # VS Code diff
+# diff_tool: "meld"                 # GUI diff tool
+# diff_tool: "colordiff"            # Colorized diff
+```
+
+The diff tool is executed as: `{tool} {source_path} {deployed_path}`
+
 ## Advanced Configuration
 
 ### Complete Real-World Example
@@ -227,6 +246,9 @@ hooks:
 package_timeout: 600      # 10 minutes for large packages
 operation_timeout: 90     # 90 seconds for searches
 dotfile_timeout: 60       # 1 minute for file operations
+
+# Diff tool for viewing drift
+diff_tool: "delta"        # Use delta for syntax-highlighted diffs
 ```
 
 ## Environment Variables

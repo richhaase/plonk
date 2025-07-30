@@ -96,6 +96,16 @@ plonk status --dotfiles               # Only dotfiles
 plonk st                              # Short alias
 ```
 
+### plonk diff
+
+Show differences for drifted dotfiles.
+
+```bash
+plonk diff                            # Show all drifted files
+plonk diff ~/.zshrc                   # Show diff for specific file
+plonk diff $HOME/.bashrc              # Supports environment variables
+```
+
 ### plonk apply
 
 Install missing packages and deploy missing dotfiles.
