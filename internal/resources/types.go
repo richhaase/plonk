@@ -12,7 +12,7 @@ const (
 	StateManaged   ItemState = iota // In config AND present/installed
 	StateMissing                    // In config BUT not present/installed
 	StateUntracked                  // Present/installed BUT not in config
-	StateDegraded                   // Reserved for future use
+	StateDegraded                   // In config AND present BUT content differs (drifted)
 )
 
 // State string constants for consistency
@@ -20,7 +20,7 @@ const (
 	StateManagedStr   = "managed"
 	StateMissingStr   = "missing"
 	StateUntrackedStr = "untracked"
-	StateDegradedStr  = "degraded" // Reserved for future use
+	StateDegradedStr  = "drifted" // Changed from "degraded" to be more user-friendly
 )
 
 // String returns a human-readable representation of the item state
@@ -33,7 +33,7 @@ func (s ItemState) String() string {
 	case StateUntracked:
 		return "untracked"
 	case StateDegraded:
-		return "degraded"
+		return "drifted"
 	default:
 		return "unknown"
 	}

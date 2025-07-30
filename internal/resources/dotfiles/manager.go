@@ -5,7 +5,10 @@ package dotfiles
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -761,6 +764,22 @@ func (m *Manager) ProcessDotfileForApply(ctx context.Context, source, destinatio
 	return action, nil
 }
 
+// createCompareFunc creates a comparison function for a dotfile
+func (m *Manager) createCompareFunc(source, destination string) func() (bool, error) {
+	return func() (bool, error) {
+		sourcePath := m.GetSourcePath(source)
+		destPath, err := m.GetDestinationPath(destination)
+		if err != nil {
+			return false, err
+		}
+		// If destination doesn't exist, they're not the same
+		if !m.FileExists(destPath) {
+			return false, nil
+		}
+		return m.CompareFiles(sourcePath, destPath)
+	}
+}
+
 // GetConfiguredDotfiles returns dotfiles defined in configuration
 func (m *Manager) GetConfiguredDotfiles() ([]resources.Item, error) {
 	// Load config to get ignore patterns
@@ -787,6 +806,7 @@ func (m *Manager) GetConfiguredDotfiles() ([]resources.Item, error) {
 				Metadata: map[string]interface{}{
 					"source":      source,
 					"destination": destination,
+					"compare_fn":  m.createCompareFunc(source, destination),
 				},
 			})
 			continue
@@ -803,6 +823,7 @@ func (m *Manager) GetConfiguredDotfiles() ([]resources.Item, error) {
 					"source":      source,
 					"destination": destination,
 					"isDirectory": true,
+					"compare_fn":  m.createCompareFunc(source, destination),
 				},
 			})
 		} else {
@@ -815,6 +836,7 @@ func (m *Manager) GetConfiguredDotfiles() ([]resources.Item, error) {
 				Metadata: map[string]interface{}{
 					"source":      source,
 					"destination": destination,
+					"compare_fn":  m.createCompareFunc(source, destination),
 				},
 			})
 		}
@@ -925,4 +947,37 @@ func (m *Manager) GetActualDotfiles(ctx context.Context) ([]resources.Item, erro
 func GetConfiguredDotfiles(homeDir, configDir string) ([]resources.Item, error) {
 	manager := NewManager(homeDir, configDir)
 	return manager.GetConfiguredDotfiles()
+}
+
+// CompareFiles checks if two files have identical content using SHA256 checksums
+func (m *Manager) CompareFiles(path1, path2 string) (bool, error) {
+	// Compute hash for first file
+	hash1, err := m.computeFileHash(path1)
+	if err != nil {
+		return false, fmt.Errorf("failed to compute hash for %s: %w", path1, err)
+	}
+
+	// Compute hash for second file
+	hash2, err := m.computeFileHash(path2)
+	if err != nil {
+		return false, fmt.Errorf("failed to compute hash for %s: %w", path2, err)
+	}
+
+	return hash1 == hash2, nil
+}
+
+// computeFileHash computes the SHA256 hash of a file
+func (m *Manager) computeFileHash(path string) (string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, file); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(h.Sum(nil)), nil
 }

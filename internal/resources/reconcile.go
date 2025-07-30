@@ -30,6 +30,20 @@ func ReconcileItems(desired, actual []Item) []Item {
 		if actualItem, exists := actualMap[desiredItem.Name]; exists {
 			// Item is managed (in both desired and actual)
 			item.State = StateManaged
+
+			// Check for drift if comparison function is provided
+			if compareFn, ok := desiredItem.Metadata["compare_fn"]; ok {
+				if fn, ok := compareFn.(func() (bool, error)); ok {
+					if identical, err := fn(); err == nil && !identical {
+						item.State = StateDegraded // Using existing reserved state for drift
+						if item.Meta == nil {
+							item.Meta = make(map[string]string)
+						}
+						item.Meta["drift_status"] = "modified"
+					}
+				}
+			}
+
 			// Merge metadata from actual if needed
 			if item.Metadata == nil {
 				item.Metadata = actualItem.Metadata
@@ -106,6 +120,20 @@ func ReconcileItemsWithKey(desired, actual []Item, keyFunc func(Item) string) []
 		if actualItem, exists := actualMap[key]; exists {
 			// Item is managed (in both desired and actual)
 			item.State = StateManaged
+
+			// Check for drift if comparison function is provided
+			if compareFn, ok := desiredItem.Metadata["compare_fn"]; ok {
+				if fn, ok := compareFn.(func() (bool, error)); ok {
+					if identical, err := fn(); err == nil && !identical {
+						item.State = StateDegraded // Using existing reserved state for drift
+						if item.Meta == nil {
+							item.Meta = make(map[string]string)
+						}
+						item.Meta["drift_status"] = "modified"
+					}
+				}
+			}
+
 			// Merge metadata from actual if needed
 			if item.Metadata == nil {
 				item.Metadata = actualItem.Metadata

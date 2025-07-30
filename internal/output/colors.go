@@ -54,6 +54,7 @@ func Missing() string      { return colorize("missing", color.FgRed) }
 func NotAvailable() string { return colorize("not available", color.FgRed) }
 
 // Yellow (Warning) status words
+func Drifted() string   { return colorize("drifted", color.FgYellow) }
 func Unmanaged() string { return colorize("unmanaged", color.FgYellow) }
 func Warn() string      { return colorize("WARN", color.FgYellow) }
 func Warning() string   { return colorize("warning", color.FgYellow) }

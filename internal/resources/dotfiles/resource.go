@@ -87,6 +87,9 @@ func (d *DotfileResource) Apply(ctx context.Context, item resources.Item) error 
 		// Dotfile is already in desired state
 		// Could check if content needs updating, but for now do nothing
 		return nil
+	case resources.StateDegraded:
+		// Dotfile has drifted - treat like missing to restore from source
+		return d.applyMissing(ctx, item)
 	default:
 		return fmt.Errorf("unknown item state: %v", item.State)
 	}

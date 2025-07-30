@@ -297,7 +297,10 @@ func (s StatusOutput) TableOutput() string {
 		} else if s.ShowMissing {
 			itemsToShow = dotfileResult.Missing
 		} else {
+			// Include managed and missing items
 			itemsToShow = append(dotfileResult.Managed, dotfileResult.Missing...)
+			// Also need to check for drifted items (they won't be in Managed due to GroupItemsByState)
+			// We'll handle drifted items separately below
 		}
 
 		if len(itemsToShow) > 0 {
@@ -358,7 +361,12 @@ func (s StatusOutput) TableOutput() string {
 						if dest, ok := item.Metadata["destination"].(string); ok {
 							target = dest
 						}
-						dotBuilder.AddRow(source, target, plonkoutput.Deployed())
+						// Check if this is actually a drifted file
+						status := plonkoutput.Deployed()
+						if item.State == resources.StateDegraded {
+							status = plonkoutput.Drifted()
+						}
+						dotBuilder.AddRow(source, target, status)
 					}
 				}
 
@@ -381,10 +389,29 @@ func (s StatusOutput) TableOutput() string {
 	// Add summary (skip for unmanaged or missing to avoid misleading counts)
 	if !s.ShowUnmanaged && !s.ShowMissing {
 		summary := s.StateSummary
+
+		// Count drifted items separately
+		driftedCount := 0
+		for _, result := range s.StateSummary.Results {
+			if result.Domain == "dotfile" {
+				for _, item := range result.Managed {
+					if item.State == resources.StateDegraded {
+						driftedCount++
+					}
+				}
+			}
+		}
+
+		// Adjust managed count to exclude drifted
+		managedCount := summary.TotalManaged - driftedCount
+
 		output.WriteString("Summary: ")
-		output.WriteString(fmt.Sprintf("%d managed", summary.TotalManaged))
+		output.WriteString(fmt.Sprintf("%d managed", managedCount))
 		if summary.TotalMissing > 0 {
 			output.WriteString(fmt.Sprintf(", %d missing", summary.TotalMissing))
+		}
+		if driftedCount > 0 {
+			output.WriteString(fmt.Sprintf(", %d drifted", driftedCount))
 		}
 		output.WriteString("\n")
 	}
