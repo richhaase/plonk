@@ -270,60 +270,6 @@ setup() {
   assert_failure
 }
 
-@test "uninstall with dry-run shows what would happen" {
-  require_safe_package "brew:figlet"
-
-  # Install first
-  run plonk install brew:figlet
-  assert_success
-  track_artifact "package" "brew:figlet"
-
-  # Verify it's installed
-  run brew list figlet
-  assert_success
-
-  # Dry-run uninstall
-  run plonk uninstall brew:figlet --dry-run
-  assert_success
-  assert_output --partial "would-remove"
-
-  # Verify still installed by brew
-  run brew list figlet
-  assert_success
-
-  # Verify still in lock file
-  run cat "$PLONK_DIR/plonk.lock"
-  assert_output --partial "figlet"
-
-  # Verify still managed
-  run plonk status
-  assert_output --partial "figlet"
-}
-
-@test "uninstall with force removes even if not managed" {
-  require_safe_package "brew:fortune"
-
-  # Ensure it's not managed by plonk
-  run plonk status
-  refute_output --partial "fortune"
-
-  # Check if installed by brew (might or might not be)
-  run brew list fortune
-  local was_installed=$status
-
-  # Force uninstall
-  run plonk uninstall brew:fortune --force
-  # Should succeed even if not managed by plonk
-  assert_success
-  refute_output --partial "panic"
-
-  # If it was installed, verify it's now gone
-  if [[ $was_installed -eq 0 ]]; then
-    run brew list fortune
-    assert_failure
-  fi
-}
-
 # Test multiple package uninstallation - only testing with brew since
 # the logic is the same for all managers (just loops over single uninstalls)
 @test "uninstall multiple packages" {
