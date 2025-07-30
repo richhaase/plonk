@@ -281,7 +281,7 @@ func (s SearchOutput) TableOutput() string {
 
 	switch s.Status {
 	case "found":
-		output.WriteString(fmt.Sprintf("📦 %s\n", s.Message))
+		output.WriteString(fmt.Sprintf("%s\n", s.Message))
 		if len(s.Results) > 0 && len(s.Results[0].Packages) > 0 {
 			output.WriteString("\nMatching packages:\n")
 			for _, pkg := range s.Results[0].Packages {
@@ -291,7 +291,7 @@ func (s SearchOutput) TableOutput() string {
 		}
 
 	case "found-multiple":
-		output.WriteString(fmt.Sprintf("📦 %s\n", s.Message))
+		output.WriteString(fmt.Sprintf("%s\n", s.Message))
 		output.WriteString("\nResults by manager:\n")
 		for _, result := range s.Results {
 			output.WriteString(fmt.Sprintf("\n%s:\n", result.Manager))
@@ -305,17 +305,17 @@ func (s SearchOutput) TableOutput() string {
 		}
 
 	case "not-found":
-		output.WriteString(fmt.Sprintf("❌ %s\n", s.Message))
+		output.WriteString(fmt.Sprintf("%s\n", s.Message))
 
 	case "no-managers":
-		output.WriteString(fmt.Sprintf("⚠️  %s\n", s.Message))
+		output.WriteString(fmt.Sprintf("%s\n", s.Message))
 		output.WriteString("\nPlease install a package manager (Homebrew or NPM) to search for packages.\n")
 
 	case "manager-unavailable":
-		output.WriteString(fmt.Sprintf("⚠️  %s\n", s.Message))
+		output.WriteString(fmt.Sprintf("%s\n", s.Message))
 
 	default:
-		output.WriteString(fmt.Sprintf("❓ %s\n", s.Message))
+		output.WriteString(fmt.Sprintf("%s\n", s.Message))
 	}
 
 	return output.String()

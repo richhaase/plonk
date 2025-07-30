@@ -74,13 +74,13 @@ func (d DotfileApplyOutput) TableOutput() string {
 		if len(d.Actions) > 0 {
 			output += "\nActions:\n"
 			for _, action := range d.Actions {
-				status := "❓"
+				status := "unknown"
 				if action.Status == "would-deploy" {
 					status = "🚀"
 				} else if action.Status == "skipped" {
-					status = "⏭️"
+					status = "skipped"
 				} else if action.Status == "error" {
-					status = "❌"
+					status = "error"
 				}
 
 				output += fmt.Sprintf("  %s %s -> %s", status, action.Source, action.Destination)
@@ -100,22 +100,22 @@ func (d DotfileApplyOutput) TableOutput() string {
 	}
 
 	if d.Deployed > 0 {
-		output += fmt.Sprintf("✅ Deployed: %d dotfiles\n", d.Deployed)
+		output += fmt.Sprintf("Deployed: %d dotfiles\n", d.Deployed)
 	}
 	if d.Skipped > 0 {
-		output += fmt.Sprintf("⏭️ Skipped: %d dotfiles\n", d.Skipped)
+		output += fmt.Sprintf("Skipped: %d dotfiles\n", d.Skipped)
 	}
 
 	if len(d.Actions) > 0 {
 		output += "\nActions:\n"
 		for _, action := range d.Actions {
-			status := "❓"
+			status := "unknown"
 			if action.Status == "deployed" {
-				status = "✅"
+				status = "deployed"
 			} else if action.Status == "skipped" {
-				status = "⏭️"
+				status = "skipped"
 			} else if action.Status == "error" {
-				status = "❌"
+				status = "error"
 			}
 
 			output += fmt.Sprintf("  %s %s -> %s", status, action.Source, action.Destination)
@@ -201,9 +201,9 @@ func (d DotfileAddOutput) TableOutput() string {
 	}
 
 	if isDryRun {
-		output += fmt.Sprintf("🔍 %s (dry-run)\n", actionText)
+		output += fmt.Sprintf("%s (dry-run)\n", actionText)
 	} else {
-		output += fmt.Sprintf("✅ %s\n", actionText)
+		output += fmt.Sprintf("%s\n", actionText)
 	}
 	output += fmt.Sprintf("   Source: %s\n", d.Source)
 	output += fmt.Sprintf("   Destination: %s\n", d.Destination)
@@ -247,19 +247,19 @@ func (d DotfileBatchAddOutput) TableOutput() string {
 
 	if isDryRun {
 		if wouldAddCount > 0 && wouldUpdateCount > 0 {
-			output += fmt.Sprintf("🔍 Would process %d files (%d add, %d update) - dry-run\n\n", d.TotalFiles, wouldAddCount, wouldUpdateCount)
+			output += fmt.Sprintf("Would process %d files (%d add, %d update) - dry-run\n\n", d.TotalFiles, wouldAddCount, wouldUpdateCount)
 		} else if wouldUpdateCount > 0 {
-			output += fmt.Sprintf("🔍 Would update %d files in plonk configuration - dry-run\n\n", d.TotalFiles)
+			output += fmt.Sprintf("Would update %d files in plonk configuration - dry-run\n\n", d.TotalFiles)
 		} else {
-			output += fmt.Sprintf("🔍 Would add %d files to plonk configuration - dry-run\n\n", d.TotalFiles)
+			output += fmt.Sprintf("Would add %d files to plonk configuration - dry-run\n\n", d.TotalFiles)
 		}
 	} else {
 		if addedCount > 0 && updatedCount > 0 {
-			output += fmt.Sprintf("✅ Processed %d files (%d added, %d updated)\n\n", d.TotalFiles, addedCount, updatedCount)
+			output += fmt.Sprintf("Processed %d files (%d added, %d updated)\n\n", d.TotalFiles, addedCount, updatedCount)
 		} else if updatedCount > 0 {
-			output += fmt.Sprintf("✅ Updated %d files in plonk configuration\n\n", d.TotalFiles)
+			output += fmt.Sprintf("Updated %d files in plonk configuration\n\n", d.TotalFiles)
 		} else {
-			output += fmt.Sprintf("✅ Added %d files to plonk configuration\n\n", d.TotalFiles)
+			output += fmt.Sprintf("Added %d files to plonk configuration\n\n", d.TotalFiles)
 		}
 	}
 
@@ -279,7 +279,7 @@ func (d DotfileBatchAddOutput) TableOutput() string {
 	}
 
 	if len(d.Errors) > 0 {
-		output += fmt.Sprintf("\n⚠️  Warnings:\n")
+		output += fmt.Sprintf("\nWarnings:\n")
 		for _, err := range d.Errors {
 			output += fmt.Sprintf("   %s\n", err)
 		}

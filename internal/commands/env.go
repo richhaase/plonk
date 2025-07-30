@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
+	plonkoutput "github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources/packages"
 	"github.com/spf13/cobra"
 )
@@ -292,22 +293,22 @@ func (e EnvOutput) TableOutput() string {
 	output.WriteString(fmt.Sprintf("Config File: %s\n", e.Config.ConfigPath))
 	if e.Config.Exists {
 		if e.Config.Valid {
-			output.WriteString("Status: ✅ Valid\n")
+			output.WriteString(fmt.Sprintf("Status: %s\n", plonkoutput.Valid()))
 		} else {
-			output.WriteString("Status: ❌ Invalid\n")
+			output.WriteString(fmt.Sprintf("Status: %s\n", plonkoutput.Invalid()))
 			if e.Config.Error != "" {
 				output.WriteString(fmt.Sprintf("Error: %s\n", e.Config.Error))
 			}
 		}
 	} else {
-		output.WriteString("Status: ❓ Not found\n")
+		output.WriteString("Status: Not found\n")
 	}
 
 	// Package Managers
 	output.WriteString("\n# Package Managers\n")
 	for _, manager := range e.Managers {
 		if manager.Available {
-			output.WriteString(fmt.Sprintf("%s: ✅ Available\n", manager.Name))
+			output.WriteString(fmt.Sprintf("%s: %s\n", manager.Name, plonkoutput.Available()))
 			if manager.Version != "" {
 				output.WriteString(fmt.Sprintf("  Version: %s\n", manager.Version))
 			}
@@ -315,7 +316,7 @@ func (e EnvOutput) TableOutput() string {
 				output.WriteString(fmt.Sprintf("  Path: %s\n", manager.Path))
 			}
 		} else {
-			output.WriteString(fmt.Sprintf("%s: ❌ Not available\n", manager.Name))
+			output.WriteString(fmt.Sprintf("%s: %s\n", manager.Name, plonkoutput.NotAvailable()))
 			if manager.Error != "" {
 				output.WriteString(fmt.Sprintf("  Error: %s\n", manager.Error))
 			}

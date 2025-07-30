@@ -10,17 +10,12 @@ import (
 
 // Common status icons used across all commands
 const (
-	IconSuccess      = "✓"
-	IconWarning      = "⚠"
-	IconError        = "✗"
-	IconInfo         = "•"
-	IconUnknown      = "?"
-	IconSkipped      = "-"
-	IconHealthy      = "✅"
-	IconUnhealthy    = "❌"
-	IconSearch       = "🔍"
-	IconPackage      = "📦"
-	IconWarningEmoji = "⚠️"
+	IconSuccess = "✓"
+	IconWarning = "⚠"
+	IconError   = "✗"
+	IconInfo    = "•"
+	IconUnknown = "?"
+	IconSkipped = "-"
 )
 
 // GetStatusIcon returns the appropriate icon for a given status

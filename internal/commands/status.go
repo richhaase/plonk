@@ -13,6 +13,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/orchestrator"
+	plonkoutput "github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources"
 	"github.com/spf13/cobra"
 )
@@ -263,14 +264,14 @@ func (s StatusOutput) TableOutput() string {
 				for _, manager := range sortedManagers {
 					packages := packagesByManager[manager]
 					for _, pkg := range packages {
-						pkgBuilder.AddRow(pkg.Name, manager, "✅ managed")
+						pkgBuilder.AddRow(pkg.Name, manager, plonkoutput.Managed())
 					}
 				}
 			}
 
 			// Show missing packages
 			for _, pkg := range missingPackages {
-				pkgBuilder.AddRow(pkg.Name, pkg.Manager, "❌ missing")
+				pkgBuilder.AddRow(pkg.Name, pkg.Manager, plonkoutput.Missing())
 			}
 
 			// Show untracked packages when --unmanaged flag is set
@@ -278,7 +279,7 @@ func (s StatusOutput) TableOutput() string {
 			for _, manager := range sortedUntrackedManagers {
 				packages := untrackedPackages[manager]
 				for _, pkg := range packages {
-					pkgBuilder.AddRow(pkg.Name, manager, "⚠️  unmanaged")
+					pkgBuilder.AddRow(pkg.Name, manager, plonkoutput.Unmanaged())
 				}
 			}
 
@@ -357,7 +358,7 @@ func (s StatusOutput) TableOutput() string {
 						if dest, ok := item.Metadata["destination"].(string); ok {
 							target = dest
 						}
-						dotBuilder.AddRow(source, target, "✅ deployed")
+						dotBuilder.AddRow(source, target, plonkoutput.Deployed())
 					}
 				}
 
@@ -368,7 +369,7 @@ func (s StatusOutput) TableOutput() string {
 					if dest, ok := item.Metadata["destination"].(string); ok {
 						target = dest
 					}
-					dotBuilder.AddRow(source, target, "❌ missing")
+					dotBuilder.AddRow(source, target, plonkoutput.Missing())
 				}
 			}
 

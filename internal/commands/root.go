@@ -6,6 +6,7 @@ package commands
 import (
 	"fmt"
 
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -25,6 +26,10 @@ var rootCmd = &cobra.Command{
 	Short: "A developer environment manager",
 	Long: `Plonk manages your development environment by installing packages
 and managing dotfiles across multiple package managers.`,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		// Initialize color support based on terminal capabilities and NO_COLOR env var
+		output.InitColors()
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if version, _ := cmd.Flags().GetBool("version"); version {
 			fmt.Printf("plonk %s\n", formatVersion())

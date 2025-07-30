@@ -147,24 +147,24 @@ func (d DotfileRemovalOutput) TableOutput() string {
 		result := d.Results[0]
 		switch result.Status {
 		case "removed":
-			tb.AddLine("✅ Removed dotfile from plonk management")
+			tb.AddLine("Removed dotfile from plonk management")
 			tb.AddLine("   File: %s", result.Name)
 			if source, ok := result.Metadata["source"].(string); ok {
 				tb.AddLine("   Source: %s (removed from config)", source)
 			}
 		case "would-remove":
-			tb.AddLine("🔍 Would remove dotfile from plonk management (dry-run)")
+			tb.AddLine("Would remove dotfile from plonk management (dry-run)")
 			tb.AddLine("   File: %s", result.Name)
 			if source, ok := result.Metadata["source"].(string); ok {
 				tb.AddLine("   Source: %s", source)
 			}
 		case "skipped":
-			tb.AddLine("⏭️ Skipped: %s", result.Name)
+			tb.AddLine("Skipped: %s", result.Name)
 			if result.Error != nil {
 				tb.AddLine("   Reason: %s", result.Error.Error())
 			}
 		case "failed":
-			tb.AddLine("%s Failed: %s", IconUnhealthy, result.Name)
+			tb.AddLine("Failed: %s", result.Name)
 			if result.Error != nil {
 				tb.AddLine("   Error: %s", result.Error.Error())
 			}
@@ -188,7 +188,7 @@ func (d DotfileRemovalOutput) TableOutput() string {
 
 	if isDryRun {
 		if wouldRemoveCount > 0 {
-			tb.AddLine("🔍 Would remove %d dotfiles (dry-run)", wouldRemoveCount)
+			tb.AddLine("Would remove %d dotfiles (dry-run)", wouldRemoveCount)
 		}
 	} else {
 		if d.Summary.Removed > 0 {
@@ -197,10 +197,10 @@ func (d DotfileRemovalOutput) TableOutput() string {
 	}
 
 	if d.Summary.Skipped > 0 {
-		tb.AddLine("⏭️ %d skipped", d.Summary.Skipped)
+		tb.AddLine("%d skipped", d.Summary.Skipped)
 	}
 	if d.Summary.Failed > 0 {
-		tb.AddLine("%s %d failed", IconUnhealthy, d.Summary.Failed)
+		tb.AddLine("%d failed", d.Summary.Failed)
 	}
 
 	tb.AddNewline()
@@ -213,7 +213,7 @@ func (d DotfileRemovalOutput) TableOutput() string {
 		case "would-remove":
 			tb.AddLine("   - %s", result.Name)
 		case "skipped":
-			tb.AddLine("   ⏭ %s (not managed)", result.Name)
+			tb.AddLine("   %s (not managed)", result.Name)
 		case "failed":
 			tb.AddLine("   ✗ %s", result.Name)
 		}

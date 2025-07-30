@@ -47,7 +47,7 @@ func installHomebrew(ctx context.Context, cfg Config) error {
 		if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
 			brewPath := "/opt/homebrew/bin/brew"
 			if _, err := os.Stat(brewPath); err == nil {
-				fmt.Printf("💡 Homebrew installed to /opt/homebrew but not in PATH\n")
+				fmt.Printf("Note: Homebrew installed to /opt/homebrew but not in PATH\n")
 				fmt.Printf("   To use brew immediately, run: export PATH=\"/opt/homebrew/bin:$PATH\"\n")
 				fmt.Printf("   To make this permanent, add this line to your shell profile:\n")
 				fmt.Printf("   - For bash: echo 'export PATH=\"/opt/homebrew/bin:$PATH\"' >> ~/.bashrc\n")
@@ -90,7 +90,7 @@ func installCargo(ctx context.Context, cfg Config) error {
 	if _, err := os.Stat(cargoPath); err == nil {
 		// Check if it's in PATH
 		if _, err := exec.LookPath("cargo"); err != nil {
-			fmt.Printf("💡 Rust/Cargo installed to ~/.cargo/bin/ but not in PATH\n")
+			fmt.Printf("Note: Rust/Cargo installed to ~/.cargo/bin/ but not in PATH\n")
 			fmt.Printf("   To use cargo immediately, run: export PATH=\"$HOME/.cargo/bin:$PATH\"\n")
 			fmt.Printf("   To make this permanent, add this line to your shell profile:\n")
 			fmt.Printf("   - For bash: echo 'export PATH=\"$HOME/.cargo/bin:$PATH\"' >> ~/.bashrc\n")

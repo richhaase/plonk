@@ -200,14 +200,14 @@ func (c CombinedApplyOutput) TableOutput() string {
 	if c.Packages != nil {
 		if pkgResult, ok := c.Packages.(orchestrator.PackageApplyResult); ok {
 			if c.DryRun {
-				output += fmt.Sprintf("📦 Packages: %d would be installed\n", pkgResult.TotalWouldInstall)
+				output += fmt.Sprintf("Packages: %d would be installed\n", pkgResult.TotalWouldInstall)
 			} else {
 				if pkgResult.TotalInstalled > 0 || pkgResult.TotalFailed > 0 {
-					output += fmt.Sprintf("📦 Packages: %d installed, %d failed\n", pkgResult.TotalInstalled, pkgResult.TotalFailed)
+					output += fmt.Sprintf("Packages: %d installed, %d failed\n", pkgResult.TotalInstalled, pkgResult.TotalFailed)
 					totalSucceeded += pkgResult.TotalInstalled
 					totalFailed += pkgResult.TotalFailed
 				} else if pkgResult.TotalMissing == 0 {
-					output += "📦 Packages: All up to date\n"
+					output += "Packages: All up to date\n"
 				}
 			}
 		}
@@ -236,7 +236,7 @@ func (c CombinedApplyOutput) TableOutput() string {
 	if !c.DryRun && (totalSucceeded > 0 || totalFailed > 0) {
 		output += fmt.Sprintf("\nTotal: %d succeeded, %d failed\n", totalSucceeded, totalFailed)
 		if totalFailed > 0 {
-			output += "\n⚠️  Some operations failed. Check the errors above.\n"
+			output += "\nSome operations failed. Check the errors above.\n"
 		}
 	}
 

@@ -292,7 +292,7 @@ func (i InfoOutput) TableOutput() string {
 		}
 
 	case "installed":
-		builder.AddRow("Status:", "✅ Installed (not managed)")
+		builder.AddRow("Status:", "Installed (not managed)")
 		if i.PackageInfo != nil {
 			builder.AddRow("Manager:", i.PackageInfo.Manager)
 			if i.PackageInfo.Version != "" {
@@ -304,7 +304,7 @@ func (i InfoOutput) TableOutput() string {
 		}
 
 	case "available":
-		builder.AddRow("Status:", "📦 Available")
+		builder.AddRow("Status:", "Available")
 		if i.PackageInfo != nil {
 			builder.AddRow("Manager:", i.PackageInfo.Manager)
 			if i.PackageInfo.Description != "" {
@@ -315,16 +315,16 @@ func (i InfoOutput) TableOutput() string {
 		}
 
 	case "not-found":
-		builder.AddRow("Status:", "❌ Not found")
+		builder.AddRow("Status:", "Not found")
 
 	case "no-managers":
-		builder.AddRow("Status:", "⚠️ No package managers available")
+		builder.AddRow("Status:", "No package managers available")
 
 	case "manager-unavailable":
-		builder.AddRow("Status:", "⚠️ Manager unavailable")
+		builder.AddRow("Status:", "Manager unavailable")
 
 	default:
-		builder.AddRow("Status:", "❓ Unknown")
+		builder.AddRow("Status:", "Unknown")
 	}
 
 	return builder.Build()

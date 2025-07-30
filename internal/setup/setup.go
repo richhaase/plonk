@@ -50,27 +50,27 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 		os.RemoveAll(plonkDir)
 		return fmt.Errorf("failed to clone repository: %w", err)
 	}
-	fmt.Printf("✅ Repository cloned successfully\n")
+	fmt.Printf("Repository cloned successfully\n")
 
 	// Check for existing plonk.yaml
 	configFilePath := filepath.Join(plonkDir, "plonk.yaml")
 	hasConfig := false
 	if _, err := os.Stat(configFilePath); err == nil {
 		hasConfig = true
-		fmt.Printf("✅ Found existing plonk.yaml configuration\n")
+		fmt.Printf("Found existing plonk.yaml configuration\n")
 	} else {
 		// Create default configuration file
 		if err := createDefaultConfig(plonkDir); err != nil {
 			return fmt.Errorf("failed to create default configuration: %w", err)
 		}
-		fmt.Printf("✅ Created default plonk.yaml configuration\n")
+		fmt.Printf("Created default plonk.yaml configuration\n")
 	}
 
 	// For clone command, detect required managers from lock file
 	lockPath := filepath.Join(plonkDir, "plonk.lock")
 	detectedManagers, err := DetectRequiredManagers(lockPath)
 	if err != nil {
-		fmt.Printf("⚠️ Could not read lock file: %v\n", err)
+		fmt.Printf("Warning: Could not read lock file: %v\n", err)
 		fmt.Printf("No package managers will be installed. You can run 'plonk init' later if needed.\n")
 		detectedManagers = []string{} // Empty list
 	}
@@ -86,7 +86,7 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 			return fmt.Errorf("failed to install required tools: %w", err)
 		}
 	} else {
-		fmt.Printf("ℹ️ No package managers detected from lock file.\n")
+		fmt.Printf("No package managers detected from lock file.\n")
 	}
 
 	// If we had existing config and not skipping apply, run plonk apply
@@ -112,13 +112,13 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 		}
 
 		if result.Success {
-			fmt.Printf("✅ Applied configuration successfully\n")
+			fmt.Printf("Applied configuration successfully\n")
 		} else {
-			fmt.Printf("⚠️ Apply completed with some issues\n")
+			fmt.Printf("Apply completed with some issues\n")
 		}
 	}
 
-	fmt.Printf("✅ Setup complete! Your dotfiles are now managed by plonk.\n")
+	fmt.Printf("Setup complete! Your dotfiles are now managed by plonk.\n")
 	return nil
 }
 
@@ -174,7 +174,7 @@ func CheckAndInstallToolsFromReport(ctx context.Context, healthReport diagnostic
 	missingManagers := findMissingPackageManagers(healthReport)
 
 	if len(missingManagers) == 0 {
-		fmt.Printf("✅ All required tools are available\n")
+		fmt.Printf("All required tools are available\n")
 		return nil
 	}
 
@@ -186,8 +186,8 @@ func CheckAndInstallToolsFromReport(ctx context.Context, healthReport diagnostic
 
 	if cfg.Interactive {
 		if !promptYesNo("Install missing package managers?", true) {
-			fmt.Printf("⚠️ Some tools are missing. You can install them later with 'plonk doctor --fix'\n")
-			fmt.Printf("💡 Manual installation options:\n")
+			fmt.Printf("Some tools are missing. You can install them later with 'plonk doctor --fix'\n")
+			fmt.Printf("Manual installation options:\n")
 			for _, manager := range missingManagers {
 				instructions := getManualInstallInstructions(manager)
 				fmt.Printf("   %s: %s\n", manager, instructions)
@@ -205,28 +205,28 @@ func CheckAndInstallToolsFromReport(ctx context.Context, healthReport diagnostic
 
 		if err := installSingleManager(ctx, manager, cfg); err != nil {
 			failed++
-			fmt.Printf("❌ Failed to install %s: %v\n", manager, err)
-			fmt.Printf("💡 Manual installation: %s\n", getManualInstallInstructions(manager))
+			fmt.Printf("Failed to install %s: %v\n", manager, err)
+			fmt.Printf("Manual installation: %s\n", getManualInstallInstructions(manager))
 
 			// Continue with other managers instead of failing completely
 			continue
 		}
 
 		successful++
-		fmt.Printf("✅ %s installed successfully\n", getManagerDescription(manager))
+		fmt.Printf("%s installed successfully\n", getManagerDescription(manager))
 	}
 
 	// Provide summary
 	if failed > 0 {
-		fmt.Printf("⚠️ Installation summary: %d successful, %d failed\n", successful, failed)
-		fmt.Printf("💡 You can retry failed installations with 'plonk doctor --fix'\n")
+		fmt.Printf("Installation summary: %d successful, %d failed\n", successful, failed)
+		fmt.Printf("You can retry failed installations with 'plonk doctor --fix'\n")
 		if successful > 0 {
 			return nil // Don't treat partial success as failure
 		}
 		return fmt.Errorf("failed to install %d package managers", failed)
 	}
 
-	fmt.Printf("✅ All tools installed successfully (%d managers)\n", successful)
+	fmt.Printf("All tools installed successfully (%d managers)\n", successful)
 	return nil
 }
 
@@ -290,9 +290,9 @@ func findMissingPackageManagers(report diagnostics.HealthReport) []string {
 
 	for _, check := range report.Checks {
 		if check.Category == "package-managers" && check.Name == "Package Manager Availability" {
-			// Parse the Details field which contains entries like "brew: ❌" or "npm: ✅"
+			// Parse the Details field which contains entries like "brew: not available" or "npm: available"
 			for _, detail := range check.Details {
-				if strings.Contains(detail, "❌") {
+				if strings.Contains(detail, "not available") {
 					// Extract manager name before the colon
 					parts := strings.Split(detail, ":")
 					if len(parts) > 0 {
@@ -433,7 +433,7 @@ func installDetectedManagers(ctx context.Context, managers []string, cfg Config)
 	}
 
 	if len(missingManagers) == 0 {
-		fmt.Printf("✅ All required package managers are already installed\n")
+		fmt.Printf("All required package managers are already installed\n")
 		return nil
 	}
 
@@ -445,7 +445,7 @@ func installDetectedManagers(ctx context.Context, managers []string, cfg Config)
 
 	if cfg.Interactive {
 		if !promptYesNo("Install missing package managers?", true) {
-			fmt.Printf("⚠️ Some required tools are missing. You can install them later with 'plonk doctor --fix'\n")
+			fmt.Printf("Some required tools are missing. You can install them later with 'plonk doctor --fix'\n")
 			return nil
 		}
 	}
@@ -459,24 +459,24 @@ func installDetectedManagers(ctx context.Context, managers []string, cfg Config)
 
 		if err := installSingleManager(ctx, manager, cfg); err != nil {
 			failed++
-			fmt.Printf("❌ Failed to install %s: %v\n", manager, err)
-			fmt.Printf("💡 Manual installation: %s\n", getManualInstallInstructions(manager))
+			fmt.Printf("Failed to install %s: %v\n", manager, err)
+			fmt.Printf("Manual installation: %s\n", getManualInstallInstructions(manager))
 			continue
 		}
 
 		successful++
-		fmt.Printf("✅ %s installed successfully\n", getManagerDescription(manager))
+		fmt.Printf("%s installed successfully\n", getManagerDescription(manager))
 	}
 
 	if failed > 0 {
-		fmt.Printf("⚠️ Installation summary: %d successful, %d failed\n", successful, failed)
-		fmt.Printf("💡 You can retry failed installations with 'plonk doctor --fix'\n")
+		fmt.Printf("Installation summary: %d successful, %d failed\n", successful, failed)
+		fmt.Printf("You can retry failed installations with 'plonk doctor --fix'\n")
 		if successful > 0 {
 			return nil // Don't treat partial success as failure
 		}
 		return fmt.Errorf("failed to install %d package managers", failed)
 	}
 
-	fmt.Printf("✅ All required package managers installed successfully\n")
+	fmt.Printf("All required package managers installed successfully\n")
 	return nil
 }

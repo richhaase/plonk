@@ -15,6 +15,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources/packages"
 )
 
@@ -372,10 +373,10 @@ func checkPackageManagerAvailability(ctx context.Context) HealthCheck {
 		available, err := mgr.IsAvailable(ctx)
 		if err != nil || !available {
 			unavailableManagers = append(unavailableManagers, managerName)
-			check.Details = append(check.Details, fmt.Sprintf("%s: ❌", managerName))
+			check.Details = append(check.Details, fmt.Sprintf("%s: %s", managerName, output.NotAvailable()))
 		} else {
 			availableManagers = append(availableManagers, managerName)
-			check.Details = append(check.Details, fmt.Sprintf("%s: ✅", managerName))
+			check.Details = append(check.Details, fmt.Sprintf("%s: %s", managerName, output.Available()))
 		}
 	}
 
@@ -469,13 +470,13 @@ func checkPathConfiguration() HealthCheck {
 		}
 
 		if found {
-			check.Details = append(check.Details, fmt.Sprintf("✅ %s: %s", name, importantPath))
+			check.Details = append(check.Details, fmt.Sprintf("%s: %s", name, importantPath))
 		} else if dirExists {
-			check.Details = append(check.Details, fmt.Sprintf("⚠️  %s: %s (exists but not in PATH)", name, importantPath))
+			check.Details = append(check.Details, fmt.Sprintf("%s: %s (exists but not in PATH)", name, importantPath))
 			missingPaths = append(missingPaths, importantPath)
 			check.Status = "warn"
 		} else {
-			check.Details = append(check.Details, fmt.Sprintf("ℹ️  %s: %s (directory does not exist)", name, importantPath))
+			check.Details = append(check.Details, fmt.Sprintf("%s: %s (directory does not exist)", name, importantPath))
 		}
 	}
 

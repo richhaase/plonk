@@ -164,14 +164,14 @@ func (d DoctorOutput) TableOutput() string {
 				if len(check.Issues) > 0 {
 					output.WriteString("\n**Issues:**\n")
 					for _, issue := range check.Issues {
-						output.WriteString(fmt.Sprintf("- ❌ %s\n", issue))
+						output.WriteString(fmt.Sprintf("- %s\n", issue))
 					}
 				}
 
 				if len(check.Suggestions) > 0 {
 					output.WriteString("\n**Suggestions:**\n")
 					for _, suggestion := range check.Suggestions {
-						output.WriteString(fmt.Sprintf("- 💡 %s\n", suggestion))
+						output.WriteString(fmt.Sprintf("- %s\n", suggestion))
 					}
 				}
 
