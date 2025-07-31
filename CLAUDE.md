@@ -312,6 +312,10 @@ For each file, we will follow this process:
 - **Cross-Reference Strategy**: Link between docs rather than repeat information
 - **Process Iteration**: Present → Query → Synthesize → Apply → Repeat ensures user alignment
 
+### Linux Testing Bug Fixes
+- **Bug #1 (Apply Drift Restoration)**: ✅ FIXED - Apply now processes both StateMissing and StateDegraded items
+- **Bug #2 (Info Command Status)**: ✅ FIXED - Info command now checks lock file for both prefix and non-prefix syntax
+
 ## Implementation Enhancement Phase (Completed - 2025-07-30)
 
 This phase implemented critical improvements identified during documentation review, focusing on UI/UX enhancements and core functionality fixes.
@@ -582,12 +586,14 @@ Rejected features:
 - **Platform Tested**: Ubuntu 24.10 arm64 via Lima
 - **Major Finding**: Testing revealed 8 bugs that affect ALL platforms
 - **Clone Test**: ✅ Successfully cloned and applied real dotfiles repo
+- **Bug Fixes Progress**: 1/8 completed
+  - ✅ Apply drift restoration fixed (Bug #1)
+  - ⏳ 7 bugs remaining
 - **Key Issues**:
-  - 2 HIGH priority bugs blocking v1.0 (drift restore, info status)
+  - 1 HIGH priority bug remaining (info status)
   - 3 MEDIUM priority bugs (display, progress, errors)
   - 3 LOW priority bugs (can defer)
   - ARM64 Linux has limited Homebrew bottles
-- **Recommendation**: Fix platform-wide bugs before v1.0
 - **Details**: See [v1-bugs-found.md](docs/planning/v1-bugs-found.md)
 
 ### Success Criteria

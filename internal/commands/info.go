@@ -100,6 +100,11 @@ func getInfoFromSpecificManager(ctx context.Context, managerName, packageName st
 		}, nil
 	}
 
+	// Check if package is managed by plonk
+	configDir := config.GetDefaultConfigDirectory()
+	lockService := lock.NewYAMLLockService(configDir)
+	isManaged := lockService.HasPackage(managerName, packageName)
+
 	// Check if package is installed
 	installed, err := manager.IsInstalled(ctx, packageName)
 	if err != nil {
@@ -116,12 +121,15 @@ func getInfoFromSpecificManager(ctx context.Context, managerName, packageName st
 		}, nil
 	}
 
-	// Determine status based on installation
+	// Determine status based on installation and management
 	status := "available"
 	message := fmt.Sprintf("Package '%s' available in %s", packageName, managerName)
-	if installed {
+	if isManaged {
+		status = "managed"
+		message = fmt.Sprintf("Package '%s' is managed by plonk via %s", packageName, managerName)
+	} else if installed {
 		status = "installed"
-		message = fmt.Sprintf("Package '%s' is installed via %s", packageName, managerName)
+		message = fmt.Sprintf("Package '%s' is installed via %s (not managed by plonk)", packageName, managerName)
 	}
 
 	return InfoOutput{
