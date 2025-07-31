@@ -1,47 +1,52 @@
+//go:build integration
+// +build integration
+
 // Copyright (c) 2025 Rich Haase
 // Licensed under the MIT License. See LICENSE file in the project root for license information.
 
-package packages
+package integration_test
 
 import (
 	"context"
 	"testing"
+
+	"github.com/richhaase/plonk/internal/resources/packages"
 )
 
 func TestPackageManagerCapabilities(t *testing.T) {
 	tests := []struct {
 		name           string
-		manager        func() PackageManager
+		manager        func() packages.PackageManager
 		supportsSearch bool
 	}{
 		{
 			name:           "cargo supports search",
-			manager:        func() PackageManager { return NewCargoManager() },
+			manager:        func() packages.PackageManager { return packages.NewCargoManager() },
 			supportsSearch: true,
 		},
 		{
 			name:           "gem supports search",
-			manager:        func() PackageManager { return NewGemManager() },
+			manager:        func() packages.PackageManager { return packages.NewGemManager() },
 			supportsSearch: true,
 		},
 		{
 			name:           "homebrew supports search",
-			manager:        func() PackageManager { return NewHomebrewManager() },
+			manager:        func() packages.PackageManager { return packages.NewHomebrewManager() },
 			supportsSearch: true,
 		},
 		{
 			name:           "npm supports search",
-			manager:        func() PackageManager { return NewNpmManager() },
+			manager:        func() packages.PackageManager { return packages.NewNpmManager() },
 			supportsSearch: true,
 		},
 		{
 			name:           "go does not support search",
-			manager:        func() PackageManager { return NewGoInstallManager() },
+			manager:        func() packages.PackageManager { return packages.NewGoInstallManager() },
 			supportsSearch: false,
 		},
 		{
 			name:           "pip supports search",
-			manager:        func() PackageManager { return NewPipManager() },
+			manager:        func() packages.PackageManager { return packages.NewPipManager() },
 			supportsSearch: true,
 		},
 	}
@@ -71,14 +76,14 @@ func TestCapabilityDiscoveryPattern(t *testing.T) {
 	// Test that capability checking prevents unnecessary errors
 	managers := []struct {
 		name    string
-		manager PackageManager
+		manager packages.PackageManager
 	}{
-		{"cargo", NewCargoManager()},
-		{"gem", NewGemManager()},
-		{"homebrew", NewHomebrewManager()},
-		{"npm", NewNpmManager()},
-		{"go", NewGoInstallManager()},
-		{"pip", NewPipManager()},
+		{"cargo", packages.NewCargoManager()},
+		{"gem", packages.NewGemManager()},
+		{"homebrew", packages.NewHomebrewManager()},
+		{"npm", packages.NewNpmManager()},
+		{"go", packages.NewGoInstallManager()},
+		{"pip", packages.NewPipManager()},
 	}
 
 	ctx := context.Background()
