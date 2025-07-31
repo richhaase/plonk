@@ -263,6 +263,35 @@ For each file, we will follow this process:
 - **Modular Design**: Setup shows good separation with dedicated files for git, tools, prompts
 - **Consistent Issues**: Status terminology and timeout documentation frequently missing
 
+### Linux Validation Testing Results (2025-07-31)
+Testing on Ubuntu 24.10 ARM64 via Lima revealed critical issues:
+
+#### Successfully Fixed Bugs (4/6):
+- **Bug #1**: Apply command drift restoration - correctly restores modified files
+- **Bug #2**: Info command management status - shows "managed by plonk" for both prefix/non-prefix syntax
+- **Bug #3**: SOURCE column display - shows correct paths without leading dots
+- **Bug #6**: Doctor Homebrew path - correctly shows `/home/linuxbrew/.linuxbrew/bin` on Linux
+
+#### Partially Fixed (1/6):
+- **Bug #4**: Progress indicators - shows "Installing: package" but no [N/M] counter for multiple items
+
+#### Not Fixed (1/6):
+- **Bug #5**: Error messages - still shows generic "✗ failed" instead of actual brew errors
+
+#### New Critical Bugs Discovered:
+1. **Non-functional --force flags** - Still present in install/uninstall/add/rm commands despite being identified for removal
+2. **config/test/ path bug** - ANY file under `config/test/` directory ALWAYS shows as "missing" in status
+   - Files are correctly deployed and exist
+   - Only affects lowercase "test" - `config/TEST/` works fine
+   - Specific to status reconciliation logic
+3. **Error message regression** - Package manager errors not captured (e.g., "no bottle available!")
+
+#### Key Testing Insights:
+- Lock file format is now version 2 with new schema including `id` field and `installed_at` timestamp
+- ARM64 Linux Homebrew has limited bottle support (fzf, gh, lazygit fail to install)
+- All bugs found affect both macOS and Linux (except Homebrew path)
+- The `config/test/` bug suggests special handling for test directories in reconciliation logic
+
 ### Other Learnings
 - Pre-commit hooks are active and will auto-fix formatting issues (end-of-file, trailing whitespace)
 - Include "Improvements" section in each document for future enhancement ideas
@@ -311,6 +340,23 @@ For each file, we will follow this process:
 - **Single Source of Truth**: Eliminate duplication by designating canonical locations for information types
 - **Cross-Reference Strategy**: Link between docs rather than repeat information
 - **Process Iteration**: Present → Query → Synthesize → Apply → Repeat ensures user alignment
+
+### v1.0 Release Blockers (as of 2025-07-31)
+Based on Linux validation testing, these must be fixed before v1.0:
+
+1. **Remove non-functional --force flags** (30 min)
+   - Present in install/uninstall/add/rm commands
+   - Users see them in help but they do nothing
+
+2. **Fix config/test/ path bug** (1-2 hours)
+   - Critical: breaks status for entire directory
+   - Investigation needed for special "test" handling
+
+3. **Fix error message capture** (1-2 hours)
+   - Package manager errors not shown to users
+   - Regression from previous fix attempt
+
+See `/tmp/v1-critical-fixes-plan.md` for detailed implementation plan.
 
 ### Linux Testing Bug Fixes
 - **Bug #1 (Apply Drift Restoration)**: ✅ FIXED - Apply now processes both StateMissing and StateDegraded items

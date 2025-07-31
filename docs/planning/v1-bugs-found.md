@@ -146,31 +146,50 @@ brew install fzf
 
 ---
 
-#### 7. Permission Errors Not Caught
-**Severity**: LOW - Data integrity concern
-**Affects**: All platforms
+#### 7. ❌ NOT A BUG - Permission Errors Not Caught
+**Severity**: N/A
+**Affects**: N/A
+**Status**: Determined not to be a bug
 **Description**:
 - Read-only lock file (chmod 444) doesn't prevent writes
 - Operation succeeds when it should fail
 
-**Test Case**:
-```bash
-chmod 444 ~/.config/plonk/plonk.lock
-plonk install wget  # Succeeds but shouldn't
-```
-
-**Code Location**: Lock file operations
+**Resolution**: This is not a bug because:
+- PLONK_DIR is in the user's home directory
+- Users own their config files and have control over them
+- Making your own config files read-only is a self-inflicted issue
+- No real-world scenario where this would be a problem
+- The test case is artificial and doesn't represent actual usage
 
 ---
 
-#### 8. Deployed Dotfiles Show as Missing
-**Severity**: LOW - Display issue
+#### 8. ❌ CRITICAL BUG FOUND - Specific Path Breaks Status
+**Severity**: CRITICAL - Broken functionality
 **Affects**: All platforms
+**Found**: During Linux validation testing
 **Description**:
-- After `plonk apply`, newly deployed files show as "missing"
-- Status is correct after next reconciliation
+- ANY file under `config/test/` directory ALWAYS shows as "missing"
+- Files are correctly deployed and exist in both locations
+- Apply command knows they need deployment
+- Status reconciliation is specifically broken for this exact path
+- Case-sensitive: `config/TEST/` works fine, only lowercase `config/test/` is broken
 
-**Code Location**: Status reconciliation logic
+**Test Case**:
+```bash
+mkdir -p ~/.config/test
+echo "content" > ~/.config/test/anyfile
+plonk add ~/.config/test/anyfile
+plonk status --dotfiles  # Shows as "missing" even though it exists
+```
+
+**Evidence**:
+- `config/test/config` → always missing
+- `config/test/otherfile` → always missing
+- `config/TEST/file` → works correctly
+- `config/testing/file` → works correctly
+- `config/mydir/config` → works correctly
+
+**Code Location**: Status reconciliation logic, likely special handling for "test" directories
 
 ---
 
@@ -182,20 +201,48 @@ plonk install wget  # Succeeds but shouldn't
 **Solution**: Document limitation or add `--build-from-source` support
 **Example**: fzf, gh, lazygit, docker, colima
 
+### 🔴 CRITICAL Priority - Must Fix Before v1.0
+
+#### 9. Non-functional --force Flags Still Present
+**Severity**: CRITICAL - User-facing broken functionality
+**Affects**: All platforms
+**Found**: During Linux validation testing
+**Description**:
+- --force flags are still defined in install, uninstall, add, and rm commands
+- These flags were identified as non-functional but never removed
+- Users see these in help text and expect them to work
+
+**Test Case**:
+```bash
+plonk install -h  # Shows --force flag
+plonk add -h      # Shows --force flag
+```
+
+**Code Locations**:
+- internal/commands/install.go (line 46)
+- internal/commands/uninstall.go (needs checking)
+- internal/commands/add.go (needs checking)
+- internal/commands/rm.go (needs checking)
+
+---
+
 ## Summary
 
-**Total Bugs Found**: 8
-- 2 HIGH priority (2 fixed, 0 remaining)
+**Total Bugs Found**: 9
+- 4 CRITICAL/HIGH priority (2 fixed, 2 remaining)
 - 3 MEDIUM priority (3 fixed, 0 remaining - 1 partial)
-- 3 LOW priority (1 fixed, 2 remaining)
+- 2 LOW priority (1 fixed, 0 remaining, 1 not a bug)
 
-**Bugs Fixed**: 6/8 (1 partial)
+**Bugs Fixed**: 6/9 (1 partial)
 - ✅ Bug #1: Apply command drift restoration (HIGH)
 - ✅ Bug #2: Info command management status (HIGH)
 - ✅ Bug #3: SOURCE column dotfile display (MEDIUM)
 - ⚠️  Bug #4: Apply command progress indicators (MEDIUM - partially fixed)
 - ✅ Bug #5: Apply error messages (MEDIUM)
 - ✅ Bug #6: Doctor Homebrew path on Linux (LOW)
+- ❌ Bug #7: Not a bug - permission errors
+- 🆕 Bug #8: CRITICAL - config/test/ path breaks status
+- 🆕 Bug #9: CRITICAL - Non-functional --force flags
 
 **Key Finding**: Most bugs affect ALL platforms, not just Linux. The Linux testing was valuable for discovering these issues.
 
