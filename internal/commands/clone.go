@@ -6,7 +6,7 @@ package commands
 import (
 	"context"
 
-	"github.com/richhaase/plonk/internal/setup"
+	"github.com/richhaase/plonk/internal/clone"
 	"github.com/spf13/cobra"
 )
 
@@ -56,12 +56,12 @@ func runClone(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 	gitRepo := args[0]
 
-	setupConfig := setup.Config{
+	cloneConfig := clone.Config{
 		Interactive: !cloneYes,
 		Verbose:     false, // Could add --verbose flag later
 		NoApply:     cloneNoApply,
 		// No SkipManagers for clone - it auto-detects
 	}
 
-	return setup.CloneAndSetup(ctx, gitRepo, setupConfig)
+	return clone.CloneAndSetup(ctx, gitRepo, cloneConfig)
 }
