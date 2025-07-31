@@ -353,6 +353,15 @@ func (p *PipManager) handleInstallError(err error, output []byte, packageName st
 		}
 
 		if exitCode != 0 {
+			// Include command output for better error messages
+			if len(output) > 0 {
+				// Trim the output and limit length for readability
+				errorOutput := strings.TrimSpace(string(output))
+				if len(errorOutput) > 500 {
+					errorOutput = errorOutput[:500] + "..."
+				}
+				return fmt.Errorf("package installation failed: %s", errorOutput)
+			}
 			return fmt.Errorf("package installation failed (exit code %d): %w", exitCode, err)
 		}
 		return nil
