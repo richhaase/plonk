@@ -3,18 +3,20 @@
 **Date**: 2025-07-30
 **Testing Platform**: Ubuntu 24.10 ARM64 via Lima
 **Plonk Version**: v0.8.10-dev
+**Status**: ALL CRITICAL BUGS FIXED (2025-07-31)
 
 ## Overview
 
-Linux platform testing revealed multiple bugs that affect ALL platforms (macOS and Linux). These bugs need to be fixed before v1.0 release.
+Linux platform testing revealed multiple bugs that affect ALL platforms (macOS and Linux). All critical bugs have been fixed.
 
 ## Bug List by Priority
 
 ### 🔴 HIGH Priority - Blocks v1.0
 
-#### 1. Apply Command Doesn't Restore Drifted Files
+#### 1. ✅ FIXED - Apply Command Doesn't Restore Drifted Files
 **Severity**: CRITICAL - Breaks core drift recovery feature
 **Affects**: All platforms
+**Status**: Fixed in commit 5b58ed9
 **Description**:
 - `plonk apply` only processes "missing" files, completely ignores "drifted" files
 - Drift detection works correctly (shows "drifted" status)
@@ -163,10 +165,11 @@ brew install fzf
 
 ---
 
-#### 8. ❌ CRITICAL BUG FOUND - Specific Path Breaks Status
+#### 8. ✅ FIXED - Specific Path Breaks Status
 **Severity**: CRITICAL - Broken functionality
 **Affects**: All platforms
 **Found**: During Linux validation testing
+**Status**: Fixed in commit 9a076a9
 **Description**:
 - ANY file under `config/test/` directory ALWAYS shows as "missing"
 - Files are correctly deployed and exist in both locations
@@ -203,10 +206,11 @@ plonk status --dotfiles  # Shows as "missing" even though it exists
 
 ### 🔴 CRITICAL Priority - Must Fix Before v1.0
 
-#### 9. Non-functional --force Flags Still Present
+#### 9. ✅ FIXED - Non-functional --force Flags Still Present
 **Severity**: CRITICAL - User-facing broken functionality
 **Affects**: All platforms
 **Found**: During Linux validation testing
+**Status**: Fixed in commit 9a076a9
 **Description**:
 - --force flags are still defined in install, uninstall, add, and rm commands
 - These flags were identified as non-functional but never removed

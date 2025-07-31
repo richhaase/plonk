@@ -1,9 +1,9 @@
 # V1.0 Final Sprint Action Plan
 
-## Current Status (2025-07-30)
+## Current Status (2025-07-31)
 
-**Completed**: 5 out of 7 v1.0 features
-**Remaining**: 2 tasks (3-5 days)
+**Completed**: All critical features and bug fixes
+**Remaining**: Documentation and release tasks only
 **Target**: v1.0.0 release
 
 ## Setup Philosophy Change
@@ -45,7 +45,7 @@ This removes complexity while maintaining the "zero-config" philosophy.
 ### 2. Documentation Updates & Release Prep (1-2 days)
 
 **Critical Updates**:
-- [x] Remove stability warning from README
+- [ ] Remove stability warning from README
 - [ ] Update version to 1.0.0 in main.go
 - [ ] Create v1.0.0 release notes
 - [ ] Review all command documentation for accuracy
@@ -132,20 +132,28 @@ Core commands and behaviors are now stable. Future changes will maintain backwar
 v1.0 ships when:
 - [x] All critical features work reliably
 - [x] Linux testing shows parity with macOS (with bugs documented)
-- [ ] Critical bugs fixed (drift restore, info status)
+- [x] Critical bugs fixed (ALL COMPLETED 2025-07-31)
 - [ ] Documentation reflects current behavior
 - [ ] Version updated to 1.0.0
 - [ ] Release notes explain stability
 - [ ] Tagged and released on GitHub
 
-## Bugs Blocking v1.0
+## All Critical Bugs Fixed (2025-07-31)
 
-Based on Linux testing, these bugs affect ALL platforms and must be fixed:
+All critical bugs have been resolved:
+1. ✅ Apply now restores drifted files
+2. ✅ Info shows correct management status
+3. ✅ SOURCE column displays correctly
+4. ✅ Apply shows progress indicators
+5. ✅ Apply error messages improved
+6. ✅ Doctor Homebrew path fixed on Linux
+7. ✅ Permission errors handled gracefully
+8. ✅ config/test/ path reconciliation fixed
+9. ✅ Non-functional --force flags removed
+10. ✅ Error messages show actual package manager output
+11. ✅ Usage no longer displayed on errors
 
-1. **Apply doesn't restore drifted files** (CRITICAL)
-2. **Info shows wrong management status** (HIGH)
-
-See [v1-bugs-found.md](v1-bugs-found.md) for complete list.
+See [v1-bugs-found.md](v1-bugs-found.md) for details.
 
 ## Implications of Homebrew Prerequisite
 

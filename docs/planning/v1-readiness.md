@@ -46,12 +46,13 @@ v1.0 is ready when:
 - Clean implementation using briandowns/spinner library
 
 #### 4. Linux Platform Testing & Support
-**Status**: Partial - needs verification
+**Status**: ✅ Completed (2025-07-30)
 **Priority**: HIGH - Core platform requirement
-- Test on Ubuntu and Debian distributions
-- Ensure all commands work identically to macOS
-- Verify Homebrew installation and functionality on Linux
-- Document any Linux-specific setup requirements
+- Tested on Ubuntu 24.10 ARM64 via Lima
+- All commands work identically to macOS
+- Homebrew on Linux verified and documented
+- Linux-specific bugs found and fixed
+- ARM64 bottle limitations documented
 
 ### 🟡 Important - Should Have
 
@@ -73,13 +74,13 @@ v1.0 is ready when:
 - See: [doctor-consolidation-plan.md](doctor-consolidation-plan.md) for details
 
 #### 7. Documentation Updates
-**Status**: Partially complete
+**Status**: In Progress
 **Priority**: MEDIUM - User experience
-- Remove all references to defunct `setup` command
-- Update installation guide with current release info
-- Review and update README stability warning
-- Ensure examples use current commands
-- Document `.plonk/` directory as reserved
+- [x] Remove all references to defunct `setup` command
+- [ ] Update installation guide with current release info
+- [ ] Review and update README stability warning
+- [x] Ensure examples use current commands
+- [x] Document `.plonk/` directory as reserved
 
 ### 🟢 Nice to Have - Can Wait
 
@@ -124,20 +125,20 @@ Before tagging v1.0.0:
 - [x] Implement dotfile drift detection
 - [x] Implement Linux support (via Homebrew)
 - [x] Implement progress indicators
-- [ ] Complete Linux platform testing
+- [x] Complete Linux platform testing
 - [x] Add `.plonk/` directory exclusion
 - [⏸️] Consolidate doctor/setup shared code (skipped - needs design decisions)
 - [ ] Update all documentation
 - [ ] Remove stability warning from README
 - [x] Document `.plonk/` as reserved directory
-- [ ] Test full user journey on fresh macOS
-- [ ] Test full user journey on fresh Ubuntu
+- [x] Test full user journey on fresh macOS
+- [x] Test full user journey on fresh Ubuntu
 - [ ] Test full user journey on WSL
-- [ ] Review all error messages for clarity
-- [ ] Ensure `plonk clone` handles edge cases:
-  - [ ] No lock file (dotfiles only)
-  - [ ] Empty repository
-  - [ ] Existing destination directory
+- [x] Review all error messages for clarity
+- [x] Ensure `plonk clone` handles edge cases:
+  - [x] No lock file (dotfiles only) - works correctly
+  - [x] Empty repository - works correctly
+  - [x] Existing destination directory - shows clear error
 
 ## Post-v1.0 Roadmap
 
@@ -164,11 +165,11 @@ High-value features to implement after v1.0:
 
 ## Definition of Done for v1.0
 
-- [ ] All critical features implemented and tested
-- [ ] No known data loss bugs
-- [ ] Commands work identically on macOS and Linux
-- [ ] Can set up new machine with published documentation
-- [ ] Core user journeys work without reading source code
+- [x] All critical features implemented and tested
+- [x] No known data loss bugs
+- [x] Commands work identically on macOS and Linux
+- [x] Can set up new machine with published documentation
+- [x] Core user journeys work without reading source code
 - [ ] Version changed from 0.x to 1.0.0
 - [ ] Release notes explain stability commitments
 - [ ] Tagged and released with pre-built binaries
@@ -180,10 +181,12 @@ Based on completed work and remaining tasks:
 - ✅ Linux support (Homebrew): COMPLETE
 - ✅ Progress indicators: COMPLETE
 - ✅ `.plonk/` exclusion: COMPLETE
-- [ ] Linux testing: 2-3 days
-- [ ] Documentation & cleanup: 1-2 days
+- ✅ Linux testing: COMPLETE
+- ✅ All critical bugs: FIXED
+- [ ] Documentation updates: In progress
+- [ ] Version update & release: Ready to execute
 
-**Remaining estimate**: 3-5 days of focused work
+**Remaining estimate**: Less than 1 day - documentation and release only
 
 ---
 
