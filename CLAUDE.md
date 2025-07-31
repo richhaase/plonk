@@ -356,7 +356,7 @@ Based on Linux validation testing, these must be fixed before v1.0:
    - Package manager errors not shown to users
    - Regression from previous fix attempt
 
-See `/tmp/v1-critical-fixes-plan.md` for detailed implementation plan.
+See `docs/planning/v1-critical-fixes-plan.md` for detailed implementation plan.
 
 ### Linux Testing Bug Fixes
 - **Bug #1 (Apply Drift Restoration)**: ✅ FIXED - Apply now processes both StateMissing and StateDegraded items
