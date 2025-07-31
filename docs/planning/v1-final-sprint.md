@@ -3,7 +3,7 @@
 ## Current Status (2025-07-31)
 
 **Completed**: All critical features and bug fixes
-**Remaining**: Documentation and release tasks only
+**Remaining**: Quality assurance and release preparation tasks
 **Target**: v1.0.0 release
 
 ## Setup Philosophy Change
@@ -19,9 +19,85 @@ This removes complexity while maintaining the "zero-config" philosophy.
 
 ## Remaining Tasks
 
-### 1. Linux Platform Testing (2-3 days)
+### 1. Comprehensive Test Review (1-2 days)
 
-**Purpose**: Validate plonk works identically on Linux as on macOS
+**Purpose**: Ensure test quality and coverage before v1.0
+
+**Scope**:
+- **Unit Tests**: Verify NO external calls, proper mocking
+- **Integration Tests**: Review coverage of system interactions
+- **BATS Tests**: Validate behavioral test completeness
+
+**Key Questions**:
+- Are unit tests truly isolated?
+- What's our test coverage percentage?
+- Are there critical paths without tests?
+- Can we improve test organization or clarity?
+
+**Deliverables**:
+- Test coverage report
+- List of tests that need fixing
+- Recommendations for improvement
+
+### 2. Code Complexity Review (1-2 days)
+
+**Purpose**: Identify and reduce unnecessary complexity introduced during revisions
+
+**Focus Areas**:
+- Functions that have grown too large
+- Duplicated logic that could be extracted
+- Complex conditionals that could be simplified
+- Error handling patterns that could be standardized
+
+**Deliverables**:
+- List of complexity hotspots
+- Refactoring recommendations
+- Any critical refactoring for v1.0
+
+### 3. Critical Documentation Review (1 day)
+
+**Purpose**: Ensure documentation is accurate, complete, and user-friendly
+
+**Scope**:
+- README.md accuracy and completeness
+- Command documentation review
+- Installation guide clarity
+- Examples and tutorials
+- API documentation (for library users)
+
+**Key Questions**:
+- What's missing that users need?
+- What's outdated or incorrect?
+- What's redundant and can be removed?
+- Are examples clear and working?
+
+**Deliverables**:
+- Documentation gap analysis
+- List of required updates
+- Cleanup recommendations
+
+### 4. Justfile and GitHub Actions Review (1 day)
+
+**Purpose**: Ensure build system and CI/CD are robust for v1.0
+
+**Justfile Review**:
+- Are all recipes still relevant and working?
+- Is the version management correct?
+- Are there missing helpful recipes?
+- Is the release process well-defined?
+
+**GitHub Actions Review**:
+- Is CI comprehensive enough?
+- Are we testing on all target platforms?
+- Is the release workflow ready for v1.0?
+- Are there security concerns?
+
+**Deliverables**:
+- List of improvements needed
+- Any critical fixes for v1.0
+- Documentation of release process
+
+### 5. Linux Platform Testing (COMPLETED)
 
 **Test Environments**:
 - Ubuntu 22.04 LTS (via Lima VM)
@@ -42,7 +118,7 @@ This removes complexity while maintaining the "zero-config" philosophy.
 - Bug fixes (if any)
 - Linux-specific documentation updates
 
-### 2. Documentation Updates & Release Prep (1-2 days)
+### 6. Documentation Updates & Release Prep (1-2 days)
 
 **Critical Updates**:
 - [ ] Remove stability warning from README
@@ -96,35 +172,43 @@ plonk install ripgrep
 Core commands and behaviors are now stable. Future changes will maintain backwards compatibility.
 ```
 
-## Daily Plan
+## Updated Sprint Plan
 
-### Day 1: Linux Testing Setup & Basic Validation
-- Set up Lima VMs for Ubuntu and Debian
-- Run basic command suite
-- Document any setup issues
-- Fix critical bugs
+### Phase 1: Quality Assurance (3-4 days)
+**Day 1: Test Review**
+- Analyze unit test coverage and isolation
+- Review integration test completeness
+- Validate BATS behavioral tests
+- Create improvement plan
 
-### Day 2: Full Linux Testing
-- Complete test scenarios from testing plan
-- Test edge cases
-- Verify WSL2 compatibility
-- Document Linux-specific behaviors
+**Day 2: Code Complexity**
+- Identify complexity hotspots
+- Review error handling patterns
+- Find duplicated logic
+- Plan critical refactoring
 
-### Day 3: Bug Fixes & Polish
-- Fix any issues found during testing
-- Update documentation based on findings
-- Prepare release notes
+**Day 3: Documentation & Build Review**
+- Critical documentation review
+- Justfile analysis
+- GitHub Actions review
+- Create documentation plan
 
-### Day 4: Documentation & Release
+**Day 4: Implement Critical Fixes**
+- Fix any critical issues found
+- Apply essential refactoring
+- Update critical documentation
+
+### Phase 2: Release Preparation (1-2 days)
+**Day 5: Final Documentation**
 - Remove stability warning
-- Update version numbers
-- Create comprehensive release notes
-- Tag v1.0.0
-- Create GitHub release with binaries
+- Update all documentation
+- Create release notes
+- Final review
 
-### Day 5: Buffer/Validation
-- Final validation on fresh systems
-- Address any last-minute issues
+**Day 6: Release**
+- Update version numbers
+- Tag v1.0.0
+- Create GitHub release
 - Announce release
 
 ## Success Criteria

@@ -447,6 +447,15 @@ This phase implemented critical improvements identified during documentation rev
   - Usage no longer printed after errors
   - Much cleaner error output for better readability
 
+#### Task 6: Pre-v1.0 Quality Assurance (In Progress - 2025-07-31)
+- **Started**: Comprehensive review phase before v1.0 release
+- **Planned Reviews**:
+  1. **Test Review**: Ensure unit tests have no external calls, check coverage
+  2. **Code Complexity**: Identify and reduce unnecessary complexity
+  3. **Documentation**: Critical review of all user-facing docs
+  4. **Build System**: Review justfile and GitHub Actions
+- **Goal**: Ensure v1.0 is truly production-ready with clean code and docs
+
 #### Task 5: Status UI/UX Improvements (Completed - 2025-07-30)
 - **Implemented**: Both status command improvements
 - **Sort Alphabetically**: Case-insensitive sorting within logical groups

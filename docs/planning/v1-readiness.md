@@ -183,10 +183,13 @@ Based on completed work and remaining tasks:
 - ✅ `.plonk/` exclusion: COMPLETE
 - ✅ Linux testing: COMPLETE
 - ✅ All critical bugs: FIXED
-- [ ] Documentation updates: In progress
-- [ ] Version update & release: Ready to execute
+- [ ] Test quality review: Unit test isolation, coverage analysis
+- [ ] Code complexity review: Identify and reduce complexity
+- [ ] Documentation review: Critical analysis and cleanup
+- [ ] Build system review: Justfile and GitHub Actions
+- [ ] Version update & release: After quality assurance
 
-**Remaining estimate**: Less than 1 day - documentation and release only
+**Remaining estimate**: 4-6 days including quality assurance phase
 
 ---
 
