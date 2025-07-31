@@ -43,10 +43,13 @@ func TestCrossPlatformIntegration(t *testing.T) {
 
 	// Create a lock file with Homebrew packages
 	lockContent := `version: 2
-packages:
-  brew:
-    - name: jq
+resources:
+  - type: package
+    id: "brew:jq"
+    metadata:
+      name: "jq"
       version: "1.6"
+      manager: "brew"
 `
 	require.NoError(t, os.WriteFile(filepath.Join(plonkDir, "plonk.lock"), []byte(lockContent), 0644))
 
@@ -62,7 +65,8 @@ packages:
 	})
 
 	t.Run("StatusShowsOnlyRelevantPackages", func(t *testing.T) {
-		cmd := exec.Command(plonkBinary, "status", "--packages")
+		// Check with --missing to see packages that need to be installed
+		cmd := exec.Command(plonkBinary, "status", "--packages", "--missing")
 		output, err := cmd.CombinedOutput()
 		require.NoError(t, err, "Status should succeed: %s", output)
 
@@ -71,6 +75,7 @@ packages:
 		// Homebrew packages shown if Homebrew is available
 		if _, err := exec.LookPath("brew"); err == nil {
 			require.Contains(t, outputStr, "jq")
+			require.Contains(t, outputStr, "missing")
 		}
 	})
 }
