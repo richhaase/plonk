@@ -119,7 +119,7 @@ test-integration:
         echo "   Set CI=true to override (at your own risk)"; \
         exit 1; \
     fi
-    go test -v -tags=integration ./test/integration/...
+    go test -v -tags=integration ./tests/integration/...
     @echo "✅ Integration tests completed!"
 
 # Clean build artifacts
