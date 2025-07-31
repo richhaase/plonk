@@ -106,9 +106,10 @@ plonk install pkg1 pkg2 pkg3
 
 ---
 
-#### 5. Apply Shows Useless Error Messages
+#### 5. ✅ FIXED - Apply Shows Useless Error Messages
 **Severity**: MEDIUM - Debugging nightmare
 **Affects**: All platforms
+**Status**: Fixed in commits f886c6c and f219198
 **Description**:
 - Errors show as "exit code 1: exit status 1"
 - Actual error from package manager is not captured
@@ -122,10 +123,8 @@ brew install fzf
 # Shows: Error: fzf: no bottle available!
 ```
 
-**Expected**: Show actual error from package manager
-**Actual**: Generic "exit status 1" message
-
-**Code Location**: Error handling in package operations
+**Root Cause**: Package managers were not including command output in error messages
+**Fix**: All package managers now include actual command output (trimmed to 500 chars) in error messages
 
 ---
 
@@ -182,14 +181,15 @@ plonk install wget  # Succeeds but shouldn't
 
 **Total Bugs Found**: 8
 - 2 HIGH priority (2 fixed, 0 remaining)
-- 3 MEDIUM priority (2 fixed/partial, 1 remaining)
+- 3 MEDIUM priority (3 fixed, 0 remaining - 1 partial)
 - 3 LOW priority (can defer)
 
-**Bugs Fixed**: 4/8 (1 partial)
+**Bugs Fixed**: 5/8 (1 partial)
 - ✅ Bug #1: Apply command drift restoration (HIGH)
 - ✅ Bug #2: Info command management status (HIGH)
 - ✅ Bug #3: SOURCE column dotfile display (MEDIUM)
 - ⚠️  Bug #4: Apply command progress indicators (MEDIUM - partially fixed)
+- ✅ Bug #5: Apply error messages (MEDIUM)
 
 **Key Finding**: Most bugs affect ALL platforms, not just Linux. The Linux testing was valuable for discovering these issues.
 
@@ -199,8 +199,8 @@ plonk install wget  # Succeeds but shouldn't
 2. ✅ Fix info command status (Quick fix) - DONE
 3. ✅ Fix SOURCE column display - DONE
 4. ⚠️  Add progress to apply - PARTIALLY DONE
-5. Improve error messages
-6. Address remaining issues
+5. ✅ Improve error messages - DONE
+6. Address remaining issues (3 LOW priority bugs)
 
 ## Testing Notes
 
