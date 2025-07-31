@@ -85,8 +85,8 @@ func TestDotfilesIntegration(t *testing.T) {
 	})
 
 	t.Run("RemoveDotfile", func(t *testing.T) {
-		// Remove the dotfile
-		cmd := exec.Command(plonkBinary, "rm", "testrc")
+		// Remove the dotfile - need to use the full path relative to HOME
+		cmd := exec.Command(plonkBinary, "rm", ".testrc")
 		output, err := cmd.CombinedOutput()
 		require.NoError(t, err, "Failed to remove dotfile: %s", output)
 

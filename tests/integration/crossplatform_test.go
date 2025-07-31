@@ -89,6 +89,6 @@ func TestPackageManagerDetection(t *testing.T) {
 		cmd := exec.Command(plonkBinary, "search", "fake:nginx")
 		output, err := cmd.CombinedOutput()
 		require.Error(t, err, "Fake manager search should fail")
-		require.Contains(t, string(output), "unsupported")
+		require.Contains(t, string(output), "not found")
 	})
 }
