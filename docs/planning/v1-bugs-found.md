@@ -130,14 +130,19 @@ brew install fzf
 
 ### 🟢 LOW Priority - Can Wait
 
-#### 6. Doctor Shows macOS Homebrew Path on Linux
+#### 6. ✅ FIXED - Doctor Shows macOS Homebrew Path on Linux
 **Severity**: LOW - Cosmetic issue
 **Affects**: Linux only
+**Status**: Fixed in commit 7ccc314
 **Description**:
 - Doctor checks `/opt/homebrew/bin` on Linux
 - Should check `/home/linuxbrew/.linuxbrew/bin`
 
-**Code Location**: `internal/diagnostics/health.go`
+**Root Cause**: Hardcoded macOS path was used for all platforms
+**Fix**: Added getHomebrewPath() function to detect OS and architecture:
+- macOS ARM64: /opt/homebrew/bin
+- macOS Intel: /usr/local/bin
+- Linux: /home/linuxbrew/.linuxbrew/bin
 
 ---
 
@@ -182,14 +187,15 @@ plonk install wget  # Succeeds but shouldn't
 **Total Bugs Found**: 8
 - 2 HIGH priority (2 fixed, 0 remaining)
 - 3 MEDIUM priority (3 fixed, 0 remaining - 1 partial)
-- 3 LOW priority (can defer)
+- 3 LOW priority (1 fixed, 2 remaining)
 
-**Bugs Fixed**: 5/8 (1 partial)
+**Bugs Fixed**: 6/8 (1 partial)
 - ✅ Bug #1: Apply command drift restoration (HIGH)
 - ✅ Bug #2: Info command management status (HIGH)
 - ✅ Bug #3: SOURCE column dotfile display (MEDIUM)
 - ⚠️  Bug #4: Apply command progress indicators (MEDIUM - partially fixed)
 - ✅ Bug #5: Apply error messages (MEDIUM)
+- ✅ Bug #6: Doctor Homebrew path on Linux (LOW)
 
 **Key Finding**: Most bugs affect ALL platforms, not just Linux. The Linux testing was valuable for discovering these issues.
 
