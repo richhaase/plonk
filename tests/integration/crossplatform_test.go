@@ -41,14 +41,14 @@ func TestCrossPlatformIntegration(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(filepath.Join(plonkDir, "plonk.yaml"), configData, 0644))
 
-	// Create a lock file with Homebrew packages
+	// Create a lock file with a package that's unlikely to be installed
 	lockContent := `version: 2
 resources:
   - type: package
-    id: "brew:jq"
+    id: "brew:plonk-test-nonexistent"
     metadata:
-      name: "jq"
-      version: "1.6"
+      name: "plonk-test-nonexistent"
+      version: "1.0.0"
       manager: "brew"
 `
 	require.NoError(t, os.WriteFile(filepath.Join(plonkDir, "plonk.lock"), []byte(lockContent), 0644))
@@ -74,7 +74,7 @@ resources:
 
 		// Homebrew packages shown if Homebrew is available
 		if _, err := exec.LookPath("brew"); err == nil {
-			require.Contains(t, outputStr, "jq")
+			require.Contains(t, outputStr, "plonk-test-nonexistent")
 			require.Contains(t, outputStr, "missing")
 		}
 	})
