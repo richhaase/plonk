@@ -79,9 +79,10 @@ ls ~/.config/plonk/config/bat/config  # File exists without dot
 
 ---
 
-#### 4. Apply Command Missing Progress Indicators
+#### 4. ✅ PARTIALLY FIXED - Apply Command Missing Progress Indicators
 **Severity**: MEDIUM - Poor user experience
 **Affects**: All platforms
+**Status**: Partially fixed in commit 920d370
 **Description**:
 - Individual install shows progress: `[1/3] Installing: package`
 - Apply shows nothing during operation
@@ -96,10 +97,12 @@ plonk install pkg1 pkg2 pkg3
 # Shows: [1/3] Installing: pkg1
 ```
 
-**Expected**: Apply should show progress like install command
-**Actual**: Silent operation until completion
+**Root Cause**: Two issues found:
+1. ProgressUpdate skipped output for single items (total <= 1) - FIXED
+2. Package managers use CombinedOutput() which doesn't stream real-time output - NOT FIXED
 
-**Code Location**: `internal/commands/apply.go` - needs progress indicators
+**Partial Fix**: Now shows "Installing: package" for all operations, including single items
+**Remaining Issue**: Still no real-time output from package managers during installation
 
 ---
 
@@ -179,13 +182,14 @@ plonk install wget  # Succeeds but shouldn't
 
 **Total Bugs Found**: 8
 - 2 HIGH priority (2 fixed, 0 remaining)
-- 3 MEDIUM priority (1 fixed, 2 remaining)
+- 3 MEDIUM priority (2 fixed/partial, 1 remaining)
 - 3 LOW priority (can defer)
 
-**Bugs Fixed**: 3/8
+**Bugs Fixed**: 4/8 (1 partial)
 - ✅ Bug #1: Apply command drift restoration (HIGH)
 - ✅ Bug #2: Info command management status (HIGH)
 - ✅ Bug #3: SOURCE column dotfile display (MEDIUM)
+- ⚠️  Bug #4: Apply command progress indicators (MEDIUM - partially fixed)
 
 **Key Finding**: Most bugs affect ALL platforms, not just Linux. The Linux testing was valuable for discovering these issues.
 
@@ -194,7 +198,7 @@ plonk install wget  # Succeeds but shouldn't
 1. ✅ Fix drift restoration in apply (CRITICAL) - DONE
 2. ✅ Fix info command status (Quick fix) - DONE
 3. ✅ Fix SOURCE column display - DONE
-4. Add progress to apply
+4. ⚠️  Add progress to apply - PARTIALLY DONE
 5. Improve error messages
 6. Address remaining issues
 
