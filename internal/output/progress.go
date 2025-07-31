@@ -6,12 +6,14 @@ package output
 import "fmt"
 
 // ProgressUpdate prints a progress update in consistent format
-// Only shows progress for multi-item operations (total > 1)
+// Shows progress for all operations when using apply command
 func ProgressUpdate(current, total int, operation, item string) {
-	if total <= 1 {
-		return // No progress for single items
+	if total > 1 {
+		fmt.Printf("[%d/%d] %s: %s\n", current, total, operation, item)
+	} else if total == 1 {
+		// For single items, still show what we're doing
+		fmt.Printf("%s: %s\n", operation, item)
 	}
-	fmt.Printf("[%d/%d] %s: %s\n", current, total, operation, item)
 }
 
 // StageUpdate prints a stage update for multi-stage operations
