@@ -35,13 +35,14 @@ cat ~/.bashrc_test                      # Still has modified content
 
 ---
 
-#### 2. Info Command Shows Wrong Management Status
+#### 2. ✅ FIXED - Info Command Shows Wrong Management Status
 **Severity**: HIGH - Confuses users about package state
 **Affects**: All platforms
+**Status**: Fixed in commit 5b58ed9
 **Description**:
 - `plonk info <package>` shows "Installed (not managed)" for packages that ARE managed
 - `plonk status` correctly shows them as "managed"
-- Info command is not checking the lock file
+- Info command was not checking the lock file when using prefix syntax
 
 **Test Case**:
 ```bash
@@ -50,10 +51,8 @@ plonk status | grep ripgrep    # Shows "managed" ✓
 plonk info brew:ripgrep        # Shows "Installed (not managed)" ✗
 ```
 
-**Expected**: Info should check lock file and show "Installed (managed)"
-**Actual**: Always shows "not managed" for installed packages
-
-**Code Location**: `internal/commands/info.go` - needs to check lock file
+**Root Cause**: The `getInfoFromSpecificManager` function (used for prefix syntax) wasn't checking the lock file
+**Fix**: Added lock file check to properly identify managed packages for both prefix and non-prefix syntax
 
 ---
 
@@ -180,16 +179,20 @@ plonk install wget  # Succeeds but shouldn't
 ## Summary
 
 **Total Bugs Found**: 8
-- 2 HIGH priority (blocks v1.0)
+- 2 HIGH priority (1 fixed, 1 remaining)
 - 3 MEDIUM priority (should fix)
 - 3 LOW priority (can defer)
+
+**Bugs Fixed**: 2/8
+- ✅ Bug #1: Apply command drift restoration (HIGH)
+- ✅ Bug #2: Info command management status (HIGH)
 
 **Key Finding**: Most bugs affect ALL platforms, not just Linux. The Linux testing was valuable for discovering these issues.
 
 ## Recommended Fix Order
 
-1. Fix drift restoration in apply (CRITICAL)
-2. Fix info command status (Quick fix)
+1. ✅ Fix drift restoration in apply (CRITICAL) - DONE
+2. ✅ Fix info command status (Quick fix) - DONE
 3. Fix SOURCE column display
 4. Add progress to apply
 5. Improve error messages
