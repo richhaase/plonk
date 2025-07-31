@@ -377,6 +377,15 @@ func (g *GemManager) handleInstallError(err error, output []byte, packageName st
 
 		// Only treat non-zero exit codes as errors
 		if exitCode != 0 {
+			// Include command output for better error messages
+			if len(output) > 0 {
+				// Trim the output and limit length for readability
+				errorOutput := strings.TrimSpace(string(output))
+				if len(errorOutput) > 500 {
+					errorOutput = errorOutput[:500] + "..."
+				}
+				return fmt.Errorf("package installation failed: %s", errorOutput)
+			}
 			return fmt.Errorf("package installation failed (exit code %d): %w", exitCode, err)
 		}
 		// Exit code 0 with no recognized error pattern - success
@@ -418,6 +427,15 @@ func (g *GemManager) handleUninstallError(err error, output []byte, packageName 
 
 		// Only treat non-zero exit codes as errors
 		if exitCode != 0 {
+			// Include command output for better error messages
+			if len(output) > 0 {
+				// Trim the output and limit length for readability
+				errorOutput := strings.TrimSpace(string(output))
+				if len(errorOutput) > 500 {
+					errorOutput = errorOutput[:500] + "..."
+				}
+				return fmt.Errorf("package uninstallation failed: %s", errorOutput)
+			}
 			return fmt.Errorf("package uninstallation failed (exit code %d): %w", exitCode, err)
 		}
 		// Exit code 0 with no recognized error pattern - success
