@@ -54,8 +54,9 @@ Examples:
   plonk add .config/nvim                # Adds entire nvim config directory
   plonk add ../myfile                   # Relative to current directory
   plonk add --dry-run ~/.zshrc ~/.vimrc # Preview what would be added`,
-	Args: cobra.MinimumNArgs(1),
-	RunE: runAdd,
+	Args:         cobra.MinimumNArgs(1),
+	RunE:         runAdd,
+	SilenceUsage: true,
 }
 
 func init() {

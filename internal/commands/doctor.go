@@ -35,7 +35,8 @@ Examples:
   plonk doctor           # Run health checks
   plonk doctor -o json   # Show as JSON
   plonk doctor -o yaml   # Show as YAML`,
-	RunE: runDoctor,
+	RunE:         runDoctor,
+	SilenceUsage: true,
 }
 
 func init() {

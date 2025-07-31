@@ -34,8 +34,9 @@ This command is useful for debugging and troubleshooting plonk issues.
 Examples:
   plonk env              # Show environment information
   plonk env -o json      # Output as JSON for scripting`,
-	RunE: runEnv,
-	Args: cobra.NoArgs,
+	RunE:         runEnv,
+	SilenceUsage: true,
+	Args:         cobra.NoArgs,
 }
 
 func init() {

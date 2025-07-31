@@ -31,8 +31,9 @@ Examples:
   plonk info brew:ripgrep     # Show ripgrep info specifically from Homebrew
   plonk info npm:typescript   # Show TypeScript info from npm
   plonk info --output json go # Show information in JSON format`,
-	Args: cobra.ExactArgs(1),
-	RunE: runInfo,
+	Args:         cobra.ExactArgs(1),
+	RunE:         runInfo,
+	SilenceUsage: true,
 }
 
 func init() {

@@ -37,6 +37,7 @@ and managing dotfiles across multiple package managers.`,
 		}
 		return cmd.Help()
 	},
+	SilenceUsage: true,
 }
 
 func init() {

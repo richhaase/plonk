@@ -29,8 +29,9 @@ Examples:
   plonk diff                # Show all drifted files
   plonk diff ~/.vimrc       # Show diff for specific file
   plonk diff vimrc          # Use config name directly`,
-	Args: cobra.MaximumNArgs(1),
-	RunE: runDiff,
+	Args:         cobra.MaximumNArgs(1),
+	RunE:         runDiff,
+	SilenceUsage: true,
 }
 
 func init() {

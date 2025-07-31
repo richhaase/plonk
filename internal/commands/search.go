@@ -28,8 +28,9 @@ Examples:
   plonk search typescript       # Search all managers for typescript
   plonk search brew:ripgrep     # Search only Homebrew for ripgrep
   plonk search npm:@types/node  # Search only npm for @types/node`,
-	Args: cobra.ExactArgs(1),
-	RunE: runSearch,
+	Args:         cobra.ExactArgs(1),
+	RunE:         runSearch,
+	SilenceUsage: true,
 }
 
 func init() {

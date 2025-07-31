@@ -34,8 +34,9 @@ Examples:
   plonk install gem:bundler gem:rubocop   # Install Ruby tools with gem
   plonk install go:golang.org/x/tools/cmd/gopls  # Install Go tools with go install
   plonk install --dry-run htop neovim     # Preview what would be installed`,
-	Args: cobra.MinimumNArgs(1),
-	RunE: runInstall,
+	Args:         cobra.MinimumNArgs(1),
+	RunE:         runInstall,
+	SilenceUsage: true,
 }
 
 func init() {
@@ -141,6 +142,10 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	for _, result := range allResults {
 		icon := GetStatusIcon(result.Status)
 		fmt.Printf("%s %s %s\n", icon, result.Status, result.Name)
+		// Show error details for failed operations
+		if result.Status == "failed" && result.Error != nil {
+			fmt.Printf("   Error: %s\n", result.Error.Error())
+		}
 	}
 
 	// Create output data using standardized format

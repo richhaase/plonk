@@ -850,12 +850,9 @@ func (m *Manager) GetActualDotfiles(ctx context.Context) ([]resources.Item, erro
 	// Load config to get ignore patterns and expand directories
 	cfg := config.LoadWithDefaults(m.configDir)
 
-	// Combine ignore patterns with unmanaged filters for scanning
-	allPatterns := append([]string{}, cfg.IgnorePatterns...)
-	allPatterns = append(allPatterns, cfg.Dotfiles.UnmanagedFilters...)
-
-	// Create filter with combined patterns
-	filter := NewFilter(allPatterns, m.configDir, true)
+	// Only use IgnorePatterns for managed dotfile scanning
+	// UnmanagedFilters should NOT be applied here as they're only for unmanaged file discovery
+	filter := NewFilter(cfg.IgnorePatterns, m.configDir, true)
 
 	// Create scanner
 	scanner := NewScanner(m.homeDir, filter)

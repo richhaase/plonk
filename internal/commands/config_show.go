@@ -30,8 +30,9 @@ Examples:
   plonk config show           # Show effective configuration
   plonk config show -o json   # Show as JSON
   plonk config show -o yaml   # Show as YAML (default)`,
-	RunE: runConfigShow,
-	Args: cobra.NoArgs,
+	RunE:         runConfigShow,
+	SilenceUsage: true,
+	Args:         cobra.NoArgs,
 }
 
 func init() {

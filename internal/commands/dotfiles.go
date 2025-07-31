@@ -21,8 +21,9 @@ Examples:
   plonk dotfiles --missing      # Show only missing dotfiles
   plonk dotfiles --managed      # Show only managed dotfiles
   plonk dotfiles --untracked    # Show only untracked dotfiles`,
-	RunE: runDotfiles,
-	Args: cobra.NoArgs,
+	RunE:         runDotfiles,
+	SilenceUsage: true,
+	Args:         cobra.NoArgs,
 }
 
 func init() {

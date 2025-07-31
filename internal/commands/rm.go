@@ -50,8 +50,9 @@ Examples:
   plonk rm vimrc                       # Finds ~/.vimrc automatically
   plonk rm .config/nvim/init.lua       # Remove specific nested file
   plonk rm --dry-run ~/.zshrc ~/.vimrc # Preview what would be removed`,
-	Args: cobra.MinimumNArgs(1),
-	RunE: runRm,
+	Args:         cobra.MinimumNArgs(1),
+	RunE:         runRm,
+	SilenceUsage: true,
 }
 
 func init() {

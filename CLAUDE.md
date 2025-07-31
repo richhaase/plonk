@@ -428,6 +428,25 @@ This phase implemented critical improvements identified during documentation rev
   - Consistent behavior across output formats
 - **Note**: JSON/YAML removal (original Task 4) not implemented per user guidance
 
+#### Task 5: Critical Bug Fixes for v1.0 (Completed - 2025-07-31)
+- **Completed**: All 3 critical bugs fixed plus UX improvement
+- **Bug 1 - Non-functional --force Flags**:
+  - Removed --force flag from install command
+  - Note: Only install had the flag (documentation was incorrect)
+  - Flag was actually functional but user requested removal
+- **Bug 2 - config/test/ Path Reconciliation**:
+  - Fixed: Files under `config/test/` always showed as "missing"
+  - Root cause: UnmanagedFilters incorrectly applied to managed files
+  - Solution: Only use IgnorePatterns for managed file scanning
+- **Bug 3 - Error Message Display**:
+  - Fixed: Package manager errors now show actual output
+  - Added error details display for failed operations
+  - Users can now see "no bottle available", "package not found", etc.
+- **Bonus - UX Improvement**:
+  - Added `SilenceUsage: true` to all commands
+  - Usage no longer printed after errors
+  - Much cleaner error output for better readability
+
 #### Task 5: Status UI/UX Improvements (Completed - 2025-07-30)
 - **Implemented**: Both status command improvements
 - **Sort Alphabetically**: Case-insensitive sorting within logical groups

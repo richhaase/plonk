@@ -30,8 +30,9 @@ Examples:
   plonk uninstall brew:git                # Uninstall git specifically with Homebrew
   plonk uninstall npm:lodash              # Uninstall lodash from npm global packages
   plonk uninstall --dry-run htop          # Preview what would be uninstalled`,
-	Args: cobra.MinimumNArgs(1),
-	RunE: runUninstall,
+	Args:         cobra.MinimumNArgs(1),
+	RunE:         runUninstall,
+	SilenceUsage: true,
 }
 
 func init() {
@@ -129,6 +130,10 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	for _, result := range allResults {
 		icon := GetStatusIcon(result.Status)
 		fmt.Printf("%s %s %s\n", icon, result.Status, result.Name)
+		// Show error details for failed operations
+		if result.Status == "failed" && result.Error != nil {
+			fmt.Printf("   Error: %s\n", result.Error.Error())
+		}
 	}
 
 	// Create output data using standardized format

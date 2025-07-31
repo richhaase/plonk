@@ -35,8 +35,9 @@ Only values that differ from defaults are saved to keep your config minimal.
 Examples:
   plonk config edit               # Edit configuration file
   EDITOR=vim plonk config edit    # Use vim as editor`,
-	RunE: runConfigEdit,
-	Args: cobra.NoArgs,
+	RunE:         runConfigEdit,
+	SilenceUsage: true,
+	Args:         cobra.NoArgs,
 }
 
 func init() {

@@ -40,8 +40,9 @@ Examples:
   plonk clone richhaase/dotfiles         # Clone specific user's dotfiles
   plonk clone user/repo --no-apply       # Clone without running apply
   plonk clone --yes user/dotfiles        # Non-interactive mode`,
-	Args: cobra.ExactArgs(1),
-	RunE: runClone,
+	Args:         cobra.ExactArgs(1),
+	RunE:         runClone,
+	SilenceUsage: true,
 }
 
 func init() {

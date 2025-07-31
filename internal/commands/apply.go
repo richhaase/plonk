@@ -31,8 +31,9 @@ Examples:
   plonk apply --dry-run   # Show what would be applied without making changes
   plonk apply --packages  # Apply packages only
   plonk apply --dotfiles  # Apply dotfiles only`,
-	RunE: runApply,
-	Args: cobra.NoArgs,
+	RunE:         runApply,
+	SilenceUsage: true,
+	Args:         cobra.NoArgs,
 }
 
 func init() {

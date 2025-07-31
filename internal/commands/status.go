@@ -46,7 +46,8 @@ Examples:
   plonk status --missing --packages  # Show only missing packages
   plonk status -o json      # Show as JSON
   plonk status -o yaml      # Show as YAML`,
-	RunE: runStatus,
+	RunE:         runStatus,
+	SilenceUsage: true,
 }
 
 func init() {
