@@ -178,26 +178,26 @@ func ApplyDotfiles(ctx context.Context, configDir, homeDir string, cfg *config.C
 	var actions []DotfileActionApplyResult
 	summary := DotfileSummaryApplyResult{}
 
-	// Count missing dotfiles
-	missingCount := 0
+	// Count missing and drifted dotfiles
+	applyCount := 0
 	for _, item := range reconciled {
-		if item.State == resources.StateMissing {
-			missingCount++
+		if item.State == resources.StateMissing || item.State == resources.StateDegraded {
+			applyCount++
 		}
 	}
 
 	// Show overall progress for dotfiles
-	if missingCount > 0 {
-		output.StageUpdate(fmt.Sprintf("Applying dotfiles (%d missing)...", missingCount))
+	if applyCount > 0 {
+		output.StageUpdate(fmt.Sprintf("Applying dotfiles (%d missing/drifted)...", applyCount))
 	}
 
-	// Process missing dotfiles (need to be created/linked)
+	// Process missing and drifted dotfiles (need to be created/restored)
 	dotfileIndex := 0
 	for _, item := range reconciled {
-		if item.State == resources.StateMissing {
+		if item.State == resources.StateMissing || item.State == resources.StateDegraded {
 			dotfileIndex++
 			// Show progress for each dotfile
-			output.ProgressUpdate(dotfileIndex, missingCount, "Deploying", item.Name)
+			output.ProgressUpdate(dotfileIndex, applyCount, "Deploying", item.Name)
 
 			if !dryRun {
 				// Apply the change using the resource interface
