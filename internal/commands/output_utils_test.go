@@ -243,3 +243,155 @@ func TestFormatNotFoundError(t *testing.T) {
 		})
 	}
 }
+
+func TestGetStatusIcon(t *testing.T) {
+	tests := []struct {
+		name     string
+		status   string
+		expected string
+	}{
+		// Success cases
+		{
+			name:     "managed status",
+			status:   "managed",
+			expected: IconSuccess,
+		},
+		{
+			name:     "added status",
+			status:   "added",
+			expected: IconSuccess,
+		},
+		{
+			name:     "installed status",
+			status:   "installed",
+			expected: IconSuccess,
+		},
+		{
+			name:     "removed status",
+			status:   "removed",
+			expected: IconSuccess,
+		},
+		{
+			name:     "success status",
+			status:   "success",
+			expected: IconSuccess,
+		},
+		{
+			name:     "completed status",
+			status:   "completed",
+			expected: IconSuccess,
+		},
+		{
+			name:     "deployed status",
+			status:   "deployed",
+			expected: IconSuccess,
+		},
+		// Warning cases
+		{
+			name:     "missing status",
+			status:   "missing",
+			expected: IconWarning,
+		},
+		{
+			name:     "warn status",
+			status:   "warn",
+			expected: IconWarning,
+		},
+		{
+			name:     "warning status",
+			status:   "warning",
+			expected: IconWarning,
+		},
+		{
+			name:     "would-install status",
+			status:   "would-install",
+			expected: IconWarning,
+		},
+		{
+			name:     "would-remove status",
+			status:   "would-remove",
+			expected: IconWarning,
+		},
+		{
+			name:     "would-add status",
+			status:   "would-add",
+			expected: IconWarning,
+		},
+		{
+			name:     "would-update status",
+			status:   "would-update",
+			expected: IconWarning,
+		},
+		// Error cases
+		{
+			name:     "failed status",
+			status:   "failed",
+			expected: IconError,
+		},
+		{
+			name:     "error status",
+			status:   "error",
+			expected: IconError,
+		},
+		{
+			name:     "fail status",
+			status:   "fail",
+			expected: IconError,
+		},
+		// Unknown cases
+		{
+			name:     "untracked status",
+			status:   "untracked",
+			expected: IconUnknown,
+		},
+		{
+			name:     "unknown status",
+			status:   "unknown",
+			expected: IconUnknown,
+		},
+		{
+			name:     "available status",
+			status:   "available",
+			expected: IconUnknown,
+		},
+		// Info cases
+		{
+			name:     "skipped status",
+			status:   "skipped",
+			expected: IconInfo,
+		},
+		{
+			name:     "already-configured status",
+			status:   "already-configured",
+			expected: IconInfo,
+		},
+		{
+			name:     "already-installed status",
+			status:   "already-installed",
+			expected: IconInfo,
+		},
+		{
+			name:     "already-managed status",
+			status:   "already-managed",
+			expected: IconInfo,
+		},
+		// Default case
+		{
+			name:     "unrecognized status",
+			status:   "something-else",
+			expected: IconSkipped,
+		},
+		{
+			name:     "empty status",
+			status:   "",
+			expected: IconSkipped,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := GetStatusIcon(tt.status)
+			assert.Equal(t, tt.expected, result, "GetStatusIcon(%q) = %q, want %q", tt.status, result, tt.expected)
+		})
+	}
+}
