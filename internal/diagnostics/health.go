@@ -428,6 +428,25 @@ func checkExecutablePath() HealthCheck {
 	return check
 }
 
+// getHomebrewPath returns the correct Homebrew bin path based on OS and architecture
+func getHomebrewPath() string {
+	switch runtime.GOOS {
+	case "darwin":
+		// macOS: Check architecture
+		if runtime.GOARCH == "arm64" {
+			return "/opt/homebrew/bin"
+		}
+		// Intel Mac
+		return "/usr/local/bin"
+	case "linux":
+		// Linux: Standard Linuxbrew location
+		return "/home/linuxbrew/.linuxbrew/bin"
+	default:
+		// Fallback to macOS ARM64 path
+		return "/opt/homebrew/bin"
+	}
+}
+
 // checkPathConfiguration checks PATH configuration for installed packages
 func checkPathConfiguration() HealthCheck {
 	check := HealthCheck{
@@ -450,7 +469,7 @@ func checkPathConfiguration() HealthCheck {
 	// Define important paths for each package manager
 	importantPaths := map[string]string{
 		"System":     "/usr/local/bin",
-		"Homebrew":   "/opt/homebrew/bin",
+		"Homebrew":   getHomebrewPath(),
 		"Cargo":      filepath.Join(homeDir, ".cargo/bin"),
 		"Go":         goBinDir,
 		"Python/pip": pythonUserBin,
