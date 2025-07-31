@@ -574,9 +574,19 @@ Rejected features:
 ### Progress Summary
 - **Start Date**: 2025-07-30
 - **Target Completion**: Mid-August 2025 (2-3 weeks total)
-- **Current Status**: 5 of 8 tasks complete, 1 skipped (62.5%)
+- **Current Status**: 6 of 8 tasks complete, 1 skipped (75%)
 - **Current Phase**: Polish & Release (Week 3)
 - **Days Elapsed**: 1
+
+### Linux Testing Findings (2025-07-30)
+- **Platform Tested**: Ubuntu 24.10 arm64 via Lima
+- **Major Success**: Core functionality works on Linux
+- **Bugs Found**:
+  - Apply doesn't restore drifted files (HIGH)
+  - Info command shows wrong status (HIGH)
+  - Doctor shows macOS Homebrew path (MEDIUM)
+  - Permission errors not caught (MEDIUM)
+- **Next**: Fix bugs, test clone workflow, test WSL2
 
 ### Success Criteria
 - ✅ One command setup works on Mac/Linux
@@ -656,12 +666,14 @@ Rejected features:
 
 Based on [v1-final-sprint.md](docs/planning/v1-final-sprint.md):
 
-1. **Linux Platform Testing** (2-3 days)
-   - Test on Ubuntu 22.04 LTS and Debian 12 via Lima VM
-   - Verify Homebrew installation process on Linux
-   - Ensure all package managers work identically to macOS
-   - Document any Linux-specific setup requirements
-   - Test WSL2 compatibility
+1. **Linux Platform Testing** (2-3 days) - IN PROGRESS
+   - ✅ Tested on Ubuntu 24.10 via Lima VM
+   - ✅ Verified Homebrew installation process on Linux
+   - ✅ Package managers work (with bugs noted)
+   - ✅ Documented Linux-specific findings
+   - ⏳ Clone workflow test pending
+   - ⏳ WSL2 compatibility pending
+   - 📝 See [linux-test-results.md](docs/planning/linux-test-results.md) for details
 
 2. **Documentation Updates & Release Prep** (1-2 days)
    - ✅ Remove stability warning from README (already done)
