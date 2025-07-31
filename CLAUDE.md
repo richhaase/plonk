@@ -315,6 +315,7 @@ For each file, we will follow this process:
 ### Linux Testing Bug Fixes
 - **Bug #1 (Apply Drift Restoration)**: ✅ FIXED - Apply now processes both StateMissing and StateDegraded items
 - **Bug #2 (Info Command Status)**: ✅ FIXED - Info command now checks lock file for both prefix and non-prefix syntax
+- **Bug #3 (SOURCE Column Display)**: ✅ FIXED - Status command now shows actual source paths from metadata instead of deployment paths
 
 ## Implementation Enhancement Phase (Completed - 2025-07-30)
 

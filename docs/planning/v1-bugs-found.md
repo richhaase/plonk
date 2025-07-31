@@ -58,9 +58,10 @@ plonk info brew:ripgrep        # Shows "Installed (not managed)" ✗
 
 ### 🟡 MEDIUM Priority - Should Fix for v1.0
 
-#### 3. SOURCE Column Shows Incorrect Dotfile Paths
+#### 3. ✅ FIXED - SOURCE Column Shows Incorrect Dotfile Paths
 **Severity**: MEDIUM - Confusing display issue
 **Affects**: All platforms
+**Status**: Fixed in commit a2754ce
 **Description**:
 - Status shows SOURCE as `.config/bat/config`
 - Actual source is `config/bat/config` (no leading dot)
@@ -73,10 +74,8 @@ plonk status --dotfiles
 ls ~/.config/plonk/config/bat/config  # File exists without dot
 ```
 
-**Expected**: SOURCE should show actual path: `config/bat/config`
-**Actual**: Shows deployment path with added dot
-
-**Code Location**: Status display logic, possibly in `internal/commands/status.go`
+**Root Cause**: The status command was using `item.Name` which contains the deployment path
+**Fix**: Updated to use the `source` field from metadata which contains the actual source path
 
 ---
 
@@ -179,13 +178,14 @@ plonk install wget  # Succeeds but shouldn't
 ## Summary
 
 **Total Bugs Found**: 8
-- 2 HIGH priority (1 fixed, 1 remaining)
-- 3 MEDIUM priority (should fix)
+- 2 HIGH priority (2 fixed, 0 remaining)
+- 3 MEDIUM priority (1 fixed, 2 remaining)
 - 3 LOW priority (can defer)
 
-**Bugs Fixed**: 2/8
+**Bugs Fixed**: 3/8
 - ✅ Bug #1: Apply command drift restoration (HIGH)
 - ✅ Bug #2: Info command management status (HIGH)
+- ✅ Bug #3: SOURCE column dotfile display (MEDIUM)
 
 **Key Finding**: Most bugs affect ALL platforms, not just Linux. The Linux testing was valuable for discovering these issues.
 
@@ -193,7 +193,7 @@ plonk install wget  # Succeeds but shouldn't
 
 1. ✅ Fix drift restoration in apply (CRITICAL) - DONE
 2. ✅ Fix info command status (Quick fix) - DONE
-3. Fix SOURCE column display
+3. ✅ Fix SOURCE column display - DONE
 4. Add progress to apply
 5. Improve error messages
 6. Address remaining issues
