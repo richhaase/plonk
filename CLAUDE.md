@@ -578,15 +578,17 @@ Rejected features:
 - **Current Phase**: Polish & Release (Week 3)
 - **Days Elapsed**: 1
 
-### Linux Testing Findings (2025-07-30)
+### Linux Testing Results (2025-07-30)
 - **Platform Tested**: Ubuntu 24.10 arm64 via Lima
-- **Major Success**: Core functionality works on Linux
-- **Bugs Found**:
-  - Apply doesn't restore drifted files (HIGH)
-  - Info command shows wrong status (HIGH)
-  - Doctor shows macOS Homebrew path (MEDIUM)
-  - Permission errors not caught (MEDIUM)
-- **Next**: Fix bugs, test clone workflow, test WSL2
+- **Major Finding**: Testing revealed 8 bugs that affect ALL platforms
+- **Clone Test**: ✅ Successfully cloned and applied real dotfiles repo
+- **Key Issues**:
+  - 2 HIGH priority bugs blocking v1.0 (drift restore, info status)
+  - 3 MEDIUM priority bugs (display, progress, errors)
+  - 3 LOW priority bugs (can defer)
+  - ARM64 Linux has limited Homebrew bottles
+- **Recommendation**: Fix platform-wide bugs before v1.0
+- **Details**: See [v1-bugs-found.md](docs/planning/v1-bugs-found.md)
 
 ### Success Criteria
 - ✅ One command setup works on Mac/Linux

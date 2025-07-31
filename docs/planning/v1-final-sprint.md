@@ -131,11 +131,21 @@ Core commands and behaviors are now stable. Future changes will maintain backwar
 
 v1.0 ships when:
 - [x] All critical features work reliably
-- [ ] Linux testing shows parity with macOS
+- [x] Linux testing shows parity with macOS (with bugs documented)
+- [ ] Critical bugs fixed (drift restore, info status)
 - [ ] Documentation reflects current behavior
 - [ ] Version updated to 1.0.0
 - [ ] Release notes explain stability
 - [ ] Tagged and released on GitHub
+
+## Bugs Blocking v1.0
+
+Based on Linux testing, these bugs affect ALL platforms and must be fixed:
+
+1. **Apply doesn't restore drifted files** (CRITICAL)
+2. **Info shows wrong management status** (HIGH)
+
+See [v1-bugs-found.md](v1-bugs-found.md) for complete list.
 
 ## Implications of Homebrew Prerequisite
 

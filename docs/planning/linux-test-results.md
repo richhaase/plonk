@@ -113,13 +113,36 @@
    - Note Homebrew installation location difference
    - Add troubleshooting for terminal warnings
 
+## Clone Workflow Test Results
+
+**Date**: 2025-07-30
+**Test Repository**: richhaase/dotfiles
+**Result**: ✅ Successful with issues noted
+
+### What Worked
+1. Repository cloned successfully
+2. Detected required package managers from lock file (brew, npm, go)
+3. Auto-installed Node.js when npm was missing
+4. Deployed 20 dotfiles successfully
+5. Managed 31 packages (29 installed, 2 npm packages)
+
+### Issues During Clone
+1. No progress indicators during apply phase
+2. 8 packages failed to install (ARM64 bottle issue)
+3. Unhelpful error messages for failures
+
+### Post-Clone Status
+- 51 total managed items (40 packages, 21 dotfiles)
+- 9 packages showing as "missing" (mostly ARM64 bottle issues)
+- All dotfiles deployed successfully
+
 ## Next Steps
 
-1. Test clone workflow on fresh VM (pending)
+1. Fix identified bugs (see v1-bugs-found.md)
 2. Test concurrent operations
 3. Test WSL2 compatibility
-4. Fix identified bugs
-5. Update documentation for Linux users
+4. Update documentation for Linux users
+5. Document ARM64 limitations
 
 ## Overall Assessment
 
