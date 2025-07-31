@@ -356,7 +356,11 @@ func (s StatusOutput) TableOutput() string {
 				// Show managed dotfiles (unless showing only missing)
 				if !s.ShowMissing {
 					for _, item := range dotfileResult.Managed {
+						// Use source from metadata if available, otherwise fall back to Name
 						source := item.Name
+						if src, ok := item.Metadata["source"].(string); ok {
+							source = src
+						}
 						target := ""
 						if dest, ok := item.Metadata["destination"].(string); ok {
 							target = dest
@@ -372,7 +376,11 @@ func (s StatusOutput) TableOutput() string {
 
 				// Show missing dotfiles
 				for _, item := range dotfileResult.Missing {
+					// Use source from metadata if available, otherwise fall back to Name
 					source := item.Name
+					if src, ok := item.Metadata["source"].(string); ok {
+						source = src
+					}
 					target := ""
 					if dest, ok := item.Metadata["destination"].(string); ok {
 						target = dest
