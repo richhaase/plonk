@@ -294,7 +294,6 @@ func installLanguagePackage(ctx context.Context, manager string, cfg Config) err
 	opts := packages.InstallOptions{
 		Manager: currentConfig.DefaultManager,
 		DryRun:  false,
-		Force:   false,
 	}
 
 	_, err = packages.InstallPackages(ctx, configDir, []string{packageName}, opts)

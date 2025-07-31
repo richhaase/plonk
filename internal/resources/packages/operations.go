@@ -18,7 +18,6 @@ import (
 type InstallOptions struct {
 	Manager string
 	DryRun  bool
-	Force   bool
 }
 
 // UninstallOptions configures package uninstallation operations
@@ -52,7 +51,7 @@ func InstallPackages(ctx context.Context, configDir string, packages []string, o
 		}
 
 		// Install single package
-		result := installSinglePackage(ctx, configDir, lockService, packageName, manager, opts.DryRun, opts.Force)
+		result := installSinglePackage(ctx, configDir, lockService, packageName, manager, opts.DryRun)
 		results = append(results, result)
 	}
 
@@ -106,7 +105,7 @@ func UninstallPackages(ctx context.Context, configDir string, packages []string,
 }
 
 // installSinglePackage installs a single package
-func installSinglePackage(ctx context.Context, configDir string, lockService *lock.YAMLLockService, packageName, manager string, dryRun, force bool) resources.OperationResult {
+func installSinglePackage(ctx context.Context, configDir string, lockService *lock.YAMLLockService, packageName, manager string, dryRun bool) resources.OperationResult {
 	result := resources.OperationResult{
 		Name:    packageName,
 		Manager: manager,
@@ -120,11 +119,9 @@ func installSinglePackage(ctx context.Context, configDir string, lockService *lo
 
 	// Check if already managed
 	if lockService.HasPackage(manager, checkPackageName) {
-		if !force {
-			result.Status = "skipped"
-			result.AlreadyManaged = true
-			return result
-		}
+		result.Status = "skipped"
+		result.AlreadyManaged = true
+		return result
 	}
 
 	if dryRun {

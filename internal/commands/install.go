@@ -43,7 +43,6 @@ func init() {
 
 	// Common flags
 	installCmd.Flags().BoolP("dry-run", "n", false, "Show what would be installed without making changes")
-	installCmd.Flags().BoolP("force", "f", false, "Force installation even if already managed")
 }
 
 func runInstall(cmd *cobra.Command, args []string) error {
@@ -56,7 +55,6 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 	// Get flags (only common flags now)
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
-	force, _ := cmd.Flags().GetBool("force")
 
 	// Get directories and config
 	configDir := config.GetDefaultConfigDirectory()
@@ -118,7 +116,6 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		opts := packages.InstallOptions{
 			Manager: manager,
 			DryRun:  dryRun,
-			Force:   force,
 		}
 
 		// Process this package with configurable timeout
