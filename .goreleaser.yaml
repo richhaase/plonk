@@ -18,14 +18,9 @@ builds:
     goos:
       - linux
       - darwin
-      - windows
     goarch:
       - amd64
       - arm64
-    # Skip certain combinations
-    ignore:
-      - goos: windows
-        goarch: arm64
     # Custom ldflags for version info
     ldflags:
       - -s -w
@@ -43,9 +38,6 @@ archives:
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
-    format_overrides:
-      - goos: windows
-        format: zip
     formats:
       - tar.gz
     files:
@@ -134,8 +126,8 @@ homebrew_casks:
       It requires Homebrew as a prerequisite.
     # No hooks needed - signing handles quarantine
 
-# Sign binaries with Apple Developer ID
-signs:
+# Sign macOS binaries with Apple Developer ID
+binary_signs:
   - cmd: quill
     args:
       - sign-and-notarize
@@ -145,6 +137,9 @@ signs:
       - -vv
     artifacts: binary
     output: true
+    # Only sign macOS binaries
+    goos:
+      - darwin
     env:
       - QUILL_SIGN_P12={{ .Env.QUILL_SIGN_P12 }}
       - QUILL_SIGN_PASSWORD={{ .Env.QUILL_SIGN_PASSWORD }}
