@@ -8,13 +8,14 @@ All critical features and bug fixes are complete. Now in quality assurance phase
 ### Remaining QA Tasks
 1. ✅ **Test Coverage Improvement** - Successfully achieved 61.7% coverage for packages/ (exceeded 60% target)
 2. ✅ **Code Complexity Review** - Completed analysis, found acceptable for v1.0
-3. **Critical Documentation Review** - Ensure accuracy and completeness
+3. ✅ **Critical Documentation Review** - Fixed outdated command references
 4. **Justfile and GitHub Actions Review** - Validate build and CI/CD readiness
 
 ### Recent Work Completed
 - ✅ **Command Executor Interface** - Implemented for all package managers
 - ✅ **Test Coverage Improvement** - Achieved 61.7% for packages/ (up from 21.7%)
 - ✅ **Code Complexity Review** - Analyzed 105 Go files, identified refactoring opportunities for post-v1.0
+- ✅ **Critical Documentation Review** - Fixed outdated references to defunct commands
 
 ### Test Architecture Improvement Summary
 - **Problem**: Package managers were tightly coupled to exec.Command, preventing unit testing
@@ -27,6 +28,12 @@ All critical features and bug fixes are complete. Now in quality assurance phase
 - **Found**: 7 functions >100 lines, duplicate patterns in validation/error handling
 - **Recommendation**: NO refactoring before v1.0 - code is stable and well-tested
 - **Documentation**: See docs/planning/code-complexity-review.md for post-v1.0 roadmap
+
+### Critical Documentation Review Summary
+- **Found**: Outdated references to defunct `setup` and `init` commands in README
+- **Fixed**: Updated README.md to use correct `clone` command
+- **Status**: Documentation ready for v1.0 (stability warning to be removed when tagging)
+- **Documentation**: See docs/planning/documentation-review.md for full analysis
 
 ## Critical Implementation Guidelines
 
@@ -102,3 +109,8 @@ All critical features and bug fixes are complete. Now in quality assurance phase
 - Analyzed entire codebase with scc and manual review
 - Identified refactoring opportunities for post-v1.0
 - Determined current complexity acceptable for v1.0 release
+
+### Critical Documentation Review ✅
+- Reviewed all documentation files for accuracy
+- Fixed outdated command references in README.md
+- Documentation ready for v1.0 release
