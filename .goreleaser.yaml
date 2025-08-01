@@ -43,9 +43,11 @@ archives:
       {{- if eq .Arch "amd64" }}x86_64
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
     formats:
       - tar.gz
-      - zip
     files:
       - README.md
       - LICENSE
@@ -107,26 +109,28 @@ release:
     brew install richhaase/tap/plonk
     ```
 
-brews:
+homebrew_casks:
   - name: plonk
     repository:
       owner: richhaase
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Formula
     homepage: "https://github.com/richhaase/plonk"
     description: "The unified package and dotfile manager for developers who tinker"
     license: "MIT"
     commit_author:
       name: goreleaserbot
       email: bot@goreleaser.com
-    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
-    caveats: |
-      Plonk requires Homebrew to be installed as a prerequisite.
-      Get started with:
-        plonk --help
-        plonk clone <your-github-username>/dotfiles
-      Documentation: https://github.com/richhaase/plonk#readme
+    commit_msg_template: "Cask update for {{ .ProjectName }} version {{ .Tag }}"
+    # Casks directory is the default, no need to specify
+    # Since plonk is a CLI tool, we need to handle the binary installation
+    hooks:
+      post:
+        install: |
+          # Remove quarantine attribute to avoid "unidentified developer" warnings
+          if system_command("/usr/bin/xattr", args: ["-h"]).exit_status == 0
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/plonk"
+          end
 
 # Announce releases on social media (optional)
 announce:
