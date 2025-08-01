@@ -50,6 +50,28 @@ func (r *RealCommandExecutor) CombinedOutput(ctx context.Context, name string, a
 func (r *RealCommandExecutor) LookPath(name string) (string, error) {
     return exec.LookPath(name)
 }
+
+// Package-level default executor
+var defaultExecutor CommandExecutor = &RealCommandExecutor{}
+
+// SetDefaultExecutor allows tests to override the executor
+func SetDefaultExecutor(executor CommandExecutor) {
+    defaultExecutor = executor
+}
+
+// Updated helper functions use defaultExecutor
+func ExecuteCommand(ctx context.Context, name string, args ...string) ([]byte, error) {
+    return defaultExecutor.Execute(ctx, name, args...)
+}
+
+func ExecuteCommandCombined(ctx context.Context, name string, args ...string) ([]byte, error) {
+    return defaultExecutor.CombinedOutput(ctx, name, args...)
+}
+
+func CheckCommandAvailable(name string) bool {
+    _, err := defaultExecutor.LookPath(name)
+    return err == nil
+}
 ```
 
 ### 3. Mock Implementation
@@ -78,10 +100,24 @@ type CommandResponse struct {
     Error  error
 }
 
+// MockExitError implements the minimal interface that package managers check for
+type MockExitError struct {
+    Code int
+}
+
+func (e *MockExitError) Error() string {
+    return fmt.Sprintf("exit status %d", e.Code)
+}
+
+func (e *MockExitError) ExitCode() int {
+    return e.Code
+}
+
 func (m *MockCommandExecutor) Execute(ctx context.Context, name string, args ...string) ([]byte, error) {
     m.Commands = append(m.Commands, ExecutedCommand{Name: name, Args: args, Context: ctx})
 
-    // Find matching response
+    // Find matching response using simple string matching
+    // This is intentionally simple - exact matches only for v1.0
     key := fmt.Sprintf("%s %s", name, strings.Join(args, " "))
     if resp, ok := m.Responses[key]; ok {
         return resp.Output, resp.Error
@@ -102,14 +138,15 @@ func (m *MockCommandExecutor) Execute(ctx context.Context, name string, args ...
    - Add factory function: `NewDefaultExecutor() CommandExecutor`
 
 2. **Update helpers.go**
-   - Replace direct exec calls with executor calls
-   - Update function signatures to accept executor
-   - Maintain backward compatibility with wrapper functions
+   - Add package-level default executor variable
+   - Add SetDefaultExecutor function for test override
+   - Replace direct exec calls with defaultExecutor calls
+   - No changes to function signatures needed
 
-3. **Update package manager structs**
-   - Add `executor CommandExecutor` field to each manager
-   - Update constructors to accept optional executor
-   - Default to RealCommandExecutor if not provided
+3. **Update package managers**
+   - No struct changes needed
+   - Managers continue to use helper functions
+   - Helper functions now use defaultExecutor internally
 
 ### Phase 2: Package Manager Updates (3-4 hours)
 
@@ -147,23 +184,21 @@ Update each package manager to use the executor:
 ## Example: Updated HomebrewManager
 
 ```go
+// HomebrewManager struct remains unchanged
 type HomebrewManager struct {
-    binary   string
-    executor CommandExecutor
+    binary string
 }
 
-func NewHomebrewManager(executor CommandExecutor) *HomebrewManager {
-    if executor == nil {
-        executor = &RealCommandExecutor{}
-    }
+// Constructor remains unchanged
+func NewHomebrewManager() *HomebrewManager {
     return &HomebrewManager{
-        binary:   "brew",
-        executor: executor,
+        binary: "brew",
     }
 }
 
+// Methods remain unchanged - they use helpers which now use defaultExecutor
 func (h *HomebrewManager) Install(ctx context.Context, name string) error {
-    output, err := h.executor.CombinedOutput(ctx, h.binary, "install", name)
+    output, err := ExecuteCommandCombined(ctx, h.binary, "install", name)
     if err != nil {
         return h.handleInstallError(err, output, name)
     }
@@ -175,6 +210,11 @@ func (h *HomebrewManager) Install(ctx context.Context, name string) error {
 
 ```go
 func TestHomebrewManager_Install(t *testing.T) {
+    // Save original executor and restore after test
+    originalExecutor := defaultExecutor
+    defer func() { defaultExecutor = originalExecutor }()
+
+    // Set up mock executor
     mock := &MockCommandExecutor{
         Responses: map[string]CommandResponse{
             "brew install vim": {
@@ -183,12 +223,16 @@ func TestHomebrewManager_Install(t *testing.T) {
             },
             "brew install nonexistent": {
                 Output: []byte("Error: No available formula"),
-                Error:  &exec.ExitError{ProcessState: &os.ProcessState{}},
+                Error:  &MockExitError{Code: 1},
             },
         },
     }
 
-    manager := NewHomebrewManager(mock)
+    // Override the default executor
+    SetDefaultExecutor(mock)
+
+    // Create manager - it will use the mock executor via helpers
+    manager := NewHomebrewManager()
 
     // Test successful install
     err := manager.Install(context.Background(), "vim")
@@ -208,10 +252,11 @@ func TestHomebrewManager_Install(t *testing.T) {
 
 To maintain backward compatibility:
 
-1. Keep existing public APIs unchanged
-2. Add executor parameter as optional (nil = use real executor)
+1. No changes to package manager APIs or constructors
+2. No changes to helper function signatures
 3. Existing code continues to work without modification
-4. Only test code uses mock executors
+4. Only test code calls SetDefaultExecutor to override behavior
+5. Tests must restore original executor to avoid affecting other tests
 
 ## Benefits
 
