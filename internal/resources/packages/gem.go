@@ -6,7 +6,6 @@ package packages
 import (
 	"context"
 	"fmt"
-	"os/exec"
 	"strings"
 )
 
@@ -94,8 +93,14 @@ func (g *GemManager) handleGemInstallError(err error, output []byte, packageName
 		// Extract current Ruby version
 		if idx := strings.Index(outputStr, "The current ruby version is"); idx > 0 {
 			versionStart := idx + len("The current ruby version is")
-			if versionEnd := strings.Index(outputStr[versionStart:], "."); versionEnd > 0 {
-				currentVersion := strings.TrimSpace(outputStr[versionStart : versionStart+versionEnd+10])
+			remainingStr := outputStr[versionStart:]
+			if versionEnd := strings.Index(remainingStr, "."); versionEnd > 0 {
+				// Find the end of the version number (usually something like "2.6.10")
+				endIdx := versionEnd + 10
+				if endIdx > len(remainingStr) {
+					endIdx = len(remainingStr)
+				}
+				currentVersion := strings.TrimSpace(remainingStr[:endIdx])
 				return fmt.Errorf("%s. Your Ruby version is %s. Check gem requirements or use rbenv/rvm to switch Ruby versions", msg, currentVersion)
 			}
 		}
@@ -118,8 +123,7 @@ func (g *GemManager) Uninstall(ctx context.Context, name string) error {
 
 // IsInstalled checks if a specific gem is installed.
 func (g *GemManager) IsInstalled(ctx context.Context, name string) (bool, error) {
-	cmd := exec.CommandContext(ctx, g.binary, "list", "--local", name)
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, g.binary, "list", "--local", name)
 	if err != nil {
 		return false, fmt.Errorf("failed to check gem installation status for %s: %w", name, err)
 	}
@@ -132,13 +136,12 @@ func (g *GemManager) IsInstalled(ctx context.Context, name string) (bool, error)
 
 // Search searches for gems in RubyGems.org.
 func (g *GemManager) Search(ctx context.Context, query string) ([]string, error) {
-	cmd := exec.CommandContext(ctx, g.binary, "search", query)
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, g.binary, "search", query)
 	if err != nil {
 		// Check if this is a real error vs expected conditions
-		if execErr, ok := err.(interface{ ExitCode() int }); ok {
+		if exitCode, ok := ExtractExitCode(err); ok {
 			// For gem search, exit code 1 usually means no results found
-			if execErr.ExitCode() == 1 {
+			if exitCode == 1 {
 				return []string{}, nil
 			}
 			// Other exit codes indicate real errors
@@ -184,10 +187,9 @@ func (g *GemManager) Info(ctx context.Context, name string) (*PackageInfo, error
 	}
 
 	// Get gem specification
-	cmd := exec.CommandContext(ctx, g.binary, "specification", name)
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, g.binary, "specification", name)
 	if err != nil {
-		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() == 1 {
+		if exitCode, ok := ExtractExitCode(err); ok && exitCode == 1 {
 			return nil, fmt.Errorf("gem '%s' not found", name)
 		}
 		return nil, fmt.Errorf("failed to get gem info for %s: %w", name, err)
@@ -232,8 +234,7 @@ func (g *GemManager) parseInfoOutput(output []byte, name string) *PackageInfo {
 
 // getDependencies gets the dependencies of an installed gem
 func (g *GemManager) getDependencies(ctx context.Context, name string) []string {
-	cmd := exec.CommandContext(ctx, g.binary, "dependency", name)
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, g.binary, "dependency", name)
 	if err != nil {
 		return []string{}
 	}
@@ -271,8 +272,7 @@ func (g *GemManager) InstalledVersion(ctx context.Context, name string) (string,
 	}
 
 	// Get version using gem list with specific gem
-	cmd := exec.CommandContext(ctx, g.binary, "list", "--local", name)
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, g.binary, "list", "--local", name)
 	if err != nil {
 		return "", fmt.Errorf("failed to get gem version information for %s: %w", name, err)
 	}
