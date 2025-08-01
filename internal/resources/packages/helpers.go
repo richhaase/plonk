@@ -5,15 +5,13 @@ package packages
 
 import (
 	"context"
-	"os/exec"
 	"strings"
 )
 
 // ExecuteCommandCombined runs a command and returns combined stdout and stderr.
 // Useful for commands where error output is important for diagnostics.
 func ExecuteCommandCombined(ctx context.Context, name string, args ...string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, name, args...)
-	return cmd.CombinedOutput()
+	return defaultExecutor.CombinedOutput(ctx, name, args...)
 }
 
 // ExtractExitCode attempts to extract the exit code from an exec error.
@@ -45,13 +43,12 @@ func SplitLines(output []byte) []string {
 // ExecuteCommand runs a command with the given arguments and returns the output.
 // This is a simple wrapper around exec.CommandContext for common usage patterns.
 func ExecuteCommand(ctx context.Context, name string, args ...string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, name, args...)
-	return cmd.Output()
+	return defaultExecutor.Execute(ctx, name, args...)
 }
 
 // CheckCommandAvailable checks if a command exists in PATH and is executable.
 func CheckCommandAvailable(name string) bool {
-	_, err := exec.LookPath(name)
+	_, err := defaultExecutor.LookPath(name)
 	return err == nil
 }
 
@@ -62,8 +59,7 @@ func VerifyBinary(ctx context.Context, binary string, versionArgs []string) erro
 		versionArgs = []string{"--version"} // Default version argument
 	}
 
-	cmd := exec.CommandContext(ctx, binary, versionArgs...)
-	_, err := cmd.Output()
+	_, err := defaultExecutor.Execute(ctx, binary, versionArgs...)
 	if err != nil {
 		// Check for context cancellation - return directly without wrapping
 		if err == context.Canceled || err == context.DeadlineExceeded {

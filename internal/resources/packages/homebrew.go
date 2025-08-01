@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"strings"
 )
 
@@ -89,8 +88,7 @@ func (h *HomebrewManager) Uninstall(ctx context.Context, name string) error {
 
 // getInstalledPackagesInfo returns detailed information about all installed packages
 func (h *HomebrewManager) getInstalledPackagesInfo(ctx context.Context) ([]brewInfoJSON, error) {
-	cmd := exec.CommandContext(ctx, h.binary, "info", "--installed", "--json=v1")
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, h.binary, "info", "--installed", "--json=v1")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get installed packages info: %w", err)
 	}
@@ -108,12 +106,11 @@ func (h *HomebrewManager) IsInstalled(ctx context.Context, name string) (bool, e
 	packages, err := h.getInstalledPackagesInfo(ctx)
 	if err != nil {
 		// Fallback to simple brew list check
-		cmd := exec.CommandContext(ctx, h.binary, "list", name)
-		err := cmd.Run()
+		_, err := ExecuteCommand(ctx, h.binary, "list", name)
 		if err == nil {
 			return true, nil
 		}
-		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+		if exitCode, ok := ExtractExitCode(err); ok && exitCode == 1 {
 			return false, nil
 		}
 		return false, err
@@ -136,8 +133,7 @@ func (h *HomebrewManager) IsInstalled(ctx context.Context, name string) (bool, e
 
 // Search searches for packages in Homebrew repositories.
 func (h *HomebrewManager) Search(ctx context.Context, query string) ([]string, error) {
-	cmd := exec.CommandContext(ctx, h.binary, "search", query)
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, h.binary, "search", query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search homebrew packages for %s: %w", query, err)
 	}
@@ -169,10 +165,9 @@ func (h *HomebrewManager) parseSearchOutput(output []byte) []string {
 
 // Info retrieves detailed information about a package.
 func (h *HomebrewManager) Info(ctx context.Context, name string) (*PackageInfo, error) {
-	cmd := exec.CommandContext(ctx, h.binary, "info", name)
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, h.binary, "info", name)
 	if err != nil {
-		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() == 1 {
+		if exitCode, ok := ExtractExitCode(err); ok && exitCode == 1 {
 			return nil, fmt.Errorf("package '%s' not found", name)
 		}
 		return nil, fmt.Errorf("failed to get package info for %s: %w", name, err)
@@ -264,8 +259,7 @@ func (h *HomebrewManager) InstalledVersion(ctx context.Context, name string) (st
 	packages, err := h.getInstalledPackagesInfo(ctx)
 	if err != nil {
 		// Fallback to brew list --versions
-		cmd := exec.CommandContext(ctx, h.binary, "list", "--versions", name)
-		output, err := cmd.Output()
+		output, err := ExecuteCommand(ctx, h.binary, "list", "--versions", name)
 		if err != nil {
 			return "", fmt.Errorf("failed to get package version information for %s: %w", name, err)
 		}
