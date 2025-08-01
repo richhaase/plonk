@@ -266,6 +266,16 @@ To maintain backward compatibility:
 4. **Speed**: Unit tests run in milliseconds, not minutes
 5. **Reliability**: No flaky tests due to network/package manager issues
 
+## Known Limitations
+
+### Go Install Manager
+The Go install manager has methods that depend on `os.Stat` to check if binary files exist:
+- `InstalledVersion` - checks if binary exists before getting version
+- `Info` - checks if binary is installed before retrieving info
+- `IsInstalled` - directly checks file existence
+
+These methods cannot be fully tested with the Command Executor pattern since we only mock command execution, not file system operations. Integration tests should cover these methods.
+
 ## Risks and Mitigations
 
 ### Risk: Mock responses become outdated

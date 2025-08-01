@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -50,8 +49,7 @@ func NewGoInstallManager() *GoInstallManager {
 // getGoBinDir returns the directory where go installs binaries
 func (g *GoInstallManager) getGoBinDir(ctx context.Context) (string, error) {
 	// First try GOBIN
-	cmd := exec.CommandContext(ctx, g.binary, "env", "GOBIN")
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, g.binary, "env", "GOBIN")
 	if err != nil {
 		return "", fmt.Errorf("failed to get GOBIN: %w", err)
 	}
@@ -62,8 +60,7 @@ func (g *GoInstallManager) getGoBinDir(ctx context.Context) (string, error) {
 	}
 
 	// Fall back to GOPATH/bin
-	cmd = exec.CommandContext(ctx, g.binary, "env", "GOPATH")
-	output, err = cmd.Output()
+	output, err = ExecuteCommand(ctx, g.binary, "env", "GOPATH")
 	if err != nil {
 		return "", fmt.Errorf("failed to get GOPATH: %w", err)
 	}
@@ -122,8 +119,7 @@ func (g *GoInstallManager) isGoBinary(ctx context.Context, binaryPath string) bo
 	checkCtx, cancel := context.WithTimeout(ctx, 2*1000*1000*1000) // 2 seconds
 	defer cancel()
 
-	checkCmd := exec.CommandContext(checkCtx, g.binary, "version", "-m", binaryPath)
-	_, err := checkCmd.Output()
+	_, err := ExecuteCommand(checkCtx, g.binary, "version", "-m", binaryPath)
 	// If go version -m succeeds, it's a Go binary
 	return err == nil
 }
@@ -259,8 +255,7 @@ func (g *GoInstallManager) Info(ctx context.Context, name string) (*PackageInfo,
 	}
 
 	// Get module information using go version -m
-	cmd := exec.CommandContext(ctx, g.binary, "version", "-m", binaryPath)
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, g.binary, "version", "-m", binaryPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get module information for %s: %w", name, err)
 	}
@@ -318,8 +313,7 @@ func (g *GoInstallManager) InstalledVersion(ctx context.Context, name string) (s
 	}
 
 	// Get version using go version -m
-	cmd := exec.CommandContext(ctx, g.binary, "version", "-m", binaryPath)
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, g.binary, "version", "-m", binaryPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to get version information for %s: %w", name, err)
 	}
