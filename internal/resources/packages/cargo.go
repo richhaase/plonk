@@ -7,7 +7,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"os/exec"
 	"strings"
 )
 
@@ -89,11 +88,10 @@ func (c *CargoManager) IsInstalled(ctx context.Context, name string) (bool, erro
 
 // Search searches for packages in the cargo registry.
 func (c *CargoManager) Search(ctx context.Context, query string) ([]string, error) {
-	cmd := exec.CommandContext(ctx, c.binary, "search", query)
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, c.binary, "search", query)
 	if err != nil {
 		// cargo search returns a non-zero exit code if no packages are found.
-		if _, ok := err.(interface{ ExitCode() int }); ok {
+		if _, ok := ExtractExitCode(err); ok {
 			outputStr := string(output)
 			if strings.Contains(outputStr, "no crates found") {
 				return []string{}, nil
@@ -125,8 +123,7 @@ func (c *CargoManager) parseSearchOutput(output []byte) []string {
 // Info retrieves detailed information about a package.
 func (c *CargoManager) Info(ctx context.Context, name string) (*PackageInfo, error) {
 	// Use search with limit 1 to get package info
-	cmd := exec.CommandContext(ctx, c.binary, "search", name, "--limit", "1")
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, c.binary, "search", name, "--limit", "1")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get info for cargo package %s: %w", name, err)
 	}
@@ -210,8 +207,7 @@ func (c *CargoManager) InstalledVersion(ctx context.Context, name string) (strin
 	}
 
 	// Use cargo install --list to get version information
-	cmd := exec.CommandContext(ctx, c.binary, "install", "--list")
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, c.binary, "install", "--list")
 	if err != nil {
 		return "", fmt.Errorf("failed to get package version information for %s: %w", name, err)
 	}
