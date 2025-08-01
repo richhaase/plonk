@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"sort"
 	"strings"
 
@@ -29,14 +28,13 @@ func NewNpmManager() *NpmManager {
 // ListInstalled lists all globally installed NPM packages.
 func (n *NpmManager) ListInstalled(ctx context.Context) ([]string, error) {
 	// Call the binary directly to handle npm's unique exit code behavior
-	cmd := exec.CommandContext(ctx, n.binary, "list", "-g", "--depth=0", "--json")
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, n.binary, "list", "-g", "--depth=0", "--json")
 	if err != nil {
 		// npm list can return non-zero exit codes even when working correctly
 		// (e.g., when there are peer dependency warnings)
-		if execErr, ok := err.(interface{ ExitCode() int }); ok {
+		if exitCode, ok := ExtractExitCode(err); ok {
 			// Only treat it as an error if the exit code indicates a real failure
-			if execErr.ExitCode() > 1 {
+			if exitCode > 1 {
 				return nil, fmt.Errorf("npm list command failed with severe error: %w", err)
 			}
 			// Exit code 1 might just be warnings - continue with parsing
@@ -98,10 +96,9 @@ func (n *NpmManager) Uninstall(ctx context.Context, name string) error {
 
 // IsInstalled checks if a specific package is installed globally.
 func (n *NpmManager) IsInstalled(ctx context.Context, name string) (bool, error) {
-	checkCmd := exec.CommandContext(ctx, n.binary, "list", "-g", name)
-	_, err := checkCmd.Output()
+	_, err := ExecuteCommand(ctx, n.binary, "list", "-g", name)
 	if err != nil {
-		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() == 1 {
+		if exitCode, ok := ExtractExitCode(err); ok && exitCode == 1 {
 			// Package not found - this is not an error condition
 			return false, nil
 		}
@@ -113,13 +110,12 @@ func (n *NpmManager) IsInstalled(ctx context.Context, name string) (bool, error)
 
 // Search searches for packages in NPM registry.
 func (n *NpmManager) Search(ctx context.Context, query string) ([]string, error) {
-	cmd := exec.CommandContext(ctx, n.binary, "search", query, "--json")
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, n.binary, "search", query, "--json")
 	if err != nil {
 		// Check if this is a real error vs expected conditions
-		if execErr, ok := err.(interface{ ExitCode() int }); ok {
+		if exitCode, ok := ExtractExitCode(err); ok {
 			// For npm search, exit code 1 usually means no results found
-			if execErr.ExitCode() == 1 {
+			if exitCode == 1 {
 				return []string{}, nil
 			}
 			// Other exit codes indicate real errors
@@ -184,10 +180,9 @@ func (n *NpmManager) Info(ctx context.Context, name string) (*PackageInfo, error
 	}
 
 	// Always use npm view for info (works for both installed and available packages)
-	cmd := exec.CommandContext(ctx, n.binary, "view", name, "--json")
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, n.binary, "view", name, "--json")
 	if err != nil {
-		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() == 1 {
+		if exitCode, ok := ExtractExitCode(err); ok && exitCode == 1 {
 			return nil, fmt.Errorf("package '%s' not found", name)
 		}
 		return nil, fmt.Errorf("failed to get package info for %s: %w", name, err)
@@ -291,8 +286,7 @@ func (n *NpmManager) InstalledVersion(ctx context.Context, name string) (string,
 	}
 
 	// Get version using npm list with specific package
-	cmd := exec.CommandContext(ctx, n.binary, "list", "-g", name, "--depth=0", "--json")
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, n.binary, "list", "-g", name, "--depth=0", "--json")
 	if err != nil {
 		return "", fmt.Errorf("failed to get package version information for %s: %w", name, err)
 	}

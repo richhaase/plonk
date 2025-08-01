@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/resources/packages/parsers"
@@ -27,13 +26,12 @@ func NewPipManager() *PipManager {
 
 // ListInstalled lists all user-installed pip packages.
 func (p *PipManager) ListInstalled(ctx context.Context) ([]string, error) {
-	cmd := exec.CommandContext(ctx, p.binary, "list", "--user", "--format=json")
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, p.binary, "list", "--user", "--format=json")
 	if err != nil {
 		// Check if --user flag is not supported (some pip installations)
-		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() != 0 {
+		if exitCode, ok := ExtractExitCode(err); ok && exitCode != 0 {
 			outputStr := string(output)
-			if strings.Contains(outputStr, "--user") || strings.Contains(outputStr, "unknown option") {
+			if strings.Contains(outputStr, "--user") || strings.Contains(outputStr, "unknown option") || strings.Contains(outputStr, "no such option") {
 				// Try without --user flag
 				return p.listInstalledFallback(ctx)
 			}
@@ -103,12 +101,10 @@ func (p *PipManager) parseListOutputPlainText(output []byte) []string {
 
 // listInstalledFallback lists packages without JSON format (for older pip versions)
 func (p *PipManager) listInstalledFallback(ctx context.Context) ([]string, error) {
-	cmd := exec.CommandContext(ctx, p.binary, "list", "--user")
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, p.binary, "list", "--user")
 	if err != nil {
 		// Try without --user flag as last resort
-		cmd = exec.CommandContext(ctx, p.binary, "list")
-		output, err = cmd.Output()
+		output, err = ExecuteCommand(ctx, p.binary, "list")
 		if err != nil {
 			return nil, err
 		}
@@ -124,12 +120,15 @@ func (p *PipManager) Install(ctx context.Context, name string) error {
 		outputStr := string(output)
 
 		// Check for --user flag issues first
-		if strings.Contains(outputStr, "--user") && strings.Contains(outputStr, "error") {
+		if strings.Contains(outputStr, "--user") && strings.Contains(strings.ToLower(outputStr), "error") {
 			// Try without --user flag
-			output, err = ExecuteCommandCombined(ctx, p.binary, "install", "--break-system-packages", name)
-			if err == nil {
+			output2, err2 := ExecuteCommandCombined(ctx, p.binary, "install", "--break-system-packages", name)
+			if err2 == nil {
 				return nil
 			}
+			// Use the retry error if it failed
+			output = output2
+			err = err2
 		}
 
 		return p.handleInstallError(err, output, name)
@@ -172,11 +171,10 @@ func (p *PipManager) SupportsSearch() bool {
 
 // Search searches for packages in PyPI using pip search.
 func (p *PipManager) Search(ctx context.Context, query string) ([]string, error) {
-	cmd := exec.CommandContext(ctx, p.binary, "search", query)
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, p.binary, "search", query)
 	if err != nil {
 		// Check if search command is not available (some pip versions/configurations)
-		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() != 0 {
+		if exitCode, ok := ExtractExitCode(err); ok && exitCode != 0 {
 			outputStr := string(output)
 			if strings.Contains(outputStr, "ERROR") && strings.Contains(outputStr, "XMLRPC") {
 				// PyPI disabled XMLRPC search API, return helpful message
@@ -225,10 +223,9 @@ func (p *PipManager) Info(ctx context.Context, name string) (*PackageInfo, error
 		return nil, fmt.Errorf("failed to check package installation status for %s: %w", name, err)
 	}
 
-	cmd := exec.CommandContext(ctx, p.binary, "show", name)
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, p.binary, "show", name)
 	if err != nil {
-		if execErr, ok := err.(interface{ ExitCode() int }); ok && execErr.ExitCode() != 0 {
+		if exitCode, ok := ExtractExitCode(err); ok && exitCode != 0 {
 			outputStr := string(output)
 			if strings.Contains(outputStr, "not found") {
 				return nil, fmt.Errorf("package '%s' not found", name)
@@ -288,8 +285,7 @@ func (p *PipManager) InstalledVersion(ctx context.Context, name string) (string,
 	}
 
 	// Get version using pip show
-	cmd := exec.CommandContext(ctx, p.binary, "show", name)
-	output, err := cmd.Output()
+	output, err := ExecuteCommand(ctx, p.binary, "show", name)
 	if err != nil {
 		return "", fmt.Errorf("failed to get package version information for %s: %w", name, err)
 	}
@@ -342,13 +338,13 @@ func (p *PipManager) handleInstallError(err error, output []byte, packageName st
 	// Check for known error patterns
 	if exitCode, ok := ExtractExitCode(err); ok {
 		// Check for known error patterns
-		if strings.Contains(outputStr, "could not find") || strings.Contains(outputStr, "no matching distribution") {
+		if strings.Contains(strings.ToLower(outputStr), "could not find") || strings.Contains(outputStr, "no matching distribution") {
 			return fmt.Errorf("package '%s' not found", packageName)
 		}
 		if strings.Contains(outputStr, "requirement already satisfied") || strings.Contains(outputStr, "already satisfied") {
 			return nil // Already installed is success
 		}
-		if strings.Contains(outputStr, "permission denied") || strings.Contains(outputStr, "access is denied") {
+		if strings.Contains(strings.ToLower(outputStr), "permission denied") || strings.Contains(outputStr, "access is denied") {
 			return fmt.Errorf("permission denied installing %s", packageName)
 		}
 
