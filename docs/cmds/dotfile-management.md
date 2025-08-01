@@ -46,7 +46,7 @@ Copies dotfiles from their current location to `$PLONK_DIR` for management. Acce
 - Recursively walks directory tree
 - Adds each file individually (leaf nodes)
 - Maintains directory structure in `$PLONK_DIR`
-- Respects `ignore_patterns` from configuration (see [Configuration Guide](../CONFIGURATION.md#ignore-patterns))
+- Respects `ignore_patterns` from configuration (see [Configuration Guide](../configuration.md#ignore-patterns))
 
 **Path Resolution**:
 - Accepts absolute paths: `/home/user/.vimrc`

@@ -65,7 +65,7 @@ Without prefix, uses `default_manager` from configuration.
 
 ### Timeout Configuration
 
-Package management operations have configurable timeouts. For complete timeout configuration examples and details, see [Configuration Guide](../CONFIGURATION.md#timeout-configuration).
+Package management operations have configurable timeouts. For complete timeout configuration examples and details, see [Configuration Guide](../configuration.md#timeout-configuration).
 
 ### Cross-Command Behaviors
 

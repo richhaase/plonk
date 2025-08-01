@@ -209,8 +209,8 @@ just install
 - **[Clone](docs/cmds/clone.md)** - Clone and set up existing dotfiles
 - **[Apply](docs/cmds/apply.md)** - Sync your system to desired state
 - **[Status](docs/cmds/status.md)** - View managed packages and dotfiles
-- **[Package Management](docs/cmds/package_management.md)** - install, uninstall, search, info
-- **[Dotfile Management](docs/cmds/dotfile_management.md)** - add, rm
+- **[Package Management](docs/cmds/package-management.md)** - install, uninstall, search, info
+- **[Dotfile Management](docs/cmds/dotfile-management.md)** - add, rm
 - **[Config](docs/cmds/config.md)** - Manage plonk configuration
 - **[Doctor](docs/cmds/doctor.md)** - Check system health
 
