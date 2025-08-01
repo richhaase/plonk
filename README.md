@@ -80,7 +80,7 @@ plonk install ripgrep fd bat                   # Install & track packages
 plonk status                                   # Show all resources
 
 # Replicate on a new machine
-plonk setup your-github/dotfiles              # Clone and apply everything
+plonk clone your-github/dotfiles              # Clone and apply everything
 ```
 
 The beauty is in what you don't need to do:
@@ -207,7 +207,6 @@ just install
 
 ### Command Documentation
 - **[Clone](docs/cmds/clone.md)** - Clone and set up existing dotfiles
-- **[Init](docs/cli.md#plonk-init)** - Initialize plonk and install tools
 - **[Apply](docs/cmds/apply.md)** - Sync your system to desired state
 - **[Status](docs/cmds/status.md)** - View managed packages and dotfiles
 - **[Package Management](docs/cmds/package_management.md)** - install, uninstall, search, info
