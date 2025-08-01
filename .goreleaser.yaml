@@ -122,6 +122,10 @@ homebrew_casks:
       name: goreleaserbot
       email: bot@goreleaser.com
     commit_msg_template: "Cask update for {{ .ProjectName }} version {{ .Tag }}"
+    hooks:
+      post:
+        install: |
+          system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/plonk"] if File.exist("/usr/bin/xattr")
 
 # Announce releases on social media (optional)
 announce:
