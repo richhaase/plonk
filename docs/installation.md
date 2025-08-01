@@ -57,9 +57,9 @@ go build -o plonk cmd/plonk/main.go
 sudo mv plonk /usr/local/bin/  # Or add to your PATH
 ```
 
-### Method 4: Pre-built Releases (Future)
+### Method 4: Pre-built Releases
 
-Pre-built binaries will be available for major platforms in future releases.
+Download pre-built binaries from the [releases page](https://github.com/richhaase/plonk/releases).
 
 ## Verification
 

@@ -1,7 +1,5 @@
 # Plonk
 
-> ⚠️ **WARNING: This project is under active development.** APIs, commands, and configuration formats may change without notice. Use at your own risk in production environments.
-
 [![CI](https://github.com/richhaase/plonk/workflows/CI/badge.svg)](https://github.com/richhaase/plonk/actions)
 [![Security](https://github.com/richhaase/plonk/workflows/Security%20Check/badge.svg)](https://github.com/richhaase/plonk/actions)
 [![codecov](https://codecov.io/gh/richhaase/plonk/branch/main/graph/badge.svg)](https://codecov.io/gh/richhaase/plonk)
