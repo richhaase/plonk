@@ -30,12 +30,15 @@ Plonk can manage packages from these language-specific package managers:
 
 ## Installation Methods
 
-### Method 1: Homebrew (Coming Soon)
-
-Once the Homebrew formula is available:
+### Method 1: Homebrew
 
 ```bash
+# Add the tap and install
+brew tap richhaase/tap
 brew install plonk
+
+# Or install directly:
+brew install richhaase/tap/plonk
 ```
 
 ### Method 2: Direct Go Install

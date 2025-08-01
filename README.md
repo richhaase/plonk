@@ -56,11 +56,11 @@ After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber
 
 2. **Install plonk**:
    ```bash
+   # Via Homebrew
+   brew install richhaase/tap/plonk
+
    # Via Go (requires Go 1.23+)
    go install github.com/richhaase/plonk/cmd/plonk@latest
-
-   # Via Homebrew (coming soon)
-   brew install plonk
    ```
 
 **Requirements:** Homebrew, Git

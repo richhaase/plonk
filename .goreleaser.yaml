@@ -98,17 +98,35 @@ release:
 
     ## Installation
 
-    ### macOS/Linux
+    ### Homebrew
     ```bash
-    # Download and extract (replace VERSION and OS/ARCH as needed)
-    curl -L https://github.com/richhaase/plonk/releases/download/v{{.Version}}/plonk_{{.Version}}_Darwin_x86_64.tar.gz | tar xz
-    sudo mv plonk /usr/local/bin/
-    ```
+    brew tap richhaase/tap
+    brew install plonk
 
-    ### Homebrew (coming soon)
-    ```bash
+    # Or install directly:
     brew install richhaase/tap/plonk
     ```
+
+brews:
+  - name: plonk
+    repository:
+      owner: richhaase
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/richhaase/plonk"
+    description: "The unified package and dotfile manager for developers who tinker"
+    license: "MIT"
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    caveats: |
+      Plonk requires Homebrew to be installed as a prerequisite.
+      Get started with:
+        plonk --help
+        plonk clone <your-github-username>/dotfiles
+      Documentation: https://github.com/richhaase/plonk#readme
 
 # Announce releases on social media (optional)
 announce:
