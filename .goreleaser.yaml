@@ -122,6 +122,16 @@ homebrew_casks:
       name: goreleaserbot
       email: bot@goreleaser.com
     commit_msg_template: "Cask update for {{ .ProjectName }} version {{ .Tag }}"
+    # Additional metadata for brew info
+    caveats: |
+      Plonk has been installed! Get started with:
+        plonk --help
+        plonk clone <your-github-username>/dotfiles
+
+      Documentation: https://github.com/richhaase/plonk#readme
+
+      Plonk manages both your dotfiles and packages in one unified tool.
+      It requires Homebrew as a prerequisite.
     # No hooks needed - signing handles quarantine
 
 # Sign binaries with Apple Developer ID
