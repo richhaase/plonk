@@ -1,0 +1,269 @@
+# Apple Code Signing Setup for Plonk
+
+This document outlines the complete process for setting up Apple code signing and notarization for plonk binaries using Quill for cross-platform signing.
+
+## Prerequisites
+
+- [x] Apple Developer Account ($99/year) - Already created
+- [ ] Access to a macOS machine (for initial certificate creation only)
+- [ ] GitHub repository admin access (for adding secrets)
+
+## Step 1: Create Developer ID Application Certificate
+
+### Option A: Using Xcode (Recommended)
+
+1. Open Xcode on macOS
+2. Go to **Xcode → Settings → Accounts** (or Preferences → Accounts on older versions)
+3. Add your Apple ID if not already added
+4. Select your team and click **Manage Certificates**
+5. Click the **+** button and choose **Developer ID Application**
+6. Xcode will create the certificate and install it in your Keychain
+
+### Option B: Using Apple Developer Portal
+
+1. Visit https://developer.apple.com/account/resources/certificates/list
+2. Click the **+** button to create a new certificate
+3. Select **Developer ID Application** under Software
+4. You'll need to create a Certificate Signing Request (CSR):
+   - Open **Keychain Access** on macOS
+   - Menu: **Keychain Access → Certificate Assistant → Request a Certificate from a Certificate Authority**
+   - Enter your email and name (must match your developer account)
+   - Select **Saved to disk**
+   - Save the CSR file
+5. Upload the CSR file to the developer portal
+6. Download the generated certificate
+7. Double-click the downloaded certificate to install it in Keychain
+
+## Step 2: Export Certificate as P12
+
+1. Open **Keychain Access**
+2. In the **login** keychain, find your certificate:
+   - Look for "Developer ID Application: [Your Name] (TeamID)"
+   - It should have a disclosure triangle showing the private key
+3. Right-click on the certificate (not the private key)
+4. Select **Export "Developer ID Application..."**
+5. Save as `plonk-signing.p12`
+6. Set a strong password when prompted - **save this password securely**
+7. The export should include both the certificate and private key
+
+## Step 3: Create App-Specific Password for Notarization
+
+Apple requires an app-specific password for notarization (not your Apple ID password):
+
+1. Go to https://appleid.apple.com/account/manage
+2. Sign in with your Apple Developer account
+3. In the **Sign-In and Security** section, find **App-Specific Passwords**
+4. Click **Generate an app-specific password** or the **+** button
+5. Label it "plonk-notarization" or similar
+6. Copy the generated password - **you won't see it again**
+7. Store this password securely
+
+## Step 4: Find Your Team ID
+
+1. Go to https://developer.apple.com/account
+2. In the membership section, find your **Team ID** (10 characters, like `ABCD1234EF`)
+3. Note this down - you'll need it for notarization
+
+## Step 5: Prepare Secrets for GitHub
+
+Convert your P12 certificate to base64 for GitHub secrets:
+
+```bash
+# On macOS or Linux
+base64 -i plonk-signing.p12 > plonk-signing-base64.txt
+
+# Copy to clipboard (macOS)
+cat plonk-signing-base64.txt | pbcopy
+
+# Or on Linux
+cat plonk-signing-base64.txt | xclip -selection clipboard
+```
+
+## Step 6: Add GitHub Repository Secrets
+
+Go to your plonk repository: **Settings → Secrets and variables → Actions**
+
+Add these repository secrets:
+
+| Secret Name | Value |
+|------------|-------|
+| `QUILL_SIGN_P12` | The base64-encoded P12 certificate (from step 5) |
+| `QUILL_SIGN_PASSWORD` | The password you set when exporting the P12 |
+| `QUILL_NOTARY_KEY` | The app-specific password from step 3 |
+| `QUILL_NOTARY_KEY_ID` | Your Apple ID email address |
+| `QUILL_NOTARY_ISSUER` | Your Team ID from step 4 |
+
+## Step 7: Update GoReleaser Configuration
+
+Update `.goreleaser.yaml` to include signing:
+
+```yaml
+# Add after the archives section
+signs:
+  - cmd: quill
+    args:
+      - sign-and-notarize
+      - "${artifact}"
+      - --dry-run={{ .IsSnapshot }}
+      - --ad-hoc={{ .IsSnapshot }}
+      - -vv
+    artifacts: binary
+    output: true
+    env:
+      - QUILL_SIGN_P12={{ .Env.QUILL_SIGN_P12 }}
+      - QUILL_SIGN_PASSWORD={{ .Env.QUILL_SIGN_PASSWORD }}
+      - QUILL_NOTARY_KEY={{ .Env.QUILL_NOTARY_KEY }}
+      - QUILL_NOTARY_KEY_ID={{ .Env.QUILL_NOTARY_KEY_ID }}
+      - QUILL_NOTARY_ISSUER={{ .Env.QUILL_NOTARY_ISSUER }}
+
+# Update homebrew_casks to remove the quarantine removal hook
+homebrew_casks:
+  - name: plonk
+    repository:
+      owner: richhaase
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    homepage: "https://github.com/richhaase/plonk"
+    description: "The unified package and dotfile manager for developers who tinker"
+    license: "MIT"
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_msg_template: "Cask update for {{ .ProjectName }} version {{ .Tag }}"
+    # No hooks needed - signing handles quarantine
+```
+
+## Step 8: Update GitHub Actions Workflow
+
+Update `.github/workflows/release.yml` to install Quill:
+
+```yaml
+- name: Checkout
+  uses: actions/checkout@v4
+  with:
+    fetch-depth: 0
+
+- name: Install Quill
+  run: |
+    curl -sSfL https://raw.githubusercontent.com/anchore/quill/main/install.sh | sh -s -- -b /usr/local/bin
+    quill --version
+
+- name: Setup Go environment
+  uses: ./.github/actions/setup-go-env
+  with:
+    go-version: 'stable'
+
+- name: Run GoReleaser
+  uses: goreleaser/goreleaser-action@v6
+  with:
+    distribution: goreleaser
+    version: v2.11.0
+    args: release --clean
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+    QUILL_SIGN_P12: ${{ secrets.QUILL_SIGN_P12 }}
+    QUILL_SIGN_PASSWORD: ${{ secrets.QUILL_SIGN_PASSWORD }}
+    QUILL_NOTARY_KEY: ${{ secrets.QUILL_NOTARY_KEY }}
+    QUILL_NOTARY_KEY_ID: ${{ secrets.QUILL_NOTARY_KEY_ID }}
+    QUILL_NOTARY_ISSUER: ${{ secrets.QUILL_NOTARY_ISSUER }}
+```
+
+## Step 9: Test Locally (Optional)
+
+To test signing locally before pushing:
+
+1. Install Quill:
+   ```bash
+   curl -sSfL https://raw.githubusercontent.com/anchore/quill/main/install.sh | sh -s -- -b /usr/local/bin
+   ```
+
+2. Test signing:
+   ```bash
+   export QUILL_SIGN_P12=/path/to/plonk-signing.p12
+   export QUILL_SIGN_PASSWORD="your-p12-password"
+
+   # Test sign only (faster)
+   quill sign /path/to/plonk-binary
+
+   # Test full sign and notarize (takes 5-10 minutes)
+   export QUILL_NOTARY_KEY="your-app-specific-password"
+   export QUILL_NOTARY_KEY_ID="your-apple-id@example.com"
+   export QUILL_NOTARY_ISSUER="TEAMID"
+
+   quill sign-and-notarize /path/to/plonk-binary
+   ```
+
+3. Verify signature:
+   ```bash
+   codesign -dvv /path/to/signed/plonk
+   ```
+
+## Step 10: Release Process
+
+1. Commit all changes:
+   ```bash
+   git add .goreleaser.yaml .github/workflows/release.yml
+   git commit -m "feat: add Apple code signing and notarization"
+   git push
+   ```
+
+2. Create a test release:
+   ```bash
+   git tag v0.9.3
+   git push origin v0.9.3
+   ```
+
+3. Monitor the GitHub Actions workflow
+4. Check that binaries are signed and notarized
+5. Test installation via Homebrew
+
+## Troubleshooting
+
+### Common Issues
+
+1. **"Certificate not found"**
+   - Ensure the P12 contains both certificate and private key
+   - Check the certificate name matches exactly
+
+2. **"Failed to notarize"**
+   - Verify app-specific password is correct
+   - Check Team ID is correct
+   - Ensure Apple ID matches the certificate
+
+3. **"Invalid signature"**
+   - Certificate might be expired
+   - P12 might be corrupted during base64 encoding
+
+### Verification Commands
+
+```bash
+# Check certificate details
+quill p12 describe /path/to/plonk-signing.p12
+
+# Verify signed binary
+codesign -dvv /path/to/signed/plonk
+
+# Check notarization status
+spctl -a -vvv -t install /path/to/signed/plonk
+```
+
+## Benefits of Code Signing
+
+1. **No quarantine warnings** - Users can run plonk immediately
+2. **Trust indicator** - Shows "Verified Developer" in security settings
+3. **Notarization** - Apple scans for malware
+4. **Professional distribution** - Expected for production tools
+
+## Notes
+
+- Notarization typically takes 5-10 minutes
+- Certificates expire after 5 years (renewable)
+- The same certificate can be used for all your projects
+- Quill enables signing from Linux/Windows CI environments
+
+## References
+
+- [Quill Documentation](https://github.com/anchore/quill)
+- [Apple Developer - Notarizing macOS Software](https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution)
+- [GoReleaser Signing Documentation](https://goreleaser.com/customization/sign/)
