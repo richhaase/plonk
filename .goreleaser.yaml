@@ -128,18 +128,20 @@ homebrew_casks:
 
 # Sign macOS binaries with Apple Developer ID
 binary_signs:
-  - cmd: quill
+  - cmd: bash
     args:
-      - sign-and-notarize
-      - "${artifact}"
-      - --dry-run={{ .IsSnapshot }}
-      - --ad-hoc={{ .IsSnapshot }}
-      - -vv
+      - -c
+      - |
+        if [[ "${artifact}" == *"darwin"* ]]; then
+          quill sign-and-notarize "${artifact}" \
+            --dry-run={{ .IsSnapshot }} \
+            --ad-hoc={{ .IsSnapshot }} \
+            -vv
+        else
+          echo "Skipping non-macOS binary: ${artifact}"
+        fi
     artifacts: binary
     output: true
-    # Only sign macOS binaries
-    goos:
-      - darwin
     env:
       - QUILL_SIGN_P12={{ .Env.QUILL_SIGN_P12 }}
       - QUILL_SIGN_PASSWORD={{ .Env.QUILL_SIGN_PASSWORD }}
