@@ -142,12 +142,7 @@ binary_signs:
         fi
     artifacts: binary
     output: true
-    env:
-      - QUILL_SIGN_P12={{ .Env.QUILL_SIGN_P12 }}
-      - QUILL_SIGN_PASSWORD={{ .Env.QUILL_SIGN_PASSWORD }}
-      - QUILL_NOTARY_KEY={{ .Env.QUILL_NOTARY_KEY }}
-      - QUILL_NOTARY_KEY_ID={{ .Env.QUILL_NOTARY_KEY_ID }}
-      - QUILL_NOTARY_ISSUER={{ .Env.QUILL_NOTARY_ISSUER }}
+    # Environment variables are passed through from the workflow
 
 # Announce releases on social media (optional)
 announce:
