@@ -1,6 +1,10 @@
 # Apple Code Signing Setup for Plonk
 
-This document outlines the complete process for setting up Apple code signing and notarization for plonk binaries using Quill for cross-platform signing.
+This document outlines the complete process for setting up Apple code signing and notarization for plonk binaries.
+
+**Status**: ✅ Completed and tested with v0.9.5 release
+
+**Implementation**: Using GoReleaser's native notarize configuration instead of Quill for simpler setup.
 
 ## Prerequisites
 
@@ -105,28 +109,26 @@ Add these repository secrets:
 
 ## Step 7: Update GoReleaser Configuration
 
-Update `.goreleaser.yaml` to include signing:
+Update `.goreleaser.yaml` to use GoReleaser's native notarize configuration:
 
 ```yaml
 # Add after the archives section
-signs:
-  - cmd: quill
-    args:
-      - sign-and-notarize
-      - "${artifact}"
-      - --dry-run={{ .IsSnapshot }}
-      - --ad-hoc={{ .IsSnapshot }}
-      - -vv
-    artifacts: binary
-    output: true
-    env:
-      - QUILL_SIGN_P12={{ .Env.QUILL_SIGN_P12 }}
-      - QUILL_SIGN_PASSWORD={{ .Env.QUILL_SIGN_PASSWORD }}
-      - QUILL_NOTARY_KEY={{ .Env.QUILL_NOTARY_KEY }}
-      - QUILL_NOTARY_KEY_ID={{ .Env.QUILL_NOTARY_KEY_ID }}
-      - QUILL_NOTARY_ISSUER={{ .Env.QUILL_NOTARY_ISSUER }}
+notarize:
+  macos:
+    - enabled: '{{ isEnvSet "QUILL_SIGN_P12" }}'
+      ids:
+        - plonk  # Your build ID
+      sign:
+        certificate: "{{.Env.QUILL_SIGN_P12}}"
+        password: "{{.Env.QUILL_SIGN_PASSWORD}}"
+      notarize:
+        issuer_id: "{{.Env.QUILL_NOTARY_ISSUER}}"
+        key_id: "{{.Env.QUILL_NOTARY_KEY_ID}}"
+        key: "{{.Env.QUILL_NOTARY_KEY}}"
+        wait: true
+        timeout: 20m
 
-# Update homebrew_casks to remove the quarantine removal hook
+# The homebrew_casks section remains the same
 homebrew_casks:
   - name: plonk
     repository:
@@ -145,18 +147,13 @@ homebrew_casks:
 
 ## Step 8: Update GitHub Actions Workflow
 
-Update `.github/workflows/release.yml` to install Quill:
+Update `.github/workflows/release.yml` to pass the signing environment variables:
 
 ```yaml
 - name: Checkout
   uses: actions/checkout@v4
   with:
     fetch-depth: 0
-
-- name: Install Quill
-  run: |
-    curl -sSfL https://raw.githubusercontent.com/anchore/quill/main/install.sh | sh -s -- -b /usr/local/bin
-    quill --version
 
 - name: Setup Go environment
   uses: ./.github/actions/setup-go-env
@@ -178,6 +175,8 @@ Update `.github/workflows/release.yml` to install Quill:
     QUILL_NOTARY_KEY_ID: ${{ secrets.QUILL_NOTARY_KEY_ID }}
     QUILL_NOTARY_ISSUER: ${{ secrets.QUILL_NOTARY_ISSUER }}
 ```
+
+Note: GoReleaser handles the signing tools internally, so no need to install Quill separately.
 
 ## Step 9: Test Locally (Optional)
 

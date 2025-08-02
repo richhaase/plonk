@@ -30,7 +30,9 @@ Plonk can manage packages from these language-specific package managers:
 
 ## Installation Methods
 
-### Method 1: Homebrew
+### Method 1: Homebrew (Recommended)
+
+The easiest way to install plonk on macOS:
 
 ```bash
 # Add the tap and install
@@ -40,6 +42,12 @@ brew install plonk
 # Or install directly:
 brew install richhaase/tap/plonk
 ```
+
+**Benefits of Homebrew installation:**
+- Automatic updates via `brew upgrade`
+- Code signed and notarized for macOS (no security warnings)
+- Managed installation/uninstallation
+- Pre-built binaries for both Intel and Apple Silicon
 
 ### Method 2: Direct Go Install
 
@@ -83,7 +91,10 @@ The `plonk doctor` command will identify any missing dependencies and can automa
 ### macOS
 
 ```bash
-# Install plonk
+# Install plonk via Homebrew (recommended)
+brew install richhaase/tap/plonk
+
+# Or via Go
 go install github.com/richhaase/plonk/cmd/plonk@latest
 
 # Verify system health
@@ -95,6 +106,7 @@ plonk clone user/dotfiles      # Clone existing setup
 
 **macOS Notes:**
 - Homebrew must be installed first (https://brew.sh)
+- Homebrew installation includes code signing and notarization
 - Xcode Command Line Tools may be required for some packages
 - System Integrity Protection (SIP) may affect some operations
 

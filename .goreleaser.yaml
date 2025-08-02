@@ -92,13 +92,17 @@ release:
 
     ## Installation
 
-    ### Homebrew
+    ### Homebrew (Recommended)
     ```bash
-    brew tap richhaase/tap
-    brew install plonk
-
-    # Or install directly:
     brew install richhaase/tap/plonk
+    ```
+
+    ### Direct Download
+    Download the appropriate archive from the assets below and extract the `plonk` binary.
+
+    ### From Source
+    ```bash
+    go install github.com/richhaase/plonk/cmd/plonk@v{{ .Version }}
     ```
 
 homebrew_casks:

@@ -1,16 +1,16 @@
 # Plonk Development Context
 
-## Current Phase: Ready for v1.0 Release (2025-08-01)
+## Current Phase: Ready for v1.0 Release (2025-08-02)
 
 ### Status
-All critical features, bug fixes, and quality assurance tasks are complete. The codebase is ready for v1.0 release.
+All critical features, bug fixes, quality assurance tasks, and distribution improvements are complete. The codebase is ready for v1.0 release.
 
 ### v1.0 Release Checklist
-- [ ] Remove stability warning from README.md
-- [ ] Update version from "dev" to "1.0.0"
-- [ ] Create and push v1.0.0 tag
-- [ ] Verify GitHub Actions release workflow
-- [ ] Update installation docs with release download links
+- [x] Remove stability warning from README.md
+- [x] Update version from "dev" to "1.0.0" (via build injection)
+- [ ] Create and push v1.0.0 tag (pending final manual checks)
+- [x] Verify GitHub Actions release workflow (v0.9.5 tested with signing/notarization)
+- [x] Update installation docs with release download links (Homebrew support added)
 
 ### Completed Pre-v1.0 Work
 
@@ -19,6 +19,7 @@ All critical features, bug fixes, and quality assurance tasks are complete. The 
 2. **Code Complexity Review** - Analyzed codebase, determined acceptable for v1.0
 3. **Critical Documentation Review** - Fixed all outdated command references
 4. **Build System Review** - Cleaned up Justfile and GitHub Actions
+5. **Security Updates** - Updated Go to 1.24.5 to fix vulnerabilities
 
 #### Feature Implementation Phase ✅
 1. **Dotfile drift detection** - SHA256-based comparison with `plonk diff`
@@ -26,6 +27,12 @@ All critical features, bug fixes, and quality assurance tasks are complete. The 
 3. **Progress indicators** - Spinner-based feedback for long operations
 4. **.plonk/ directory exclusion** - Reserved for future metadata
 5. **All critical bug fixes** - Linux testing revealed and fixed all issues
+
+#### Distribution Improvements ✅
+1. **Homebrew Support** - Added homebrew-tap repository with Cask support
+2. **Apple Code Signing** - Implemented Developer ID signing for macOS binaries
+3. **Notarization** - Automated notarization via App Store Connect API
+4. **Windows Builds Removed** - Focused on supported platforms (macOS/Linux)
 
 ### Post-v1.0 Roadmap
 
@@ -99,6 +106,10 @@ All critical features, bug fixes, and quality assurance tasks are complete. The 
 - **Justfile**: Development workflow automation
 - **GitHub Actions**: CI/CD with matrix testing (Go 1.23, 1.24 on Ubuntu, macOS)
 - **Release Process**: Automated via GoReleaser on tag push
+  - Automatic macOS binary signing with Developer ID certificate
+  - Apple notarization for Gatekeeper approval
+  - Homebrew Cask generation and publishing to richhaase/homebrew-tap
+  - Multi-platform archives (tar.gz) with checksums
 
 ### Known Limitations
 - No native Windows support (use WSL)
