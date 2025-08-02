@@ -138,7 +138,8 @@ binary_signs:
             --ad-hoc={{ .IsSnapshot }} \
             -vv
         else
-          echo "Skipping non-macOS binary: ${artifact}"
+          # For non-macOS binaries, just output the original path
+          echo "${artifact}"
         fi
     artifacts: binary
     output: true
