@@ -17,11 +17,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install Quill
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/quill/main/install.sh | sh -s -- -b /usr/local/bin
-          quill --version
-
       - name: Setup Go environment
         uses: ./.github/actions/setup-go-env
         with:

@@ -126,24 +126,21 @@ homebrew_casks:
       It requires Homebrew as a prerequisite.
     # No hooks needed - signing handles quarantine
 
-# Sign macOS binaries with Apple Developer ID
-binary_signs:
-  - cmd: bash
-    args:
-      - -c
-      - |
-        if [[ "${artifact}" == *"darwin"* ]]; then
-          quill sign-and-notarize "${artifact}" \
-            --dry-run={{ .IsSnapshot }} \
-            --ad-hoc={{ .IsSnapshot }} \
-            -vv
-        else
-          # For non-macOS binaries, just output the original path
-          echo "${artifact}"
-        fi
-    artifacts: binary
-    output: true
-    # Environment variables are passed through from the workflow
+# Sign and notarize macOS binaries
+notarize:
+  macos:
+    - enabled: '{{ isEnvSet "QUILL_SIGN_P12" }}'
+      ids:
+        - plonk
+      sign:
+        certificate: "{{.Env.QUILL_SIGN_P12}}"
+        password: "{{.Env.QUILL_SIGN_PASSWORD}}"
+      notarize:
+        issuer_id: "{{.Env.QUILL_NOTARY_ISSUER}}"
+        key_id: "{{.Env.QUILL_NOTARY_KEY_ID}}"
+        key: "{{.Env.QUILL_NOTARY_KEY}}"
+        wait: true
+        timeout: 20m
 
 # Announce releases on social media (optional)
 announce:
