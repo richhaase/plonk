@@ -46,17 +46,24 @@ This document outlines the complete process for setting up Apple code signing an
 6. Set a strong password when prompted - **save this password securely**
 7. The export should include both the certificate and private key
 
-## Step 3: Create App-Specific Password for Notarization
+## Step 3: Create App Store Connect API Key for Notarization
 
-Apple requires an app-specific password for notarization (not your Apple ID password):
+Apple requires an API key for notarization (not an app-specific password):
 
-1. Go to https://appleid.apple.com/account/manage
+1. Go to https://appstoreconnect.apple.com/
 2. Sign in with your Apple Developer account
-3. In the **Sign-In and Security** section, find **App-Specific Passwords**
-4. Click **Generate an app-specific password** or the **+** button
-5. Label it "plonk-notarization" or similar
-6. Copy the generated password - **you won't see it again**
-7. Store this password securely
+3. Navigate to **Users and Access**
+4. Click on the **Keys** tab under **Integrations**
+5. Click the **+** button to generate a new API key
+6. Set the following:
+   - **Name**: "plonk-notarization" or similar
+   - **Access**: "Developer" role (minimum required for notarization)
+7. Click **Generate**
+8. **IMPORTANT**: Download the `.p8` private key file immediately - you can only download it once!
+9. Note down the following information:
+   - **Key ID**: Shown in the list (like "ABC123DEFG")
+   - **Issuer ID**: Found at the top of the Keys page (UUID format)
+10. Store the `.p8` file securely
 
 ## Step 4: Find Your Team ID
 
@@ -66,17 +73,20 @@ Apple requires an app-specific password for notarization (not your Apple ID pass
 
 ## Step 5: Prepare Secrets for GitHub
 
-Convert your P12 certificate to base64 for GitHub secrets:
+Convert your P12 certificate and P8 key to base64 for GitHub secrets:
 
 ```bash
-# On macOS or Linux
+# Convert P12 certificate
 base64 -i plonk-signing.p12 > plonk-signing-base64.txt
 
-# Copy to clipboard (macOS)
+# Convert P8 API key
+base64 -i AuthKey_XXXXXXXXXX.p8 > notary-key-base64.txt
+
+# Copy P12 to clipboard (macOS)
 cat plonk-signing-base64.txt | pbcopy
 
-# Or on Linux
-cat plonk-signing-base64.txt | xclip -selection clipboard
+# After adding P12, copy P8 to clipboard
+cat notary-key-base64.txt | pbcopy
 ```
 
 ## Step 6: Add GitHub Repository Secrets
@@ -89,9 +99,9 @@ Add these repository secrets:
 |------------|-------|
 | `QUILL_SIGN_P12` | The base64-encoded P12 certificate (from step 5) |
 | `QUILL_SIGN_PASSWORD` | The password you set when exporting the P12 |
-| `QUILL_NOTARY_KEY` | The app-specific password from step 3 |
-| `QUILL_NOTARY_KEY_ID` | Your Apple ID email address |
-| `QUILL_NOTARY_ISSUER` | Your Team ID from step 4 |
+| `QUILL_NOTARY_KEY` | The base64-encoded P8 API key (from step 5) |
+| `QUILL_NOTARY_KEY_ID` | Your Key ID from App Store Connect (like "ABC123DEFG") |
+| `QUILL_NOTARY_ISSUER` | Your Issuer ID from App Store Connect (UUID format) |
 
 ## Step 7: Update GoReleaser Configuration
 
