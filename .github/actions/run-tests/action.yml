@@ -36,5 +36,5 @@ runs:
       if: ${{ inputs.coverage == 'true' && inputs.upload-codecov == 'true' }}
       uses: codecov/codecov-action@v5
       with:
-        file: ./coverage.out
+        files: ./coverage.out
         fail_ci_if_error: false
