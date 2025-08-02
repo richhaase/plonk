@@ -18,7 +18,7 @@ jobs:
     - name: Setup Go environment
       uses: ./.github/actions/setup-go-env
       with:
-        install-homebrew: 'true'
+        install-homebrew: 'false'
         install-just: 'true'
 
     - name: Run tests
@@ -50,7 +50,7 @@ jobs:
       uses: ./.github/actions/setup-go-env
       with:
         go-version: ${{ matrix.go-version }}
-        install-homebrew: ${{ runner.os == 'Linux' }}
+        install-homebrew: 'false'
         install-just: 'true'
 
     - name: Run tests
