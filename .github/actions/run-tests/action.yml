@@ -9,10 +9,6 @@ inputs:
     description: 'Coverage format: ci or html (default: ci)'
     required: false
     default: 'ci'
-  upload-codecov:
-    description: 'Upload coverage to Codecov (default: false)'
-    required: false
-    default: 'false'
 
 runs:
   using: 'composite'
@@ -31,12 +27,3 @@ runs:
       if: ${{ inputs.coverage != 'true' }}
       run: just test
       shell: bash
-
-    - name: Upload coverage to Codecov
-      if: ${{ inputs.coverage == 'true' && inputs.upload-codecov == 'true' }}
-      uses: codecov/codecov-action@v5
-      with:
-        files: ./coverage.out
-        fail_ci_if_error: false
-        token: ${{ secrets.CODECOV_TOKEN }}
-        verbose: true
