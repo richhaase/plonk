@@ -244,6 +244,83 @@ func TestFormatNotFoundError(t *testing.T) {
 	}
 }
 
+func TestTruncateString(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		maxLen int
+		want   string
+	}{
+		{
+			name:   "string shorter than max",
+			input:  "hello",
+			maxLen: 10,
+			want:   "hello",
+		},
+		{
+			name:   "string exactly max length",
+			input:  "hello",
+			maxLen: 5,
+			want:   "hello",
+		},
+		{
+			name:   "string longer than max",
+			input:  "hello world",
+			maxLen: 8,
+			want:   "hello...",
+		},
+		{
+			name:   "very short max length",
+			input:  "hello",
+			maxLen: 3,
+			want:   "...",
+		},
+		{
+			name:   "max length less than 3",
+			input:  "hello",
+			maxLen: 2,
+			want:   "he",
+		},
+		{
+			name:   "max length 1",
+			input:  "hello",
+			maxLen: 1,
+			want:   "h",
+		},
+		{
+			name:   "max length 0",
+			input:  "hello",
+			maxLen: 0,
+			want:   "",
+		},
+		{
+			name:   "empty string",
+			input:  "",
+			maxLen: 10,
+			want:   "",
+		},
+		{
+			name:   "unicode string (byte-based truncation)",
+			input:  "こんにちは世界",
+			maxLen: 5,
+			want:   "\xe3\x81...", // First 2 bytes of "こ" + "..."
+		},
+		{
+			name:   "string with spaces",
+			input:  "hello world this is a test",
+			maxLen: 15,
+			want:   "hello world ...",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := TruncateString(tt.input, tt.maxLen)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestGetStatusIcon(t *testing.T) {
 	tests := []struct {
 		name     string

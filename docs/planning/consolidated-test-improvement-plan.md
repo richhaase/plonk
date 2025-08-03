@@ -1,19 +1,19 @@
 # Consolidated Test Coverage Improvement Plan
 
 **Date**: 2025-08-03
-**Current Coverage**: 34.6% (up from 32.7%)
+**Current Coverage**: 37.6% (up from 32.7%)
 **Target Coverage**: 50% (minimum for v1.0)
 **Timeline**: 2-3 weeks
-**Progress**: Phase 1 Foundation complete
+**Progress**: Phase 1 & 2 complete
 
 ## Executive Summary
 
 After reviewing all test improvement documentation and verifying actual coverage, this plan consolidates the approach into practical, low-risk improvements that can achieve 50% coverage for v1.0. The strategy focuses on:
 
 1. **No coverage reporting bugs found** - Config (38.4%) and dotfiles (50.3%) already have decent coverage
-2. **Quick wins** - Add tests to packages with 0% coverage (output, clone)
-3. **High-impact packages** - Focus on commands package (4,577 LOC at 9.2%)
-4. **Pragmatic targets** - Need +15.4% to reach 50% total (was +17.3%)
+2. **Quick wins** - ✅ Output package now at 80% coverage (Phase 1)
+3. **High-impact packages** - ✅ Commands package improved from 9.2% to 14.1% (Phase 2)
+4. **Pragmatic targets** - Need +12.4% more to reach 50% total
 
 ## Current State Analysis
 
@@ -21,14 +21,14 @@ After reviewing all test improvement documentation and verifying actual coverage
 
 | Package | Current | LOC | Realistic Target | Coverage Gain | Impact | Status |
 |---------|---------|-----|------------------|---------------|--------|--------|
-| commands | 9.2% | 4,577 | 40% | +10-12% | **HIGHEST** | Pending |
-| output | **80%** | 224 | 80% | **+1.9%** | **COMPLETE** | ✅ |
+| commands | **14.1%** | 4,577 | 40% | +8-10% | **HIGHEST** | Phase 2 ✅ |
+| output | **80%** | 224 | 80% | **+1.9%** | **COMPLETE** | Phase 1 ✅ |
 | clone | 0% | 436 | 30% | +2-3% | **QUICK WIN** | Pending |
 | orchestrator | 0.7% | 490 | 40% | +2% | **MEDIUM** | Pending |
 | diagnostics | 13.7% | 798 | 40% | +2-3% | **MEDIUM** | Pending |
 | config | 38.4% | 855 | 50% | +1% | **LOW** | Pending |
 | dotfiles | 50.3% | 2,769 | 60% | +2% | **LOW** | Pending |
-| testutil | **100%** | 46 | - | - | **FOUNDATION** | ✅ |
+| testutil | **100%** | 46 | - | - | **FOUNDATION** | Phase 1 ✅ |
 
 ### Key Findings
 
@@ -37,9 +37,9 @@ After reviewing all test improvement documentation and verifying actual coverage
 3. **No Tests**: Clone and output packages have 0% coverage
 4. **Well-Tested**: lock (83.3%), packages (61.7%), resources (58.5%) exceed our targets
 
-## Phase 1: Foundation & Quick Wins (Week 1) ✅ COMPLETE
+## Phase 1: Foundation & Quick Wins ✅ COMPLETE
 
-### Add Minimal Test Infrastructure (2 days) ✅
+### Add Minimal Test Infrastructure ✅
 
 **Created `internal/testutil` package** with common test helpers:
 
@@ -100,43 +100,25 @@ func (b *BufferWriter) String() string {
 - Consistent mocking patterns
 - Reduces duplication across packages
 
-## Phase 2: High-Impact Improvements (Week 2)
+## Phase 2: Commands Package Pure Functions ✅ COMPLETE
 
-### Commands Package (5 days)
+### Commands Package
 
-**Current**: 9.2% (421/4,577 statements)
-**Target**: 40% (~1,830 statements)
-**Approach**: Test pure functions and add minimal mocks
+**Result**: 9.2% → 14.1% (+4.9% coverage)
+**Approach**: Tested pure functions without mocking
 
-1. **Test all flag parsing** (quick win)
-2. **Test validation functions**
-3. **Test output formatting**
-4. **Mock CommandExecutor for basic flows**
-5. **Skip complex orchestration initially**
+**Completed tests**:
+- ✅ `TruncateString` - string truncation with edge cases
+- ✅ `GetMetadataString` - safe metadata extraction
+- ✅ `CompleteDotfilePaths` - shell completion suggestions
+- ✅ `NewStandardTableBuilder` - table formatting
+- ✅ `formatVersion` - version string formatting
+- ✅ `completeOutputFormats` - output format completion
+- ✅ `getEditor` - editor detection from env vars
+- ✅ `getConfigPath` - config file path construction
+- ✅ `convertApplyResult` - apply result conversion
 
-**Example improvements**:
-```go
-// Easy to test - pure functions
-func TestValidatePackageName(t *testing.T)
-func TestFormatPackageList(t *testing.T)
-func TestParseFlags(t *testing.T)
-
-// Medium - use MockExecutor
-func TestInstallCommand_DryRun(t *testing.T)
-func TestStatusCommand_Output(t *testing.T)
-```
-
-### Output Package (2 days)
-
-**Current**: 0%
-**Target**: 80%
-**Approach**: Add writer interface (already planned)
-
-1. Implement BufferWriter from testutil
-2. Test all status words and formatting
-3. Test progress output
-
-**Expected gain**: +2% overall coverage
+**Key achievement**: Improved coverage without complex mocking
 
 ## Phase 3: Medium Priority (Week 3)
 
@@ -204,9 +186,9 @@ func TestStatusCommand_Output(t *testing.T)
 
 | Package | Current | Target | Must Have |
 |---------|---------|--------|-----------|
-| Overall | 32.7% | 50% | ✓ |
-| commands | 9.2% | 40% | ✓ |
-| output | 0% | 80% | ✓ |
+| Overall | 37.6% | 50% | ✓ |
+| commands | 14.1% | 40% | ✓ |
+| output | 80% | 80% | ✅ Complete |
 | diagnostics | 13.7% | 40% | ✓ |
 | clone | 0% | 30% | Nice to have |
 | orchestrator | 0.7% | 40% | Nice to have |
@@ -231,9 +213,12 @@ These can wait:
 
 ## Next Steps
 
-1. **Week 1**: Add testutil package + output package tests
-2. **Week 2**: Commands package improvements
-3. **Week 3**: Diagnostics + remaining quick wins
-4. **Review**: Verify 50% target is met
+1. **Phase 1** ✅: testutil package + output package tests (Complete)
+2. **Phase 2** ✅: Commands package pure functions (Complete)
+3. **Phase 3**: Extract MockCommandExecutor to testutil + more commands tests
+4. **Phase 4**: Diagnostics package improvements
+5. **Phase 5**: Clone and orchestrator quick wins
 
-Total effort: 10-15 days to reach 50% coverage for v1.0 (reduced since no reporting bugs exist).
+**Progress**: 32.7% → 37.6% (+4.9% achieved, need +12.4% more)
+
+Total remaining effort: 8-10 days to reach 50% coverage for v1.0.

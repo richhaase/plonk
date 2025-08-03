@@ -5,6 +5,9 @@ package commands
 
 import (
 	"testing"
+
+	"github.com/richhaase/plonk/internal/resources"
+	"github.com/spf13/cobra"
 )
 
 func TestParsePackageSpec(t *testing.T) {
@@ -166,5 +169,166 @@ func TestGetValidManagers(t *testing.T) {
 		if !found {
 			t.Errorf("GetValidManagers() missing expected manager: %s", manager)
 		}
+	}
+}
+
+func TestGetMetadataString(t *testing.T) {
+	tests := []struct {
+		name     string
+		result   resources.OperationResult
+		key      string
+		expected string
+	}{
+		{
+			name: "valid string metadata",
+			result: resources.OperationResult{
+				Metadata: map[string]interface{}{
+					"version": "1.2.3",
+					"author":  "John Doe",
+				},
+			},
+			key:      "version",
+			expected: "1.2.3",
+		},
+		{
+			name: "key not found",
+			result: resources.OperationResult{
+				Metadata: map[string]interface{}{
+					"version": "1.2.3",
+				},
+			},
+			key:      "missing",
+			expected: "",
+		},
+		{
+			name: "nil metadata",
+			result: resources.OperationResult{
+				Metadata: nil,
+			},
+			key:      "any",
+			expected: "",
+		},
+		{
+			name: "non-string value",
+			result: resources.OperationResult{
+				Metadata: map[string]interface{}{
+					"count":   42,
+					"enabled": true,
+					"data":    []string{"a", "b"},
+				},
+			},
+			key:      "count",
+			expected: "",
+		},
+		{
+			name: "empty string value",
+			result: resources.OperationResult{
+				Metadata: map[string]interface{}{
+					"empty": "",
+				},
+			},
+			key:      "empty",
+			expected: "",
+		},
+		{
+			name: "mixed case key",
+			result: resources.OperationResult{
+				Metadata: map[string]interface{}{
+					"MixedCase": "value",
+				},
+			},
+			key:      "MixedCase",
+			expected: "value",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := GetMetadataString(tt.result, tt.key)
+			if result != tt.expected {
+				t.Errorf("GetMetadataString() = %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestCompleteDotfilePaths(t *testing.T) {
+	tests := []struct {
+		name       string
+		toComplete string
+		wantLen    int
+		checkStrs  []string
+	}{
+		{
+			name:       "empty input returns all suggestions",
+			toComplete: "",
+			wantLen:    24, // Count of all commonDotfiles
+			checkStrs:  []string{"~/.zshrc", "~/.bashrc", "~/.vimrc"},
+		},
+		{
+			name:       "tilde path filters suggestions",
+			toComplete: "~/.z",
+			wantLen:    3, // .zshrc, .zprofile, .zshenv
+			checkStrs:  []string{"~/.zshrc", "~/.zprofile", "~/.zshenv"},
+		},
+		{
+			name:       "config directory path",
+			toComplete: "~/.config/",
+			wantLen:    4,
+			checkStrs:  []string{"~/.config/", "~/.config/nvim/", "~/.config/fish/"},
+		},
+		{
+			name:       "relative dotfile",
+			toComplete: ".v",
+			wantLen:    1,
+			checkStrs:  []string{".vimrc"},
+		},
+		{
+			name:       "no matches for tilde path",
+			toComplete: "~/.nonexistent",
+			wantLen:    0,
+			checkStrs:  []string{},
+		},
+		{
+			name:       "absolute path returns default",
+			toComplete: "/etc/",
+			wantLen:    0,
+			checkStrs:  []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			suggestions, directive := CompleteDotfilePaths(nil, nil, tt.toComplete)
+
+			if tt.toComplete == "/etc/" {
+				// For absolute paths, we expect default directive
+				if directive != cobra.ShellCompDirectiveDefault {
+					t.Errorf("Expected ShellCompDirectiveDefault for absolute path, got %v", directive)
+				}
+			} else if len(suggestions) > 0 {
+				// For matches, we expect NoSpace directive
+				if directive != cobra.ShellCompDirectiveNoSpace {
+					t.Errorf("Expected ShellCompDirectiveNoSpace when suggestions exist, got %v", directive)
+				}
+			}
+
+			if len(suggestions) != tt.wantLen {
+				t.Errorf("Got %d suggestions, want %d", len(suggestions), tt.wantLen)
+			}
+
+			for _, check := range tt.checkStrs {
+				found := false
+				for _, s := range suggestions {
+					if s == check {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("Expected to find %q in suggestions", check)
+				}
+			}
+		})
 	}
 }

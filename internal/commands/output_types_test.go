@@ -105,6 +105,101 @@ func TestCalculatePackageOperationSummary(t *testing.T) {
 	}
 }
 
+func TestNewStandardTableBuilder(t *testing.T) {
+	tests := []struct {
+		name     string
+		title    string
+		expected string
+	}{
+		{
+			name:     "simple title",
+			title:    "Test Title",
+			expected: "Test Title\n==========\n\n",
+		},
+		{
+			name:     "empty title",
+			title:    "",
+			expected: "",
+		},
+		{
+			name:     "title with spaces",
+			title:    "Multiple Word Title",
+			expected: "Multiple Word Title\n===================\n\n",
+		},
+		{
+			name:     "title with special characters",
+			title:    "Title: With Special Characters!",
+			expected: "Title: With Special Characters!\n===============================\n\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			builder := NewStandardTableBuilder(tt.title)
+			result := builder.Build()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestStandardTableBuilder_Methods(t *testing.T) {
+	t.Run("SetHeaders and AddRow", func(t *testing.T) {
+		builder := NewStandardTableBuilder("Test")
+		builder.SetHeaders("Name", "Status").
+			AddRow("package1", "installed").
+			AddRow("package2", "missing")
+		result := builder.Build()
+		assert.Contains(t, result, "Test")
+		assert.Contains(t, result, "Name")
+		assert.Contains(t, result, "Status")
+		assert.Contains(t, result, "package1")
+		assert.Contains(t, result, "installed")
+	})
+
+	t.Run("SetSummary", func(t *testing.T) {
+		builder := NewStandardTableBuilder("Test")
+		builder.SetHeaders("Item").
+			AddRow("item1").
+			SetSummary("Total: 1 item")
+		result := builder.Build()
+		assert.Contains(t, result, "Total: 1 item")
+	})
+
+	t.Run("Empty table", func(t *testing.T) {
+		builder := NewStandardTableBuilder("Empty Table")
+		result := builder.Build()
+		expected := "Empty Table\n===========\n\n"
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("Table without headers", func(t *testing.T) {
+		builder := NewStandardTableBuilder("No Headers")
+		builder.AddRow("row1", "data1").
+			AddRow("row2", "data2")
+		result := builder.Build()
+		assert.Contains(t, result, "No Headers")
+		assert.Contains(t, result, "row1")
+		assert.Contains(t, result, "data1")
+	})
+
+	t.Run("Complex table", func(t *testing.T) {
+		builder := NewStandardTableBuilder("Package Status")
+		builder.SetHeaders("Package", "Manager", "Status").
+			AddRow("htop", "brew", "installed").
+			AddRow("vim", "brew", "installed").
+			AddRow("jq", "brew", "missing").
+			SetSummary("Total: 3 packages (2 installed, 1 missing)")
+
+		result := builder.Build()
+		assert.Contains(t, result, "Package Status")
+		assert.Contains(t, result, "Package")
+		assert.Contains(t, result, "Manager")
+		assert.Contains(t, result, "Status")
+		assert.Contains(t, result, "htop")
+		assert.Contains(t, result, "Total: 3 packages")
+	})
+}
+
 func TestConvertOperationResults(t *testing.T) {
 	tests := []struct {
 		name     string
