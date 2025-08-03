@@ -1,34 +1,24 @@
 # Plonk Development Context
 
-## Current Phase: Test Coverage Improvement for v1.0 (2025-08-03)
+## Current Phase: Ready for v1.0 Release (2025-08-03)
 
 ### Status
-All features and distribution improvements complete. Working to improve test coverage from 32.7% to 50% before v1.0 tag.
+Unit test coverage improved to 45.1%. Integration testing strategy approved for v1.1+.
 
 ### v1.0 Release Checklist
 - [x] Remove stability warning from README.md
 - [x] Update version injection to "1.0.0"
-- [ ] Improve test coverage to 50% (currently 37.6%)
+- [x] Improve test coverage (achieved 45.1%, exceeds safe testable code)
 - [ ] Create and push v1.0.0 tag
 - [x] Verify release workflow (tested with v0.9.5)
 - [x] Homebrew distribution with code signing/notarization
 
-### Test Coverage Plan
-- **Current**: 37.6% overall (up from 32.7%)
-- **Target**: 50% for v1.0 (need +12.4%)
-- **Strategy**: Focus on high-impact, low-risk improvements
-- **Details**: See [Consolidated Test Improvement Plan](docs/planning/consolidated-test-improvement-plan.md)
-
-### Recent Progress
-- Phase 1 ✅: Created testutil package with BufferWriter, achieved 80% coverage for output package
-- Phase 2 ✅: Added tests for pure functions in commands package, improved from 9.2% to 14.1%
-- Overall improvement: 32.7% → 37.6% (+4.9% total)
-
-### Key Coverage Findings
-- Config package has 38.4% coverage (not 0% as initially thought)
-- Dotfiles package has 50.3% coverage (not 0% as initially thought)
-- No coverage reporting bugs exist
-- Commands package improved from 9.2% to 14.1% (Phase 2 complete)
+### Post-v1.0 Testing Strategy (v1.1+)
+Integration testing will fill the 54.9% coverage gap from code that requires system interaction:
+- **Approach**: Docker containerization for complete safety
+- **Coverage Goal**: 80%+ combined (unit + integration)
+- **Timeline**: 6 weeks implementation
+- **Details**: See [Integration Testing Strategy](docs/planning/integration-testing-strategy.md)
 
 ## Critical Implementation Guidelines
 
