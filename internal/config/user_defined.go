@@ -15,11 +15,12 @@ type UserDefinedChecker struct {
 
 // NewUserDefinedChecker creates a checker that can identify user-defined values
 func NewUserDefinedChecker(configDir string) *UserDefinedChecker {
-	defaults := GetDefaults()
+	// Create a copy of the default config
+	defaults := defaultConfig
 	userConfig, _ := Load(configDir) // May fail if no user config exists
 
 	return &UserDefinedChecker{
-		defaults:   defaults,
+		defaults:   &defaults,
 		userConfig: userConfig,
 	}
 }
@@ -99,6 +100,8 @@ func (c *UserDefinedChecker) getDefaultFieldValue(fieldName string) interface{} 
 		return c.defaults.Dotfiles
 	case "hooks":
 		return c.defaults.Hooks
+	case "diff_tool":
+		return c.defaults.DiffTool
 	default:
 		return nil
 	}

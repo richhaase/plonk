@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestYAMLLockService_ReadAndWrite(t *testing.T) {
@@ -401,4 +403,13 @@ func TestYAMLLockService_NPMScopedPackage(t *testing.T) {
 	if !found {
 		t.Error("Scoped npm package not found")
 	}
+}
+
+func TestYAMLLockService_GetLockPath(t *testing.T) {
+	testPath := "/home/user/.config/plonk/plonk.lock"
+	service := &YAMLLockService{
+		lockPath: testPath,
+	}
+
+	assert.Equal(t, testPath, service.GetLockPath())
 }

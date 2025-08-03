@@ -241,7 +241,9 @@ func findMissingPackageManagers(report diagnostics.HealthReport) []string {
 					parts := strings.Split(detail, ":")
 					if len(parts) > 0 {
 						managerName := strings.TrimSpace(parts[0])
-						missing = append(missing, managerName)
+						if managerName != "" {
+							missing = append(missing, managerName)
+						}
 					}
 				}
 			}
