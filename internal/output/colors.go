@@ -4,10 +4,7 @@
 package output
 
 import (
-	"os"
-
 	"github.com/fatih/color"
-	"github.com/mattn/go-isatty"
 )
 
 // InitColors should be called early in command execution to set up color support
@@ -18,7 +15,7 @@ func InitColors() {
 	// 3. Windows console support
 
 	// We only need to check if output is going to a terminal
-	isTerminal := isatty.IsTerminal(os.Stdout.Fd()) || isatty.IsCygwinTerminal(os.Stdout.Fd())
+	isTerminal := writer.IsTerminal()
 
 	// Disable colors if output is not to a terminal (piped/redirected)
 	if !isTerminal {
