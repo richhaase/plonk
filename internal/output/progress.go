@@ -7,14 +7,14 @@ package output
 // Shows progress for all operations when using apply command
 func ProgressUpdate(current, total int, operation, item string) {
 	if total > 1 {
-		writer.Printf("[%d/%d] %s: %s\n", current, total, operation, item)
+		progressWriter.Printf("[%d/%d] %s: %s\n", current, total, operation, item)
 	} else if total == 1 {
 		// For single items, still show what we're doing
-		writer.Printf("%s: %s\n", operation, item)
+		progressWriter.Printf("%s: %s\n", operation, item)
 	}
 }
 
 // StageUpdate prints a stage update for multi-stage operations
 func StageUpdate(stage string) {
-	writer.Printf("%s\n", stage)
+	progressWriter.Printf("%s\n", stage)
 }

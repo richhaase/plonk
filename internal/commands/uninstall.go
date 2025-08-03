@@ -5,7 +5,6 @@ package commands
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -57,66 +56,37 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	configDir := config.GetDefaultConfigDirectory()
 	cfg := config.LoadWithDefaults(configDir)
 
+	// Parse and validate all package specifications
+	validSpecs, validationErrors := parseAndValidateUninstallSpecs(args)
+
 	// Process each package with prefix parsing
 	var allResults []resources.OperationResult
 
-	for i, packageSpec := range args {
+	// Add validation errors to results
+	allResults = append(allResults, validationErrors...)
+
+	// Process valid specifications
+	for i, spec := range validSpecs {
 		// Show progress for multi-package operations
-		output.ProgressUpdate(i+1, len(args), "Uninstalling", packageSpec)
-		// Parse the package specification
-		manager, packageName := ParsePackageSpec(packageSpec)
-
-		// Validate package specification
-		if packageName == "" {
-			errorMsg := FormatValidationError("package specification", packageSpec, "package name cannot be empty")
-			allResults = append(allResults, resources.OperationResult{
-				Name:   packageSpec,
-				Status: "failed",
-				Error:  fmt.Errorf("%s", errorMsg),
-			})
-			continue
-		}
-
-		if manager == "" && packageSpec != packageName {
-			// This means there was a colon but empty prefix
-			errorMsg := FormatValidationError("package specification", packageSpec, "manager prefix cannot be empty")
-			allResults = append(allResults, resources.OperationResult{
-				Name:   packageSpec,
-				Status: "failed",
-				Error:  fmt.Errorf("%s", errorMsg),
-			})
-			continue
-		}
-
-		// Only validate manager if explicitly specified
-		if manager != "" && !IsValidManager(manager) {
-			errorMsg := FormatNotFoundError("package manager", manager, GetValidManagers())
-			allResults = append(allResults, resources.OperationResult{
-				Name:    packageSpec,
-				Manager: manager,
-				Status:  "failed",
-				Error:   fmt.Errorf("%s", errorMsg),
-			})
-			continue
-		}
+		output.ProgressUpdate(i+1, len(validSpecs), "Uninstalling", spec.OriginalSpec)
 
 		// Configure uninstallation options for this package
 		// Pass empty manager if not specified to let UninstallPackages determine it
 		opts := packages.UninstallOptions{
-			Manager: manager,
+			Manager: spec.Manager,
 			DryRun:  dryRun,
 		}
 
 		// Process this package with configurable timeout
 		timeout := time.Duration(cfg.PackageTimeout) * time.Second
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		results, err := packages.UninstallPackages(ctx, configDir, []string{packageName}, opts)
+		results, err := packages.UninstallPackages(ctx, configDir, []string{spec.PackageName}, opts)
 		cancel()
 
 		if err != nil {
 			allResults = append(allResults, resources.OperationResult{
-				Name:    packageSpec,
-				Manager: manager,
+				Name:    spec.OriginalSpec,
+				Manager: spec.Manager,
 				Status:  "failed",
 				Error:   err,
 			})
@@ -129,10 +99,10 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	// Show progress for each result
 	for _, result := range allResults {
 		icon := GetStatusIcon(result.Status)
-		fmt.Printf("%s %s %s\n", icon, result.Status, result.Name)
+		output.Printf("%s %s %s\n", icon, result.Status, result.Name)
 		// Show error details for failed operations
 		if result.Status == "failed" && result.Error != nil {
-			fmt.Printf("   Error: %s\n", result.Error.Error())
+			output.Printf("   Error: %s\n", result.Error.Error())
 		}
 	}
 

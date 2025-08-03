@@ -73,15 +73,12 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	showMissing, _ := cmd.Flags().GetBool("missing")
 
 	// Validate mutually exclusive flags
-	if showUnmanaged && showMissing {
-		return fmt.Errorf("--unmanaged and --missing are mutually exclusive: items cannot be both untracked and missing")
+	if err := validateStatusFlags(showUnmanaged, showMissing); err != nil {
+		return err
 	}
 
-	// If neither flag is set, show both
-	if !showPackages && !showDotfiles {
-		showPackages = true
-		showDotfiles = true
-	}
+	// Normalize display flags
+	showPackages, showDotfiles = normalizeDisplayFlags(showPackages, showDotfiles)
 
 	// Get directories
 	homeDir := config.GetHomeDir()

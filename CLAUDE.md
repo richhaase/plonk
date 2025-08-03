@@ -1,34 +1,16 @@
 # Plonk Development Context
 
-## Current Phase: Test Coverage Improvement for v1.0 (2025-08-03)
+## Current Phase: Continuous Improvement (2025-08-04)
 
 ### Status
-All features and distribution improvements complete. Working to improve test coverage from 32.7% to 50% before v1.0 tag.
+Unit test coverage improved to 46.0% through simple function extraction. Focusing on improving testability without Docker complexity.
 
-### v1.0 Release Checklist
-- [x] Remove stability warning from README.md
-- [x] Update version injection to "1.0.0"
-- [ ] Improve test coverage to 50% (currently 37.6%)
-- [ ] Create and push v1.0.0 tag
-- [x] Verify release workflow (tested with v0.9.5)
-- [x] Homebrew distribution with code signing/notarization
-
-### Test Coverage Plan
-- **Current**: 37.6% overall (up from 32.7%)
-- **Target**: 50% for v1.0 (need +12.4%)
-- **Strategy**: Focus on high-impact, low-risk improvements
-- **Details**: See [Consolidated Test Improvement Plan](docs/planning/consolidated-test-improvement-plan.md)
-
-### Recent Progress
-- Phase 1 ✅: Created testutil package with BufferWriter, achieved 80% coverage for output package
-- Phase 2 ✅: Added tests for pure functions in commands package, improved from 9.2% to 14.1%
-- Overall improvement: 32.7% → 37.6% (+4.9% total)
-
-### Key Coverage Findings
-- Config package has 38.4% coverage (not 0% as initially thought)
-- Dotfiles package has 50.3% coverage (not 0% as initially thought)
-- No coverage reporting bugs exist
-- Commands package improved from 9.2% to 14.1% (Phase 2 complete)
+### Testing Strategy
+Currently improving test coverage through:
+- **Simple function extraction** - Extract validation and business logic
+- **Unit tests only** - No integration testing with Docker for now
+- **Coverage Goal**: Maximize unit-testable code coverage
+- **Approach**: Go idiomatic patterns, no over-engineering
 
 ## Critical Implementation Guidelines
 
@@ -80,7 +62,7 @@ This rule has been violated multiple times. It CANNOT happen again. Any AI agent
 Before adding ANY test, ask: "Could this test modify the real system?" If yes, DO NOT ADD IT.
 
 ### Test Coverage Status
-**Overall Coverage**: 45.1% (up from 32.7%)
+**Overall Coverage**: 46.0% (up from 32.7% initially, 45.1% after first round, 45.9% after second round)
 
 #### Coverage by Package
 | Package | Coverage | Notes |
@@ -96,14 +78,14 @@ Before adding ANY test, ask: "Could this test modify the real system?" If yes, D
 | dotfiles | 50.5% | Limited by file operations |
 | clone | 28.9% | Limited by git/network operations |
 | orchestrator | 17.6% | Limited by system operations |
-| commands | 14.6% | Limited by CLI orchestration |
+| commands | 17.6% | ✅ Improved via function extraction |
 | cmd/plonk | 0% | Cannot test main() |
 
 #### Test Philosophy
 - **Safety First**: NO tests may modify system state
 - **Business Logic**: All pure functions and utilities tested
 - **System Operations**: Documented as intentionally untested
-- **Coverage Target**: 50% was aspirational; 45.1% represents all safely testable code
+- **Coverage Target**: 50% was aspirational; 45.9% represents all safely testable code with simple extractions
 
 ### Build & Release
 - **CI/CD**: GitHub Actions with Go 1.23/1.24 matrix testing

@@ -13,6 +13,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/orchestrator"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources"
 	"github.com/spf13/cobra"
 )
@@ -50,7 +51,7 @@ func runDiff(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(driftedFiles) == 0 {
-		fmt.Println("No drifted dotfiles found")
+		output.Println("No drifted dotfiles found")
 		return nil
 	}
 

@@ -10,9 +10,9 @@ import (
 )
 
 func TestProgressUpdate(t *testing.T) {
-	// Save and restore original writer
-	originalWriter := writer
-	defer func() { writer = originalWriter }()
+	// Save and restore original progress writer
+	originalProgressWriter := progressWriter
+	defer func() { progressWriter = originalProgressWriter }()
 
 	tests := []struct {
 		name      string
@@ -83,7 +83,7 @@ func TestProgressUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			buf := testutil.NewBufferWriter(true)
-			writer = buf
+			progressWriter = buf
 
 			ProgressUpdate(tt.current, tt.total, tt.operation, tt.item)
 
@@ -96,8 +96,8 @@ func TestProgressUpdate(t *testing.T) {
 }
 
 func TestStageUpdate(t *testing.T) {
-	originalWriter := writer
-	defer func() { writer = originalWriter }()
+	originalProgressWriter := progressWriter
+	defer func() { progressWriter = originalProgressWriter }()
 
 	tests := []struct {
 		name  string
@@ -129,7 +129,7 @@ func TestStageUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			buf := testutil.NewBufferWriter(true)
-			writer = buf
+			progressWriter = buf
 
 			StageUpdate(tt.stage)
 
@@ -141,13 +141,13 @@ func TestStageUpdate(t *testing.T) {
 }
 
 func TestProgressUpdateNonTerminal(t *testing.T) {
-	// Save and restore original writer
-	originalWriter := writer
-	defer func() { writer = originalWriter }()
+	// Save and restore original progress writer
+	originalProgressWriter := progressWriter
+	defer func() { progressWriter = originalProgressWriter }()
 
 	// Test that output is the same for terminal and non-terminal
 	buf := testutil.NewBufferWriter(false) // non-terminal
-	writer = buf
+	progressWriter = buf
 
 	ProgressUpdate(2, 5, "Installing", "package")
 	want := "[2/5] Installing: package\n"
