@@ -1,11 +1,35 @@
 # Commands Package Testing Plan
 
+## 📛 THIS PLAN IS SUPERSEDED AND CONTAINS DANGEROUS APPROACHES 📛
+
+**DO NOT IMPLEMENT THE ORIGINAL PLAN BELOW - IT WOULD CREATE TESTS THAT MODIFY SYSTEM STATE**
+
+**The original plan suggested testing command orchestration functions which would risk:**
+- **Installing real packages on developer machines**
+- **Modifying real dotfiles**
+- **Executing real system commands**
+
+**THIS IS EXACTLY WHAT WE MUST NEVER DO IN UNIT TESTS**
+
+---
+
 **Date**: 2025-08-02
 **Author**: Analysis by Claude
-**Current Coverage**: 9.2% (421 of 4,577 statements)
-**Target Coverage**: 45-50% (adding ~2,000 statements)
+**Current Coverage**: 14.1% (after Phase 2)
+**Target Coverage**: ~15% (pure functions only)
+**Status**: SUPERSEDED - See [Architecture Decision](commands-testing-architecture-decision.md)
 
-## Executive Summary
+## UPDATE: Architecture Decision
+
+After Phase 2 completion and critical analysis in Phase 3, we determined that command orchestration functions are not suitable for unit testing. They are integration points by design, mixing multiple concerns with no dependency injection points.
+
+**Decision**: Test only pure functions in commands package. Focus testing efforts on business logic packages (orchestrator, diagnostics, etc.).
+
+**Original plan below is preserved for historical context but is no longer being pursued.**
+
+---
+
+## Executive Summary (Original Plan - Not Implemented)
 
 The `internal/commands` package is the largest untested package in plonk, representing 4,577 lines of code with only 9.2% coverage. This document provides a comprehensive plan to improve test coverage using idiomatic Go patterns that leverage existing interfaces and require minimal refactoring.
 

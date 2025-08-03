@@ -1,5 +1,17 @@
 # Consolidated Test Coverage Improvement Plan
 
+## 🚨🚨🚨 CRITICAL SAFETY WARNING 🚨🚨🚨
+
+**UNIT TESTS MUST NEVER MODIFY THE REAL SYSTEM STATE**
+
+**This is an ABSOLUTE, NON-NEGOTIABLE RULE. Tests that install packages, modify dotfiles, or execute system commands are FORBIDDEN and DANGEROUS.**
+
+**We have had MULTIPLE incidents of tests attempting to modify developer machines. This CANNOT happen again.**
+
+**NO TESTS IS BETTER THAN TESTS THAT BREAK DEVELOPER MACHINES**
+
+---
+
 **Date**: 2025-08-03
 **Current Coverage**: 37.6% (up from 32.7%)
 **Target Coverage**: 50% (minimum for v1.0)
@@ -120,41 +132,67 @@ func (b *BufferWriter) String() string {
 
 **Key achievement**: Improved coverage without complex mocking
 
-## Phase 3: Medium Priority (Week 3)
+## Phase 3: Commands Package Architecture Decision ✅ COMPLETE
+
+### Decision: Do Not Unit Test Command Orchestration Functions
+
+After critical analysis, we determined that command orchestration functions (`runXXX`) are not suitable for unit testing because:
+- They directly instantiate dependencies with no injection points
+- They are integration points by design, not business logic containers
+- They mix multiple concerns (parsing, orchestration, output)
+- Testing them would require significant production code changes
+
+**Result**: Focus shifted to packages with actual business logic. Commands package will remain at ~15% coverage (pure functions only).
+
+See [Architecture Decision Document](commands-testing-architecture-decision.md) for full rationale.
+
+## Phase 4: High Priority Business Logic Packages
+
+### Orchestrator Package (3 days) - NEW HIGH PRIORITY
+
+**Current**: 0.7%
+**Target**: 40%
+**Approach**: This package contains core business logic and is highly testable
+
+1. Test option functions (easy wins)
+2. Test ReconcileAll with mocked packages/dotfiles
+3. Test Apply with various scenarios
+4. Test hook execution with mocked commands
+5. Mock package and dotfile reconciliation
 
 ### Diagnostics Package (2 days)
 
 **Current**: 13.7%
 **Target**: 40%
-**Approach**: Test pure functions first
+**Approach**: Test pure functions and add minimal system mocks
 
 1. Test shell detection logic
 2. Test PATH manipulation
 3. Test health check aggregation
-4. Mock system calls only where necessary
+4. Create minimal SystemInterface for external calls
 
-### Orchestrator Package (2 days)
-
-**Current**: 0%
-**Target**: 40%
-**Approach**: Mock external dependencies
-
-1. Test option functions (easy)
-2. Test result conversion
-3. Mock package/dotfile operations
-4. Skip complex Apply method initially
+## Phase 5: Additional Coverage
 
 ### Clone Package (1 day)
 
 **Current**: 0%
 **Target**: 30%
-**Approach**: Test only pure functions
+**Approach**: Test pure functions
 
 1. Test Git URL parsing (pure function)
 2. Test configuration generation
 3. Skip actual git/network operations
 
 ## Implementation Guidelines
+
+### ⚠️ MANDATORY SAFETY CHECKS ⚠️
+
+Before writing ANY test, ask yourself:
+1. **Could this test install a package?** If yes, DO NOT WRITE IT
+2. **Could this test modify a dotfile?** If yes, DO NOT WRITE IT
+3. **Could this test execute a shell command?** If yes, DO NOT WRITE IT
+4. **Could this test write outside temp directories?** If yes, DO NOT WRITE IT
+5. **Could this test change ANYTHING on the system?** If yes, DO NOT WRITE IT
 
 ### Principles
 
@@ -187,11 +225,11 @@ func (b *BufferWriter) String() string {
 | Package | Current | Target | Must Have |
 |---------|---------|--------|-----------|
 | Overall | 37.6% | 50% | ✓ |
-| commands | 14.1% | 40% | ✓ |
+| commands | 14.1% | ~15% | ✅ Pure functions only |
 | output | 80% | 80% | ✅ Complete |
-| diagnostics | 13.7% | 40% | ✓ |
+| orchestrator | 0.7% | 40% | ✓ HIGH PRIORITY |
+| diagnostics | 13.7% | 40% | ✓ HIGH PRIORITY |
 | clone | 0% | 30% | Nice to have |
-| orchestrator | 0.7% | 40% | Nice to have |
 | config | 38.4% | 50% | Nice to have |
 | dotfiles | 50.3% | 60% | Nice to have |
 
@@ -215,10 +253,13 @@ These can wait:
 
 1. **Phase 1** ✅: testutil package + output package tests (Complete)
 2. **Phase 2** ✅: Commands package pure functions (Complete)
-3. **Phase 3**: Extract MockCommandExecutor to testutil + more commands tests
-4. **Phase 4**: Diagnostics package improvements
-5. **Phase 5**: Clone and orchestrator quick wins
+3. **Phase 3** ✅: Architecture decision - commands not unit testable (Complete)
+4. **Phase 4**: Orchestrator package - HIGH PRIORITY (40% target)
+5. **Phase 5**: Diagnostics package improvements (40% target)
+6. **Phase 6**: Clone package basic tests (30% target)
 
 **Progress**: 32.7% → 37.6% (+4.9% achieved, need +12.4% more)
 
-Total remaining effort: 8-10 days to reach 50% coverage for v1.0.
+**Revised Strategy**: Focus on business logic packages (orchestrator, diagnostics) rather than CLI adapter layer (commands).
+
+Total remaining effort: 6-8 days to reach 50% coverage for v1.0.

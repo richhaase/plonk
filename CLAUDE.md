@@ -45,9 +45,29 @@ All features and distribution improvements complete. Working to improve test cov
 - Professional, clean output similar to tools like git, docker, kubectl
 
 ## Testing Philosophy
+
+### 🚨 CRITICAL SAFETY RULE: NEVER MODIFY SYSTEM STATE IN UNIT TESTS 🚨
+
+**THIS IS THE MOST IMPORTANT RULE IN THE ENTIRE CODEBASE**
+
+**UNIT TESTS MUST NEVER:**
+- Call Apply() methods that could install packages or modify dotfiles
+- Execute real package manager commands (brew, apt, npm, etc.)
+- Run hooks or shell commands that affect the system
+- Write to any paths outside of temporary test directories
+- Modify ANY aspect of the developer's machine
+
+**NO TESTS IS BETTER THAN TESTS THAT BREAK DEVELOPER MACHINES**
+
+This rule has been violated multiple times. It CANNOT happen again. Any AI agent or developer who creates tests that modify system state is putting users at risk.
+
+### Safe Testing Practices
 - Unit tests for business logic only, no mocks for CLIs
 - Integration tests in CI only to protect developer systems
 - Existing CommandExecutor interface pattern for mocking
+- Commands package orchestration functions are not unit testable by design (see [Architecture Decision](docs/planning/commands-testing-architecture-decision.md))
+- ALWAYS use os.MkdirTemp() for file operations
+- ONLY test pure functions and data structures
 
 ## Technical Details
 
@@ -56,14 +76,17 @@ All features and distribution improvements complete. Working to improve test cov
 - **Platforms**: macOS, Linux (including WSL)
 - **Prerequisites**: Homebrew, Git
 
+### ⚠️ WARNING: Test Coverage Must Be Safe ⚠️
+Before adding ANY test, ask: "Could this test modify the real system?" If yes, DO NOT ADD IT.
+
 ### Test Coverage
 | Package | Current | Target | Priority | Status |
 |---------|---------|--------|----------|---------|
-| commands | 14.1% | 40% | **HIGH** | Phase 2 ✅ |
+| commands | 14.1% | ~15% | **N/A** | ✅ Pure functions only |
 | output | 80.0% | 80% | **HIGH** | ✅ Complete |
+| orchestrator | 0.7% | 40% | **HIGH** | Next priority |
+| diagnostics | 13.7% | 40% | **HIGH** | Pending |
 | clone | 0% | 30% | **MEDIUM** | Pending |
-| diagnostics | 13.7% | 40% | **MEDIUM** | Pending |
-| orchestrator | 0.7% | 40% | **LOW** | Pending |
 | testutil | 100% | - | - | ✅ Complete |
 | **Overall** | **37.6%** | **50%** | | In Progress |
 

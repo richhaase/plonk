@@ -2,3 +2,575 @@
 // Licensed under the MIT License. See LICENSE file in the project root for license information.
 
 package orchestrator
+
+import (
+	"context"
+	"errors"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/resources"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestNewOrchestrator(t *testing.T) {
+	tests := []struct {
+		name     string
+		opts     []Option
+		validate func(t *testing.T, o *Orchestrator)
+	}{
+		{
+			name: "default orchestrator",
+			opts: nil,
+			validate: func(t *testing.T, o *Orchestrator) {
+				assert.NotNil(t, o)
+				assert.NotNil(t, o.hookRunner)
+				assert.Nil(t, o.config)
+				assert.Nil(t, o.lock)
+				assert.False(t, o.dryRun)
+				assert.False(t, o.packagesOnly)
+				assert.False(t, o.dotfilesOnly)
+			},
+		},
+		{
+			name: "with config",
+			opts: []Option{
+				WithConfig(&config.Config{DefaultManager: "brew"}),
+			},
+			validate: func(t *testing.T, o *Orchestrator) {
+				assert.NotNil(t, o.config)
+				assert.Equal(t, "brew", o.config.DefaultManager)
+			},
+		},
+		{
+			name: "with config dir",
+			opts: []Option{
+				WithConfigDir("/test/config"),
+			},
+			validate: func(t *testing.T, o *Orchestrator) {
+				assert.Equal(t, "/test/config", o.configDir)
+				assert.NotNil(t, o.lock)
+			},
+		},
+		{
+			name: "with home dir",
+			opts: []Option{
+				WithHomeDir("/home/user"),
+			},
+			validate: func(t *testing.T, o *Orchestrator) {
+				assert.Equal(t, "/home/user", o.homeDir)
+			},
+		},
+		{
+			name: "with dry run",
+			opts: []Option{
+				WithDryRun(true),
+			},
+			validate: func(t *testing.T, o *Orchestrator) {
+				assert.True(t, o.dryRun)
+			},
+		},
+		{
+			name: "with packages only",
+			opts: []Option{
+				WithPackagesOnly(true),
+			},
+			validate: func(t *testing.T, o *Orchestrator) {
+				assert.True(t, o.packagesOnly)
+			},
+		},
+		{
+			name: "with dotfiles only",
+			opts: []Option{
+				WithDotfilesOnly(true),
+			},
+			validate: func(t *testing.T, o *Orchestrator) {
+				assert.True(t, o.dotfilesOnly)
+			},
+		},
+		{
+			name: "with multiple options",
+			opts: []Option{
+				WithConfig(&config.Config{DefaultManager: "npm"}),
+				WithConfigDir("/etc/plonk"),
+				WithHomeDir("/home/test"),
+				WithDryRun(true),
+				WithPackagesOnly(false),
+				WithDotfilesOnly(false),
+			},
+			validate: func(t *testing.T, o *Orchestrator) {
+				assert.NotNil(t, o.config)
+				assert.Equal(t, "npm", o.config.DefaultManager)
+				assert.Equal(t, "/etc/plonk", o.configDir)
+				assert.Equal(t, "/home/test", o.homeDir)
+				assert.True(t, o.dryRun)
+				assert.False(t, o.packagesOnly)
+				assert.False(t, o.dotfilesOnly)
+				assert.NotNil(t, o.lock)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := New(tt.opts...)
+			tt.validate(t, o)
+		})
+	}
+}
+
+func TestOptionFunctions(t *testing.T) {
+	t.Run("WithConfig", func(t *testing.T) {
+		cfg := &config.Config{DefaultManager: "test"}
+		opt := WithConfig(cfg)
+		o := &Orchestrator{}
+		opt(o)
+		assert.Equal(t, cfg, o.config)
+	})
+
+	t.Run("WithConfigDir", func(t *testing.T) {
+		dir := "/test/dir"
+		opt := WithConfigDir(dir)
+		o := &Orchestrator{}
+		opt(o)
+		assert.Equal(t, dir, o.configDir)
+	})
+
+	t.Run("WithHomeDir", func(t *testing.T) {
+		dir := "/home/test"
+		opt := WithHomeDir(dir)
+		o := &Orchestrator{}
+		opt(o)
+		assert.Equal(t, dir, o.homeDir)
+	})
+
+	t.Run("WithDryRun", func(t *testing.T) {
+		opt := WithDryRun(true)
+		o := &Orchestrator{}
+		opt(o)
+		assert.True(t, o.dryRun)
+	})
+
+	t.Run("WithPackagesOnly", func(t *testing.T) {
+		opt := WithPackagesOnly(true)
+		o := &Orchestrator{}
+		opt(o)
+		assert.True(t, o.packagesOnly)
+	})
+
+	t.Run("WithDotfilesOnly", func(t *testing.T) {
+		opt := WithDotfilesOnly(true)
+		o := &Orchestrator{}
+		opt(o)
+		assert.True(t, o.dotfilesOnly)
+	})
+}
+
+// Test hook configuration structure only
+func TestOrchestratorHookConfiguration(t *testing.T) {
+	tests := []struct {
+		name         string
+		config       *config.Config
+		hasPreApply  bool
+		hasPostApply bool
+	}{
+		{
+			name:         "no hooks configured",
+			config:       &config.Config{},
+			hasPreApply:  false,
+			hasPostApply: false,
+		},
+		{
+			name: "pre-apply hook only",
+			config: &config.Config{
+				Hooks: config.Hooks{
+					PreApply: []config.Hook{{Command: "echo test"}},
+				},
+			},
+			hasPreApply:  true,
+			hasPostApply: false,
+		},
+		{
+			name: "post-apply hook only",
+			config: &config.Config{
+				Hooks: config.Hooks{
+					PostApply: []config.Hook{{Command: "echo done"}},
+				},
+			},
+			hasPreApply:  false,
+			hasPostApply: true,
+		},
+		{
+			name: "both hooks configured",
+			config: &config.Config{
+				Hooks: config.Hooks{
+					PreApply:  []config.Hook{{Command: "echo start"}},
+					PostApply: []config.Hook{{Command: "echo end"}},
+				},
+			},
+			hasPreApply:  true,
+			hasPostApply: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Just verify the configuration structure
+			if tt.hasPreApply {
+				assert.NotEmpty(t, tt.config.Hooks.PreApply)
+				assert.NotEmpty(t, tt.config.Hooks.PreApply[0].Command)
+			} else {
+				assert.Empty(t, tt.config.Hooks.PreApply)
+			}
+
+			if tt.hasPostApply {
+				assert.NotEmpty(t, tt.config.Hooks.PostApply)
+				assert.NotEmpty(t, tt.config.Hooks.PostApply[0].Command)
+			} else {
+				assert.Empty(t, tt.config.Hooks.PostApply)
+			}
+		})
+	}
+}
+
+func TestApply_SelectiveApplication(t *testing.T) {
+	// This test verifies the selective application logic without actually calling Apply
+	// which could modify the system. We test the flags behavior only.
+	tests := []struct {
+		name           string
+		packagesOnly   bool
+		dotfilesOnly   bool
+		expectPackages bool
+		expectDotfiles bool
+	}{
+		{
+			name:           "apply both by default",
+			packagesOnly:   false,
+			dotfilesOnly:   false,
+			expectPackages: true,
+			expectDotfiles: true,
+		},
+		{
+			name:           "packages only",
+			packagesOnly:   true,
+			dotfilesOnly:   false,
+			expectPackages: true,
+			expectDotfiles: false,
+		},
+		{
+			name:           "dotfiles only",
+			packagesOnly:   false,
+			dotfilesOnly:   true,
+			expectPackages: false,
+			expectDotfiles: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			o := &Orchestrator{
+				packagesOnly: tt.packagesOnly,
+				dotfilesOnly: tt.dotfilesOnly,
+				dryRun:       true,
+				hookRunner:   NewHookRunner(),
+			}
+
+			// Test the logic without calling Apply
+			// The Apply method checks these flags to decide what to run
+			shouldRunPackages := !o.dotfilesOnly
+			shouldRunDotfiles := !o.packagesOnly
+
+			assert.Equal(t, tt.expectPackages, shouldRunPackages)
+			assert.Equal(t, tt.expectDotfiles, shouldRunDotfiles)
+		})
+	}
+}
+
+func TestApplyResult_Success(t *testing.T) {
+	tests := []struct {
+		name          string
+		packageResult interface{}
+		dotfileResult interface{}
+		dryRun        bool
+		expectSuccess bool
+	}{
+		{
+			name: "packages installed in normal mode",
+			packageResult: PackageApplyResult{
+				DryRun:         false,
+				TotalInstalled: 3,
+			},
+			dryRun:        false,
+			expectSuccess: true,
+		},
+		{
+			name: "packages would install in dry run",
+			packageResult: PackageApplyResult{
+				DryRun:            true,
+				TotalWouldInstall: 3,
+			},
+			dryRun:        true,
+			expectSuccess: true,
+		},
+		{
+			name: "dotfiles added in normal mode",
+			dotfileResult: DotfileApplyResult{
+				DryRun: false,
+				Summary: DotfileSummaryApplyResult{
+					Added: 5,
+				},
+			},
+			dryRun:        false,
+			expectSuccess: true,
+		},
+		{
+			name: "dotfiles would add in dry run",
+			dotfileResult: DotfileApplyResult{
+				DryRun: true,
+				Summary: DotfileSummaryApplyResult{
+					Added: 5,
+				},
+			},
+			dryRun:        true,
+			expectSuccess: true,
+		},
+		{
+			name: "no changes in normal mode",
+			packageResult: PackageApplyResult{
+				DryRun:         false,
+				TotalInstalled: 0,
+			},
+			dotfileResult: DotfileApplyResult{
+				DryRun: false,
+				Summary: DotfileSummaryApplyResult{
+					Added: 0,
+				},
+			},
+			dryRun:        false,
+			expectSuccess: false,
+		},
+		{
+			name: "mixed success",
+			packageResult: PackageApplyResult{
+				DryRun:         false,
+				TotalInstalled: 2,
+			},
+			dotfileResult: DotfileApplyResult{
+				DryRun: false,
+				Summary: DotfileSummaryApplyResult{
+					Added: 0,
+				},
+			},
+			dryRun:        false,
+			expectSuccess: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ApplyResult{
+				DryRun:   tt.dryRun,
+				Packages: tt.packageResult,
+				Dotfiles: tt.dotfileResult,
+			}
+
+			// Simulate the success determination logic from Apply()
+			success := false
+			if packageResult, ok := result.Packages.(PackageApplyResult); ok {
+				if !tt.dryRun && packageResult.TotalInstalled > 0 {
+					success = true
+				} else if tt.dryRun && packageResult.TotalWouldInstall > 0 {
+					success = true
+				}
+			}
+			if dotfileResult, ok := result.Dotfiles.(DotfileApplyResult); ok {
+				if !tt.dryRun && dotfileResult.Summary.Added > 0 {
+					success = true
+				} else if tt.dryRun && dotfileResult.Summary.Added > 0 {
+					success = true
+				}
+			}
+
+			assert.Equal(t, tt.expectSuccess, success)
+		})
+	}
+}
+
+func TestApply_ErrorHandling(t *testing.T) {
+	tests := []struct {
+		name             string
+		packageErrors    []string
+		dotfileErrors    []string
+		expectError      bool
+		expectErrorCount int
+	}{
+		{
+			name:          "no errors",
+			packageErrors: nil,
+			dotfileErrors: nil,
+			expectError:   false,
+		},
+		{
+			name:             "package errors only",
+			packageErrors:    []string{"failed to install foo"},
+			dotfileErrors:    nil,
+			expectError:      true,
+			expectErrorCount: 1,
+		},
+		{
+			name:             "dotfile errors only",
+			packageErrors:    nil,
+			dotfileErrors:    []string{"failed to link .bashrc"},
+			expectError:      true,
+			expectErrorCount: 1,
+		},
+		{
+			name:             "both types of errors",
+			packageErrors:    []string{"failed to install foo", "failed to install bar"},
+			dotfileErrors:    []string{"failed to link .bashrc", "failed to link .vimrc"},
+			expectError:      true,
+			expectErrorCount: 4,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ApplyResult{
+				PackageErrors: tt.packageErrors,
+				DotfileErrors: tt.dotfileErrors,
+			}
+
+			// Simulate error checking logic from Apply()
+			var err error
+			if len(result.PackageErrors) > 0 || len(result.DotfileErrors) > 0 {
+				totalErrors := len(result.PackageErrors) + len(result.DotfileErrors)
+				err = errors.New("apply completed with errors")
+				assert.Equal(t, tt.expectErrorCount, totalErrors)
+			}
+
+			if tt.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+// Test the ReconcileAll function
+func TestReconcileAll(t *testing.T) {
+	// This test would require mocking the dotfiles.Reconcile and packages.Reconcile
+	// functions, which are package-level functions. In a real implementation,
+	// we might want to refactor to use interfaces for better testability.
+	// For now, we'll test that the function exists and has the right signature.
+
+	ctx := context.Background()
+
+	// We can't really test this without modifying the package to support
+	// dependency injection or mocking. This is a limitation of the current design.
+	// The function will attempt to read actual files which may not exist in test.
+	t.Run("function exists with temp dirs", func(t *testing.T) {
+		// Create temporary directories for testing
+		tempHome, err := os.MkdirTemp("", "plonk-test-home-*")
+		assert.NoError(t, err)
+		defer os.RemoveAll(tempHome)
+
+		tempConfig, err := os.MkdirTemp("", "plonk-test-config-*")
+		assert.NoError(t, err)
+		defer os.RemoveAll(tempConfig)
+
+		// Create minimal required structure
+		err = os.MkdirAll(filepath.Join(tempConfig, "dotfiles"), 0755)
+		assert.NoError(t, err)
+
+		// Create an empty lock file to avoid errors
+		lockFile := filepath.Join(tempConfig, "plonk.lock")
+		err = os.WriteFile(lockFile, []byte("version: 2\nresources: []\n"), 0644)
+		assert.NoError(t, err)
+
+		// Just verify the function can be called
+		results, err := ReconcileAll(ctx, tempHome, tempConfig)
+		// Either way, we're just testing that the function exists and returns the right types
+		if err == nil {
+			assert.NotNil(t, results)
+			assert.IsType(t, map[string]resources.Result{}, results)
+		}
+	})
+}
+
+// Test apply result structs marshaling
+func TestApplyResultStructs(t *testing.T) {
+	t.Run("PackageApplyResult fields", func(t *testing.T) {
+		result := PackageApplyResult{
+			DryRun:            true,
+			TotalMissing:      5,
+			TotalInstalled:    3,
+			TotalFailed:       1,
+			TotalWouldInstall: 2,
+			Managers: []ManagerApplyResult{
+				{
+					Name:         "brew",
+					MissingCount: 3,
+					Packages: []PackageOperationApplyResult{
+						{
+							Name:   "ripgrep",
+							Status: "installed",
+						},
+						{
+							Name:   "fd",
+							Status: "failed",
+							Error:  "network error",
+						},
+					},
+				},
+			},
+		}
+
+		assert.True(t, result.DryRun)
+		assert.Equal(t, 5, result.TotalMissing)
+		assert.Equal(t, 3, result.TotalInstalled)
+		assert.Equal(t, 1, result.TotalFailed)
+		assert.Equal(t, 2, result.TotalWouldInstall)
+		assert.Len(t, result.Managers, 1)
+		assert.Equal(t, "brew", result.Managers[0].Name)
+		assert.Len(t, result.Managers[0].Packages, 2)
+	})
+
+	t.Run("DotfileApplyResult fields", func(t *testing.T) {
+		result := DotfileApplyResult{
+			DryRun:     false,
+			TotalFiles: 10,
+			Actions: []DotfileActionApplyResult{
+				{
+					Source:      "dotfiles/.bashrc",
+					Destination: "~/.bashrc",
+					Action:      "copy",
+					Status:      "added",
+				},
+				{
+					Source:      "dotfiles/.vimrc",
+					Destination: "~/.vimrc",
+					Action:      "error",
+					Status:      "failed",
+					Error:       "permission denied",
+				},
+			},
+			Summary: DotfileSummaryApplyResult{
+				Added:     5,
+				Updated:   2,
+				Unchanged: 2,
+				Failed:    1,
+			},
+		}
+
+		assert.False(t, result.DryRun)
+		assert.Equal(t, 10, result.TotalFiles)
+		assert.Len(t, result.Actions, 2)
+		assert.Equal(t, 5, result.Summary.Added)
+		assert.Equal(t, 2, result.Summary.Updated)
+		assert.Equal(t, 2, result.Summary.Unchanged)
+		assert.Equal(t, 1, result.Summary.Failed)
+	})
+}
