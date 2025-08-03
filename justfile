@@ -60,7 +60,7 @@ test-coverage:
 # Run tests with coverage for CI
 test-coverage-ci:
     @echo "Running unit tests with coverage for CI..."
-    @go test -race -coverprofile=coverage.out -covermode=atomic ./...
+    @go test -race -coverprofile=coverage.out ./...
     @echo "✅ Unit tests passed with coverage!"
 
 # Run BATS behavioral tests

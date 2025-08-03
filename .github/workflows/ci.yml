@@ -31,12 +31,10 @@ jobs:
 
     - name: Upload coverage to Codecov
       if: success()
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
-        file: ./coverage.out
         token: ${{ secrets.CODECOV_TOKEN }}
-        name: codecov-umbrella
-        fail_ci_if_error: false
+        verbose: true
 
     - name: Quality checks
       uses: ./.github/actions/quality-checks
