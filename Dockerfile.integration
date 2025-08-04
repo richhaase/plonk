@@ -1,0 +1,45 @@
+# Integration test container
+FROM ubuntu:22.04
+
+# Minimal dependencies for PoC
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    sudo \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create test user
+RUN useradd -m -s /bin/bash testuser && \
+    echo 'testuser ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+USER testuser
+WORKDIR /home/testuser
+
+# Install Homebrew (Linux)
+RUN /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Set PATH based on architecture
+RUN if [ -d "/home/linuxbrew/.linuxbrew" ]; then \
+        echo 'export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"' >> ~/.bashrc; \
+    elif [ -d "/opt/homebrew" ]; then \
+        echo 'export PATH="/opt/homebrew/bin:$PATH"' >> ~/.bashrc; \
+    fi
+
+ENV PATH="/home/linuxbrew/.linuxbrew/bin:/opt/homebrew/bin:$PATH"
+
+# Set environment for faster operations
+ENV NO_COLOR=1
+ENV HOMEBREW_NO_ANALYTICS=1
+
+# Install build dependencies for ARM64 (if needed)
+RUN if [ "$(uname -m)" = "aarch64" ]; then \
+        sudo apt-get update && \
+        sudo apt-get install -y build-essential && \
+        sudo rm -rf /var/lib/apt/lists/*; \
+    fi
+
+
+# Signal that container is ready
+RUN echo "Container ready" > /tmp/ready.txt
+
+CMD ["tail", "-f", "/dev/null"]

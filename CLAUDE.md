@@ -1,16 +1,30 @@
 # Plonk Development Context
 
-## Current Phase: Continuous Improvement (2025-08-04)
+## Current Phase: Integration Testing Implementation (2025-08-04)
 
 ### Status
-Unit test coverage improved to 46.0% through simple function extraction. Focusing on improving testability without Docker complexity.
+- **Unit test coverage**: 46.0% (represents all safely testable code)
+- **Integration testing**: POC infrastructure working with testcontainers-go
+- **JSON/YAML output**: Fixed - progress/status to stderr, structured data to stdout
 
-### Testing Strategy
-Currently improving test coverage through:
-- **Simple function extraction** - Extract validation and business logic
-- **Unit tests only** - No integration testing with Docker for now
-- **Coverage Goal**: Maximize unit-testable code coverage
-- **Approach**: Go idiomatic patterns, no over-engineering
+### Recent Achievements
+1. **Stderr output fix** (2025-08-04):
+   - All progress messages now go to stderr
+   - JSON/YAML output is clean on stdout
+   - Follows industry standard (kubectl, docker, gh)
+   - No breaking changes to existing functionality
+
+2. **Integration test POC** (2025-08-04):
+   - Docker containerized testing with testcontainers-go
+   - First test (TestInstallPackage) working
+   - Safe execution - no impact on developer machines
+   - JSON output validation working correctly
+
+### Integration Testing Strategy
+- **Docker-only on dev machines** for safety
+- **testcontainers-go** for container orchestration
+- **JSON validation** for reliable assertions
+- **Gradual expansion** from single test POC
 
 ## Critical Implementation Guidelines
 

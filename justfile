@@ -84,6 +84,37 @@ test-integration:
     go test -v -tags=integration ./tests/integration/...
     @echo "✅ Integration tests completed!"
 
+# Build Linux binary for Docker container (auto-detects architecture)
+build-linux:
+    @echo "🔨 Building Linux binary for Docker..."
+    @if [ "$(uname -m)" = "arm64" ] || [ "$(uname -m)" = "aarch64" ]; then \
+        echo "   Detected ARM64 architecture"; \
+        CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o plonk-linux cmd/plonk/main.go; \
+    else \
+        echo "   Detected AMD64 architecture"; \
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o plonk-linux cmd/plonk/main.go; \
+    fi
+
+# Build test container
+build-test-image:
+    @echo "🐳 Building test container..."
+    docker build -t plonk-test:poc -f Dockerfile.integration .
+
+# Run containerized integration tests (safe on dev machines)
+test-integration-container: build-linux build-test-image
+    @echo "🧪 Running integration tests in Docker..."
+    @echo "   Using Docker for safety (required on dev machines)"
+    PLONK_INTEGRATION=1 go test -v -tags=integration ./tests/integration/container_test.go
+
+# Quick verification of Linux binary
+verify-linux-binary: build-linux
+    @echo "✓ Testing Linux binary in Docker..."
+    @docker run --rm \
+        -v $$PWD/plonk-linux:/plonk \
+        ubuntu:22.04 \
+        /plonk --version || \
+        (echo "❌ Linux binary failed" && exit 1)
+
 # Clean build artifacts
 clean:
     @echo "Cleaning build artifacts..."
