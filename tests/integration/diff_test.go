@@ -46,8 +46,8 @@ func TestDiffDotfile(t *testing.T) {
 	err = env.WriteFile("/home/testuser/.testdiff", []byte(originalContent))
 	require.NoError(t, err)
 
-	// Apply to ensure symlink points to correct content
-	_, err = env.Run("apply", "--dotfiles-only", "-o", "json")
+	// Apply to ensure the dotfile is properly deployed
+	_, err = env.Run("apply", "--dotfiles", "-o", "json")
 	require.NoError(t, err)
 
 	// Now diff should show no differences
