@@ -45,10 +45,6 @@ test:
     go test ./...
     @echo "✅ Unit tests passed!"
 
-test-clear-cache:
-    @echo "Clearing test cache..."
-    @go clean -testcache
-    @echo "✅ Cache cleared!"
 
 # Run tests with coverage
 test-coverage:
@@ -57,21 +53,16 @@ test-coverage:
     @go tool cover -html=coverage.out -o coverage.html
     @echo "✅ Unit tests passed! Coverage report: coverage.html"
 
-# Run tests with coverage for CI
-test-coverage-ci:
-    @echo "Running unit tests with coverage for CI..."
-    @go test -race -coverprofile=coverage.out ./...
-    @echo "✅ Unit tests passed with coverage!"
 
 
 # Run integration tests (Docker-based, safe for local development)
-test-integration: build-linux build-test-image
+test-integration: _build-linux _build-test-image
     @echo "Running integration tests..."
     go test -v -tags=integration ./tests/integration/...
     @echo "✅ Integration tests completed!"
 
 # Build Linux binary for Docker container (auto-detects architecture)
-build-linux:
+_build-linux:
     @echo "🔨 Building Linux binary for Docker..."
     @if [ "$(uname -m)" = "arm64" ] || [ "$(uname -m)" = "aarch64" ]; then \
         echo "   Detected ARM64 architecture"; \
@@ -82,44 +73,21 @@ build-linux:
     fi
 
 # Build test container
-build-test-image:
+_build-test-image:
     @echo "🐳 Building test container..."
     docker build -t plonk-test:poc -f Dockerfile.integration .
 
-# Run containerized integration tests (safe on dev machines)
-test-integration-container: build-linux build-test-image
-    @echo "🧪 Running integration tests in Docker..."
-    @echo "   Using Docker for safety (required on dev machines)"
-    PLONK_INTEGRATION=1 go test -v -tags=integration ./tests/integration/container_test.go
 
-# Quick verification of Linux binary
-verify-linux-binary: build-linux
-    @echo "✓ Testing Linux binary in Docker..."
-    @docker run --rm \
-        -v $$PWD/plonk-linux:/plonk \
-        ubuntu:22.04 \
-        /plonk --version || \
-        (echo "❌ Linux binary failed" && exit 1)
 
-# Clean build artifacts
+# Clean build artifacts and test cache
 clean:
-    @echo "Cleaning build artifacts..."
+    @echo "Cleaning build artifacts and caches..."
     rm -rf bin dist
     rm -f coverage.out coverage.html
     go clean
-    @echo "✅ Build artifacts cleaned"
-
-# Complete development environment cleanup
-clean-all: clean
-    @echo "🧹 Performing complete cleanup..."
-    @echo "  • Clearing Go module cache..."
-    go clean -modcache
-    @echo "  • Clearing pre-commit cache..."
-    pre-commit clean || true
-    rm -rf ~/.cache/pre-commit
-    @echo "  • Clearing test cache..."
     go clean -testcache
-    @echo "✅ Complete cleanup done!"
+    @echo "✅ Build artifacts and test cache cleaned"
+
 
 # Setup development environment for new contributors
 dev-setup:
@@ -140,44 +108,8 @@ dev-setup:
     @echo "Next steps:"
     @echo "  • Run 'just' to see available commands"
     @echo "  • Run 'just build' to build the binary"
-    @echo "  • Run 'just precommit' before committing changes"
 
-# Update all dependencies with safety checks
-deps-update:
-    @echo "🔄 Updating project dependencies..."
-    @echo "  • Updating Go dependencies..."
-    go get -u ./...
-    go mod tidy
-    @echo "  • Updating pre-commit hooks..."
-    @if command -v pre-commit &> /dev/null; then \
-        pre-commit autoupdate; \
-    else \
-        echo "⚠️  pre-commit not found, skipping hook updates"; \
-    fi
-    @echo "  • Running validation..."
-    @echo "    - Testing..."
-    @if ! just test; then \
-        echo "❌ Tests failed after update. Review changes carefully."; \
-        exit 1; \
-    fi
-    @echo "    - Linting..."
-    @if ! just lint; then \
-        echo "❌ Linting failed after update. Review changes carefully."; \
-        exit 1; \
-    fi
-    @echo "✅ Dependencies updated successfully!"
-    @echo ""
-    @echo "📊 Review changes with:"
-    @echo "  git diff go.mod go.sum .pre-commit-config.yaml"
 
-# Run pre-commit checks (format, lint, test, security)
-precommit:
-    @echo "Running pre-commit checks..."
-    @just format
-    @just lint
-    @just test
-    @just security
-    @echo "✅ Pre-commit checks passed!"
 
 
 # Format Go code and organize imports
