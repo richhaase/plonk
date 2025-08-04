@@ -121,14 +121,3 @@ format:
 lint:
     @echo "🔍 Running linter..."
     go run github.com/golangci/golangci-lint/cmd/golangci-lint run --timeout=10m
-
-# Run security checks (non-blocking)
-security:
-    @echo "🔐 Running security checks..."
-    @go run golang.org/x/vuln/cmd/govulncheck ./...
-    @if go run github.com/securego/gosec/v2/cmd/gosec ./...; then \
-        echo "✅ No security issues found!"; \
-    else \
-        echo "⚠️  Security warnings found (non-blocking)"; \
-    fi
-    @echo "✅ Security checks completed!"

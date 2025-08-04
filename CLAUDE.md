@@ -4,11 +4,26 @@ This document contains critical rules that MUST be followed when working on the 
 
 ## 1. Scope Control Rules
 
-### NEVER Add Unrequested Features
+### NEVER Add Unrequested Features - THIS IS A MAJOR BUG
+**Adding ANY unrequested feature, no matter how "helpful", is considered a MAJOR BUG in your implementation.**
+
 - **FORBIDDEN**: Implementing features, enhancements, or improvements that were not explicitly requested
-- **ALLOWED**: Proposing improvements through comments or suggestions
+- **FORBIDDEN**: Adding "sensible defaults" or "best practices" beyond the exact request
+- **FORBIDDEN**: Including extra branches, error handling, or configuration options not asked for
+- **ALLOWED**: Proposing improvements through comments or suggestions ONLY
 - **REQUIRED**: When given a task, implement EXACTLY what was asked - nothing more, nothing less
-- **EXAMPLE**: If asked to "fix the JSON output bug", do NOT also "improve error messages" or "add helpful logging"
+
+**Common violations that are MAJOR BUGS:**
+- Adding branch names like "develop" when not requested
+- Adding environment variables or flags "for flexibility"
+- Including "helpful" validation or safety checks not asked for
+- Adding extra commands, options, or parameters
+- "Improving" code organization beyond the specific request
+
+**EXAMPLE BUGS**:
+- Asked: "Add CI for main branch" → BUG: Also adding "develop" branch
+- Asked: "Remove environment check" → BUG: Keeping it but making it "optional"
+- Asked: "Create a simple test" → BUG: Adding test helpers, fixtures, or frameworks
 
 ### File Creation Restrictions
 - **FORBIDDEN**: Creating new files unless absolutely necessary for the requested task
@@ -118,8 +133,11 @@ These rules exist because:
 2. Scope creep makes code harder to review and can introduce bugs
 3. Professional tools have professional output
 4. Safety is more important than metrics
+5. **Unrequested features are BUGS, not improvements** - they waste time, complicate reviews, and violate trust
 
 When in doubt, err on the side of caution. It's better to do less safely than more dangerously.
+
+**If you're thinking "but it would be helpful to also..." - STOP. That thought is a bug. Do ONLY what was asked.**
 
 ## 6. CLAUDE.md Usage Rules
 
