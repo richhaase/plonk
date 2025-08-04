@@ -38,21 +38,6 @@ repos:
       - id: mixed-line-ending
         name: Check for mixed line endings
 
-  # Go-specific community hooks
-  - repo: https://github.com/dnephin/pre-commit-golang
-    rev: v0.5.1
-    hooks:
-      - id: go-mod-tidy
-        name: Tidy Go modules
-      # Note: go-vet can be enabled once we resolve module path detection
-      # - id: go-vet
-      #   name: Go vet
-      #   files: \.go$
-      - id: go-fmt
-        name: Go fmt
-      - id: go-imports
-        name: Go imports
-        args: [-local, plonk]
 
   # Additional security checks can be added here
   # Example: detect-secrets, commitizen, etc.
