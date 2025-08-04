@@ -35,24 +35,24 @@ resources:
 
 	// Run apply
 	var applyResult struct {
-		Command string `json:"command"`
-		Summary struct {
-			Packages struct {
-				Installed int `json:"installed"`
-				Failed    int `json:"failed"`
-			} `json:"packages"`
-		} `json:"summary"`
-		DryRun bool `json:"dry_run"`
+		DryRun   bool   `json:"dry_run"`
+		Scope    string `json:"scope"`
+		Packages struct {
+			TotalInstalled int `json:"total_installed"`
+			TotalFailed    int `json:"total_failed"`
+		} `json:"packages"`
+		Success bool `json:"success"`
 	}
 
-	err = env.RunJSON(&applyResult, "apply", "--packages-only")
+	err = env.RunJSON(&applyResult, "apply", "--packages")
 	require.NoError(t, err, "Apply should succeed")
 
 	// Verify results
-	assert.Equal(t, "apply", applyResult.Command)
-	assert.Equal(t, 2, applyResult.Summary.Packages.Installed)
-	assert.Equal(t, 0, applyResult.Summary.Packages.Failed)
+	assert.Equal(t, "packages", applyResult.Scope)
+	assert.Equal(t, 2, applyResult.Packages.TotalInstalled)
+	assert.Equal(t, 0, applyResult.Packages.TotalFailed)
 	assert.False(t, applyResult.DryRun)
+	assert.True(t, applyResult.Success)
 
 	// Verify packages are actually installed
 	brewList, err := env.Exec("brew", "list")
@@ -84,25 +84,32 @@ resources:
 
 	// Run apply
 	var applyResult struct {
-		Command string `json:"command"`
-		Summary struct {
-			Dotfiles struct {
-				Deployed int `json:"deployed"`
-				Failed   int `json:"failed"`
-			} `json:"dotfiles"`
-		} `json:"summary"`
+		DryRun   bool   `json:"dry_run"`
+		Scope    string `json:"scope"`
+		Dotfiles struct {
+			Summary struct {
+				Added  int `json:"added"`
+				Failed int `json:"failed"`
+			} `json:"summary"`
+		} `json:"dotfiles"`
+		Success bool `json:"success"`
 	}
 
-	err = env.RunJSON(&applyResult, "apply", "--dotfiles-only")
+	err = env.RunJSON(&applyResult, "apply", "--dotfiles")
 	require.NoError(t, err, "Apply should succeed")
 
 	// Verify results
-	assert.Equal(t, 1, applyResult.Summary.Dotfiles.Deployed)
-	assert.Equal(t, 0, applyResult.Summary.Dotfiles.Failed)
+	assert.Equal(t, "dotfiles", applyResult.Scope)
+	assert.Equal(t, 1, applyResult.Dotfiles.Summary.Added)
+	assert.Equal(t, 0, applyResult.Dotfiles.Summary.Failed)
+	assert.True(t, applyResult.Success)
 
-	// Verify symlink exists
-	output, err := env.Exec("ls", "-la", "/home/testuser/.testrc")
-	require.NoError(t, err, "Symlink should exist")
-	assert.Contains(t, output, "->", "Should be a symlink")
-	assert.Contains(t, output, ".config/plonk/testrc", "Should point to config directory")
+	// Verify the dotfile was deployed
+	_, err = env.Exec("ls", "/home/testuser/.testrc")
+	require.NoError(t, err, "Dotfile should exist")
+
+	// Verify the content is correct
+	content, err := env.Exec("cat", "/home/testuser/.testrc")
+	require.NoError(t, err)
+	assert.Equal(t, testConfig, content, "Dotfile content should match")
 }
