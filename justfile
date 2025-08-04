@@ -53,7 +53,6 @@ test-coverage:
     @go tool cover -html=coverage.out -o coverage.html
     @echo "Unit tests passed! Coverage report: coverage.html"
 
-
 # Clean build artifacts and test cache
 clean:
     @echo "Cleaning build artifacts and caches..."
@@ -62,7 +61,6 @@ clean:
     go clean
     go clean -testcache
     @echo "Build artifacts and test cache cleaned"
-
 
 # Setup development environment for new contributors
 dev-setup:
@@ -83,9 +81,6 @@ dev-setup:
     @echo "Next steps:"
     @echo "  • Run 'just' to see available commands"
     @echo "  • Run 'just build' to build the binary"
-
-
-
 
 # Format Go code and organize imports
 format:

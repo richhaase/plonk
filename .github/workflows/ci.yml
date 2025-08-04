@@ -25,18 +25,7 @@ jobs:
 
     - name: Run all tests with coverage
       run: |
-        # Install gocovmerge for combining coverage
-        go install github.com/wadey/gocovmerge@latest
-        # Run tests
-        just test-all-coverage
-
-    - name: Upload coverage to Codecov
-      if: success()
-      uses: codecov/codecov-action@v5
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.out
-        verbose: true
+        just test-coverage
 
     - name: Quality checks
       uses: ./.github/actions/quality-checks
