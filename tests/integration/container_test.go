@@ -34,11 +34,6 @@ func NewTestEnv(t *testing.T) *TestEnv {
 
 	ctx := context.Background()
 
-	// Check if we're in CI - skip for now (future: run directly)
-	if os.Getenv("CI") == "true" {
-		t.Skip("CI mode - container tests not yet implemented for CI")
-	}
-
 	// Set Docker host for testcontainers if not already set
 	if os.Getenv("DOCKER_HOST") == "" {
 		// Try common Docker socket locations

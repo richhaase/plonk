@@ -44,9 +44,10 @@ repos:
     hooks:
       - id: go-mod-tidy
         name: Tidy Go modules
-      - id: go-vet
-        name: Go vet
-        files: \.go$
+      # Note: go-vet can be enabled once we resolve module path detection
+      # - id: go-vet
+      #   name: Go vet
+      #   files: \.go$
       - id: go-fmt
         name: Go fmt
       - id: go-imports

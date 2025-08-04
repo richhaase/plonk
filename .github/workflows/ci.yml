@@ -48,6 +48,4 @@ jobs:
         just build-test-image
 
     - name: Run integration tests
-      env:
-        PLONK_INTEGRATION: 'true'
       run: go test -v -tags=integration ./tests/integration/...

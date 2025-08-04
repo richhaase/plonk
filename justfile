@@ -67,12 +67,6 @@ test-coverage-ci:
 # Run integration tests (Docker-based, safe for local development)
 test-integration: build-linux build-test-image
     @echo "Running integration tests..."
-    @if [ -z "$PLONK_INTEGRATION" ] && [ -z "$CI" ]; then \
-        echo "⚠️  Integration tests require explicit opt-in"; \
-        echo "   Run: PLONK_INTEGRATION=1 just test-integration"; \
-        echo "   Or set CI=true for CI environments"; \
-        exit 1; \
-    fi
     go test -v -tags=integration ./tests/integration/...
     @echo "✅ Integration tests completed!"
 
