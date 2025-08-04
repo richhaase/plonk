@@ -5,9 +5,11 @@ package integration_test
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -161,6 +163,30 @@ func (e *TestEnv) RunJSON(v interface{}, args ...string) error {
 
 	if err := json.Unmarshal([]byte(output), v); err != nil {
 		return fmt.Errorf("failed to parse JSON: %w\nOutput: %s", err, output)
+	}
+
+	return nil
+}
+
+// WriteFile writes a file inside the container
+func (e *TestEnv) WriteFile(path string, content []byte) error {
+	e.t.Helper()
+
+	// Create directory if needed
+	dir := filepath.Dir(path)
+	if dir != "." && dir != "/" {
+		_, err := e.Exec("mkdir", "-p", dir)
+		if err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", dir, err)
+		}
+	}
+
+	// Write file using echo and shell redirection
+	// Use base64 to handle special characters
+	encoded := base64.StdEncoding.EncodeToString(content)
+	_, err := e.Exec("sh", "-c", fmt.Sprintf("echo '%s' | base64 -d > %s", encoded, path))
+	if err != nil {
+		return fmt.Errorf("failed to write file %s: %w", path, err)
 	}
 
 	return nil
