@@ -16,13 +16,6 @@ repos:
         files: \.go$
         pass_filenames: false
 
-      - id: go-test
-        name: Test Go code
-        entry: just test
-        language: system
-        files: \.go$
-        pass_filenames: false
-
   # Standard file quality checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -51,10 +44,9 @@ repos:
     hooks:
       - id: go-mod-tidy
         name: Tidy Go modules
-      # Note: go-vet can be enabled once we resolve module path detection
-      # - id: go-vet
-      #   name: Go vet
-      #   files: \.go$
+      - id: go-vet
+        name: Go vet
+        files: \.go$
       - id: go-fmt
         name: Go fmt
       - id: go-imports

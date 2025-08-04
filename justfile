@@ -64,12 +64,13 @@ test-coverage-ci:
     @echo "✅ Unit tests passed with coverage!"
 
 
-# Run integration tests (CI only - requires real package managers)
-test-integration:
+# Run integration tests (Docker-based, safe for local development)
+test-integration: build-linux build-test-image
     @echo "Running integration tests..."
-    @if [ -z "$CI" ]; then \
-        echo "❌ Integration tests should only run in CI to protect your system"; \
-        echo "   Set CI=true to override (at your own risk)"; \
+    @if [ -z "$PLONK_INTEGRATION" ] && [ -z "$CI" ]; then \
+        echo "⚠️  Integration tests require explicit opt-in"; \
+        echo "   Run: PLONK_INTEGRATION=1 just test-integration"; \
+        echo "   Or set CI=true for CI environments"; \
         exit 1; \
     fi
     go test -v -tags=integration ./tests/integration/...
