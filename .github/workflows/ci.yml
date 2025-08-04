@@ -23,17 +23,19 @@ jobs:
         install-homebrew: 'true'
         install-just: 'true'
 
-    - name: Run unit tests with coverage
-      uses: ./.github/actions/run-tests
-      with:
-        coverage: 'true'
-        coverage-format: 'ci'
+    - name: Run all tests with coverage
+      run: |
+        # Install gocovmerge for combining coverage
+        go install github.com/wadey/gocovmerge@latest
+        # Run tests
+        just test-all-coverage
 
     - name: Upload coverage to Codecov
       if: success()
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.out
         verbose: true
 
     - name: Quality checks
@@ -41,11 +43,3 @@ jobs:
       with:
         run-linter: 'true'
         test-build: 'true'
-
-    - name: Build Docker test image
-      run: |
-        just build-linux
-        just build-test-image
-
-    - name: Run integration tests
-      run: go test -v -tags=integration ./tests/integration/...

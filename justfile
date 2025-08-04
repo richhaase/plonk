@@ -55,11 +55,23 @@ test-coverage:
 
 
 
-# Run integration tests (Docker-based, safe for local development)
-test-integration: _build-linux _build-test-image
-    @echo "Running integration tests..."
+# Run all tests (unit + integration)
+test-all: _build-linux _build-test-image
+    @echo "Running all tests (unit + integration)..."
+    go test ./...
     go test -v -tags=integration ./tests/integration/...
-    @echo "✅ Integration tests completed!"
+    @echo "✅ All tests passed!"
+
+# Run all tests with coverage
+test-all-coverage: _build-linux _build-test-image
+    @echo "Running all tests with coverage..."
+    @go test -coverprofile=unit.coverage ./...
+    @go test -tags=integration -coverprofile=integration.coverage ./tests/integration/...
+    @echo "Merging coverage reports..."
+    @go run github.com/wadey/gocovmerge unit.coverage integration.coverage > coverage.out
+    @go tool cover -html=coverage.out -o coverage.html
+    @rm unit.coverage integration.coverage
+    @echo "✅ All tests passed! Coverage report: coverage.html"
 
 # Build Linux binary for Docker container (auto-detects architecture)
 _build-linux:
