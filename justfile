@@ -34,16 +34,16 @@ build:
     eval $(just _get-version-info)
 
     if ! go build -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" -o bin/plonk ./cmd/plonk; then
-        echo "❌ Build failed"
+        echo "Build failed"
         exit 1
     fi
-    echo "✅ Built versioned plonk binary to bin/ (version: $VERSION)"
+    echo "Built versioned plonk binary to bin/ (version: $VERSION)"
 
 # Run all unit tests
 test:
     @echo "Running unit tests..."
     go test ./...
-    @echo "✅ Unit tests passed!"
+    @echo "Unit tests passed!"
 
 
 # Run tests with coverage
@@ -51,7 +51,7 @@ test-coverage:
     @echo "Running unit tests with coverage..."
     @go test -coverprofile=coverage.out ./...
     @go tool cover -html=coverage.out -o coverage.html
-    @echo "✅ Unit tests passed! Coverage report: coverage.html"
+    @echo "Unit tests passed! Coverage report: coverage.html"
 
 
 
@@ -60,7 +60,7 @@ test-all: _build-linux _build-test-image
     @echo "Running all tests (unit + integration)..."
     go test ./...
     go test -v -tags=integration ./tests/integration/...
-    @echo "✅ All tests passed!"
+    @echo "All tests passed!"
 
 # Run all tests with coverage
 test-all-coverage: _build-linux _build-test-image
@@ -71,11 +71,11 @@ test-all-coverage: _build-linux _build-test-image
     @go run github.com/wadey/gocovmerge unit.coverage integration.coverage > coverage.out
     @go tool cover -html=coverage.out -o coverage.html
     @rm unit.coverage integration.coverage
-    @echo "✅ All tests passed! Coverage report: coverage.html"
+    @echo "All tests passed! Coverage report: coverage.html"
 
 # Build Linux binary for Docker container (auto-detects architecture)
 _build-linux:
-    @echo "🔨 Building Linux binary for Docker..."
+    @echo "Building Linux binary for Docker..."
     @if [ "$(uname -m)" = "arm64" ] || [ "$(uname -m)" = "aarch64" ]; then \
         echo "   Detected ARM64 architecture"; \
         CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o plonk-linux cmd/plonk/main.go; \
@@ -86,7 +86,7 @@ _build-linux:
 
 # Build test container
 _build-test-image:
-    @echo "🐳 Building test container..."
+    @echo "Building test container..."
     docker build -t plonk-test:poc -f Dockerfile.integration .
 
 
@@ -98,24 +98,24 @@ clean:
     rm -f coverage.out coverage.html
     go clean
     go clean -testcache
-    @echo "✅ Build artifacts and test cache cleaned"
+    @echo "Build artifacts and test cache cleaned"
 
 
 # Setup development environment for new contributors
 dev-setup:
-    @echo "🚀 Setting up development environment..."
+    @echo "Setting up development environment..."
     @echo "  • Downloading Go dependencies..."
     go mod download
     @echo "  • Installing pre-commit hooks..."
     @if command -v pre-commit &> /dev/null; then \
         pre-commit install; \
     else \
-        echo "⚠️  pre-commit not found. Install with: brew install pre-commit"; \
+        echo "pre-commit not found. Install with: brew install pre-commit"; \
         exit 1; \
     fi
     @echo "  • Running tests to verify setup..."
     just test
-    @echo "✅ Development environment ready!"
+    @echo "Development environment ready!"
     @echo ""
     @echo "Next steps:"
     @echo "  • Run 'just' to see available commands"
@@ -126,10 +126,10 @@ dev-setup:
 
 # Format Go code and organize imports
 format:
-    @echo "🔧 Formatting Go code and organizing imports..."
+    @echo "Formatting Go code and organizing imports..."
     go run golang.org/x/tools/cmd/goimports -w .
 
 # Run linter
 lint:
-    @echo "🔍 Running linter..."
+    @echo "Running linter..."
     go run github.com/golangci/golangci-lint/cmd/golangci-lint run --timeout=10m
