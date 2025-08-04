@@ -191,7 +191,6 @@ just dev-setup          # Install dependencies and tools
 
 # Run tests
 go test ./...           # Unit tests
-just test-bats          # Behavioral tests (installs real packages!)
 
 # Build and install locally
 just install
