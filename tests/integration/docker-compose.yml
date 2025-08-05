@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  plonk-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      # Mount the Linux plonk binary built by host
+      - ../../bin/plonk-linux:/usr/local/bin/plonk:ro
+      # Mount test cases and fixtures
+      - ./test-cases:/test-cases:ro
+      - ./fixtures:/fixtures:ro
+      # Mount the test runner
+      - ./run-tests.sh:/run-tests.sh:ro
+    working_dir: /home/testuser
+    environment:
+      - PLONK_DIR=/home/testuser/dotfiles
+      - HOME=/home/testuser
+    # Keep container running for reuse
+    tty: true
+    stdin_open: true
