@@ -612,9 +612,13 @@ for _, pkg := range packages {
    - **Status**: Complete - 975-line monolith refactored into 6 focused components
    - **Impact**: Manager reduced to 554 lines, each component under 200 lines
    - **Tests**: All existing tests pass, component isolation achieved
+5. ✅ **Reorganize orchestrator package** - Clearer separation of concerns
+   - **Status**: Complete - Split 391 lines across 2 files into 5 focused files
+   - **Impact**: Created coordinator.go, options.go, types.go, reconcile.go, apply_legacy.go
+   - **Bonus**: Legacy code eliminated - moved domain logic to packages/dotfiles Apply() methods
+   - **Tests**: All tests pass, zero functional changes, clean architecture achieved
 
 ### Phase 2: Medium Priority (2-3 weeks)
-5. **Reorganize orchestrator package** - Clearer separation of concerns
 6. **Move output formatting** - Commands focus on CLI, output handles formatting
 7. **Fix interface over-engineering** - Right level of abstraction
 8. **Standardize testing patterns** - Consistent test organization
