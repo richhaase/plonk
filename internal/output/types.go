@@ -1,6 +1,9 @@
 package output
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // ApplyResult represents the top-level result of any apply operation
 type ApplyResult struct {
@@ -10,8 +13,8 @@ type ApplyResult struct {
 	Packages      *PackageResults `json:"packages,omitempty" yaml:"packages,omitempty"`
 	Dotfiles      *DotfileResults `json:"dotfiles,omitempty" yaml:"dotfiles,omitempty"`
 	Error         string          `json:"error,omitempty" yaml:"error,omitempty"`
-	PackageErrors []string        `json:"package_errors,omitempty" yaml:"package_errors,omitempty"`
-	DotfileErrors []string        `json:"dotfile_errors,omitempty" yaml:"dotfile_errors,omitempty"`
+	PackageErrors []error         `json:"-" yaml:"-"`
+	DotfileErrors []error         `json:"-" yaml:"-"`
 }
 
 // PackageResults represents package apply operation results
@@ -165,6 +168,33 @@ func (r ApplyResult) TableOutput() string {
 	}
 
 	return output
+}
+
+// AddPackageError adds an error to the package errors list
+func (r *ApplyResult) AddPackageError(err error) {
+	if err != nil {
+		r.PackageErrors = append(r.PackageErrors, err)
+	}
+}
+
+// AddDotfileError adds an error to the dotfile errors list
+func (r *ApplyResult) AddDotfileError(err error) {
+	if err != nil {
+		r.DotfileErrors = append(r.DotfileErrors, err)
+	}
+}
+
+// GetCombinedError returns all errors as a single error using errors.Join
+func (r *ApplyResult) GetCombinedError() error {
+	var allErrors []error
+	allErrors = append(allErrors, r.PackageErrors...)
+	allErrors = append(allErrors, r.DotfileErrors...)
+	return errors.Join(allErrors...)
+}
+
+// HasErrors returns true if there are any errors
+func (r *ApplyResult) HasErrors() bool {
+	return len(r.PackageErrors) > 0 || len(r.DotfileErrors) > 0
 }
 
 // StructuredData returns the data structure for JSON/YAML serialization

@@ -184,15 +184,15 @@ func searchAllManagersParallel(ctx context.Context, cfg *config.Config, packageN
 
 	// Collect results
 	var searchResults []SearchResultEntry
-	var errors []string
+	var errors []error
 
 	for result := range resultsChan {
 		if result.Error != nil {
 			// Handle timeout or other errors gracefully
 			if ctx.Err() == context.DeadlineExceeded {
-				errors = append(errors, fmt.Sprintf("%s: timeout", result.Manager))
+				errors = append(errors, fmt.Errorf("%s: timeout", result.Manager))
 			} else {
-				errors = append(errors, fmt.Sprintf("%s: %v", result.Manager, result.Error))
+				errors = append(errors, fmt.Errorf("%s: %w", result.Manager, result.Error))
 			}
 			continue
 		}
@@ -209,7 +209,11 @@ func searchAllManagersParallel(ctx context.Context, cfg *config.Config, packageN
 	if len(searchResults) == 0 {
 		message := fmt.Sprintf("Package '%s' not found in any available package manager", packageName)
 		if len(errors) > 0 {
-			message += fmt.Sprintf(" (errors: %s)", strings.Join(errors, ", "))
+			var errorStrings []string
+			for _, err := range errors {
+				errorStrings = append(errorStrings, err.Error())
+			}
+			message += fmt.Sprintf(" (errors: %s)", strings.Join(errorStrings, ", "))
 		}
 		return SearchOutput{
 			Package: packageName,
@@ -229,7 +233,11 @@ func searchAllManagersParallel(ctx context.Context, cfg *config.Config, packageN
 		totalResults, packageName, len(searchResults), strings.Join(managerNames, ", "))
 
 	if len(errors) > 0 {
-		message += fmt.Sprintf(" (some managers had errors: %s)", strings.Join(errors, ", "))
+		var errorStrings []string
+		for _, err := range errors {
+			errorStrings = append(errorStrings, err.Error())
+		}
+		message += fmt.Sprintf(" (some managers had errors: %s)", strings.Join(errorStrings, ", "))
 	}
 
 	return SearchOutput{

@@ -117,7 +117,7 @@ func (o *Orchestrator) Apply(ctx context.Context) (ApplyResult, error) {
 		packageResult, err := ApplyPackages(ctx, o.configDir, o.config, o.dryRun)
 		result.Packages = &packageResult
 		if err != nil {
-			result.PackageErrors = append(result.PackageErrors, fmt.Sprintf("package apply failed: %v", err))
+			result.AddPackageError(fmt.Errorf("package apply failed: %w", err))
 		}
 	}
 
@@ -126,7 +126,7 @@ func (o *Orchestrator) Apply(ctx context.Context) (ApplyResult, error) {
 		dotfileResult, err := ApplyDotfiles(ctx, o.configDir, o.homeDir, o.config, o.dryRun)
 		result.Dotfiles = &dotfileResult
 		if err != nil {
-			result.DotfileErrors = append(result.DotfileErrors, fmt.Sprintf("dotfile apply failed: %v", err))
+			result.AddDotfileError(fmt.Errorf("dotfile apply failed: %w", err))
 		}
 	}
 
@@ -156,9 +156,8 @@ func (o *Orchestrator) Apply(ctx context.Context) (ApplyResult, error) {
 	}
 
 	// If we had any failures, return an error even if some succeeded
-	if len(result.PackageErrors) > 0 || len(result.DotfileErrors) > 0 {
-		totalErrors := len(result.PackageErrors) + len(result.DotfileErrors)
-		return result, fmt.Errorf("apply completed with %d error(s)", totalErrors)
+	if result.HasErrors() {
+		return result, result.GetCombinedError()
 	}
 
 	return result, nil

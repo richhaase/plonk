@@ -401,8 +401,8 @@ func TestApplyResult_Success(t *testing.T) {
 func TestApply_ErrorHandling(t *testing.T) {
 	tests := []struct {
 		name             string
-		packageErrors    []string
-		dotfileErrors    []string
+		packageErrors    []error
+		dotfileErrors    []error
 		expectError      bool
 		expectErrorCount int
 	}{
@@ -414,7 +414,7 @@ func TestApply_ErrorHandling(t *testing.T) {
 		},
 		{
 			name:             "package errors only",
-			packageErrors:    []string{"failed to install foo"},
+			packageErrors:    []error{errors.New("failed to install foo")},
 			dotfileErrors:    nil,
 			expectError:      true,
 			expectErrorCount: 1,
@@ -422,14 +422,14 @@ func TestApply_ErrorHandling(t *testing.T) {
 		{
 			name:             "dotfile errors only",
 			packageErrors:    nil,
-			dotfileErrors:    []string{"failed to link .bashrc"},
+			dotfileErrors:    []error{errors.New("failed to link .bashrc")},
 			expectError:      true,
 			expectErrorCount: 1,
 		},
 		{
 			name:             "both types of errors",
-			packageErrors:    []string{"failed to install foo", "failed to install bar"},
-			dotfileErrors:    []string{"failed to link .bashrc", "failed to link .vimrc"},
+			packageErrors:    []error{errors.New("failed to install foo"), errors.New("failed to install bar")},
+			dotfileErrors:    []error{errors.New("failed to link .bashrc"), errors.New("failed to link .vimrc")},
 			expectError:      true,
 			expectErrorCount: 4,
 		},
@@ -444,9 +444,9 @@ func TestApply_ErrorHandling(t *testing.T) {
 
 			// Simulate error checking logic from Apply()
 			var err error
-			if len(result.PackageErrors) > 0 || len(result.DotfileErrors) > 0 {
+			if result.HasErrors() {
+				err = result.GetCombinedError()
 				totalErrors := len(result.PackageErrors) + len(result.DotfileErrors)
-				err = errors.New("apply completed with errors")
 				assert.Equal(t, tt.expectErrorCount, totalErrors)
 			}
 
