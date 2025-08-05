@@ -61,7 +61,8 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	cfg := config.LoadWithDefaults(configDir)
 
 	// Parse and validate all package specifications
-	validSpecs, validationErrors := parseAndValidatePackageSpecs(args, cfg)
+	validator := NewPackageSpecValidator(cfg)
+	validSpecs, validationErrors := validator.ValidateInstallSpecs(args)
 
 	// Process each package with prefix parsing
 	var allResults []resources.OperationResult
@@ -72,7 +73,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	// Process valid specifications
 	for i, spec := range validSpecs {
 		// Show progress for multi-package operations
-		output.ProgressUpdate(i+1, len(validSpecs), "Installing", spec.OriginalSpec)
+		output.ProgressUpdate(i+1, len(validSpecs), "Installing", spec.String())
 
 		// Configure installation options for this package
 		opts := packages.InstallOptions{
@@ -83,12 +84,12 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		// Process this package with configurable timeout
 		timeout := time.Duration(cfg.PackageTimeout) * time.Second
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		results, err := packages.InstallPackages(ctx, configDir, []string{spec.PackageName}, opts)
+		results, err := packages.InstallPackages(ctx, configDir, []string{spec.Name}, opts)
 		cancel()
 
 		if err != nil {
 			allResults = append(allResults, resources.OperationResult{
-				Name:    spec.OriginalSpec,
+				Name:    spec.String(),
 				Manager: spec.Manager,
 				Status:  "failed",
 				Error:   err,

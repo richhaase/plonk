@@ -57,7 +57,8 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	cfg := config.LoadWithDefaults(configDir)
 
 	// Parse and validate all package specifications
-	validSpecs, validationErrors := parseAndValidateUninstallSpecs(args)
+	validator := NewPackageSpecValidator(nil) // Uninstall doesn't need config
+	validSpecs, validationErrors := validator.ValidateUninstallSpecs(args)
 
 	// Process each package with prefix parsing
 	var allResults []resources.OperationResult
@@ -68,7 +69,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	// Process valid specifications
 	for i, spec := range validSpecs {
 		// Show progress for multi-package operations
-		output.ProgressUpdate(i+1, len(validSpecs), "Uninstalling", spec.OriginalSpec)
+		output.ProgressUpdate(i+1, len(validSpecs), "Uninstalling", spec.String())
 
 		// Configure uninstallation options for this package
 		// Pass empty manager if not specified to let UninstallPackages determine it
@@ -80,12 +81,12 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 		// Process this package with configurable timeout
 		timeout := time.Duration(cfg.PackageTimeout) * time.Second
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		results, err := packages.UninstallPackages(ctx, configDir, []string{spec.PackageName}, opts)
+		results, err := packages.UninstallPackages(ctx, configDir, []string{spec.Name}, opts)
 		cancel()
 
 		if err != nil {
 			allResults = append(allResults, resources.OperationResult{
-				Name:    spec.OriginalSpec,
+				Name:    spec.String(),
 				Manager: spec.Manager,
 				Status:  "failed",
 				Error:   err,

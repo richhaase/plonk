@@ -15,6 +15,9 @@ import (
 
 // ParsePackageSpec splits "manager:package" into (manager, package)
 // Returns ("", package) if no prefix is found
+//
+// Deprecated: Use packages.ParsePackageSpec instead, which returns a
+// structured PackageSpec type with validation methods.
 func ParsePackageSpec(spec string) (manager, packageName string) {
 	parts := strings.SplitN(spec, ":", 2)
 	if len(parts) == 2 {
@@ -73,124 +76,6 @@ func ParseSimpleFlags(cmd *cobra.Command) (*SimpleFlags, error) {
 	return flags, nil
 }
 
-// validatePackageSpec validates a package specification and returns an error if invalid
-func validatePackageSpec(spec, manager, packageName string) error {
-	// Check for empty package name
-	if packageName == "" {
-		return fmt.Errorf("package name cannot be empty")
-	}
-
-	// Check for empty manager prefix when colon is present
-	if manager == "" && spec != packageName {
-		// This means there was a colon but empty prefix (e.g., ":package")
-		return fmt.Errorf("manager prefix cannot be empty")
-	}
-
-	return nil
-}
-
-// resolvePackageManager determines the package manager to use based on the spec and config
-func resolvePackageManager(manager string, cfg *config.Config) string {
-	if manager != "" {
-		return manager
-	}
-
-	if cfg != nil && cfg.DefaultManager != "" {
-		return cfg.DefaultManager
-	}
-
-	return packages.DefaultManager
-}
-
-// ValidatedPackageSpec represents a validated package specification
-type ValidatedPackageSpec struct {
-	Manager      string
-	PackageName  string
-	OriginalSpec string
-}
-
-// parseAndValidatePackageSpecs processes package specifications and returns validated specs or errors
-func parseAndValidatePackageSpecs(args []string, cfg *config.Config) ([]ValidatedPackageSpec, []resources.OperationResult) {
-	var specs []ValidatedPackageSpec
-	var errors []resources.OperationResult
-
-	for _, packageSpec := range args {
-		manager, packageName := ParsePackageSpec(packageSpec)
-
-		// Validate the package specification
-		if err := validatePackageSpec(packageSpec, manager, packageName); err != nil {
-			errors = append(errors, resources.OperationResult{
-				Name:   packageSpec,
-				Status: "failed",
-				Error:  fmt.Errorf("invalid package specification %q: %w", packageSpec, err),
-			})
-			continue
-		}
-
-		// Resolve the package manager
-		manager = resolvePackageManager(manager, cfg)
-
-		// Validate the manager
-		if !IsValidManager(manager) {
-			errors = append(errors, resources.OperationResult{
-				Name:    packageSpec,
-				Manager: manager,
-				Status:  "failed",
-				Error:   fmt.Errorf("unknown package manager %q", manager),
-			})
-			continue
-		}
-
-		specs = append(specs, ValidatedPackageSpec{
-			Manager:      manager,
-			PackageName:  packageName,
-			OriginalSpec: packageSpec,
-		})
-	}
-
-	return specs, errors
-}
-
-// parseAndValidateUninstallSpecs processes package specifications for uninstall command
-// Unlike install, this doesn't resolve default managers - it lets the uninstall command determine which manager to use
-func parseAndValidateUninstallSpecs(args []string) ([]ValidatedPackageSpec, []resources.OperationResult) {
-	var specs []ValidatedPackageSpec
-	var errors []resources.OperationResult
-
-	for _, packageSpec := range args {
-		manager, packageName := ParsePackageSpec(packageSpec)
-
-		// Validate the package specification
-		if err := validatePackageSpec(packageSpec, manager, packageName); err != nil {
-			errors = append(errors, resources.OperationResult{
-				Name:   packageSpec,
-				Status: "failed",
-				Error:  fmt.Errorf("invalid package specification %q: %w", packageSpec, err),
-			})
-			continue
-		}
-
-		// Only validate manager if explicitly specified
-		if manager != "" && !IsValidManager(manager) {
-			errors = append(errors, resources.OperationResult{
-				Name:    packageSpec,
-				Manager: manager,
-				Status:  "failed",
-				Error:   fmt.Errorf("unknown package manager %q", manager),
-			})
-			continue
-		}
-
-		specs = append(specs, ValidatedPackageSpec{
-			Manager:      manager, // Can be empty - uninstall will determine
-			PackageName:  packageName,
-			OriginalSpec: packageSpec,
-		})
-	}
-
-	return specs, errors
-}
-
 // validateStatusFlags checks for incompatible flag combinations
 func validateStatusFlags(showUnmanaged, showMissing bool) error {
 	if showUnmanaged && showMissing {
@@ -206,21 +91,6 @@ func normalizeDisplayFlags(showPackages, showDotfiles bool) (packages, dotfiles 
 		return true, true
 	}
 	return showPackages, showDotfiles
-}
-
-// validateSearchSpec validates a search specification
-func validateSearchSpec(manager, packageName string) error {
-	// Package name must not be empty
-	if packageName == "" {
-		return fmt.Errorf("package name cannot be empty")
-	}
-
-	// If manager is specified, it must be valid
-	if manager != "" && !IsValidManager(manager) {
-		return fmt.Errorf("unknown package manager %q", manager)
-	}
-
-	return nil
 }
 
 // CompleteDotfilePaths provides file path completion for dotfiles

@@ -47,13 +47,15 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 	packageSpec := args[0]
 
-	// Parse prefix syntax
-	manager, packageName := ParsePackageSpec(packageSpec)
-
-	// Validate search specification
-	if err := validateSearchSpec(manager, packageName); err != nil {
+	// Parse and validate search specification
+	validator := NewPackageSpecValidator(nil)
+	spec, err := validator.ValidateSearchSpec(packageSpec)
+	if err != nil {
 		return err
 	}
+
+	manager := spec.Manager
+	packageName := spec.Name
 
 	// Load configuration for timeout settings
 	configDir := config.GetDefaultConfigDirectory()
