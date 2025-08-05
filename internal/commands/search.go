@@ -50,10 +50,9 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	// Parse prefix syntax
 	manager, packageName := ParsePackageSpec(packageSpec)
 
-	// Validate manager if prefix specified
-	if manager != "" && !IsValidManager(manager) {
-		errorMsg := FormatNotFoundError("package manager", manager, GetValidManagers())
-		return fmt.Errorf("%s", errorMsg)
+	// Validate search specification
+	if err := validateSearchSpec(manager, packageName); err != nil {
+		return err
 	}
 
 	// Load configuration for timeout settings

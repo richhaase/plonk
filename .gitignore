@@ -47,3 +47,4 @@ security-*.json
 tests/ux-comparison/results/
 tests/ux-comparison/baseline.json
 tests/ux-comparison/scenarios.yaml
+plonk-linux

@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/output"
 	plonkoutput "github.com/richhaase/plonk/internal/output"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -70,7 +71,7 @@ func editConfigVisudoStyle(configDir string) error {
 	// Edit loop
 	for {
 		// Open in editor
-		fmt.Printf("Opening configuration with %s...\n", editor)
+		output.Printf("Opening configuration with %s...\n", editor)
 		if err := openInEditor(editor, tempFile); err != nil {
 			return fmt.Errorf("failed to open editor: %w", err)
 		}
@@ -86,7 +87,7 @@ func editConfigVisudoStyle(configDir string) error {
 			case 'e':
 				continue // Edit again
 			case 'r':
-				fmt.Println("Changes reverted.")
+				output.Println("Changes reverted.")
 				return nil // Revert (don't save)
 			case 'q':
 				return fmt.Errorf("configuration invalid, changes discarded")
@@ -98,7 +99,7 @@ func editConfigVisudoStyle(configDir string) error {
 			return fmt.Errorf("failed to save configuration: %w", err)
 		}
 
-		fmt.Printf("%s Configuration saved (only non-default values)\n", plonkoutput.Success())
+		output.Printf("%s Configuration saved (only non-default values)\n", plonkoutput.Success())
 		return nil
 	}
 }
@@ -321,7 +322,7 @@ func promptAction() rune {
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
-		fmt.Print("\nWhat would you like to do? (e)dit again, (r)evert changes, (q)uit: ")
+		output.Printf("\nWhat would you like to do? (e)dit again, (r)evert changes, (q)uit: ")
 
 		input, err := reader.ReadString('\n')
 		if err != nil {
@@ -336,6 +337,6 @@ func promptAction() rune {
 			}
 		}
 
-		fmt.Println("Please enter 'e', 'r', or 'q'")
+		output.Println("Please enter 'e', 'r', or 'q'")
 	}
 }

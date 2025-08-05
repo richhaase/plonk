@@ -5,9 +5,10 @@ package clone
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"strings"
+
+	"github.com/richhaase/plonk/internal/output"
 )
 
 // promptYesNo prompts the user for a yes/no answer
@@ -17,7 +18,7 @@ func promptYesNo(question string, defaultYes bool) bool {
 		defaultStr = "Y/n"
 	}
 
-	fmt.Printf("%s [%s]: ", question, defaultStr)
+	output.Printf("%s [%s]: ", question, defaultStr)
 
 	reader := bufio.NewReader(os.Stdin)
 	response, err := reader.ReadString('\n')

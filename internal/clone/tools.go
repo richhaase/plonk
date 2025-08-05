@@ -10,6 +10,8 @@ import (
 	"os"
 	"os/exec"
 	"time"
+
+	"github.com/richhaase/plonk/internal/output"
 )
 
 // Note: Homebrew installation has been removed. Homebrew is now a prerequisite for plonk.
@@ -43,12 +45,12 @@ func installCargo(ctx context.Context, cfg Config) error {
 	if _, err := os.Stat(cargoPath); err == nil {
 		// Check if it's in PATH
 		if _, err := exec.LookPath("cargo"); err != nil {
-			fmt.Printf("Note: Rust/Cargo installed to ~/.cargo/bin/ but not in PATH\n")
-			fmt.Printf("   To use cargo immediately, run: export PATH=\"$HOME/.cargo/bin:$PATH\"\n")
-			fmt.Printf("   To make this permanent, add this line to your shell profile:\n")
-			fmt.Printf("   - For bash: echo 'export PATH=\"$HOME/.cargo/bin:$PATH\"' >> ~/.bashrc\n")
-			fmt.Printf("   - For zsh:  echo 'export PATH=\"$HOME/.cargo/bin:$PATH\"' >> ~/.zshrc\n")
-			fmt.Printf("   Or restart your shell to automatically source ~/.cargo/env\n")
+			output.Printf("Note: Rust/Cargo installed to ~/.cargo/bin/ but not in PATH\n")
+			output.Printf("   To use cargo immediately, run: export PATH=\"$HOME/.cargo/bin:$PATH\"\n")
+			output.Printf("   To make this permanent, add this line to your shell profile:\n")
+			output.Printf("   - For bash: echo 'export PATH=\"$HOME/.cargo/bin:$PATH\"' >> ~/.bashrc\n")
+			output.Printf("   - For zsh:  echo 'export PATH=\"$HOME/.cargo/bin:$PATH\"' >> ~/.zshrc\n")
+			output.Printf("   Or restart your shell to automatically source ~/.cargo/env\n")
 		}
 		return nil
 	}

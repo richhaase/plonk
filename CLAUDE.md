@@ -1,107 +1,151 @@
-# Plonk Development Context
+# Plonk Development Rules for AI Agents
 
-## Current Phase: Ready for v1.0 Release (2025-08-03)
+This document contains critical rules that MUST be followed when working on the Plonk codebase. These rules exist to protect user systems and maintain code quality. Violating these rules can cause serious harm to developer machines.
 
-### Status
-Unit test coverage improved to 45.1%. Integration testing strategy approved for v1.1+.
+## 1. Scope Control Rules
 
-### v1.0 Release Checklist
-- [x] Remove stability warning from README.md
-- [x] Update version injection to "1.0.0"
-- [x] Improve test coverage (achieved 45.1%, exceeds safe testable code)
-- [ ] Create and push v1.0.0 tag
-- [x] Verify release workflow (tested with v0.9.5)
-- [x] Homebrew distribution with code signing/notarization
+### NEVER Add Unrequested Features - THIS IS A MAJOR BUG
+**Adding ANY unrequested feature, no matter how "helpful", is considered a MAJOR BUG in your implementation.**
 
-### Post-v1.0 Testing Strategy (v1.1+)
-Integration testing will fill the 54.9% coverage gap from code that requires system interaction:
-- **Approach**: Docker containerization for complete safety
-- **Coverage Goal**: 80%+ combined (unit + integration)
-- **Timeline**: 6 weeks implementation
-- **Details**: See [Integration Testing Strategy](docs/planning/integration-testing-strategy.md)
+- **FORBIDDEN**: Implementing features, enhancements, or improvements that were not explicitly requested
+- **FORBIDDEN**: Adding "sensible defaults" or "best practices" beyond the exact request
+- **FORBIDDEN**: Including extra branches, error handling, or configuration options not asked for
+- **ALLOWED**: Proposing improvements through comments or suggestions ONLY
+- **REQUIRED**: When given a task, implement EXACTLY what was asked - nothing more, nothing less
 
-## Critical Implementation Guidelines
+**Common violations that are MAJOR BUGS:**
+- Adding branch names like "develop" when not requested
+- Adding environment variables or flags "for flexibility"
+- Including "helpful" validation or safety checks not asked for
+- Adding extra commands, options, or parameters
+- "Improving" code organization beyond the specific request
 
-### STRICT RULE: No Unauthorized Features
-**NEVER independently add features or enhancements that were not explicitly requested.**
-- You MAY propose improvements, but that is all
-- Do NOT implement anything beyond the exact scope requested
-- Do NOT add "helpful" extras without explicit approval
-- When in doubt, implement ONLY what was explicitly requested
+**EXAMPLE BUGS**:
+- Asked: "Add CI for main branch" → BUG: Also adding "develop" branch
+- Asked: "Remove environment check" → BUG: Keeping it but making it "optional"
+- Asked: "Create a simple test" → BUG: Adding test helpers, fixtures, or frameworks
 
-### UI/UX Guidelines
-- **NEVER use emojis in plonk output** - Use colored text status indicators instead
-- Status indicators should be colored minimally (only the status word, not full lines)
-- Professional, clean output similar to tools like git, docker, kubectl
+### File Creation Restrictions
+- **FORBIDDEN**: Creating new files unless absolutely necessary for the requested task
+- **FORBIDDEN**: Creating documentation files (*.md) or README files unless explicitly requested
+- **REQUIRED**: Always prefer editing existing files over creating new ones
+- **EXAMPLE**: If fixing a bug, modify the existing file rather than creating a new helper file
 
-## Testing Philosophy
+## 2. User Interface Rules
 
-### 🚨 CRITICAL SAFETY RULE: NEVER MODIFY SYSTEM STATE IN UNIT TESTS 🚨
+### No Emojis in Output
+- **FORBIDDEN**: Using emojis (🎉, ✅, ❌, etc.) in any plonk command output
+- **REQUIRED**: Use colored text for status indicators instead
+- **REQUIRED**: Color only the status word itself, not entire lines
+- **EXAMPLE**: Use `[green]installed[/green]` not `✅ Package installed successfully! 🎉`
 
-**THIS IS THE MOST IMPORTANT RULE IN THE ENTIRE CODEBASE**
+### Professional Output Standards
+- **REQUIRED**: Output must be clean and professional like git, docker, or kubectl
+- **FORBIDDEN**: Chatty, conversational, or "friendly" output messages
+- **EXAMPLE**: Use `Installing package...` not `Let's install this package for you!`
 
-**UNIT TESTS MUST NEVER:**
-- Call Apply() methods that could install packages or modify dotfiles
-- Execute real package manager commands (brew, apt, npm, etc.)
+## 3. Testing Safety Rules
+
+### The Golden Rule of Testing
+**UNIT TESTS MUST NEVER MODIFY THE HOST SYSTEM**
+
+This is the most critical rule in the entire codebase. Tests that modify system state put developer machines at risk.
+
+### Forbidden Test Operations
+Tests MUST NEVER:
+- Call `Apply()` methods that could install real packages
+- Execute real package manager commands (`brew install`, `apt-get`, `npm install`, etc.)
 - Run hooks or shell commands that affect the system
-- Write to any paths outside of temporary test directories
+- Write to any paths outside of temporary test directories created with `os.MkdirTemp()`
+- Create or modify dotfiles in the user's home directory
 - Modify ANY aspect of the developer's machine
 
-**NO TESTS IS BETTER THAN TESTS THAT BREAK DEVELOPER MACHINES**
-
-This rule has been violated multiple times. It CANNOT happen again. Any AI agent or developer who creates tests that modify system state is putting users at risk.
-
 ### Safe Testing Practices
-- Unit tests for business logic only, no mocks for CLIs
-- Integration tests in CI only to protect developer systems
-- Existing CommandExecutor interface pattern for mocking
-- Commands package orchestration functions are not unit testable by design (see [Architecture Decision](docs/planning/commands-testing-architecture-decision.md))
-- ALWAYS use os.MkdirTemp() for file operations
-- ONLY test pure functions and data structures
+- **ALLOWED**: Testing pure functions that only manipulate data
+- **ALLOWED**: Testing business logic that doesn't touch the filesystem
+- **ALLOWED**: Using `os.MkdirTemp()` to create temporary directories for test files
+- **ALLOWED**: Using the `CommandExecutor` interface to mock system commands
+- **REQUIRED**: Integration tests that need real system interaction MUST run in Docker containers
 
-## Technical Details
+### The Safety Check Question
+Before adding ANY test, ask yourself: "Could this test modify the real system?"
+- If YES → DO NOT add the test
+- If UNSURE → DO NOT add the test
+- If NO → Proceed with caution
 
-### System Requirements
-- **Go**: 1.23+ (required by tool dependencies)
-- **Platforms**: macOS, Linux (including WSL)
-- **Prerequisites**: Homebrew, Git
+### Integration Testing Rules
+- **REQUIRED**: Integration tests MUST run in Docker containers using testcontainers-go
+- **FORBIDDEN**: Running integration tests directly on developer machines
+- **REQUIRED**: Integration tests must have no side effects outside their container
 
-### ⚠️ WARNING: Test Coverage Must Be Safe ⚠️
-Before adding ANY test, ask: "Could this test modify the real system?" If yes, DO NOT ADD IT.
+## 4. Code Architecture Rules
 
-### Test Coverage Status
-**Overall Coverage**: 45.1% (up from 32.7%)
+### Commands Package Testing
+- **FACT**: Commands package orchestration functions are intentionally not unit testable
+- **FORBIDDEN**: Attempting to unit test CLI command orchestration
+- **ALLOWED**: Testing extracted business logic from command handlers
+- **REQUIRED**: Accept that some code paths will have low coverage for safety
 
-#### Coverage by Package
-| Package | Coverage | Notes |
-|---------|----------|-------|
-| parsers | 100% | ✅ Complete |
-| testutil | 100% | ✅ Complete |
-| config | 95.4% | ✅ Comprehensive tests added |
-| resources | 89.8% | ✅ Utility functions tested |
-| lock | 84.6% | ✅ Good coverage |
-| output | 82.0% | ✅ StructuredData methods tested |
-| diagnostics | 70.6% | ✅ Health checks tested with temp dirs |
-| packages | 62.1% | ✅ SupportsSearch methods tested |
-| dotfiles | 50.5% | Limited by file operations |
-| clone | 28.9% | Limited by git/network operations |
-| orchestrator | 17.6% | Limited by system operations |
-| commands | 14.6% | Limited by CLI orchestration |
-| cmd/plonk | 0% | Cannot test main() |
+### Test Coverage Philosophy
+- **PRINCIPLE**: Safety > Coverage
+- **FORBIDDEN**: Adding unsafe tests to increase coverage metrics
+- **ALLOWED**: Having lower coverage if it means keeping tests safe
+- **REMINDER**: "No tests is better than tests that break developer machines"
 
-#### Test Philosophy
-- **Safety First**: NO tests may modify system state
-- **Business Logic**: All pure functions and utilities tested
-- **System Operations**: Documented as intentionally untested
-- **Coverage Target**: 50% was aspirational; 45.1% represents all safely testable code
+## 5. Examples of Rule Violations
 
-### Build & Release
-- **CI/CD**: GitHub Actions with Go 1.23/1.24 matrix testing
-- **Release**: GoReleaser with macOS signing/notarization
-- **Distribution**: Homebrew via richhaase/homebrew-tap
-- **Coverage**: Codecov integration for tracking
+### ❌ WRONG: Adding Unrequested Features
+```go
+// Task: "Fix the install command error handling"
+// WRONG: Also added progress bar, emoji output, and new --verbose flag
+func installCommand() {
+    showProgressBar() // <- NOT REQUESTED
+    fmt.Println("🚀 Starting installation!") // <- EMOJIS FORBIDDEN
+    if verbose { // <- NEW FLAG NOT REQUESTED
+        // ...
+    }
+}
+```
 
-### Known Limitations
-- No native Windows support (use WSL)
-- No package update command (use uninstall/install)
-- Basic error messages (post-v1.0 enhancement)
+### ❌ WRONG: Unsafe Test
+```go
+// WRONG: This test will install real packages on the developer's machine!
+func TestInstallCommand(t *testing.T) {
+    cmd := exec.Command("brew", "install", "wget") // <- MODIFIES REAL SYSTEM
+    cmd.Run() // <- DANGER: ACTUALLY INSTALLS PACKAGE
+}
+```
+
+### ✅ CORRECT: Safe Test
+```go
+// CORRECT: Uses mock executor, doesn't touch real system
+func TestInstallLogic(t *testing.T) {
+    executor := &MockCommandExecutor{} // <- MOCK, NOT REAL
+    result := processInstallRequest("wget", executor)
+    assert.Equal(t, "would install wget", result)
+}
+```
+
+## Remember
+
+These rules exist because:
+1. User trust is paramount - we must never harm their systems
+2. Scope creep makes code harder to review and can introduce bugs
+3. Professional tools have professional output
+4. Safety is more important than metrics
+5. **Unrequested features are BUGS, not improvements** - they waste time, complicate reviews, and violate trust
+
+When in doubt, err on the side of caution. It's better to do less safely than more dangerously.
+
+**If you're thinking "but it would be helpful to also..." - STOP. That thought is a bug. Do ONLY what was asked.**
+
+## 6. CLAUDE.md Usage Rules
+
+### This File is for Development Rules Only
+- **REQUIRED**: CLAUDE.md must contain ONLY development rules and guidelines
+- **FORBIDDEN**: Using CLAUDE.md to store project status, todo lists, future plans, or any other context
+- **FORBIDDEN**: Adding sections about current progress, version information, or feature tracking
+- **REQUIRED**: Store project status, plans, and tracking information in appropriate files (e.g., docs/planning/*.md, TODO.md, etc.)
+- **EXAMPLE**: Development rules belong here, but "Current sprint goals" belong in a separate planning document
+
+This restriction ensures CLAUDE.md remains a clear, focused reference for development rules without becoming cluttered with transient information.

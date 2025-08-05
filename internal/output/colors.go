@@ -14,11 +14,12 @@ func InitColors() {
 	// 2. Terminal capability detection
 	// 3. Windows console support
 
-	// We only need to check if output is going to a terminal
-	isTerminal := writer.IsTerminal()
+	// Check both stdout and stderr for terminal status
+	stdoutIsTerminal := writer.IsTerminal()
+	stderrIsTerminal := progressWriter.IsTerminal()
 
-	// Disable colors if output is not to a terminal (piped/redirected)
-	if !isTerminal {
+	// Disable colors if neither stdout nor stderr is a terminal
+	if !stdoutIsTerminal && !stderrIsTerminal {
 		color.NoColor = true
 	}
 }
