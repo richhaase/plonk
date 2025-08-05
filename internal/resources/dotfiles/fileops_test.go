@@ -14,14 +14,14 @@ import (
 
 func TestNewFileOperations(t *testing.T) {
 	manager := NewManager("/home/user", "/home/user/.config/plonk")
-	fileOps := NewFileOperations(manager)
+	fileOps := NewFileOperations(manager.pathResolver)
 
 	if fileOps == nil {
 		t.Fatal("NewFileOperations() returned nil")
 	}
 
-	if fileOps.manager != manager {
-		t.Error("fileOps.manager not set correctly")
+	if fileOps.pathResolver != manager.pathResolver {
+		t.Error("fileOps.pathResolver not set correctly")
 	}
 }
 
