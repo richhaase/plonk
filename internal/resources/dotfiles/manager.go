@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources"
 )
 
@@ -74,14 +75,8 @@ type ApplyOptions struct {
 	Backup bool
 }
 
-// ApplyResult represents an action taken on a dotfile
-type ApplyResult struct {
-	Source      string `json:"source" yaml:"source"`
-	Destination string `json:"destination" yaml:"destination"`
-	Action      string `json:"action" yaml:"action"`
-	Status      string `json:"status" yaml:"status"`
-	Error       string `json:"error,omitempty" yaml:"error,omitempty"`
-}
+// ApplyResult is now defined in output package
+type ApplyResult = output.DotfileOperation
 
 // ResolveDotfilePath resolves a dotfile path to an absolute path within the home directory
 func (m *Manager) ResolveDotfilePath(path string) (string, error) {

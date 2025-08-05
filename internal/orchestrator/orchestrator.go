@@ -9,6 +9,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/resources/dotfiles"
 	"github.com/richhaase/plonk/internal/resources/packages"
@@ -73,15 +74,8 @@ func WithDotfilesOnly(dotfilesOnly bool) Option {
 }
 
 // ApplyResult represents the result of an apply operation
-type ApplyResult struct {
-	DryRun        bool        `json:"dry_run" yaml:"dry_run"`
-	Success       bool        `json:"success" yaml:"success"`
-	Packages      interface{} `json:"packages,omitempty" yaml:"packages,omitempty"`
-	Dotfiles      interface{} `json:"dotfiles,omitempty" yaml:"dotfiles,omitempty"`
-	Error         string      `json:"error,omitempty" yaml:"error,omitempty"`
-	PackageErrors []string    `json:"package_errors,omitempty" yaml:"package_errors,omitempty"`
-	DotfileErrors []string    `json:"dotfile_errors,omitempty" yaml:"dotfile_errors,omitempty"`
-}
+// ApplyResult is now defined in output package
+type ApplyResult = output.ApplyResult
 
 // New creates a new orchestrator instance with options
 func New(opts ...Option) *Orchestrator {
@@ -121,7 +115,7 @@ func (o *Orchestrator) Apply(ctx context.Context) (ApplyResult, error) {
 	// Apply packages (unless dotfiles-only)
 	if !o.dotfilesOnly {
 		packageResult, err := ApplyPackages(ctx, o.configDir, o.config, o.dryRun)
-		result.Packages = packageResult
+		result.Packages = &packageResult
 		if err != nil {
 			result.PackageErrors = append(result.PackageErrors, fmt.Sprintf("package apply failed: %v", err))
 		}
@@ -130,7 +124,7 @@ func (o *Orchestrator) Apply(ctx context.Context) (ApplyResult, error) {
 	// Apply dotfiles (unless packages-only)
 	if !o.packagesOnly {
 		dotfileResult, err := ApplyDotfiles(ctx, o.configDir, o.homeDir, o.config, o.dryRun)
-		result.Dotfiles = dotfileResult
+		result.Dotfiles = &dotfileResult
 		if err != nil {
 			result.DotfileErrors = append(result.DotfileErrors, fmt.Sprintf("dotfile apply failed: %v", err))
 		}
@@ -146,17 +140,17 @@ func (o *Orchestrator) Apply(ctx context.Context) (ApplyResult, error) {
 
 	// Determine overall success
 	// Success if we had no critical errors and at least some operations succeeded
-	if packageResult, ok := result.Packages.(PackageApplyResult); ok {
-		if !o.dryRun && packageResult.TotalInstalled > 0 {
+	if result.Packages != nil {
+		if !o.dryRun && result.Packages.TotalInstalled > 0 {
 			result.Success = true
-		} else if o.dryRun && packageResult.TotalWouldInstall > 0 {
+		} else if o.dryRun && result.Packages.TotalWouldInstall > 0 {
 			result.Success = true
 		}
 	}
-	if dotfileResult, ok := result.Dotfiles.(DotfileApplyResult); ok {
-		if !o.dryRun && dotfileResult.Summary.Added > 0 {
+	if result.Dotfiles != nil {
+		if !o.dryRun && result.Dotfiles.Summary.Added > 0 {
 			result.Success = true
-		} else if o.dryRun && dotfileResult.Summary.Added > 0 {
+		} else if o.dryRun && result.Dotfiles.Summary.Added > 0 {
 			result.Success = true
 		}
 	}

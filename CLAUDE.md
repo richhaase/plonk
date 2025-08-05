@@ -74,9 +74,11 @@ Before adding ANY test, ask yourself: "Could this test modify the real system?"
 - If NO → Proceed with caution
 
 ### Integration Testing Rules
-- **REQUIRED**: Integration tests MUST run in Docker containers using testcontainers-go
-- **FORBIDDEN**: Running integration tests directly on developer machines
-- **REQUIRED**: Integration tests must have no side effects outside their container
+- **REQUIRED**: Integration tests use BATS (Bash Automated Testing System) for CLI/UX validation
+- **FORBIDDEN**: Running BATS tests without express user permission
+- **ALLOWED**: BATS tests may have controlled side effects on developer machines
+- **REQUIRED**: BATS tests must only manipulate pre-approved "safe" files and packages
+- **REQUIRED**: Safe files and packages are specified in tests/bats/config/ directory
 
 ## 4. Code Architecture Rules
 

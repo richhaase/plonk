@@ -14,9 +14,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Type aliases for UI types (these have been moved to internal/output/formatters.go)
-type ManagerApplyResult = output.ManagerApplyResult
-type PackageApplyResult = output.PackageApplyResult
+// Type aliases for UI types (these have been moved to internal/output/types.go)
+type ManagerResults = output.ManagerResults
+type PackageOperation = output.PackageOperation
+type PackageResults = output.PackageResults
+type ApplyResult = output.ApplyResult
 
 type DotfileAction = output.DotfileAction
 

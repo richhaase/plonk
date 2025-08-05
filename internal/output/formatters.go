@@ -10,18 +10,6 @@ import (
 )
 
 // ManagerApplyResult represents the result for a specific manager
-type ManagerApplyResult struct {
-	Name         string               `json:"name" yaml:"name"`
-	MissingCount int                  `json:"missing_count" yaml:"missing_count"`
-	Packages     []PackageApplyResult `json:"packages" yaml:"packages"`
-}
-
-// PackageApplyResult represents the result for a specific package
-type PackageApplyResult struct {
-	Name   string `json:"name" yaml:"name"`
-	Status string `json:"status" yaml:"status"`
-	Error  string `json:"error,omitempty" yaml:"error,omitempty"`
-}
 
 // DotfileAction represents a single dotfile deployment action
 type DotfileAction struct {

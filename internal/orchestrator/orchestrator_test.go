@@ -291,14 +291,14 @@ func TestApply_SelectiveApplication(t *testing.T) {
 func TestApplyResult_Success(t *testing.T) {
 	tests := []struct {
 		name          string
-		packageResult interface{}
-		dotfileResult interface{}
+		packageResult *PackageApplyResult
+		dotfileResult *DotfileApplyResult
 		dryRun        bool
 		expectSuccess bool
 	}{
 		{
 			name: "packages installed in normal mode",
-			packageResult: PackageApplyResult{
+			packageResult: &PackageApplyResult{
 				DryRun:         false,
 				TotalInstalled: 3,
 			},
@@ -307,7 +307,7 @@ func TestApplyResult_Success(t *testing.T) {
 		},
 		{
 			name: "packages would install in dry run",
-			packageResult: PackageApplyResult{
+			packageResult: &PackageApplyResult{
 				DryRun:            true,
 				TotalWouldInstall: 3,
 			},
@@ -316,7 +316,7 @@ func TestApplyResult_Success(t *testing.T) {
 		},
 		{
 			name: "dotfiles added in normal mode",
-			dotfileResult: DotfileApplyResult{
+			dotfileResult: &DotfileApplyResult{
 				DryRun: false,
 				Summary: DotfileSummaryApplyResult{
 					Added: 5,
@@ -327,7 +327,7 @@ func TestApplyResult_Success(t *testing.T) {
 		},
 		{
 			name: "dotfiles would add in dry run",
-			dotfileResult: DotfileApplyResult{
+			dotfileResult: &DotfileApplyResult{
 				DryRun: true,
 				Summary: DotfileSummaryApplyResult{
 					Added: 5,
@@ -338,11 +338,11 @@ func TestApplyResult_Success(t *testing.T) {
 		},
 		{
 			name: "no changes in normal mode",
-			packageResult: PackageApplyResult{
+			packageResult: &PackageApplyResult{
 				DryRun:         false,
 				TotalInstalled: 0,
 			},
-			dotfileResult: DotfileApplyResult{
+			dotfileResult: &DotfileApplyResult{
 				DryRun: false,
 				Summary: DotfileSummaryApplyResult{
 					Added: 0,
@@ -353,11 +353,11 @@ func TestApplyResult_Success(t *testing.T) {
 		},
 		{
 			name: "mixed success",
-			packageResult: PackageApplyResult{
+			packageResult: &PackageApplyResult{
 				DryRun:         false,
 				TotalInstalled: 2,
 			},
-			dotfileResult: DotfileApplyResult{
+			dotfileResult: &DotfileApplyResult{
 				DryRun: false,
 				Summary: DotfileSummaryApplyResult{
 					Added: 0,
@@ -378,17 +378,17 @@ func TestApplyResult_Success(t *testing.T) {
 
 			// Simulate the success determination logic from Apply()
 			success := false
-			if packageResult, ok := result.Packages.(PackageApplyResult); ok {
-				if !tt.dryRun && packageResult.TotalInstalled > 0 {
+			if result.Packages != nil {
+				if !tt.dryRun && result.Packages.TotalInstalled > 0 {
 					success = true
-				} else if tt.dryRun && packageResult.TotalWouldInstall > 0 {
+				} else if tt.dryRun && result.Packages.TotalWouldInstall > 0 {
 					success = true
 				}
 			}
-			if dotfileResult, ok := result.Dotfiles.(DotfileApplyResult); ok {
-				if !tt.dryRun && dotfileResult.Summary.Added > 0 {
+			if result.Dotfiles != nil {
+				if !tt.dryRun && result.Dotfiles.Summary.Added > 0 {
 					success = true
-				} else if tt.dryRun && dotfileResult.Summary.Added > 0 {
+				} else if tt.dryRun && result.Dotfiles.Summary.Added > 0 {
 					success = true
 				}
 			}

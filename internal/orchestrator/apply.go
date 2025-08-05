@@ -15,53 +15,13 @@ import (
 )
 
 // PackageApplyResult represents the result of package apply operations
-type PackageApplyResult struct {
-	DryRun            bool                 `json:"dry_run" yaml:"dry_run"`
-	TotalMissing      int                  `json:"total_missing" yaml:"total_missing"`
-	TotalInstalled    int                  `json:"total_installed" yaml:"total_installed"`
-	TotalFailed       int                  `json:"total_failed" yaml:"total_failed"`
-	TotalWouldInstall int                  `json:"total_would_install" yaml:"total_would_install"`
-	Managers          []ManagerApplyResult `json:"managers" yaml:"managers"`
-}
-
-// ManagerApplyResult represents the result for a specific manager
-type ManagerApplyResult struct {
-	Name         string                        `json:"name" yaml:"name"`
-	MissingCount int                           `json:"missing_count" yaml:"missing_count"`
-	Packages     []PackageOperationApplyResult `json:"packages" yaml:"packages"`
-}
-
-// PackageOperationApplyResult represents the result for a specific package operation
-type PackageOperationApplyResult struct {
-	Name   string `json:"name" yaml:"name"`
-	Status string `json:"status" yaml:"status"`
-	Error  string `json:"error,omitempty" yaml:"error,omitempty"`
-}
-
-// DotfileApplyResult represents the result of dotfile apply operations
-type DotfileApplyResult struct {
-	DryRun     bool                       `json:"dry_run" yaml:"dry_run"`
-	TotalFiles int                        `json:"total_files" yaml:"total_files"`
-	Actions    []DotfileActionApplyResult `json:"actions" yaml:"actions"`
-	Summary    DotfileSummaryApplyResult  `json:"summary" yaml:"summary"`
-}
-
-// DotfileActionApplyResult represents an action taken on a dotfile
-type DotfileActionApplyResult struct {
-	Source      string `json:"source" yaml:"source"`
-	Destination string `json:"destination" yaml:"destination"`
-	Action      string `json:"action" yaml:"action"`
-	Status      string `json:"status" yaml:"status"`
-	Error       string `json:"error,omitempty" yaml:"error,omitempty"`
-}
-
-// DotfileSummaryApplyResult provides summary statistics
-type DotfileSummaryApplyResult struct {
-	Added     int `json:"added" yaml:"added"`
-	Updated   int `json:"updated" yaml:"updated"`
-	Unchanged int `json:"unchanged" yaml:"unchanged"`
-	Failed    int `json:"failed" yaml:"failed"`
-}
+// Type aliases to consolidated types in output package
+type PackageApplyResult = output.PackageResults
+type ManagerApplyResult = output.ManagerResults
+type PackageOperationApplyResult = output.PackageOperation
+type DotfileApplyResult = output.DotfileResults
+type DotfileActionApplyResult = output.DotfileOperation
+type DotfileSummaryApplyResult = output.DotfileSummary
 
 // Legacy apply functions - keeping for backward compatibility during transition
 // These will be removed in a future phase
