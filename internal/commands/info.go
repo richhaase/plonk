@@ -9,6 +9,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources/packages"
 	"github.com/spf13/cobra"
 )
@@ -76,7 +77,15 @@ func runInfo(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return RenderOutput(infoResult, format)
+	// Convert to output package type and create formatter
+	formatterData := output.InfoOutput{
+		Package:     infoResult.Package,
+		Status:      infoResult.Status,
+		Message:     infoResult.Message,
+		PackageInfo: infoResult.PackageInfo,
+	}
+	formatter := output.NewInfoFormatter(formatterData)
+	return RenderOutput(formatter, format)
 }
 
 // getInfoFromSpecificManager gets info from a specific package manager only
@@ -264,82 +273,4 @@ type InfoOutput struct {
 	Status      string                `json:"status" yaml:"status"`
 	Message     string                `json:"message" yaml:"message"`
 	PackageInfo *packages.PackageInfo `json:"package_info,omitempty" yaml:"package_info,omitempty"`
-}
-
-// TableOutput generates human-friendly table output for info command
-func (i InfoOutput) TableOutput() string {
-	builder := NewStandardTableBuilder("")
-
-	// Add package name
-	builder.AddRow("Package:", i.Package)
-
-	// Add status and details based on status
-	switch i.Status {
-	case "managed":
-		builder.AddRow("Status:", "🎯 Managed by plonk")
-		if i.PackageInfo != nil {
-			builder.AddRow("Manager:", i.PackageInfo.Manager)
-			if i.PackageInfo.Version != "" {
-				builder.AddRow("Version:", i.PackageInfo.Version)
-			}
-			if i.PackageInfo.Description != "" {
-				builder.AddRow("Description:", i.PackageInfo.Description)
-			}
-			if i.PackageInfo.Homepage != "" {
-				builder.AddRow("Homepage:", i.PackageInfo.Homepage)
-			}
-			if i.PackageInfo.InstalledSize != "" {
-				builder.AddRow("Size:", i.PackageInfo.InstalledSize)
-			}
-			if len(i.PackageInfo.Dependencies) > 0 {
-				builder.AddRow("", "")
-				builder.AddRow("Dependencies:", fmt.Sprintf("%d packages", len(i.PackageInfo.Dependencies)))
-				for _, dep := range i.PackageInfo.Dependencies {
-					builder.AddRow("", fmt.Sprintf("• %s", dep))
-				}
-			}
-		}
-
-	case "installed":
-		builder.AddRow("Status:", "Installed (not managed)")
-		if i.PackageInfo != nil {
-			builder.AddRow("Manager:", i.PackageInfo.Manager)
-			if i.PackageInfo.Version != "" {
-				builder.AddRow("Version:", i.PackageInfo.Version)
-			}
-			if i.PackageInfo.Description != "" {
-				builder.AddRow("Description:", i.PackageInfo.Description)
-			}
-		}
-
-	case "available":
-		builder.AddRow("Status:", "Available")
-		if i.PackageInfo != nil {
-			builder.AddRow("Manager:", i.PackageInfo.Manager)
-			if i.PackageInfo.Description != "" {
-				builder.AddRow("Description:", i.PackageInfo.Description)
-			}
-			builder.AddRow("", "")
-			builder.AddRow("Install:", fmt.Sprintf("plonk install %s:%s", i.PackageInfo.Manager, i.Package))
-		}
-
-	case "not-found":
-		builder.AddRow("Status:", "Not found")
-
-	case "no-managers":
-		builder.AddRow("Status:", "No package managers available")
-
-	case "manager-unavailable":
-		builder.AddRow("Status:", "Manager unavailable")
-
-	default:
-		builder.AddRow("Status:", "Unknown")
-	}
-
-	return builder.Build()
-}
-
-// StructuredData returns the structured data for serialization
-func (i InfoOutput) StructuredData() any {
-	return i
 }

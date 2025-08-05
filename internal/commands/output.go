@@ -4,60 +4,51 @@
 package commands
 
 import (
-	"encoding/json"
-	"fmt"
-	"os"
-
-	"gopkg.in/yaml.v3"
+	"github.com/richhaase/plonk/internal/output"
 )
 
-// OutputFormat represents the available output formats
-type OutputFormat string
+// Re-export types from output package for backward compatibility
+type OutputFormat = output.OutputFormat
+type OutputData = output.OutputData
 
-const (
-	OutputTable OutputFormat = "table"
-	OutputJSON  OutputFormat = "json"
-	OutputYAML  OutputFormat = "yaml"
+var (
+	OutputTable = output.OutputTable
+	OutputJSON  = output.OutputJSON
+	OutputYAML  = output.OutputYAML
 )
 
-// OutputData defines the interface for command output data
-type OutputData interface {
-	TableOutput() string // Human-friendly table format
-	StructuredData() any // Data structure for json/yaml/toml
-}
+// Re-export functions from output package
+var RenderOutput = output.RenderOutput
+var ParseOutputFormat = output.ParseOutputFormat
 
-// RenderOutput renders data in the specified format
-func RenderOutput(data OutputData, format OutputFormat) error {
-	switch format {
-	case OutputTable:
-		fmt.Print(data.TableOutput())
-		return nil
-	case OutputJSON:
-		encoder := json.NewEncoder(os.Stdout)
-		encoder.SetIndent("", "  ")
-		return encoder.Encode(data.StructuredData())
-	case OutputYAML:
-		encoder := yaml.NewEncoder(os.Stdout)
-		defer encoder.Close()
-		return encoder.Encode(data.StructuredData())
-	default:
-		return fmt.Errorf("unsupported output format: %s (use: table, json, or yaml)", format)
-	}
-}
+// Re-export formatter types
+type DotfileRemovalFormatter = output.DotfileRemovalFormatter
+type ConfigShowFormatter = output.ConfigShowFormatter
+type PackageOperationFormatter = output.PackageOperationFormatter
+type StatusFormatter = output.StatusFormatter
+type InfoFormatter = output.InfoFormatter
+type SearchFormatter = output.SearchFormatter
+type DoctorFormatter = output.DoctorFormatter
 
-// ParseOutputFormat converts string to OutputFormat
-func ParseOutputFormat(format string) (OutputFormat, error) {
-	switch format {
-	case "table":
-		return OutputTable, nil
-	case "json":
-		return OutputJSON, nil
-	case "yaml":
-		return OutputYAML, nil
-	default:
-		return OutputTable, fmt.Errorf("unsupported format '%s' (use: table, json, or yaml)", format)
-	}
-}
+// Re-export formatter constructors
+var NewDotfileRemovalFormatter = output.NewDotfileRemovalFormatter
+var NewConfigShowFormatter = output.NewConfigShowFormatter
+var NewPackageOperationFormatter = output.NewPackageOperationFormatter
+var NewStatusFormatter = output.NewStatusFormatter
+var NewInfoFormatter = output.NewInfoFormatter
+var NewSearchFormatter = output.NewSearchFormatter
+var NewDoctorFormatter = output.NewDoctorFormatter
+
+// Re-export utility functions and types
+var GetStatusIcon = output.GetStatusIcon
+var NewTableBuilder = output.NewTableBuilder
+var NewStandardTableBuilder = output.NewStandardTableBuilder
+
+type TableBuilder = output.TableBuilder
+type StandardTableBuilder = output.StandardTableBuilder
+
+// Re-export output structures from output package (for formatters that were moved)
+// Note: Commands may need to create these structures differently to avoid import cycles
 
 // PackageListOutput represents the output structure for package list commands
 type PackageListOutput struct {

@@ -5,6 +5,7 @@ package commands
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -120,11 +121,43 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		DryRun:     dryRun,
 	}
 
-	// Render output
-	if err := RenderOutput(outputData, format); err != nil {
+	// Convert to output package type and create formatter
+	formatterData := output.PackageOperationOutput{
+		Command:    outputData.Command,
+		TotalItems: outputData.TotalItems,
+		Results:    convertOperationResults(outputData.Results),
+		Summary: output.PackageOperationSummary{
+			Succeeded: outputData.Summary.Succeeded,
+			Skipped:   outputData.Summary.Skipped,
+			Failed:    outputData.Summary.Failed,
+		},
+		DryRun: outputData.DryRun,
+	}
+	formatter := output.NewPackageOperationFormatter(formatterData)
+	if err := RenderOutput(formatter, format); err != nil {
 		return err
 	}
 
 	// Check if all operations failed and return appropriate error
 	return resources.ValidateOperationResults(allResults, "install packages")
+}
+
+// convertOperationResults converts from command types to output types
+func convertOperationResults(results []SerializableOperationResult) []output.SerializableOperationResult {
+	converted := make([]output.SerializableOperationResult, len(results))
+	for i, result := range results {
+		var err error
+		if result.Error != "" {
+			err = fmt.Errorf("%s", result.Error)
+		}
+		converted[i] = output.SerializableOperationResult{
+			Name:     result.Name,
+			Status:   result.Status,
+			Manager:  result.Manager,
+			Path:     "", // Commands package doesn't have Path field, using empty string
+			Error:    err,
+			Metadata: result.Metadata,
+		}
+	}
+	return converted
 }

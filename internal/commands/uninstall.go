@@ -117,8 +117,20 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 		DryRun:     dryRun,
 	}
 
-	// Render output
-	if err := RenderOutput(outputData, format); err != nil {
+	// Convert to output package type and create formatter
+	formatterData := output.PackageOperationOutput{
+		Command:    outputData.Command,
+		TotalItems: outputData.TotalItems,
+		Results:    convertOperationResults(outputData.Results),
+		Summary: output.PackageOperationSummary{
+			Succeeded: outputData.Summary.Succeeded,
+			Skipped:   outputData.Summary.Skipped,
+			Failed:    outputData.Summary.Failed,
+		},
+		DryRun: outputData.DryRun,
+	}
+	formatter := output.NewPackageOperationFormatter(formatterData)
+	if err := RenderOutput(formatter, format); err != nil {
 		return err
 	}
 

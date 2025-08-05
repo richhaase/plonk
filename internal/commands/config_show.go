@@ -6,12 +6,10 @@ package commands
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
-	plonkoutput "github.com/richhaase/plonk/internal/output"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 func getConfigPath(configDir string) string {
@@ -62,7 +60,15 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 		ConfigDir:  configDir,
 	}
 
-	return RenderOutput(outputData, format)
+	// Convert to output package type and create formatter
+	formatterData := output.ConfigShowOutput{
+		ConfigPath: outputData.ConfigPath,
+		Config:     outputData.Config,
+		Checker:    outputData.Checker,
+		ConfigDir:  outputData.ConfigDir,
+	}
+	formatter := output.NewConfigShowFormatter(formatterData)
+	return RenderOutput(formatter, format)
 }
 
 // ConfigShowOutput represents the output structure for config show command
@@ -71,60 +77,4 @@ type ConfigShowOutput struct {
 	Config     *config.Config             `json:"config" yaml:"config"`
 	Checker    *config.UserDefinedChecker `json:"-" yaml:"-"` // Not included in JSON/YAML
 	ConfigDir  string                     `json:"-" yaml:"-"` // Not included in JSON/YAML
-}
-
-// TableOutput generates human-friendly table output for config show
-func (c ConfigShowOutput) TableOutput() string {
-	output := fmt.Sprintf("# Configuration for plonk\n")
-	output += fmt.Sprintf("# Config file: %s\n\n", c.ConfigPath)
-
-	if c.Config == nil {
-		return output + "No configuration loaded\n"
-	}
-
-	// Helper to format a field with optional user-defined annotation
-	formatField := func(name string, value interface{}) string {
-		// Marshal just this field to YAML
-		fieldMap := map[string]interface{}{name: value}
-		data, _ := yaml.Marshal(fieldMap)
-		line := strings.TrimSpace(string(data))
-
-		// Check if user-defined and add annotation
-		if c.Checker != nil && c.Checker.IsFieldUserDefined(name, value) {
-			line += "  " + plonkoutput.ColorInfo("(user-defined)")
-		}
-
-		return line + "\n"
-	}
-
-	// Format each field
-	output += formatField("default_manager", c.Config.DefaultManager)
-	output += formatField("operation_timeout", c.Config.OperationTimeout)
-	output += formatField("package_timeout", c.Config.PackageTimeout)
-	output += formatField("dotfile_timeout", c.Config.DotfileTimeout)
-
-	// Add blank line before lists
-	output += "\n"
-	output += formatField("expand_directories", c.Config.ExpandDirectories)
-
-	output += "\n"
-	output += formatField("ignore_patterns", c.Config.IgnorePatterns)
-
-	// Handle optional nested structures
-	if len(c.Config.Dotfiles.UnmanagedFilters) > 0 {
-		output += "\n"
-		output += formatField("dotfiles", c.Config.Dotfiles)
-	}
-
-	if len(c.Config.Hooks.PreApply) > 0 || len(c.Config.Hooks.PostApply) > 0 {
-		output += "\n"
-		output += formatField("hooks", c.Config.Hooks)
-	}
-
-	return output
-}
-
-// StructuredData returns the structured data for serialization
-func (c ConfigShowOutput) StructuredData() any {
-	return c
 }

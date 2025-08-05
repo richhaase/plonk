@@ -5,6 +5,7 @@ package commands
 
 import (
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/resources/dotfiles"
 	"github.com/spf13/cobra"
@@ -106,8 +107,18 @@ func runRm(cmd *cobra.Command, args []string) error {
 		Summary:    summary,
 	}
 
-	// Render output
-	if err := RenderOutput(outputData, format); err != nil {
+	// Convert to output package type and create formatter
+	formatterData := output.DotfileRemovalOutput{
+		TotalFiles: outputData.TotalFiles,
+		Results:    outputData.Results,
+		Summary: output.DotfileRemovalSummary{
+			Removed: outputData.Summary.Removed,
+			Skipped: outputData.Summary.Skipped,
+			Failed:  outputData.Summary.Failed,
+		},
+	}
+	formatter := output.NewDotfileRemovalFormatter(formatterData)
+	if err := RenderOutput(formatter, format); err != nil {
 		return err
 	}
 
@@ -137,96 +148,4 @@ func calculateRemovalSummary(results []resources.OperationResult) DotfileRemoval
 		Skipped: genericSummary.Skipped,
 		Failed:  genericSummary.Failed,
 	}
-}
-
-// TableOutput generates human-friendly output
-func (d DotfileRemovalOutput) TableOutput() string {
-	tb := NewTableBuilder()
-
-	// For single file operations, show inline result
-	if d.TotalFiles == 1 && len(d.Results) == 1 {
-		result := d.Results[0]
-		switch result.Status {
-		case "removed":
-			tb.AddLine("Removed dotfile from plonk management")
-			tb.AddLine("   File: %s", result.Name)
-			if source, ok := result.Metadata["source"].(string); ok {
-				tb.AddLine("   Source: %s (removed from config)", source)
-			}
-		case "would-remove":
-			tb.AddLine("Would remove dotfile from plonk management (dry-run)")
-			tb.AddLine("   File: %s", result.Name)
-			if source, ok := result.Metadata["source"].(string); ok {
-				tb.AddLine("   Source: %s", source)
-			}
-		case "skipped":
-			tb.AddLine("Skipped: %s", result.Name)
-			if result.Error != nil {
-				tb.AddLine("   Reason: %s", result.Error.Error())
-			}
-		case "failed":
-			tb.AddLine("Failed: %s", result.Name)
-			if result.Error != nil {
-				tb.AddLine("   Error: %s", result.Error.Error())
-			}
-		}
-		return tb.Build()
-	}
-
-	// For batch operations, show summary
-	tb.AddTitle("Dotfile Removal")
-	tb.AddNewline()
-
-	// Check if this is a dry run
-	isDryRun := false
-	wouldRemoveCount := 0
-	for _, result := range d.Results {
-		if result.Status == "would-remove" {
-			isDryRun = true
-			wouldRemoveCount++
-		}
-	}
-
-	if isDryRun {
-		if wouldRemoveCount > 0 {
-			tb.AddLine("Would remove %d dotfiles (dry-run)", wouldRemoveCount)
-		}
-	} else {
-		if d.Summary.Removed > 0 {
-			tb.AddLine("📄 Removed %d dotfiles", d.Summary.Removed)
-		}
-	}
-
-	if d.Summary.Skipped > 0 {
-		tb.AddLine("%d skipped", d.Summary.Skipped)
-	}
-	if d.Summary.Failed > 0 {
-		tb.AddLine("%d failed", d.Summary.Failed)
-	}
-
-	tb.AddNewline()
-
-	// Show individual files
-	for _, result := range d.Results {
-		switch result.Status {
-		case "removed":
-			tb.AddLine("   ✓ %s", result.Name)
-		case "would-remove":
-			tb.AddLine("   - %s", result.Name)
-		case "skipped":
-			tb.AddLine("   %s (not managed)", result.Name)
-		case "failed":
-			tb.AddLine("   ✗ %s", result.Name)
-		}
-	}
-
-	tb.AddNewline()
-	tb.AddLine("Total: %d dotfiles processed", d.TotalFiles)
-
-	return tb.Build()
-}
-
-// StructuredData returns the structured data for serialization
-func (d DotfileRemovalOutput) StructuredData() any {
-	return d
 }
