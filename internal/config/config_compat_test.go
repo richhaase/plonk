@@ -5,8 +5,9 @@ package config
 
 import (
 	"os"
-	"path/filepath"
 	"testing"
+
+	"github.com/richhaase/plonk/internal/testutil"
 )
 
 // TestConfig_CompatibilityWithExisting ensures the new implementation
@@ -111,12 +112,7 @@ ignore_patterns: []
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tempDir := t.TempDir()
-			configPath := filepath.Join(tempDir, "plonk.yaml")
-
-			if err := os.WriteFile(configPath, []byte(tc.content), 0644); err != nil {
-				t.Fatal(err)
-			}
+			tempDir := testutil.NewTestConfig(t, tc.content)
 
 			cfg, err := Load(tempDir)
 			if err != nil {

@@ -4,10 +4,9 @@
 package config
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
+	"github.com/richhaase/plonk/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -25,9 +24,7 @@ func TestNewUserDefinedChecker(t *testing.T) {
 
 	t.Run("with user config", func(t *testing.T) {
 		// Create a config file
-		configPath := filepath.Join(tempDir, "plonk.yaml")
-		configContent := `default_manager: npm`
-		require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0644))
+		tempDir := testutil.NewTestConfig(t, "default_manager: npm")
 
 		checker := NewUserDefinedChecker(tempDir)
 		assert.NotNil(t, checker)
@@ -54,12 +51,11 @@ func TestIsFieldUserDefined(t *testing.T) {
 
 	t.Run("with user config", func(t *testing.T) {
 		// Create a config file with custom values
-		configPath := filepath.Join(tempDir, "plonk.yaml")
 		configContent := `
 default_manager: npm
 operation_timeout: 600
 `
-		require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0644))
+		tempDir := testutil.NewTestConfig(t, configContent)
 
 		checker := NewUserDefinedChecker(tempDir)
 
@@ -90,14 +86,13 @@ func TestGetNonDefaultFields(t *testing.T) {
 
 	t.Run("some custom values", func(t *testing.T) {
 		// Create a config file with some custom values
-		configPath := filepath.Join(tempDir, "plonk.yaml")
 		configContent := `
 default_manager: npm
 operation_timeout: 600
 ignore_patterns:
   - custom_pattern
 `
-		require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0644))
+		tempDir := testutil.NewTestConfig(t, configContent)
 
 		checker := NewUserDefinedChecker(tempDir)
 		cfg, err := Load(tempDir)

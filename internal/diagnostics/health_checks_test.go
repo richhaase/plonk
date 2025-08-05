@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/richhaase/plonk/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -81,13 +82,8 @@ func TestCheckPermissions(t *testing.T) {
 
 func TestCheckConfigurationFile(t *testing.T) {
 	t.Run("config file exists", func(t *testing.T) {
-		tempDir := t.TempDir()
-		configPath := filepath.Join(tempDir, "plonk.yaml")
-		require.NoError(t, os.WriteFile(configPath, []byte("default_manager: brew"), 0644))
-
-		oldPlonkDir := os.Getenv("PLONK_DIR")
-		os.Setenv("PLONK_DIR", tempDir)
-		defer os.Setenv("PLONK_DIR", oldPlonkDir)
+		tempDir := testutil.NewTestConfig(t, "default_manager: brew")
+		testutil.SetEnv(t, "PLONK_DIR", tempDir)
 
 		check := checkConfigurationFile()
 
@@ -99,11 +95,8 @@ func TestCheckConfigurationFile(t *testing.T) {
 	})
 
 	t.Run("config file does not exist", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		oldPlonkDir := os.Getenv("PLONK_DIR")
-		os.Setenv("PLONK_DIR", tempDir)
-		defer os.Setenv("PLONK_DIR", oldPlonkDir)
+		tempDir := testutil.NewTestConfig(t, "")
+		testutil.SetEnv(t, "PLONK_DIR", tempDir)
 
 		check := checkConfigurationFile()
 
@@ -115,18 +108,13 @@ func TestCheckConfigurationFile(t *testing.T) {
 
 func TestCheckConfigurationValidity(t *testing.T) {
 	t.Run("valid config", func(t *testing.T) {
-		tempDir := t.TempDir()
-		configPath := filepath.Join(tempDir, "plonk.yaml")
 		validConfig := `default_manager: brew
 ignore_patterns:
   - "*.tmp"
   - ".DS_Store"
 `
-		require.NoError(t, os.WriteFile(configPath, []byte(validConfig), 0644))
-
-		oldPlonkDir := os.Getenv("PLONK_DIR")
-		os.Setenv("PLONK_DIR", tempDir)
-		defer os.Setenv("PLONK_DIR", oldPlonkDir)
+		tempDir := testutil.NewTestConfig(t, validConfig)
+		testutil.SetEnv(t, "PLONK_DIR", tempDir)
 
 		check := checkConfigurationValidity()
 
@@ -137,14 +125,9 @@ ignore_patterns:
 	})
 
 	t.Run("invalid config", func(t *testing.T) {
-		tempDir := t.TempDir()
-		configPath := filepath.Join(tempDir, "plonk.yaml")
 		invalidConfig := `invalid yaml content {{`
-		require.NoError(t, os.WriteFile(configPath, []byte(invalidConfig), 0644))
-
-		oldPlonkDir := os.Getenv("PLONK_DIR")
-		os.Setenv("PLONK_DIR", tempDir)
-		defer os.Setenv("PLONK_DIR", oldPlonkDir)
+		tempDir := testutil.NewTestConfig(t, invalidConfig)
+		testutil.SetEnv(t, "PLONK_DIR", tempDir)
 
 		check := checkConfigurationValidity()
 
