@@ -60,7 +60,7 @@ func init() {
 func runStatus(cmd *cobra.Command, args []string) error {
 	// Parse output format
 	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := ParseOutputFormat(outputFormat)
+	format, err := output.ParseOutputFormat(outputFormat)
 	if err != nil {
 		return err
 	}
@@ -143,7 +143,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		ConfigDir:     outputData.ConfigDir,
 	}
 	formatter := output.NewStatusFormatter(formatterData)
-	return RenderOutput(formatter, format)
+	return output.RenderOutput(formatter, format)
 }
 
 // convertSummary converts from resources.Summary to output.Summary

@@ -43,7 +43,7 @@ func init() {
 func runDoctor(cmd *cobra.Command, args []string) error {
 	// Parse output format
 	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := ParseOutputFormat(outputFormat)
+	format, err := output.ParseOutputFormat(outputFormat)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		Checks: convertHealthChecks(doctorOutput.Checks),
 	}
 	formatter := output.NewDoctorFormatter(formatterData)
-	return RenderOutput(formatter, format)
+	return output.RenderOutput(formatter, format)
 }
 
 // convertHealthChecks converts from diagnostics types to output types

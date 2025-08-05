@@ -67,13 +67,13 @@ func init() {
 func runRm(cmd *cobra.Command, args []string) error {
 	// Parse output format
 	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := ParseOutputFormat(outputFormat)
+	format, err := output.ParseOutputFormat(outputFormat)
 	if err != nil {
 		return err
 	}
 
 	// Get flags
-	flags, err := ParseSimpleFlags(cmd)
+	flags, err := parseSimpleFlags(cmd)
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 		},
 	}
 	formatter := output.NewDotfileRemovalFormatter(formatterData)
-	if err := RenderOutput(formatter, format); err != nil {
+	if err := output.RenderOutput(formatter, format); err != nil {
 		return err
 	}
 

@@ -44,7 +44,7 @@ func init() {
 func runInfo(cmd *cobra.Command, args []string) error {
 	// Parse output format
 	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := ParseOutputFormat(outputFormat)
+	format, err := output.ParseOutputFormat(outputFormat)
 	if err != nil {
 		return fmt.Errorf("invalid output format: %w", err)
 	}
@@ -52,11 +52,11 @@ func runInfo(cmd *cobra.Command, args []string) error {
 	packageSpec := args[0]
 
 	// Parse prefix syntax
-	manager, packageName := ParsePackageSpec(packageSpec)
+	manager, packageName := parsePackageSpec(packageSpec)
 
 	// Validate manager if prefix specified
-	if manager != "" && !IsValidManager(manager) {
-		errorMsg := FormatNotFoundError("package manager", manager, GetValidManagers())
+	if manager != "" && !isValidManager(manager) {
+		errorMsg := formatNotFoundError("package manager", manager, getValidManagers())
 		return fmt.Errorf("%s", errorMsg)
 	}
 
@@ -85,7 +85,7 @@ func runInfo(cmd *cobra.Command, args []string) error {
 		PackageInfo: infoResult.PackageInfo,
 	}
 	formatter := output.NewInfoFormatter(formatterData)
-	return RenderOutput(formatter, format)
+	return output.RenderOutput(formatter, format)
 }
 
 // getInfoFromSpecificManager gets info from a specific package manager only
