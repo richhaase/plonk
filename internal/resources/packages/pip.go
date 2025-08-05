@@ -8,8 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-
-	"github.com/richhaase/plonk/internal/resources/packages/parsers"
 )
 
 // PipManager manages Python packages via pip.
@@ -300,8 +298,39 @@ func (p *PipManager) InstalledVersion(ctx context.Context, name string) (string,
 
 // extractVersion extracts version from pip show output
 func (p *PipManager) extractVersion(output []byte) string {
-	version, _ := parsers.ParseVersionOutput(output, "Version:")
-	return version
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "Version:") {
+			version := strings.TrimSpace(strings.TrimPrefix(line, "Version:"))
+			if version != "" {
+				return cleanVersionString(version)
+			}
+		}
+	}
+	return ""
+}
+
+// cleanVersionString removes common version prefixes
+func cleanVersionString(version string) string {
+	// Remove common prefixes
+	prefixes := []string{"v", "version", "Version"}
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(version, prefix) {
+			version = strings.TrimSpace(strings.TrimPrefix(version, prefix))
+			break
+		}
+	}
+
+	// Remove common suffixes and extra information
+	if idx := strings.Index(version, " "); idx > 0 {
+		version = version[:idx]
+	}
+	if idx := strings.Index(version, "\t"); idx > 0 {
+		version = version[:idx]
+	}
+
+	return strings.TrimSpace(version)
 }
 
 // normalizeName normalizes a package name according to pip's rules

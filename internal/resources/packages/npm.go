@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-
-	"github.com/richhaase/plonk/internal/resources/packages/parsers"
 )
 
 // NpmManager manages NPM packages.
@@ -226,13 +224,13 @@ func (n *NpmManager) parseInfoOutput(output []byte, name string) *PackageInfo {
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if strings.Contains(line, `"name":`) {
-			info.Name = cleanJSONValue(parsers.ExtractVersion([]byte(line), `"name":`))
+			info.Name = cleanJSONValue(extractValue(line, `"name":`))
 		} else if strings.Contains(line, `"version":`) {
-			info.Version = cleanJSONValue(parsers.ExtractVersion([]byte(line), `"version":`))
+			info.Version = cleanJSONValue(extractValue(line, `"version":`))
 		} else if strings.Contains(line, `"description":`) {
-			info.Description = cleanJSONValue(parsers.ExtractVersion([]byte(line), `"description":`))
+			info.Description = cleanJSONValue(extractValue(line, `"description":`))
 		} else if strings.Contains(line, `"homepage":`) {
-			info.Homepage = cleanJSONValue(parsers.ExtractVersion([]byte(line), `"homepage":`))
+			info.Homepage = cleanJSONValue(extractValue(line, `"homepage":`))
 		}
 	}
 
@@ -309,9 +307,22 @@ func (n *NpmManager) InstalledVersion(ctx context.Context, name string) (string,
 	return "", fmt.Errorf("package '%s' not found in npm list output", name)
 }
 
+// extractValue extracts the value after a prefix from a string
+func extractValue(line, prefix string) string {
+	line = strings.TrimSpace(line)
+	if strings.HasPrefix(line, prefix) {
+		return strings.TrimSpace(strings.TrimPrefix(line, prefix))
+	}
+	return ""
+}
+
 // cleanJSONValue removes quotes and commas from a JSON value
 func cleanJSONValue(value string) string {
-	return parsers.CleanJSONValue(value)
+	// First trim the trailing comma if present
+	value = strings.TrimSuffix(value, ",")
+	// Then remove quotes
+	value = strings.Trim(value, `"'`)
+	return value
 }
 
 // IsAvailable checks if npm is installed and accessible
