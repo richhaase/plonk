@@ -39,30 +39,6 @@ build:
     fi
     echo "Built versioned plonk binary to bin/ (version: $VERSION)"
 
-# Build Linux binary for integration tests (supports both Intel and Apple Silicon hosts)
-build-linux:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo "Building plonk for Linux (integration tests)..."
-    mkdir -p bin
-
-    # Get version info using helper
-    eval $(just _get-version-info)
-
-    # Detect host architecture and build appropriate Linux binary
-    HOST_ARCH=$(uname -m)
-    if [[ "$HOST_ARCH" == "arm64" ]]; then
-        TARGET_ARCH="arm64"
-    else
-        TARGET_ARCH="amd64"
-    fi
-
-    echo "Building for linux/$TARGET_ARCH..."
-    if ! GOOS=linux GOARCH=$TARGET_ARCH go build -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" -o bin/plonk-linux ./cmd/plonk; then
-        echo "Linux build failed"
-        exit 1
-    fi
-    echo "Built Linux plonk binary to bin/plonk-linux (linux/$TARGET_ARCH, version: $VERSION)"
 
 # Run all unit tests
 test:
@@ -70,6 +46,15 @@ test:
     go test ./...
     @echo "Unit tests passed!"
 
+# Run BATS behavioral tests
+test-bats:
+    @echo "Running BATS behavioral tests..."
+    @if ! command -v bats &> /dev/null; then \
+        echo "❌ BATS not found. Install with: brew install bats-core"; \
+        exit 1; \
+    fi
+    @cd tests/bats && PLONK_TEST_CLEANUP_PACKAGES=1 PLONK_TEST_CLEANUP_DOTFILES=1 bats behavioral/
+    @echo "✅ BATS tests completed!"
 
 # Run tests with coverage
 test-coverage:
