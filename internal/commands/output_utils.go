@@ -18,57 +18,9 @@ const (
 	IconSkipped = "-"
 )
 
-// GetStatusIcon returns the appropriate icon for a given status
-func GetStatusIcon(status string) string {
-	switch status {
-	case "managed", "added", "installed", "removed", "success", "completed", "deployed":
-		return IconSuccess
-	case "missing", "warn", "warning", "would-install", "would-remove", "would-add", "would-update":
-		return IconWarning
-	case "failed", "error", "fail":
-		return IconError
-	case "untracked", "unknown", "available":
-		return IconUnknown
-	case "skipped", "already-configured", "already-installed", "already-managed":
-		return IconInfo
-	default:
-		return IconSkipped
-	}
-}
+// GetStatusIcon moved to output package - using re-export
 
-// TableBuilder helps construct consistent table outputs
-type TableBuilder struct {
-	output strings.Builder
-}
-
-// NewTableBuilder creates a new TableBuilder
-func NewTableBuilder() *TableBuilder {
-	return &TableBuilder{}
-}
-
-// AddTitle adds a title with underline
-func (t *TableBuilder) AddTitle(title string) *TableBuilder {
-	t.output.WriteString(title + "\n")
-	t.output.WriteString(strings.Repeat("=", len(title)) + "\n")
-	return t
-}
-
-// AddLine adds a single line
-func (t *TableBuilder) AddLine(format string, args ...interface{}) *TableBuilder {
-	t.output.WriteString(fmt.Sprintf(format, args...) + "\n")
-	return t
-}
-
-// AddNewline adds an empty line
-func (t *TableBuilder) AddNewline() *TableBuilder {
-	t.output.WriteString("\n")
-	return t
-}
-
-// Build returns the constructed output
-func (t *TableBuilder) Build() string {
-	return t.output.String()
-}
+// TableBuilder and NewTableBuilder moved to output package - using re-export
 
 // OperationSummary is a generic summary for operations
 type OperationSummary struct {

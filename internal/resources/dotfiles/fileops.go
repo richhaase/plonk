@@ -13,14 +13,14 @@ import (
 
 // FileOperations handles file system operations for dotfiles
 type FileOperations struct {
-	manager      *Manager
+	pathResolver PathResolver
 	atomicWriter *AtomicFileWriter
 }
 
 // NewFileOperations creates a new file operations handler
-func NewFileOperations(manager *Manager) *FileOperations {
+func NewFileOperations(pathResolver PathResolver) *FileOperations {
 	return &FileOperations{
-		manager:      manager,
+		pathResolver: pathResolver,
 		atomicWriter: NewAtomicFileWriter(),
 	}
 }
@@ -43,14 +43,14 @@ func DefaultCopyOptions() CopyOptions {
 
 // CopyFile copies a file from source to destination with options
 func (f *FileOperations) CopyFile(ctx context.Context, source, destination string, options CopyOptions) error {
-	sourcePath := f.manager.GetSourcePath(source)
-	destPath, err := f.manager.GetDestinationPath(destination)
+	sourcePath := f.pathResolver.GetSourcePath(source)
+	destPath, err := f.pathResolver.GetDestinationPath(destination)
 	if err != nil {
 		return fmt.Errorf("failed to resolve destination path %s: %w", destination, err)
 	}
 
 	// Check if source exists
-	if !f.manager.FileExists(sourcePath) {
+	if !f.fileExists(sourcePath) {
 		return fmt.Errorf("source file %s does not exist at %s", source, sourcePath)
 	}
 
@@ -61,7 +61,7 @@ func (f *FileOperations) CopyFile(ctx context.Context, source, destination strin
 	}
 
 	// Handle backup if destination exists
-	if f.manager.FileExists(destPath) {
+	if f.fileExists(destPath) {
 		if options.CreateBackup {
 			backupPath := destPath + options.BackupSuffix
 			if err := f.createBackup(ctx, destPath, backupPath); err != nil {
@@ -121,4 +121,10 @@ func CopyFileWithAttributes(src, dst string) error {
 
 	// Preserve timestamps
 	return os.Chtimes(dst, srcInfo.ModTime(), srcInfo.ModTime())
+}
+
+// fileExists checks if a file exists at the given path
+func (f *FileOperations) fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }

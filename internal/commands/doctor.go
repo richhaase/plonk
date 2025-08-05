@@ -4,11 +4,8 @@
 package commands
 
 import (
-	"fmt"
-	"strings"
-
-	"github.com/fatih/color"
 	"github.com/richhaase/plonk/internal/diagnostics"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -60,106 +57,37 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		Checks:  healthReport.Checks,
 	}
 
-	return RenderOutput(doctorOutput, format)
+	// Convert to output package type and create formatter
+	formatterData := output.DoctorOutput{
+		Overall: output.HealthStatus{
+			Status:  doctorOutput.Overall.Status,
+			Message: doctorOutput.Overall.Message,
+		},
+		Checks: convertHealthChecks(doctorOutput.Checks),
+	}
+	formatter := output.NewDoctorFormatter(formatterData)
+	return RenderOutput(formatter, format)
+}
+
+// convertHealthChecks converts from diagnostics types to output types
+func convertHealthChecks(checks []diagnostics.HealthCheck) []output.HealthCheck {
+	converted := make([]output.HealthCheck, len(checks))
+	for i, check := range checks {
+		converted[i] = output.HealthCheck{
+			Name:        check.Name,
+			Category:    check.Category,
+			Status:      check.Status,
+			Message:     check.Message,
+			Details:     check.Details,
+			Issues:      check.Issues,
+			Suggestions: check.Suggestions,
+		}
+	}
+	return converted
 }
 
 // DoctorOutput represents the output of the doctor command (health checks)
 type DoctorOutput struct {
 	Overall diagnostics.HealthStatus  `json:"overall" yaml:"overall"`
 	Checks  []diagnostics.HealthCheck `json:"checks" yaml:"checks"`
-}
-
-// TableOutput generates human-friendly table output for doctor command
-func (d DoctorOutput) TableOutput() string {
-	var output strings.Builder
-
-	// Overall status
-	output.WriteString("Plonk Doctor Report\n\n")
-
-	switch d.Overall.Status {
-	case "healthy":
-		green := color.New(color.FgGreen, color.Bold)
-		output.WriteString(green.Sprintf("Overall Status: HEALTHY\n"))
-	case "warning":
-		yellow := color.New(color.FgYellow, color.Bold)
-		output.WriteString(yellow.Sprintf("Overall Status: WARNING\n"))
-	case "unhealthy":
-		red := color.New(color.FgRed, color.Bold)
-		output.WriteString(red.Sprintf("Overall Status: UNHEALTHY\n"))
-	}
-	output.WriteString(fmt.Sprintf("   %s\n\n", d.Overall.Message))
-
-	// Group checks by category
-	categories := make(map[string][]diagnostics.HealthCheck)
-	for _, check := range d.Checks {
-		categories[check.Category] = append(categories[check.Category], check)
-	}
-
-	// Display each category
-	categoryOrder := []string{"system", "environment", "permissions", "configuration", "package-managers", "installation"}
-	for _, category := range categoryOrder {
-		if checks, exists := categories[category]; exists {
-			output.WriteString(fmt.Sprintf("## %s\n", strings.Title(strings.ReplaceAll(category, "-", " "))))
-
-			for _, check := range checks {
-				// Color-coded status
-				var statusColor *color.Color
-				var statusText string
-				switch check.Status {
-				case "pass":
-					statusColor = color.New(color.FgGreen)
-					statusText = "PASS"
-				case "warn":
-					statusColor = color.New(color.FgYellow)
-					statusText = "WARN"
-				case "fail":
-					statusColor = color.New(color.FgRed)
-					statusText = "FAIL"
-				case "info":
-					statusColor = color.New(color.FgBlue)
-					statusText = "INFO"
-				default:
-					statusColor = color.New(color.FgWhite)
-					statusText = "UNKNOWN"
-				}
-
-				coloredName := statusColor.Sprintf("### %s", check.Name)
-				coloredStatus := statusColor.Sprintf("**Status**: %s", statusText)
-
-				output.WriteString(fmt.Sprintf("%s\n", coloredName))
-				output.WriteString(fmt.Sprintf("%s\n", coloredStatus))
-				output.WriteString(fmt.Sprintf("**Message**: %s\n", check.Message))
-
-				if len(check.Details) > 0 {
-					output.WriteString("\n**Details:**\n")
-					for _, detail := range check.Details {
-						output.WriteString(fmt.Sprintf("- %s\n", detail))
-					}
-				}
-
-				if len(check.Issues) > 0 {
-					output.WriteString("\n**Issues:**\n")
-					for _, issue := range check.Issues {
-						output.WriteString(fmt.Sprintf("- %s\n", issue))
-					}
-				}
-
-				if len(check.Suggestions) > 0 {
-					output.WriteString("\n**Suggestions:**\n")
-					for _, suggestion := range check.Suggestions {
-						output.WriteString(fmt.Sprintf("- %s\n", suggestion))
-					}
-				}
-
-				output.WriteString("\n")
-			}
-		}
-	}
-
-	return output.String()
-}
-
-// StructuredData returns the structured data for serialization
-func (d DoctorOutput) StructuredData() any {
-	return d
 }

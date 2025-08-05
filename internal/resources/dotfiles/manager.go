@@ -5,29 +5,46 @@ package dotfiles
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources"
 )
 
-// Manager handles all dotfile operations including path resolution, validation, and file operations
+// Manager coordinates dotfile operations using focused components
 type Manager struct {
-	homeDir   string
-	configDir string
+	homeDir          string
+	configDir        string
+	pathResolver     PathResolver
+	pathValidator    PathValidator
+	directoryScanner DirectoryScanner
+	configHandler    ConfigHandler
+	fileComparator   FileComparator
+	fileOperations   *FileOperations
 }
 
-// NewManager creates a new dotfile manager
+// NewManager creates a new dotfile manager with all components
 func NewManager(homeDir, configDir string) *Manager {
+	pathResolver := NewPathResolver(homeDir, configDir)
+	pathValidator := NewPathValidator(homeDir, configDir)
+	directoryScanner := NewDirectoryScanner(homeDir, configDir, pathValidator, pathResolver)
+	fileComparator := NewFileComparator()
+	configHandler := NewConfigHandler(homeDir, configDir, pathResolver, directoryScanner, fileComparator)
+	fileOperations := NewFileOperations(pathResolver)
+
 	return &Manager{
-		homeDir:   homeDir,
-		configDir: configDir,
+		homeDir:          homeDir,
+		configDir:        configDir,
+		pathResolver:     pathResolver,
+		pathValidator:    pathValidator,
+		directoryScanner: directoryScanner,
+		configHandler:    configHandler,
+		fileComparator:   fileComparator,
+		fileOperations:   fileOperations,
 	}
 }
 
@@ -41,289 +58,81 @@ func (m *Manager) ConfigDir() string {
 	return m.configDir
 }
 
-// DotfileInfo represents information about a dotfile
-type DotfileInfo struct {
-	Name        string
-	Source      string // Path in config directory
-	Destination string // Path in home directory
-	IsDirectory bool
-	ParentDir   string // For files expanded from directories
-	Metadata    map[string]interface{}
-}
-
-// DirectoryEntry represents a file found during directory expansion
-type DirectoryEntry struct {
-	RelativePath string // Path relative to the expanded directory
-	FullPath     string // Full absolute path to the file
-	ParentDir    string // Original directory path that was expanded
-}
-
-// AddOptions configures dotfile addition operations
-type AddOptions struct {
-	DryRun bool
-}
-
-// RemoveOptions configures dotfile removal operations
-type RemoveOptions struct {
-	DryRun bool
-}
-
-// ApplyOptions configures dotfile apply operations
-type ApplyOptions struct {
-	DryRun bool
-	Backup bool
-}
-
-// ApplyResult represents an action taken on a dotfile
-type ApplyResult struct {
-	Source      string `json:"source" yaml:"source"`
-	Destination string `json:"destination" yaml:"destination"`
-	Action      string `json:"action" yaml:"action"`
-	Status      string `json:"status" yaml:"status"`
-	Error       string `json:"error,omitempty" yaml:"error,omitempty"`
-}
-
-// ResolveDotfilePath resolves a dotfile path to an absolute path within the home directory
+// Delegate path resolution methods
 func (m *Manager) ResolveDotfilePath(path string) (string, error) {
-	var resolvedPath string
-
-	if strings.HasPrefix(path, "~/") {
-		resolvedPath = filepath.Join(m.homeDir, path[2:])
-	} else if filepath.IsAbs(path) {
-		resolvedPath = path
-	} else {
-		// Relative path - try current directory first, then home directory
-		absPath, err := filepath.Abs(path)
-		if err != nil {
-			return "", err
-		}
-
-		if _, err := os.Stat(absPath); err == nil {
-			resolvedPath = absPath
-		} else {
-			homeRelativePath := filepath.Join(m.homeDir, path)
-			if _, err := os.Stat(homeRelativePath); err == nil {
-				resolvedPath = homeRelativePath
-			} else {
-				resolvedPath = absPath
-			}
-		}
-	}
-
-	// Ensure it's within the home directory
-	if !strings.HasPrefix(resolvedPath, m.homeDir) {
-		return "", fmt.Errorf("dotfile must be within home directory: %s", resolvedPath)
-	}
-
-	return resolvedPath, nil
+	return m.pathResolver.ResolveDotfilePath(path)
 }
 
-// GetSourcePath returns the full path to a source file in the config directory
 func (m *Manager) GetSourcePath(source string) string {
-	return filepath.Join(m.configDir, source)
+	return m.pathResolver.GetSourcePath(source)
 }
 
-// GetDestinationPath converts a destination path to an absolute path in the home directory
 func (m *Manager) GetDestinationPath(destination string) (string, error) {
-	if strings.HasPrefix(destination, "~/") {
-		return filepath.Join(m.homeDir, destination[2:]), nil
-	}
-	if filepath.IsAbs(destination) {
-		return destination, nil
-	}
-	// Relative destination, assume it's relative to home
-	return filepath.Join(m.homeDir, destination), nil
+	return m.pathResolver.GetDestinationPath(destination)
 }
 
-// GenerateDestinationPath converts a resolved absolute path to a destination path (~/relative/path)
 func (m *Manager) GenerateDestinationPath(resolvedPath string) (string, error) {
-	relPath, err := filepath.Rel(m.homeDir, resolvedPath)
-	if err != nil {
-		return "", err
-	}
-	return "~/" + relPath, nil
+	return m.pathResolver.GenerateDestinationPath(resolvedPath)
 }
 
-// GenerateSourcePath converts a destination path to a source path using plonk's naming convention
 func (m *Manager) GenerateSourcePath(destination string) string {
-	return TargetToSource(destination)
+	return m.pathResolver.GenerateSourcePath(destination)
 }
 
-// GeneratePaths generates both source and destination paths for a resolved dotfile path
 func (m *Manager) GeneratePaths(resolvedPath string) (source, destination string, err error) {
-	destination, err = m.GenerateDestinationPath(resolvedPath)
-	if err != nil {
-		return "", "", err
-	}
-	source = m.GenerateSourcePath(destination)
-	return source, destination, nil
+	return m.pathResolver.GeneratePaths(resolvedPath)
 }
 
-// ValidatePath validates that a path is safe and within allowed boundaries
+// Delegate validation methods
 func (m *Manager) ValidatePath(path string) error {
-	// Check for null bytes
-	if strings.Contains(path, "\x00") {
-		return fmt.Errorf("path contains null bytes")
-	}
-
-	// Clean and resolve the path
-	cleanPath := filepath.Clean(path)
-	absPath, err := filepath.Abs(cleanPath)
-	if err != nil {
-		return err
-	}
-
-	// Ensure path is within home directory
-	if !strings.HasPrefix(absPath, m.homeDir) {
-		return fmt.Errorf("path is outside home directory: %s", absPath)
-	}
-
-	// Ensure we're not managing plonk's own config
-	if strings.HasPrefix(absPath, m.configDir) {
-		return fmt.Errorf("cannot manage plonk configuration directory")
-	}
-
-	return nil
+	return m.pathValidator.ValidatePath(path)
 }
 
-// ShouldSkipPath determines if a path should be skipped based on ignore patterns
+func (m *Manager) ValidatePaths(source, destination string) error {
+	return m.pathValidator.ValidatePaths(source, destination)
+}
+
 func (m *Manager) ShouldSkipPath(relPath string, info os.FileInfo, ignorePatterns []string) bool {
-	// Always skip plonk config files
-	if relPath == "plonk.yaml" || relPath == "plonk.lock" {
-		return true
-	}
-
-	// Always skip .plonk/ directory (reserved for future plonk metadata)
-	if relPath == ".plonk" || strings.HasPrefix(relPath, ".plonk/") {
-		return true
-	}
-
-	// Check against ignore patterns
-	for _, pattern := range ignorePatterns {
-		if strings.HasSuffix(pattern, "/") {
-			dirPattern := strings.TrimSuffix(pattern, "/")
-			if info.IsDir() && strings.Contains(relPath, dirPattern) {
-				return true
-			}
-			if strings.Contains(relPath, dirPattern+"/") {
-				return true
-			}
-		} else {
-			matched, err := filepath.Match(pattern, filepath.Base(relPath))
-			if err == nil && matched {
-				return true
-			}
-			matched, err = filepath.Match(pattern, relPath)
-			if err == nil && matched {
-				return true
-			}
-		}
-	}
-	return false
+	return m.pathValidator.ShouldSkipPath(relPath, info, ignorePatterns)
 }
 
-// ExpandDirectoryPaths walks a directory and returns individual file paths
+// Delegate directory operations
 func (m *Manager) ExpandDirectoryPaths(dirPath string) ([]DirectoryEntry, error) {
-	var entries []DirectoryEntry
-
-	resolvedDirPath, err := m.ResolveDotfilePath(dirPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve directory path: %w", err)
-	}
-
-	info, err := os.Stat(resolvedDirPath)
-	if err != nil {
-		return nil, fmt.Errorf("directory does not exist: %w", err)
-	}
-
-	if !info.IsDir() {
-		return nil, fmt.Errorf("path is not a directory: %s", dirPath)
-	}
-
-	err = filepath.Walk(resolvedDirPath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if info.IsDir() {
-			return nil
-		}
-
-		relPath, err := filepath.Rel(resolvedDirPath, path)
-		if err != nil {
-			return err
-		}
-
-		entries = append(entries, DirectoryEntry{
-			RelativePath: relPath,
-			FullPath:     path,
-			ParentDir:    dirPath,
-		})
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to walk directory: %w", err)
-	}
-
-	return entries, nil
+	return m.directoryScanner.ExpandDirectoryPaths(dirPath)
 }
 
-// ExpandConfigDirectory walks the config directory and returns all files suitable for dotfile management
 func (m *Manager) ExpandConfigDirectory(ignorePatterns []string) (map[string]string, error) {
-	result := make(map[string]string)
-
-	err := filepath.Walk(m.configDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil // Skip files we can't read
-		}
-
-		relPath, err := filepath.Rel(m.configDir, path)
-		if err != nil {
-			return nil
-		}
-
-		// Always skip plonk config file
-		if relPath == "plonk.yaml" {
-			return nil
-		}
-
-		// Skip files based on ignore patterns
-		if m.ShouldSkipPath(relPath, info, ignorePatterns) {
-			if info.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-
-		// Skip directories themselves (we'll get the files inside)
-		if info.IsDir() {
-			return nil
-		}
-
-		// Add to results with proper mapping
-		source := relPath
-		target := SourceToTarget(source)
-		result[source] = target
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to walk config directory: %w", err)
-	}
-
-	return result, nil
+	return m.directoryScanner.ExpandConfigDirectory(ignorePatterns)
 }
 
-// FileExists checks if a file exists at the given path
+func (m *Manager) ListDotfiles(dir string) ([]string, error) {
+	return m.directoryScanner.ListDotfiles(dir)
+}
+
+func (m *Manager) ExpandDirectory(sourceDir, destDir string) ([]DotfileInfo, error) {
+	return m.directoryScanner.ExpandDirectory(sourceDir, destDir)
+}
+
+// Delegate config operations
+func (m *Manager) GetConfiguredDotfiles() ([]resources.Item, error) {
+	return m.configHandler.GetConfiguredDotfiles()
+}
+
+func (m *Manager) GetActualDotfiles(ctx context.Context) ([]resources.Item, error) {
+	return m.configHandler.GetActualDotfiles(ctx)
+}
+
+// Delegate file comparison
+func (m *Manager) CompareFiles(path1, path2 string) (bool, error) {
+	return m.fileComparator.CompareFiles(path1, path2)
+}
+
+// Utility methods that need to stay in manager
 func (m *Manager) FileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
 
-// IsDirectory checks if a path is a directory
 func (m *Manager) IsDirectory(path string) bool {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -332,7 +141,6 @@ func (m *Manager) IsDirectory(path string) bool {
 	return info.IsDir()
 }
 
-// DestinationToName converts a destination path to a standardized name
 func (m *Manager) DestinationToName(destination string) string {
 	if strings.HasPrefix(destination, "~/") {
 		return destination[2:]
@@ -340,7 +148,6 @@ func (m *Manager) DestinationToName(destination string) string {
 	return destination
 }
 
-// CreateDotfileInfo creates a DotfileInfo from source and destination paths
 func (m *Manager) CreateDotfileInfo(source, destination string) DotfileInfo {
 	sourcePath := m.GetSourcePath(source)
 	isDir := m.IsDirectory(sourcePath)
@@ -357,96 +164,7 @@ func (m *Manager) CreateDotfileInfo(source, destination string) DotfileInfo {
 	}
 }
 
-// ValidatePaths validates that source and destination paths are valid
-func (m *Manager) ValidatePaths(source, destination string) error {
-	sourcePath := m.GetSourcePath(source)
-	if !m.FileExists(sourcePath) {
-		return fmt.Errorf("source file %s does not exist at %s", source, sourcePath)
-	}
-
-	if !strings.HasPrefix(destination, "~/") && !filepath.IsAbs(destination) {
-		return fmt.Errorf("destination %s must start with ~/ or be absolute", destination)
-	}
-
-	return nil
-}
-
-// SourceToTarget converts a source path to target path using plonk's convention
-// Prepends ~/. to make all files/directories hidden
-func SourceToTarget(source string) string {
-	return "~/." + source
-}
-
-// TargetToSource converts a target path to source path using plonk's convention
-// Removes the ~/. prefix
-func TargetToSource(target string) string {
-	if len(target) > 3 && target[:3] == "~/." {
-		return target[3:]
-	}
-	return target
-}
-
-// ListDotfiles finds all dotfiles in the specified directory
-func (m *Manager) ListDotfiles(dir string) ([]string, error) {
-	var dotfiles []string
-
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, entry := range entries {
-		if strings.HasPrefix(entry.Name(), ".") && entry.Name() != "." && entry.Name() != ".." {
-			dotfiles = append(dotfiles, entry.Name())
-		}
-	}
-
-	return dotfiles, nil
-}
-
-// ExpandDirectory walks a directory and returns individual file entries as DotfileInfo
-func (m *Manager) ExpandDirectory(sourceDir, destDir string) ([]DotfileInfo, error) {
-	var items []DotfileInfo
-	sourcePath := filepath.Join(m.configDir, sourceDir)
-
-	err := filepath.Walk(sourcePath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if info.IsDir() {
-			return nil
-		}
-
-		relPath, err := filepath.Rel(sourcePath, path)
-		if err != nil {
-			return err
-		}
-
-		source := filepath.Join(sourceDir, relPath)
-		destination := filepath.Join(destDir, relPath)
-		name := m.DestinationToName(destination)
-
-		items = append(items, DotfileInfo{
-			Name:        name,
-			Source:      source,
-			Destination: destination,
-			IsDirectory: false,
-			ParentDir:   sourceDir,
-			Metadata: map[string]interface{}{
-				"source":      source,
-				"destination": destination,
-				"parent_dir":  sourceDir,
-			},
-		})
-
-		return nil
-	})
-
-	return items, err
-}
-
-// AddFiles processes multiple dotfile paths and returns results for all files processed
+// High-level operations that coordinate components
 func (m *Manager) AddFiles(ctx context.Context, cfg *config.Config, dotfilePaths []string, opts AddOptions) ([]resources.OperationResult, error) {
 	var allResults []resources.OperationResult
 
@@ -458,10 +176,9 @@ func (m *Manager) AddFiles(ctx context.Context, cfg *config.Config, dotfilePaths
 	return allResults, nil
 }
 
-// AddSingleDotfile processes a single dotfile path and returns results for all files processed
 func (m *Manager) AddSingleDotfile(ctx context.Context, cfg *config.Config, dotfilePath string, dryRun bool) []resources.OperationResult {
 	// Resolve and validate dotfile path
-	resolvedPath, err := m.ResolveDotfilePath(dotfilePath)
+	resolvedPath, err := m.pathResolver.ResolveDotfilePath(dotfilePath)
 	if err != nil {
 		return []resources.OperationResult{{
 			Name:   dotfilePath,
@@ -497,14 +214,13 @@ func (m *Manager) AddSingleDotfile(ctx context.Context, cfg *config.Config, dotf
 	return []resources.OperationResult{result}
 }
 
-// AddSingleFile processes a single file and returns an resources.OperationResult
 func (m *Manager) AddSingleFile(ctx context.Context, cfg *config.Config, filePath string, dryRun bool) resources.OperationResult {
 	result := resources.OperationResult{
 		Name: filePath,
 	}
 
 	// Generate source and destination paths
-	source, destination, err := m.GeneratePaths(filePath)
+	source, destination, err := m.pathResolver.GeneratePaths(filePath)
 	if err != nil {
 		result.Status = "failed"
 		result.Error = fmt.Errorf("failed to generate paths: %w", err)
@@ -518,7 +234,7 @@ func (m *Manager) AddSingleFile(ctx context.Context, cfg *config.Config, filePat
 	result.FilesProcessed = 1
 
 	// Check if already managed by checking if source file exists in config dir
-	configured, err := GetConfiguredDotfiles(m.homeDir, m.configDir)
+	configured, err := m.configHandler.GetConfiguredDotfiles()
 	if err == nil {
 		for _, item := range configured {
 			if meta, ok := item.Metadata["source"].(string); ok && meta == source {
@@ -547,7 +263,7 @@ func (m *Manager) AddSingleFile(ctx context.Context, cfg *config.Config, filePat
 	}
 
 	// Copy file to plonk config directory
-	sourcePath := filepath.Join(m.configDir, source)
+	sourcePath := m.pathResolver.GetSourcePath(source)
 
 	// Create parent directories
 	if err := os.MkdirAll(filepath.Dir(sourcePath), 0750); err != nil {
@@ -566,12 +282,11 @@ func (m *Manager) AddSingleFile(ctx context.Context, cfg *config.Config, filePat
 	return result
 }
 
-// AddDirectoryFiles processes all files in a directory and returns results
 func (m *Manager) AddDirectoryFiles(ctx context.Context, cfg *config.Config, dirPath string, dryRun bool) []resources.OperationResult {
 	var results []resources.OperationResult
 	ignorePatterns := cfg.IgnorePatterns
 
-	entries, err := m.ExpandDirectoryPaths(dirPath)
+	entries, err := m.directoryScanner.ExpandDirectoryPaths(dirPath)
 	if err != nil {
 		return []resources.OperationResult{{
 			Name:   dirPath,
@@ -599,7 +314,7 @@ func (m *Manager) AddDirectoryFiles(ctx context.Context, cfg *config.Config, dir
 		}
 
 		// Check if file should be skipped
-		if m.ShouldSkipPath(entry.RelativePath, info, ignorePatterns) {
+		if m.pathValidator.ShouldSkipPath(entry.RelativePath, info, ignorePatterns) {
 			continue
 		}
 
@@ -611,7 +326,6 @@ func (m *Manager) AddDirectoryFiles(ctx context.Context, cfg *config.Config, dir
 	return results
 }
 
-// RemoveFiles processes multiple dotfile paths for removal
 func (m *Manager) RemoveFiles(cfg *config.Config, dotfilePaths []string, opts RemoveOptions) ([]resources.OperationResult, error) {
 	var allResults []resources.OperationResult
 
@@ -623,14 +337,13 @@ func (m *Manager) RemoveFiles(cfg *config.Config, dotfilePaths []string, opts Re
 	return allResults, nil
 }
 
-// RemoveSingleDotfile removes a single dotfile
 func (m *Manager) RemoveSingleDotfile(cfg *config.Config, dotfilePath string, dryRun bool) resources.OperationResult {
 	result := resources.OperationResult{
 		Name: dotfilePath,
 	}
 
 	// Resolve dotfile path
-	resolvedPath, err := m.ResolveDotfilePath(dotfilePath)
+	resolvedPath, err := m.pathResolver.ResolveDotfilePath(dotfilePath)
 	if err != nil {
 		result.Status = "failed"
 		result.Error = fmt.Errorf("failed to resolve dotfile path %s: %w", dotfilePath, err)
@@ -638,14 +351,14 @@ func (m *Manager) RemoveSingleDotfile(cfg *config.Config, dotfilePath string, dr
 	}
 
 	// Get the source file path in config directory
-	_, destination, err := m.GeneratePaths(resolvedPath)
+	_, destination, err := m.pathResolver.GeneratePaths(resolvedPath)
 	if err != nil {
 		result.Status = "failed"
 		result.Error = fmt.Errorf("failed to generate paths for %s: %w", dotfilePath, err)
 		return result
 	}
 	source := TargetToSource(destination)
-	sourcePath := filepath.Join(m.configDir, source)
+	sourcePath := m.pathResolver.GetSourcePath(source)
 
 	// Check if file is managed (has corresponding file in config directory)
 	if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
@@ -696,17 +409,16 @@ func (m *Manager) RemoveSingleDotfile(cfg *config.Config, dotfilePath string, dr
 	return result
 }
 
-// ProcessDotfileForApply processes a single dotfile for apply operations
-func (m *Manager) ProcessDotfileForApply(ctx context.Context, source, destination string, opts ApplyOptions) (ApplyResult, error) {
-	sourcePath := filepath.Join(m.configDir, source)
-	destinationPath, err := m.ResolveDotfilePath(destination)
+func (m *Manager) ProcessDotfileForApply(ctx context.Context, source, destination string, opts ApplyOptions) (output.DotfileOperation, error) {
+	sourcePath := m.pathResolver.GetSourcePath(source)
+	destinationPath, err := m.pathResolver.ResolveDotfilePath(destination)
 	if err != nil {
-		return ApplyResult{}, fmt.Errorf("failed to resolve destination path: %w", err)
+		return output.DotfileOperation{}, fmt.Errorf("failed to resolve destination path: %w", err)
 	}
 
 	// Check if source exists
-	if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
-		return ApplyResult{
+	if !m.FileExists(sourcePath) {
+		return output.DotfileOperation{
 			Source:      source,
 			Destination: destination,
 			Action:      "error",
@@ -716,12 +428,9 @@ func (m *Manager) ProcessDotfileForApply(ctx context.Context, source, destinatio
 	}
 
 	// Check if destination already exists
-	destExists := false
-	if _, err := os.Stat(destinationPath); err == nil {
-		destExists = true
-	}
+	destExists := m.FileExists(destinationPath)
 
-	action := ApplyResult{
+	action := output.DotfileOperation{
 		Source:      source,
 		Destination: destination,
 	}
@@ -737,15 +446,12 @@ func (m *Manager) ProcessDotfileForApply(ctx context.Context, source, destinatio
 		return action, nil
 	}
 
-	// Create file operations handler
-	fileOps := NewFileOperations(m)
-
 	// Configure copy options
 	copyOptions := DefaultCopyOptions()
 	copyOptions.CreateBackup = opts.Backup
 
 	// Perform the copy
-	err = fileOps.CopyFile(ctx, source, destination, copyOptions)
+	err = m.fileOperations.CopyFile(ctx, source, destination, copyOptions)
 	if err != nil {
 		action.Action = "error"
 		action.Status = "failed"
@@ -764,179 +470,45 @@ func (m *Manager) ProcessDotfileForApply(ctx context.Context, source, destinatio
 	return action, nil
 }
 
-// createCompareFunc creates a comparison function for a dotfile
-func (m *Manager) createCompareFunc(source, destination string) func() (bool, error) {
-	return func() (bool, error) {
-		sourcePath := m.GetSourcePath(source)
-		destPath, err := m.GetDestinationPath(destination)
-		if err != nil {
-			return false, err
-		}
-		// If destination doesn't exist, they're not the same
-		if !m.FileExists(destPath) {
-			return false, nil
-		}
-		return m.CompareFiles(sourcePath, destPath)
-	}
+// Type definitions that were moved from old manager
+
+// DotfileInfo represents information about a dotfile
+type DotfileInfo struct {
+	Name        string
+	Source      string // Path in config directory
+	Destination string // Path in home directory
+	IsDirectory bool
+	ParentDir   string // For files expanded from directories
+	Metadata    map[string]interface{}
 }
 
-// GetConfiguredDotfiles returns dotfiles defined in configuration
-func (m *Manager) GetConfiguredDotfiles() ([]resources.Item, error) {
-	// Load config to get ignore patterns
-	cfg := config.LoadWithDefaults(m.configDir)
-
-	targets, err := m.ExpandConfigDirectory(cfg.IgnorePatterns)
-	if err != nil {
-		return nil, fmt.Errorf("expanding config directory: %w", err)
-	}
-
-	items := make([]resources.Item, 0)
-
-	for source, destination := range targets {
-		// Check if source is a directory
-		sourcePath := m.GetSourcePath(source)
-		info, err := os.Stat(sourcePath)
-		if err != nil {
-			// Source doesn't exist yet, treat as single file
-			name := m.DestinationToName(destination)
-			items = append(items, resources.Item{
-				Name:   name,
-				Domain: "dotfile",
-				Path:   destination,
-				Metadata: map[string]interface{}{
-					"source":      source,
-					"destination": destination,
-					"compare_fn":  m.createCompareFunc(source, destination),
-				},
-			})
-			continue
-		}
-
-		if info.IsDir() {
-			// For directories, just use the directory itself as one item
-			name := m.DestinationToName(destination)
-			items = append(items, resources.Item{
-				Name:   name,
-				Domain: "dotfile",
-				Path:   destination,
-				Metadata: map[string]interface{}{
-					"source":      source,
-					"destination": destination,
-					"isDirectory": true,
-					"compare_fn":  m.createCompareFunc(source, destination),
-				},
-			})
-		} else {
-			// Single file
-			name := m.DestinationToName(destination)
-			items = append(items, resources.Item{
-				Name:   name,
-				Domain: "dotfile",
-				Path:   destination,
-				Metadata: map[string]interface{}{
-					"source":      source,
-					"destination": destination,
-					"compare_fn":  m.createCompareFunc(source, destination),
-				},
-			})
-		}
-	}
-
-	return items, nil
+// DirectoryEntry represents a file found during directory expansion
+type DirectoryEntry struct {
+	RelativePath string // Path relative to the expanded directory
+	FullPath     string // Full absolute path to the file
+	ParentDir    string // Original directory path that was expanded
 }
 
-// GetActualDotfiles returns dotfiles currently present in the home directory
-func (m *Manager) GetActualDotfiles(ctx context.Context) ([]resources.Item, error) {
-	// Load config to get ignore patterns and expand directories
-	cfg := config.LoadWithDefaults(m.configDir)
-
-	// Only use IgnorePatterns for managed dotfile scanning
-	// UnmanagedFilters should NOT be applied here as they're only for unmanaged file discovery
-	filter := NewFilter(cfg.IgnorePatterns, m.configDir, true)
-
-	// Create scanner
-	scanner := NewScanner(m.homeDir, filter)
-
-	// Create expander
-	expander := NewExpander(m.homeDir, cfg.ExpandDirectories, scanner)
-
-	var items []resources.Item
-
-	// Scan home directory for dotfiles
-	scanResults, err := scanner.ScanDotfiles(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("scanning dotfiles: %w", err)
-	}
-
-	// Process scan results
-	for _, result := range scanResults {
-		// Check if directory should be expanded
-		shouldExpand := false
-		for _, dir := range cfg.ExpandDirectories {
-			if result.Name == dir {
-				shouldExpand = true
-				break
-			}
-		}
-		if result.Info.IsDir() && shouldExpand {
-			// For expanded directories, scan inside them
-			err := filepath.Walk(result.Path, func(path string, info os.FileInfo, err error) error {
-				if err != nil {
-					return nil // Skip files we can't read
-				}
-
-				// Skip the directory itself
-				if path == result.Path {
-					return nil
-				}
-
-				// Skip directories (we want files)
-				if info.IsDir() {
-					return nil
-				}
-
-				// Get relative path from home
-				relPath, err := filepath.Rel(m.homeDir, path)
-				if err != nil {
-					return nil
-				}
-
-				// Apply filter
-				if filter != nil && filter.ShouldSkip(relPath, info) {
-					return nil
-				}
-
-				items = append(items, resources.Item{
-					Name:   relPath,
-					State:  resources.StateUntracked,
-					Domain: "dotfile",
-					Path:   path,
-					Metadata: map[string]interface{}{
-						"path": path,
-					},
-				})
-
-				return nil
-			})
-			if err != nil {
-				// If we can't walk the directory, just skip it
-				continue
-			}
-		} else {
-			// Single file or unexpanded directory
-			expander.CheckDuplicate(result.Name)
-			items = append(items, resources.Item{
-				Name:     result.Name,
-				State:    resources.StateUntracked,
-				Domain:   "dotfile",
-				Path:     result.Path,
-				Metadata: result.Metadata,
-			})
-		}
-	}
-
-	return items, nil
+// AddOptions configures dotfile addition operations
+type AddOptions struct {
+	DryRun bool
 }
+
+// RemoveOptions configures dotfile removal operations
+type RemoveOptions struct {
+	DryRun bool
+}
+
+// ApplyOptions configures dotfile apply operations
+type ApplyOptions struct {
+	DryRun bool
+	Backup bool
+}
+
+// Type aliases and backward compatibility
+
+// ApplyResult is now defined in output package
+type ApplyResult = output.DotfileOperation
 
 // Backward compatibility functions for external usage
 
@@ -946,35 +518,38 @@ func GetConfiguredDotfiles(homeDir, configDir string) ([]resources.Item, error) 
 	return manager.GetConfiguredDotfiles()
 }
 
-// CompareFiles checks if two files have identical content using SHA256 checksums
-func (m *Manager) CompareFiles(path1, path2 string) (bool, error) {
-	// Compute hash for first file
-	hash1, err := m.computeFileHash(path1)
-	if err != nil {
-		return false, fmt.Errorf("failed to compute hash for %s: %w", path1, err)
-	}
-
-	// Compute hash for second file
-	hash2, err := m.computeFileHash(path2)
-	if err != nil {
-		return false, fmt.Errorf("failed to compute hash for %s: %w", path2, err)
-	}
-
-	return hash1 == hash2, nil
+// SourceToTarget converts a source path to target path using plonk's convention
+// Prepends ~/. to make all files/directories hidden
+func SourceToTarget(source string) string {
+	return "~/." + source
 }
 
-// computeFileHash computes the SHA256 hash of a file
+// TargetToSource converts a target path to source path using plonk's convention
+// Removes the ~/. prefix
+func TargetToSource(target string) string {
+	if len(target) > 3 && target[:3] == "~/." {
+		return target[3:]
+	}
+	return target
+}
+
+// computeFileHash computes the SHA256 hash of a file (for backward compatibility)
 func (m *Manager) computeFileHash(path string) (string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
+	return m.fileComparator.ComputeFileHash(path)
+}
 
-	h := sha256.New()
-	if _, err := io.Copy(h, file); err != nil {
-		return "", err
+// createCompareFunc creates a comparison function for a dotfile (for backward compatibility)
+func (m *Manager) createCompareFunc(source, destination string) func() (bool, error) {
+	return func() (bool, error) {
+		sourcePath := m.pathResolver.GetSourcePath(source)
+		destPath, err := m.pathResolver.GetDestinationPath(destination)
+		if err != nil {
+			return false, err
+		}
+		// If destination doesn't exist, they're not the same
+		if !m.FileExists(destPath) {
+			return false, nil
+		}
+		return m.fileComparator.CompareFiles(sourcePath, destPath)
 	}
-
-	return hex.EncodeToString(h.Sum(nil)), nil
 }

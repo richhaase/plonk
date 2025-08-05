@@ -8,11 +8,13 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/richhaase/plonk/internal/testutil"
 )
 
 func TestLoad_MissingFile(t *testing.T) {
 	// Test zero-config behavior - missing file should return defaults
-	tempDir := t.TempDir()
+	tempDir := testutil.NewTestConfig(t, "")
 
 	cfg, err := Load(tempDir)
 	if err != nil {
@@ -45,10 +47,6 @@ func TestLoad_MissingFile(t *testing.T) {
 }
 
 func TestLoad_ValidConfig(t *testing.T) {
-	tempDir := t.TempDir()
-	configPath := filepath.Join(tempDir, "plonk.yaml")
-
-	// Write a valid config
 	configContent := `
 default_manager: npm
 operation_timeout: 600
@@ -61,9 +59,7 @@ ignore_patterns:
   - "*.log"
   - "*.cache"
 `
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatal(err)
-	}
+	tempDir := testutil.NewTestConfig(t, configContent)
 
 	cfg, err := Load(tempDir)
 	if err != nil {
@@ -97,17 +93,11 @@ ignore_patterns:
 
 func TestLoad_PartialConfig(t *testing.T) {
 	// Test that unspecified fields get defaults
-	tempDir := t.TempDir()
-	configPath := filepath.Join(tempDir, "plonk.yaml")
-
-	// Write a partial config
 	configContent := `
 default_manager: cargo
 operation_timeout: 400
 `
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatal(err)
-	}
+	tempDir := testutil.NewTestConfig(t, configContent)
 
 	cfg, err := Load(tempDir)
 	if err != nil {
@@ -142,16 +132,11 @@ operation_timeout: 400
 }
 
 func TestLoad_InvalidManager(t *testing.T) {
-	tempDir := t.TempDir()
-	configPath := filepath.Join(tempDir, "plonk.yaml")
-
 	// Write config with invalid manager
 	configContent := `
 default_manager: invalid_manager
 `
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatal(err)
-	}
+	tempDir := testutil.NewTestConfig(t, configContent)
 
 	_, err := Load(tempDir)
 	if err == nil {
@@ -192,12 +177,7 @@ dotfile_timeout: 601
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tempDir := t.TempDir()
-			configPath := filepath.Join(tempDir, "plonk.yaml")
-
-			if err := os.WriteFile(configPath, []byte(tc.content), 0644); err != nil {
-				t.Fatal(err)
-			}
+			tempDir := testutil.NewTestConfig(t, tc.content)
 
 			_, err := Load(tempDir)
 			if err == nil {
@@ -208,16 +188,11 @@ dotfile_timeout: 601
 }
 
 func TestLoad_InvalidYAML(t *testing.T) {
-	tempDir := t.TempDir()
-	configPath := filepath.Join(tempDir, "plonk.yaml")
-
 	// Write invalid YAML
 	configContent := `
 default_manager: [this is not valid yaml
 `
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatal(err)
-	}
+	tempDir := testutil.NewTestConfig(t, configContent)
 
 	_, err := Load(tempDir)
 	if err == nil {
@@ -238,13 +213,11 @@ func TestLoadWithDefaults(t *testing.T) {
 		t.Error("Should return defaults for missing file")
 	}
 
-	// Case 2: Invalid file
-	configPath := filepath.Join(tempDir, "plonk.yaml")
-	if err := os.WriteFile(configPath, []byte("invalid: [yaml"), 0644); err != nil {
-		t.Fatal(err)
-	}
+	// Case 2: Invalid file - create new temp directory with invalid config
+	invalidTempDir := testutil.NewTestConfig(t, "invalid: [yaml")
 
-	cfg = LoadWithDefaults(tempDir)
+	cfg = LoadWithDefaults(invalidTempDir)
+
 	if cfg == nil {
 		t.Fatal("LoadWithDefaults should never return nil")
 	}
@@ -300,9 +273,6 @@ func TestConfig_Resolve(t *testing.T) {
 }
 
 func TestLoad_DotfilesConfig(t *testing.T) {
-	tempDir := t.TempDir()
-	configPath := filepath.Join(tempDir, "plonk.yaml")
-
 	// Write config with dotfiles section
 	configContent := `
 default_manager: npm
@@ -312,9 +282,7 @@ dotfiles:
     - "**/node_modules/**"
     - "**/*-*-*-*-*/**"
 `
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatal(err)
-	}
+	tempDir := testutil.NewTestConfig(t, configContent)
 
 	cfg, err := Load(tempDir)
 	if err != nil {
@@ -329,18 +297,13 @@ dotfiles:
 }
 
 func TestLoad_EmptyDotfilesConfig(t *testing.T) {
-	tempDir := t.TempDir()
-	configPath := filepath.Join(tempDir, "plonk.yaml")
-
 	// Write config with empty dotfiles section
 	configContent := `
 default_manager: npm
 dotfiles:
   unmanaged_filters: []
 `
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatal(err)
-	}
+	tempDir := testutil.NewTestConfig(t, configContent)
 
 	cfg, err := Load(tempDir)
 	if err != nil {
@@ -355,9 +318,6 @@ dotfiles:
 
 func TestLoad_BackwardCompatibility(t *testing.T) {
 	// Test that configs without dotfiles section still work
-	tempDir := t.TempDir()
-	configPath := filepath.Join(tempDir, "plonk.yaml")
-
 	// Write old-style config without dotfiles section
 	configContent := `
 default_manager: brew
@@ -365,9 +325,7 @@ ignore_patterns:
   - "*.tmp"
   - ".DS_Store"
 `
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
-		t.Fatal(err)
-	}
+	tempDir := testutil.NewTestConfig(t, configContent)
 
 	cfg, err := Load(tempDir)
 	if err != nil {
@@ -392,11 +350,11 @@ func TestLoadFromPath_PermissionError(t *testing.T) {
 		t.Skip("Skipping permission test on Windows")
 	}
 
-	tempDir := t.TempDir()
-	configPath := filepath.Join(tempDir, "plonk.yaml")
+	tempDir := testutil.NewTestConfig(t, "test: data")
 
 	// Create file with no read permission
-	if err := os.WriteFile(configPath, []byte("test: data"), 0000); err != nil {
+	configPath := filepath.Join(tempDir, "plonk.yaml")
+	if err := os.Chmod(configPath, 0000); err != nil {
 		t.Fatal(err)
 	}
 

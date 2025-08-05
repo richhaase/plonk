@@ -4,20 +4,16 @@
 package commands
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/testutil"
 )
 
 // TestConfigResolutionInCommands tests that commands properly use resolved configuration
 func TestConfigResolutionInCommands(t *testing.T) {
 	t.Run("status command works with zero config", func(t *testing.T) {
-		tmpDir := t.TempDir()
-
-		// Ensure no config file exists
-		os.Remove(filepath.Join(tmpDir, "plonk.yaml"))
+		tmpDir := testutil.NewTestConfig(t, "")
 
 		// Load config (should get zero config)
 		cfg, err := config.Load(tmpDir)
@@ -36,19 +32,11 @@ func TestConfigResolutionInCommands(t *testing.T) {
 	})
 
 	t.Run("config with partial overrides resolves correctly", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		configPath := filepath.Join(tmpDir, "plonk.yaml")
-
-		// Create config with only some settings
 		configContent := `default_manager: cargo
 operation_timeout: 900
 # Note: package_timeout and dotfile_timeout not specified - should use defaults
 `
-
-		err := os.WriteFile(configPath, []byte(configContent), 0644)
-		if err != nil {
-			t.Fatal(err)
-		}
+		tmpDir := testutil.NewTestConfig(t, configContent)
 
 		// Load and resolve config
 		cfg, err := config.Load(tmpDir)

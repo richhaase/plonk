@@ -83,11 +83,11 @@ func runApply(cmd *cobra.Command, args []string) error {
 	// Run apply with hooks and v2 lock
 	result, err := orch.Apply(ctx)
 
-	// Convert to legacy output format
-	outputData := convertApplyResult(result, getApplyScope(packagesOnly, dotfilesOnly))
+	// Set the scope on the result
+	result.Scope = getApplyScope(packagesOnly, dotfilesOnly)
 
 	// Render output first
-	renderErr := RenderOutput(outputData, format)
+	renderErr := RenderOutput(result, format)
 	if renderErr != nil {
 		return renderErr
 	}
@@ -101,19 +101,6 @@ func runApply(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// convertApplyResult converts new ApplyResult to legacy CombinedApplyOutput
-func convertApplyResult(result orchestrator.ApplyResult, scope string) CombinedApplyOutput {
-	return CombinedApplyOutput{
-		DryRun:        result.DryRun,
-		Packages:      result.Packages,
-		Dotfiles:      result.Dotfiles,
-		Scope:         scope,
-		PackageErrors: result.PackageErrors,
-		DotfileErrors: result.DotfileErrors,
-		Success:       result.Success,
-	}
-}
-
 // getApplyScope returns a description of what's being applied
 func getApplyScope(packagesOnly, dotfilesOnly bool) string {
 	if packagesOnly {
@@ -123,132 +110,4 @@ func getApplyScope(packagesOnly, dotfilesOnly bool) string {
 		return "dotfiles"
 	}
 	return "all"
-}
-
-// CombinedApplyOutput represents the output structure for the apply command
-type CombinedApplyOutput struct {
-	DryRun        bool        `json:"dry_run" yaml:"dry_run"`
-	Scope         string      `json:"scope" yaml:"scope"`
-	Packages      interface{} `json:"packages,omitempty" yaml:"packages,omitempty"`
-	Dotfiles      interface{} `json:"dotfiles,omitempty" yaml:"dotfiles,omitempty"`
-	PackageErrors []string    `json:"package_errors,omitempty" yaml:"package_errors,omitempty"`
-	DotfileErrors []string    `json:"dotfile_errors,omitempty" yaml:"dotfile_errors,omitempty"`
-	Success       bool        `json:"success" yaml:"success"`
-}
-
-// TableOutput generates human-friendly table output for apply
-func (c CombinedApplyOutput) TableOutput() string {
-	output := ""
-
-	if c.DryRun {
-		output += "Plonk Apply (Dry Run)\n"
-		output += "=====================\n\n"
-	} else {
-		output += "Plonk Apply\n"
-		output += "===========\n\n"
-	}
-
-	// Show detailed results if available
-
-	// Package details
-	if c.Packages != nil {
-		if pkgResult, ok := c.Packages.(orchestrator.PackageApplyResult); ok && len(pkgResult.Managers) > 0 {
-			for _, mgr := range pkgResult.Managers {
-				if len(mgr.Packages) > 0 {
-					output += fmt.Sprintf("%s:\n", mgr.Name)
-					for _, pkg := range mgr.Packages {
-						switch pkg.Status {
-						case "installed":
-							output += fmt.Sprintf("  ✓ %s\n", pkg.Name)
-						case "would-install":
-							output += fmt.Sprintf("  → %s (would install)\n", pkg.Name)
-						case "failed":
-							output += fmt.Sprintf("  ✗ %s: %s\n", pkg.Name, pkg.Error)
-						}
-					}
-					output += "\n"
-				}
-			}
-		}
-	}
-
-	// Dotfile details
-	if c.Dotfiles != nil {
-		if dotResult, ok := c.Dotfiles.(orchestrator.DotfileApplyResult); ok && len(dotResult.Actions) > 0 {
-			output += "Dotfiles:\n"
-			for _, action := range dotResult.Actions {
-				switch action.Status {
-				case "added":
-					output += fmt.Sprintf("  ✓ %s\n", action.Destination)
-				case "would-add":
-					output += fmt.Sprintf("  → %s (would deploy)\n", action.Destination)
-				case "failed":
-					output += fmt.Sprintf("  ✗ %s: %s\n", action.Destination, action.Error)
-				}
-			}
-			output += "\n"
-		}
-	}
-
-	// Summary section
-	output += "Summary:\n"
-	output += "--------\n"
-
-	totalSucceeded := 0
-	totalFailed := 0
-
-	// Package summary
-	if c.Packages != nil {
-		if pkgResult, ok := c.Packages.(orchestrator.PackageApplyResult); ok {
-			if c.DryRun {
-				output += fmt.Sprintf("Packages: %d would be installed\n", pkgResult.TotalWouldInstall)
-			} else {
-				if pkgResult.TotalInstalled > 0 || pkgResult.TotalFailed > 0 {
-					output += fmt.Sprintf("Packages: %d installed, %d failed\n", pkgResult.TotalInstalled, pkgResult.TotalFailed)
-					totalSucceeded += pkgResult.TotalInstalled
-					totalFailed += pkgResult.TotalFailed
-				} else if pkgResult.TotalMissing == 0 {
-					output += "Packages: All up to date\n"
-				}
-			}
-		}
-	}
-
-	// Dotfile summary
-	if c.Dotfiles != nil {
-		if dotResult, ok := c.Dotfiles.(orchestrator.DotfileApplyResult); ok {
-			if c.DryRun {
-				output += fmt.Sprintf("📄 Dotfiles: %d would be deployed\n", dotResult.Summary.Added)
-			} else {
-				if dotResult.Summary.Added > 0 || dotResult.Summary.Failed > 0 {
-					output += fmt.Sprintf("📄 Dotfiles: %d deployed, %d failed\n", dotResult.Summary.Added, dotResult.Summary.Failed)
-					totalSucceeded += dotResult.Summary.Added
-					totalFailed += dotResult.Summary.Failed
-				} else if dotResult.TotalFiles == 0 {
-					output += "📄 Dotfiles: None configured\n"
-				} else {
-					output += "📄 Dotfiles: All up to date\n"
-				}
-			}
-		}
-	}
-
-	// Overall result
-	if !c.DryRun && (totalSucceeded > 0 || totalFailed > 0) {
-		output += fmt.Sprintf("\nTotal: %d succeeded, %d failed\n", totalSucceeded, totalFailed)
-		if totalFailed > 0 {
-			output += "\nSome operations failed. Check the errors above.\n"
-		}
-	}
-
-	if c.DryRun {
-		output += "\nUse 'plonk apply' without --dry-run to apply these changes\n"
-	}
-
-	return output
-}
-
-// StructuredData returns the structured data for serialization
-func (c CombinedApplyOutput) StructuredData() any {
-	return c
 }

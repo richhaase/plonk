@@ -5,6 +5,7 @@ package commands
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -61,7 +62,8 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	cfg := config.LoadWithDefaults(configDir)
 
 	// Parse and validate all package specifications
-	validSpecs, validationErrors := parseAndValidatePackageSpecs(args, cfg)
+	validator := NewPackageSpecValidator(cfg)
+	validSpecs, validationErrors := validator.ValidateInstallSpecs(args)
 
 	// Process each package with prefix parsing
 	var allResults []resources.OperationResult
@@ -72,7 +74,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	// Process valid specifications
 	for i, spec := range validSpecs {
 		// Show progress for multi-package operations
-		output.ProgressUpdate(i+1, len(validSpecs), "Installing", spec.OriginalSpec)
+		output.ProgressUpdate(i+1, len(validSpecs), "Installing", spec.String())
 
 		// Configure installation options for this package
 		opts := packages.InstallOptions{
@@ -83,12 +85,12 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		// Process this package with configurable timeout
 		timeout := time.Duration(cfg.PackageTimeout) * time.Second
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		results, err := packages.InstallPackages(ctx, configDir, []string{spec.PackageName}, opts)
+		results, err := packages.InstallPackages(ctx, configDir, []string{spec.Name}, opts)
 		cancel()
 
 		if err != nil {
 			allResults = append(allResults, resources.OperationResult{
-				Name:    spec.OriginalSpec,
+				Name:    spec.String(),
 				Manager: spec.Manager,
 				Status:  "failed",
 				Error:   err,
@@ -119,11 +121,43 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		DryRun:     dryRun,
 	}
 
-	// Render output
-	if err := RenderOutput(outputData, format); err != nil {
+	// Convert to output package type and create formatter
+	formatterData := output.PackageOperationOutput{
+		Command:    outputData.Command,
+		TotalItems: outputData.TotalItems,
+		Results:    convertOperationResults(outputData.Results),
+		Summary: output.PackageOperationSummary{
+			Succeeded: outputData.Summary.Succeeded,
+			Skipped:   outputData.Summary.Skipped,
+			Failed:    outputData.Summary.Failed,
+		},
+		DryRun: outputData.DryRun,
+	}
+	formatter := output.NewPackageOperationFormatter(formatterData)
+	if err := RenderOutput(formatter, format); err != nil {
 		return err
 	}
 
 	// Check if all operations failed and return appropriate error
 	return resources.ValidateOperationResults(allResults, "install packages")
+}
+
+// convertOperationResults converts from command types to output types
+func convertOperationResults(results []SerializableOperationResult) []output.SerializableOperationResult {
+	converted := make([]output.SerializableOperationResult, len(results))
+	for i, result := range results {
+		var err error
+		if result.Error != "" {
+			err = fmt.Errorf("%s", result.Error)
+		}
+		converted[i] = output.SerializableOperationResult{
+			Name:     result.Name,
+			Status:   result.Status,
+			Manager:  result.Manager,
+			Path:     "", // Commands package doesn't have Path field, using empty string
+			Error:    err,
+			Metadata: result.Metadata,
+		}
+	}
+	return converted
 }

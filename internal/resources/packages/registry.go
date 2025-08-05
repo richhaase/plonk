@@ -59,6 +59,12 @@ func (r *ManagerRegistry) GetAllManagerNames() []string {
 	return names
 }
 
+// HasManager checks if a manager is supported by the registry
+func (r *ManagerRegistry) HasManager(name string) bool {
+	_, exists := r.managers[name]
+	return exists
+}
+
 // ManagerInfo holds information about a package manager
 type ManagerInfo struct {
 	Name      string

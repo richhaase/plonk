@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources/packages"
 	"github.com/spf13/cobra"
 )
@@ -47,13 +48,15 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 	packageSpec := args[0]
 
-	// Parse prefix syntax
-	manager, packageName := ParsePackageSpec(packageSpec)
-
-	// Validate search specification
-	if err := validateSearchSpec(manager, packageName); err != nil {
+	// Parse and validate search specification
+	validator := NewPackageSpecValidator(nil)
+	spec, err := validator.ValidateSearchSpec(packageSpec)
+	if err != nil {
 		return err
 	}
+
+	manager := spec.Manager
+	packageName := spec.Name
 
 	// Load configuration for timeout settings
 	configDir := config.GetDefaultConfigDirectory()
@@ -78,7 +81,27 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	return RenderOutput(searchResult, format)
+	// Convert to output package type and create formatter
+	formatterData := output.SearchOutput{
+		Package: searchResult.Package,
+		Status:  searchResult.Status,
+		Message: searchResult.Message,
+		Results: convertSearchResults(searchResult.Results),
+	}
+	formatter := output.NewSearchFormatter(formatterData)
+	return RenderOutput(formatter, format)
+}
+
+// convertSearchResults converts from command types to output types
+func convertSearchResults(results []SearchResultEntry) []output.SearchResultEntry {
+	converted := make([]output.SearchResultEntry, len(results))
+	for i, result := range results {
+		converted[i] = output.SearchResultEntry{
+			Manager:  result.Manager,
+			Packages: result.Packages,
+		}
+	}
+	return converted
 }
 
 // searchSpecificManager searches only the specified manager
@@ -184,15 +207,15 @@ func searchAllManagersParallel(ctx context.Context, cfg *config.Config, packageN
 
 	// Collect results
 	var searchResults []SearchResultEntry
-	var errors []string
+	var errors []error
 
 	for result := range resultsChan {
 		if result.Error != nil {
 			// Handle timeout or other errors gracefully
 			if ctx.Err() == context.DeadlineExceeded {
-				errors = append(errors, fmt.Sprintf("%s: timeout", result.Manager))
+				errors = append(errors, fmt.Errorf("%s: timeout", result.Manager))
 			} else {
-				errors = append(errors, fmt.Sprintf("%s: %v", result.Manager, result.Error))
+				errors = append(errors, fmt.Errorf("%s: %w", result.Manager, result.Error))
 			}
 			continue
 		}
@@ -209,7 +232,11 @@ func searchAllManagersParallel(ctx context.Context, cfg *config.Config, packageN
 	if len(searchResults) == 0 {
 		message := fmt.Sprintf("Package '%s' not found in any available package manager", packageName)
 		if len(errors) > 0 {
-			message += fmt.Sprintf(" (errors: %s)", strings.Join(errors, ", "))
+			var errorStrings []string
+			for _, err := range errors {
+				errorStrings = append(errorStrings, err.Error())
+			}
+			message += fmt.Sprintf(" (errors: %s)", strings.Join(errorStrings, ", "))
 		}
 		return SearchOutput{
 			Package: packageName,
@@ -229,7 +256,11 @@ func searchAllManagersParallel(ctx context.Context, cfg *config.Config, packageN
 		totalResults, packageName, len(searchResults), strings.Join(managerNames, ", "))
 
 	if len(errors) > 0 {
-		message += fmt.Sprintf(" (some managers had errors: %s)", strings.Join(errors, ", "))
+		var errorStrings []string
+		for _, err := range errors {
+			errorStrings = append(errorStrings, err.Error())
+		}
+		message += fmt.Sprintf(" (some managers had errors: %s)", strings.Join(errorStrings, ", "))
 	}
 
 	return SearchOutput{
@@ -273,55 +304,4 @@ type SearchOutput struct {
 	Status  string              `json:"status" yaml:"status"`
 	Message string              `json:"message" yaml:"message"`
 	Results []SearchResultEntry `json:"results,omitempty" yaml:"results,omitempty"`
-}
-
-// TableOutput generates human-friendly table output for search command
-func (s SearchOutput) TableOutput() string {
-	var output strings.Builder
-
-	switch s.Status {
-	case "found":
-		output.WriteString(fmt.Sprintf("%s\n", s.Message))
-		if len(s.Results) > 0 && len(s.Results[0].Packages) > 0 {
-			output.WriteString("\nMatching packages:\n")
-			for _, pkg := range s.Results[0].Packages {
-				output.WriteString(fmt.Sprintf("  • %s\n", pkg))
-			}
-			output.WriteString(fmt.Sprintf("\nInstall with: plonk install %s:%s\n", s.Results[0].Manager, s.Package))
-		}
-
-	case "found-multiple":
-		output.WriteString(fmt.Sprintf("%s\n", s.Message))
-		output.WriteString("\nResults by manager:\n")
-		for _, result := range s.Results {
-			output.WriteString(fmt.Sprintf("\n%s:\n", result.Manager))
-			for _, pkg := range result.Packages {
-				output.WriteString(fmt.Sprintf("  • %s\n", pkg))
-			}
-		}
-		output.WriteString(fmt.Sprintf("\nInstall examples:\n"))
-		for _, result := range s.Results {
-			output.WriteString(fmt.Sprintf("  • plonk install %s:%s\n", result.Manager, s.Package))
-		}
-
-	case "not-found":
-		output.WriteString(fmt.Sprintf("%s\n", s.Message))
-
-	case "no-managers":
-		output.WriteString(fmt.Sprintf("%s\n", s.Message))
-		output.WriteString("\nPlease install a package manager (Homebrew or NPM) to search for packages.\n")
-
-	case "manager-unavailable":
-		output.WriteString(fmt.Sprintf("%s\n", s.Message))
-
-	default:
-		output.WriteString(fmt.Sprintf("%s\n", s.Message))
-	}
-
-	return output.String()
-}
-
-// StructuredData returns the structured data for serialization
-func (s SearchOutput) StructuredData() any {
-	return s
 }
