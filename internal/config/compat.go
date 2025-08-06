@@ -57,6 +57,8 @@ type SimpleValidator struct {
 // NewSimpleValidator creates a new validator
 func NewSimpleValidator() *SimpleValidator {
 	v := validator.New()
+	// Register custom validators
+	_ = RegisterValidators(v)
 	return &SimpleValidator{validator: v}
 }
 

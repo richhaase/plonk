@@ -327,6 +327,12 @@ func (g *GemManager) SupportsSearch() bool {
 	return true
 }
 
+func init() {
+	RegisterManager("gem", func() PackageManager {
+		return NewGemManager()
+	})
+}
+
 // handleInstallError processes install command errors
 func (g *GemManager) handleInstallError(err error, output []byte, packageName string) error {
 	outputStr := strings.ToLower(string(output))

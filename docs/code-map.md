@@ -11,7 +11,7 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 
 #### Core Commands
 - `root.go` - Root command setup, global flags, version info
-- `clone.go` - Clone dotfiles repository
+- `clone.go` - Clone dotfiles repository and apply it
 - `apply.go` - Reconcile system state with desired configuration
 - `status.go` - Display managed packages and dotfiles
 - `diff.go` - Show differences between desired and actual state

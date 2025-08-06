@@ -5,17 +5,9 @@ package packages
 
 import (
 	"fmt"
+	"sort"
+	"sync"
 )
-
-// SupportedManagers contains all package packages supported by plonk
-var SupportedManagers = []string{
-	"brew",
-	"cargo",
-	"gem",
-	"go",
-	"npm",
-	"pip",
-}
 
 // DefaultManager is the fallback manager when none is configured
 const DefaultManager = "brew"
@@ -25,42 +17,63 @@ type ManagerFactory func() PackageManager
 
 // ManagerRegistry manages package manager creation and availability checking
 type ManagerRegistry struct {
+	mu       sync.RWMutex
 	managers map[string]ManagerFactory
 }
 
-// NewManagerRegistry creates a new manager registry with all supported package packages
+// defaultRegistry is the global registry instance
+var defaultRegistry = &ManagerRegistry{
+	managers: make(map[string]ManagerFactory),
+}
+
+// RegisterManager registers a package manager with the global registry.
+// This is typically called from init() functions in package manager implementations.
+func RegisterManager(name string, factory ManagerFactory) {
+	defaultRegistry.Register(name, factory)
+}
+
+// Register adds a manager to the registry
+func (r *ManagerRegistry) Register(name string, factory ManagerFactory) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.managers[name] = factory
+}
+
+// NewManagerRegistry creates a new manager registry that uses the global registrations
 func NewManagerRegistry() *ManagerRegistry {
-	return &ManagerRegistry{
-		managers: map[string]ManagerFactory{
-			"brew":  func() PackageManager { return NewHomebrewManager() },
-			"npm":   func() PackageManager { return NewNpmManager() },
-			"cargo": func() PackageManager { return NewCargoManager() },
-			"pip":   func() PackageManager { return NewPipManager() },
-			"gem":   func() PackageManager { return NewGemManager() },
-			"go":    func() PackageManager { return NewGoInstallManager() },
-		},
-	}
+	return defaultRegistry
 }
 
 // GetManager returns a package manager instance by name
 func (r *ManagerRegistry) GetManager(name string) (PackageManager, error) {
+	r.mu.RLock()
 	factory, exists := r.managers[name]
+	r.mu.RUnlock()
+
 	if !exists {
 		return nil, fmt.Errorf("unsupported package manager: %s", name)
 	}
 	return factory(), nil
 }
 
-// GetAllManagerNames returns all supported manager names regardless of availability
+// GetAllManagerNames returns all registered manager names sorted alphabetically
 func (r *ManagerRegistry) GetAllManagerNames() []string {
-	// Return a copy to prevent external modification
-	names := make([]string, len(SupportedManagers))
-	copy(names, SupportedManagers)
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	names := make([]string, 0, len(r.managers))
+	for name := range r.managers {
+		names = append(names, name)
+	}
+	sort.Strings(names)
 	return names
 }
 
 // HasManager checks if a manager is supported by the registry
 func (r *ManagerRegistry) HasManager(name string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
 	_, exists := r.managers[name]
 	return exists
 }

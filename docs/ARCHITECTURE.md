@@ -110,10 +110,10 @@ The lock file uses a versioned format for future compatibility.
 - Permission verification
 
 #### Clone (`internal/clone/`)
+
 - Clone command implementation
 - Git repository cloning
 - Tool installation
-- Interactive prompts for setup
 
 #### Output Formatting (`internal/output/`)
 - Multiple formatters for different commands
@@ -209,10 +209,8 @@ All commands support multiple output formats (table, JSON, YAML) to support:
 ### Adding a New Package Manager
 
 1. Implement the `PackageManager` interface in `internal/resources/packages/`
-2. Add to the registry in `registry.go`
-3. Add to `SupportedManagers` list in `registry.go`
-4. Implement required operations (Install, Uninstall, ListInstalled, etc.)
-5. Implement optional capabilities through interfaces (search, info)
+2. Implement required operations (Install, Uninstall, ListInstalled, etc.)
+3. Implement optional capabilities through interfaces (search, info)
 
 ### Adding a New Resource Type
 

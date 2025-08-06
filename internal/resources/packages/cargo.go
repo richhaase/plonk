@@ -265,6 +265,12 @@ func (c *CargoManager) SupportsSearch() bool {
 	return true
 }
 
+func init() {
+	RegisterManager("cargo", func() PackageManager {
+		return NewCargoManager()
+	})
+}
+
 // handleInstallError processes install command errors
 func (c *CargoManager) handleInstallError(err error, output []byte, packageName string) error {
 	outputStr := strings.ToLower(string(output))
