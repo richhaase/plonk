@@ -98,10 +98,8 @@ The lock file uses a versioned format for future compatibility.
 - Package manager availability
 - Permission verification
 
-#### Setup (`internal/setup/`)
-- First-time setup workflows
-- Git repository cloning
-- Tool installation
+#### Clone (`internal/clone/`)
+- Git clone + plonk apply
 
 ## Key Design Decisions
 
@@ -187,9 +185,7 @@ All commands support multiple output formats (table, JSON, YAML) to support:
 ### Adding a New Package Manager
 
 1. Implement the `PackageManager` interface in `internal/resources/packages/`
-2. Add to the registry in `registry.go`
-3. Add to `SupportedManagers` list
-4. Implement any optional capabilities (search, info)
+2. Implement any optional capabilities (search, info)
 
 ### Adding a New Resource Type
 
