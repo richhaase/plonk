@@ -365,6 +365,12 @@ func (g *GoInstallManager) SupportsSearch() bool {
 	return false
 }
 
+func init() {
+	RegisterManager("go", func() PackageManager {
+		return NewGoInstallManager()
+	})
+}
+
 // handleInstall handles the install operation for Go packages
 func (g *GoInstallManager) handleInstall(ctx context.Context, name string) error {
 	modulePath, version := parseModulePath(name)

@@ -325,6 +325,12 @@ func cleanJSONValue(value string) string {
 	return value
 }
 
+func init() {
+	RegisterManager("npm", func() PackageManager {
+		return NewNpmManager()
+	})
+}
+
 // IsAvailable checks if npm is installed and accessible
 func (n *NpmManager) IsAvailable(ctx context.Context) (bool, error) {
 	if !CheckCommandAvailable(n.binary) {

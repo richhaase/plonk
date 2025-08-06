@@ -324,6 +324,12 @@ func (h *HomebrewManager) SupportsSearch() bool {
 	return true
 }
 
+func init() {
+	RegisterManager("brew", func() PackageManager {
+		return NewHomebrewManager()
+	})
+}
+
 // handleInstallError processes install command errors
 func (h *HomebrewManager) handleInstallError(err error, output []byte, packageName string) error {
 	outputStr := strings.ToLower(string(output))
