@@ -2,15 +2,13 @@
 
 Commands for managing packages: `install`, `uninstall`, `search`, and `info`.
 
-For CLI syntax and flags, see [CLI Reference](../cli.md#package-manager-prefixes).
-
 ## Description
 
-The package management commands handle system package operations across multiple package managers. All commands support package manager prefixes (e.g., `brew:htop`) to target specific managers, defaulting to the configured `default_manager` when no prefix is specified. Package state is tracked in plonk.lock, which is updated atomically with each operation.
+The package management commands handle system package operations across multiple package managers. All commands support package manager prefixes (e.g., `brew:htop`) to target specific managers, defaulting to the configured `default_manager` when no prefix is specified.
 
-## Behavior
+Package state is tracked in `plonk.lock`, which is updated atomically with each operation. The v2 lock format stores both binary names and source paths for accurate reinstallation.
 
-### Package Manager Prefixes
+## Package Manager Prefixes
 
 - `brew:` - Homebrew (macOS and Linux)
 - `npm:` - NPM (global packages)
@@ -19,169 +17,201 @@ The package management commands handle system package operations across multiple
 - `gem:` - RubyGems
 - `go:` - Go modules
 
-Without prefix, uses `default_manager` from configuration.
+Without prefix, uses `default_manager` from configuration (default: brew).
 
-### Install Command
+---
 
-**Purpose**: Install packages and add to plonk management
+## Install Command
 
-**Behavior**:
-  - Not installed → installs package, adds to plonk.lock
-  - Already installed → adds to plonk.lock (success)
-  - Already managed → skips (no reinstall)
-  - Updates plonk.lock atomically with each success
+Installs packages and adds them to plonk management.
 
+### Synopsis
 
-### Uninstall Command
+```bash
+plonk install [options] <package>...
+```
 
-**Purpose**: Remove packages from system and plonk management
+### Options
 
-**Behavior**:
-  - Removes package and plonk.lock entry
-  - Dependency handling by package manager
-  - Only removes packages that are currently managed by plonk
+- `--dry-run, -n` - Preview changes without installing
 
-### Search Command
+### Behavior
 
-**Purpose**: Find packages across package managers
+- **Not installed** → installs package, adds to plonk.lock
+- **Already installed** → adds to plonk.lock (success)
+- **Already managed** → skips (no reinstall)
+- Updates plonk.lock atomically with each success
+- Processes multiple packages independently
+- Failures don't block other installations
 
-**Behavior**:
-  - Without prefix: searches all managers in parallel (configurable timeout)
-  - With prefix: searches only specified manager
-  - Shows package names only
-  - Slow managers may not return results due to timeout
-  - Timeout controlled by `operation_timeout` configuration (default: 5 minutes)
+### Examples
 
-### Info Command
+```bash
+# Install with default manager
+plonk install ripgrep fd bat
 
-**Purpose**: Show package details and installation status
+# Install with specific managers
+plonk install brew:wget npm:prettier cargo:exa
 
-**Priority order**:
-  1. Managed by plonk
-  2. Installed but not managed
-  3. Available but not installed
+# Preview installation
+plonk install --dry-run ripgrep
+```
 
-**Information displayed**: name, status, manager, description, homepage, install command
+---
 
-### Timeout Configuration
+## Uninstall Command
 
-Package management operations have configurable timeouts. For complete timeout configuration examples and details, see [Configuration Guide](../configuration.md#timeout-configuration).
+Removes packages from system and plonk management.
 
-### Cross-Command Behaviors
+### Synopsis
 
-- All commands process multiple packages independently
-- Failures don't block other operations
-- Summary shows succeeded/skipped/failed counts
-- Output formats: table (default), json, yaml
-- plonk.lock updated atomically per operation
+```bash
+plonk uninstall [options] <package>...
+```
 
-### State Impact
+### Options
 
-**Install Command**:
-- Modifies: `plonk.lock` (adds package entry)
-- System changes: Package installed via manager
-- Atomic: Lock file updated only on successful install
+- `--dry-run, -n` - Preview changes without uninstalling
 
-**Uninstall Command**:
-- Modifies: `plonk.lock` (removes package entry)
-- System changes: Package removed via manager
-- Atomic: Lock file updated only on successful uninstall
+### Behavior
 
-**Search/Info Commands**:
+- Removes package from system and plonk.lock entry
+- Only removes packages currently managed by plonk
+- Dependency handling delegated to package manager
+- Processes multiple packages independently
+- Lock file updated atomically per operation
+
+### Examples
+
+```bash
+# Uninstall packages
+plonk uninstall ripgrep fd
+
+# Uninstall with specific manager
+plonk uninstall brew:wget npm:prettier
+
+# Preview removal
+plonk uninstall --dry-run ripgrep
+```
+
+---
+
+## Search Command
+
+Searches for packages across package managers.
+
+### Synopsis
+
+```bash
+plonk search [options] <query>
+```
+
+### Options
+
+- `-o, --output` - Output format (table/json/yaml)
+
+### Behavior
+
+- Without prefix: searches all managers in parallel
+- With prefix: searches only specified manager
+- Shows package names only (no descriptions by default)
+- Uses configurable timeout (default: 5 minutes)
+- Slow managers may not return results due to timeout
+
+### Examples
+
+```bash
+# Search all managers
+plonk search ripgrep
+
+# Search specific manager
+plonk search brew:ripgrep
+
+# Output as JSON
+plonk search -o json ripgrep
+```
+
+---
+
+## Info Command
+
+Shows detailed package information and installation status.
+
+### Synopsis
+
+```bash
+plonk info [options] <package>
+```
+
+### Options
+
+- `-o, --output` - Output format (table/json/yaml)
+
+### Behavior
+
+Priority order for information:
+1. Managed by plonk (shows from lock file)
+2. Installed but not managed
+3. Available but not installed
+
+Displays:
+- Package name and status
+- Manager and version
+- Description and homepage
+- Installation command
+
+### Examples
+
+```bash
+# Get package info
+plonk info ripgrep
+
+# Info for specific manager
+plonk info brew:ripgrep
+
+# Output as JSON
+plonk info -o json ripgrep
+```
+
+---
+
+## Common Behaviors
+
+### State Management
+
+**Install/Uninstall:**
+- Modifies `plonk.lock` atomically
+- Updates system packages via manager
+- Lock file preserves full module paths for Go packages
+
+**Search/Info:**
 - Read-only operations
 - No state modifications
 - Query package managers directly
 
-## Implementation Notes
+### Error Handling
 
-The package management commands provide unified package operations across multiple package managers through a registry-based system:
-
-**Command Structure:**
-- Entry points: `internal/commands/install.go`, `internal/commands/uninstall.go`, `internal/commands/search.go`, `internal/commands/info.go`
-- Core operations: `internal/resources/packages/operations.go`
-- Manager registry: `internal/resources/packages/registry.go`
-- Lock file management: `internal/lock/yaml_lock.go`
-
-**Key Implementation Flow:**
-
-1. **Install Command Processing:**
-   - Entry point parses package specifications with `ParsePackageSpec()`
-   - Uses configurable timeout per package installation (from `package_timeout` config)
-   - Validates manager and checks availability before installation
-   - Updates `plonk.lock` atomically after successful installation
-
-2. **Uninstall Command Processing:**
-   - Uses configurable timeout per package removal (from `package_timeout` config)
-   - Automatically determines manager from lock file if no prefix specified
-   - Only removes from lock file if package was actually managed
-
-3. **Search Command Implementation:**
-   - Uses configurable timeout for parallel manager search (from `operation_timeout` config)
-   - Includes all available package managers in search operations
-   - Parallel goroutines with per-manager configurable timeouts
-
-4. **Info Command Priority Logic:**
-   - Implements exact priority: managed → installed → available
-   - Uses `lock.FindPackage()` to check managed status first
-   - Falls back to checking installation across all available managers
-   - Returns first available package if not installed anywhere
-
-5. **Package Manager Registry:**
-   - Central registry pattern for all 6 supported managers
-   - `IsAvailable()` checks performed before all operations
-   - Manager instances created per-operation (not cached)
-   - Supports dynamic manager discovery and validation
-
-6. **Lock File State Management:**
-   - Uses `YAMLLockService` for atomic updates
-   - **Known Limitation**: Go packages store binary name only, not full module path
-   - Implementation: `ExtractBinaryNameFromPath()` converts `golang.org/x/tools/cmd/gopls` → `gopls`
-   - This design choice prioritizes binary management but loses reinstallation information
-   - Updates happen immediately after successful package operations
-   - **Future Enhancement**: v2 lock format could store both binary name and source path in metadata
-
-7. **Error Handling and Timeouts:**
-   - Install operations: Configurable timeout per package (default: 3 minutes)
-   - Uninstall operations: Configurable timeout per package (default: 3 minutes)
-   - Search operations: Configurable timeout total and per-manager (default: 5 minutes)
-   - Info operations: No timeout (blocking)
-   - Failed operations don't prevent other packages from processing
-
-8. **Validation and Fallbacks:**
-   - Empty package names rejected with validation errors
-   - Invalid managers rejected with helpful error messages
-   - Default manager fallback: configuration → `DefaultManager` constant
-   - Manager availability checked before each operation
-
-**Architecture Patterns:**
-- Registry pattern for package manager abstraction
-- Individual package processing with independent error handling
-- Atomic lock file updates with rollback on failure
-- Context-based timeout management with cancellation
-- Standardized operation result format across all commands
-
-**Error Conditions:**
+- Individual package failures don't stop batch operations
+- Summary shows succeeded/skipped/failed counts
+- Package conflicts during install are considered successful
 - Manager unavailability results in operation failure
-- Package not found errors are command-specific
-- Lock file corruption prevents operations
-- Network timeouts are handled gracefully in search
 
-**Integration Points:**
-- Uses `config.LoadWithDefaults()` for consistent configuration loading
-- Shares `resources.OperationResult` format with dotfile commands
-- Lock file service used by status command for reconciliation
-- Manager registry used by doctor command for availability checks
+### Timeout Configuration
 
-**Bugs Identified:**
-None - all discrepancies have been resolved.
+Operations have configurable timeouts via `plonk.yaml`:
+- `package_timeout` - Install/uninstall operations (default: 180s)
+- `operation_timeout` - Search operations (default: 300s)
 
-## Improvements
+## Integration
 
-- Add verbose search mode showing descriptions and versions
-- Support version pinning in install command
-- Add update command to upgrade managed packages
-- Show installation progress for long-running operations
-- Add --all flag to uninstall all packages from a manager
-- Consider showing dependencies in info output
+- Use `plonk status` to see managed packages
+- Use `plonk apply` to install all packages from lock file
+- Lock file can be version controlled for team sharing
+- See [Configuration Guide](../configuration.md) for timeout settings
 
-Note: Lock file format enhancement completed in v2 (2025-07-29)
+## Notes
+
+- Empty package names are rejected with validation errors
+- Invalid managers show helpful error messages
+- Go packages store both binary name and full source path in v2 lock format
+- Network timeouts are handled gracefully in search operations
