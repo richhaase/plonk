@@ -49,8 +49,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	packageSpec := args[0]
 
 	// Parse and validate search specification
-	validator := NewPackageSpecValidator(nil)
-	spec, err := validator.ValidateSearchSpec(packageSpec)
+	spec, err := packages.ValidateSpec(packageSpec, packages.ValidationModeSearch, "")
 	if err != nil {
 		return err
 	}

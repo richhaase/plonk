@@ -57,8 +57,18 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	cfg := config.LoadWithDefaults(configDir)
 
 	// Parse and validate all package specifications
-	validator := NewPackageSpecValidator(nil) // Uninstall doesn't need config
-	validSpecs, validationErrors := validator.ValidateUninstallSpecs(args)
+	validationResult := packages.ValidateSpecs(args, packages.ValidationModeUninstall, "")
+
+	// Convert validation errors to OperationResults
+	var validationErrors []resources.OperationResult
+	for _, invalid := range validationResult.Invalid {
+		validationErrors = append(validationErrors, resources.OperationResult{
+			Name:    invalid.OriginalSpec,
+			Manager: "",
+			Status:  "failed",
+			Error:   invalid.Error,
+		})
+	}
 
 	// Process each package with prefix parsing
 	var allResults []resources.OperationResult
@@ -67,9 +77,9 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	allResults = append(allResults, validationErrors...)
 
 	// Process valid specifications
-	for i, spec := range validSpecs {
+	for i, spec := range validationResult.Valid {
 		// Show progress for multi-package operations
-		output.ProgressUpdate(i+1, len(validSpecs), "Uninstalling", spec.String())
+		output.ProgressUpdate(i+1, len(validationResult.Valid), "Uninstalling", spec.String())
 
 		// Configure uninstallation options for this package
 		// Pass empty manager if not specified to let UninstallPackages determine it
