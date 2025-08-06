@@ -12,18 +12,6 @@ import (
 // DefaultManager is the fallback manager when none is configured
 const DefaultManager = "brew"
 
-// SupportedManagers returns all registered manager names.
-// Deprecated: Use NewManagerRegistry().GetAllManagerNames() instead.
-// This is kept for backward compatibility.
-var SupportedManagers = []string{
-	"brew",
-	"cargo",
-	"gem",
-	"go",
-	"npm",
-	"pip",
-}
-
 // ManagerFactory defines a function that creates a package manager instance
 type ManagerFactory func() PackageManager
 
