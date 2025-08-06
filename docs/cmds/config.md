@@ -1,123 +1,111 @@
 # Config Command
 
-The `plonk config` command manages plonk configuration.
+Manages plonk configuration through subcommands.
+
+## Synopsis
+
+```bash
+plonk config <subcommand> [options]
+```
 
 ## Description
 
-The config command provides access to plonk's configuration system through two subcommands: `show` and `edit`. Plonk uses a zero-configuration approach with sensible defaults, allowing users to override specific values through a YAML configuration file stored at `$PLONK_DIR/plonk.yaml` (default: `~/.config/plonk/plonk.yaml`).
+The config command provides access to plonk's configuration system through two subcommands: `show` and `edit`. Plonk uses a zero-configuration approach with sensible defaults, allowing users to override specific values through a YAML configuration file.
 
-## Behavior
+Configuration is stored at `$PLONK_DIR/plonk.yaml` (default: `~/.config/plonk/plonk.yaml`). The system merges user overrides with built-in defaults to provide the effective runtime configuration.
 
-### Subcommands
+## Subcommands
 
-- **`plonk config show`** - Display the effective runtime configuration
-- **`plonk config edit`** - Open the configuration file in an editor
+### config show
 
-### Configuration Storage
+Displays the effective runtime configuration.
 
-- Configuration file location: `$PLONK_DIR/plonk.yaml`
-- Default `$PLONK_DIR`: `~/.config/plonk`
-- Environment variable override: `PLONK_DIR` can be set to use alternate location
+```bash
+plonk config show [options]
+```
 
-### Show Command Behavior
+**Options:**
+- `-o, --output` - Output format (table/json/yaml)
 
-Displays all configuration values (both defaults and user overrides):
-
-- Shows configuration file path at the top
-- Maintains nested structure for complex values
-- Supports multiple output formats via `-o/--output` flag:
-  - `table` (default): Human-readable YAML-like format
-  - `json`: Structured JSON with PascalCase field names
-  - `yaml`: Standard YAML format with snake_case field names
-
-Output structure differences:
-- Table format: Simple, indented display
-- JSON format: Wrapped in object with `config_path` and `config` fields
-- YAML format: Same structure as JSON but in YAML syntax
-
-User-defined values are highlighted with blue "(user-defined)" annotations in table format, making it easy to see which settings you've customized. JSON and YAML output formats remain clean without annotations for scripting compatibility.
-
-### Edit Command Behavior
-
-Works like visudo - opens a temporary file with the full runtime configuration for editing:
-
+**Behavior:**
 - Shows all configuration values (defaults merged with user overrides)
-- User-defined values are marked with `# (user-defined)` annotations
-- Uses system editor (determined by `$VISUAL`, then `$EDITOR`, then fallback to vim)
+- Table format displays user-defined values with blue "(user-defined)" annotations
+- JSON/YAML formats remain clean for scripting compatibility
+- Shows configuration file path at the top of output
+
+### config edit
+
+Opens the configuration file in an editor with visudo-style validation.
+
+```bash
+plonk config edit
+```
+
+**Behavior:**
+- Creates config directory if missing
+- Opens temporary file with full runtime configuration
+- User-defined values marked with `# (user-defined)` comments
 - Validates configuration after editing
-- If validation fails, offers options to (e)dit again, (r)evert changes, or (q)uit
-- On successful save, writes only non-default values to `plonk.yaml`
+- On validation failure, offers options to:
+  - (e)dit again to fix errors
+  - (r)evert changes and exit
+  - (q)uit without saving
+- On success, saves only non-default values to `plonk.yaml`
 - Changes take effect immediately (no restart required)
 
-### Configuration Precedence
+**Editor Selection:**
+1. `$VISUAL` environment variable
+2. `$EDITOR` environment variable
+3. Falls back to `vim`
 
-1. Built-in defaults (hardcoded)
-2. User overrides from `plonk.yaml`
+## Configuration Structure
 
-Configuration validation occurs during editing. Invalid entries are reported with specific error messages, and users can choose to fix errors or cancel the edit operation.
+### Available Settings
 
-### Default Configuration Values
+- **Package Management:**
+  - `default_manager` - Default package manager (brew, npm, cargo, pip, gem, go)
+  - `package_timeout` - Timeout for package operations (seconds)
+  - `operation_timeout` - Timeout for search operations (seconds)
 
-The system provides defaults for:
-- Package manager settings (`default_manager`, timeout values)
-- Directory handling (`expand_directories`)
-- File filtering (`ignore_patterns`, `dotfiles.unmanaged_filters`)
-- Hook configuration (pre/post apply hooks)
+- **Dotfile Management:**
+  - `dotfile_timeout` - Timeout for dotfile operations (seconds)
+  - `expand_directories` - Directories to scan for dotfiles
+  - `ignore_patterns` - Patterns to exclude from dotfile operations
 
-User overrides in `plonk.yaml` only need to specify values that differ from defaults.
+- **Hooks:**
+  - `hooks.pre_apply` - Commands to run before apply
+  - `hooks.post_apply` - Commands to run after apply
+
+- **Tools:**
+  - `diff_tool` - Tool for showing dotfile differences
 
 ### Minimal Configuration Philosophy
 
-Plonk follows a minimal configuration approach. When you run `plonk config edit`, you see all available options with their current values, but only settings that differ from defaults are saved to `plonk.yaml`. This keeps your configuration file clean and makes it clear what you've actually customized.
+When you run `plonk config edit`, you see all available options with their current values, but only settings that differ from defaults are saved to `plonk.yaml`. This keeps your configuration file clean and makes it clear what you've actually customized.
 
-## Implementation Notes
+## Examples
 
-The config command is implemented as a parent command with two subcommands:
+```bash
+# View current configuration
+plonk config show
 
-**Command Structure:**
-- Parent command: `internal/commands/config.go` - Simple command group
-- Show subcommand: `internal/commands/config_show.go`
-- Edit subcommand: `internal/commands/config_edit.go`
+# View configuration as JSON
+plonk config show -o json
 
-**Configuration Management:**
-- Core configuration: `internal/config/config.go`
-- Compatibility layer: `internal/config/compat.go`
-- Environment variable support: `PLONK_DIR` overrides default location
+# Edit configuration with validation
+plonk config edit
+```
 
-**Key Implementation Details:**
+## Integration
 
-1. **Config Loading Flow:**
-   - `GetDefaultConfigDirectory()` checks `PLONK_DIR` env var first
-   - Falls back to `~/.config/plonk` if not set
-   - `LoadWithDefaults()` provides zero-config behavior
-   - Missing config files return defaults silently
+- Configuration affects all plonk commands
+- `PLONK_DIR` environment variable can override default location
+- Invalid configuration falls back to defaults gracefully
+- See [Configuration Guide](../configuration.md) for detailed examples
 
-2. **Show Command:**
-   - Loads merged configuration (defaults + user overrides)
-   - Supports three output formats via `RenderOutput()`
-   - Table format displays YAML representation
-   - JSON/YAML formats wrap config in structured output
+## Notes
 
-3. **Edit Command (Visudo-style):**
-   - Creates config directory if missing
-   - Generates temporary file with full runtime configuration
-   - Marks user-defined values with `# (user-defined)` annotations
-   - Validates edited configuration using `SimpleValidator`
-   - Provides edit/revert/quit loop on validation failures
-   - Editor selection: Checks `$VISUAL`, then `$EDITOR`, then defaults to vim
-   - Saves only non-default values to maintain minimal config files
-
-4. **Validation:**
-   - Uses `go-playground/validator` for struct validation
-   - Edit command actively validates and reports errors with detailed messages
-   - Validation includes field constraints (e.g., timeout ranges)
-   - Returns structured `ValidationResult` with errors and warnings
-
-**Configuration Structure:**
-- Defaults defined in `defaultConfig` variable
-- Extensive default `ignore_patterns` and `unmanaged_filters`
-- YAML unmarshaling overlays user config on defaults
-- All fields are optional with `omitempty` tags
-
-**Bugs Identified:**
-None - all discrepancies have been resolved.
+- Configuration precedence: Environment variables > User config > Defaults
+- Missing configuration file is valid (uses all defaults)
+- Validation includes field constraints (e.g., timeout ranges)
+- All configuration fields are optional

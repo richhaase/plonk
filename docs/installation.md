@@ -16,13 +16,13 @@ This guide covers installing plonk and setting up your development environment.
 
 - **Homebrew** - The primary package manager (install from https://brew.sh)
 - **Git** - For cloning dotfiles repositories
-- **Go 1.23 or later** - Only if installing via `go install`
+- **Go 1.23 or later** - Only if building from source (note: Go 1.24+ works as well)
 
 ### Optional Language Package Managers
 
 Plonk can manage packages from these language-specific package managers:
 
-- **Cargo** (Rust) - For Rust-based CLI tools, can be installed by `plonk doctor --fix`
+- **Cargo** (Rust) - For Rust-based CLI tools, can be installed by `plonk clone` or `plonk doctor --fix`
 - **npm** (Node.js) - For global JavaScript packages
 - **pip** (Python) - For Python packages
 - **gem** (Ruby) - For Ruby gems
@@ -64,13 +64,29 @@ For development or if you need to modify the source:
 ```bash
 git clone https://github.com/richhaase/plonk.git
 cd plonk
+
+# Using just (recommended if installed)
+just build
+# Binary will be in bin/plonk
+
+# Or using go directly
 go build -o plonk cmd/plonk/main.go
+
+# Install to system
 sudo mv plonk /usr/local/bin/  # Or add to your PATH
+# Or from bin/ if using just
+sudo mv bin/plonk /usr/local/bin/
 ```
 
 ### Method 4: Pre-built Releases
 
 Download pre-built binaries from the [releases page](https://github.com/richhaase/plonk/releases).
+
+```bash
+# Example for macOS arm64
+curl -L https://github.com/richhaase/plonk/releases/latest/download/plonk_Darwin_arm64.tar.gz | tar xz
+sudo mv plonk /usr/local/bin/
+```
 
 ## Verification
 
@@ -86,6 +102,28 @@ plonk doctor
 
 The `plonk doctor` command will identify any missing dependencies and can automatically install supported package managers.
 
+## Uninstallation
+
+### Uninstall via Homebrew
+
+```bash
+brew uninstall plonk
+brew untap richhaase/tap  # Optional: remove the tap
+```
+
+### Manual Uninstallation
+
+```bash
+# Remove the binary
+sudo rm /usr/local/bin/plonk
+# Or if installed via go install
+rm $(go env GOPATH)/bin/plonk
+
+# Optionally remove configuration and dotfiles
+# WARNING: This removes all your plonk-managed dotfiles!
+rm -rf ~/.config/plonk
+```
+
 ## System-Specific Setup
 
 ### macOS
@@ -100,8 +138,8 @@ go install github.com/richhaase/plonk/cmd/plonk@latest
 # Verify system health
 plonk doctor
 
-# Clone your dotfiles (installs needed package managers)
-plonk clone user/dotfiles      # Clone existing setup
+# Clone your dotfiles (automatically installs needed package managers)
+plonk clone user/dotfiles      # GitHub shorthand for existing setup
 ```
 
 **macOS Notes:**
@@ -119,8 +157,8 @@ go install github.com/richhaase/plonk/cmd/plonk@latest
 # Verify system health
 plonk doctor
 
-# Clone your dotfiles (installs needed package managers)
-plonk clone user/dotfiles
+# Clone your dotfiles (automatically installs needed package managers)
+plonk clone user/dotfiles      # GitHub shorthand
 ```
 
 **Linux Notes:**
@@ -210,8 +248,9 @@ plonk apply
 - Try `~/go/bin/plonk` directly to verify installation
 
 **"Go version too old"**
-- Update Go to 1.23 or later
+- Update Go to 1.23 or later (1.24+ is also supported)
 - Use `go version` to check current version
+- The project uses Go 1.23.10 but newer versions work
 
 **Permission denied errors**
 - Check file permissions on `~/.config/plonk/`
@@ -219,7 +258,7 @@ plonk apply
 
 **Package manager not found**
 - For Homebrew: Install manually from https://brew.sh (required prerequisite)
-- For language package managers: Install manually or use `plonk clone` for automatic installation
+- For language package managers: Use `plonk clone` for automatic installation or install manually
 - See [Configuration Guide](configuration.md#package-manager-settings) for manual setup
 
 ### Getting Help
@@ -231,14 +270,6 @@ plonk doctor                 # System health check with fix suggestions
 
 For detailed command usage, see the [CLI Reference](cli.md).
 
-### Debug Mode
-
-Set environment variable for verbose output:
-
-```bash
-export PLONK_DEBUG=1
-plonk doctor
-```
 
 ## Next Steps
 

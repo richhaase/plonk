@@ -14,6 +14,7 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - `clone.go` - Clone dotfiles repository and apply it
 - `apply.go` - Reconcile system state with desired configuration
 - `status.go` - Display managed packages and dotfiles
+- `diff.go` - Show differences between desired and actual state
 - `doctor.go` - System health checks and fixes
 
 #### Package Management Commands
@@ -33,13 +34,10 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - `config_edit.go` - Edit configuration file
 
 #### Utility Commands
-- `env.go` - Display environment information (hidden command)
+- `package_validation.go` - Package validation utilities
 
 #### Command Support Files
 - `helpers.go` - Shared command utilities and helpers
-- `output.go` - Output formatting infrastructure
-- `output_utils.go` - Output formatting utilities
-- `output_types.go` - Output type definitions
 - `shared.go` - Shared command logic
 
 ## Core Components
@@ -55,9 +53,11 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - `yaml_lock.go` - YAML lock file implementation
 
 ### Orchestration (`internal/orchestrator/`)
-- `orchestrator.go` - Main orchestration logic
-- `apply.go` - Apply command orchestration
+- `coordinator.go` - Main coordination logic
+- `reconcile.go` - Reconciliation orchestration
 - `hooks.go` - Pre/post hook management
+- `options.go` - Orchestrator options
+- `types.go` - Orchestrator type definitions
 
 ### Resources (`internal/resources/`)
 
@@ -69,7 +69,10 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 #### Package Resources (`internal/resources/packages/`)
 - `resource.go` - Package resource implementation
 - `reconcile.go` - Package reconciliation logic
+- `apply.go` - Package apply operations
 - `operations.go` - Package operations (install, uninstall, etc.)
+- `spec.go` - Package specification handling
+- `executor.go` - Command execution abstraction
 - `interfaces.go` - Package manager interfaces
 - `registry.go` - Package manager registry
 - `helpers.go` - Package utilities
@@ -82,21 +85,26 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - `gem.go` - Gem package manager
 - `goinstall.go` - Go install package manager
 
-##### Package Parsing
-- `parsers/parsers.go` - Package string parsing utilities
 
 #### Dotfile Resources (`internal/resources/dotfiles/`)
 - `resource.go` - Dotfile resource implementation
 - `manager.go` - Dotfile management operations
 - `reconcile.go` - Dotfile reconciliation logic
+- `apply.go` - Dotfile apply operations
 - `scanner.go` - Dotfile discovery and scanning
+- `directory_scanner.go` - Directory scanning utilities
 - `filter.go` - Dotfile filtering logic
 - `fileops.go` - File operations (copy, remove, etc.)
 - `atomic.go` - Atomic file operations
 - `expander.go` - Path expansion utilities
+- `config_handler.go` - Configuration file handling
+- `file_comparator.go` - File comparison utilities
+- `path_resolver.go` - Path resolution utilities
+- `path_validator.go` - Path validation utilities
+- `types.go` - Dotfile type definitions
 
-### Setup Utilities (`internal/setup/`)
-- `setup.go` - Setup command implementation
+### Clone Utilities (`internal/clone/`)
+- `setup.go` - Clone command implementation
 - `git.go` - Git operations for cloning
 - `tools.go` - Tool installation logic
 - `prompts.go` - Interactive prompt utilities
@@ -104,23 +112,43 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 ### Diagnostics (`internal/diagnostics/`)
 - `health.go` - System health check implementations
 
+### Test Utilities (`internal/testutil/`)
+- Test utilities and helpers for the codebase
+
 ### Output Formatting (`internal/output/`)
 - `formatters.go` - Output formatting implementations
+- `interface.go` - Output formatter interfaces
+- `colors.go` - Color output utilities
+- `config_formatter.go` - Configuration output formatting
+- `doctor_formatter.go` - Doctor command output formatting
+- `dotfile_list_formatter.go` - Dotfile list output formatting
+- `info_formatter.go` - Info command output formatting
+- `package_formatter.go` - Package output formatting
+- `rm_formatter.go` - Remove command output formatting
+- `search_formatter.go` - Search command output formatting
+- `status_formatter.go` - Status command output formatting
+- `progress.go` - Progress display utilities
+- `progress_writer.go` - Progress writer implementation
+- `print.go` - Print utilities
+- `render.go` - Rendering utilities
+- `types.go` - Output type definitions
+- `utils.go` - Output utilities
+- `writer.go` - Output writer implementation
 
 ## Command-to-Implementation Mapping
 
-### setup command
-- Entry: `internal/commands/setup.go`
-- Logic: `internal/setup/setup.go`
-- Git operations: `internal/setup/git.go`
-- Tool installation: `internal/setup/tools.go`
+### clone command
+- Entry: `internal/commands/clone.go`
+- Logic: `internal/clone/setup.go`
+- Git operations: `internal/clone/git.go`
+- Tool installation: `internal/clone/tools.go`
 - Uses: `internal/diagnostics/health.go` (via doctor --fix for language package managers only)
 
 ### apply command
 - Entry: `internal/commands/apply.go`
-- Orchestration: `internal/orchestrator/apply.go`
-- Package reconciliation: `internal/resources/packages/reconcile.go`
-- Dotfile reconciliation: `internal/resources/dotfiles/reconcile.go`
+- Orchestration: `internal/orchestrator/coordinator.go`, `reconcile.go`
+- Package reconciliation: `internal/resources/packages/reconcile.go`, `apply.go`
+- Dotfile reconciliation: `internal/resources/dotfiles/reconcile.go`, `apply.go`
 - Hook execution: `internal/orchestrator/hooks.go`
 
 ### status command
@@ -132,7 +160,13 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 ### doctor command
 - Entry: `internal/commands/doctor.go`
 - Health checks: `internal/diagnostics/health.go`
-- Tool installation: `internal/setup/tools.go` (for --fix)
+- Tool installation: `internal/clone/tools.go` (for --fix)
+
+### diff command
+- Entry: `internal/commands/diff.go`
+- Resource reconciliation: `internal/resources/reconcile.go`
+- Package state: `internal/resources/packages/resource.go`
+- Dotfile state: `internal/resources/dotfiles/resource.go`
 
 ### config show/edit commands
 - Entry: `internal/commands/config_show.go`, `config_edit.go`

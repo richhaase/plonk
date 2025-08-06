@@ -23,18 +23,28 @@ The lock file is automatically maintained by plonk and tracks your managed resou
 **Format:**
 ```yaml
 version: 2
-packages:
-  brew:
-    - name: ripgrep
+resources:
+  - type: package
+    id: brew:ripgrep
+    metadata:
+      manager: brew
+      name: ripgrep
       version: 14.0.3
-      installed_at: 2025-07-27T11:01:03.519704-06:00
-    - name: fd
+    installed_at: "2025-07-27T11:01:03-06:00"
+  - type: package
+    id: brew:fd
+    metadata:
+      manager: brew
+      name: fd
       version: 8.7.0
-      installed_at: 2025-07-27T11:00:51.028708-06:00
-  npm:
-    - name: prettier
+    installed_at: "2025-07-27T11:00:51-06:00"
+  - type: package
+    id: npm:prettier
+    metadata:
+      manager: npm
+      name: prettier
       version: 3.1.0
-      installed_at: 2025-07-28T15:11:08.74692-06:00
+    installed_at: "2025-07-28T15:11:08-06:00"
 ```
 
 **Note:** Dotfiles are not tracked in the lock file. Instead, the filesystem structure of `$PLONK_DIR` itself represents the dotfile state (see [Filesystem as State](#filesystem-as-state)).
@@ -88,33 +98,39 @@ default_manager: brew    # Options: brew, npm, cargo, pip, gem, go
 Control which files are excluded when scanning for dotfiles:
 
 ```yaml
+# Note: ignore_patterns should be at the root level, not under dotfiles
+ignore_patterns:
+  # Temporary files
+  - "*.swp"
+  - "*.tmp"
+  - "*.bak"
+  - "*~"
+
+  # OS-specific files
+  - ".DS_Store"        # macOS
+  - "Thumbs.db"        # Windows
+  - ".Trash"
+
+  # Cache and build directories
+  - ".cache/*"
+  - "node_modules/*"
+  - "target/*"         # Rust build output
+  - "__pycache__/*"    # Python cache
+
+  # Version control
+  - ".git/*"
+  - ".svn/*"
+
+  # IDE/Editor files
+  - ".vscode/*"
+  - ".idea/*"
+  - "*.log"
+
+# Dotfile-specific configuration (optional)
 dotfiles:
-  ignore_patterns:
-    # Temporary files
-    - "*.swp"
-    - "*.tmp"
-    - "*.bak"
-    - "*~"
-
-    # OS-specific files
-    - ".DS_Store"        # macOS
-    - "Thumbs.db"        # Windows
-    - ".Trash"
-
-    # Cache and build directories
-    - ".cache/*"
-    - "node_modules/*"
-    - "target/*"         # Rust build output
-    - "__pycache__/*"    # Python cache
-
-    # Version control
-    - ".git/*"
-    - ".svn/*"
-
-    # IDE/Editor files
-    - ".vscode/*"
-    - ".idea/*"
-    - "*.log"
+  unmanaged_filters:    # Filters for marking dotfiles as unmanaged
+    - "*.backup"
+    - "*.old"
 ```
 
 ### Directory Expansion
@@ -122,12 +138,12 @@ dotfiles:
 Specify directories to recursively scan for dotfiles:
 
 ```yaml
-dotfiles:
-  expand_directories:
-    - "~/.config"        # Standard config location
-    - "~/.local/share"   # User data files
-    - "~/.ssh"           # SSH configuration
-    # Add custom directories as needed
+# Note: expand_directories should be at the root level, not under dotfiles
+expand_directories:
+  - ".config"           # Standard config location (relative to home)
+  # Default is just .config, add more as needed:
+  # - ".local/share"    # User data files
+  # - ".ssh"            # SSH configuration
 ```
 
 ## Hook Configuration
@@ -140,29 +156,29 @@ Execute commands before and after apply operations:
 hooks:
   # Commands run before apply starts
   pre_apply:
-    - "echo 'Starting plonk apply...'"
-    - "brew update"      # Update Homebrew before installing
-    - "git pull"         # Pull latest dotfiles changes
+    - command: "echo 'Starting plonk apply...'"
+    - command: "brew update"      # Update Homebrew before installing
+    - command: "git pull"         # Pull latest dotfiles changes
 
   # Commands run after apply completes
   post_apply:
-    - "echo 'Apply completed successfully'"
-    - "source ~/.zshrc"  # Reload shell configuration
-    - "tmux source-file ~/.tmux.conf"  # Reload tmux config
+    - command: "echo 'Apply completed successfully'"
+    - command: "source ~/.zshrc"  # Reload shell configuration
+    - command: "tmux source-file ~/.tmux.conf"  # Reload tmux config
 ```
 
 ### Hook Timeout and Error Handling
 
 ```yaml
 hooks:
-  # Hook-specific settings
-  timeout: 600          # 10 minutes timeout for hooks
-  continue_on_error: true  # Don't fail apply if hooks fail
-
   pre_apply:
-    - "brew doctor"     # Check Homebrew health
+    - command: "brew doctor"     # Check Homebrew health
+      timeout: "60s"              # Individual hook timeout
+      continue_on_error: true     # Don't fail if this hook fails
   post_apply:
-    - "plonk doctor"    # Verify system after apply
+    - command: "plonk doctor"    # Verify system after apply
+      timeout: "30s"
+      continue_on_error: false    # Fail if doctor check fails
 ```
 
 ## Timeout Configuration
@@ -173,18 +189,18 @@ Control how long operations wait before timing out:
 
 ```yaml
 # All timeouts in seconds
-package_timeout: 300      # Package install/uninstall (5 minutes)
-operation_timeout: 60     # Search operations (1 minute)
-dotfile_timeout: 30       # Dotfile operations (30 seconds)
+package_timeout: 180      # Package install/uninstall (3 minutes default)
+operation_timeout: 300    # Search operations (5 minutes default)
+dotfile_timeout: 60       # Dotfile operations (1 minute default)
 
 # Examples for different scenarios:
 # Fast network, powerful machine:
-# package_timeout: 180    # 3 minutes
-# operation_timeout: 30   # 30 seconds
+# package_timeout: 120    # 2 minutes
+# operation_timeout: 60   # 1 minute
 
 # Slow network, limited resources:
 # package_timeout: 600    # 10 minutes
-# operation_timeout: 120  # 2 minutes
+# operation_timeout: 600  # 10 minutes
 ```
 
 ## Diff Tool Configuration
@@ -217,35 +233,40 @@ A comprehensive configuration for a development environment:
 default_manager: brew
 
 # Dotfile management
+ignore_patterns:
+  - "*.swp"
+  - "*.tmp"
+  - ".DS_Store"
+  - ".cache/*"
+  - "node_modules/*"
+  - ".git/*"
+expand_directories:
+  - ".config"
+  - ".local/share"
+
+# Optional dotfile-specific configuration
 dotfiles:
-  ignore_patterns:
-    - "*.swp"
-    - "*.tmp"
-    - ".DS_Store"
-    - ".cache/*"
-    - "node_modules/*"
-    - ".git/*"
-  expand_directories:
-    - "~/.config"
-    - "~/.local/share"
+  unmanaged_filters:
+    - "*.backup"
 
 # Hooks for automated maintenance
 hooks:
-  timeout: 300
-  continue_on_error: true
   pre_apply:
-    - "echo 'Updating package managers...'"
-    - "brew update"
-    - "npm update -g"
+    - command: "echo 'Updating package managers...'"
+    - command: "brew update"
+      timeout: "300s"
+    - command: "npm update -g"
+      timeout: "300s"
   post_apply:
-    - "echo 'Sourcing shell configuration...'"
-    - "source ~/.zshrc || true"
-    - "echo 'Apply completed successfully'"
+    - command: "echo 'Sourcing shell configuration...'"
+    - command: "source ~/.zshrc || true"
+      continue_on_error: true
+    - command: "echo 'Apply completed successfully'"
 
 # Conservative timeouts for reliability
 package_timeout: 600      # 10 minutes for large packages
-operation_timeout: 90     # 90 seconds for searches
-dotfile_timeout: 60       # 1 minute for file operations
+operation_timeout: 600    # 10 minutes for searches
+dotfile_timeout: 120      # 2 minutes for file operations
 
 # Diff tool for viewing drift
 diff_tool: "delta"        # Use delta for syntax-highlighted diffs
@@ -275,45 +296,45 @@ Example: If you set `default_manager: npm` in plonk.yaml but run `plonk install 
 For JavaScript/Node.js heavy workflows:
 ```yaml
 default_manager: npm
-package_timeout: 180     # NPM can be faster than Homebrew
-operation_timeout: 45
+package_timeout: 120     # NPM can be faster than Homebrew
+operation_timeout: 180   # 3 minutes for NPM searches
 ```
 
 ### Scenario 2: Minimal Dotfile Management
 For users who only want basic dotfile tracking:
 ```yaml
-dotfiles:
-  ignore_patterns:
-    - "*"                # Ignore everything by default
-  # Manually add only specific files with `plonk add`
+ignore_patterns:
+  - "*"                # Ignore everything by default
+# Manually add only specific files with `plonk add`
 ```
 
 ### Scenario 3: Automated CI/CD Integration
 For automated environments:
 ```yaml
 hooks:
-  continue_on_error: false  # Fail on hook errors
-  timeout: 60
   pre_apply:
-    - "git status --porcelain | wc -l | grep -q '^0$'"  # Ensure clean repo
+    - command: "git status --porcelain | wc -l | grep -q '^0$'"  # Ensure clean repo
+      timeout: "10s"
+      continue_on_error: false  # Fail on hook errors
   post_apply:
-    - "plonk doctor"      # Verify system health
+    - command: "plonk doctor"      # Verify system health
+      timeout: "60s"
+      continue_on_error: false
 ```
 
 ### Scenario 4: Multi-Language Development
 For polyglot developers:
 ```yaml
 default_manager: brew     # System tools via Homebrew
-dotfiles:
-  expand_directories:
-    - "~/.config"
-    - "~/.local/share"
-    - "~/.cargo"          # Rust configuration
-    - "~/.npm"            # NPM configuration
+expand_directories:
+  - ".config"
+  - ".local/share"
+  - ".cargo"            # Rust configuration
+  - ".npm"              # NPM configuration
 hooks:
   pre_apply:
-    - "brew update"
-    - "rustup update"     # Keep Rust toolchain updated
+    - command: "brew update"
+    - command: "rustup update"     # Keep Rust toolchain updated
 ```
 
 ## Creating and Managing Configuration
@@ -375,8 +396,12 @@ dotfile_timeout: 60
 
 expand_directories:
   - .config
-  - .local
   - .ssh  # (user-defined)
+
+ignore_patterns:
+  - .DS_Store
+  - .Trash
+  - "*.swp"  # (user-defined)
 ```
 
-In this example, only `package_timeout` and the `expand_directories` list would be saved to plonk.yaml.
+In this example, only `package_timeout`, the additional `.ssh` entry in `expand_directories`, and the additional `*.swp` pattern in `ignore_patterns` would be saved to plonk.yaml.

@@ -44,16 +44,19 @@ The command layer handles:
 
 Key components:
 - `root.go` - Main command setup and global flags
-- Individual command files (`install.go`, `add.go`, etc.)
-- Output formatting utilities
+- Individual command files (`install.go`, `add.go`, `clone.go`, `diff.go`, etc.)
+- `shared.go` - Shared command logic
+- `helpers.go` - Command utilities
+- `package_validation.go` - Package validation utilities
 
 ### 2. Orchestration Layer (`internal/orchestrator/`)
 
 The orchestrator coordinates complex operations across multiple resource types:
-- Manages the overall apply workflow
-- Handles hooks (pre/post apply)
-- Coordinates between package and dotfile operations
-- Ensures proper error handling and rollback
+- Manages the overall apply workflow through the coordinator
+- Handles hooks execution
+- Coordinates between package and dotfile reconciliation
+- Manages orchestrator options and types
+- Ensures proper error handling
 
 ### 3. Resource Layer (`internal/resources/`)
 
@@ -62,7 +65,10 @@ Resources are organized by type:
 #### Packages (`internal/resources/packages/`)
 - Package manager interfaces and implementations
 - Registry for dynamic package manager discovery
-- Reconciliation logic for package state
+- Reconciliation and apply logic for package state
+- Package specification parsing (`spec.go`)
+- Command execution abstraction (`executor.go`)
+- Operations for install, uninstall, search, info
 
 Supported package managers:
 - Homebrew (brew) - macOS and Linux
@@ -74,9 +80,13 @@ Supported package managers:
 
 #### Dotfiles (`internal/resources/dotfiles/`)
 - Dotfile scanning and discovery
-- File copying and deployment
+- Directory scanning utilities
+- File copying and deployment operations
 - Atomic file operations
-- Backup and restore functionality
+- Path resolution and validation
+- File comparison utilities
+- Configuration file handling
+- Apply operations for dotfile state
 
 ### 4. Configuration Layer (`internal/config/`)
 
@@ -90,6 +100,7 @@ The lock file uses a versioned format for future compatibility.
 
 #### Lock Management (`internal/lock/`)
 - Interfaces for reading/writing lock files
+- YAML lock file implementation
 - Version compatibility handling
 - Atomic file operations
 
@@ -99,7 +110,20 @@ The lock file uses a versioned format for future compatibility.
 - Permission verification
 
 #### Clone (`internal/clone/`)
-- Git clone + plonk apply
+
+- Clone command implementation
+- Git repository cloning
+- Tool installation
+
+#### Output Formatting (`internal/output/`)
+- Multiple formatters for different commands
+- Color output utilities
+- Progress display and writer
+- Rendering and print utilities
+- Support for table, JSON, and YAML formats
+
+#### Test Utilities (`internal/testutil/`)
+- Test helpers and utilities for the codebase
 
 ## Key Design Decisions
 
@@ -185,7 +209,8 @@ All commands support multiple output formats (table, JSON, YAML) to support:
 ### Adding a New Package Manager
 
 1. Implement the `PackageManager` interface in `internal/resources/packages/`
-2. Implement any optional capabilities (search, info)
+2. Implement required operations (Install, Uninstall, ListInstalled, etc.)
+3. Implement optional capabilities through interfaces (search, info)
 
 ### Adding a New Resource Type
 
@@ -205,16 +230,16 @@ All commands support multiple output formats (table, JSON, YAML) to support:
 
 ### Install Flow
 ```
-User -> CLI Command -> Package Parser -> Package Manager -> Lock File
-                                     |
-                                     -> System (actual install)
+User -> CLI Command -> Package Spec Parser -> Package Manager -> Lock File
+                                           |
+                                           -> System (actual install)
 ```
 
 ### Apply Flow
 ```
-Lock File -> Orchestrator -> Reconcile Resources -> Apply Changes
-                         |                       |
-                         -> Pre-hooks            -> Post-hooks
+Lock File -> Orchestrator/Coordinator -> Reconcile Resources -> Apply Changes
+                                      |
+                                      -> Execute Hooks
 ```
 
 ### Status Flow
