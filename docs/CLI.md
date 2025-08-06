@@ -10,6 +10,8 @@ All commands support these options:
 
 ## Commands
 
+Note: For detailed command behaviors and examples, see the individual command documentation in docs/cmds/
+
 ### plonk
 
 Show help information for plonk commands.
@@ -23,15 +25,15 @@ plonk                                     # Show help and available commands
 Clone a dotfiles repository and intelligently set up plonk.
 
 ```bash
-plonk clone user/dotfiles             # Clone and auto-detect managers
-plonk clone richhaase/dotfiles        # Clone specific user's dotfiles
+plonk clone user/dotfiles             # Clone GitHub repository (shorthand)
+plonk clone https://github.com/user/repo.git  # Clone with full URL
 plonk clone user/repo --no-apply      # Clone without running apply
 plonk clone --yes user/dotfiles       # Non-interactive mode
 ```
 
 Options:
 - `--no-apply` - Skip running apply after clone
-- `--yes` - Auto-install tools without prompts
+- `--yes, -y` - Auto-install tools without prompts
 
 
 ### plonk install
@@ -81,8 +83,16 @@ Show managed packages and dotfiles.
 plonk status                          # Show all
 plonk status --packages               # Only packages
 plonk status --dotfiles               # Only dotfiles
-plonk st                              # Short alias
+plonk status --unmanaged              # Show only unmanaged items
+plonk status --missing                # Show only missing resources
+plonk status --missing --packages     # Show only missing packages
 ```
+
+Options:
+- `--packages` - Show only package status
+- `--dotfiles` - Show only dotfile status
+- `--unmanaged` - Show only unmanaged items
+- `--missing` - Show only missing resources (mutually exclusive with --unmanaged)
 
 ### plonk diff
 
@@ -129,7 +139,11 @@ Check system health and configuration.
 
 ```bash
 plonk doctor                          # Check system health
+plonk doctor -o json                  # Output as JSON
+plonk doctor -o yaml                  # Output as YAML
 ```
+
+Note: To automatically install missing package managers, use `plonk clone`.
 
 ### plonk config
 
@@ -140,13 +154,13 @@ plonk config show                     # Show current config with user-defined va
 plonk config edit                     # Edit config in visudo-style (only saves non-defaults)
 ```
 
-### plonk env
+### plonk dotfiles
 
-Show plonk environment information.
+List dotfiles specifically.
 
 ```bash
-plonk env                             # Show all info
-plonk env --shell                     # Shell setup commands
+plonk dotfiles                        # List all managed dotfiles
+plonk dotfiles -o json                # Output as JSON
 ```
 
 ### plonk completion
@@ -197,6 +211,4 @@ NO_COLOR=1 plonk status
 ## Exit Codes
 
 - `0` - Success
-- `1` - General error
-- `2` - Configuration error
-- `3` - Resource not found
+- `1` - General error or command failure
