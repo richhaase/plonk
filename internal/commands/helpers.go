@@ -93,6 +93,45 @@ func normalizeDisplayFlags(showPackages, showDotfiles bool) (packages, dotfiles 
 	return showPackages, showDotfiles
 }
 
+// parsePackageSpec splits "manager:package" into (manager, package)
+// Returns ("", package) if no prefix is found
+func parsePackageSpec(spec string) (manager, packageName string) {
+	return ParsePackageSpec(spec)
+}
+
+// isValidManager checks if the given manager name is supported
+func isValidManager(manager string) bool {
+	return IsValidManager(manager)
+}
+
+// getValidManagers returns a list of all valid manager names
+func getValidManagers() []string {
+	return GetValidManagers()
+}
+
+// getMetadataString safely extracts string metadata from operation results
+func getMetadataString(result resources.OperationResult, key string) string {
+	return GetMetadataString(result, key)
+}
+
+// parseSimpleFlags parses basic flags for commands
+func parseSimpleFlags(cmd *cobra.Command) (*SimpleFlags, error) {
+	return ParseSimpleFlags(cmd)
+}
+
+// formatNotFoundError creates a standardized "not found" error message
+func formatNotFoundError(itemType, name string, suggestions []string) string {
+	msg := fmt.Sprintf("%s %q not found", itemType, name)
+	if len(suggestions) > 0 {
+		if len(suggestions) == 1 {
+			msg += fmt.Sprintf("\nDid you mean: %s", suggestions[0])
+		} else {
+			msg += fmt.Sprintf("\nValid options: %s", strings.Join(suggestions, ", "))
+		}
+	}
+	return msg
+}
+
 // CompleteDotfilePaths provides file path completion for dotfiles
 func CompleteDotfilePaths(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	// Get home directory (no error handling needed)

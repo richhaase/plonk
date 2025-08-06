@@ -40,7 +40,7 @@ func init() {
 func runConfigShow(cmd *cobra.Command, args []string) error {
 	// Parse output format
 	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := ParseOutputFormat(outputFormat)
+	format, err := output.ParseOutputFormat(outputFormat)
 	if err != nil {
 		return fmt.Errorf("invalid output format: %w", err)
 	}
@@ -68,7 +68,7 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 		ConfigDir:  outputData.ConfigDir,
 	}
 	formatter := output.NewConfigShowFormatter(formatterData)
-	return RenderOutput(formatter, format)
+	return output.RenderOutput(formatter, format)
 }
 
 // ConfigShowOutput represents the output structure for config show command

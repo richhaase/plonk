@@ -44,7 +44,7 @@ func init() {
 func runUninstall(cmd *cobra.Command, args []string) error {
 	// Parse output format
 	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := ParseOutputFormat(outputFormat)
+	format, err := output.ParseOutputFormat(outputFormat)
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 
 	// Show progress for each result
 	for _, result := range allResults {
-		icon := GetStatusIcon(result.Status)
+		icon := output.GetStatusIcon(result.Status)
 		output.Printf("%s %s %s\n", icon, result.Status, result.Name)
 		// Show error details for failed operations
 		if result.Status == "failed" && result.Error != nil {
@@ -108,29 +108,18 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create output data using standardized format
-	summary := CalculatePackageOperationSummary(allResults)
-	outputData := PackageOperationOutput{
+	summary := calculatePackageOperationSummary(allResults)
+	outputData := output.PackageOperationOutput{
 		Command:    "uninstall",
 		TotalItems: len(allResults),
-		Results:    ConvertOperationResults(allResults),
+		Results:    convertOperationResults(allResults),
 		Summary:    summary,
 		DryRun:     dryRun,
 	}
 
-	// Convert to output package type and create formatter
-	formatterData := output.PackageOperationOutput{
-		Command:    outputData.Command,
-		TotalItems: outputData.TotalItems,
-		Results:    convertOperationResults(outputData.Results),
-		Summary: output.PackageOperationSummary{
-			Succeeded: outputData.Summary.Succeeded,
-			Skipped:   outputData.Summary.Skipped,
-			Failed:    outputData.Summary.Failed,
-		},
-		DryRun: outputData.DryRun,
-	}
-	formatter := output.NewPackageOperationFormatter(formatterData)
-	if err := RenderOutput(formatter, format); err != nil {
+	// Create formatter
+	formatter := output.NewPackageOperationFormatter(outputData)
+	if err := output.RenderOutput(formatter, format); err != nil {
 		return err
 	}
 

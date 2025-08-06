@@ -42,7 +42,7 @@ type DotfileBatchAddOutput = output.DotfileBatchAddOutput
 func runDotList(cmd *cobra.Command, args []string) error {
 	// Parse output format
 	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := ParseOutputFormat(outputFormat)
+	format, err := output.ParseOutputFormat(outputFormat)
 	if err != nil {
 		return fmt.Errorf("invalid output format: %w", err)
 	}
@@ -110,5 +110,36 @@ func runDotList(cmd *cobra.Command, args []string) error {
 		Verbose:   verbose,
 	}
 	formatter := output.NewDotfileListFormatter(formatterData)
-	return RenderOutput(formatter, format)
+	return output.RenderOutput(formatter, format)
+}
+
+// convertOperationResults converts resources.OperationResult to output.SerializableOperationResult
+func convertOperationResults(results []resources.OperationResult) []output.SerializableOperationResult {
+	converted := make([]output.SerializableOperationResult, len(results))
+	for i, result := range results {
+		converted[i] = output.SerializableOperationResult{
+			Name:     result.Name,
+			Manager:  result.Manager,
+			Status:   result.Status,
+			Error:    result.Error,
+			Metadata: result.Metadata,
+		}
+	}
+	return converted
+}
+
+// calculatePackageOperationSummary calculates summary from operation results
+func calculatePackageOperationSummary(results []resources.OperationResult) output.PackageOperationSummary {
+	summary := output.PackageOperationSummary{}
+	for _, result := range results {
+		switch result.Status {
+		case "added", "removed", "installed", "uninstalled", "success":
+			summary.Succeeded++
+		case "skipped", "already-installed", "already-configured":
+			summary.Skipped++
+		case "failed", "error":
+			summary.Failed++
+		}
+	}
+	return summary
 }

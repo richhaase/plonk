@@ -70,7 +70,7 @@ func init() {
 func runAdd(cmd *cobra.Command, args []string) error {
 	// Parse output format
 	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := ParseOutputFormat(outputFormat)
+	format, err := output.ParseOutputFormat(outputFormat)
 	if err != nil {
 		return err
 	}
@@ -101,23 +101,23 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create output data based on number of results
-	var outputData OutputData
+	var outputData output.OutputData
 	if len(results) == 1 {
 		// Single file output
 		result := results[0]
-		output := &DotfileAddOutput{
-			Source:      GetMetadataString(result, "source"),
-			Destination: GetMetadataString(result, "destination"),
+		dotfileOutput := &output.DotfileAddOutput{
+			Source:      getMetadataString(result, "source"),
+			Destination: getMetadataString(result, "destination"),
 			Action:      output.MapStatusToAction(result.Status),
 			Path:        result.Name,
 		}
 		if result.Error != nil {
-			output.Error = result.Error.Error()
+			dotfileOutput.Error = result.Error.Error()
 		}
-		outputData = output
+		outputData = dotfileOutput
 	} else {
 		// Batch output
-		outputData = &DotfileBatchAddOutput{
+		outputData = &output.DotfileBatchAddOutput{
 			TotalFiles: len(results),
 			AddedFiles: output.ConvertToDotfileAddOutput(results),
 			Errors:     output.ExtractErrorMessages(results),
@@ -125,7 +125,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Render output
-	if err := RenderOutput(outputData, format); err != nil {
+	if err := output.RenderOutput(outputData, format); err != nil {
 		return err
 	}
 

@@ -9,6 +9,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/orchestrator"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -56,7 +57,7 @@ func runApply(cmd *cobra.Command, args []string) error {
 
 	// Parse output format
 	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := ParseOutputFormat(outputFormat)
+	format, err := output.ParseOutputFormat(outputFormat)
 	if err != nil {
 		return fmt.Errorf("invalid output format: %w", err)
 	}
@@ -87,7 +88,7 @@ func runApply(cmd *cobra.Command, args []string) error {
 	result.Scope = getApplyScope(packagesOnly, dotfilesOnly)
 
 	// Render output first
-	renderErr := RenderOutput(result, format)
+	renderErr := output.RenderOutput(result, format)
 	if renderErr != nil {
 		return renderErr
 	}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/resources"
 	"github.com/spf13/cobra"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParsePackageSpec(t *testing.T) {
@@ -329,6 +330,102 @@ func TestCompleteDotfilePaths(t *testing.T) {
 					t.Errorf("Expected to find %q in suggestions", check)
 				}
 			}
+		})
+	}
+}
+func TestValidateStatusFlags(t *testing.T) {
+	tests := []struct {
+		name          string
+		showUnmanaged bool
+		showMissing   bool
+		wantErr       bool
+		errContains   string
+	}{
+		{
+			name:          "both false is valid",
+			showUnmanaged: false,
+			showMissing:   false,
+			wantErr:       false,
+		},
+		{
+			name:          "unmanaged only is valid",
+			showUnmanaged: true,
+			showMissing:   false,
+			wantErr:       false,
+		},
+		{
+			name:          "missing only is valid",
+			showUnmanaged: false,
+			showMissing:   true,
+			wantErr:       false,
+		},
+		{
+			name:          "both true is invalid",
+			showUnmanaged: true,
+			showMissing:   true,
+			wantErr:       true,
+			errContains:   "mutually exclusive",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateStatusFlags(tt.showUnmanaged, tt.showMissing)
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errContains != "" {
+					assert.Contains(t, err.Error(), tt.errContains)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestNormalizeDisplayFlags(t *testing.T) {
+	tests := []struct {
+		name         string
+		showPackages bool
+		showDotfiles bool
+		wantPackages bool
+		wantDotfiles bool
+	}{
+		{
+			name:         "both false returns both true",
+			showPackages: false,
+			showDotfiles: false,
+			wantPackages: true,
+			wantDotfiles: true,
+		},
+		{
+			name:         "packages only",
+			showPackages: true,
+			showDotfiles: false,
+			wantPackages: true,
+			wantDotfiles: false,
+		},
+		{
+			name:         "dotfiles only",
+			showPackages: false,
+			showDotfiles: true,
+			wantPackages: false,
+			wantDotfiles: true,
+		},
+		{
+			name:         "both true stays both true",
+			showPackages: true,
+			showDotfiles: true,
+			wantPackages: true,
+			wantDotfiles: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			packages, dotfiles := normalizeDisplayFlags(tt.showPackages, tt.showDotfiles)
+			assert.Equal(t, tt.wantPackages, packages)
+			assert.Equal(t, tt.wantDotfiles, dotfiles)
 		})
 	}
 }

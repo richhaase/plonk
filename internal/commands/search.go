@@ -41,7 +41,7 @@ func init() {
 func runSearch(cmd *cobra.Command, args []string) error {
 	// Parse output format
 	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := ParseOutputFormat(outputFormat)
+	format, err := output.ParseOutputFormat(outputFormat)
 	if err != nil {
 		return fmt.Errorf("invalid output format: %w", err)
 	}
@@ -89,7 +89,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		Results: convertSearchResults(searchResult.Results),
 	}
 	formatter := output.NewSearchFormatter(formatterData)
-	return RenderOutput(formatter, format)
+	return output.RenderOutput(formatter, format)
 }
 
 // convertSearchResults converts from command types to output types
