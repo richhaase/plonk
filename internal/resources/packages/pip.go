@@ -341,6 +341,12 @@ func (p *PipManager) normalizeName(name string) string {
 	return normalized
 }
 
+func init() {
+	RegisterManager("pip", func() PackageManager {
+		return NewPipManager()
+	})
+}
+
 // IsAvailable checks if pip3 is installed and accessible
 func (p *PipManager) IsAvailable(ctx context.Context) (bool, error) {
 	if !CheckCommandAvailable(p.binary) {

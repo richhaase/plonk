@@ -364,7 +364,7 @@ func checkPackageManagerAvailability(ctx context.Context) HealthCheck {
 	unavailableManagers := []string{}
 	homebrewAvailable := false
 
-	for _, managerName := range packages.SupportedManagers {
+	for _, managerName := range registry.GetAllManagerNames() {
 		mgr, err := registry.GetManager(managerName)
 		if err != nil {
 			unavailableManagers = append(unavailableManagers, managerName)

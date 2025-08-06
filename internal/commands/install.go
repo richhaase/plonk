@@ -61,8 +61,22 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	cfg := config.LoadWithDefaults(configDir)
 
 	// Parse and validate all package specifications
-	validator := NewPackageSpecValidator(cfg)
-	validSpecs, validationErrors := validator.ValidateInstallSpecs(args)
+	defaultManager := packages.DefaultManager
+	if cfg != nil && cfg.DefaultManager != "" {
+		defaultManager = cfg.DefaultManager
+	}
+	validationResult := packages.ValidateSpecs(args, packages.ValidationModeInstall, defaultManager)
+
+	// Convert validation errors to OperationResults
+	var validationErrors []resources.OperationResult
+	for _, invalid := range validationResult.Invalid {
+		validationErrors = append(validationErrors, resources.OperationResult{
+			Name:    invalid.OriginalSpec,
+			Manager: "",
+			Status:  "failed",
+			Error:   invalid.Error,
+		})
+	}
 
 	// Process each package with prefix parsing
 	var allResults []resources.OperationResult
@@ -71,9 +85,9 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	allResults = append(allResults, validationErrors...)
 
 	// Process valid specifications
-	for i, spec := range validSpecs {
+	for i, spec := range validationResult.Valid {
 		// Show progress for multi-package operations
-		output.ProgressUpdate(i+1, len(validSpecs), "Installing", spec.String())
+		output.ProgressUpdate(i+1, len(validationResult.Valid), "Installing", spec.String())
 
 		// Configure installation options for this package
 		opts := packages.InstallOptions{

@@ -13,7 +13,7 @@ import (
 
 // Config represents the plonk configuration
 type Config struct {
-	DefaultManager    string   `yaml:"default_manager,omitempty" validate:"omitempty,oneof=apt brew npm pip gem go cargo test-unavailable"`
+	DefaultManager    string   `yaml:"default_manager,omitempty" validate:"omitempty,validmanager"`
 	OperationTimeout  int      `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"`
 	PackageTimeout    int      `yaml:"package_timeout,omitempty" validate:"omitempty,min=0,max=1800"`
 	DotfileTimeout    int      `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`
@@ -186,6 +186,9 @@ func LoadFromPath(configPath string) (*Config, error) {
 
 	// Validate
 	validate := validator.New()
+	if err := RegisterValidators(validate); err != nil {
+		return nil, err
+	}
 	if err := validate.Struct(&cfg); err != nil {
 		return nil, err
 	}
