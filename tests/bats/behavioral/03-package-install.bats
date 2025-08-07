@@ -346,6 +346,63 @@ setup() {
   assert_output --partial "minicli/minicli"
 }
 
+# .NET install tests
+@test "install managed dotnet tool" {
+  require_safe_package "dotnet:dotnetsay"
+
+  run which dotnet
+  if [[ $status -ne 0 ]]; then
+    skip "dotnet not available"
+  fi
+
+  run plonk install dotnet:dotnetsay
+  assert_success
+  assert_output --partial "installed"
+  track_artifact "package" "dotnet:dotnetsay"
+
+  # Verify it's installed by dotnet
+  run dotnet tool list -g
+  assert_success
+  assert_output --partial "dotnetsay"
+
+  # Verify it's in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "dotnetsay"
+
+  # Verify in status
+  run plonk status
+  assert_output --partial "dotnetsay"
+}
+
+@test "install second managed dotnet tool" {
+  require_safe_package "dotnet:dotnet-outdated-tool"
+
+  run which dotnet
+  if [[ $status -ne 0 ]]; then
+    skip "dotnet not available"
+  fi
+
+  run plonk install dotnet:dotnet-outdated-tool
+  assert_success
+  assert_output --partial "installed"
+  track_artifact "package" "dotnet:dotnet-outdated-tool"
+
+  # Verify it's installed by dotnet
+  run dotnet tool list -g
+  assert_success
+  assert_output --partial "dotnet-outdated-tool"
+
+  # Verify it's in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "dotnet-outdated-tool"
+
+  # Verify in status
+  run plonk status
+  assert_output --partial "dotnet-outdated-tool"
+}
+
 # General installation behavior tests
 @test "install with dry-run doesn't actually install" {
   require_safe_package "brew:fortune"

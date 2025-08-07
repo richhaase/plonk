@@ -75,6 +75,7 @@ Plonk's vision for package management is to be the "package manager manager" - o
 - **uv** for Python tool management
 - **pixi** for conda-forge packages
 - **composer** for PHP global packages
+- **dotnet** for .NET Global Tools
 
 Today, plonk provides a unified interface for common operations. Tomorrow, it could enable:
 - Transitioning tools between package managers (e.g., moving from npm to cargo-based tools)
