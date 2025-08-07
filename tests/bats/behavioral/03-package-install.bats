@@ -302,7 +302,7 @@ setup() {
 
   run plonk install composer:splitbrain/php-cli
   assert_success
-  assert_output --partial "installed"
+  assert_output --partial "added"
   track_artifact "package" "composer:splitbrain/php-cli"
 
   # Verify it's installed by composer
@@ -329,7 +329,7 @@ setup() {
 
   run plonk install composer:minicli/minicli
   assert_success
-  assert_output --partial "installed"
+  assert_output --partial "added"
   track_artifact "package" "composer:minicli/minicli"
 
   # Verify it's installed by composer
@@ -357,7 +357,7 @@ setup() {
 
   run plonk install dotnet:dotnetsay
   assert_success
-  assert_output --partial "installed"
+  assert_output --partial "added"
   track_artifact "package" "dotnet:dotnetsay"
 
   # Verify it's installed by dotnet
@@ -385,7 +385,7 @@ setup() {
 
   run plonk install dotnet:dotnet-outdated-tool
   assert_success
-  assert_output --partial "installed"
+  assert_output --partial "added"
   track_artifact "package" "dotnet:dotnet-outdated-tool"
 
   # Verify it's installed by dotnet
