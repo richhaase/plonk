@@ -68,7 +68,9 @@ Resources are organized by type:
 - Reconciliation and apply logic for package state
 - Package specification parsing (`spec.go`)
 - Command execution abstraction (`executor.go`)
-- Operations for install, uninstall, search, info
+- Operations for install, uninstall, search, info, upgrade
+- Health checking and self-installation capabilities
+- Outdated package detection
 
 Supported package managers:
 - Homebrew (brew) - macOS and Linux
@@ -112,11 +114,13 @@ The lock file uses a versioned format for future compatibility.
 - System health checks
 - Package manager availability
 - Permission verification
+- Orchestrates health checks by calling CheckHealth() on each package manager
 
 #### Clone (`internal/clone/`)
 
 - Clone command implementation
 - Git repository cloning
+- Automatic package manager installation via SelfInstall()
 - Tool installation
 
 #### Output Formatting (`internal/output/`)
@@ -144,6 +148,9 @@ Each package manager implements a common interface, allowing:
 - Consistent behavior across different tools
 - Easy addition of new package managers
 - Capability detection (search, info, etc.)
+- Self-health checking and diagnostics
+- Automatic self-installation during environment setup
+- Package upgrade management
 
 ### 3. State-Based Management
 
@@ -215,6 +222,9 @@ All commands support multiple output formats (table, JSON, YAML) to support:
 1. Implement the `PackageManager` interface in `internal/resources/packages/`
 2. Implement required operations (Install, Uninstall, ListInstalled, etc.)
 3. Implement optional capabilities through interfaces (search, info)
+4. Implement health checking via CheckHealth() method
+5. Implement self-installation via SelfInstall() method
+6. Implement package upgrade capabilities via Upgrade() and Outdated() methods
 
 ### Adding a New Resource Type
 
