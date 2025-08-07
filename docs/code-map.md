@@ -85,6 +85,7 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - `gem.go` - Gem package manager
 - `goinstall.go` - Go install package manager
 - `uv.go` - UV package manager
+- `pixi.go` - Pixi package manager
 
 
 #### Dotfile Resources (`internal/resources/dotfiles/`)

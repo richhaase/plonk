@@ -4,7 +4,6 @@
 package packages
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -123,7 +122,7 @@ func TestUvManager_handleInstallError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockErr := &mockExitError{code: tt.exitCode}
+			mockErr := &MockExitError{Code: tt.exitCode}
 
 			err := manager.handleInstallError(mockErr, tt.output, tt.packageName)
 			if err == nil {
@@ -180,7 +179,7 @@ func TestUvManager_handleUninstallError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockErr := &mockExitError{code: tt.exitCode}
+			mockErr := &MockExitError{Code: tt.exitCode}
 
 			err := manager.handleUninstallError(mockErr, tt.output, tt.packageName)
 			if (err != nil) != tt.wantErr {
@@ -190,36 +189,4 @@ func TestUvManager_handleUninstallError(t *testing.T) {
 	}
 }
 
-// Mock error type for testing
-type mockExitError struct {
-	code int
-}
-
-func (e *mockExitError) Error() string {
-	return "mock exit error"
-}
-
-func (e *mockExitError) ExitCode() int {
-	return e.code
-}
-
-// Helper function to check if string contains substring (case-insensitive)
-func stringContains(s, substr string) bool {
-	if len(substr) == 0 {
-		return true
-	}
-	if len(s) < len(substr) {
-		return false
-	}
-
-	// Convert to lowercase for case-insensitive comparison
-	sLower := strings.ToLower(s)
-	substrLower := strings.ToLower(substr)
-
-	for i := 0; i <= len(sLower)-len(substrLower); i++ {
-		if sLower[i:i+len(substrLower)] == substrLower {
-			return true
-		}
-	}
-	return false
-}
+// Note: Uses MockExitError from executor.go and stringContains from test_helpers.go

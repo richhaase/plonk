@@ -73,6 +73,7 @@ Plonk's vision for package management is to be the "package manager manager" - o
 - **gem** for Ruby
 - **go install** for Go tools
 - **uv** for Python tool management
+- **pixi** for conda-forge packages
 
 Today, plonk provides a unified interface for common operations. Tomorrow, it could enable:
 - Transitioning tools between package managers (e.g., moving from npm to cargo-based tools)

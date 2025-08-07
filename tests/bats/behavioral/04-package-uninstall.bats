@@ -288,6 +288,46 @@ setup() {
   refute_output --partial "rich-cli"
 }
 
+# Pixi uninstall tests
+@test "uninstall managed pixi package" {
+  require_safe_package "pixi:gcal"
+
+  run which pixi
+  if [[ $status -ne 0 ]]; then
+    skip "pixi not available"
+  fi
+
+  # Install first
+  run plonk install pixi:gcal
+  assert_success
+  track_artifact "package" "pixi:gcal"
+
+  # Verify it's installed by pixi
+  run pixi global list
+  assert_success
+  assert_output --partial "gcal"
+
+  # Then uninstall
+  run plonk uninstall pixi:gcal
+  assert_success
+  assert_output --partial "removed"
+
+  # Verify actually uninstalled by pixi
+  run pixi global list
+  assert_success
+  refute_output --partial "gcal"
+
+  # Verify gone from lock file
+  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
+    run cat "$PLONK_DIR/plonk.lock"
+    refute_output --partial "gcal"
+  fi
+
+  # Verify gone from status
+  run plonk status
+  refute_output --partial "gcal"
+}
+
 # General uninstall behavior tests
 @test "uninstall non-managed package acts as pass-through" {
   require_safe_package "brew:fortune"

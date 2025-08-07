@@ -259,6 +259,38 @@ setup() {
   assert_output --partial "cowsay"
 }
 
+# Pixi tests
+@test "install pixi package" {
+  require_safe_package "pixi:hello"
+
+  # Check if pixi is available
+  run which pixi
+  if [[ $status -ne 0 ]]; then
+    skip "pixi not available"
+  fi
+
+  run plonk install pixi:hello
+  assert_success
+  assert_output --partial "hello"
+  assert_output --partial "added"
+
+  track_artifact "package" "pixi:hello"
+
+  # Verify it's actually installed by pixi
+  run pixi global list
+  assert_success
+  assert_output --partial "hello"
+
+  # Verify it's in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "hello"
+
+  # Verify in status
+  run plonk status
+  assert_output --partial "hello"
+}
+
 # General installation behavior tests
 @test "install with dry-run doesn't actually install" {
   require_safe_package "brew:fortune"

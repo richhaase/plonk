@@ -78,6 +78,7 @@ Supported package managers:
 - Gem (gem)
 - Go (go install)
 - UV (uv) - Python tool manager
+- Pixi (pixi) - Conda-forge package manager
 
 #### Dotfiles (`internal/resources/dotfiles/`)
 - Dotfile scanning and discovery
