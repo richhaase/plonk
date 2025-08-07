@@ -29,6 +29,7 @@ Plonk can manage packages from these language-specific package managers:
 - **go** (Go) - For Go modules
 - **uv** (Python) - For Python tools management
 - **pixi** (Conda-forge) - For conda-forge packages
+- **composer** (PHP) - For PHP global packages
 
 ## Installation Methods
 

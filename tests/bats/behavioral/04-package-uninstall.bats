@@ -328,6 +328,81 @@ setup() {
   refute_output --partial "gcal"
 }
 
+# Composer uninstall tests
+@test "uninstall managed composer package" {
+  require_safe_package "composer:splitbrain/php-cli"
+
+  run which composer
+  if [[ $status -ne 0 ]]; then
+    skip "composer not available"
+  fi
+
+  # Install first
+  run plonk install composer:splitbrain/php-cli
+  assert_success
+  track_artifact "package" "composer:splitbrain/php-cli"
+
+  # Verify it's installed
+  run composer global show splitbrain/php-cli
+  assert_success
+
+  # Then uninstall
+  run plonk uninstall composer:splitbrain/php-cli
+  assert_success
+  assert_output --partial "removed"
+
+  # Verify actually uninstalled by composer
+  run composer global show splitbrain/php-cli
+  assert_failure
+
+  # Verify gone from lock file
+  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
+    run cat "$PLONK_DIR/plonk.lock"
+    refute_output --partial "splitbrain/php-cli"
+  fi
+
+  # Verify gone from status
+  run plonk status
+  refute_output --partial "splitbrain/php-cli"
+}
+
+@test "uninstall second managed composer package" {
+  require_safe_package "composer:minicli/minicli"
+
+  run which composer
+  if [[ $status -ne 0 ]]; then
+    skip "composer not available"
+  fi
+
+  # Install first
+  run plonk install composer:minicli/minicli
+  assert_success
+  track_artifact "package" "composer:minicli/minicli"
+
+  # Verify it's installed
+  run composer global show minicli/minicli
+  assert_success
+
+  # Then uninstall
+  run plonk uninstall composer:minicli/minicli
+  assert_success
+  assert_output --partial "removed"
+
+  # Verify actually uninstalled by composer
+  run composer global show minicli/minicli
+  assert_failure
+
+  # Verify gone from lock file
+  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
+    run cat "$PLONK_DIR/plonk.lock"
+    refute_output --partial "minicli/minicli"
+  fi
+
+  # Verify gone from status
+  run plonk status
+  refute_output --partial "minicli/minicli"
+}
+
 # General uninstall behavior tests
 @test "uninstall non-managed package acts as pass-through" {
   require_safe_package "brew:fortune"

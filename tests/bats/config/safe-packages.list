@@ -32,3 +32,7 @@ uv:rich-cli      # Rich command-line tools, small package
 # Pixi packages (Conda-forge packages)
 pixi:hello       # Simple hello program, very safe test package
 pixi:gcal        # GNU calendar utility, small and safe
+
+# Composer packages (PHP)
+composer:splitbrain/php-cli  # Lightweight CLI framework, zero dependencies
+composer:minicli/minicli     # Minimalist CLI framework, dependency-free

@@ -79,6 +79,7 @@ Supported package managers:
 - Go (go install)
 - UV (uv) - Python tool manager
 - Pixi (pixi) - Conda-forge package manager
+- Composer (composer) - PHP global packages
 
 #### Dotfiles (`internal/resources/dotfiles/`)
 - Dotfile scanning and discovery

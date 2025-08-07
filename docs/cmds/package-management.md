@@ -18,6 +18,7 @@ Package state is tracked in `plonk.lock`, which is updated atomically with each 
 - `go:` - Go modules
 - `uv:` - UV (Python tool manager)
 - `pixi:` - Pixi (Conda-forge packages)
+- `composer:` - Composer (PHP global packages)
 
 Without prefix, uses `default_manager` from configuration (default: brew).
 
@@ -53,7 +54,7 @@ plonk install [options] <package>...
 plonk install ripgrep fd bat
 
 # Install with specific managers
-plonk install brew:wget npm:prettier cargo:exa uv:ruff pixi:tree
+plonk install brew:wget npm:prettier cargo:exa uv:ruff pixi:tree composer:phpunit/phpunit
 
 # Preview installation
 plonk install --dry-run ripgrep
@@ -90,7 +91,7 @@ plonk uninstall [options] <package>...
 plonk uninstall ripgrep fd
 
 # Uninstall with specific manager
-plonk uninstall brew:wget npm:prettier uv:ruff pixi:tree
+plonk uninstall brew:wget npm:prettier uv:ruff pixi:tree composer:phpunit/phpunit
 
 # Preview removal
 plonk uninstall --dry-run ripgrep
@@ -127,7 +128,7 @@ plonk search [options] <query>
 plonk search ripgrep
 
 # Search specific manager
-plonk search brew:ripgrep pixi:tree
+plonk search brew:ripgrep pixi:tree composer:phpunit
 
 # Note: UV does not support search
 plonk search uv:ruff  # Will return no results
@@ -172,7 +173,7 @@ Displays:
 plonk info ripgrep
 
 # Info for specific manager
-plonk info brew:ripgrep uv:ruff pixi:tree
+plonk info brew:ripgrep uv:ruff pixi:tree composer:phpunit/phpunit
 
 # Output as JSON
 plonk info -o json ripgrep
