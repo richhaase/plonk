@@ -248,6 +248,240 @@ setup() {
   refute_output --partial "ripgrep"
 }
 
+# UV uninstall tests
+@test "uninstall managed uv package" {
+  require_safe_package "uv:rich-cli"
+
+  run which uv
+  if [[ $status -ne 0 ]]; then
+    skip "uv not available"
+  fi
+
+  # Install first
+  run plonk install uv:rich-cli
+  assert_success
+  track_artifact "package" "uv:rich-cli"
+
+  # Verify it's installed by uv
+  run uv tool list
+  assert_success
+  assert_output --partial "rich-cli"
+
+  # Then uninstall
+  run plonk uninstall uv:rich-cli
+  assert_success
+  assert_output --partial "removed"
+
+  # Verify actually uninstalled by uv
+  run uv tool list
+  assert_success
+  refute_output --partial "rich-cli"
+
+  # Verify gone from lock file
+  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
+    run cat "$PLONK_DIR/plonk.lock"
+    refute_output --partial "rich-cli"
+  fi
+
+  # Verify gone from status
+  run plonk status
+  refute_output --partial "rich-cli"
+}
+
+# Pixi uninstall tests
+@test "uninstall managed pixi package" {
+  require_safe_package "pixi:gcal"
+
+  run which pixi
+  if [[ $status -ne 0 ]]; then
+    skip "pixi not available"
+  fi
+
+  # Install first
+  run plonk install pixi:gcal
+  assert_success
+  track_artifact "package" "pixi:gcal"
+
+  # Verify it's installed by pixi
+  run pixi global list
+  assert_success
+  assert_output --partial "gcal"
+
+  # Then uninstall
+  run plonk uninstall pixi:gcal
+  assert_success
+  assert_output --partial "removed"
+
+  # Verify actually uninstalled by pixi
+  run pixi global list
+  assert_success
+  refute_output --partial "gcal"
+
+  # Verify gone from lock file
+  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
+    run cat "$PLONK_DIR/plonk.lock"
+    refute_output --partial "gcal"
+  fi
+
+  # Verify gone from status
+  run plonk status
+  refute_output --partial "gcal"
+}
+
+# Composer uninstall tests
+@test "uninstall managed composer package" {
+  require_safe_package "composer:splitbrain/php-cli"
+
+  run which composer
+  if [[ $status -ne 0 ]]; then
+    skip "composer not available"
+  fi
+
+  # Install first
+  run plonk install composer:splitbrain/php-cli
+  assert_success
+  track_artifact "package" "composer:splitbrain/php-cli"
+
+  # Verify it's installed
+  run composer global show splitbrain/php-cli
+  assert_success
+
+  # Then uninstall
+  run plonk uninstall composer:splitbrain/php-cli
+  assert_success
+  assert_output --partial "removed"
+
+  # Verify actually uninstalled by composer
+  run composer global show splitbrain/php-cli
+  assert_failure
+
+  # Verify gone from lock file
+  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
+    run cat "$PLONK_DIR/plonk.lock"
+    refute_output --partial "splitbrain/php-cli"
+  fi
+
+  # Verify gone from status
+  run plonk status
+  refute_output --partial "splitbrain/php-cli"
+}
+
+@test "uninstall second managed composer package" {
+  require_safe_package "composer:minicli/minicli"
+
+  run which composer
+  if [[ $status -ne 0 ]]; then
+    skip "composer not available"
+  fi
+
+  # Install first
+  run plonk install composer:minicli/minicli
+  assert_success
+  track_artifact "package" "composer:minicli/minicli"
+
+  # Verify it's installed
+  run composer global show minicli/minicli
+  assert_success
+
+  # Then uninstall
+  run plonk uninstall composer:minicli/minicli
+  assert_success
+  assert_output --partial "removed"
+
+  # Verify actually uninstalled by composer
+  run composer global show minicli/minicli
+  assert_failure
+
+  # Verify gone from lock file
+  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
+    run cat "$PLONK_DIR/plonk.lock"
+    refute_output --partial "minicli/minicli"
+  fi
+
+  # Verify gone from status
+  run plonk status
+  refute_output --partial "minicli/minicli"
+}
+
+# .NET uninstall tests
+@test "uninstall managed dotnet tool" {
+  require_safe_package "dotnet:dotnetsay"
+
+  run which dotnet
+  if [[ $status -ne 0 ]]; then
+    skip "dotnet not available"
+  fi
+
+  # Install first
+  run plonk install dotnet:dotnetsay
+  assert_success
+  track_artifact "package" "dotnet:dotnetsay"
+
+  # Verify it's installed
+  run dotnet tool list -g
+  assert_success
+  assert_output --partial "dotnetsay"
+
+  # Then uninstall
+  run plonk uninstall dotnet:dotnetsay
+  assert_success
+  assert_output --partial "removed"
+
+  # Verify actually uninstalled by dotnet
+  run dotnet tool list -g
+  assert_success
+  refute_output --partial "dotnetsay"
+
+  # Verify gone from lock file
+  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
+    run cat "$PLONK_DIR/plonk.lock"
+    refute_output --partial "dotnetsay"
+  fi
+
+  # Verify gone from status
+  run plonk status
+  refute_output --partial "dotnetsay"
+}
+
+@test "uninstall second managed dotnet tool" {
+  require_safe_package "dotnet:dotnet-outdated-tool"
+
+  run which dotnet
+  if [[ $status -ne 0 ]]; then
+    skip "dotnet not available"
+  fi
+
+  # Install first
+  run plonk install dotnet:dotnet-outdated-tool
+  assert_success
+  track_artifact "package" "dotnet:dotnet-outdated-tool"
+
+  # Verify it's installed
+  run dotnet tool list -g
+  assert_success
+  assert_output --partial "dotnet-outdated-tool"
+
+  # Then uninstall
+  run plonk uninstall dotnet:dotnet-outdated-tool
+  assert_success
+  assert_output --partial "removed"
+
+  # Verify actually uninstalled by dotnet
+  run dotnet tool list -g
+  assert_success
+  refute_output --partial "dotnet-outdated-tool"
+
+  # Verify gone from lock file
+  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
+    run cat "$PLONK_DIR/plonk.lock"
+    refute_output --partial "dotnet-outdated-tool"
+  fi
+
+  # Verify gone from status
+  run plonk status
+  refute_output --partial "dotnet-outdated-tool"
+}
+
 # General uninstall behavior tests
 @test "uninstall non-managed package acts as pass-through" {
   require_safe_package "brew:fortune"

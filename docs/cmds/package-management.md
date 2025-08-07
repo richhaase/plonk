@@ -16,6 +16,10 @@ Package state is tracked in `plonk.lock`, which is updated atomically with each 
 - `pip:` - Pip (Python)
 - `gem:` - RubyGems
 - `go:` - Go modules
+- `uv:` - UV (Python tool manager)
+- `pixi:` - Pixi (Conda-forge packages)
+- `composer:` - Composer (PHP global packages)
+- `dotnet:` - .NET Global Tools
 
 Without prefix, uses `default_manager` from configuration (default: brew).
 
@@ -51,7 +55,7 @@ plonk install [options] <package>...
 plonk install ripgrep fd bat
 
 # Install with specific managers
-plonk install brew:wget npm:prettier cargo:exa
+plonk install brew:wget npm:prettier cargo:exa uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay
 
 # Preview installation
 plonk install --dry-run ripgrep
@@ -88,7 +92,7 @@ plonk uninstall [options] <package>...
 plonk uninstall ripgrep fd
 
 # Uninstall with specific manager
-plonk uninstall brew:wget npm:prettier
+plonk uninstall brew:wget npm:prettier uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay
 
 # Preview removal
 plonk uninstall --dry-run ripgrep
@@ -125,7 +129,11 @@ plonk search [options] <query>
 plonk search ripgrep
 
 # Search specific manager
-plonk search brew:ripgrep
+plonk search brew:ripgrep pixi:tree composer:phpunit
+
+# Note: UV and .NET do not support search
+plonk search uv:ruff     # Will return no results
+plonk search dotnet:test # Will return no results
 
 # Output as JSON
 plonk search -o json ripgrep
@@ -167,7 +175,7 @@ Displays:
 plonk info ripgrep
 
 # Info for specific manager
-plonk info brew:ripgrep
+plonk info brew:ripgrep uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay
 
 # Output as JSON
 plonk info -o json ripgrep

@@ -42,7 +42,7 @@ Install packages and add them to management.
 
 ```bash
 plonk install ripgrep                 # Default manager
-plonk install brew:wget npm:prettier  # Specific managers
+plonk install brew:wget npm:prettier uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay  # Specific managers
 plonk install --dry-run ripgrep       # Preview changes
 ```
 
@@ -52,7 +52,7 @@ Uninstall packages and remove from management.
 
 ```bash
 plonk uninstall ripgrep
-plonk uninstall brew:wget npm:prettier
+plonk uninstall brew:wget npm:prettier uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay
 plonk uninstall --dry-run ripgrep
 ```
 
@@ -184,6 +184,10 @@ Use prefixes to specify package managers:
 - `pip:` - Pip (Python)
 - `gem:` - RubyGems
 - `go:` - Go modules
+- `uv:` - UV (Python tool manager)
+- `pixi:` - Pixi (Conda-forge packages)
+- `composer:` - Composer (PHP global packages)
+- `dotnet:` - .NET Global Tools
 
 Examples:
 ```bash
@@ -193,6 +197,10 @@ plonk install cargo:ripgrep
 plonk install pip:black
 plonk install gem:bundler
 plonk install go:golang.org/x/tools/cmd/goimports
+plonk install uv:ruff
+plonk install pixi:tree
+plonk install composer:phpunit/phpunit
+plonk install dotnet:dotnetsay
 ```
 
 ## Output and Colors

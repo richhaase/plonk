@@ -45,6 +45,34 @@ resources:
       name: prettier
       version: 3.1.0
     installed_at: "2025-07-28T15:11:08-06:00"
+  - type: package
+    id: uv:ruff
+    metadata:
+      manager: uv
+      name: ruff
+      version: 0.1.14
+    installed_at: "2025-08-07T10:15:22-06:00"
+  - type: package
+    id: pixi:tree
+    metadata:
+      manager: pixi
+      name: tree
+      version: 1.8.0
+    installed_at: "2025-08-07T10:20:15-06:00"
+  - type: package
+    id: composer:phpunit/phpunit
+    metadata:
+      manager: composer
+      name: phpunit/phpunit
+      version: 9.5.28
+    installed_at: "2025-08-07T10:25:30-06:00"
+  - type: package
+    id: dotnet:dotnetsay
+    metadata:
+      manager: dotnet
+      name: dotnetsay
+      version: 2.1.4
+    installed_at: "2025-08-07T10:30:45-06:00"
 ```
 
 **Note:** Dotfiles are not tracked in the lock file. Instead, the filesystem structure of `$PLONK_DIR` itself represents the dotfile state (see [Filesystem as State](#filesystem-as-state)).
@@ -84,7 +112,7 @@ User configuration file for customizing plonk behavior. This file is optional - 
 
 ```yaml
 # Default package manager when no prefix is specified
-default_manager: brew    # Options: brew, npm, cargo, pip, gem, go
+default_manager: brew    # Options: brew, npm, cargo, pip, gem, go, uv, pixi, composer, dotnet
 
 # Alternative examples:
 # default_manager: npm    # Use npm for global JavaScript tools

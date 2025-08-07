@@ -227,6 +227,182 @@ setup() {
   assert_output --partial "ripgrep"
 }
 
+# UV tests
+@test "install uv package" {
+  require_safe_package "uv:cowsay"
+
+  # Check if uv is available
+  run which uv
+  if [[ $status -ne 0 ]]; then
+    skip "uv not available"
+  fi
+
+  run plonk install uv:cowsay
+  assert_success
+  assert_output --partial "cowsay"
+  assert_output --partial "added"
+
+  track_artifact "package" "uv:cowsay"
+
+  # Verify it's actually installed by uv
+  run uv tool list
+  assert_success
+  assert_output --partial "cowsay"
+
+  # Verify it's in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "cowsay"
+
+  # Verify in status
+  run plonk status
+  assert_output --partial "cowsay"
+}
+
+# Pixi tests
+@test "install pixi package" {
+  require_safe_package "pixi:hello"
+
+  # Check if pixi is available
+  run which pixi
+  if [[ $status -ne 0 ]]; then
+    skip "pixi not available"
+  fi
+
+  run plonk install pixi:hello
+  assert_success
+  assert_output --partial "hello"
+  assert_output --partial "added"
+
+  track_artifact "package" "pixi:hello"
+
+  # Verify it's actually installed by pixi
+  run pixi global list
+  assert_success
+  assert_output --partial "hello"
+
+  # Verify it's in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "hello"
+
+  # Verify in status
+  run plonk status
+  assert_output --partial "hello"
+}
+
+# Composer install tests
+@test "install managed composer package" {
+  require_safe_package "composer:splitbrain/php-cli"
+
+  run which composer
+  if [[ $status -ne 0 ]]; then
+    skip "composer not available"
+  fi
+
+  run plonk install composer:splitbrain/php-cli
+  assert_success
+  assert_output --partial "added"
+  track_artifact "package" "composer:splitbrain/php-cli"
+
+  # Verify it's installed by composer
+  run composer global show splitbrain/php-cli
+  assert_success
+
+  # Verify it's in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "splitbrain/php-cli"
+
+  # Verify in status
+  run plonk status
+  assert_output --partial "splitbrain/php-cli"
+}
+
+@test "install second managed composer package" {
+  require_safe_package "composer:minicli/minicli"
+
+  run which composer
+  if [[ $status -ne 0 ]]; then
+    skip "composer not available"
+  fi
+
+  run plonk install composer:minicli/minicli
+  assert_success
+  assert_output --partial "added"
+  track_artifact "package" "composer:minicli/minicli"
+
+  # Verify it's installed by composer
+  run composer global show minicli/minicli
+  assert_success
+
+  # Verify it's in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "minicli/minicli"
+
+  # Verify in status
+  run plonk status
+  assert_output --partial "minicli/minicli"
+}
+
+# .NET install tests
+@test "install managed dotnet tool" {
+  require_safe_package "dotnet:dotnetsay"
+
+  run which dotnet
+  if [[ $status -ne 0 ]]; then
+    skip "dotnet not available"
+  fi
+
+  run plonk install dotnet:dotnetsay
+  assert_success
+  assert_output --partial "added"
+  track_artifact "package" "dotnet:dotnetsay"
+
+  # Verify it's installed by dotnet
+  run dotnet tool list -g
+  assert_success
+  assert_output --partial "dotnetsay"
+
+  # Verify it's in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "dotnetsay"
+
+  # Verify in status
+  run plonk status
+  assert_output --partial "dotnetsay"
+}
+
+@test "install second managed dotnet tool" {
+  require_safe_package "dotnet:dotnet-outdated-tool"
+
+  run which dotnet
+  if [[ $status -ne 0 ]]; then
+    skip "dotnet not available"
+  fi
+
+  run plonk install dotnet:dotnet-outdated-tool
+  assert_success
+  assert_output --partial "added"
+  track_artifact "package" "dotnet:dotnet-outdated-tool"
+
+  # Verify it's installed by dotnet
+  run dotnet tool list -g
+  assert_success
+  assert_output --partial "dotnet-outdated-tool"
+
+  # Verify it's in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "dotnet-outdated-tool"
+
+  # Verify in status
+  run plonk status
+  assert_output --partial "dotnet-outdated-tool"
+}
+
 # General installation behavior tests
 @test "install with dry-run doesn't actually install" {
   require_safe_package "brew:fortune"

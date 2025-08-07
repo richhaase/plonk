@@ -5,6 +5,29 @@ package packages
 
 // Test helper functions that are only used in tests
 
+import "strings"
+
+// stringContains checks if string contains substring (case-insensitive)
+func stringContains(s, substr string) bool {
+	if len(substr) == 0 {
+		return true
+	}
+	if len(s) < len(substr) {
+		return false
+	}
+
+	// Convert to lowercase for case-insensitive comparison
+	sLower := strings.ToLower(s)
+	substrLower := strings.ToLower(substr)
+
+	for i := 0; i <= len(sLower)-len(substrLower); i++ {
+		if sLower[i:i+len(substrLower)] == substrLower {
+			return true
+		}
+	}
+	return false
+}
+
 // stringSlicesEqual compares two string slices for equality
 func stringSlicesEqual(a, b []string) bool {
 	if len(a) != len(b) {

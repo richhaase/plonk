@@ -20,6 +20,7 @@ The command supports filtering by resource type and state, with multiple output 
 - `--dotfiles` - Show only dotfile status
 - `--unmanaged` - Show only unmanaged items
 - `--missing` - Show only missing resources (mutually exclusive with --unmanaged)
+- `--outdated` - Show packages with available updates (implies --packages)
 - `-o, --output` - Output format (table/json/yaml)
 
 ## Behavior
@@ -31,6 +32,13 @@ Status displays resources in four possible states:
 - **missing** - Resource is tracked by plonk but doesn't exist in the environment
 - **drifted** - Dotfile is tracked and exists but content has been modified
 - **unmanaged** - Resource exists in the environment but isn't tracked by plonk
+
+### Package Update States (--outdated flag)
+
+When using the `--outdated` flag, packages also show update information:
+- **current** - Package is at the latest available version
+- **outdated** - Package has a newer version available for upgrade
+- **unknown** - Version information could not be determined
 
 ### Default Display
 
@@ -46,15 +54,25 @@ Filters can be combined:
 - `--packages --unmanaged` - Show only unmanaged packages
 - `--dotfiles --unmanaged` - Show only unmanaged dotfiles
 - `--packages --missing` - Show only missing packages
+- `--packages --outdated` - Show only packages with available updates
 
 Using both `--packages` and `--dotfiles` together has the same effect as using neither.
+
+**Note**: The `--outdated` flag automatically implies `--packages` and is mutually exclusive with `--dotfiles`, `--unmanaged`, and `--missing`.
 
 ### Table Format Display
 
 **Packages Table**:
 - NAME: Package name
-- MANAGER: Package manager (brew, npm, cargo, pip, gem, go)
+- MANAGER: Package manager (brew, npm, cargo, pip, gem, go, uv, pixi, composer, dotnet)
 - STATUS: Current state with icon
+
+**Packages Table with --outdated**:
+- NAME: Package name
+- MANAGER: Package manager
+- CURRENT: Currently installed version
+- LATEST: Latest available version
+- UPDATE: Update status (current/outdated/unknown)
 
 **Dotfiles Table** (managed/missing):
 - SOURCE: Path relative to `$PLONK_DIR`
@@ -70,6 +88,7 @@ JSON and YAML output formats include:
 - Configuration file paths and validity
 - Detailed summary with counts by domain
 - Managed items in flat array with domain field
+- When using `--outdated`, includes version and update information
 
 Note: Structured output formats (JSON/YAML) do not support the `--unmanaged` flag and will always show managed items only. Use table format to view unmanaged items.
 
@@ -100,6 +119,12 @@ plonk status --missing
 # Show missing packages only
 plonk status --packages --missing
 
+# Show packages with available updates
+plonk status --outdated
+
+# Show outdated packages as JSON
+plonk status --outdated -o json
+
 # Output as JSON
 plonk status -o json
 ```
@@ -110,6 +135,8 @@ plonk status -o json
 - Missing items can be resolved with `plonk apply`
 - Drifted dotfiles can be restored with `plonk apply` or updated with `plonk add`
 - Unmanaged items can be added with `plonk install` or `plonk add`
+- Use `plonk status --outdated` before `plonk upgrade` to preview available updates
+- Outdated packages can be upgraded with `plonk upgrade`
 
 ## Notes
 

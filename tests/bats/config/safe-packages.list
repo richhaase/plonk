@@ -24,3 +24,19 @@ go:github.com/rakyll/hey  # HTTP load generator, small tool
 
 # Cargo packages (Rust)
 cargo:ripgrep    # Fast grep replacement, useful tool
+
+# UV packages (Python tools)
+uv:cowsay        # ASCII cow, harmless fun tool
+uv:rich-cli      # Rich command-line tools, small package
+
+# Pixi packages (Conda-forge packages)
+pixi:hello       # Simple hello program, very safe test package
+pixi:gcal        # GNU calendar utility, small and safe
+
+# Composer packages (PHP)
+composer:splitbrain/php-cli  # Lightweight CLI framework, zero dependencies
+composer:minicli/minicli     # Minimalist CLI framework, dependency-free
+
+# .NET Global Tools
+dotnet:dotnetsay             # Simple demo tool, no side effects
+dotnet:dotnet-outdated-tool  # Dependency checker, read-only operations
