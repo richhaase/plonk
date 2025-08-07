@@ -53,7 +53,7 @@ Using both `--packages` and `--dotfiles` together has the same effect as using n
 
 **Packages Table**:
 - NAME: Package name
-- MANAGER: Package manager (brew, npm, cargo, pip, gem, go)
+- MANAGER: Package manager (brew, npm, cargo, pip, gem, go, uv)
 - STATUS: Current state with icon
 
 **Dotfiles Table** (managed/missing):

@@ -27,6 +27,7 @@ Plonk can manage packages from these language-specific package managers:
 - **pip** (Python) - For Python packages
 - **gem** (Ruby) - For Ruby gems
 - **go** (Go) - For Go modules
+- **uv** (Python) - For Python tools management
 
 ## Installation Methods
 

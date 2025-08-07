@@ -248,6 +248,46 @@ setup() {
   refute_output --partial "ripgrep"
 }
 
+# UV uninstall tests
+@test "uninstall managed uv package" {
+  require_safe_package "uv:rich-cli"
+
+  run which uv
+  if [[ $status -ne 0 ]]; then
+    skip "uv not available"
+  fi
+
+  # Install first
+  run plonk install uv:rich-cli
+  assert_success
+  track_artifact "package" "uv:rich-cli"
+
+  # Verify it's installed by uv
+  run uv tool list
+  assert_success
+  assert_output --partial "rich-cli"
+
+  # Then uninstall
+  run plonk uninstall uv:rich-cli
+  assert_success
+  assert_output --partial "removed"
+
+  # Verify actually uninstalled by uv
+  run uv tool list
+  assert_success
+  refute_output --partial "rich-cli"
+
+  # Verify gone from lock file
+  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
+    run cat "$PLONK_DIR/plonk.lock"
+    refute_output --partial "rich-cli"
+  fi
+
+  # Verify gone from status
+  run plonk status
+  refute_output --partial "rich-cli"
+}
+
 # General uninstall behavior tests
 @test "uninstall non-managed package acts as pass-through" {
   require_safe_package "brew:fortune"

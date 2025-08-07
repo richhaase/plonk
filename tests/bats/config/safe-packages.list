@@ -24,3 +24,7 @@ go:github.com/rakyll/hey  # HTTP load generator, small tool
 
 # Cargo packages (Rust)
 cargo:ripgrep    # Fast grep replacement, useful tool
+
+# UV packages (Python tools)
+uv:cowsay        # ASCII cow, harmless fun tool
+uv:rich-cli      # Rich command-line tools, small package

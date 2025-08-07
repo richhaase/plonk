@@ -227,6 +227,38 @@ setup() {
   assert_output --partial "ripgrep"
 }
 
+# UV tests
+@test "install uv package" {
+  require_safe_package "uv:cowsay"
+
+  # Check if uv is available
+  run which uv
+  if [[ $status -ne 0 ]]; then
+    skip "uv not available"
+  fi
+
+  run plonk install uv:cowsay
+  assert_success
+  assert_output --partial "cowsay"
+  assert_output --partial "added"
+
+  track_artifact "package" "uv:cowsay"
+
+  # Verify it's actually installed by uv
+  run uv tool list
+  assert_success
+  assert_output --partial "cowsay"
+
+  # Verify it's in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "cowsay"
+
+  # Verify in status
+  run plonk status
+  assert_output --partial "cowsay"
+}
+
 # General installation behavior tests
 @test "install with dry-run doesn't actually install" {
   require_safe_package "brew:fortune"

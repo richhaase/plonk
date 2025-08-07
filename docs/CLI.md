@@ -42,7 +42,7 @@ Install packages and add them to management.
 
 ```bash
 plonk install ripgrep                 # Default manager
-plonk install brew:wget npm:prettier  # Specific managers
+plonk install brew:wget npm:prettier uv:ruff  # Specific managers
 plonk install --dry-run ripgrep       # Preview changes
 ```
 
@@ -52,7 +52,7 @@ Uninstall packages and remove from management.
 
 ```bash
 plonk uninstall ripgrep
-plonk uninstall brew:wget npm:prettier
+plonk uninstall brew:wget npm:prettier uv:ruff
 plonk uninstall --dry-run ripgrep
 ```
 
@@ -184,6 +184,7 @@ Use prefixes to specify package managers:
 - `pip:` - Pip (Python)
 - `gem:` - RubyGems
 - `go:` - Go modules
+- `uv:` - UV (Python tool manager)
 
 Examples:
 ```bash
@@ -193,6 +194,7 @@ plonk install cargo:ripgrep
 plonk install pip:black
 plonk install gem:bundler
 plonk install go:golang.org/x/tools/cmd/goimports
+plonk install uv:ruff
 ```
 
 ## Output and Colors

@@ -45,6 +45,13 @@ resources:
       name: prettier
       version: 3.1.0
     installed_at: "2025-07-28T15:11:08-06:00"
+  - type: package
+    id: uv:ruff
+    metadata:
+      manager: uv
+      name: ruff
+      version: 0.1.14
+    installed_at: "2025-08-07T10:15:22-06:00"
 ```
 
 **Note:** Dotfiles are not tracked in the lock file. Instead, the filesystem structure of `$PLONK_DIR` itself represents the dotfile state (see [Filesystem as State](#filesystem-as-state)).
@@ -84,7 +91,7 @@ User configuration file for customizing plonk behavior. This file is optional - 
 
 ```yaml
 # Default package manager when no prefix is specified
-default_manager: brew    # Options: brew, npm, cargo, pip, gem, go
+default_manager: brew    # Options: brew, npm, cargo, pip, gem, go, uv
 
 # Alternative examples:
 # default_manager: npm    # Use npm for global JavaScript tools

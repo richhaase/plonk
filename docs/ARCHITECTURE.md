@@ -77,6 +77,7 @@ Supported package managers:
 - Pip (pip)
 - Gem (gem)
 - Go (go install)
+- UV (uv) - Python tool manager
 
 #### Dotfiles (`internal/resources/dotfiles/`)
 - Dotfile scanning and discovery
