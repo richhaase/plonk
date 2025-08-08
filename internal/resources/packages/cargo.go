@@ -374,6 +374,11 @@ func (c *CargoManager) SelfInstall(ctx context.Context) error {
 	return executeInstallScript(ctx, script, "Rust/Cargo")
 }
 
+// Dependencies returns package managers this manager depends on for self-installation
+func (c *CargoManager) Dependencies() []string {
+	return []string{} // Cargo is independent - uses official rustup installer script
+}
+
 func init() {
 	RegisterManager("cargo", func() PackageManager {
 		return NewCargoManager()

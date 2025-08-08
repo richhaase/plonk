@@ -530,6 +530,11 @@ func (g *GoInstallManager) Upgrade(ctx context.Context, packages []string) error
 	return nil
 }
 
+// Dependencies returns package managers this manager depends on for self-installation
+func (g *GoInstallManager) Dependencies() []string {
+	return []string{"brew"} // go requires brew to install Go toolchain
+}
+
 func init() {
 	RegisterManager("go", func() PackageManager {
 		return NewGoInstallManager()

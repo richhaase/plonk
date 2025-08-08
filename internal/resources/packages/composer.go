@@ -343,6 +343,11 @@ func (c *ComposerManager) Upgrade(ctx context.Context, packages []string) error 
 	return nil
 }
 
+// Dependencies returns package managers this manager depends on for self-installation
+func (c *ComposerManager) Dependencies() []string {
+	return []string{"brew"} // composer requires brew to install Composer
+}
+
 func init() {
 	RegisterManager("composer", func() PackageManager {
 		return NewComposerManager()

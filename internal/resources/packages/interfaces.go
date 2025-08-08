@@ -31,6 +31,11 @@ type PackageManager interface {
 	// Upgrade upgrades one or more packages to their latest versions
 	// If packages slice is empty, upgrades all installed packages for this manager
 	Upgrade(ctx context.Context, packages []string) error
+
+	// Dependencies returns package managers this manager depends on for self-installation
+	// Returns empty slice if fully independent
+	// Each string should match the manager name used in the registry
+	Dependencies() []string
 }
 
 // PackageInfo represents detailed information about a package

@@ -142,6 +142,7 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 ### clone command
 - Entry: `internal/commands/clone.go`
 - Logic: `internal/clone/setup.go`
+- Dependency resolution: `internal/resources/packages/dependencies.go`
 - Git operations: `internal/clone/git.go`
 - Tool installation: `internal/clone/tools.go`
 - Uses: `internal/diagnostics/health.go` (via doctor --fix for language package managers only)
@@ -178,6 +179,7 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - Entries: `internal/commands/install.go`, `uninstall.go`, `search.go`, `info.go`
 - Operations: `internal/resources/packages/operations.go`
 - Manager registry: `internal/resources/packages/registry.go`
+- Dependency resolution: `internal/resources/packages/dependencies.go`
 - Lock file updates: `internal/lock/yaml_lock.go`
 
 ### Dotfile management commands (add/rm)
@@ -197,6 +199,7 @@ Location: `internal/resources/resource.go`
 Location: `internal/resources/packages/interfaces.go`
 - Implemented by: All package managers
 - Defines: Install, Uninstall, List, Search, Info operations
+- Dependencies method: Returns package manager dependencies for installation order
 
 ### Lock Interface
 Location: `internal/lock/interfaces.go`

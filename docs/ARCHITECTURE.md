@@ -65,6 +65,7 @@ Resources are organized by type:
 #### Packages (`internal/resources/packages/`)
 - Package manager interfaces and implementations
 - Registry for dynamic package manager discovery
+- Dependency resolution system with topological sorting for correct installation order
 - Reconciliation and apply logic for package state
 - Package specification parsing (`spec.go`)
 - Command execution abstraction (`executor.go`)
@@ -122,6 +123,7 @@ The lock file uses a versioned format for future compatibility.
 - Clone command implementation
 - Git repository cloning
 - Automatic package manager installation via SelfInstall()
+- Dependency-aware installation that resolves package manager dependencies and installs in correct order
 - Tool installation
 
 #### Output Formatting (`internal/output/`)

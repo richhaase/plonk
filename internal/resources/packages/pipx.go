@@ -268,6 +268,11 @@ func (p *PipxManager) Upgrade(ctx context.Context, packages []string) error {
 	return nil
 }
 
+// Dependencies returns package managers this manager depends on for self-installation
+func (p *PipxManager) Dependencies() []string {
+	return []string{"brew"} // pipx requires brew to install pipx
+}
+
 func init() {
 	RegisterManager("pipx", func() PackageManager {
 		return NewPipxManager()

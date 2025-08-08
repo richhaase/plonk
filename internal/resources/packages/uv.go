@@ -213,6 +213,11 @@ func (u *UvManager) SelfInstall(ctx context.Context) error {
 	return executeInstallScript(ctx, script, "UV")
 }
 
+// Dependencies returns package managers this manager depends on for self-installation
+func (u *UvManager) Dependencies() []string {
+	return []string{} // UV is independent - uses official installer script
+}
+
 func init() {
 	RegisterManager("uv", func() PackageManager {
 		return NewUvManager()

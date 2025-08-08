@@ -425,6 +425,11 @@ func (p *PnpmManager) handleUpgradeError(err error, output []byte, packageName s
 	return fmt.Errorf("failed to execute upgrade command: %w", err)
 }
 
+// Dependencies returns package managers this manager depends on for self-installation
+func (p *PnpmManager) Dependencies() []string {
+	return []string{} // pnpm is independent - uses official installer script
+}
+
 func init() {
 	RegisterManager("pnpm", func() PackageManager {
 		return NewPnpmManager()

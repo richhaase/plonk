@@ -228,6 +228,11 @@ func (d *DotnetManager) SelfInstall(ctx context.Context) error {
 	return executeInstallScript(ctx, script, ".NET SDK")
 }
 
+// Dependencies returns package managers this manager depends on for self-installation
+func (d *DotnetManager) Dependencies() []string {
+	return []string{} // .NET is independent - uses official Microsoft installer script
+}
+
 // Upgrade upgrades one or more packages to their latest versions
 func (d *DotnetManager) Upgrade(ctx context.Context, packages []string) error {
 	if len(packages) == 0 {

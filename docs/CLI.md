@@ -22,7 +22,7 @@ plonk                                     # Show help and available commands
 
 ### plonk clone
 
-Clone a dotfiles repository and intelligently set up plonk.
+Clone a dotfiles repository and intelligently set up plonk. Automatically detects required package managers from the lock file and installs them in dependency order.
 
 ```bash
 plonk clone user/dotfiles             # Clone GitHub repository (shorthand)
