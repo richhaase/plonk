@@ -441,6 +441,46 @@ setup() {
   refute_output --partial "dotnet-outdated-tool"
 }
 
+# Pipx uninstall tests
+@test "uninstall managed pipx package" {
+  require_safe_package "pipx:black"
+
+  run which pipx
+  if [[ $status -ne 0 ]]; then
+    skip "pipx not available"
+  fi
+
+  # Install first
+  run plonk install pipx:black
+  assert_success
+  track_artifact "package" "pipx:black"
+
+  # Verify it's installed by pipx
+  run pipx list --short
+  assert_success
+  assert_output --partial "black"
+
+  # Then uninstall
+  run plonk uninstall pipx:black
+  assert_success
+  assert_output --partial "removed"
+
+  # Verify actually uninstalled by pipx
+  run pipx list --short
+  assert_success
+  refute_output --partial "black"
+
+  # Verify gone from lock file
+  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
+    run cat "$PLONK_DIR/plonk.lock"
+    refute_output --partial "black"
+  fi
+
+  # Verify gone from status
+  run plonk status
+  refute_output --partial "black"
+}
+
 # General uninstall behavior tests
 @test "uninstall non-managed package acts as pass-through" {
   require_safe_package "brew:fortune"

@@ -439,6 +439,37 @@ setup() {
   track_artifact "package" "brew:fortune"
 }
 
+# Pipx tests
+@test "install pipx package" {
+  require_safe_package "pipx:black"
+
+  # Check if pipx is available
+  run which pipx
+  if [[ $status -ne 0 ]]; then
+    skip "pipx not available"
+  fi
+
+  run plonk install pipx:black
+  assert_success
+  assert_output --partial "black"
+  assert_output --partial "added"
+  track_artifact "package" "pipx:black"
+
+  # Verify it's actually installed via pipx
+  run pipx list --short
+  assert_success
+  assert_output --partial "black"
+
+  # Verify it's in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "black"
+
+  # Verify in status
+  run plonk status
+  assert_output --partial "black"
+}
+
 @test "install shows error for non-existent package" {
   run plonk install brew:definitely-not-real-xyz123
   assert_failure

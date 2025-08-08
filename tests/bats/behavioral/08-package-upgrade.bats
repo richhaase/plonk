@@ -197,6 +197,24 @@ setup() {
   assert_output --partial "ripgrep"
 }
 
+# Pipx upgrade tests
+@test "upgrade single pipx package" {
+  require_package_manager "pipx"
+  require_safe_package "pipx:black"
+
+  # Install package
+  run plonk install pipx:black
+  if [[ $status -ne 0 ]]; then
+    skip "Failed to install pipx:black"
+  fi
+  track_artifact "package" "pipx:black"
+
+  # Upgrade the specific package
+  run plonk upgrade pipx:black
+  assert_success
+  assert_output --partial "black"
+}
+
 # Cross-manager upgrade tests
 @test "upgrade package across managers" {
   require_safe_package "brew:cowsay"

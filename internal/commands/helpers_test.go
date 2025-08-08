@@ -141,8 +141,8 @@ func TestIsValidManager(t *testing.T) {
 func TestGetValidManagers(t *testing.T) {
 	managers := GetValidManagers()
 
-	// Should return all 9 supported managers
-	expectedCount := 9
+	// Should return all 10 supported managers
+	expectedCount := 10
 	if len(managers) != expectedCount {
 		t.Errorf("GetValidManagers() returned %d managers, want %d", len(managers), expectedCount)
 	}
@@ -158,6 +158,7 @@ func TestGetValidManagers(t *testing.T) {
 		"pixi":     false,
 		"composer": false,
 		"dotnet":   false,
+		"pipx":     false,
 	}
 
 	for _, manager := range managers {
