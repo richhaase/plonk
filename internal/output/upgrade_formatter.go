@@ -6,6 +6,9 @@ package output
 import (
 	"fmt"
 	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // UpgradeFormatter formats upgrade operation output
@@ -36,8 +39,9 @@ func (f UpgradeFormatter) TableOutput() string {
 	}
 
 	// Display results grouped by package manager
+	titleCaser := cases.Title(language.English)
 	for manager, results := range managerResults {
-		output += fmt.Sprintf("%s:\n", strings.Title(manager))
+		output += fmt.Sprintf("%s:\n", titleCaser.String(manager))
 
 		for _, result := range results {
 			var statusIcon string
