@@ -177,13 +177,6 @@ func TestPixiManager_extractPackageName(t *testing.T) {
 	}
 }
 
-func TestPixiManager_SupportsSearch(t *testing.T) {
-	manager := NewPixiManager()
-	if !manager.SupportsSearch() {
-		t.Errorf("SupportsSearch() = false, want true - pixi supports search")
-	}
-}
-
 func TestPixiManager_handleInstallError(t *testing.T) {
 	manager := NewPixiManager()
 

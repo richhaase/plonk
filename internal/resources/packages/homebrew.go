@@ -320,11 +320,6 @@ func (h *HomebrewManager) IsAvailable(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-// SupportsSearch returns true as Homebrew supports package search
-func (h *HomebrewManager) SupportsSearch() bool {
-	return true
-}
-
 // CheckHealth performs a comprehensive health check of the Homebrew installation
 func (h *HomebrewManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	check := &HealthCheck{

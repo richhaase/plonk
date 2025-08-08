@@ -377,11 +377,6 @@ func (c *ComposerManager) IsAvailable(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-// SupportsSearch returns true as Composer supports package search
-func (c *ComposerManager) SupportsSearch() bool {
-	return true
-}
-
 // CheckHealth performs a comprehensive health check of the Composer installation
 func (c *ComposerManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	check := &HealthCheck{

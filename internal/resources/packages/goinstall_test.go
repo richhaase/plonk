@@ -173,13 +173,6 @@ func TestGoInstallManager_Configuration(t *testing.T) {
 	}
 }
 
-func TestGoInstallManager_SupportsSearch(t *testing.T) {
-	manager := NewGoInstallManager()
-	if manager.SupportsSearch() {
-		t.Error("GoInstallManager should not support search")
-	}
-}
-
 func TestGoInstallManager_IsAvailable(t *testing.T) {
 	tests := []struct {
 		name           string

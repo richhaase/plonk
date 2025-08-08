@@ -314,11 +314,6 @@ func (p *PixiManager) IsAvailable(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-// SupportsSearch returns true as pixi supports package search
-func (p *PixiManager) SupportsSearch() bool {
-	return true
-}
-
 // CheckHealth performs a comprehensive health check of the Pixi installation
 func (p *PixiManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	check := &HealthCheck{

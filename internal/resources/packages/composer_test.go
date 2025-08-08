@@ -285,13 +285,6 @@ func TestComposerManager_IsAvailable(t *testing.T) {
 	}
 }
 
-func TestComposerManager_SupportsSearch(t *testing.T) {
-	manager := NewComposerManager()
-	if !manager.SupportsSearch() {
-		t.Errorf("SupportsSearch() = false, want true - composer supports search")
-	}
-}
-
 func TestComposerManager_handleInstallError(t *testing.T) {
 	manager := NewComposerManager()
 

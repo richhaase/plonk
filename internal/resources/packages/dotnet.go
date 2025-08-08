@@ -304,11 +304,6 @@ func (d *DotnetManager) IsAvailable(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-// SupportsSearch returns false as .NET CLI doesn't have built-in tool search
-func (d *DotnetManager) SupportsSearch() bool {
-	return false
-}
-
 // CheckHealth performs a comprehensive health check of the .NET Global Tools installation
 func (d *DotnetManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	check := &HealthCheck{
