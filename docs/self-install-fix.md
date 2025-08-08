@@ -15,19 +15,20 @@ This plan addresses unnecessary dependencies in package manager self-installatio
 
 A comprehensive audit of all 11 package manager `SelfInstall()` methods revealed the following dependency patterns:
 
-#### ✅ Truly Independent Managers (5/11)
+#### ✅ Truly Independent Managers (6/11)
 1. **Homebrew** - Uses standalone installer script
 2. **Cargo** - Uses rustup installer script
 3. **UV** - Uses standalone installer script
 4. **Pixi** - Uses standalone installer script
 5. **Composer** - Uses hash-verified installer (requires PHP runtime only)
+6. **PNPM** - Uses standalone installer script (exemplar implementation)
 
 #### ⚠️ Dependent Managers (5/11)
-6. **NPM** - Depends on Homebrew (`brew install node`)
-7. **Gem** - Depends on Homebrew (`brew install ruby`)
-8. **.NET Tools** - Depends on Homebrew (`brew install dotnet`)
-9. **Pipx** - Depends on pip3 OR Homebrew
-10. **Go Install** - Platform-dependent (Homebrew on macOS, system pkg mgrs on Linux)
+7. **NPM** - Depends on Homebrew (`brew install node`)
+8. **Gem** - Depends on Homebrew (`brew install ruby`)
+9. **.NET Tools** - Depends on Homebrew (`brew install dotnet`)
+10. **Pipx** - Depends on pip3 OR Homebrew
+11. **Go Install** - Platform-dependent (Homebrew on macOS, system pkg mgrs on Linux)
 
 #### 🔍 Current Dependency Hierarchy
 ```
@@ -53,6 +54,13 @@ Go Install (mixed - system package managers)
 ## Objective
 
 **Transform package managers to use a SINGLE, most independent installation method available. Each package manager should have exactly one predictable installation method, treating each manager as a first-class citizen with no fallback dependencies on other package managers.**
+
+### Core Principles
+1. **One Method Only**: Each manager has exactly one canonical SelfInstall() implementation
+2. **No Fallbacks**: Remove all conditional logic and alternative installation paths
+3. **Maximum Independence**: Use the most independent method available (standalone scripts preferred)
+4. **Predictable Behavior**: Users always know exactly how each manager will be installed
+5. **First-Class Treatment**: Every package manager is treated equally, none depend on others
 
 ## Detailed Manager Analysis
 
@@ -148,6 +156,37 @@ default:
 
 **Recommendation**: Use ONLY official Go installer script - no package manager dependencies
 
+## Reference Implementation: PNPM
+
+**PNPM serves as the exemplar of proper single-method installation design within plonk:**
+
+```go
+func (p *PnpmManager) SelfInstall(ctx context.Context) error {
+    // Check if already available (idempotent)
+    if available, _ := p.IsAvailable(ctx); available {
+        return nil
+    }
+
+    // Use ONLY the most independent installation method - standalone script
+    // This ensures predictable behavior and treats pnpm as a first-class citizen
+    return p.installViaStandaloneScript(ctx)
+}
+
+func (p *PnpmManager) installViaStandaloneScript(ctx context.Context) error {
+    script := `curl -fsSL https://get.pnpm.io/install.sh | sh`
+    return executeInstallScript(ctx, script, "pnpm")
+}
+```
+
+**Key Design Principles Demonstrated:**
+- ✅ **Single Method**: Only one installation path, no conditionals or fallbacks
+- ✅ **Predictable**: Users always know exactly how pnpm will be installed
+- ✅ **Independent**: Requires no other package managers or dependencies
+- ✅ **First-Class**: pnpm is treated as an independent package manager
+- ✅ **Clear Error Handling**: Fails cleanly with actionable error messages
+
+This implementation should serve as the **template** for updating all other dependent managers.
+
 ## Implementation Plan
 
 ### Phase 1: Research and Validation (1 day)
@@ -195,27 +234,33 @@ Modify `CheckHealth()` methods to suggest new installation methods in help text.
 ### Phase 3: Implementation (2-3 days)
 
 #### Task 3.1: NPM Manager (Priority 1)
-- Implement nvm installer as primary method
-- Add fallback to official Node.js installer
-- Keep Homebrew as final fallback
+- Replace Homebrew dependency with ONLY nvm installer script
+- Remove all fallback mechanisms
+- Update error messages to provide manual installation guidance
 - Update tests and documentation
 
 #### Task 3.2: .NET Tools Manager (Priority 1)
-- Implement official dotnet-install.sh script
-- Add Windows PowerShell method
-- Keep Homebrew as fallback
+- Replace Homebrew dependency with ONLY official dotnet-install.sh script
+- Remove all fallback mechanisms
+- Update error messages to provide manual installation guidance
 - Update tests and documentation
 
 #### Task 3.3: Gem Manager (Priority 2)
-- Implement rbenv installer as primary method
-- Add RVM as secondary option
-- Keep Homebrew as fallback
+- Replace Homebrew dependency with ONLY rbenv installer script
+- Remove all fallback mechanisms
+- Update error messages to provide manual installation guidance
 - Update tests and documentation
 
 #### Task 3.4: Go Install Manager (Priority 2)
-- Add official Go installer method
-- Keep platform-specific package managers as fallbacks
-- Improve Windows support
+- Replace platform-specific dependencies with ONLY official Go installer
+- Remove all fallback mechanisms
+- Update error messages to provide manual installation guidance
+- Update tests and documentation
+
+#### Task 3.5: Pipx Manager (Priority 3)
+- Remove Homebrew fallback, keep ONLY pip3 installation
+- Remove fallback mechanisms
+- Update error messages to provide manual installation guidance
 - Update tests and documentation
 
 ### Phase 4: Testing and Validation (1 day)
@@ -240,19 +285,20 @@ Test new installation methods on:
 
 ### Before/After Comparison
 
-| Manager | Current Method | New Primary Method | Independence Level |
+| Manager | Current Method | New Single Method | Independence Level |
 |---------|---------------|-------------------|-------------------|
-| NPM | Homebrew | nvm installer | Independent ✅ |
-| .NET | Homebrew | Official installer | Independent ✅ |
-| Gem | Homebrew | rbenv installer | Independent ✅ |
-| Go | Platform-mixed | Official installer | Independent ✅ |
-| Pipx | pip3 → Homebrew | pip3 → pipx installer | Improved ✅ |
+| NPM | Homebrew | nvm installer ONLY | Independent ✅ |
+| .NET | Homebrew | Official installer ONLY | Independent ✅ |
+| Gem | Homebrew | rbenv installer ONLY | Independent ✅ |
+| Go | Platform-mixed | Official installer ONLY | Independent ✅ |
+| Pipx | pip3 → Homebrew | pip3 ONLY | Independent ✅ |
 
 ### Success Metrics
-- **Reduced Dependencies**: 4+ managers become truly independent
+- **Eliminated Dependencies**: 5 managers become truly independent (11/11 total)
+- **Predictable Behavior**: Each manager has exactly one installation method
 - **Improved Success Rate**: Higher installation success on diverse systems
-- **Better User Experience**: More consistent installation behavior
-- **Enhanced Reliability**: Less dependency on external package managers
+- **Better User Experience**: Completely consistent installation behavior
+- **Enhanced Reliability**: Zero dependency on external package managers
 
 ## Implementation Considerations
 
@@ -263,9 +309,10 @@ Test new installation methods on:
 - ✅ Follow principle of least privilege
 
 ### Backwards Compatibility
-- ✅ Keep existing fallback methods for compatibility
-- ✅ Maintain current error message format
+- ✅ Maintain current SelfInstall() method signature
+- ✅ Provide clear error messages when installation fails
 - ✅ Ensure no breaking changes to public interfaces
+- ✅ Update CheckHealth() suggestions to reflect new methods
 
 ### Error Handling
 - ✅ Clear error messages explaining what failed and why
@@ -276,13 +323,13 @@ Test new installation methods on:
 
 ### Technical Risks: LOW-MEDIUM
 - **Mitigation**: Independent installers are maintained by official projects
-- **Mitigation**: Keep existing Homebrew fallbacks for compatibility
+- **Mitigation**: Clear error messages guide users when installation fails
 - **Mitigation**: Comprehensive testing on multiple platforms
 
 ### Compatibility Risks: LOW
-- **Mitigation**: Phased rollout with existing methods as fallbacks
+- **Mitigation**: Single-method approach provides predictable behavior
 - **Mitigation**: No changes to public interfaces
-- **Mitigation**: Backwards compatibility preserved
+- **Mitigation**: Method signatures preserved, only implementation changes
 
 ### Security Risks: MEDIUM
 - **Mitigation**: Use official installation scripts only
@@ -321,11 +368,11 @@ docs/package-managers.md    # Updated installation documentation
 ## Success Criteria
 
 ### Functional Requirements
-- ✅ Each manager uses most independent installation method available
-- ✅ Fallback mechanisms preserved for compatibility
+- ✅ Each manager uses exactly ONE independent installation method
+- ✅ No fallback mechanisms - single predictable behavior
 - ✅ All managers can self-install on clean systems
 - ✅ Cross-platform functionality maintained or improved
-- ✅ Error handling provides clear guidance
+- ✅ Error handling provides clear manual installation guidance
 
 ### Non-Functional Requirements
 - **Reliability**: Installation success rate > 95% on supported platforms
@@ -342,16 +389,22 @@ docs/package-managers.md    # Updated installation documentation
 4. **Caching**: Cache downloaded installers for faster subsequent installations
 
 ### Long-term Goals
-1. **Complete Independence**: Achieve 100% independent installation capability
-2. **Smart Fallbacks**: Machine learning-based selection of optimal installation method
+1. **Complete Independence**: Maintain 100% independent installation capability
+2. **Enhanced Validation**: Improved verification of installation success
 3. **Containerized Installation**: Support for container-based isolation
 4. **Air-gapped Installation**: Support for offline installation scenarios
 
 ## Conclusion
 
-This audit and fix plan addresses a significant architectural improvement opportunity. By maximizing installation independence, we enhance plonk's reliability, reduce complexity, and improve the user experience across diverse system configurations.
+This audit and fix plan addresses a significant architectural improvement opportunity. By implementing single-method installation for all package managers, we achieve:
 
-The phased approach ensures minimal risk while delivering meaningful improvements. The focus on independent installation methods aligns with plonk's goals of unified, efficient package management without unnecessary dependencies.
+- **Complete Predictability**: Every package manager has exactly one installation method
+- **Maximum Independence**: 11/11 managers become truly independent
+- **Simplified Architecture**: Elimination of complex fallback logic
+- **Enhanced Reliability**: No dependency chains or conditional failures
+- **Better User Experience**: Consistent, predictable behavior across all managers
+
+The single-method approach, exemplified by the pnpm implementation, represents the architectural ideal: each package manager is treated as a first-class citizen with its own independent installation method. This eliminates ambiguity, reduces complexity, and provides users with completely predictable behavior.
 
 ---
 
