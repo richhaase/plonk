@@ -6,6 +6,8 @@ package packages
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -214,6 +216,26 @@ func (d *DotnetManager) InstalledVersion(ctx context.Context, name string) (stri
 	return d.getInstalledVersion(ctx, name)
 }
 
+// SelfInstall attempts to install .NET via available package managers
+func (d *DotnetManager) SelfInstall(ctx context.Context) error {
+	// Check if already available (idempotent)
+	if available, _ := d.IsAvailable(ctx); available {
+		return nil
+	}
+
+	// Try to install .NET SDK via Homebrew if available
+	if homebrewAvailable, _ := checkPackageManagerAvailable(ctx, "brew"); homebrewAvailable {
+		return d.installViaHomebrew(ctx)
+	}
+
+	return fmt.Errorf(".NET tools require .NET SDK installation - install .NET SDK manually from https://dotnet.microsoft.com/download or ensure Homebrew is available")
+}
+
+// installViaHomebrew installs .NET SDK via Homebrew
+func (d *DotnetManager) installViaHomebrew(ctx context.Context) error {
+	return executeInstallCommand(ctx, "brew", []string{"install", "dotnet"}, ".NET SDK")
+}
+
 func init() {
 	RegisterManager("dotnet", func() PackageManager {
 		return NewDotnetManager()
@@ -242,6 +264,68 @@ func (d *DotnetManager) IsAvailable(ctx context.Context) (bool, error) {
 // SupportsSearch returns false as .NET CLI doesn't have built-in tool search
 func (d *DotnetManager) SupportsSearch() bool {
 	return false
+}
+
+// CheckHealth performs a comprehensive health check of the .NET Global Tools installation
+func (d *DotnetManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
+	check := &HealthCheck{
+		Name:     ".NET Global Tools Manager",
+		Category: "package-managers",
+		Status:   "pass",
+		Message:  ".NET SDK is available and properly configured",
+	}
+
+	// Check basic availability first
+	available, err := d.IsAvailable(ctx)
+	if err != nil {
+		if IsContextError(err) {
+			return nil, err
+		}
+		check.Status = "fail"
+		check.Message = ".NET SDK availability check failed"
+		check.Issues = []string{fmt.Sprintf("Error checking .NET SDK: %v", err)}
+		return check, nil
+	}
+
+	if !available {
+		check.Status = "fail"
+		check.Message = ".NET SDK is required but not available"
+		check.Issues = []string{".NET SDK is required for managing global tools"}
+		check.Suggestions = []string{
+			"Install .NET SDK: https://dotnet.microsoft.com/download",
+			"Or via Homebrew: brew install --cask dotnet",
+			"After installation, ensure dotnet is in your PATH",
+		}
+		return check, nil
+	}
+
+	// Get .NET global tools directory (predictable path)
+	binDir := d.getBinDirectory()
+
+	// Check if bin directory is in PATH
+	pathCheck := checkDirectoryInPath(binDir)
+	check.Details = append(check.Details, fmt.Sprintf(".NET global tools directory: %s", binDir))
+
+	if !pathCheck.inPath && pathCheck.exists {
+		check.Status = "warn"
+		check.Message = ".NET global tools directory exists but not in PATH"
+		check.Issues = []string{fmt.Sprintf("Directory %s exists but not in PATH", binDir)}
+		check.Suggestions = pathCheck.suggestions
+	} else if !pathCheck.exists {
+		check.Status = "warn"
+		check.Message = ".NET global tools directory does not exist"
+		check.Issues = []string{fmt.Sprintf("Directory %s does not exist", binDir)}
+	} else {
+		check.Details = append(check.Details, ".NET global tools directory is in PATH")
+	}
+
+	return check, nil
+}
+
+// getBinDirectory returns the predictable .NET global tools directory
+func (d *DotnetManager) getBinDirectory() string {
+	homeDir, _ := os.UserHomeDir()
+	return filepath.Join(homeDir, ".dotnet", "tools")
 }
 
 // handleInstallError processes install command errors

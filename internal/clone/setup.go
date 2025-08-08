@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/diagnostics"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/output"
@@ -214,98 +213,6 @@ func getManualInstallInstructions(manager string) string {
 	}
 }
 
-// installSingleManager installs a single package manager with error handling
-func installSingleManager(ctx context.Context, manager string, cfg Config) error {
-	switch manager {
-	case "homebrew", "brew":
-		return fmt.Errorf("homebrew must be installed manually as a prerequisite - see https://brew.sh")
-	case "cargo":
-		return installCargo(ctx, cfg)
-	case "npm", "pip", "gem", "go":
-		return installLanguagePackage(ctx, manager, cfg)
-	default:
-		return fmt.Errorf("unsupported package manager: %s", manager)
-	}
-}
-
-// findMissingPackageManagers extracts missing package managers from health report
-func findMissingPackageManagers(report diagnostics.HealthReport) []string {
-	var missing []string
-
-	for _, check := range report.Checks {
-		if check.Category == "package-managers" && check.Name == "Package Manager Availability" {
-			// Parse the Details field which contains entries like "brew: not available" or "npm: available"
-			for _, detail := range check.Details {
-				if strings.Contains(detail, "not available") {
-					// Extract manager name before the colon
-					parts := strings.Split(detail, ":")
-					if len(parts) > 0 {
-						managerName := strings.TrimSpace(parts[0])
-						if managerName != "" {
-							missing = append(missing, managerName)
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return missing
-}
-
-// installLanguagePackage installs a single language package via plonk's system
-func installLanguagePackage(ctx context.Context, manager string, cfg Config) error {
-	// Map package manager to package name and description
-	var packageName, description string
-	switch manager {
-	case "npm":
-		packageName = "node"
-		description = "Node.js (provides npm)"
-	case "pip":
-		packageName = "python"
-		description = "Python (provides pip)"
-	case "gem":
-		packageName = "ruby"
-		description = "Ruby (provides gem)"
-	case "go":
-		packageName = "go"
-		description = "Go language"
-	default:
-		return fmt.Errorf("unsupported language package manager: %s", manager)
-	}
-
-	// Load current config to get default manager
-	configDir := config.GetConfigDir()
-	currentConfig := config.LoadWithDefaults(configDir)
-
-	// Check if default manager is available
-	registry := packages.NewManagerRegistry()
-	defaultMgr, err := registry.GetManager(currentConfig.DefaultManager)
-	if err != nil {
-		return fmt.Errorf("default package manager %s not available: %w", currentConfig.DefaultManager, err)
-	}
-
-	available, err := defaultMgr.IsAvailable(ctx)
-	if err != nil || !available {
-		return fmt.Errorf("default package manager %s is not functional", currentConfig.DefaultManager)
-	}
-
-	output.Printf("Installing %s via %s...\n", description, currentConfig.DefaultManager)
-
-	// Install the package using plonk's normal installation path (updates lock file)
-	opts := packages.InstallOptions{
-		Manager: currentConfig.DefaultManager,
-		DryRun:  false,
-	}
-
-	_, err = packages.InstallPackages(ctx, configDir, []string{packageName}, opts)
-	if err != nil {
-		return fmt.Errorf("failed to install %s via %s: %w", description, currentConfig.DefaultManager, err)
-	}
-
-	return nil
-}
-
 // DetectRequiredManagers reads a lock file and returns unique package managers
 func DetectRequiredManagers(lockPath string) ([]string, error) {
 	lockService := lock.NewYAMLLockService(filepath.Dir(lockPath))
@@ -353,7 +260,7 @@ func DetectRequiredManagers(lockPath string) ([]string, error) {
 	return managers, nil
 }
 
-// installDetectedManagers installs only the specified package managers
+// installDetectedManagers installs only the specified package managers using SelfInstall interface
 func installDetectedManagers(ctx context.Context, managers []string, cfg Config) error {
 	if len(managers) == 0 {
 		return nil
@@ -361,19 +268,28 @@ func installDetectedManagers(ctx context.Context, managers []string, cfg Config)
 
 	output.StageUpdate(fmt.Sprintf("Installing package managers (%d required)...", len(managers)))
 
-	// Run doctor checks to get current state
-	healthReport := diagnostics.RunHealthChecks()
+	// Get package manager registry
+	registry := packages.NewManagerRegistry()
 
 	// Find which of the detected managers are missing
 	var missingManagers []string
-	allMissing := findMissingPackageManagers(healthReport)
 
 	for _, mgr := range managers {
-		for _, missing := range allMissing {
-			if mgr == missing {
-				missingManagers = append(missingManagers, mgr)
-				break
-			}
+		packageManager, err := registry.GetManager(mgr)
+		if err != nil {
+			// If we can't get the manager from registry, skip it
+			output.Printf("Warning: Unknown package manager '%s', skipping\n", mgr)
+			continue
+		}
+
+		available, err := packageManager.IsAvailable(ctx)
+		if err != nil {
+			output.Printf("Warning: Could not check availability of %s: %v\n", mgr, err)
+			continue
+		}
+
+		if !available {
+			missingManagers = append(missingManagers, mgr)
 		}
 	}
 
@@ -388,14 +304,7 @@ func installDetectedManagers(ctx context.Context, managers []string, cfg Config)
 		output.Printf("- %s (%s)\n", manager, description)
 	}
 
-	if cfg.Interactive {
-		if !promptYesNo("Install missing package managers?", true) {
-			output.Printf("Some required tools are missing. You can install them manually\n")
-			return nil
-		}
-	}
-
-	// Install missing tools
+	// Install missing tools using SelfInstall interface
 	successful := 0
 	failed := 0
 
@@ -403,7 +312,15 @@ func installDetectedManagers(ctx context.Context, managers []string, cfg Config)
 		// Show progress for each manager
 		output.ProgressUpdate(i+1, len(missingManagers), "Installing", getManagerDescription(manager))
 
-		if err := installSingleManager(ctx, manager, cfg); err != nil {
+		packageManager, err := registry.GetManager(manager)
+		if err != nil {
+			failed++
+			output.Printf("Failed to get manager for %s: %v\n", manager, err)
+			output.Printf("Manual installation: %s\n", getManualInstallInstructions(manager))
+			continue
+		}
+
+		if err := packageManager.SelfInstall(ctx); err != nil {
 			failed++
 			output.Printf("Failed to install %s: %v\n", manager, err)
 			output.Printf("Manual installation: %s\n", getManualInstallInstructions(manager))

@@ -6,6 +6,7 @@ package packages
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -165,6 +166,18 @@ func (u *UvManager) InstalledVersion(ctx context.Context, name string) (string, 
 	return "", fmt.Errorf("version information not found for tool '%s'", name)
 }
 
+// SelfInstall installs UV using official installer
+func (u *UvManager) SelfInstall(ctx context.Context) error {
+	// Check if already available (idempotent)
+	if available, _ := u.IsAvailable(ctx); available {
+		return nil
+	}
+
+	// Execute official UV installer script
+	script := `curl -LsSf https://astral.sh/uv/install.sh | sh`
+	return executeInstallScript(ctx, script, "UV")
+}
+
 func init() {
 	RegisterManager("uv", func() PackageManager {
 		return NewUvManager()
@@ -193,6 +206,79 @@ func (u *UvManager) IsAvailable(ctx context.Context) (bool, error) {
 // SupportsSearch returns false as UV does not support tool search
 func (u *UvManager) SupportsSearch() bool {
 	return false
+}
+
+// CheckHealth performs a comprehensive health check of the UV tool installation
+func (u *UvManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
+	check := &HealthCheck{
+		Name:     "UV Tool Manager",
+		Category: "package-managers",
+		Status:   "pass",
+		Message:  "UV is available and properly configured",
+	}
+
+	// Check basic availability first
+	available, err := u.IsAvailable(ctx)
+	if err != nil {
+		if IsContextError(err) {
+			return nil, err
+		}
+		check.Status = "fail"
+		check.Message = "UV availability check failed"
+		check.Issues = []string{fmt.Sprintf("Error checking UV: %v", err)}
+		return check, nil
+	}
+
+	if !available {
+		check.Status = "fail"
+		check.Message = "UV is required but not available"
+		check.Issues = []string{"UV is required for managing Python tools"}
+		check.Suggestions = []string{
+			"Install UV: curl -LsSf https://astral.sh/uv/install.sh | sh",
+			"Or via pipx: pipx install uv",
+			"After installation, ensure uv is in your PATH",
+		}
+		return check, nil
+	}
+
+	// Discover UV tool directory dynamically
+	binDir, err := u.getBinDirectory(ctx)
+	if err != nil {
+		check.Status = "warn"
+		check.Message = "Could not determine UV tool directory"
+		check.Issues = []string{fmt.Sprintf("Error discovering tool directory: %v", err)}
+		return check, nil
+	}
+
+	// Check if bin directory is in PATH
+	pathCheck := checkDirectoryInPath(binDir)
+	check.Details = append(check.Details, fmt.Sprintf("UV tool directory: %s", binDir))
+
+	if !pathCheck.inPath && pathCheck.exists {
+		check.Status = "warn"
+		check.Message = "UV tool directory exists but not in PATH"
+		check.Issues = []string{fmt.Sprintf("Directory %s exists but not in PATH", binDir)}
+		check.Suggestions = pathCheck.suggestions
+	} else if !pathCheck.exists {
+		check.Status = "warn"
+		check.Message = "UV tool directory does not exist"
+		check.Issues = []string{fmt.Sprintf("Directory %s does not exist", binDir)}
+	} else {
+		check.Details = append(check.Details, "UV tool directory is in PATH")
+	}
+
+	return check, nil
+}
+
+// getBinDirectory discovers the UV tool bin directory using uv tool dir
+func (u *UvManager) getBinDirectory(ctx context.Context) (string, error) {
+	output, err := ExecuteCommand(ctx, u.binary, "tool", "dir")
+	if err != nil {
+		return "", fmt.Errorf("failed to get UV tool directory: %w", err)
+	}
+
+	toolDir := strings.TrimSpace(string(output))
+	return filepath.Join(toolDir, "bin"), nil
 }
 
 // handleInstallError processes install command errors

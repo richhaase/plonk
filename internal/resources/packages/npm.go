@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -325,6 +326,26 @@ func cleanJSONValue(value string) string {
 	return value
 }
 
+// SelfInstall attempts to install NPM via available package managers
+func (n *NpmManager) SelfInstall(ctx context.Context) error {
+	// Check if already available (idempotent)
+	if available, _ := n.IsAvailable(ctx); available {
+		return nil
+	}
+
+	// Try to install Node.js via Homebrew if available
+	if homebrewAvailable, _ := checkPackageManagerAvailable(ctx, "brew"); homebrewAvailable {
+		return n.installViaHomebrew(ctx)
+	}
+
+	return fmt.Errorf("npm requires Node.js installation - install Node.js manually from https://nodejs.org or ensure Homebrew is available")
+}
+
+// installViaHomebrew installs Node.js (which includes NPM) via Homebrew
+func (n *NpmManager) installViaHomebrew(ctx context.Context) error {
+	return executeInstallCommand(ctx, "brew", []string{"install", "node"}, "Node.js (includes NPM)")
+}
+
 func init() {
 	RegisterManager("npm", func() PackageManager {
 		return NewNpmManager()
@@ -353,6 +374,82 @@ func (n *NpmManager) IsAvailable(ctx context.Context) (bool, error) {
 // SupportsSearch returns true as NPM supports package search
 func (n *NpmManager) SupportsSearch() bool {
 	return true
+}
+
+// CheckHealth performs a comprehensive health check of the NPM installation
+func (n *NpmManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
+	check := &HealthCheck{
+		Name:     "NPM Manager",
+		Category: "package-managers",
+		Status:   "pass",
+		Message:  "NPM is available and properly configured",
+	}
+
+	// Check basic availability
+	available, err := n.IsAvailable(ctx)
+	if err != nil {
+		if IsContextError(err) {
+			return nil, err
+		}
+		check.Status = "warn"
+		check.Message = "NPM availability check failed"
+		check.Issues = []string{fmt.Sprintf("Error checking npm: %v", err)}
+		return check, nil
+	}
+
+	if !available {
+		check.Status = "warn"
+		check.Message = "NPM is not available"
+		check.Issues = []string{"NPM command not found or not functional"}
+		check.Suggestions = []string{
+			"Install Node.js (includes NPM): brew install node",
+			"Or install NPM separately if Node.js is already installed",
+		}
+		return check, nil
+	}
+
+	// Discover NPM global bin directory
+	binDir, err := n.getGlobalBinDirectory(ctx)
+	if err != nil {
+		check.Status = "warn"
+		check.Message = "Could not determine NPM global bin directory"
+		check.Issues = []string{fmt.Sprintf("Error discovering bin directory: %v", err)}
+		check.Details = []string{"Consider configuring NPM prefix: npm config set prefix ~/.npm-global"}
+		return check, nil
+	}
+
+	check.Details = append(check.Details, fmt.Sprintf("NPM global bin directory: %s", binDir))
+
+	// Check PATH configuration
+	pathCheck := checkDirectoryInPath(binDir)
+	if !pathCheck.inPath && pathCheck.exists {
+		check.Status = "warn"
+		check.Message = "NPM global bin directory exists but not in PATH"
+		check.Issues = []string{fmt.Sprintf("Directory %s exists but not in PATH", binDir)}
+		check.Suggestions = pathCheck.suggestions
+	} else if !pathCheck.exists {
+		check.Details = append(check.Details, "NPM global bin directory does not exist (no global packages installed)")
+	} else {
+		check.Details = append(check.Details, "NPM global bin directory is in PATH")
+	}
+
+	return check, nil
+}
+
+// getGlobalBinDirectory discovers the NPM global bin directory
+func (n *NpmManager) getGlobalBinDirectory(ctx context.Context) (string, error) {
+	// Get npm global prefix
+	output, err := ExecuteCommand(ctx, n.binary, "config", "get", "prefix")
+	if err != nil {
+		return "", fmt.Errorf("failed to get npm prefix: %w", err)
+	}
+
+	prefix := strings.TrimSpace(string(output))
+	if prefix == "" {
+		return "", fmt.Errorf("npm prefix is empty")
+	}
+
+	return filepath.Join(prefix, "bin"), nil
 }
 
 // handleInstallError processes install command errors

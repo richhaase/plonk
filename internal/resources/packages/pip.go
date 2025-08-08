@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 )
 
@@ -165,6 +166,81 @@ func (p *PipManager) IsInstalled(ctx context.Context, name string) (bool, error)
 // SupportsSearch returns true as pip has a search command.
 func (p *PipManager) SupportsSearch() bool {
 	return true
+}
+
+// CheckHealth performs a comprehensive health check of the Pip installation
+func (p *PipManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
+	check := &HealthCheck{
+		Name:     "Pip Manager",
+		Category: "package-managers",
+		Status:   "pass",
+		Message:  "Pip is available and properly configured",
+	}
+
+	// Check availability
+	available, err := p.IsAvailable(ctx)
+	if err != nil {
+		if IsContextError(err) {
+			return nil, err
+		}
+		check.Status = "warn"
+		check.Message = "Pip availability check failed"
+		check.Issues = []string{fmt.Sprintf("Error checking pip: %v", err)}
+		return check, nil
+	}
+
+	if !available {
+		check.Status = "warn"
+		check.Message = "Pip is not available"
+		check.Issues = []string{"pip/pip3 command not found"}
+		check.Suggestions = []string{
+			"Install Python 3: brew install python3",
+			"Ensure pip is installed: python3 -m ensurepip",
+		}
+		return check, nil
+	}
+
+	// Discover user bin directory
+	binDir, err := p.getUserBinDirectory(ctx)
+	if err != nil {
+		check.Status = "warn"
+		check.Message = "Could not determine Python user bin directory"
+		check.Issues = []string{fmt.Sprintf("Error discovering bin directory: %v", err)}
+		return check, nil
+	}
+
+	check.Details = append(check.Details, fmt.Sprintf("Python user bin directory: %s", binDir))
+
+	// Check PATH
+	pathCheck := checkDirectoryInPath(binDir)
+	if !pathCheck.inPath && pathCheck.exists {
+		check.Status = "warn"
+		check.Message = "Python user bin directory exists but not in PATH"
+		check.Issues = []string{fmt.Sprintf("Directory %s exists but not in PATH", binDir)}
+		check.Suggestions = pathCheck.suggestions
+	} else if !pathCheck.exists {
+		check.Details = append(check.Details, "Python user bin directory does not exist (no user packages installed)")
+	} else {
+		check.Details = append(check.Details, "Python user bin directory is in PATH")
+	}
+
+	return check, nil
+}
+
+// getUserBinDirectory discovers the Python user bin directory
+func (p *PipManager) getUserBinDirectory(ctx context.Context) (string, error) {
+	// Use python3 to get user base directory
+	output, err := ExecuteCommand(ctx, "python3", "-m", "site", "--user-base")
+	if err != nil {
+		return "", fmt.Errorf("failed to get python user base: %w", err)
+	}
+
+	userBase := strings.TrimSpace(string(output))
+	if userBase == "" {
+		return "", fmt.Errorf("python user base is empty")
+	}
+
+	return filepath.Join(userBase, "bin"), nil
 }
 
 // Search searches for packages in PyPI using pip search.
@@ -339,6 +415,45 @@ func (p *PipManager) normalizeName(name string) string {
 	normalized := strings.ToLower(name)
 	normalized = strings.ReplaceAll(normalized, "-", "_")
 	return normalized
+}
+
+// SelfInstall attempts to install Pip
+func (p *PipManager) SelfInstall(ctx context.Context) error {
+	// Check if already available (idempotent)
+	if available, _ := p.IsAvailable(ctx); available {
+		return nil
+	}
+
+	// Try ensurepip first (Python 3.4+)
+	if err := p.tryEnsurePip(ctx); err == nil {
+		return nil
+	}
+
+	// Fallback to get-pip.py
+	return p.installWithGetPip(ctx)
+}
+
+// tryEnsurePip attempts to install pip using Python's ensurepip module
+func (p *PipManager) tryEnsurePip(ctx context.Context) error {
+	// Check if Python is available
+	if _, err := defaultExecutor.LookPath("python3"); err != nil {
+		return fmt.Errorf("python3 not available for ensurepip")
+	}
+
+	// Try to install pip using ensurepip
+	return executeInstallCommand(ctx, "python3", []string{"-m", "ensurepip", "--upgrade"}, "Pip (via ensurepip)")
+}
+
+// installWithGetPip downloads and runs get-pip.py
+func (p *PipManager) installWithGetPip(ctx context.Context) error {
+	// Check if Python is available
+	if _, err := defaultExecutor.LookPath("python3"); err != nil {
+		return fmt.Errorf("pip requires Python 3 to be installed first - install Python 3 and retry")
+	}
+
+	// Download and run get-pip.py
+	script := `curl -fsSL https://bootstrap.pypa.io/get-pip.py | python3`
+	return executeInstallScript(ctx, script, "Pip (via get-pip.py)")
 }
 
 func init() {

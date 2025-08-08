@@ -7,6 +7,8 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -263,6 +265,93 @@ func (c *CargoManager) IsAvailable(ctx context.Context) (bool, error) {
 // SupportsSearch returns true as Cargo supports package search
 func (c *CargoManager) SupportsSearch() bool {
 	return true
+}
+
+// CheckHealth performs a comprehensive health check of the Cargo installation
+func (c *CargoManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
+	check := &HealthCheck{
+		Name:     "Cargo Manager",
+		Category: "package-managers",
+		Status:   "pass",
+		Message:  "Cargo is available and properly configured",
+	}
+
+	// Check availability
+	available, err := c.IsAvailable(ctx)
+	if err != nil {
+		if IsContextError(err) {
+			return nil, err
+		}
+		check.Status = "warn"
+		check.Message = "Cargo availability check failed"
+		check.Issues = []string{fmt.Sprintf("Error checking cargo: %v", err)}
+		return check, nil
+	}
+
+	if !available {
+		check.Status = "warn"
+		check.Message = "Cargo is not available"
+		check.Issues = []string{"cargo command not found"}
+		check.Suggestions = []string{
+			"Install Rust (includes Cargo): curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh",
+			"Or install via Homebrew: brew install rust",
+		}
+		return check, nil
+	}
+
+	// Discover cargo bin directory
+	binDir, err := c.getBinDirectory()
+	if err != nil {
+		check.Status = "warn"
+		check.Message = "Could not determine Cargo bin directory"
+		check.Issues = []string{fmt.Sprintf("Error discovering bin directory: %v", err)}
+		return check, nil
+	}
+
+	check.Details = append(check.Details, fmt.Sprintf("Cargo bin directory: %s", binDir))
+
+	// Check PATH
+	pathCheck := checkDirectoryInPath(binDir)
+	if !pathCheck.inPath && pathCheck.exists {
+		check.Status = "warn"
+		check.Message = "Cargo bin directory exists but not in PATH"
+		check.Issues = []string{fmt.Sprintf("Directory %s exists but not in PATH", binDir)}
+		check.Suggestions = pathCheck.suggestions
+	} else if !pathCheck.exists {
+		check.Details = append(check.Details, "Cargo bin directory does not exist (no packages installed)")
+	} else {
+		check.Details = append(check.Details, "Cargo bin directory is in PATH")
+	}
+
+	return check, nil
+}
+
+// getBinDirectory discovers the Cargo bin directory
+func (c *CargoManager) getBinDirectory() (string, error) {
+	// Check CARGO_HOME first
+	if cargoHome := os.Getenv("CARGO_HOME"); cargoHome != "" {
+		return filepath.Join(cargoHome, "bin"), nil
+	}
+
+	// Default to ~/.cargo/bin
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get user home directory: %w", err)
+	}
+
+	return filepath.Join(homeDir, ".cargo", "bin"), nil
+}
+
+// SelfInstall installs Rust/Cargo using the official rustup installer
+func (c *CargoManager) SelfInstall(ctx context.Context) error {
+	// Check if already available (idempotent)
+	if available, _ := c.IsAvailable(ctx); available {
+		return nil
+	}
+
+	// Execute official rustup installer
+	script := `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y`
+	return executeInstallScript(ctx, script, "Rust/Cargo")
 }
 
 func init() {

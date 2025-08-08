@@ -6,6 +6,7 @@ package packages
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -325,6 +326,110 @@ func (g *GemManager) IsAvailable(ctx context.Context) (bool, error) {
 // SupportsSearch returns true as gem supports package search
 func (g *GemManager) SupportsSearch() bool {
 	return true
+}
+
+// CheckHealth performs a comprehensive health check of the Gem installation
+func (g *GemManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
+	check := &HealthCheck{
+		Name:     "Gem Manager",
+		Category: "package-managers",
+		Status:   "pass",
+		Message:  "Gem is available and properly configured",
+	}
+
+	// Check availability
+	available, err := g.IsAvailable(ctx)
+	if err != nil {
+		if IsContextError(err) {
+			return nil, err
+		}
+		check.Status = "warn"
+		check.Message = "Gem availability check failed"
+		check.Issues = []string{fmt.Sprintf("Error checking gem: %v", err)}
+		return check, nil
+	}
+
+	if !available {
+		check.Status = "warn"
+		check.Message = "Gem is not available"
+		check.Issues = []string{"gem command not found"}
+		check.Suggestions = []string{
+			"Install Ruby (includes Gem): brew install ruby",
+			"Or install Ruby via system package manager",
+		}
+		return check, nil
+	}
+
+	// Discover gem bin directory
+	binDir, err := g.getBinDirectory(ctx)
+	if err != nil {
+		check.Status = "warn"
+		check.Message = "Could not determine Gem bin directory"
+		check.Issues = []string{fmt.Sprintf("Error discovering bin directory: %v", err)}
+		return check, nil
+	}
+
+	check.Details = append(check.Details, fmt.Sprintf("Gem bin directory: %s", binDir))
+
+	// Check PATH
+	pathCheck := checkDirectoryInPath(binDir)
+	if !pathCheck.inPath && pathCheck.exists {
+		check.Status = "warn"
+		check.Message = "Gem bin directory exists but not in PATH"
+		check.Issues = []string{fmt.Sprintf("Directory %s exists but not in PATH", binDir)}
+		check.Suggestions = pathCheck.suggestions
+	} else if !pathCheck.exists {
+		check.Details = append(check.Details, "Gem bin directory does not exist (no user gems installed)")
+	} else {
+		check.Details = append(check.Details, "Gem bin directory is in PATH")
+	}
+
+	return check, nil
+}
+
+// getBinDirectory discovers the Gem bin directory
+func (g *GemManager) getBinDirectory(ctx context.Context) (string, error) {
+	// Use gem environment to get executable directory
+	output, err := ExecuteCommand(ctx, g.binary, "environment")
+	if err != nil {
+		return "", fmt.Errorf("failed to get gem environment: %w", err)
+	}
+
+	// Parse gem environment output for EXECUTABLE DIRECTORY
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.Contains(line, "EXECUTABLE DIRECTORY:") {
+			// Extract directory path from line like "  - EXECUTABLE DIRECTORY: /path/to/bin"
+			re := regexp.MustCompile(`EXECUTABLE DIRECTORY:\s*(.+)`)
+			matches := re.FindStringSubmatch(line)
+			if len(matches) > 1 {
+				return strings.TrimSpace(matches[1]), nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("could not find executable directory in gem environment output")
+}
+
+// SelfInstall attempts to install Gem via available package managers
+func (g *GemManager) SelfInstall(ctx context.Context) error {
+	// Check if already available (idempotent)
+	if available, _ := g.IsAvailable(ctx); available {
+		return nil
+	}
+
+	// Try to install Ruby via Homebrew if available
+	if homebrewAvailable, _ := checkPackageManagerAvailable(ctx, "brew"); homebrewAvailable {
+		return g.installViaHomebrew(ctx)
+	}
+
+	return fmt.Errorf("gem requires Ruby installation - install Ruby manually or ensure Homebrew is available")
+}
+
+// installViaHomebrew installs Ruby (which includes Gem) via Homebrew
+func (g *GemManager) installViaHomebrew(ctx context.Context) error {
+	return executeInstallCommand(ctx, "brew", []string{"install", "ruby"}, "Ruby (includes Gem)")
 }
 
 func init() {

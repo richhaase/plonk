@@ -242,6 +242,18 @@ func (p *PixiManager) InstalledVersion(ctx context.Context, name string) (string
 	return "", fmt.Errorf("version information not found for environment '%s'", name)
 }
 
+// SelfInstall installs Pixi using official installer
+func (p *PixiManager) SelfInstall(ctx context.Context) error {
+	// Check if already available (idempotent)
+	if available, _ := p.IsAvailable(ctx); available {
+		return nil
+	}
+
+	// Execute official Pixi installer script
+	script := `curl -fsSL https://pixi.sh/install.sh | sh`
+	return executeInstallScript(ctx, script, "Pixi")
+}
+
 func init() {
 	RegisterManager("pixi", func() PackageManager {
 		return NewPixiManager()
@@ -270,6 +282,79 @@ func (p *PixiManager) IsAvailable(ctx context.Context) (bool, error) {
 // SupportsSearch returns true as pixi supports package search
 func (p *PixiManager) SupportsSearch() bool {
 	return true
+}
+
+// CheckHealth performs a comprehensive health check of the Pixi installation
+func (p *PixiManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
+	check := &HealthCheck{
+		Name:     "Pixi Manager",
+		Category: "package-managers",
+		Status:   "pass",
+		Message:  "Pixi is available and properly configured",
+	}
+
+	// Check basic availability first
+	available, err := p.IsAvailable(ctx)
+	if err != nil {
+		if IsContextError(err) {
+			return nil, err
+		}
+		check.Status = "fail"
+		check.Message = "Pixi availability check failed"
+		check.Issues = []string{fmt.Sprintf("Error checking Pixi: %v", err)}
+		return check, nil
+	}
+
+	if !available {
+		check.Status = "fail"
+		check.Message = "Pixi is required but not available"
+		check.Issues = []string{"Pixi is required for managing conda-forge packages globally"}
+		check.Suggestions = []string{
+			"Install Pixi: curl -fsSL https://pixi.sh/install.sh | bash",
+			"Or via Homebrew: brew install pixi",
+			"After installation, ensure pixi is in your PATH",
+		}
+		return check, nil
+	}
+
+	// Discover Pixi global bin directory dynamically
+	binDir, err := p.getBinDirectory(ctx)
+	if err != nil {
+		check.Status = "warn"
+		check.Message = "Could not determine Pixi global bin directory"
+		check.Issues = []string{fmt.Sprintf("Error discovering global bin directory: %v", err)}
+		return check, nil
+	}
+
+	// Check if bin directory is in PATH
+	pathCheck := checkDirectoryInPath(binDir)
+	check.Details = append(check.Details, fmt.Sprintf("Pixi global bin directory: %s", binDir))
+
+	if !pathCheck.inPath && pathCheck.exists {
+		check.Status = "warn"
+		check.Message = "Pixi global bin directory exists but not in PATH"
+		check.Issues = []string{fmt.Sprintf("Directory %s exists but not in PATH", binDir)}
+		check.Suggestions = pathCheck.suggestions
+	} else if !pathCheck.exists {
+		check.Status = "warn"
+		check.Message = "Pixi global bin directory does not exist"
+		check.Issues = []string{fmt.Sprintf("Directory %s does not exist", binDir)}
+	} else {
+		check.Details = append(check.Details, "Pixi global bin directory is in PATH")
+	}
+
+	return check, nil
+}
+
+// getBinDirectory discovers the Pixi global bin directory using pixi global bin
+func (p *PixiManager) getBinDirectory(ctx context.Context) (string, error) {
+	output, err := ExecuteCommand(ctx, p.binary, "global", "bin")
+	if err != nil {
+		return "", fmt.Errorf("failed to get Pixi global bin directory: %w", err)
+	}
+
+	binDir := strings.TrimSpace(string(output))
+	return binDir, nil
 }
 
 // handleInstallError processes install command errors

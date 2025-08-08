@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/richhaase/plonk/internal/diagnostics"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -298,102 +297,7 @@ func TestDetectRequiredManagers(t *testing.T) {
 	})
 }
 
-func TestFindMissingPackageManagers(t *testing.T) {
-	t.Run("extract missing managers", func(t *testing.T) {
-		report := diagnostics.HealthReport{
-			Checks: []diagnostics.HealthCheck{
-				{
-					Name:     "Package Manager Availability",
-					Category: "package-managers",
-					Details: []string{
-						"brew: available",
-						"npm: not available",
-						"pip: available",
-						"cargo: not available",
-						"gem: not available",
-						"go: available",
-					},
-				},
-			},
-		}
-
-		missing := findMissingPackageManagers(report)
-
-		assert.Len(t, missing, 3)
-		assert.Contains(t, missing, "npm")
-		assert.Contains(t, missing, "cargo")
-		assert.Contains(t, missing, "gem")
-	})
-
-	t.Run("no missing managers", func(t *testing.T) {
-		report := diagnostics.HealthReport{
-			Checks: []diagnostics.HealthCheck{
-				{
-					Name:     "Package Manager Availability",
-					Category: "package-managers",
-					Details: []string{
-						"brew: available",
-						"npm: available",
-					},
-				},
-			},
-		}
-
-		missing := findMissingPackageManagers(report)
-		assert.Empty(t, missing)
-	})
-
-	t.Run("empty report", func(t *testing.T) {
-		report := diagnostics.HealthReport{
-			Checks: []diagnostics.HealthCheck{},
-		}
-
-		missing := findMissingPackageManagers(report)
-		assert.Empty(t, missing)
-	})
-
-	t.Run("different check category", func(t *testing.T) {
-		report := diagnostics.HealthReport{
-			Checks: []diagnostics.HealthCheck{
-				{
-					Name:     "System Check",
-					Category: "system",
-					Details: []string{
-						"brew: not available",
-						"npm: not available",
-					},
-				},
-			},
-		}
-
-		missing := findMissingPackageManagers(report)
-		assert.Empty(t, missing)
-	})
-
-	t.Run("malformed details", func(t *testing.T) {
-		report := diagnostics.HealthReport{
-			Checks: []diagnostics.HealthCheck{
-				{
-					Name:     "Package Manager Availability",
-					Category: "package-managers",
-					Details: []string{
-						"brew available", // Missing colon
-						"npm: not available",
-						"no status here",    // No colon at all
-						": not available",   // Empty manager name
-						"cargo : available", // Extra spaces
-					},
-				},
-			},
-		}
-
-		missing := findMissingPackageManagers(report)
-
-		// Should only extract npm
-		assert.Len(t, missing, 1)
-		assert.Contains(t, missing, "npm")
-	})
-}
+// TestFindMissingPackageManagers test removed - functionality replaced by SelfInstall interface
 
 func TestCreateDefaultConfig(t *testing.T) {
 	tempDir := t.TempDir()

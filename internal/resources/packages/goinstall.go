@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 )
 
@@ -363,6 +364,136 @@ func (g *GoInstallManager) IsAvailable(ctx context.Context) (bool, error) {
 // SupportsSearch returns false as go install doesn't support package search
 func (g *GoInstallManager) SupportsSearch() bool {
 	return false
+}
+
+// CheckHealth performs a comprehensive health check of the Go installation
+func (g *GoInstallManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
+	check := &HealthCheck{
+		Name:     "Go Manager",
+		Category: "package-managers",
+		Status:   "pass",
+		Message:  "Go is available and properly configured",
+	}
+
+	// Check availability
+	available, err := g.IsAvailable(ctx)
+	if err != nil {
+		if IsContextError(err) {
+			return nil, err
+		}
+		check.Status = "warn"
+		check.Message = "Go availability check failed"
+		check.Issues = []string{fmt.Sprintf("Error checking go: %v", err)}
+		return check, nil
+	}
+
+	if !available {
+		check.Status = "warn"
+		check.Message = "Go is not available"
+		check.Issues = []string{"go command not found"}
+		check.Suggestions = []string{
+			"Install Go: brew install go",
+			"Or download from https://golang.org/dl/",
+		}
+		return check, nil
+	}
+
+	// Discover go bin directory
+	binDir, err := g.getBinDirectory(ctx)
+	if err != nil {
+		check.Status = "warn"
+		check.Message = "Could not determine Go bin directory"
+		check.Issues = []string{fmt.Sprintf("Error discovering bin directory: %v", err)}
+		return check, nil
+	}
+
+	check.Details = append(check.Details, fmt.Sprintf("Go bin directory: %s", binDir))
+
+	// Check PATH
+	pathCheck := checkDirectoryInPath(binDir)
+	if !pathCheck.inPath && pathCheck.exists {
+		check.Status = "warn"
+		check.Message = "Go bin directory exists but not in PATH"
+		check.Issues = []string{fmt.Sprintf("Directory %s exists but not in PATH", binDir)}
+		check.Suggestions = pathCheck.suggestions
+	} else if !pathCheck.exists {
+		check.Details = append(check.Details, "Go bin directory does not exist (no go install packages installed)")
+	} else {
+		check.Details = append(check.Details, "Go bin directory is in PATH")
+	}
+
+	return check, nil
+}
+
+// getBinDirectory discovers the Go bin directory
+func (g *GoInstallManager) getBinDirectory(ctx context.Context) (string, error) {
+	// First try GOBIN
+	if gobin := os.Getenv("GOBIN"); gobin != "" {
+		return gobin, nil
+	}
+
+	// Get GOPATH
+	output, err := ExecuteCommand(ctx, g.binary, "env", "GOPATH")
+	if err != nil {
+		return "", fmt.Errorf("failed to get GOPATH: %w", err)
+	}
+
+	gopath := strings.TrimSpace(string(output))
+	if gopath != "" {
+		return filepath.Join(gopath, "bin"), nil
+	}
+
+	// Fallback to default GOPATH
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get user home directory: %w", err)
+	}
+
+	return filepath.Join(homeDir, "go", "bin"), nil
+}
+
+// SelfInstall installs Go using official installer
+func (g *GoInstallManager) SelfInstall(ctx context.Context) error {
+	// Check if already available (idempotent)
+	if available, _ := g.IsAvailable(ctx); available {
+		return nil
+	}
+
+	// Platform-specific installation
+	switch runtime.GOOS {
+	case "darwin":
+		return g.installMacOS(ctx)
+	case "linux":
+		return g.installLinux(ctx)
+	default:
+		return fmt.Errorf("unsupported platform for Go auto-installation: %s", runtime.GOOS)
+	}
+}
+
+// installMacOS installs Go on macOS using Homebrew if available
+func (g *GoInstallManager) installMacOS(ctx context.Context) error {
+	// Check if Homebrew is available for installation
+	if homebrewAvailable, _ := checkPackageManagerAvailable(ctx, "brew"); homebrewAvailable {
+		return executeInstallCommand(ctx, "brew", []string{"install", "go"}, "Go")
+	}
+
+	return fmt.Errorf("Go installation requires Homebrew - install Homebrew first or install Go manually from https://golang.org/dl/")
+}
+
+// installLinux installs Go on Linux using package managers
+func (g *GoInstallManager) installLinux(ctx context.Context) error {
+	// Try common Linux package managers
+	if _, err := defaultExecutor.LookPath("apt"); err == nil {
+		return executeInstallCommand(ctx, "apt", []string{"install", "-y", "golang-go"}, "Go")
+	}
+	if _, err := defaultExecutor.LookPath("yum"); err == nil {
+		return executeInstallCommand(ctx, "yum", []string{"install", "-y", "go"}, "Go")
+	}
+	if _, err := defaultExecutor.LookPath("dnf"); err == nil {
+		return executeInstallCommand(ctx, "dnf", []string{"install", "-y", "go"}, "Go")
+	}
+
+	return fmt.Errorf("Go installation requires a supported package manager (apt/yum/dnf) or manual installation from https://golang.org/dl/")
 }
 
 func init() {

@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 )
 
@@ -322,6 +323,90 @@ func (h *HomebrewManager) IsAvailable(ctx context.Context) (bool, error) {
 // SupportsSearch returns true as Homebrew supports package search
 func (h *HomebrewManager) SupportsSearch() bool {
 	return true
+}
+
+// CheckHealth performs a comprehensive health check of the Homebrew installation
+func (h *HomebrewManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
+	check := &HealthCheck{
+		Name:     "Homebrew Manager",
+		Category: "package-managers",
+		Status:   "pass",
+		Message:  "Homebrew is available and properly configured",
+	}
+
+	// Check basic availability first
+	available, err := h.IsAvailable(ctx)
+	if err != nil {
+		if IsContextError(err) {
+			return nil, err
+		}
+		check.Status = "fail"
+		check.Message = "Homebrew availability check failed"
+		check.Issues = []string{fmt.Sprintf("Error checking homebrew: %v", err)}
+		return check, nil
+	}
+
+	if !available {
+		check.Status = "fail"
+		check.Message = "Homebrew is required but not available"
+		check.Issues = []string{"Homebrew is required for plonk to function properly"}
+		check.Suggestions = []string{
+			`Install Homebrew: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`,
+			"After installation, ensure brew is in your PATH",
+		}
+		return check, nil
+	}
+
+	// Discover homebrew bin directory dynamically
+	binDir, err := h.getBinDirectory(ctx)
+	if err != nil {
+		check.Status = "warn"
+		check.Message = "Could not determine Homebrew bin directory"
+		check.Issues = []string{fmt.Sprintf("Error discovering bin directory: %v", err)}
+		return check, nil
+	}
+
+	// Check if bin directory is in PATH
+	pathCheck := checkDirectoryInPath(binDir)
+	check.Details = append(check.Details, fmt.Sprintf("Homebrew bin directory: %s", binDir))
+
+	if !pathCheck.inPath && pathCheck.exists {
+		check.Status = "warn"
+		check.Message = "Homebrew bin directory exists but not in PATH"
+		check.Issues = []string{fmt.Sprintf("Directory %s exists but not in PATH", binDir)}
+		check.Suggestions = pathCheck.suggestions
+	} else if !pathCheck.exists {
+		check.Status = "warn"
+		check.Message = "Homebrew bin directory does not exist"
+		check.Issues = []string{fmt.Sprintf("Directory %s does not exist", binDir)}
+	} else {
+		check.Details = append(check.Details, "Homebrew bin directory is in PATH")
+	}
+
+	return check, nil
+}
+
+// getBinDirectory discovers the actual homebrew bin directory
+func (h *HomebrewManager) getBinDirectory(ctx context.Context) (string, error) {
+	output, err := ExecuteCommand(ctx, h.binary, "--prefix")
+	if err != nil {
+		return "", fmt.Errorf("failed to get homebrew prefix: %w", err)
+	}
+
+	prefix := strings.TrimSpace(string(output))
+	return filepath.Join(prefix, "bin"), nil
+}
+
+// SelfInstall installs Homebrew using the official installer script
+func (h *HomebrewManager) SelfInstall(ctx context.Context) error {
+	// Check if already available (idempotent)
+	if available, _ := h.IsAvailable(ctx); available {
+		return nil
+	}
+
+	// Execute official installer script
+	script := `curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | bash`
+	return executeInstallScript(ctx, script, "Homebrew")
 }
 
 func init() {

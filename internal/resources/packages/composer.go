@@ -303,6 +303,35 @@ func cleanValue(value string) string {
 	return value
 }
 
+// SelfInstall attempts to install Composer
+func (c *ComposerManager) SelfInstall(ctx context.Context) error {
+	// Check if already available (idempotent)
+	if available, _ := c.IsAvailable(ctx); available {
+		return nil
+	}
+
+	// Check PHP prerequisite
+	if !CheckCommandAvailable("php") {
+		return fmt.Errorf("composer requires PHP to be installed first - install PHP and retry")
+	}
+
+	return c.installWithHashVerification(ctx)
+}
+
+// installWithHashVerification implements the 4-step secure installation process from getcomposer.org
+func (c *ComposerManager) installWithHashVerification(ctx context.Context) error {
+	// Step 1: Download installer to temporary file
+	script := `
+		cd /tmp &&
+		php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" &&
+		php -r "if (hash_file('sha384', 'composer-setup.php') === 'dac665fdc30fdd8ec78b38b9800061b4150413ff2e3b6f88543c636f7cd84f6db9189d43a81e5503cda447da73c7e5b6') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); exit(1); }" &&
+		php composer-setup.php --install-dir=/usr/local/bin --filename=composer &&
+		php -r "unlink('composer-setup.php');"
+	`
+
+	return executeInstallScript(ctx, script, "Composer")
+}
+
 func init() {
 	RegisterManager("composer", func() PackageManager {
 		return NewComposerManager()
@@ -331,6 +360,79 @@ func (c *ComposerManager) IsAvailable(ctx context.Context) (bool, error) {
 // SupportsSearch returns true as Composer supports package search
 func (c *ComposerManager) SupportsSearch() bool {
 	return true
+}
+
+// CheckHealth performs a comprehensive health check of the Composer installation
+func (c *ComposerManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
+	check := &HealthCheck{
+		Name:     "Composer Manager",
+		Category: "package-managers",
+		Status:   "pass",
+		Message:  "Composer is available and properly configured",
+	}
+
+	// Check basic availability first
+	available, err := c.IsAvailable(ctx)
+	if err != nil {
+		if IsContextError(err) {
+			return nil, err
+		}
+		check.Status = "fail"
+		check.Message = "Composer availability check failed"
+		check.Issues = []string{fmt.Sprintf("Error checking Composer: %v", err)}
+		return check, nil
+	}
+
+	if !available {
+		check.Status = "fail"
+		check.Message = "Composer is required but not available"
+		check.Issues = []string{"Composer is required for managing PHP packages globally"}
+		check.Suggestions = []string{
+			"Install Composer: curl -sS https://getcomposer.org/installer | php && sudo mv composer.phar /usr/local/bin/composer",
+			"Or via Homebrew: brew install composer",
+			"After installation, ensure composer is in your PATH",
+		}
+		return check, nil
+	}
+
+	// Discover Composer global bin directory dynamically
+	binDir, err := c.getBinDirectory(ctx)
+	if err != nil {
+		check.Status = "warn"
+		check.Message = "Could not determine Composer global bin directory"
+		check.Issues = []string{fmt.Sprintf("Error discovering global bin directory: %v", err)}
+		return check, nil
+	}
+
+	// Check if bin directory is in PATH
+	pathCheck := checkDirectoryInPath(binDir)
+	check.Details = append(check.Details, fmt.Sprintf("Composer global bin directory: %s", binDir))
+
+	if !pathCheck.inPath && pathCheck.exists {
+		check.Status = "warn"
+		check.Message = "Composer global bin directory exists but not in PATH"
+		check.Issues = []string{fmt.Sprintf("Directory %s exists but not in PATH", binDir)}
+		check.Suggestions = pathCheck.suggestions
+	} else if !pathCheck.exists {
+		check.Status = "warn"
+		check.Message = "Composer global bin directory does not exist"
+		check.Issues = []string{fmt.Sprintf("Directory %s does not exist", binDir)}
+	} else {
+		check.Details = append(check.Details, "Composer global bin directory is in PATH")
+	}
+
+	return check, nil
+}
+
+// getBinDirectory discovers the Composer global bin directory using composer global config bin-dir
+func (c *ComposerManager) getBinDirectory(ctx context.Context) (string, error) {
+	output, err := ExecuteCommand(ctx, c.binary, "global", "config", "bin-dir", "--absolute")
+	if err != nil {
+		return "", fmt.Errorf("failed to get Composer global bin directory: %w", err)
+	}
+
+	binDir := strings.TrimSpace(string(output))
+	return binDir, nil
 }
 
 // handleInstallError processes install command errors
