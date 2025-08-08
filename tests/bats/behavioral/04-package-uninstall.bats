@@ -481,6 +481,63 @@ setup() {
   refute_output --partial "black"
 }
 
+# Conda uninstall tests
+@test "uninstall managed conda package" {
+  require_safe_package "conda:tree"
+
+  # Check if conda/mamba is available
+  run which mamba
+  local has_mamba=$status
+  run which conda
+  local has_conda=$status
+
+  if [[ $has_mamba -ne 0 && $has_conda -ne 0 ]]; then
+    skip "conda/mamba not available"
+  fi
+
+  # Install first
+  run plonk install conda:tree
+  assert_success
+  track_artifact "package" "conda:tree"
+
+  # Verify it's installed by conda/mamba
+  if [[ $has_mamba -eq 0 ]]; then
+    run mamba list -n base tree
+    assert_success
+    assert_output --partial "tree"
+  else
+    run conda list -n base tree
+    assert_success
+    assert_output --partial "tree"
+  fi
+
+  # Then uninstall
+  run plonk uninstall conda:tree
+  assert_success
+  assert_output --partial "removed"
+
+  # Verify actually uninstalled by conda/mamba
+  if [[ $has_mamba -eq 0 ]]; then
+    run mamba list -n base tree
+    assert_success
+    refute_output --partial "tree"
+  else
+    run conda list -n base tree
+    assert_success
+    refute_output --partial "tree"
+  fi
+
+  # Verify gone from lock file
+  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
+    run cat "$PLONK_DIR/plonk.lock"
+    refute_output --partial "tree"
+  fi
+
+  # Verify gone from status
+  run plonk status
+  refute_output --partial "tree"
+}
+
 # General uninstall behavior tests
 @test "uninstall non-managed package acts as pass-through" {
   require_safe_package "brew:fortune"

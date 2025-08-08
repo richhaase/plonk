@@ -41,3 +41,7 @@ dotnet:dotnet-outdated-tool  # Dependency checker, read-only operations
 # Pipx packages (Python applications in isolated environments)
 pipx:black                   # Python code formatter, safe dev tool
 pipx:pycowsay                # Python ASCII cow (different from brew cowsay)
+
+# Conda packages (Scientific computing and data science)
+conda:fortls                 # Fortran Language Server, very niche tool
+conda:tree                   # Directory tree display utility, simple and safe
