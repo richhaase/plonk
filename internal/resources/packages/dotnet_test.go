@@ -323,3 +323,674 @@ func TestDotnetManager_handleUninstallError(t *testing.T) {
 		})
 	}
 }
+
+func TestDotnetManager_IsAvailableWithMock(t *testing.T) {
+	tests := []struct {
+		name          string
+		mockResponses map[string]CommandResponse
+		expected      bool
+	}{
+		{
+			name: "dotnet is available",
+			mockResponses: map[string]CommandResponse{
+				"dotnet --version": {
+					Output: []byte("9.0.100"),
+					Error:  nil,
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "dotnet not found",
+			mockResponses: map[string]CommandResponse{
+				"dotnet --version": {
+					Output: []byte(""),
+					Error:  &MockExitError{Code: 127},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "dotnet exists but not functional",
+			mockResponses: map[string]CommandResponse{
+				"dotnet --version": {
+					Output: []byte(""),
+					Error:  &MockExitError{Code: 1},
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Save and restore original executor
+			originalExecutor := defaultExecutor
+			defer func() { SetDefaultExecutor(originalExecutor) }()
+
+			mock := &MockCommandExecutor{
+				Responses: tt.mockResponses,
+			}
+			SetDefaultExecutor(mock)
+
+			manager := NewDotnetManager()
+			result, _ := manager.IsAvailable(context.Background())
+
+			if result != tt.expected {
+				t.Errorf("Expected %v but got %v", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestDotnetManager_Install(t *testing.T) {
+	tests := []struct {
+		name          string
+		toolName      string
+		mockResponses map[string]CommandResponse
+		expectError   bool
+		errorContains string
+	}{
+		{
+			name:     "successful install",
+			toolName: "dotnetsay",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool install -g dotnetsay": {
+					Output: []byte("You can invoke the tool using the following command: dotnetsay\nTool 'dotnetsay' (version '2.1.4') was installed successfully."),
+					Error:  nil,
+				},
+			},
+			expectError: false,
+		},
+		{
+			name:     "tool not found",
+			toolName: "nonexistent-tool",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool install -g nonexistent-tool": {
+					Output: []byte("error NU1101: Unable to find package nonexistent-tool. No packages exist with this id"),
+					Error:  &MockExitError{Code: 1},
+				},
+			},
+			expectError:   true,
+			errorContains: "not found",
+		},
+		{
+			name:     "tool already installed",
+			toolName: "dotnetsay",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool install -g dotnetsay": {
+					Output: []byte("Tool 'dotnetsay' is already installed."),
+					Error:  &MockExitError{Code: 1},
+				},
+			},
+			expectError:   true,
+			errorContains: "already installed",
+		},
+		{
+			name:     "not a dotnet tool",
+			toolName: "some-package",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool install -g some-package": {
+					Output: []byte("error NU1212: Invalid project-package combination for some-package. DotnetToolReference project style can only contain references of the DotnetTool type"),
+					Error:  &MockExitError{Code: 1},
+				},
+			},
+			expectError:   true,
+			errorContains: "not a .NET global tool",
+		},
+		{
+			name:     "permission denied",
+			toolName: "testtool",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool install -g testtool": {
+					Output: []byte("Access denied when writing to tool directory"),
+					Error:  &MockExitError{Code: 1},
+				},
+			},
+			expectError:   true,
+			errorContains: "permission denied",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Save and restore original executor
+			originalExecutor := defaultExecutor
+			defer func() { SetDefaultExecutor(originalExecutor) }()
+
+			mock := &MockCommandExecutor{
+				Responses: tt.mockResponses,
+			}
+			SetDefaultExecutor(mock)
+
+			manager := NewDotnetManager()
+			err := manager.Install(context.Background(), tt.toolName)
+
+			if tt.expectError && err == nil {
+				t.Errorf("Expected error but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			if tt.expectError && err != nil && tt.errorContains != "" {
+				if !stringContains(err.Error(), tt.errorContains) {
+					t.Errorf("Expected error to contain '%s' but got: %v", tt.errorContains, err)
+				}
+			}
+		})
+	}
+}
+
+func TestDotnetManager_Uninstall(t *testing.T) {
+	tests := []struct {
+		name          string
+		toolName      string
+		mockResponses map[string]CommandResponse
+		expectError   bool
+		errorContains string
+	}{
+		{
+			name:     "successful uninstall",
+			toolName: "dotnetsay",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool uninstall -g dotnetsay": {
+					Output: []byte("Tool 'dotnetsay' (version '2.1.4') was successfully uninstalled."),
+					Error:  nil,
+				},
+			},
+			expectError: false,
+		},
+		{
+			name:     "tool not installed",
+			toolName: "nonexistent-tool",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool uninstall -g nonexistent-tool": {
+					Output: []byte("Tool 'nonexistent-tool' is not installed."),
+					Error:  &MockExitError{Code: 1},
+				},
+			},
+			expectError: false, // Not installed is success for uninstall
+		},
+		{
+			name:     "no such tool",
+			toolName: "missing-tool",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool uninstall -g missing-tool": {
+					Output: []byte("No such tool exists in the global tools"),
+					Error:  &MockExitError{Code: 1},
+				},
+			},
+			expectError: false, // Not found is success for uninstall
+		},
+		{
+			name:     "permission denied",
+			toolName: "restricted-tool",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool uninstall -g restricted-tool": {
+					Output: []byte("Access denied when writing to tool directory"),
+					Error:  &MockExitError{Code: 1},
+				},
+			},
+			expectError:   true,
+			errorContains: "permission denied",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Save and restore original executor
+			originalExecutor := defaultExecutor
+			defer func() { SetDefaultExecutor(originalExecutor) }()
+
+			mock := &MockCommandExecutor{
+				Responses: tt.mockResponses,
+			}
+			SetDefaultExecutor(mock)
+
+			manager := NewDotnetManager()
+			err := manager.Uninstall(context.Background(), tt.toolName)
+
+			if tt.expectError && err == nil {
+				t.Errorf("Expected error but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			if tt.expectError && err != nil && tt.errorContains != "" {
+				if !stringContains(err.Error(), tt.errorContains) {
+					t.Errorf("Expected error to contain '%s' but got: %v", tt.errorContains, err)
+				}
+			}
+		})
+	}
+}
+
+func TestDotnetManager_ListInstalled(t *testing.T) {
+	tests := []struct {
+		name          string
+		mockResponses map[string]CommandResponse
+		expected      []string
+		expectError   bool
+	}{
+		{
+			name: "list with tools",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool list -g": {
+					Output: []byte(`Package Id                    Version    Commands
+-------------------------------------------------------
+dotnetsay                     2.1.4      dotnetsay
+dotnet-ef                     9.0.7      dotnet-ef`),
+					Error: nil,
+				},
+			},
+			expected:    []string{"dotnet-ef", "dotnetsay"},
+			expectError: false,
+		},
+		{
+			name: "empty list",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool list -g": {
+					Output: []byte(`Package Id                    Version    Commands
+-------------------------------------------------------`),
+					Error: nil,
+				},
+			},
+			expected:    []string{},
+			expectError: false,
+		},
+		{
+			name: "no tools installed - exit code 1",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool list -g": {
+					Output: []byte(""),
+					Error:  &MockExitError{Code: 1},
+				},
+			},
+			expected:    []string{},
+			expectError: false, // Exit code 1 is handled gracefully
+		},
+		{
+			name: "command error - severe failure",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool list -g": {
+					Output: []byte("error: command failed"),
+					Error:  &MockExitError{Code: 2},
+				},
+			},
+			expected:    nil,
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Save and restore original executor
+			originalExecutor := defaultExecutor
+			defer func() { SetDefaultExecutor(originalExecutor) }()
+
+			mock := &MockCommandExecutor{
+				Responses: tt.mockResponses,
+			}
+			SetDefaultExecutor(mock)
+
+			manager := NewDotnetManager()
+			result, err := manager.ListInstalled(context.Background())
+
+			if tt.expectError && err == nil {
+				t.Errorf("Expected error but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			if !tt.expectError && !stringSlicesEqual(result, tt.expected) {
+				t.Errorf("Expected %v but got %v", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestDotnetManager_IsInstalled(t *testing.T) {
+	tests := []struct {
+		name          string
+		toolName      string
+		mockResponses map[string]CommandResponse
+		expected      bool
+		expectError   bool
+	}{
+		{
+			name:     "tool is installed",
+			toolName: "dotnetsay",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool list -g": {
+					Output: []byte(`Package Id                    Version    Commands
+-------------------------------------------------------
+dotnetsay                     2.1.4      dotnetsay
+dotnet-ef                     9.0.7      dotnet-ef`),
+					Error: nil,
+				},
+			},
+			expected:    true,
+			expectError: false,
+		},
+		{
+			name:     "tool not installed",
+			toolName: "nonexistent-tool",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool list -g": {
+					Output: []byte(`Package Id                    Version    Commands
+-------------------------------------------------------
+dotnetsay                     2.1.4      dotnetsay`),
+					Error: nil,
+				},
+			},
+			expected:    false,
+			expectError: false,
+		},
+		{
+			name:     "empty list",
+			toolName: "dotnetsay",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool list -g": {
+					Output: []byte(`Package Id                    Version    Commands
+-------------------------------------------------------`),
+					Error: nil,
+				},
+			},
+			expected:    false,
+			expectError: false,
+		},
+		{
+			name:     "command error",
+			toolName: "dotnetsay",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool list -g": {
+					Output: []byte("error: command failed"),
+					Error:  &MockExitError{Code: 2},
+				},
+			},
+			expected:    false,
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Save and restore original executor
+			originalExecutor := defaultExecutor
+			defer func() { SetDefaultExecutor(originalExecutor) }()
+
+			mock := &MockCommandExecutor{
+				Responses: tt.mockResponses,
+			}
+			SetDefaultExecutor(mock)
+
+			manager := NewDotnetManager()
+			result, err := manager.IsInstalled(context.Background(), tt.toolName)
+
+			if tt.expectError && err == nil {
+				t.Errorf("Expected error but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			if !tt.expectError && result != tt.expected {
+				t.Errorf("Expected %v but got %v", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestDotnetManager_Info(t *testing.T) {
+	tests := []struct {
+		name          string
+		toolName      string
+		mockResponses map[string]CommandResponse
+		expectError   bool
+	}{
+		{
+			name:     "info for installed tool",
+			toolName: "dotnetsay",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool list -g": {
+					Output: []byte(`Package Id                    Version    Commands
+-------------------------------------------------------
+dotnetsay                     2.1.4      dotnetsay`),
+					Error: nil,
+				},
+			},
+			expectError: false,
+		},
+		{
+			name:     "info for not installed tool",
+			toolName: "notinstalled-tool",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool list -g": {
+					Output: []byte(`Package Id                    Version    Commands
+-------------------------------------------------------`),
+					Error: nil,
+				},
+			},
+			expectError: false,
+		},
+		{
+			name:     "command error",
+			toolName: "test-tool",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool list -g": {
+					Output: []byte("error: command failed"),
+					Error:  &MockExitError{Code: 2},
+				},
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Save and restore original executor
+			originalExecutor := defaultExecutor
+			defer func() { SetDefaultExecutor(originalExecutor) }()
+
+			mock := &MockCommandExecutor{
+				Responses: tt.mockResponses,
+			}
+			SetDefaultExecutor(mock)
+
+			manager := NewDotnetManager()
+			result, err := manager.Info(context.Background(), tt.toolName)
+
+			if tt.expectError && err == nil {
+				t.Errorf("Expected error but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			if !tt.expectError && result == nil {
+				t.Errorf("Expected non-nil PackageInfo but got nil")
+			}
+			if !tt.expectError && result != nil && result.Name != tt.toolName {
+				t.Errorf("Expected tool name '%s' but got '%s'", tt.toolName, result.Name)
+			}
+		})
+	}
+}
+
+func TestDotnetManager_InstalledVersion(t *testing.T) {
+	tests := []struct {
+		name          string
+		toolName      string
+		mockResponses map[string]CommandResponse
+		expected      string
+		expectError   bool
+	}{
+		{
+			name:     "get version of installed tool",
+			toolName: "dotnetsay",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool list -g": {
+					Output: []byte(`Package Id                    Version    Commands
+-------------------------------------------------------
+dotnetsay                     2.1.4      dotnetsay
+dotnet-ef                     9.0.7      dotnet-ef`),
+					Error: nil,
+				},
+			},
+			expected:    "2.1.4",
+			expectError: false,
+		},
+		{
+			name:     "tool not installed",
+			toolName: "nonexistent-tool",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool list -g": {
+					Output: []byte(`Package Id                    Version    Commands
+-------------------------------------------------------
+dotnetsay                     2.1.4      dotnetsay`),
+					Error: nil,
+				},
+			},
+			expected:    "",
+			expectError: true,
+		},
+		{
+			name:     "command error",
+			toolName: "dotnetsay",
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool list -g": {
+					Output: []byte("error: command failed"),
+					Error:  &MockExitError{Code: 2},
+				},
+			},
+			expected:    "",
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Save and restore original executor
+			originalExecutor := defaultExecutor
+			defer func() { SetDefaultExecutor(originalExecutor) }()
+
+			mock := &MockCommandExecutor{
+				Responses: tt.mockResponses,
+			}
+			SetDefaultExecutor(mock)
+
+			manager := NewDotnetManager()
+			result, err := manager.InstalledVersion(context.Background(), tt.toolName)
+
+			if tt.expectError && err == nil {
+				t.Errorf("Expected error but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			if !tt.expectError && result != tt.expected {
+				t.Errorf("Expected '%s' but got '%s'", tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestDotnetManager_Upgrade(t *testing.T) {
+	tests := []struct {
+		name          string
+		tools         []string
+		mockResponses map[string]CommandResponse
+		expectError   bool
+		errorContains string
+	}{
+		{
+			name:  "upgrade specific tools",
+			tools: []string{"dotnetsay", "dotnet-ef"},
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool update -g dotnetsay": {
+					Output: []byte("Tool 'dotnetsay' was reinstalled with the latest stable version (version '2.1.5')."),
+					Error:  nil,
+				},
+				"dotnet tool update -g dotnet-ef": {
+					Output: []byte("Tool 'dotnet-ef' was reinstalled with the latest stable version (version '9.0.8')."),
+					Error:  nil,
+				},
+			},
+			expectError: false,
+		},
+		{
+			name:  "upgrade all tools",
+			tools: []string{}, // empty means all tools
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool list -g": {
+					Output: []byte(`Package Id                    Version    Commands
+-------------------------------------------------------
+dotnetsay                     2.1.4      dotnetsay
+dotnet-ef                     9.0.7      dotnet-ef`),
+					Error: nil,
+				},
+				"dotnet tool update -g dotnetsay": {
+					Output: []byte("Tool 'dotnetsay' was reinstalled with the latest stable version (version '2.1.5')."),
+					Error:  nil,
+				},
+				"dotnet tool update -g dotnet-ef": {
+					Output: []byte("Tool 'dotnet-ef' was reinstalled with the latest stable version (version '9.0.8')."),
+					Error:  nil,
+				},
+			},
+			expectError: false,
+		},
+		{
+			name:  "upgrade with tool not installed error",
+			tools: []string{"nonexistent-tool"},
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool update -g nonexistent-tool": {
+					Output: []byte("Tool 'nonexistent-tool' is not installed."),
+					Error:  &MockExitError{Code: 1},
+				},
+			},
+			expectError:   true,
+			errorContains: "not found",
+		},
+		{
+			name:  "upgrade with permission error",
+			tools: []string{"restricted-tool"},
+			mockResponses: map[string]CommandResponse{
+				"dotnet tool update -g restricted-tool": {
+					Output: []byte("Access denied when writing to tool directory"),
+					Error:  &MockExitError{Code: 1},
+				},
+			},
+			expectError:   true,
+			errorContains: "permission denied",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Save and restore original executor
+			originalExecutor := defaultExecutor
+			defer func() { SetDefaultExecutor(originalExecutor) }()
+
+			mock := &MockCommandExecutor{
+				Responses: tt.mockResponses,
+			}
+			SetDefaultExecutor(mock)
+
+			manager := NewDotnetManager()
+			err := manager.Upgrade(context.Background(), tt.tools)
+
+			if tt.expectError && err == nil {
+				t.Errorf("Expected error but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			if tt.expectError && err != nil && tt.errorContains != "" {
+				if !stringContains(err.Error(), tt.errorContains) {
+					t.Errorf("Expected error to contain '%s' but got: %v", tt.errorContains, err)
+				}
+			}
+		})
+	}
+}
+
+// Note: Uses MockExitError from executor.go and stringContains, stringSlicesEqual from test_helpers.go
