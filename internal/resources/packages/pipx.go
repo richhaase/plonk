@@ -303,11 +303,6 @@ func (p *PipxManager) IsAvailable(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-// SupportsSearch returns false as pipx doesn't have built-in search
-func (p *PipxManager) SupportsSearch() bool {
-	return false
-}
-
 // CheckHealth performs a comprehensive health check of the pipx installation
 func (p *PipxManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	check := &HealthCheck{

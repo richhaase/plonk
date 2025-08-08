@@ -5,23 +5,10 @@ package packages
 
 import "context"
 
-// PackageManagerCapabilities describes which optional operations are supported by a package manager.
-// This allows callers to check capabilities before attempting operations that may not be available.
-type PackageManagerCapabilities interface {
-	// SupportsSearch returns true if the package manager supports searching for packages.
-	// If false, calling Search will return ErrOperationNotSupported.
-	SupportsSearch() bool
-
-	// Future optional operations can be added here:
-	// SupportsUpgrade() bool
-	// SupportsDependencyTree() bool
-}
-
 // PackageManager defines the standard interface for package packages.
 // Package managers handle availability checking, listing, installing, and uninstalling packages.
 // All methods accept a context for cancellation and timeout support.
 type PackageManager interface {
-	PackageManagerCapabilities
 
 	// Core operations - these are always supported by all package packages
 	IsAvailable(ctx context.Context) (bool, error)
@@ -32,7 +19,7 @@ type PackageManager interface {
 	InstalledVersion(ctx context.Context, name string) (string, error)
 	Info(ctx context.Context, name string) (*PackageInfo, error)
 
-	// Optional operations - check capabilities before calling
+	// Search operations - may return empty results if unsupported
 	Search(ctx context.Context, query string) ([]string, error)
 
 	// Health checking - provides diagnostic information about the package manager

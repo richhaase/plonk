@@ -238,11 +238,6 @@ func (u *UvManager) IsAvailable(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-// SupportsSearch returns false as UV does not support tool search
-func (u *UvManager) SupportsSearch() bool {
-	return false
-}
-
 // CheckHealth performs a comprehensive health check of the UV tool installation
 func (u *UvManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	check := &HealthCheck{

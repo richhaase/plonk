@@ -391,11 +391,6 @@ func (n *NpmManager) IsAvailable(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-// SupportsSearch returns true as NPM supports package search
-func (n *NpmManager) SupportsSearch() bool {
-	return true
-}
-
 // CheckHealth performs a comprehensive health check of the NPM installation
 func (n *NpmManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	check := &HealthCheck{

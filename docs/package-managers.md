@@ -4,16 +4,18 @@ This document outlines plonk's package manager ecosystem strategy based on compe
 
 ## Current Package Manager Support
 
-Plonk currently supports 9 package managers across multiple language ecosystems:
-
+Plonk currently supports 10 package managers across multiple language ecosystems:
 
 - **Homebrew (brew)** - System tools and applications (macOS/Linux)
 - **NPM (npm)** - JavaScript global packages
 - **Cargo (cargo)** - Rust packages
+- **Pipx (pipx)** - Python applications in isolated environments
 - **Gem (gem)** - Ruby gems
 - **Go install (go)** - Go modules
 - **UV (uv)** - Python tool management
 - **Pixi (pixi)** - Conda-forge packages
+- **Composer (composer)** - PHP global packages and CLI tools
+- **.NET Global Tools (dotnet)** - .NET CLI tools and utilities
 
 ## Competitive Landscape Analysis
 
@@ -37,40 +39,31 @@ Plonk's multi-package-manager approach is more comprehensive than existing solut
 
 ## Priority Package Managers for Implementation
 
-### Immediate Priority
+### Current Implementation Status
 
-#### 1. **pnpm Global Support**
-- **Status**: 70% less disk space, significantly faster than npm
-- **Adoption**: "Increasingly recommended for new projects" in 2024-2025
+#### 1. **pnpm Global Support** - 🚧 **IN DEVELOPMENT**
+- **Status**: Implementation underway
+- **Performance**: 70% less disk space, significantly faster than npm
+- **Adoption**: Increasingly recommended for new projects in 2024-2025
 - **Commands**: `pnpm add -g`, `pnpm remove -g`, `pnpm list -g`
 - **Value**: Direct npm alternative with better performance
-- **Why Important**: Higher current adoption than alternatives like Bun
+- **Implementation**: Full PackageManager interface support available
 
-#### 2. **Bun/BunX Global Support**
-- **Status**: Strong developer interest, early but growing adoption
+#### 2. **Bun/BunX Global Support** - ❌ **NOT READY**
+- **Status**: Blocked by upstream limitations in Bun itself
 - **Performance**: Up to 30x faster package manager than npm
-- **Commands**: `bunx add --global`, `bunx remove --global`, `bun pm ls --global`
-- **Value**: Performance-focused JavaScript ecosystem alternative
-- **Why Important**: Positions plonk in emerging high-performance JS tooling
+- **Blocking Issues**:
+  - ❌ No global package listing (`bun pm ls --global` doesn't exist)
+  - ❌ Unreliable global package removal (known issues as of 2023)
+  - ❌ No package information/version querying commands
+  - ❌ No search capabilities
+- **Timeline**: Monitor Bun development; implementation possible Q3-Q4 2025 if upstream issues resolved
+- **Alternative**: Consider after pnpm implementation and when Bun matures global package management
 
-### Next Phase
+### Future Candidates
 
-#### 3. **.NET Global Tools** (`dotnet tool`)
-- **Gap**: Major enterprise language ecosystem completely missing from plonk
-- **Commands**: `dotnet tool install/list/uninstall -g`
-- **Value**: Massive enterprise adoption, rich CLI tool ecosystem
-- **Examples**: `dotnet-ef`, `dotnet-outdated`, code generators
-
-#### 4. **PHP Composer Global** (`composer global`)
-- **Gap**: Web development ecosystem with huge adoption
-- **Commands**: `composer global require/show/remove`
-- **Value**: PHP has enormous web development usage
-- **Examples**: `phpunit`, `php_codesniffer`, documentation generators
-
-### Future Monitoring
-
-- **Proto Version Manager**: Consider as complement rather than competition for tool version management
 - **Zig Package Manager**: Monitor for 1.0 release (expected 2025+) and ecosystem maturation
+- **Proto Version Manager**: Consider as complement rather than competition for tool version management
 - **Mojo/AI Tools**: Watch AI-focused development tool emergence
 
 ## Language Ecosystem Trends (2024-2025)
@@ -100,20 +93,24 @@ Plonk's multi-package-manager approach is more comprehensive than existing solut
 - Developer-friendly complexity (vs enterprise IaC tools)
 - Cross-platform consistency
 
-## Implementation Recommendations
+## Implementation Roadmap
 
-**Phase 1**: Implement **pnpm** and **Bun** global support
-- Address JavaScript ecosystem performance demands
-- Capitalize on growing adoption of npm alternatives
+**Current Phase**: Implement **pnpm** global support
+- ✅ Complete PackageManager interface compatibility confirmed
+- ✅ Commands available: `pnpm add -g`, `pnpm remove -g`, `pnpm list -g`
+- ✅ Address JavaScript ecosystem performance demands
+- 🚧 Implementation in progress
 
-**Phase 2**: Add **.NET Global Tools** and **PHP Composer Global**
-- Fill major language ecosystem gaps
-- Expand enterprise and web development coverage
+**Next Phase**: Monitor **Bun** development and evaluate emerging ecosystems
+- Wait for Bun to resolve global package management limitations
+- Monitor Zig package manager post-1.0 release
+- Evaluate AI/ML focused tooling trends
+- Consider new performance-oriented package managers
 
-**Phase 3**: Monitor and evaluate emerging ecosystems
-- Zig package manager post-1.0
-- AI/ML focused tooling trends
-- New performance-oriented package managers
+**Future Considerations**: Additional language ecosystems
+- Evaluate demand for additional specialized package managers
+- Consider version management integration (Proto, etc.)
+- Monitor enterprise and web development needs
 
 ---
 

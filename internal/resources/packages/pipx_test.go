@@ -159,13 +159,6 @@ func TestPipxManager_IsAvailable(t *testing.T) {
 	}
 }
 
-func TestPipxManager_SupportsSearch(t *testing.T) {
-	manager := NewPipxManager()
-	if manager.SupportsSearch() {
-		t.Errorf("SupportsSearch() = true, want false - pipx doesn't support search")
-	}
-}
-
 func TestPipxManager_Search(t *testing.T) {
 	manager := NewPipxManager()
 	ctx := context.Background()

@@ -361,11 +361,6 @@ func (g *GoInstallManager) IsAvailable(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-// SupportsSearch returns false as go install doesn't support package search
-func (g *GoInstallManager) SupportsSearch() bool {
-	return false
-}
-
 // CheckHealth performs a comprehensive health check of the Go installation
 func (g *GoInstallManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	check := &HealthCheck{

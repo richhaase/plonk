@@ -323,11 +323,6 @@ func (g *GemManager) IsAvailable(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-// SupportsSearch returns true as gem supports package search
-func (g *GemManager) SupportsSearch() bool {
-	return true
-}
-
 // CheckHealth performs a comprehensive health check of the Gem installation
 func (g *GemManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	check := &HealthCheck{

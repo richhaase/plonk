@@ -262,11 +262,6 @@ func (c *CargoManager) IsAvailable(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-// SupportsSearch returns true as Cargo supports package search
-func (c *CargoManager) SupportsSearch() bool {
-	return true
-}
-
 // CheckHealth performs a comprehensive health check of the Cargo installation
 func (c *CargoManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	check := &HealthCheck{

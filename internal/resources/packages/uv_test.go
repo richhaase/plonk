@@ -74,13 +74,6 @@ func TestUvManager_parseListOutput(t *testing.T) {
 	}
 }
 
-func TestUvManager_SupportsSearch(t *testing.T) {
-	manager := NewUvManager()
-	if manager.SupportsSearch() {
-		t.Errorf("SupportsSearch() = true, want false - UV does not support search")
-	}
-}
-
 func TestUvManager_handleInstallError(t *testing.T) {
 	manager := NewUvManager()
 

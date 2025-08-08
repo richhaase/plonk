@@ -187,13 +187,6 @@ func TestDotnetManager_IsAvailable(t *testing.T) {
 	}
 }
 
-func TestDotnetManager_SupportsSearch(t *testing.T) {
-	manager := NewDotnetManager()
-	if manager.SupportsSearch() {
-		t.Errorf("SupportsSearch() = true, want false - .NET CLI doesn't support search")
-	}
-}
-
 func TestDotnetManager_Search(t *testing.T) {
 	manager := NewDotnetManager()
 	ctx := context.Background()
