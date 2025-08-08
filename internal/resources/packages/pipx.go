@@ -227,22 +227,12 @@ func (p *PipxManager) SelfInstall(ctx context.Context) error {
 		return nil
 	}
 
-	// Try to install pipx via pip3 if available
-	if pipAvailable, _ := checkPackageManagerAvailable(ctx, "pip3"); pipAvailable {
-		return p.installViaPip(ctx)
-	}
-
-	// Try via Homebrew if available
+	// Install pipx via Homebrew (canonical method)
 	if homebrewAvailable, _ := checkPackageManagerAvailable(ctx, "brew"); homebrewAvailable {
 		return p.installViaHomebrew(ctx)
 	}
 
-	return fmt.Errorf("pipx installation requires pip3 or Homebrew - install Python 3 with pip or Homebrew first")
-}
-
-// installViaPip installs pipx via pip3
-func (p *PipxManager) installViaPip(ctx context.Context) error {
-	return executeInstallCommand(ctx, "pip3", []string{"install", "--user", "pipx"}, "pipx")
+	return fmt.Errorf("pipx installation requires Homebrew - install Homebrew first from https://brew.sh")
 }
 
 // installViaHomebrew installs pipx via Homebrew
