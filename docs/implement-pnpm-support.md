@@ -51,28 +51,18 @@ type PackageManager interface {
     InstalledVersion(ctx context.Context, name string) (string, error) ✅
     Info(ctx context.Context, name string) (*PackageInfo, error) ✅
 
-    // Required operations
+    // Optional operations
+    Search(ctx context.Context, query string) ([]string, error) ❌ Not supported
     CheckHealth(ctx context.Context) (*HealthCheck, error)      ✅
     SelfInstall(ctx context.Context) error                      ✅
     Upgrade(ctx context.Context, packages []string) error       ✅
-
-    // Optional operations
-    Search(ctx context.Context, query string) ([]string, error) ❌ Not supported
 }
 ```
 
-### Single Limitation: Search Support
+### Critical Limitation: Search Support
 **Issue**: pnpm lacks a native `search` command
 **Solution**: Implement `SupportsSearch() { return false }` and return `ErrOperationNotSupported`
-**Impact**: Not a blocker - this is the only optional method and several existing managers have limited search support
-
-### Full Interface Compatibility
-pnpm provides **complete implementation** for all required methods:
-- ✅ **All core operations** - standard package management
-- ✅ **CheckHealth()** - via `pnpm --version` and `pnpm root -g`
-- ✅ **SelfInstall()** - via `npm install -g pnpm` or `brew install pnpm`
-- ✅ **Upgrade()** - via `pnpm update -g [packages]`
-- ❌ **Search()** - only optional method not supported
+**Impact**: Not a blocker - several existing managers have limited search support
 
 ## Implementation Plan
 
@@ -104,10 +94,10 @@ func NewPnpmManager() *PnpmManager {
 4. **IsInstalled()** - Check specific package installation
 5. **InstalledVersion()** - Extract version from list output
 6. **Info()** - Use `pnpm view <package> --json`
-7. **CheckHealth()** - Comprehensive health checking (REQUIRED)
-8. **SelfInstall()** - Install pnpm via available package managers (REQUIRED)
-9. **Upgrade()** - Use `pnpm update -g [packages]` (REQUIRED)
-10. **Search()** - Return `ErrOperationNotSupported` (only optional method)
+7. **Upgrade()** - Use `pnpm update -g [packages]`
+8. **CheckHealth()** - Comprehensive health checking
+9. **SelfInstall()** - Install pnpm via available package managers
+10. **Search()** - Return `ErrOperationNotSupported`
 
 #### JSON Output Parsing
 ```go
@@ -157,7 +147,7 @@ func init() {
 }
 ```
 
-### Phase 2: Required Operations (1 day)
+### Phase 2: Advanced Features (1 day)
 
 #### Health Checking
 ```go
@@ -399,7 +389,7 @@ internal/resources/packages/
 
 ### Week 1
 - **Days 1-2**: Core implementation (Phase 1)
-- **Day 3**: Required operations - CheckHealth, SelfInstall, Upgrade (Phase 2)
+- **Day 3**: Advanced features (Phase 2)
 - **Day 4**: Testing and integration (Phase 3)
 
 ### Week 2
