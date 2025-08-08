@@ -136,7 +136,7 @@ Plonk supports 10 package managers across multiple language ecosystems:
 - **Homebrew** (brew) - macOS/Linux packages and system tools
 - **NPM** (npm) - Node.js packages (global)
 - **Cargo** (cargo) - Rust packages
-- **Pip** (pip) - Python packages (user installs)
+- **Pipx** (pipx) - Python applications in isolated environments
 - **Gem** (gem) - Ruby packages
 - **Go** (go) - Go packages via `go install`
 
@@ -150,7 +150,7 @@ Package manager prefixes in commands:
 ```bash
 # Core managers
 plonk install brew:wget npm:prettier cargo:ripgrep
-plonk install pip:black gem:rubocop go:golangci-lint
+plonk install pipx:black gem:rubocop go:golangci-lint
 
 # Extended support
 plonk install uv:ruff pixi:jupyter composer:php-cs-fixer

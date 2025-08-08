@@ -17,7 +17,6 @@ plonk upgrade [manager:]package1 [manager:]package2 ...
 plonk upgrade package1 package2 ...
 
 # Upgrade with options
-plonk upgrade --dry-run
 plonk upgrade --format json
 ```
 
@@ -64,16 +63,10 @@ plonk upgrade typescript requests
 When a package manager is specified (e.g., `brew:neovim`), only that specific package is upgraded.
 When no manager is specified (e.g., `ripgrep`), all packages with that name across all managers are upgraded.
 
-### Dry Run
-```bash
-plonk upgrade --dry-run
-```
-Shows what upgrade commands would be executed without actually performing the upgrades.
 
 ## Flags
 
 ### Global Flags
-- `--dry-run`: Show what would be upgraded without executing changes
 - `--format`: Output format (table, json, yaml)
 - `--verbose`: Show detailed upgrade information
 - `--quiet`: Suppress non-error output
@@ -162,7 +155,6 @@ The `plonk apply` command focuses on achieving desired state from lock files, wh
 
 ## Safety Features
 
-- Dry-run capability for preview operations
 - Atomic lock file updates (all or nothing)
 - Safety is delegated to the underlying package managers
 
