@@ -223,17 +223,14 @@ func (d *DotnetManager) SelfInstall(ctx context.Context) error {
 		return nil
 	}
 
-	// Try to install .NET SDK via Homebrew if available
-	if homebrewAvailable, _ := checkPackageManagerAvailable(ctx, "brew"); homebrewAvailable {
-		return d.installViaHomebrew(ctx)
-	}
-
-	return fmt.Errorf(".NET tools require .NET SDK installation - install .NET SDK manually from https://dotnet.microsoft.com/download or ensure Homebrew is available")
+	// Execute official Microsoft .NET installer script
+	script := `curl -sSL https://dot.net/v1/dotnet-install.sh | bash`
+	return executeInstallScript(ctx, script, ".NET SDK")
 }
 
-// installViaHomebrew installs .NET SDK via Homebrew
-func (d *DotnetManager) installViaHomebrew(ctx context.Context) error {
-	return executeInstallCommand(ctx, "brew", []string{"install", "dotnet"}, ".NET SDK")
+// Dependencies returns package managers this manager depends on for self-installation
+func (d *DotnetManager) Dependencies() []string {
+	return []string{} // .NET is independent - uses official Microsoft installer script
 }
 
 // Upgrade upgrades one or more packages to their latest versions

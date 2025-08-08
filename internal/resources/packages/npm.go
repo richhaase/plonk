@@ -366,6 +366,11 @@ func (n *NpmManager) Upgrade(ctx context.Context, packages []string) error {
 	return nil
 }
 
+// Dependencies returns package managers this manager depends on for self-installation
+func (n *NpmManager) Dependencies() []string {
+	return []string{"brew"} // npm requires brew to install Node.js
+}
+
 func init() {
 	RegisterManager("npm", func() PackageManager {
 		return NewNpmManager()

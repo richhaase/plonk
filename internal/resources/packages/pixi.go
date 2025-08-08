@@ -289,6 +289,11 @@ func (p *PixiManager) SelfInstall(ctx context.Context) error {
 	return executeInstallScript(ctx, script, "Pixi")
 }
 
+// Dependencies returns package managers this manager depends on for self-installation
+func (p *PixiManager) Dependencies() []string {
+	return []string{} // Pixi is independent - uses official installer script
+}
+
 func init() {
 	RegisterManager("pixi", func() PackageManager {
 		return NewPixiManager()

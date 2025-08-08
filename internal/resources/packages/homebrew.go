@@ -464,6 +464,11 @@ func (h *HomebrewManager) handleUpgradeError(err error, output []byte, packages 
 	return fmt.Errorf("failed to execute upgrade command: %w", err)
 }
 
+// Dependencies returns package managers this manager depends on for self-installation
+func (h *HomebrewManager) Dependencies() []string {
+	return []string{} // Homebrew is independent - uses official installer script
+}
+
 // handleInstallError processes install command errors
 func (h *HomebrewManager) handleInstallError(err error, output []byte, packageName string) error {
 	outputStr := strings.ToLower(string(output))

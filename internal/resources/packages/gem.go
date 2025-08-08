@@ -447,6 +447,11 @@ func (g *GemManager) Upgrade(ctx context.Context, packages []string) error {
 	return nil
 }
 
+// Dependencies returns package managers this manager depends on for self-installation
+func (g *GemManager) Dependencies() []string {
+	return []string{"brew"} // gem requires brew to install Ruby
+}
+
 func init() {
 	RegisterManager("gem", func() PackageManager {
 		return NewGemManager()

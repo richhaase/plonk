@@ -101,7 +101,7 @@ plonk add ~/.zshrc                       # Start tracking your dotfiles
 
 The `clone` command:
 1. Clones your dotfiles repository
-2. Installs missing language package managers needed by your dotfiles
+2. Intelligently resolves package manager dependencies and installs them in correct order
 3. Runs `plonk apply` to install all packages and deploy dotfiles
 4. Gets your machine ready for development in minutes
 

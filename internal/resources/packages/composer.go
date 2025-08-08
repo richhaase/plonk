@@ -310,26 +310,17 @@ func (c *ComposerManager) SelfInstall(ctx context.Context) error {
 		return nil
 	}
 
-	// Check PHP prerequisite
-	if !CheckCommandAvailable("php") {
-		return fmt.Errorf("composer requires PHP to be installed first - install PHP and retry")
+	// Install Composer via Homebrew (handles PHP dependency automatically)
+	if homebrewAvailable, _ := checkPackageManagerAvailable(ctx, "brew"); homebrewAvailable {
+		return c.installViaHomebrew(ctx)
 	}
 
-	return c.installWithHashVerification(ctx)
+	return fmt.Errorf("Composer installation requires Homebrew - install Homebrew first from https://brew.sh")
 }
 
-// installWithHashVerification implements the 4-step secure installation process from getcomposer.org
-func (c *ComposerManager) installWithHashVerification(ctx context.Context) error {
-	// Step 1: Download installer to temporary file
-	script := `
-		cd /tmp &&
-		php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" &&
-		php -r "if (hash_file('sha384', 'composer-setup.php') === 'dac665fdc30fdd8ec78b38b9800061b4150413ff2e3b6f88543c636f7cd84f6db9189d43a81e5503cda447da73c7e5b6') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); exit(1); }" &&
-		php composer-setup.php --install-dir=/usr/local/bin --filename=composer &&
-		php -r "unlink('composer-setup.php');"
-	`
-
-	return executeInstallScript(ctx, script, "Composer")
+// installViaHomebrew installs Composer via Homebrew
+func (c *ComposerManager) installViaHomebrew(ctx context.Context) error {
+	return executeInstallCommand(ctx, "brew", []string{"install", "composer"}, "Composer")
 }
 
 // Upgrade upgrades one or more packages to their latest versions
@@ -350,6 +341,11 @@ func (c *ComposerManager) Upgrade(ctx context.Context, packages []string) error 
 		return c.handleUpgradeError(err, output, strings.Join(packages, ", "))
 	}
 	return nil
+}
+
+// Dependencies returns package managers this manager depends on for self-installation
+func (c *ComposerManager) Dependencies() []string {
+	return []string{"brew"} // composer requires brew to install Composer
 }
 
 func init() {

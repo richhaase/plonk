@@ -260,24 +260,54 @@ func DetectRequiredManagers(lockPath string) ([]string, error) {
 	return managers, nil
 }
 
-// installDetectedManagers installs only the specified package managers using SelfInstall interface
+// installDetectedManagers installs package managers in dependency order
 func installDetectedManagers(ctx context.Context, managers []string, cfg Config) error {
 	if len(managers) == 0 {
 		return nil
 	}
 
-	output.StageUpdate(fmt.Sprintf("Installing package managers (%d required)...", len(managers)))
-
 	// Get package manager registry
 	registry := packages.NewManagerRegistry()
+	resolver := packages.NewDependencyResolver(registry)
 
-	// Find which of the detected managers are missing
+	// Resolve all dependencies (including transitive)
+	allManagers, err := resolver.GetAllDependencies(managers)
+	if err != nil {
+		return fmt.Errorf("failed to resolve package manager dependencies: %w", err)
+	}
+
+	// Get installation order via topological sort
+	orderedManagers, err := resolver.ResolveDependencyOrder(allManagers)
+	if err != nil {
+		return fmt.Errorf("failed to resolve dependency order: %w", err)
+	}
+
+	output.StageUpdate(fmt.Sprintf("Installing package managers in dependency order (%d total)...", len(orderedManagers)))
+
+	// Show dependency order to user
+	if len(orderedManagers) > len(managers) {
+		output.Printf("Detected additional dependencies:\n")
+		for _, mgr := range orderedManagers {
+			isOriginal := false
+			for _, orig := range managers {
+				if mgr == orig {
+					isOriginal = true
+					break
+				}
+			}
+			if isOriginal {
+				output.Printf("- %s (required)\n", getManagerDescription(mgr))
+			} else {
+				output.Printf("- %s (dependency)\n", getManagerDescription(mgr))
+			}
+		}
+	}
+
+	// Find which managers are missing
 	var missingManagers []string
-
-	for _, mgr := range managers {
+	for _, mgr := range orderedManagers {
 		packageManager, err := registry.GetManager(mgr)
 		if err != nil {
-			// If we can't get the manager from registry, skip it
 			output.Printf("Warning: Unknown package manager '%s', skipping\n", mgr)
 			continue
 		}
@@ -298,18 +328,16 @@ func installDetectedManagers(ctx context.Context, managers []string, cfg Config)
 		return nil
 	}
 
-	output.Printf("Missing required package managers:\n")
+	output.Printf("Installing missing package managers in dependency order:\n")
 	for _, manager := range missingManagers {
-		description := getManagerDescription(manager)
-		output.Printf("- %s (%s)\n", manager, description)
+		output.Printf("- %s\n", getManagerDescription(manager))
 	}
 
-	// Install missing tools using SelfInstall interface
+	// Install in dependency order
 	successful := 0
 	failed := 0
 
 	for i, manager := range missingManagers {
-		// Show progress for each manager
 		output.ProgressUpdate(i+1, len(missingManagers), "Installing", getManagerDescription(manager))
 
 		packageManager, err := registry.GetManager(manager)
@@ -333,13 +361,12 @@ func installDetectedManagers(ctx context.Context, managers []string, cfg Config)
 
 	if failed > 0 {
 		output.Printf("Installation summary: %d successful, %d failed\n", successful, failed)
-		output.Printf("You can retry failed installations manually\n")
 		if successful > 0 {
 			return nil // Don't treat partial success as failure
 		}
 		return fmt.Errorf("failed to install %d package managers", failed)
 	}
 
-	output.Printf("All required package managers installed successfully\n")
+	output.Printf("All package managers installed successfully\n")
 	return nil
 }
