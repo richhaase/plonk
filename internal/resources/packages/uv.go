@@ -6,6 +6,7 @@ package packages
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -165,6 +166,53 @@ func (u *UvManager) InstalledVersion(ctx context.Context, name string) (string, 
 	return "", fmt.Errorf("version information not found for tool '%s'", name)
 }
 
+// Upgrade upgrades one or more packages to their latest versions
+func (u *UvManager) Upgrade(ctx context.Context, packages []string) error {
+	if len(packages) == 0 {
+		// First get all installed tools
+		installed, err := u.ListInstalled(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to list installed tools: %w", err)
+		}
+
+		// Upgrade each tool individually
+		var upgradeErrors []string
+		for _, tool := range installed {
+			output, err := ExecuteCommandCombined(ctx, u.binary, "tool", "upgrade", tool)
+			if err != nil {
+				upgradeErr := u.handleUpgradeError(err, output, tool)
+				upgradeErrors = append(upgradeErrors, upgradeErr.Error())
+				continue
+			}
+		}
+
+		if len(upgradeErrors) > 0 {
+			return fmt.Errorf("some tools failed to upgrade: %s", strings.Join(upgradeErrors, "; "))
+		}
+		return nil
+	}
+
+	// Upgrade specific packages
+	args := append([]string{"tool", "upgrade"}, packages...)
+	output, err := ExecuteCommandCombined(ctx, u.binary, args...)
+	if err != nil {
+		return u.handleUpgradeError(err, output, strings.Join(packages, ", "))
+	}
+	return nil
+}
+
+// SelfInstall installs UV using official installer
+func (u *UvManager) SelfInstall(ctx context.Context) error {
+	// Check if already available (idempotent)
+	if available, _ := u.IsAvailable(ctx); available {
+		return nil
+	}
+
+	// Execute official UV installer script
+	script := `curl -LsSf https://astral.sh/uv/install.sh | sh`
+	return executeInstallScript(ctx, script, "UV")
+}
+
 func init() {
 	RegisterManager("uv", func() PackageManager {
 		return NewUvManager()
@@ -193,6 +241,118 @@ func (u *UvManager) IsAvailable(ctx context.Context) (bool, error) {
 // SupportsSearch returns false as UV does not support tool search
 func (u *UvManager) SupportsSearch() bool {
 	return false
+}
+
+// CheckHealth performs a comprehensive health check of the UV tool installation
+func (u *UvManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
+	check := &HealthCheck{
+		Name:     "UV Tool Manager",
+		Category: "package-managers",
+		Status:   "pass",
+		Message:  "UV is available and properly configured",
+	}
+
+	// Check basic availability first
+	available, err := u.IsAvailable(ctx)
+	if err != nil {
+		if IsContextError(err) {
+			return nil, err
+		}
+		check.Status = "fail"
+		check.Message = "UV availability check failed"
+		check.Issues = []string{fmt.Sprintf("Error checking UV: %v", err)}
+		return check, nil
+	}
+
+	if !available {
+		check.Status = "fail"
+		check.Message = "UV is required but not available"
+		check.Issues = []string{"UV is required for managing Python tools"}
+		check.Suggestions = []string{
+			"Install UV: curl -LsSf https://astral.sh/uv/install.sh | sh",
+			"Or via pipx: pipx install uv",
+			"After installation, ensure uv is in your PATH",
+		}
+		return check, nil
+	}
+
+	// Discover UV tool directory dynamically
+	binDir, err := u.getBinDirectory(ctx)
+	if err != nil {
+		check.Status = "warn"
+		check.Message = "Could not determine UV tool directory"
+		check.Issues = []string{fmt.Sprintf("Error discovering tool directory: %v", err)}
+		return check, nil
+	}
+
+	// Check if bin directory is in PATH
+	pathCheck := checkDirectoryInPath(binDir)
+	check.Details = append(check.Details, fmt.Sprintf("UV tool directory: %s", binDir))
+
+	if !pathCheck.inPath && pathCheck.exists {
+		check.Status = "warn"
+		check.Message = "UV tool directory exists but not in PATH"
+		check.Issues = []string{fmt.Sprintf("Directory %s exists but not in PATH", binDir)}
+		check.Suggestions = pathCheck.suggestions
+	} else if !pathCheck.exists {
+		check.Status = "warn"
+		check.Message = "UV tool directory does not exist"
+		check.Issues = []string{fmt.Sprintf("Directory %s does not exist", binDir)}
+	} else {
+		check.Details = append(check.Details, "UV tool directory is in PATH")
+	}
+
+	return check, nil
+}
+
+// getBinDirectory discovers the UV tool bin directory using uv tool dir
+func (u *UvManager) getBinDirectory(ctx context.Context) (string, error) {
+	output, err := ExecuteCommand(ctx, u.binary, "tool", "dir")
+	if err != nil {
+		return "", fmt.Errorf("failed to get UV tool directory: %w", err)
+	}
+
+	toolDir := strings.TrimSpace(string(output))
+	return filepath.Join(toolDir, "bin"), nil
+}
+
+// handleUpgradeError processes upgrade command errors
+func (u *UvManager) handleUpgradeError(err error, output []byte, packages string) error {
+	outputStr := string(output)
+
+	if exitCode, ok := ExtractExitCode(err); ok {
+		// Check for known error patterns
+		if strings.Contains(outputStr, "No such tool") ||
+			strings.Contains(outputStr, "not installed") ||
+			strings.Contains(outputStr, "not found") {
+			return fmt.Errorf("one or more tools not found: %s", packages)
+		}
+		if strings.Contains(outputStr, "already up-to-date") ||
+			strings.Contains(outputStr, "Nothing to upgrade") ||
+			strings.Contains(outputStr, "up to date") {
+			return nil // Already up-to-date is success
+		}
+		if strings.Contains(outputStr, "permission denied") ||
+			strings.Contains(outputStr, "Permission denied") {
+			return fmt.Errorf("permission denied upgrading %s", packages)
+		}
+
+		if exitCode != 0 {
+			// Include command output for better error messages
+			if len(output) > 0 {
+				// Trim the output and limit length for readability
+				errorOutput := strings.TrimSpace(string(output))
+				if len(errorOutput) > 500 {
+					errorOutput = errorOutput[:500] + "..."
+				}
+				return fmt.Errorf("tool upgrade failed: %s", errorOutput)
+			}
+			return fmt.Errorf("tool upgrade failed (exit code %d): %w", exitCode, err)
+		}
+		return nil
+	}
+
+	return fmt.Errorf("failed to execute upgrade command: %w", err)
 }
 
 // handleInstallError processes install command errors

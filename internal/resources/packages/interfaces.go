@@ -34,6 +34,16 @@ type PackageManager interface {
 
 	// Optional operations - check capabilities before calling
 	Search(ctx context.Context, query string) ([]string, error)
+
+	// Health checking - provides diagnostic information about the package manager
+	CheckHealth(ctx context.Context) (*HealthCheck, error)
+
+	// Self-installation - automatically installs the package manager if not available
+	SelfInstall(ctx context.Context) error
+
+	// Upgrade upgrades one or more packages to their latest versions
+	// If packages slice is empty, upgrades all installed packages for this manager
+	Upgrade(ctx context.Context, packages []string) error
 }
 
 // PackageInfo represents detailed information about a package
@@ -63,4 +73,50 @@ type PackageConfigLoader interface {
 // PackageConfigItem represents a package from configuration
 type PackageConfigItem struct {
 	Name string
+}
+
+// HealthCheck represents the health status of a package manager
+type HealthCheck struct {
+	Name        string   `json:"name" yaml:"name"`
+	Category    string   `json:"category" yaml:"category"`
+	Status      string   `json:"status" yaml:"status"`
+	Message     string   `json:"message" yaml:"message"`
+	Details     []string `json:"details,omitempty" yaml:"details,omitempty"`
+	Issues      []string `json:"issues,omitempty" yaml:"issues,omitempty"`
+	Suggestions []string `json:"suggestions,omitempty" yaml:"suggestions,omitempty"`
+}
+
+// InstallationInfo provides metadata about how a package manager can be installed
+type InstallationInfo struct {
+	Method          InstallMethod     `json:"method"`
+	IsIndependent   bool              `json:"is_independent"`
+	RequiresManager string            `json:"requires_manager,omitempty"`
+	SecurityLevel   SecurityLevel     `json:"security_level"`
+	PlatformNotes   map[string]string `json:"platform_notes,omitempty"`
+}
+
+// InstallMethod represents the method used to install a package manager
+type InstallMethod int
+
+const (
+	ShellScript InstallMethod = iota
+	BinaryDownload
+	PackageManagerInstall
+	RuntimeBundled
+	NotSupported
+)
+
+// SecurityLevel represents the security level of an installation method
+type SecurityLevel int
+
+const (
+	HighSecurity     SecurityLevel = iota // Signed releases, official sources
+	MediumSecurity                        // Hash verification, HTTPS
+	StandardSecurity                      // HTTPS only
+	ManualOnly                            // Requires manual installation
+)
+
+// SelfInstaller is an optional interface for package managers that provide installation metadata
+type SelfInstaller interface {
+	GetInstallationInfo() InstallationInfo
 }

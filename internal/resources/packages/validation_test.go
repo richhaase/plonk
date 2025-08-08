@@ -84,10 +84,10 @@ func TestValidateSpec(t *testing.T) {
 		// Search mode tests
 		{
 			name:           "search with manager specified",
-			spec:           "pip:requests",
+			spec:           "uv:requests",
 			mode:           ValidationModeSearch,
 			defaultManager: "",
-			wantSpec:       &PackageSpec{Name: "requests", Manager: "pip", OriginalSpec: "pip:requests"},
+			wantSpec:       &PackageSpec{Name: "requests", Manager: "uv", OriginalSpec: "uv:requests"},
 			wantErr:        false,
 		},
 		{
@@ -154,7 +154,7 @@ func TestValidateSpecs(t *testing.T) {
 	}{
 		{
 			name:           "all valid install specs",
-			specs:          []string{"brew:git", "npm:lodash", "pip:requests"},
+			specs:          []string{"brew:git", "npm:lodash", "uv:requests"},
 			mode:           ValidationModeInstall,
 			defaultManager: "brew",
 			wantValid:      3,

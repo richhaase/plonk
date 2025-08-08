@@ -41,9 +41,9 @@ func TestManagers_SupportsSearch(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "Pip supports search",
-			manager:  &PipManager{},
-			expected: true,
+			name:     "UV does not support search",
+			manager:  &UvManager{},
+			expected: false,
 		},
 	}
 

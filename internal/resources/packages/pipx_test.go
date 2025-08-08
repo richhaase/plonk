@@ -9,8 +9,8 @@ import (
 	"testing"
 )
 
-func TestDotnetManager_parseListOutput(t *testing.T) {
-	manager := NewDotnetManager()
+func TestPipxManager_parseListOutput(t *testing.T) {
+	manager := NewPipxManager()
 
 	tests := []struct {
 		name   string
@@ -18,26 +18,21 @@ func TestDotnetManager_parseListOutput(t *testing.T) {
 		want   []string
 	}{
 		{
-			name: "standard dotnet tool list output",
-			output: []byte(`Package Id                    Version    Commands
--------------------------------------------------------
-dotnetsay                     2.1.4      dotnetsay
-dotnet-ef                     9.0.7      dotnet-ef
-dotnet-counters               9.0.572801 dotnet-counters`),
-			want: []string{"dotnet-counters", "dotnet-ef", "dotnetsay"},
+			name: "standard pipx list --short output",
+			output: []byte(`black 23.12.1
+flake8 7.0.0
+httpie 3.2.2`),
+			want: []string{"black", "flake8", "httpie"},
 		},
 		{
-			name: "single tool output",
-			output: []byte(`Package Id                    Version    Commands
--------------------------------------------------------
-dotnetsay                     2.1.4      dotnetsay`),
-			want: []string{"dotnetsay"},
+			name:   "single package output",
+			output: []byte(`black 23.12.1`),
+			want:   []string{"black"},
 		},
 		{
-			name: "no tools installed",
-			output: []byte(`Package Id                    Version    Commands
--------------------------------------------------------`),
-			want: []string{},
+			name:   "no packages installed",
+			output: []byte(``),
+			want:   []string{},
 		},
 		{
 			name:   "empty output",
@@ -46,20 +41,16 @@ dotnetsay                     2.1.4      dotnetsay`),
 		},
 		{
 			name: "output with extra whitespace",
-			output: []byte(`  Package Id                    Version    Commands
-  -------------------------------------------------------
-  dotnetsay                     2.1.4      dotnetsay
-  dotnet-outdated-tool          4.6.4      dotnet-outdated  `),
-			want: []string{"dotnet-outdated-tool", "dotnetsay"},
+			output: []byte(`  black 23.12.1
+  httpie 3.2.2  `),
+			want: []string{"black", "httpie"},
 		},
 		{
-			name: "tools with complex names",
-			output: []byte(`Package Id                    Version    Commands
--------------------------------------------------------
-Microsoft.dotnet-openapi      9.0.7      dotnet-openapi
-coverlet.console              6.0.0      coverlet
-dotnet-format                 5.1.250801 dotnet-format`),
-			want: []string{"Microsoft.dotnet-openapi", "coverlet.console", "dotnet-format"},
+			name: "packages with complex names",
+			output: []byte(`pre-commit 3.6.0
+python-dotenv 1.0.0
+requests-oauthlib 1.3.1`),
+			want: []string{"pre-commit", "python-dotenv", "requests-oauthlib"},
 		},
 	}
 
@@ -79,50 +70,44 @@ dotnet-format                 5.1.250801 dotnet-format`),
 	}
 }
 
-func TestDotnetManager_getInstalledVersion(t *testing.T) {
-	_ = NewDotnetManager()
+func TestPipxManager_getInstalledVersion(t *testing.T) {
+	_ = NewPipxManager()
 
 	tests := []struct {
 		name        string
 		output      []byte
-		toolName    string
+		packageName string
 		wantVersion string
 		wantErr     bool
 	}{
 		{
-			name: "find version for existing tool",
-			output: []byte(`Package Id                    Version    Commands
--------------------------------------------------------
-dotnetsay                     2.1.4      dotnetsay
-dotnet-ef                     9.0.7      dotnet-ef`),
-			toolName:    "dotnetsay",
-			wantVersion: "2.1.4",
+			name: "find version for existing package",
+			output: []byte(`black 23.12.1
+httpie 3.2.2`),
+			packageName: "black",
+			wantVersion: "23.12.1",
 			wantErr:     false,
 		},
 		{
-			name: "find version for different tool",
-			output: []byte(`Package Id                    Version    Commands
--------------------------------------------------------
-dotnetsay                     2.1.4      dotnetsay
-dotnet-ef                     9.0.7      dotnet-ef`),
-			toolName:    "dotnet-ef",
-			wantVersion: "9.0.7",
+			name: "find version for different package",
+			output: []byte(`black 23.12.1
+httpie 3.2.2`),
+			packageName: "httpie",
+			wantVersion: "3.2.2",
 			wantErr:     false,
 		},
 		{
-			name: "tool not found",
-			output: []byte(`Package Id                    Version    Commands
--------------------------------------------------------
-dotnetsay                     2.1.4      dotnetsay`),
-			toolName:    "nonexistent-tool",
+			name: "package not found",
+			output: []byte(`black 23.12.1
+httpie 3.2.2`),
+			packageName: "nonexistent-package",
 			wantVersion: "",
 			wantErr:     true,
 		},
 		{
-			name: "empty tool list",
-			output: []byte(`Package Id                    Version    Commands
--------------------------------------------------------`),
-			toolName:    "dotnetsay",
+			name:        "empty package list",
+			output:      []byte(``),
+			packageName: "black",
 			wantVersion: "",
 			wantErr:     true,
 		},
@@ -132,29 +117,16 @@ dotnetsay                     2.1.4      dotnetsay`),
 		t.Run(tt.name, func(t *testing.T) {
 			// We can't easily test the context-based method, so we'll duplicate the parsing logic
 			lines := strings.Split(string(tt.output), "\n")
-			var inDataSection bool
 			var gotVersion string
 			var found bool
 
 			for _, line := range lines {
 				line = strings.TrimSpace(line)
-
-				if strings.Contains(line, "-------") {
-					inDataSection = true
-					continue
-				}
-
-				if strings.Contains(line, "Package Id") {
-					continue
-				}
-
-				if inDataSection {
-					fields := strings.Fields(line)
-					if len(fields) >= 2 && fields[0] == tt.toolName {
-						gotVersion = fields[1]
-						found = true
-						break
-					}
+				parts := strings.Fields(line)
+				if len(parts) >= 2 && parts[0] == tt.packageName {
+					gotVersion = parts[1]
+					found = true
+					break
 				}
 			}
 
@@ -175,30 +147,30 @@ dotnetsay                     2.1.4      dotnetsay`),
 	}
 }
 
-func TestDotnetManager_IsAvailable(t *testing.T) {
-	manager := NewDotnetManager()
+func TestPipxManager_IsAvailable(t *testing.T) {
+	manager := NewPipxManager()
 	ctx := context.Background()
 
 	// This test just ensures the method exists and doesn't panic
 	_, err := manager.IsAvailable(ctx)
 	if err != nil && !IsContextError(err) {
-		// Only context errors are acceptable here since we can't guarantee dotnet is installed
+		// Only context errors are acceptable here since we can't guarantee pipx is installed
 		t.Logf("IsAvailable returned error (this may be expected): %v", err)
 	}
 }
 
-func TestDotnetManager_SupportsSearch(t *testing.T) {
-	manager := NewDotnetManager()
+func TestPipxManager_SupportsSearch(t *testing.T) {
+	manager := NewPipxManager()
 	if manager.SupportsSearch() {
-		t.Errorf("SupportsSearch() = true, want false - .NET CLI doesn't support search")
+		t.Errorf("SupportsSearch() = true, want false - pipx doesn't support search")
 	}
 }
 
-func TestDotnetManager_Search(t *testing.T) {
-	manager := NewDotnetManager()
+func TestPipxManager_Search(t *testing.T) {
+	manager := NewPipxManager()
 	ctx := context.Background()
 
-	// Search should always return empty results since .NET doesn't support search
+	// Search should always return empty results since pipx doesn't support search
 	results, err := manager.Search(ctx, "test")
 	if err != nil {
 		t.Errorf("Search() unexpected error = %v", err)
@@ -208,48 +180,41 @@ func TestDotnetManager_Search(t *testing.T) {
 	}
 }
 
-func TestDotnetManager_handleInstallError(t *testing.T) {
-	manager := NewDotnetManager()
+func TestPipxManager_handleInstallError(t *testing.T) {
+	manager := NewPipxManager()
 
 	tests := []struct {
 		name         string
 		output       []byte
-		toolName     string
+		packageName  string
 		exitCode     int
 		wantContains string
 	}{
 		{
-			name:         "tool not found",
-			output:       []byte("error NU1101: Unable to find package nonexistent-tool. No packages exist with this id"),
-			toolName:     "nonexistent-tool",
+			name:         "package not found",
+			output:       []byte("ERROR: Could not find a version that satisfies the requirement nonexistent-package"),
+			packageName:  "nonexistent-package",
 			exitCode:     1,
 			wantContains: "not found",
 		},
 		{
-			name:         "not a dotnet tool",
-			output:       []byte("error NU1212: Invalid project-package combination for some-package. DotnetToolReference project style can only contain references of the DotnetTool type"),
-			toolName:     "some-package",
-			exitCode:     1,
-			wantContains: "not a .NET global tool",
-		},
-		{
-			name:         "tool already installed",
-			output:       []byte("Tool 'dotnetsay' is already installed."),
-			toolName:     "dotnetsay",
+			name:         "package already installed",
+			output:       []byte("'black' already exists on your system."),
+			packageName:  "black",
 			exitCode:     1,
 			wantContains: "already installed",
 		},
 		{
 			name:         "permission denied",
-			output:       []byte("Access denied when writing to tool directory"),
-			toolName:     "testtool",
+			output:       []byte("Permission denied: Unable to write to directory"),
+			packageName:  "testpackage",
 			exitCode:     1,
 			wantContains: "permission denied",
 		},
 		{
 			name:         "generic error with output",
 			output:       []byte("Some installation error occurred"),
-			toolName:     "testtool",
+			packageName:  "testpackage",
 			exitCode:     2,
 			wantContains: "installation failed",
 		},
@@ -259,7 +224,7 @@ func TestDotnetManager_handleInstallError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockErr := &MockExitError{Code: tt.exitCode}
 
-			err := manager.handleInstallError(mockErr, tt.output, tt.toolName)
+			err := manager.handleInstallError(mockErr, tt.output, tt.packageName)
 			if err == nil {
 				t.Errorf("handleInstallError() = nil, want error")
 				return
@@ -272,43 +237,43 @@ func TestDotnetManager_handleInstallError(t *testing.T) {
 	}
 }
 
-func TestDotnetManager_handleUninstallError(t *testing.T) {
-	manager := NewDotnetManager()
+func TestPipxManager_handleUninstallError(t *testing.T) {
+	manager := NewPipxManager()
 
 	tests := []struct {
-		name     string
-		output   []byte
-		toolName string
-		exitCode int
-		wantErr  bool
+		name        string
+		output      []byte
+		packageName string
+		exitCode    int
+		wantErr     bool
 	}{
 		{
-			name:     "tool not installed",
-			output:   []byte("Tool 'testtool' is not installed."),
-			toolName: "testtool",
-			exitCode: 1,
-			wantErr:  false, // Not installed should be success
+			name:        "package not installed",
+			output:      []byte("No apps associated with package testpackage."),
+			packageName: "testpackage",
+			exitCode:    1,
+			wantErr:     false, // Not installed should be success
 		},
 		{
-			name:     "no such tool",
-			output:   []byte("No such tool exists in the global tools"),
-			toolName: "missing-tool",
-			exitCode: 1,
-			wantErr:  false, // Not found should be success
+			name:        "package not found",
+			output:      []byte("No such package 'missing-package' is installed."),
+			packageName: "missing-package",
+			exitCode:    1,
+			wantErr:     false, // Not found should be success
 		},
 		{
-			name:     "permission denied",
-			output:   []byte("Access denied when writing to tool directory"),
-			toolName: "testtool",
-			exitCode: 1,
-			wantErr:  true,
+			name:        "permission denied",
+			output:      []byte("Permission denied: Unable to remove directory"),
+			packageName: "testpackage",
+			exitCode:    1,
+			wantErr:     true,
 		},
 		{
-			name:     "generic error",
-			output:   []byte("Some uninstallation error"),
-			toolName: "testtool",
-			exitCode: 2,
-			wantErr:  true,
+			name:        "generic error",
+			output:      []byte("Some uninstallation error"),
+			packageName: "testpackage",
+			exitCode:    2,
+			wantErr:     true,
 		},
 	}
 
@@ -316,7 +281,7 @@ func TestDotnetManager_handleUninstallError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockErr := &MockExitError{Code: tt.exitCode}
 
-			err := manager.handleUninstallError(mockErr, tt.output, tt.toolName)
+			err := manager.handleUninstallError(mockErr, tt.output, tt.packageName)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("handleUninstallError() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -324,26 +289,26 @@ func TestDotnetManager_handleUninstallError(t *testing.T) {
 	}
 }
 
-func TestDotnetManager_IsAvailableWithMock(t *testing.T) {
+func TestPipxManager_IsAvailableWithMock(t *testing.T) {
 	tests := []struct {
 		name          string
 		mockResponses map[string]CommandResponse
 		expected      bool
 	}{
 		{
-			name: "dotnet is available",
+			name: "pipx is available",
 			mockResponses: map[string]CommandResponse{
-				"dotnet --version": {
-					Output: []byte("9.0.100"),
+				"pipx --version": {
+					Output: []byte("1.4.3"),
 					Error:  nil,
 				},
 			},
 			expected: true,
 		},
 		{
-			name: "dotnet not found",
+			name: "pipx not found",
 			mockResponses: map[string]CommandResponse{
-				"dotnet --version": {
+				"pipx --version": {
 					Output: []byte(""),
 					Error:  &MockExitError{Code: 127},
 				},
@@ -351,9 +316,9 @@ func TestDotnetManager_IsAvailableWithMock(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "dotnet exists but not functional",
+			name: "pipx exists but not functional",
 			mockResponses: map[string]CommandResponse{
-				"dotnet --version": {
+				"pipx --version": {
 					Output: []byte(""),
 					Error:  &MockExitError{Code: 1},
 				},
@@ -373,7 +338,7 @@ func TestDotnetManager_IsAvailableWithMock(t *testing.T) {
 			}
 			SetDefaultExecutor(mock)
 
-			manager := NewDotnetManager()
+			manager := NewPipxManager()
 			result, _ := manager.IsAvailable(context.Background())
 
 			if result != tt.expected {
@@ -383,31 +348,31 @@ func TestDotnetManager_IsAvailableWithMock(t *testing.T) {
 	}
 }
 
-func TestDotnetManager_Install(t *testing.T) {
+func TestPipxManager_Install(t *testing.T) {
 	tests := []struct {
 		name          string
-		toolName      string
+		packageName   string
 		mockResponses map[string]CommandResponse
 		expectError   bool
 		errorContains string
 	}{
 		{
-			name:     "successful install",
-			toolName: "dotnetsay",
+			name:        "successful install",
+			packageName: "black",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool install -g dotnetsay": {
-					Output: []byte("You can invoke the tool using the following command: dotnetsay\nTool 'dotnetsay' (version '2.1.4') was installed successfully."),
+				"pipx install black": {
+					Output: []byte("installed package black 23.12.1, installed using Python 3.11.7\n  - black"),
 					Error:  nil,
 				},
 			},
 			expectError: false,
 		},
 		{
-			name:     "tool not found",
-			toolName: "nonexistent-tool",
+			name:        "package not found",
+			packageName: "nonexistent-package",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool install -g nonexistent-tool": {
-					Output: []byte("error NU1101: Unable to find package nonexistent-tool. No packages exist with this id"),
+				"pipx install nonexistent-package": {
+					Output: []byte("ERROR: Could not find a version that satisfies the requirement nonexistent-package"),
 					Error:  &MockExitError{Code: 1},
 				},
 			},
@@ -415,11 +380,11 @@ func TestDotnetManager_Install(t *testing.T) {
 			errorContains: "not found",
 		},
 		{
-			name:     "tool already installed",
-			toolName: "dotnetsay",
+			name:        "package already installed",
+			packageName: "black",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool install -g dotnetsay": {
-					Output: []byte("Tool 'dotnetsay' is already installed."),
+				"pipx install black": {
+					Output: []byte("'black' already exists on your system."),
 					Error:  &MockExitError{Code: 1},
 				},
 			},
@@ -427,23 +392,11 @@ func TestDotnetManager_Install(t *testing.T) {
 			errorContains: "already installed",
 		},
 		{
-			name:     "not a dotnet tool",
-			toolName: "some-package",
+			name:        "permission denied",
+			packageName: "testpackage",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool install -g some-package": {
-					Output: []byte("error NU1212: Invalid project-package combination for some-package. DotnetToolReference project style can only contain references of the DotnetTool type"),
-					Error:  &MockExitError{Code: 1},
-				},
-			},
-			expectError:   true,
-			errorContains: "not a .NET global tool",
-		},
-		{
-			name:     "permission denied",
-			toolName: "testtool",
-			mockResponses: map[string]CommandResponse{
-				"dotnet tool install -g testtool": {
-					Output: []byte("Access denied when writing to tool directory"),
+				"pipx install testpackage": {
+					Output: []byte("Permission denied: Unable to write to directory"),
 					Error:  &MockExitError{Code: 1},
 				},
 			},
@@ -463,8 +416,8 @@ func TestDotnetManager_Install(t *testing.T) {
 			}
 			SetDefaultExecutor(mock)
 
-			manager := NewDotnetManager()
-			err := manager.Install(context.Background(), tt.toolName)
+			manager := NewPipxManager()
+			err := manager.Install(context.Background(), tt.packageName)
 
 			if tt.expectError && err == nil {
 				t.Errorf("Expected error but got none")
@@ -481,53 +434,53 @@ func TestDotnetManager_Install(t *testing.T) {
 	}
 }
 
-func TestDotnetManager_Uninstall(t *testing.T) {
+func TestPipxManager_Uninstall(t *testing.T) {
 	tests := []struct {
 		name          string
-		toolName      string
+		packageName   string
 		mockResponses map[string]CommandResponse
 		expectError   bool
 		errorContains string
 	}{
 		{
-			name:     "successful uninstall",
-			toolName: "dotnetsay",
+			name:        "successful uninstall",
+			packageName: "black",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool uninstall -g dotnetsay": {
-					Output: []byte("Tool 'dotnetsay' (version '2.1.4') was successfully uninstalled."),
+				"pipx uninstall black": {
+					Output: []byte("uninstalled black! ✨ 🌟 ✨"),
 					Error:  nil,
 				},
 			},
 			expectError: false,
 		},
 		{
-			name:     "tool not installed",
-			toolName: "nonexistent-tool",
+			name:        "package not installed",
+			packageName: "nonexistent-package",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool uninstall -g nonexistent-tool": {
-					Output: []byte("Tool 'nonexistent-tool' is not installed."),
+				"pipx uninstall nonexistent-package": {
+					Output: []byte("No apps associated with package nonexistent-package."),
 					Error:  &MockExitError{Code: 1},
 				},
 			},
 			expectError: false, // Not installed is success for uninstall
 		},
 		{
-			name:     "no such tool",
-			toolName: "missing-tool",
+			name:        "package not found",
+			packageName: "missing-package",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool uninstall -g missing-tool": {
-					Output: []byte("No such tool exists in the global tools"),
+				"pipx uninstall missing-package": {
+					Output: []byte("No such package 'missing-package' is installed."),
 					Error:  &MockExitError{Code: 1},
 				},
 			},
 			expectError: false, // Not found is success for uninstall
 		},
 		{
-			name:     "permission denied",
-			toolName: "restricted-tool",
+			name:        "permission denied",
+			packageName: "restricted-package",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool uninstall -g restricted-tool": {
-					Output: []byte("Access denied when writing to tool directory"),
+				"pipx uninstall restricted-package": {
+					Output: []byte("Permission denied: Unable to remove directory"),
 					Error:  &MockExitError{Code: 1},
 				},
 			},
@@ -547,8 +500,8 @@ func TestDotnetManager_Uninstall(t *testing.T) {
 			}
 			SetDefaultExecutor(mock)
 
-			manager := NewDotnetManager()
-			err := manager.Uninstall(context.Background(), tt.toolName)
+			manager := NewPipxManager()
+			err := manager.Uninstall(context.Background(), tt.packageName)
 
 			if tt.expectError && err == nil {
 				t.Errorf("Expected error but got none")
@@ -565,7 +518,7 @@ func TestDotnetManager_Uninstall(t *testing.T) {
 	}
 }
 
-func TestDotnetManager_ListInstalled(t *testing.T) {
+func TestPipxManager_ListInstalled(t *testing.T) {
 	tests := []struct {
 		name          string
 		mockResponses map[string]CommandResponse
@@ -573,35 +526,32 @@ func TestDotnetManager_ListInstalled(t *testing.T) {
 		expectError   bool
 	}{
 		{
-			name: "list with tools",
+			name: "list with packages",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool list -g": {
-					Output: []byte(`Package Id                    Version    Commands
--------------------------------------------------------
-dotnetsay                     2.1.4      dotnetsay
-dotnet-ef                     9.0.7      dotnet-ef`),
+				"pipx list --short": {
+					Output: []byte(`black 23.12.1
+httpie 3.2.2`),
 					Error: nil,
 				},
 			},
-			expected:    []string{"dotnet-ef", "dotnetsay"},
+			expected:    []string{"black", "httpie"},
 			expectError: false,
 		},
 		{
 			name: "empty list",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool list -g": {
-					Output: []byte(`Package Id                    Version    Commands
--------------------------------------------------------`),
-					Error: nil,
+				"pipx list --short": {
+					Output: []byte(``),
+					Error:  nil,
 				},
 			},
 			expected:    []string{},
 			expectError: false,
 		},
 		{
-			name: "no tools installed - exit code 1",
+			name: "no packages installed - exit code 1",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool list -g": {
+				"pipx list --short": {
 					Output: []byte(""),
 					Error:  &MockExitError{Code: 1},
 				},
@@ -612,7 +562,7 @@ dotnet-ef                     9.0.7      dotnet-ef`),
 		{
 			name: "command error - severe failure",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool list -g": {
+				"pipx list --short": {
 					Output: []byte("error: command failed"),
 					Error:  &MockExitError{Code: 2},
 				},
@@ -633,7 +583,7 @@ dotnet-ef                     9.0.7      dotnet-ef`),
 			}
 			SetDefaultExecutor(mock)
 
-			manager := NewDotnetManager()
+			manager := NewPipxManager()
 			result, err := manager.ListInstalled(context.Background())
 
 			if tt.expectError && err == nil {
@@ -649,23 +599,21 @@ dotnet-ef                     9.0.7      dotnet-ef`),
 	}
 }
 
-func TestDotnetManager_IsInstalled(t *testing.T) {
+func TestPipxManager_IsInstalled(t *testing.T) {
 	tests := []struct {
 		name          string
-		toolName      string
+		packageName   string
 		mockResponses map[string]CommandResponse
 		expected      bool
 		expectError   bool
 	}{
 		{
-			name:     "tool is installed",
-			toolName: "dotnetsay",
+			name:        "package is installed",
+			packageName: "black",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool list -g": {
-					Output: []byte(`Package Id                    Version    Commands
--------------------------------------------------------
-dotnetsay                     2.1.4      dotnetsay
-dotnet-ef                     9.0.7      dotnet-ef`),
+				"pipx list --short": {
+					Output: []byte(`black 23.12.1
+httpie 3.2.2`),
 					Error: nil,
 				},
 			},
@@ -673,13 +621,12 @@ dotnet-ef                     9.0.7      dotnet-ef`),
 			expectError: false,
 		},
 		{
-			name:     "tool not installed",
-			toolName: "nonexistent-tool",
+			name:        "package not installed",
+			packageName: "nonexistent-package",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool list -g": {
-					Output: []byte(`Package Id                    Version    Commands
--------------------------------------------------------
-dotnetsay                     2.1.4      dotnetsay`),
+				"pipx list --short": {
+					Output: []byte(`black 23.12.1
+httpie 3.2.2`),
 					Error: nil,
 				},
 			},
@@ -687,23 +634,22 @@ dotnetsay                     2.1.4      dotnetsay`),
 			expectError: false,
 		},
 		{
-			name:     "empty list",
-			toolName: "dotnetsay",
+			name:        "empty list",
+			packageName: "black",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool list -g": {
-					Output: []byte(`Package Id                    Version    Commands
--------------------------------------------------------`),
-					Error: nil,
+				"pipx list --short": {
+					Output: []byte(``),
+					Error:  nil,
 				},
 			},
 			expected:    false,
 			expectError: false,
 		},
 		{
-			name:     "command error",
-			toolName: "dotnetsay",
+			name:        "command error",
+			packageName: "black",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool list -g": {
+				"pipx list --short": {
 					Output: []byte("error: command failed"),
 					Error:  &MockExitError{Code: 2},
 				},
@@ -724,8 +670,8 @@ dotnetsay                     2.1.4      dotnetsay`),
 			}
 			SetDefaultExecutor(mock)
 
-			manager := NewDotnetManager()
-			result, err := manager.IsInstalled(context.Background(), tt.toolName)
+			manager := NewPipxManager()
+			result, err := manager.IsInstalled(context.Background(), tt.packageName)
 
 			if tt.expectError && err == nil {
 				t.Errorf("Expected error but got none")
@@ -740,43 +686,48 @@ dotnetsay                     2.1.4      dotnetsay`),
 	}
 }
 
-func TestDotnetManager_Info(t *testing.T) {
+func TestPipxManager_Info(t *testing.T) {
 	tests := []struct {
 		name          string
-		toolName      string
+		packageName   string
 		mockResponses map[string]CommandResponse
 		expectError   bool
 	}{
 		{
-			name:     "info for installed tool",
-			toolName: "dotnetsay",
+			name:        "info for installed package",
+			packageName: "black",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool list -g": {
-					Output: []byte(`Package Id                    Version    Commands
--------------------------------------------------------
-dotnetsay                     2.1.4      dotnetsay`),
+				"pipx list --short": {
+					Output: []byte(`black 23.12.1
+httpie 3.2.2`),
+					Error: nil,
+				},
+				"pipx list": {
+					Output: []byte(`venvs are in /home/user/.local/share/pipx/venvs
+apps are in /home/user/.local/bin
+   package black 23.12.1, installed using Python 3.11.7
+    - black`),
 					Error: nil,
 				},
 			},
 			expectError: false,
 		},
 		{
-			name:     "info for not installed tool",
-			toolName: "notinstalled-tool",
+			name:        "info for not installed package",
+			packageName: "notinstalled-package",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool list -g": {
-					Output: []byte(`Package Id                    Version    Commands
--------------------------------------------------------`),
-					Error: nil,
+				"pipx list --short": {
+					Output: []byte(`black 23.12.1`),
+					Error:  nil,
 				},
 			},
 			expectError: false,
 		},
 		{
-			name:     "command error",
-			toolName: "test-tool",
+			name:        "command error",
+			packageName: "test-package",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool list -g": {
+				"pipx list --short": {
 					Output: []byte("error: command failed"),
 					Error:  &MockExitError{Code: 2},
 				},
@@ -796,8 +747,8 @@ dotnetsay                     2.1.4      dotnetsay`),
 			}
 			SetDefaultExecutor(mock)
 
-			manager := NewDotnetManager()
-			result, err := manager.Info(context.Background(), tt.toolName)
+			manager := NewPipxManager()
+			result, err := manager.Info(context.Background(), tt.packageName)
 
 			if tt.expectError && err == nil {
 				t.Errorf("Expected error but got none")
@@ -808,55 +759,51 @@ dotnetsay                     2.1.4      dotnetsay`),
 			if !tt.expectError && result == nil {
 				t.Errorf("Expected non-nil PackageInfo but got nil")
 			}
-			if !tt.expectError && result != nil && result.Name != tt.toolName {
-				t.Errorf("Expected tool name '%s' but got '%s'", tt.toolName, result.Name)
+			if !tt.expectError && result != nil && result.Name != tt.packageName {
+				t.Errorf("Expected package name '%s' but got '%s'", tt.packageName, result.Name)
 			}
 		})
 	}
 }
 
-func TestDotnetManager_InstalledVersion(t *testing.T) {
+func TestPipxManager_InstalledVersion(t *testing.T) {
 	tests := []struct {
 		name          string
-		toolName      string
+		packageName   string
 		mockResponses map[string]CommandResponse
 		expected      string
 		expectError   bool
 	}{
 		{
-			name:     "get version of installed tool",
-			toolName: "dotnetsay",
+			name:        "get version of installed package",
+			packageName: "black",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool list -g": {
-					Output: []byte(`Package Id                    Version    Commands
--------------------------------------------------------
-dotnetsay                     2.1.4      dotnetsay
-dotnet-ef                     9.0.7      dotnet-ef`),
+				"pipx list --short": {
+					Output: []byte(`black 23.12.1
+httpie 3.2.2`),
 					Error: nil,
 				},
 			},
-			expected:    "2.1.4",
+			expected:    "23.12.1",
 			expectError: false,
 		},
 		{
-			name:     "tool not installed",
-			toolName: "nonexistent-tool",
+			name:        "package not installed",
+			packageName: "nonexistent-package",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool list -g": {
-					Output: []byte(`Package Id                    Version    Commands
--------------------------------------------------------
-dotnetsay                     2.1.4      dotnetsay`),
-					Error: nil,
+				"pipx list --short": {
+					Output: []byte(`black 23.12.1`),
+					Error:  nil,
 				},
 			},
 			expected:    "",
 			expectError: true,
 		},
 		{
-			name:     "command error",
-			toolName: "dotnetsay",
+			name:        "command error",
+			packageName: "black",
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool list -g": {
+				"pipx list --short": {
 					Output: []byte("error: command failed"),
 					Error:  &MockExitError{Code: 2},
 				},
@@ -877,8 +824,8 @@ dotnetsay                     2.1.4      dotnetsay`),
 			}
 			SetDefaultExecutor(mock)
 
-			manager := NewDotnetManager()
-			result, err := manager.InstalledVersion(context.Background(), tt.toolName)
+			manager := NewPipxManager()
+			result, err := manager.InstalledVersion(context.Background(), tt.packageName)
 
 			if tt.expectError && err == nil {
 				t.Errorf("Expected error but got none")
@@ -893,69 +840,58 @@ dotnetsay                     2.1.4      dotnetsay`),
 	}
 }
 
-func TestDotnetManager_Upgrade(t *testing.T) {
+func TestPipxManager_Upgrade(t *testing.T) {
 	tests := []struct {
 		name          string
-		tools         []string
+		packages      []string
 		mockResponses map[string]CommandResponse
 		expectError   bool
 		errorContains string
 	}{
 		{
-			name:  "upgrade specific tools",
-			tools: []string{"dotnetsay", "dotnet-ef"},
+			name:     "upgrade specific packages",
+			packages: []string{"black", "httpie"},
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool update -g dotnetsay": {
-					Output: []byte("Tool 'dotnetsay' was reinstalled with the latest stable version (version '2.1.5')."),
+				"pipx upgrade black": {
+					Output: []byte("upgraded package black from 23.12.0 to 23.12.1! ✨ 🌟 ✨"),
 					Error:  nil,
 				},
-				"dotnet tool update -g dotnet-ef": {
-					Output: []byte("Tool 'dotnet-ef' was reinstalled with the latest stable version (version '9.0.8')."),
+				"pipx upgrade httpie": {
+					Output: []byte("upgraded package httpie from 3.2.1 to 3.2.2! ✨ 🌟 ✨"),
 					Error:  nil,
 				},
 			},
 			expectError: false,
 		},
 		{
-			name:  "upgrade all tools",
-			tools: []string{}, // empty means all tools
+			name:     "upgrade all packages",
+			packages: []string{}, // empty means all packages
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool list -g": {
-					Output: []byte(`Package Id                    Version    Commands
--------------------------------------------------------
-dotnetsay                     2.1.4      dotnetsay
-dotnet-ef                     9.0.7      dotnet-ef`),
-					Error: nil,
-				},
-				"dotnet tool update -g dotnetsay": {
-					Output: []byte("Tool 'dotnetsay' was reinstalled with the latest stable version (version '2.1.5')."),
-					Error:  nil,
-				},
-				"dotnet tool update -g dotnet-ef": {
-					Output: []byte("Tool 'dotnet-ef' was reinstalled with the latest stable version (version '9.0.8')."),
+				"pipx upgrade-all": {
+					Output: []byte("Upgraded packages: black, httpie"),
 					Error:  nil,
 				},
 			},
 			expectError: false,
 		},
 		{
-			name:  "upgrade with tool not installed error",
-			tools: []string{"nonexistent-tool"},
+			name:     "upgrade with package not installed error",
+			packages: []string{"nonexistent-package"},
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool update -g nonexistent-tool": {
-					Output: []byte("Tool 'nonexistent-tool' is not installed."),
+				"pipx upgrade nonexistent-package": {
+					Output: []byte("No apps associated with package nonexistent-package."),
 					Error:  &MockExitError{Code: 1},
 				},
 			},
 			expectError:   true,
-			errorContains: "not found",
+			errorContains: "not found or not installed",
 		},
 		{
-			name:  "upgrade with permission error",
-			tools: []string{"restricted-tool"},
+			name:     "upgrade with permission error",
+			packages: []string{"restricted-package"},
 			mockResponses: map[string]CommandResponse{
-				"dotnet tool update -g restricted-tool": {
-					Output: []byte("Access denied when writing to tool directory"),
+				"pipx upgrade restricted-package": {
+					Output: []byte("Permission denied: Unable to upgrade package"),
 					Error:  &MockExitError{Code: 1},
 				},
 			},
@@ -975,8 +911,8 @@ dotnet-ef                     9.0.7      dotnet-ef`),
 			}
 			SetDefaultExecutor(mock)
 
-			manager := NewDotnetManager()
-			err := manager.Upgrade(context.Background(), tt.tools)
+			manager := NewPipxManager()
+			err := manager.Upgrade(context.Background(), tt.packages)
 
 			if tt.expectError && err == nil {
 				t.Errorf("Expected error but got none")

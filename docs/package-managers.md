@@ -4,12 +4,12 @@ This document outlines plonk's package manager ecosystem strategy based on compe
 
 ## Current Package Manager Support
 
-Plonk currently supports 8 package managers across multiple language ecosystems:
+Plonk currently supports 9 package managers across multiple language ecosystems:
+
 
 - **Homebrew (brew)** - System tools and applications (macOS/Linux)
 - **NPM (npm)** - JavaScript global packages
 - **Cargo (cargo)** - Rust packages
-- **Pip (pip)** - Python packages
 - **Gem (gem)** - Ruby gems
 - **Go install (go)** - Go modules
 - **UV (uv)** - Python tool management

@@ -6,6 +6,7 @@ package packages
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -327,10 +328,172 @@ func (g *GemManager) SupportsSearch() bool {
 	return true
 }
 
+// CheckHealth performs a comprehensive health check of the Gem installation
+func (g *GemManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
+	check := &HealthCheck{
+		Name:     "Gem Manager",
+		Category: "package-managers",
+		Status:   "pass",
+		Message:  "Gem is available and properly configured",
+	}
+
+	// Check availability
+	available, err := g.IsAvailable(ctx)
+	if err != nil {
+		if IsContextError(err) {
+			return nil, err
+		}
+		check.Status = "warn"
+		check.Message = "Gem availability check failed"
+		check.Issues = []string{fmt.Sprintf("Error checking gem: %v", err)}
+		return check, nil
+	}
+
+	if !available {
+		check.Status = "warn"
+		check.Message = "Gem is not available"
+		check.Issues = []string{"gem command not found"}
+		check.Suggestions = []string{
+			"Install Ruby (includes Gem): brew install ruby",
+			"Or install Ruby via system package manager",
+		}
+		return check, nil
+	}
+
+	// Discover gem bin directory
+	binDir, err := g.getBinDirectory(ctx)
+	if err != nil {
+		check.Status = "warn"
+		check.Message = "Could not determine Gem bin directory"
+		check.Issues = []string{fmt.Sprintf("Error discovering bin directory: %v", err)}
+		return check, nil
+	}
+
+	check.Details = append(check.Details, fmt.Sprintf("Gem bin directory: %s", binDir))
+
+	// Check PATH
+	pathCheck := checkDirectoryInPath(binDir)
+	if !pathCheck.inPath && pathCheck.exists {
+		check.Status = "warn"
+		check.Message = "Gem bin directory exists but not in PATH"
+		check.Issues = []string{fmt.Sprintf("Directory %s exists but not in PATH", binDir)}
+		check.Suggestions = pathCheck.suggestions
+	} else if !pathCheck.exists {
+		check.Details = append(check.Details, "Gem bin directory does not exist (no user gems installed)")
+	} else {
+		check.Details = append(check.Details, "Gem bin directory is in PATH")
+	}
+
+	return check, nil
+}
+
+// getBinDirectory discovers the Gem bin directory
+func (g *GemManager) getBinDirectory(ctx context.Context) (string, error) {
+	// Use gem environment to get executable directory
+	output, err := ExecuteCommand(ctx, g.binary, "environment")
+	if err != nil {
+		return "", fmt.Errorf("failed to get gem environment: %w", err)
+	}
+
+	// Parse gem environment output for EXECUTABLE DIRECTORY
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.Contains(line, "EXECUTABLE DIRECTORY:") {
+			// Extract directory path from line like "  - EXECUTABLE DIRECTORY: /path/to/bin"
+			re := regexp.MustCompile(`EXECUTABLE DIRECTORY:\s*(.+)`)
+			matches := re.FindStringSubmatch(line)
+			if len(matches) > 1 {
+				return strings.TrimSpace(matches[1]), nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("could not find executable directory in gem environment output")
+}
+
+// SelfInstall attempts to install Gem via available package managers
+func (g *GemManager) SelfInstall(ctx context.Context) error {
+	// Check if already available (idempotent)
+	if available, _ := g.IsAvailable(ctx); available {
+		return nil
+	}
+
+	// Try to install Ruby via Homebrew if available
+	if homebrewAvailable, _ := checkPackageManagerAvailable(ctx, "brew"); homebrewAvailable {
+		return g.installViaHomebrew(ctx)
+	}
+
+	return fmt.Errorf("gem requires Ruby installation - install Ruby manually or ensure Homebrew is available")
+}
+
+// installViaHomebrew installs Ruby (which includes Gem) via Homebrew
+func (g *GemManager) installViaHomebrew(ctx context.Context) error {
+	return executeInstallCommand(ctx, "brew", []string{"install", "ruby"}, "Ruby (includes Gem)")
+}
+
+// Upgrade upgrades one or more packages to their latest versions
+func (g *GemManager) Upgrade(ctx context.Context, packages []string) error {
+	if len(packages) == 0 {
+		// Upgrade all gems
+		output, err := ExecuteCommandCombined(ctx, g.binary, "update")
+		if err != nil {
+			return g.handleUpgradeError(err, output, "all gems")
+		}
+		return nil
+	}
+
+	// Upgrade specific gems
+	args := append([]string{"update"}, packages...)
+	output, err := ExecuteCommandCombined(ctx, g.binary, args...)
+	if err != nil {
+		return g.handleUpgradeError(err, output, strings.Join(packages, ", "))
+	}
+	return nil
+}
+
 func init() {
 	RegisterManager("gem", func() PackageManager {
 		return NewGemManager()
 	})
+}
+
+// handleUpgradeError processes upgrade command errors
+func (g *GemManager) handleUpgradeError(err error, output []byte, packages string) error {
+	outputStr := strings.ToLower(string(output))
+
+	if exitCode, ok := ExtractExitCode(err); ok {
+		// Check for known error patterns
+		if strings.Contains(outputStr, "could not find a valid gem") ||
+			strings.Contains(outputStr, "could not find gem") ||
+			strings.Contains(outputStr, "unknown gem") {
+			return fmt.Errorf("one or more gems not found: %s", packages)
+		}
+		if strings.Contains(outputStr, "nothing to update") || strings.Contains(outputStr, "latest version") {
+			return nil // Already up-to-date is success
+		}
+		if strings.Contains(outputStr, "permission denied") ||
+			strings.Contains(outputStr, "you don't have write permissions") ||
+			strings.Contains(outputStr, "insufficient permissions") {
+			return fmt.Errorf("permission denied upgrading %s", packages)
+		}
+
+		if exitCode != 0 {
+			// Include command output for better error messages
+			if len(output) > 0 {
+				// Trim the output and limit length for readability
+				errorOutput := strings.TrimSpace(string(output))
+				if len(errorOutput) > 500 {
+					errorOutput = errorOutput[:500] + "..."
+				}
+				return fmt.Errorf("gem upgrade failed: %s", errorOutput)
+			}
+			return fmt.Errorf("gem upgrade failed (exit code %d): %w", exitCode, err)
+		}
+		return nil
+	}
+
+	return fmt.Errorf("failed to execute upgrade command: %w", err)
 }
 
 // handleInstallError processes install command errors

@@ -78,47 +78,6 @@ setup() {
   refute_output --partial "left-pad"
 }
 
-# Python/pip uninstall tests
-@test "uninstall managed pip package" {
-  require_safe_package "pip:cowsay"
-
-  # Check if pip is available
-  run which pip3
-  if [[ $status -ne 0 ]]; then
-    run which pip
-    if [[ $status -ne 0 ]]; then
-      skip "pip not available"
-    fi
-  fi
-
-  # Install first
-  run plonk install pip:cowsay
-  assert_success
-  track_artifact "package" "pip:cowsay"
-
-  # Verify it's installed
-  run pip3 show cowsay
-  assert_success
-
-  # Then uninstall
-  run plonk uninstall pip:cowsay
-  assert_success
-  assert_output --partial "removed"
-
-  # Verify actually uninstalled by pip
-  run pip3 show cowsay
-  assert_failure
-
-  # Verify gone from lock file
-  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
-    run cat "$PLONK_DIR/plonk.lock"
-    refute_output --partial "cowsay"
-  fi
-
-  # Verify gone from status
-  run plonk status
-  refute_output --partial "cowsay"
-}
 
 # Ruby/gem uninstall tests
 @test "uninstall managed gem package" {
@@ -480,6 +439,46 @@ setup() {
   # Verify gone from status
   run plonk status
   refute_output --partial "dotnet-outdated-tool"
+}
+
+# Pipx uninstall tests
+@test "uninstall managed pipx package" {
+  require_safe_package "pipx:black"
+
+  run which pipx
+  if [[ $status -ne 0 ]]; then
+    skip "pipx not available"
+  fi
+
+  # Install first
+  run plonk install pipx:black
+  assert_success
+  track_artifact "package" "pipx:black"
+
+  # Verify it's installed by pipx
+  run pipx list --short
+  assert_success
+  assert_output --partial "black"
+
+  # Then uninstall
+  run plonk uninstall pipx:black
+  assert_success
+  assert_output --partial "removed"
+
+  # Verify actually uninstalled by pipx
+  run pipx list --short
+  assert_success
+  refute_output --partial "black"
+
+  # Verify gone from lock file
+  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
+    run cat "$PLONK_DIR/plonk.lock"
+    refute_output --partial "black"
+  fi
+
+  # Verify gone from status
+  run plonk status
+  refute_output --partial "black"
 }
 
 # General uninstall behavior tests

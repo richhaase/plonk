@@ -15,7 +15,6 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
-	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources/packages"
 )
 
@@ -68,12 +67,12 @@ func RunHealthChecks() HealthReport {
 	report.Checks = append(report.Checks, checkLockFile())
 	report.Checks = append(report.Checks, checkLockFileValidity())
 
-	// Package manager checks
-	report.Checks = append(report.Checks, checkPackageManagerAvailability(ctx))
+	// Package manager health checks (UPDATED - replaces old logic)
+	packageHealthChecks := checkPackageManagerHealth(ctx)
+	report.Checks = append(report.Checks, packageHealthChecks...)
 
-	// Path and executable checks
+	// Executable path check
 	report.Checks = append(report.Checks, checkExecutablePath())
-	report.Checks = append(report.Checks, checkPathConfiguration())
 
 	// Determine overall health
 	report.Overall = calculateOverallHealth(report.Checks)
@@ -350,56 +349,107 @@ func checkLockFileValidity() HealthCheck {
 	return check
 }
 
-// checkPackageManagerAvailability checks which package managers are available
-func checkPackageManagerAvailability(ctx context.Context) HealthCheck {
-	check := HealthCheck{
-		Name:     "Package Manager Availability",
-		Category: "package-managers",
-		Status:   "pass",
-		Message:  "Package managers detected",
-	}
+// checkPackageManagerHealth runs health checks for all package managers
+func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
+	var checks []HealthCheck
 
 	registry := packages.NewManagerRegistry()
-	availableManagers := []string{}
-	unavailableManagers := []string{}
 	homebrewAvailable := false
 
 	for _, managerName := range registry.GetAllManagerNames() {
 		mgr, err := registry.GetManager(managerName)
 		if err != nil {
-			unavailableManagers = append(unavailableManagers, managerName)
+			// Create a basic failure check for registry errors
+			check := HealthCheck{
+				Name:     fmt.Sprintf("%s Manager", strings.Title(managerName)),
+				Category: "package-managers",
+				Status:   "fail",
+				Message:  "Package manager registration failed",
+				Issues:   []string{fmt.Sprintf("Error getting %s manager: %v", managerName, err)},
+			}
+			checks = append(checks, check)
 			continue
 		}
 
-		available, err := mgr.IsAvailable(ctx)
-		if err != nil || !available {
-			unavailableManagers = append(unavailableManagers, managerName)
-			check.Details = append(check.Details, fmt.Sprintf("%s: %s", managerName, output.NotAvailable()))
-		} else {
-			availableManagers = append(availableManagers, managerName)
-			check.Details = append(check.Details, fmt.Sprintf("%s: %s", managerName, output.Available()))
-			if managerName == "brew" {
-				homebrewAvailable = true
+		// Call the manager's CheckHealth method
+		healthCheck, err := mgr.CheckHealth(ctx)
+		if err != nil {
+			if packages.IsContextError(err) {
+				// Context errors should bubble up
+				return checks // Return what we have so far
 			}
+			// Convert to basic health check
+			check := HealthCheck{
+				Name:     fmt.Sprintf("%s Manager", strings.Title(managerName)),
+				Category: "package-managers",
+				Status:   "fail",
+				Message:  "Health check failed",
+				Issues:   []string{fmt.Sprintf("Error checking %s health: %v", managerName, err)},
+			}
+			checks = append(checks, check)
+			continue
+		}
+
+		// Convert packages.HealthCheck to diagnostics.HealthCheck
+		diagnosticsCheck := HealthCheck{
+			Name:        healthCheck.Name,
+			Category:    healthCheck.Category,
+			Status:      healthCheck.Status,
+			Message:     healthCheck.Message,
+			Details:     healthCheck.Details,
+			Issues:      healthCheck.Issues,
+			Suggestions: healthCheck.Suggestions,
+		}
+		checks = append(checks, diagnosticsCheck)
+
+		// Track homebrew availability for overall health
+		if managerName == "brew" && healthCheck.Status == "pass" {
+			homebrewAvailable = true
 		}
 	}
 
-	// Homebrew is now a prerequisite
+	// Add overall package manager status check
+	overallCheck := calculateOverallPackageManagerHealth(checks, homebrewAvailable)
+	checks = append(checks, overallCheck)
+
+	return checks
+}
+
+func calculateOverallPackageManagerHealth(checks []HealthCheck, homebrewAvailable bool) HealthCheck {
+	check := HealthCheck{
+		Name:     "Package Manager Ecosystem",
+		Category: "package-managers",
+		Status:   "pass",
+		Message:  "Package management ecosystem is healthy",
+	}
+
 	if !homebrewAvailable {
 		check.Status = "fail"
-		check.Message = "Homebrew not found (required prerequisite)"
-		check.Issues = append(check.Issues, "Homebrew is required for plonk to function properly")
-		check.Suggestions = append(check.Suggestions, "Install Homebrew: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"")
-		check.Suggestions = append(check.Suggestions, "After installation, ensure brew is in your PATH")
-	} else if len(availableManagers) == 1 {
-		check.Status = "warn"
-		check.Message = "Only Homebrew available"
-		check.Suggestions = append(check.Suggestions, "Consider installing language-specific package managers as needed (npm, pip, cargo, gem, or go)")
-	} else {
-		check.Message = fmt.Sprintf("%d package managers available", len(availableManagers))
-		if len(unavailableManagers) > 0 {
-			check.Suggestions = append(check.Suggestions, "Consider installing additional package managers for broader package support")
+		check.Message = "Critical package manager missing"
+		check.Issues = []string{"Homebrew is required but not available"}
+		check.Suggestions = []string{
+			"Install Homebrew first, then other package managers as needed",
+			"Homebrew is the foundational package manager for plonk",
 		}
+		return check
+	}
+
+	availableCount := 0
+	for _, mgr := range checks {
+		if mgr.Category == "package-managers" && mgr.Status == "pass" {
+			availableCount++
+		}
+	}
+
+	if availableCount == 1 {
+		check.Status = "warn"
+		check.Message = "Limited package manager availability"
+		check.Suggestions = []string{
+			"Consider installing additional package managers as needed",
+			"Available: npm (Node.js), uv (Python), cargo (Rust), gem (Ruby), go",
+		}
+	} else {
+		check.Message = fmt.Sprintf("Package management ecosystem healthy (%d managers available)", availableCount)
 	}
 
 	return check
@@ -426,273 +476,6 @@ func checkExecutablePath() HealthCheck {
 	}
 
 	return check
-}
-
-// getHomebrewPath returns the correct Homebrew bin path based on OS and architecture
-func getHomebrewPath() string {
-	switch runtime.GOOS {
-	case "darwin":
-		// macOS: Check architecture
-		if runtime.GOARCH == "arm64" {
-			return "/opt/homebrew/bin"
-		}
-		// Intel Mac
-		return "/usr/local/bin"
-	case "linux":
-		// Linux: Standard Linuxbrew location
-		return "/home/linuxbrew/.linuxbrew/bin"
-	default:
-		// Fallback to macOS ARM64 path
-		return "/opt/homebrew/bin"
-	}
-}
-
-// checkPathConfiguration checks PATH configuration for installed packages
-func checkPathConfiguration() HealthCheck {
-	check := HealthCheck{
-		Name:     "PATH Configuration",
-		Category: "installation",
-		Status:   "pass",
-		Message:  "PATH is properly configured",
-	}
-
-	path := os.Getenv("PATH")
-	pathDirs := strings.Split(path, string(os.PathListSeparator))
-	homeDir := config.GetHomeDir()
-
-	// Check for Python user bin directory
-	pythonUserBin := getPythonUserBinDir()
-
-	// Check for Go bin directory (GOBIN or GOPATH/bin)
-	goBinDir := getGoBinDir()
-
-	// Define important paths for each package manager
-	importantPaths := map[string]string{
-		"System":     "/usr/local/bin",
-		"Homebrew":   getHomebrewPath(),
-		"Cargo":      filepath.Join(homeDir, ".cargo/bin"),
-		"Go":         goBinDir,
-		"Python/pip": pythonUserBin,
-		"Gem":        filepath.Join(homeDir, ".gem/ruby/bin"),
-		"NPM":        filepath.Join(homeDir, ".npm-global/bin"),
-	}
-
-	missingPaths := []string{}
-	for name, importantPath := range importantPaths {
-		// Skip empty paths
-		if importantPath == "" {
-			continue
-		}
-
-		found := false
-		for _, pathDir := range pathDirs {
-			if pathDir == importantPath {
-				found = true
-				break
-			}
-		}
-
-		// Check if directory exists
-		dirExists := false
-		if _, err := os.Stat(importantPath); err == nil {
-			dirExists = true
-		}
-
-		if found {
-			check.Details = append(check.Details, fmt.Sprintf("%s: %s", name, importantPath))
-		} else if dirExists {
-			check.Details = append(check.Details, fmt.Sprintf("%s: %s (exists but not in PATH)", name, importantPath))
-			missingPaths = append(missingPaths, importantPath)
-			check.Status = "warn"
-		} else {
-			check.Details = append(check.Details, fmt.Sprintf("%s: %s (directory does not exist)", name, importantPath))
-		}
-	}
-
-	check.Details = append(check.Details, fmt.Sprintf("\nTotal PATH directories: %d", len(pathDirs)))
-
-	if len(missingPaths) > 0 {
-		check.Status = "warn"
-		check.Message = "Some package directories are not in PATH"
-		check.Issues = append(check.Issues, "The following directories exist but are not in PATH:")
-		for _, path := range missingPaths {
-			check.Issues = append(check.Issues, fmt.Sprintf("  - %s", path))
-		}
-
-		// Detect user's shell and provide exact commands
-		shellPath := os.Getenv("SHELL")
-		shell := detectShell(shellPath)
-
-		check.Suggestions = append(check.Suggestions, fmt.Sprintf("Detected shell: %s", shell.name))
-		check.Suggestions = append(check.Suggestions, "\nCopy and run these commands to fix your PATH:")
-
-		// Generate the PATH export line
-		pathExport := generatePathExport(missingPaths)
-
-		// Provide shell-specific commands
-		commands := generateShellCommands(shell, pathExport)
-		for _, cmd := range commands {
-			check.Suggestions = append(check.Suggestions, fmt.Sprintf("  %s", cmd))
-		}
-
-		// Add instructions for immediate effect
-		check.Suggestions = append(check.Suggestions, "\nOr for immediate effect in this session only:")
-		check.Suggestions = append(check.Suggestions, fmt.Sprintf("  %s", pathExport))
-	}
-
-	return check
-}
-
-// shellInfo represents shell detection information
-type shellInfo struct {
-	name       string
-	configFile string
-	reload     string
-}
-
-// detectShell detects the user's shell from SHELL environment variable
-func detectShell(shellPath string) shellInfo {
-	// Default to bash if detection fails
-	defaultShell := shellInfo{
-		name:       "bash",
-		configFile: "~/.bashrc",
-		reload:     "source ~/.bashrc",
-	}
-
-	if shellPath == "" {
-		return defaultShell
-	}
-
-	// Extract shell name from path
-	shellName := filepath.Base(shellPath)
-
-	switch shellName {
-	case "zsh":
-		return shellInfo{
-			name:       "zsh",
-			configFile: "~/.zshrc",
-			reload:     "source ~/.zshrc",
-		}
-	case "bash":
-		return defaultShell
-	case "fish":
-		return shellInfo{
-			name:       "fish",
-			configFile: "~/.config/fish/config.fish",
-			reload:     "source ~/.config/fish/config.fish",
-		}
-	case "ksh":
-		return shellInfo{
-			name:       "ksh",
-			configFile: "~/.kshrc",
-			reload:     ". ~/.kshrc",
-		}
-	case "tcsh":
-		return shellInfo{
-			name:       "tcsh",
-			configFile: "~/.tcshrc",
-			reload:     "source ~/.tcshrc",
-		}
-	default:
-		// Try to infer from common patterns
-		if strings.Contains(shellPath, "zsh") {
-			return shellInfo{
-				name:       "zsh",
-				configFile: "~/.zshrc",
-				reload:     "source ~/.zshrc",
-			}
-		}
-		return defaultShell
-	}
-}
-
-// generatePathExport creates the PATH export line for missing paths
-func generatePathExport(missingPaths []string) string {
-	if len(missingPaths) == 0 {
-		return ""
-	}
-
-	// Join all paths with colon
-	pathString := strings.Join(missingPaths, ":")
-	return fmt.Sprintf("export PATH=\"%s:$PATH\"", pathString)
-}
-
-// generateShellCommands generates shell-specific commands for PATH configuration
-func generateShellCommands(shell shellInfo, pathExport string) []string {
-	if shell.name == "fish" {
-		// Fish shell has special syntax
-		commands := []string{}
-		// Extract paths from the export command
-		// pathExport looks like: export PATH="/path1:/path2:$PATH"
-		if strings.HasPrefix(pathExport, "export PATH=\"") && strings.HasSuffix(pathExport, ":$PATH\"") {
-			pathString := strings.TrimPrefix(pathExport, "export PATH=\"")
-			pathString = strings.TrimSuffix(pathString, ":$PATH\"")
-			paths := strings.Split(pathString, ":")
-			for _, path := range paths {
-				if path != "" {
-					commands = append(commands, fmt.Sprintf("fish_add_path %s", path))
-				}
-			}
-		}
-		return commands
-	}
-
-	// For most shells, we can append to config file
-	commands := []string{
-		fmt.Sprintf("echo '%s' >> %s", pathExport, shell.configFile),
-		shell.reload,
-	}
-
-	return commands
-}
-
-// getPythonUserBinDir returns the Python user bin directory
-func getPythonUserBinDir() string {
-	// Try to get Python user base directory
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, "python3", "-m", "site", "--user-base")
-	output, err := cmd.Output()
-	if err != nil {
-		return ""
-	}
-
-	userBase := strings.TrimSpace(string(output))
-	if userBase == "" {
-		return ""
-	}
-
-	return filepath.Join(userBase, "bin")
-}
-
-// getGoBinDir returns the Go bin directory (GOBIN or GOPATH/bin)
-func getGoBinDir() string {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	// First check GOBIN
-	cmd := exec.CommandContext(ctx, "go", "env", "GOBIN")
-	output, err := cmd.Output()
-	if err == nil {
-		gobin := strings.TrimSpace(string(output))
-		if gobin != "" {
-			return gobin
-		}
-	}
-
-	// Fall back to GOPATH/bin
-	cmd = exec.CommandContext(ctx, "go", "env", "GOPATH")
-	output, err = cmd.Output()
-	if err == nil {
-		gopath := strings.TrimSpace(string(output))
-		if gopath != "" {
-			return filepath.Join(gopath, "bin")
-		}
-	}
-
-	// Default to ~/go/bin
-	return filepath.Join(config.GetHomeDir(), "go/bin")
 }
 
 // calculateOverallHealth determines overall system health from individual checks

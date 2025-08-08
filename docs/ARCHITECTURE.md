@@ -76,13 +76,14 @@ Supported package managers:
 - Homebrew (brew) - macOS and Linux
 - NPM (npm)
 - Cargo (cargo)
-- Pip (pip)
 - Gem (gem)
 - Go (go install)
 - UV (uv) - Python tool manager
 - Pixi (pixi) - Conda-forge package manager
 - Composer (composer) - PHP global packages
 - .NET (dotnet) - .NET Global Tools
+- Pipx (pipx) - Python applications in isolated environments
+
 
 #### Dotfiles (`internal/resources/dotfiles/`)
 - Dotfile scanning and discovery

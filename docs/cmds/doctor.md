@@ -47,7 +47,7 @@ Overall system health:
 - Homebrew is required (prerequisite) - will show FAIL if missing
 - Language package managers are optional - will show WARN if missing
 - Only verifies availability, not full functionality
-- For automatic installation, use `plonk clone` which installs needed managers
+- Use `plonk clone` to automatically install package managers needed by your managed packages
 
 ### PATH Configuration Analysis
 
@@ -91,7 +91,7 @@ plonk doctor -o yaml
 - Use before `plonk clone` to verify prerequisites
 - Run when plonk commands fail unexpectedly
 - Check after system updates or configuration changes
-- Note: `plonk clone` can automatically install language package managers
+- Note: `plonk clone` automatically installs package managers for packages in your plonk.lock
 
 ## Notes
 

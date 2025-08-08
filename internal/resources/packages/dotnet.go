@@ -6,6 +6,8 @@ package packages
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -214,6 +216,69 @@ func (d *DotnetManager) InstalledVersion(ctx context.Context, name string) (stri
 	return d.getInstalledVersion(ctx, name)
 }
 
+// SelfInstall attempts to install .NET via available package managers
+func (d *DotnetManager) SelfInstall(ctx context.Context) error {
+	// Check if already available (idempotent)
+	if available, _ := d.IsAvailable(ctx); available {
+		return nil
+	}
+
+	// Try to install .NET SDK via Homebrew if available
+	if homebrewAvailable, _ := checkPackageManagerAvailable(ctx, "brew"); homebrewAvailable {
+		return d.installViaHomebrew(ctx)
+	}
+
+	return fmt.Errorf(".NET tools require .NET SDK installation - install .NET SDK manually from https://dotnet.microsoft.com/download or ensure Homebrew is available")
+}
+
+// installViaHomebrew installs .NET SDK via Homebrew
+func (d *DotnetManager) installViaHomebrew(ctx context.Context) error {
+	return executeInstallCommand(ctx, "brew", []string{"install", "dotnet"}, ".NET SDK")
+}
+
+// Upgrade upgrades one or more packages to their latest versions
+func (d *DotnetManager) Upgrade(ctx context.Context, packages []string) error {
+	if len(packages) == 0 {
+		// First get all installed tools
+		installed, err := d.ListInstalled(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to list installed tools: %w", err)
+		}
+
+		// Upgrade each tool individually
+		var upgradeErrors []string
+		for _, tool := range installed {
+			output, err := ExecuteCommandCombined(ctx, d.binary, "tool", "update", "-g", tool)
+			if err != nil {
+				upgradeErr := d.handleUpgradeError(err, output, tool)
+				upgradeErrors = append(upgradeErrors, upgradeErr.Error())
+				continue
+			}
+		}
+
+		if len(upgradeErrors) > 0 {
+			return fmt.Errorf("some tools failed to upgrade: %s", strings.Join(upgradeErrors, "; "))
+		}
+		return nil
+	}
+
+	// Upgrade specific packages
+	var upgradeErrors []string
+	for _, pkg := range packages {
+		output, err := ExecuteCommandCombined(ctx, d.binary, "tool", "update", "-g", pkg)
+		if err != nil {
+			upgradeErr := d.handleUpgradeError(err, output, pkg)
+			upgradeErrors = append(upgradeErrors, upgradeErr.Error())
+			continue
+		}
+	}
+
+	if len(upgradeErrors) > 0 {
+		return fmt.Errorf("failed to upgrade tools: %s", strings.Join(upgradeErrors, "; "))
+	}
+	return nil
+}
+
 func init() {
 	RegisterManager("dotnet", func() PackageManager {
 		return NewDotnetManager()
@@ -242,6 +307,112 @@ func (d *DotnetManager) IsAvailable(ctx context.Context) (bool, error) {
 // SupportsSearch returns false as .NET CLI doesn't have built-in tool search
 func (d *DotnetManager) SupportsSearch() bool {
 	return false
+}
+
+// CheckHealth performs a comprehensive health check of the .NET Global Tools installation
+func (d *DotnetManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
+	check := &HealthCheck{
+		Name:     ".NET Global Tools Manager",
+		Category: "package-managers",
+		Status:   "pass",
+		Message:  ".NET SDK is available and properly configured",
+	}
+
+	// Check basic availability first
+	available, err := d.IsAvailable(ctx)
+	if err != nil {
+		if IsContextError(err) {
+			return nil, err
+		}
+		check.Status = "fail"
+		check.Message = ".NET SDK availability check failed"
+		check.Issues = []string{fmt.Sprintf("Error checking .NET SDK: %v", err)}
+		return check, nil
+	}
+
+	if !available {
+		check.Status = "fail"
+		check.Message = ".NET SDK is required but not available"
+		check.Issues = []string{".NET SDK is required for managing global tools"}
+		check.Suggestions = []string{
+			"Install .NET SDK: https://dotnet.microsoft.com/download",
+			"Or via Homebrew: brew install --cask dotnet",
+			"After installation, ensure dotnet is in your PATH",
+		}
+		return check, nil
+	}
+
+	// Get .NET global tools directory (predictable path)
+	binDir := d.getBinDirectory()
+
+	// Check if bin directory is in PATH
+	pathCheck := checkDirectoryInPath(binDir)
+	check.Details = append(check.Details, fmt.Sprintf(".NET global tools directory: %s", binDir))
+
+	if !pathCheck.inPath && pathCheck.exists {
+		check.Status = "warn"
+		check.Message = ".NET global tools directory exists but not in PATH"
+		check.Issues = []string{fmt.Sprintf("Directory %s exists but not in PATH", binDir)}
+		check.Suggestions = pathCheck.suggestions
+	} else if !pathCheck.exists {
+		check.Status = "warn"
+		check.Message = ".NET global tools directory does not exist"
+		check.Issues = []string{fmt.Sprintf("Directory %s does not exist", binDir)}
+	} else {
+		check.Details = append(check.Details, ".NET global tools directory is in PATH")
+	}
+
+	return check, nil
+}
+
+// getBinDirectory returns the predictable .NET global tools directory
+func (d *DotnetManager) getBinDirectory() string {
+	homeDir, _ := os.UserHomeDir()
+	return filepath.Join(homeDir, ".dotnet", "tools")
+}
+
+// handleUpgradeError processes upgrade command errors
+func (d *DotnetManager) handleUpgradeError(err error, output []byte, toolName string) error {
+	outputStr := string(output)
+
+	if exitCode, ok := ExtractExitCode(err); ok {
+		// Check for known error patterns
+		if strings.Contains(outputStr, "is not installed") ||
+			strings.Contains(outputStr, "No such tool") ||
+			strings.Contains(outputStr, "Tool") && strings.Contains(outputStr, "is not installed") {
+			return fmt.Errorf("tool '%s' not found or not installed", toolName)
+		}
+		if strings.Contains(outputStr, "already up-to-date") ||
+			strings.Contains(outputStr, "no updates available") ||
+			strings.Contains(outputStr, "is already up to date") {
+			return nil // Already up-to-date is success
+		}
+		if strings.Contains(outputStr, "Access denied") ||
+			strings.Contains(outputStr, "permission denied") ||
+			strings.Contains(outputStr, "Permission denied") {
+			return fmt.Errorf("permission denied upgrading %s", toolName)
+		}
+		if strings.Contains(outputStr, "Unable to find package") ||
+			strings.Contains(outputStr, "NU1101") {
+			return fmt.Errorf("tool '%s' not found in registry", toolName)
+		}
+
+		if exitCode != 0 {
+			// Include command output for better error messages
+			if len(output) > 0 {
+				// Trim the output and limit length for readability
+				errorOutput := strings.TrimSpace(string(output))
+				if len(errorOutput) > 500 {
+					errorOutput = errorOutput[:500] + "..."
+				}
+				return fmt.Errorf("tool upgrade failed: %s", errorOutput)
+			}
+			return fmt.Errorf("tool upgrade failed (exit code %d): %w", exitCode, err)
+		}
+		return nil
+	}
+
+	return fmt.Errorf("failed to execute upgrade command: %w", err)
 }
 
 // handleInstallError processes install command errors

@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 )
 
@@ -324,10 +325,148 @@ func (h *HomebrewManager) SupportsSearch() bool {
 	return true
 }
 
+// CheckHealth performs a comprehensive health check of the Homebrew installation
+func (h *HomebrewManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
+	check := &HealthCheck{
+		Name:     "Homebrew Manager",
+		Category: "package-managers",
+		Status:   "pass",
+		Message:  "Homebrew is available and properly configured",
+	}
+
+	// Check basic availability first
+	available, err := h.IsAvailable(ctx)
+	if err != nil {
+		if IsContextError(err) {
+			return nil, err
+		}
+		check.Status = "fail"
+		check.Message = "Homebrew availability check failed"
+		check.Issues = []string{fmt.Sprintf("Error checking homebrew: %v", err)}
+		return check, nil
+	}
+
+	if !available {
+		check.Status = "fail"
+		check.Message = "Homebrew is required but not available"
+		check.Issues = []string{"Homebrew is required for plonk to function properly"}
+		check.Suggestions = []string{
+			`Install Homebrew: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`,
+			"After installation, ensure brew is in your PATH",
+		}
+		return check, nil
+	}
+
+	// Discover homebrew bin directory dynamically
+	binDir, err := h.getBinDirectory(ctx)
+	if err != nil {
+		check.Status = "warn"
+		check.Message = "Could not determine Homebrew bin directory"
+		check.Issues = []string{fmt.Sprintf("Error discovering bin directory: %v", err)}
+		return check, nil
+	}
+
+	// Check if bin directory is in PATH
+	pathCheck := checkDirectoryInPath(binDir)
+	check.Details = append(check.Details, fmt.Sprintf("Homebrew bin directory: %s", binDir))
+
+	if !pathCheck.inPath && pathCheck.exists {
+		check.Status = "warn"
+		check.Message = "Homebrew bin directory exists but not in PATH"
+		check.Issues = []string{fmt.Sprintf("Directory %s exists but not in PATH", binDir)}
+		check.Suggestions = pathCheck.suggestions
+	} else if !pathCheck.exists {
+		check.Status = "warn"
+		check.Message = "Homebrew bin directory does not exist"
+		check.Issues = []string{fmt.Sprintf("Directory %s does not exist", binDir)}
+	} else {
+		check.Details = append(check.Details, "Homebrew bin directory is in PATH")
+	}
+
+	return check, nil
+}
+
+// getBinDirectory discovers the actual homebrew bin directory
+func (h *HomebrewManager) getBinDirectory(ctx context.Context) (string, error) {
+	output, err := ExecuteCommand(ctx, h.binary, "--prefix")
+	if err != nil {
+		return "", fmt.Errorf("failed to get homebrew prefix: %w", err)
+	}
+
+	prefix := strings.TrimSpace(string(output))
+	return filepath.Join(prefix, "bin"), nil
+}
+
+// SelfInstall installs Homebrew using the official installer script
+func (h *HomebrewManager) SelfInstall(ctx context.Context) error {
+	// Check if already available (idempotent)
+	if available, _ := h.IsAvailable(ctx); available {
+		return nil
+	}
+
+	// Execute official installer script
+	script := `curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | bash`
+	return executeInstallScript(ctx, script, "Homebrew")
+}
+
+// Upgrade upgrades one or more packages to their latest versions
+func (h *HomebrewManager) Upgrade(ctx context.Context, packages []string) error {
+	if len(packages) == 0 {
+		// Upgrade all packages
+		output, err := ExecuteCommandCombined(ctx, h.binary, "upgrade")
+		if err != nil {
+			return h.handleUpgradeError(err, output, "all packages")
+		}
+		return nil
+	}
+
+	// Upgrade specific packages
+	args := append([]string{"upgrade"}, packages...)
+	output, err := ExecuteCommandCombined(ctx, h.binary, args...)
+	if err != nil {
+		return h.handleUpgradeError(err, output, strings.Join(packages, ", "))
+	}
+	return nil
+}
+
 func init() {
 	RegisterManager("brew", func() PackageManager {
 		return NewHomebrewManager()
 	})
+}
+
+// handleUpgradeError processes upgrade command errors
+func (h *HomebrewManager) handleUpgradeError(err error, output []byte, packages string) error {
+	outputStr := strings.ToLower(string(output))
+
+	if exitCode, ok := ExtractExitCode(err); ok {
+		// Check for known error patterns
+		if strings.Contains(outputStr, "no available formula") || strings.Contains(outputStr, "no formulae found") {
+			return fmt.Errorf("one or more packages not found: %s", packages)
+		}
+		if strings.Contains(outputStr, "nothing to upgrade") || strings.Contains(outputStr, "already up-to-date") {
+			return nil // Already up-to-date is success
+		}
+		if strings.Contains(outputStr, "permission denied") {
+			return fmt.Errorf("permission denied upgrading %s", packages)
+		}
+
+		if exitCode != 0 {
+			// Include command output for better error messages
+			if len(output) > 0 {
+				// Trim the output and limit length for readability
+				errorOutput := strings.TrimSpace(string(output))
+				if len(errorOutput) > 500 {
+					errorOutput = errorOutput[:500] + "..."
+				}
+				return fmt.Errorf("package upgrade failed: %s", errorOutput)
+			}
+			return fmt.Errorf("package upgrade failed (exit code %d): %w", exitCode, err)
+		}
+		return nil
+	}
+
+	return fmt.Errorf("failed to execute upgrade command: %w", err)
 }
 
 // handleInstallError processes install command errors

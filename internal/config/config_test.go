@@ -263,11 +263,11 @@ func TestConfig_DirectFieldAccess(t *testing.T) {
 
 func TestConfig_Resolve(t *testing.T) {
 	cfg := &Config{
-		DefaultManager: "pip",
+		DefaultManager: "uv",
 	}
 
 	// Config should work directly without resolution
-	if cfg.DefaultManager != "pip" {
+	if cfg.DefaultManager != "uv" {
 		t.Error("Config should work directly")
 	}
 }

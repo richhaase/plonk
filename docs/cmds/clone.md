@@ -16,7 +16,6 @@ The command clones the repository directly into `$PLONK_DIR`, detects required p
 
 ## Options
 
-- `--yes, -y` - Non-interactive mode, automatically accepts all prompts
 - `--no-apply` - Skip running `plonk apply` after setup
 
 ## Behavior
@@ -27,7 +26,7 @@ The command clones the repository directly into `$PLONK_DIR`, detects required p
 1. Validates and parses the git repository URL
 2. Clones the repository directly into `$PLONK_DIR`
 3. Reads `plonk.lock` to detect required package managers
-4. Installs ONLY the package managers needed by your dotfiles
+4. Installs ONLY the package managers needed by your managed packages
 5. Runs `plonk apply` to configure your system (unless --no-apply)
 
 ### Repository URL Support
@@ -50,17 +49,13 @@ If no lock file exists or it cannot be read:
 - No package managers are installed
 - User can manually install package managers if needed
 
-### Interactive Behavior
+### Automated Behavior
 
-In interactive mode (default):
-- Shows detected package managers
-- Prompts before installation
-- Asks for apply confirmation
-
-With `--yes` flag:
-- Automatically installs detected managers
-- Automatically runs apply
-- No user prompts
+The clone command operates fully automatically:
+- Detects required package managers from the lock file
+- Automatically installs detected managers using official installation methods
+- Automatically runs apply to complete setup (unless --no-apply)
+- No user interaction required - completely hands-off operation
 
 ### Error Handling
 
@@ -82,8 +77,8 @@ plonk clone richhaase/dotfiles
 # Clone without running apply
 plonk clone user/repo --no-apply
 
-# Non-interactive mode
-plonk clone --yes user/dotfiles
+# Clone with manual apply step
+plonk clone user/dotfiles --no-apply
 
 # Full URL examples
 plonk clone https://github.com/user/repo.git
@@ -100,5 +95,5 @@ plonk clone git@github.com:user/repo.git
 ## Notes
 
 - Homebrew must be installed before using plonk (it's a prerequisite)
-- Only installs package managers that are actually needed by your dotfiles
+- Only installs package managers that are actually needed by your managed packages
 - The repository is cloned directly into `$PLONK_DIR` (no subdirectory)

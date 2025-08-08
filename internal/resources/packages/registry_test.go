@@ -33,8 +33,8 @@ func TestManagerRegistry_HasManager(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "pip manager exists",
-			manager:  "pip",
+			name:     "uv manager exists",
+			manager:  "uv",
 			expected: true,
 		},
 		{

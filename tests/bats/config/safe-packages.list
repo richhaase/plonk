@@ -12,9 +12,6 @@ brew:fortune     # Fortune cookie messages
 npm:is-odd       # Checks if number is odd, ~4KB, no deps
 npm:left-pad     # Pads strings, ~4KB, famous tiny package
 
-# Python packages
-pip:cowsay       # ASCII cow, harmless fun tool
-pip:six          # Python 2/3 compatibility, very small
 
 # Ruby gems
 gem:colorize     # Terminal color output, small utility
@@ -40,3 +37,7 @@ composer:minicli/minicli     # Minimalist CLI framework, dependency-free
 # .NET Global Tools
 dotnet:dotnetsay             # Simple demo tool, no side effects
 dotnet:dotnet-outdated-tool  # Dependency checker, read-only operations
+
+# Pipx packages (Python applications in isolated environments)
+pipx:black                   # Python code formatter, safe dev tool
+pipx:pycowsay                # Python ASCII cow (different from brew cowsay)

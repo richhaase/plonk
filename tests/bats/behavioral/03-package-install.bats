@@ -93,39 +93,6 @@ setup() {
 }
 
 
-# Python/pip tests
-@test "install pip package" {
-  require_safe_package "pip:six"
-
-  # Check if pip is available
-  run which pip3
-  if [[ $status -ne 0 ]]; then
-    run which pip
-    if [[ $status -ne 0 ]]; then
-      skip "pip not available"
-    fi
-  fi
-
-  run plonk install pip:six
-  assert_success
-  assert_output --partial "six"
-  assert_output --partial "added"
-
-  track_artifact "package" "pip:six"
-
-  # Verify it's actually installed by pip
-  run pip3 show six
-  assert_success
-
-  # Verify it's in lock file
-  run cat "$PLONK_DIR/plonk.lock"
-  assert_success
-  assert_output --partial "six"
-
-  # Verify in status
-  run plonk status
-  assert_output --partial "six"
-}
 
 # Ruby/gem tests
 @test "install gem package" {
@@ -470,6 +437,37 @@ setup() {
   assert_output --partial "fortune"
 
   track_artifact "package" "brew:fortune"
+}
+
+# Pipx tests
+@test "install pipx package" {
+  require_safe_package "pipx:black"
+
+  # Check if pipx is available
+  run which pipx
+  if [[ $status -ne 0 ]]; then
+    skip "pipx not available"
+  fi
+
+  run plonk install pipx:black
+  assert_success
+  assert_output --partial "black"
+  assert_output --partial "added"
+  track_artifact "package" "pipx:black"
+
+  # Verify it's actually installed via pipx
+  run pipx list --short
+  assert_success
+  assert_output --partial "black"
+
+  # Verify it's in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "black"
+
+  # Verify in status
+  run plonk status
+  assert_output --partial "black"
 }
 
 @test "install shows error for non-existent package" {

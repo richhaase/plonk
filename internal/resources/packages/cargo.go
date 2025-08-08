@@ -7,6 +7,8 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -265,10 +267,158 @@ func (c *CargoManager) SupportsSearch() bool {
 	return true
 }
 
+// CheckHealth performs a comprehensive health check of the Cargo installation
+func (c *CargoManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
+	check := &HealthCheck{
+		Name:     "Cargo Manager",
+		Category: "package-managers",
+		Status:   "pass",
+		Message:  "Cargo is available and properly configured",
+	}
+
+	// Check availability
+	available, err := c.IsAvailable(ctx)
+	if err != nil {
+		if IsContextError(err) {
+			return nil, err
+		}
+		check.Status = "warn"
+		check.Message = "Cargo availability check failed"
+		check.Issues = []string{fmt.Sprintf("Error checking cargo: %v", err)}
+		return check, nil
+	}
+
+	if !available {
+		check.Status = "warn"
+		check.Message = "Cargo is not available"
+		check.Issues = []string{"cargo command not found"}
+		check.Suggestions = []string{
+			"Install Rust (includes Cargo): curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh",
+			"Or install via Homebrew: brew install rust",
+		}
+		return check, nil
+	}
+
+	// Discover cargo bin directory
+	binDir, err := c.getBinDirectory()
+	if err != nil {
+		check.Status = "warn"
+		check.Message = "Could not determine Cargo bin directory"
+		check.Issues = []string{fmt.Sprintf("Error discovering bin directory: %v", err)}
+		return check, nil
+	}
+
+	check.Details = append(check.Details, fmt.Sprintf("Cargo bin directory: %s", binDir))
+
+	// Check PATH
+	pathCheck := checkDirectoryInPath(binDir)
+	if !pathCheck.inPath && pathCheck.exists {
+		check.Status = "warn"
+		check.Message = "Cargo bin directory exists but not in PATH"
+		check.Issues = []string{fmt.Sprintf("Directory %s exists but not in PATH", binDir)}
+		check.Suggestions = pathCheck.suggestions
+	} else if !pathCheck.exists {
+		check.Details = append(check.Details, "Cargo bin directory does not exist (no packages installed)")
+	} else {
+		check.Details = append(check.Details, "Cargo bin directory is in PATH")
+	}
+
+	return check, nil
+}
+
+// getBinDirectory discovers the Cargo bin directory
+func (c *CargoManager) getBinDirectory() (string, error) {
+	// Check CARGO_HOME first
+	if cargoHome := os.Getenv("CARGO_HOME"); cargoHome != "" {
+		return filepath.Join(cargoHome, "bin"), nil
+	}
+
+	// Default to ~/.cargo/bin
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get user home directory: %w", err)
+	}
+
+	return filepath.Join(homeDir, ".cargo", "bin"), nil
+}
+
+// Upgrade upgrades one or more packages to their latest versions
+func (c *CargoManager) Upgrade(ctx context.Context, packages []string) error {
+	if len(packages) == 0 {
+		// Get all installed packages and upgrade them
+		installed, err := c.ListInstalled(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get installed packages: %w", err)
+		}
+		packages = installed
+	}
+
+	if len(packages) == 0 {
+		return nil // No packages to upgrade
+	}
+
+	// Upgrade packages by reinstalling them (cargo install reinstalls with latest version)
+	for _, pkg := range packages {
+		output, err := ExecuteCommandCombined(ctx, c.binary, "install", pkg)
+		if err != nil {
+			return c.handleUpgradeError(err, output, pkg)
+		}
+	}
+	return nil
+}
+
+// SelfInstall installs Rust/Cargo using the official rustup installer
+func (c *CargoManager) SelfInstall(ctx context.Context) error {
+	// Check if already available (idempotent)
+	if available, _ := c.IsAvailable(ctx); available {
+		return nil
+	}
+
+	// Execute official rustup installer
+	script := `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y`
+	return executeInstallScript(ctx, script, "Rust/Cargo")
+}
+
 func init() {
 	RegisterManager("cargo", func() PackageManager {
 		return NewCargoManager()
 	})
+}
+
+// handleUpgradeError processes upgrade command errors
+func (c *CargoManager) handleUpgradeError(err error, output []byte, packageName string) error {
+	outputStr := strings.ToLower(string(output))
+
+	if exitCode, ok := ExtractExitCode(err); ok {
+		// Check for known error patterns
+		if strings.Contains(outputStr, "no matching package found") ||
+			strings.Contains(outputStr, "not find package") ||
+			strings.Contains(outputStr, "could not find") {
+			return fmt.Errorf("package '%s' not found", packageName)
+		}
+		if strings.Contains(outputStr, "already installed") {
+			return nil // Already up-to-date is success
+		}
+		if strings.Contains(outputStr, "permission denied") {
+			return fmt.Errorf("permission denied upgrading %s", packageName)
+		}
+
+		if exitCode != 0 {
+			// Include command output for better error messages
+			if len(output) > 0 {
+				// Trim the output and limit length for readability
+				errorOutput := strings.TrimSpace(string(output))
+				if len(errorOutput) > 500 {
+					errorOutput = errorOutput[:500] + "..."
+				}
+				return fmt.Errorf("package upgrade failed: %s", errorOutput)
+			}
+			return fmt.Errorf("package upgrade failed (exit code %d): %w", exitCode, err)
+		}
+		return nil
+	}
+
+	return fmt.Errorf("failed to execute upgrade command: %w", err)
 }
 
 // handleInstallError processes install command errors

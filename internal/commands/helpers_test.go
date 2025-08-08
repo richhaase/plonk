@@ -97,8 +97,8 @@ func TestIsValidManager(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "valid pip manager",
-			manager:  "pip",
+			name:     "valid uv manager",
+			manager:  "uv",
 			expected: true,
 		},
 		{
@@ -152,13 +152,13 @@ func TestGetValidManagers(t *testing.T) {
 		"brew":     false,
 		"npm":      false,
 		"cargo":    false,
-		"pip":      false,
+		"uv":       false,
 		"gem":      false,
 		"go":       false,
-		"uv":       false,
 		"pixi":     false,
 		"composer": false,
 		"dotnet":   false,
+		"pipx":     false,
 	}
 
 	for _, manager := range managers {

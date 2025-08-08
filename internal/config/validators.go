@@ -18,7 +18,7 @@ func SetValidManagers(managers []string) {
 
 // knownManagers is a fallback list of known package managers
 // used when the dynamic list hasn't been populated yet
-var knownManagers = []string{"apt", "brew", "npm", "pip", "gem", "go", "cargo", "test-unavailable"}
+var knownManagers = []string{"apt", "brew", "npm", "uv", "gem", "go", "cargo", "test-unavailable"}
 
 // RegisterValidators registers custom validators for config validation
 func RegisterValidators(v *validator.Validate) error {

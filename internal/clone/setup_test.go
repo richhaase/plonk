@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/richhaase/plonk/internal/diagnostics"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,9 +40,9 @@ func TestGetManagerDescription(t *testing.T) {
 			expected: "npm (Node.js package manager)",
 		},
 		{
-			name:     "pip",
-			manager:  "pip",
-			expected: "pip (Python package manager)",
+			name:     "uv",
+			manager:  "uv",
+			expected: "uv (Python package manager)",
 		},
 		{
 			name:     "gem",
@@ -97,9 +96,9 @@ func TestGetManualInstallInstructions(t *testing.T) {
 			expected: "Install Node.js from https://nodejs.org/ or use brew install node",
 		},
 		{
-			name:     "pip",
-			manager:  "pip",
-			expected: "Install Python from https://python.org/ or use brew install python",
+			name:     "uv",
+			manager:  "uv",
+			expected: "Install UV from https://docs.astral.sh/uv/ or use brew install uv",
 		},
 		{
 			name:     "gem",
@@ -201,7 +200,7 @@ func TestDetectRequiredManagers(t *testing.T) {
 				},
 				{
 					Type: "package",
-					ID:   "pip:requests",
+					ID:   "uv:requests",
 					Metadata: map[string]interface{}{
 						"version": "2.31.0",
 					},
@@ -224,10 +223,10 @@ func TestDetectRequiredManagers(t *testing.T) {
 		managers, err := DetectRequiredManagers(lockPath)
 		require.NoError(t, err)
 
-		// Should have cargo and pip (unique)
+		// Should have cargo and uv (unique)
 		assert.Len(t, managers, 2)
 		assert.Contains(t, managers, "cargo")
-		assert.Contains(t, managers, "pip")
+		assert.Contains(t, managers, "uv")
 	})
 
 	t.Run("empty lock file", func(t *testing.T) {
@@ -298,102 +297,7 @@ func TestDetectRequiredManagers(t *testing.T) {
 	})
 }
 
-func TestFindMissingPackageManagers(t *testing.T) {
-	t.Run("extract missing managers", func(t *testing.T) {
-		report := diagnostics.HealthReport{
-			Checks: []diagnostics.HealthCheck{
-				{
-					Name:     "Package Manager Availability",
-					Category: "package-managers",
-					Details: []string{
-						"brew: available",
-						"npm: not available",
-						"pip: available",
-						"cargo: not available",
-						"gem: not available",
-						"go: available",
-					},
-				},
-			},
-		}
-
-		missing := findMissingPackageManagers(report)
-
-		assert.Len(t, missing, 3)
-		assert.Contains(t, missing, "npm")
-		assert.Contains(t, missing, "cargo")
-		assert.Contains(t, missing, "gem")
-	})
-
-	t.Run("no missing managers", func(t *testing.T) {
-		report := diagnostics.HealthReport{
-			Checks: []diagnostics.HealthCheck{
-				{
-					Name:     "Package Manager Availability",
-					Category: "package-managers",
-					Details: []string{
-						"brew: available",
-						"npm: available",
-					},
-				},
-			},
-		}
-
-		missing := findMissingPackageManagers(report)
-		assert.Empty(t, missing)
-	})
-
-	t.Run("empty report", func(t *testing.T) {
-		report := diagnostics.HealthReport{
-			Checks: []diagnostics.HealthCheck{},
-		}
-
-		missing := findMissingPackageManagers(report)
-		assert.Empty(t, missing)
-	})
-
-	t.Run("different check category", func(t *testing.T) {
-		report := diagnostics.HealthReport{
-			Checks: []diagnostics.HealthCheck{
-				{
-					Name:     "System Check",
-					Category: "system",
-					Details: []string{
-						"brew: not available",
-						"npm: not available",
-					},
-				},
-			},
-		}
-
-		missing := findMissingPackageManagers(report)
-		assert.Empty(t, missing)
-	})
-
-	t.Run("malformed details", func(t *testing.T) {
-		report := diagnostics.HealthReport{
-			Checks: []diagnostics.HealthCheck{
-				{
-					Name:     "Package Manager Availability",
-					Category: "package-managers",
-					Details: []string{
-						"brew available", // Missing colon
-						"npm: not available",
-						"no status here",    // No colon at all
-						": not available",   // Empty manager name
-						"cargo : available", // Extra spaces
-					},
-				},
-			},
-		}
-
-		missing := findMissingPackageManagers(report)
-
-		// Should only extract npm
-		assert.Len(t, missing, 1)
-		assert.Contains(t, missing, "npm")
-	})
-}
+// TestFindMissingPackageManagers test removed - functionality replaced by SelfInstall interface
 
 func TestCreateDefaultConfig(t *testing.T) {
 	tempDir := t.TempDir()

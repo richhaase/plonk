@@ -22,9 +22,8 @@ This guide covers installing plonk and setting up your development environment.
 
 Plonk can manage packages from these language-specific package managers:
 
-- **Cargo** (Rust) - For Rust-based CLI tools, can be installed by `plonk clone` or `plonk doctor --fix`
+- **Cargo** (Rust) - For Rust-based CLI tools, automatically installed by `plonk clone` when needed
 - **npm** (Node.js) - For global JavaScript packages
-- **pip** (Python) - For Python packages
 - **gem** (Ruby) - For Ruby gems
 - **go** (Go) - For Go modules
 - **uv** (Python) - For Python tools management
@@ -104,7 +103,7 @@ plonk --version
 plonk doctor
 ```
 
-The `plonk doctor` command will identify any missing dependencies and can automatically install supported package managers.
+The `plonk doctor` command will identify any missing dependencies. Use `plonk clone` to automatically install package managers needed by your managed packages.
 
 ## Uninstallation
 
@@ -142,7 +141,7 @@ go install github.com/richhaase/plonk/cmd/plonk@latest
 # Verify system health
 plonk doctor
 
-# Clone your dotfiles (automatically installs needed package managers)
+# Clone your dotfiles (automatically installs package managers for managed packages)
 plonk clone user/dotfiles      # GitHub shorthand for existing setup
 ```
 
@@ -161,7 +160,7 @@ go install github.com/richhaase/plonk/cmd/plonk@latest
 # Verify system health
 plonk doctor
 
-# Clone your dotfiles (automatically installs needed package managers)
+# Clone your dotfiles (automatically installs package managers for managed packages)
 plonk clone user/dotfiles      # GitHub shorthand
 ```
 
@@ -169,7 +168,7 @@ plonk clone user/dotfiles      # GitHub shorthand
 - Homebrew must be installed first (https://brew.sh)
 - Homebrew on Linux installs to `/home/linuxbrew/.linuxbrew`
 - Ensure Homebrew is in your PATH after installation
-- Language package managers (npm, pip, etc.) work identically to macOS
+- Language package managers (npm, uv, etc.) work identically to macOS
 - Ensure your PATH includes `$GOPATH/bin` (usually `~/go/bin`)
 - Docker/container environments are supported
 
@@ -262,7 +261,7 @@ plonk apply
 
 **Package manager not found**
 - For Homebrew: Install manually from https://brew.sh (required prerequisite)
-- For language package managers: Use `plonk clone` for automatic installation or install manually
+- For language package managers: Use `plonk clone` to automatically install those needed by your managed packages, or install manually
 - See [Configuration Guide](configuration.md#package-manager-settings) for manual setup
 
 ### Getting Help
