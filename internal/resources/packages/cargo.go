@@ -342,6 +342,31 @@ func (c *CargoManager) getBinDirectory() (string, error) {
 	return filepath.Join(homeDir, ".cargo", "bin"), nil
 }
 
+// Upgrade upgrades one or more packages to their latest versions
+func (c *CargoManager) Upgrade(ctx context.Context, packages []string) error {
+	if len(packages) == 0 {
+		// Get all installed packages and upgrade them
+		installed, err := c.ListInstalled(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get installed packages: %w", err)
+		}
+		packages = installed
+	}
+
+	if len(packages) == 0 {
+		return nil // No packages to upgrade
+	}
+
+	// Upgrade packages by reinstalling them (cargo install reinstalls with latest version)
+	for _, pkg := range packages {
+		output, err := ExecuteCommandCombined(ctx, c.binary, "install", pkg)
+		if err != nil {
+			return c.handleUpgradeError(err, output, pkg)
+		}
+	}
+	return nil
+}
+
 // SelfInstall installs Rust/Cargo using the official rustup installer
 func (c *CargoManager) SelfInstall(ctx context.Context) error {
 	// Check if already available (idempotent)
@@ -358,6 +383,42 @@ func init() {
 	RegisterManager("cargo", func() PackageManager {
 		return NewCargoManager()
 	})
+}
+
+// handleUpgradeError processes upgrade command errors
+func (c *CargoManager) handleUpgradeError(err error, output []byte, packageName string) error {
+	outputStr := strings.ToLower(string(output))
+
+	if exitCode, ok := ExtractExitCode(err); ok {
+		// Check for known error patterns
+		if strings.Contains(outputStr, "no matching package found") ||
+			strings.Contains(outputStr, "not find package") ||
+			strings.Contains(outputStr, "could not find") {
+			return fmt.Errorf("package '%s' not found", packageName)
+		}
+		if strings.Contains(outputStr, "already installed") {
+			return nil // Already up-to-date is success
+		}
+		if strings.Contains(outputStr, "permission denied") {
+			return fmt.Errorf("permission denied upgrading %s", packageName)
+		}
+
+		if exitCode != 0 {
+			// Include command output for better error messages
+			if len(output) > 0 {
+				// Trim the output and limit length for readability
+				errorOutput := strings.TrimSpace(string(output))
+				if len(errorOutput) > 500 {
+					errorOutput = errorOutput[:500] + "..."
+				}
+				return fmt.Errorf("package upgrade failed: %s", errorOutput)
+			}
+			return fmt.Errorf("package upgrade failed (exit code %d): %w", exitCode, err)
+		}
+		return nil
+	}
+
+	return fmt.Errorf("failed to execute upgrade command: %w", err)
 }
 
 // handleInstallError processes install command errors

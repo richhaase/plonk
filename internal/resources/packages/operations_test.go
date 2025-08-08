@@ -125,9 +125,9 @@ func TestGetManagerInstallSuggestion(t *testing.T) {
 			expected: "install Node.js from https://nodejs.org/",
 		},
 		{
-			name:     "pip manager",
-			manager:  "pip",
-			expected: "install Python from https://python.org/",
+			name:     "uv manager",
+			manager:  "uv",
+			expected: "install UV from https://docs.astral.sh/uv/",
 		},
 		{
 			name:     "cargo manager",

@@ -409,10 +409,64 @@ func (h *HomebrewManager) SelfInstall(ctx context.Context) error {
 	return executeInstallScript(ctx, script, "Homebrew")
 }
 
+// Upgrade upgrades one or more packages to their latest versions
+func (h *HomebrewManager) Upgrade(ctx context.Context, packages []string) error {
+	if len(packages) == 0 {
+		// Upgrade all packages
+		output, err := ExecuteCommandCombined(ctx, h.binary, "upgrade")
+		if err != nil {
+			return h.handleUpgradeError(err, output, "all packages")
+		}
+		return nil
+	}
+
+	// Upgrade specific packages
+	args := append([]string{"upgrade"}, packages...)
+	output, err := ExecuteCommandCombined(ctx, h.binary, args...)
+	if err != nil {
+		return h.handleUpgradeError(err, output, strings.Join(packages, ", "))
+	}
+	return nil
+}
+
 func init() {
 	RegisterManager("brew", func() PackageManager {
 		return NewHomebrewManager()
 	})
+}
+
+// handleUpgradeError processes upgrade command errors
+func (h *HomebrewManager) handleUpgradeError(err error, output []byte, packages string) error {
+	outputStr := strings.ToLower(string(output))
+
+	if exitCode, ok := ExtractExitCode(err); ok {
+		// Check for known error patterns
+		if strings.Contains(outputStr, "no available formula") || strings.Contains(outputStr, "no formulae found") {
+			return fmt.Errorf("one or more packages not found: %s", packages)
+		}
+		if strings.Contains(outputStr, "nothing to upgrade") || strings.Contains(outputStr, "already up-to-date") {
+			return nil // Already up-to-date is success
+		}
+		if strings.Contains(outputStr, "permission denied") {
+			return fmt.Errorf("permission denied upgrading %s", packages)
+		}
+
+		if exitCode != 0 {
+			// Include command output for better error messages
+			if len(output) > 0 {
+				// Trim the output and limit length for readability
+				errorOutput := strings.TrimSpace(string(output))
+				if len(errorOutput) > 500 {
+					errorOutput = errorOutput[:500] + "..."
+				}
+				return fmt.Errorf("package upgrade failed: %s", errorOutput)
+			}
+			return fmt.Errorf("package upgrade failed (exit code %d): %w", exitCode, err)
+		}
+		return nil
+	}
+
+	return fmt.Errorf("failed to execute upgrade command: %w", err)
 }
 
 // handleInstallError processes install command errors

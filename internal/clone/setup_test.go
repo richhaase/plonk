@@ -40,9 +40,9 @@ func TestGetManagerDescription(t *testing.T) {
 			expected: "npm (Node.js package manager)",
 		},
 		{
-			name:     "pip",
-			manager:  "pip",
-			expected: "pip (Python package manager)",
+			name:     "uv",
+			manager:  "uv",
+			expected: "uv (Python package manager)",
 		},
 		{
 			name:     "gem",
@@ -96,9 +96,9 @@ func TestGetManualInstallInstructions(t *testing.T) {
 			expected: "Install Node.js from https://nodejs.org/ or use brew install node",
 		},
 		{
-			name:     "pip",
-			manager:  "pip",
-			expected: "Install Python from https://python.org/ or use brew install python",
+			name:     "uv",
+			manager:  "uv",
+			expected: "Install UV from https://docs.astral.sh/uv/ or use brew install uv",
 		},
 		{
 			name:     "gem",
@@ -200,7 +200,7 @@ func TestDetectRequiredManagers(t *testing.T) {
 				},
 				{
 					Type: "package",
-					ID:   "pip:requests",
+					ID:   "uv:requests",
 					Metadata: map[string]interface{}{
 						"version": "2.31.0",
 					},
@@ -223,10 +223,10 @@ func TestDetectRequiredManagers(t *testing.T) {
 		managers, err := DetectRequiredManagers(lockPath)
 		require.NoError(t, err)
 
-		// Should have cargo and pip (unique)
+		// Should have cargo and uv (unique)
 		assert.Len(t, managers, 2)
 		assert.Contains(t, managers, "cargo")
-		assert.Contains(t, managers, "pip")
+		assert.Contains(t, managers, "uv")
 	})
 
 	t.Run("empty lock file", func(t *testing.T) {

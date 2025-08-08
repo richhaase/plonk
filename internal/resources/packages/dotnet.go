@@ -236,6 +236,49 @@ func (d *DotnetManager) installViaHomebrew(ctx context.Context) error {
 	return executeInstallCommand(ctx, "brew", []string{"install", "dotnet"}, ".NET SDK")
 }
 
+// Upgrade upgrades one or more packages to their latest versions
+func (d *DotnetManager) Upgrade(ctx context.Context, packages []string) error {
+	if len(packages) == 0 {
+		// First get all installed tools
+		installed, err := d.ListInstalled(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to list installed tools: %w", err)
+		}
+
+		// Upgrade each tool individually
+		var upgradeErrors []string
+		for _, tool := range installed {
+			output, err := ExecuteCommandCombined(ctx, d.binary, "tool", "update", "-g", tool)
+			if err != nil {
+				upgradeErr := d.handleUpgradeError(err, output, tool)
+				upgradeErrors = append(upgradeErrors, upgradeErr.Error())
+				continue
+			}
+		}
+
+		if len(upgradeErrors) > 0 {
+			return fmt.Errorf("some tools failed to upgrade: %s", strings.Join(upgradeErrors, "; "))
+		}
+		return nil
+	}
+
+	// Upgrade specific packages
+	var upgradeErrors []string
+	for _, pkg := range packages {
+		output, err := ExecuteCommandCombined(ctx, d.binary, "tool", "update", "-g", pkg)
+		if err != nil {
+			upgradeErr := d.handleUpgradeError(err, output, pkg)
+			upgradeErrors = append(upgradeErrors, upgradeErr.Error())
+			continue
+		}
+	}
+
+	if len(upgradeErrors) > 0 {
+		return fmt.Errorf("failed to upgrade tools: %s", strings.Join(upgradeErrors, "; "))
+	}
+	return nil
+}
+
 func init() {
 	RegisterManager("dotnet", func() PackageManager {
 		return NewDotnetManager()
@@ -326,6 +369,50 @@ func (d *DotnetManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 func (d *DotnetManager) getBinDirectory() string {
 	homeDir, _ := os.UserHomeDir()
 	return filepath.Join(homeDir, ".dotnet", "tools")
+}
+
+// handleUpgradeError processes upgrade command errors
+func (d *DotnetManager) handleUpgradeError(err error, output []byte, toolName string) error {
+	outputStr := string(output)
+
+	if exitCode, ok := ExtractExitCode(err); ok {
+		// Check for known error patterns
+		if strings.Contains(outputStr, "is not installed") ||
+			strings.Contains(outputStr, "No such tool") ||
+			strings.Contains(outputStr, "Tool") && strings.Contains(outputStr, "is not installed") {
+			return fmt.Errorf("tool '%s' not found or not installed", toolName)
+		}
+		if strings.Contains(outputStr, "already up-to-date") ||
+			strings.Contains(outputStr, "no updates available") ||
+			strings.Contains(outputStr, "is already up to date") {
+			return nil // Already up-to-date is success
+		}
+		if strings.Contains(outputStr, "Access denied") ||
+			strings.Contains(outputStr, "permission denied") ||
+			strings.Contains(outputStr, "Permission denied") {
+			return fmt.Errorf("permission denied upgrading %s", toolName)
+		}
+		if strings.Contains(outputStr, "Unable to find package") ||
+			strings.Contains(outputStr, "NU1101") {
+			return fmt.Errorf("tool '%s' not found in registry", toolName)
+		}
+
+		if exitCode != 0 {
+			// Include command output for better error messages
+			if len(output) > 0 {
+				// Trim the output and limit length for readability
+				errorOutput := strings.TrimSpace(string(output))
+				if len(errorOutput) > 500 {
+					errorOutput = errorOutput[:500] + "..."
+				}
+				return fmt.Errorf("tool upgrade failed: %s", errorOutput)
+			}
+			return fmt.Errorf("tool upgrade failed (exit code %d): %w", exitCode, err)
+		}
+		return nil
+	}
+
+	return fmt.Errorf("failed to execute upgrade command: %w", err)
 }
 
 // handleInstallError processes install command errors

@@ -432,10 +432,68 @@ func (g *GemManager) installViaHomebrew(ctx context.Context) error {
 	return executeInstallCommand(ctx, "brew", []string{"install", "ruby"}, "Ruby (includes Gem)")
 }
 
+// Upgrade upgrades one or more packages to their latest versions
+func (g *GemManager) Upgrade(ctx context.Context, packages []string) error {
+	if len(packages) == 0 {
+		// Upgrade all gems
+		output, err := ExecuteCommandCombined(ctx, g.binary, "update")
+		if err != nil {
+			return g.handleUpgradeError(err, output, "all gems")
+		}
+		return nil
+	}
+
+	// Upgrade specific gems
+	args := append([]string{"update"}, packages...)
+	output, err := ExecuteCommandCombined(ctx, g.binary, args...)
+	if err != nil {
+		return g.handleUpgradeError(err, output, strings.Join(packages, ", "))
+	}
+	return nil
+}
+
 func init() {
 	RegisterManager("gem", func() PackageManager {
 		return NewGemManager()
 	})
+}
+
+// handleUpgradeError processes upgrade command errors
+func (g *GemManager) handleUpgradeError(err error, output []byte, packages string) error {
+	outputStr := strings.ToLower(string(output))
+
+	if exitCode, ok := ExtractExitCode(err); ok {
+		// Check for known error patterns
+		if strings.Contains(outputStr, "could not find a valid gem") ||
+			strings.Contains(outputStr, "could not find gem") ||
+			strings.Contains(outputStr, "unknown gem") {
+			return fmt.Errorf("one or more gems not found: %s", packages)
+		}
+		if strings.Contains(outputStr, "nothing to update") || strings.Contains(outputStr, "latest version") {
+			return nil // Already up-to-date is success
+		}
+		if strings.Contains(outputStr, "permission denied") ||
+			strings.Contains(outputStr, "you don't have write permissions") ||
+			strings.Contains(outputStr, "insufficient permissions") {
+			return fmt.Errorf("permission denied upgrading %s", packages)
+		}
+
+		if exitCode != 0 {
+			// Include command output for better error messages
+			if len(output) > 0 {
+				// Trim the output and limit length for readability
+				errorOutput := strings.TrimSpace(string(output))
+				if len(errorOutput) > 500 {
+					errorOutput = errorOutput[:500] + "..."
+				}
+				return fmt.Errorf("gem upgrade failed: %s", errorOutput)
+			}
+			return fmt.Errorf("gem upgrade failed (exit code %d): %w", exitCode, err)
+		}
+		return nil
+	}
+
+	return fmt.Errorf("failed to execute upgrade command: %w", err)
 }
 
 // handleInstallError processes install command errors

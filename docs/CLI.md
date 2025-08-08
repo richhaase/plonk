@@ -179,7 +179,6 @@ Use prefixes to specify package managers:
 - `brew:` - Homebrew (macOS and Linux)
 - `npm:` - NPM (global packages)
 - `cargo:` - Cargo (Rust)
-- `pip:` - Pip (Python)
 - `gem:` - RubyGems
 - `go:` - Go modules
 - `uv:` - UV (Python tool manager)
@@ -192,7 +191,6 @@ Examples:
 plonk install brew:wget
 plonk install npm:typescript
 plonk install cargo:ripgrep
-plonk install pip:black
 plonk install gem:bundler
 plonk install go:golang.org/x/tools/cmd/goimports
 plonk install uv:ruff

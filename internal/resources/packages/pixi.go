@@ -242,6 +242,41 @@ func (p *PixiManager) InstalledVersion(ctx context.Context, name string) (string
 	return "", fmt.Errorf("version information not found for environment '%s'", name)
 }
 
+// Upgrade upgrades one or more packages to their latest versions
+func (p *PixiManager) Upgrade(ctx context.Context, packages []string) error {
+	if len(packages) == 0 {
+		// First get all installed environments
+		installed, err := p.ListInstalled(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to list installed environments: %w", err)
+		}
+
+		// Upgrade each environment individually
+		var upgradeErrors []string
+		for _, env := range installed {
+			output, err := ExecuteCommandCombined(ctx, p.binary, "global", "update", env)
+			if err != nil {
+				upgradeErr := p.handleUpgradeError(err, output, env)
+				upgradeErrors = append(upgradeErrors, upgradeErr.Error())
+				continue
+			}
+		}
+
+		if len(upgradeErrors) > 0 {
+			return fmt.Errorf("some environments failed to upgrade: %s", strings.Join(upgradeErrors, "; "))
+		}
+		return nil
+	}
+
+	// Upgrade specific packages
+	args := append([]string{"global", "update"}, packages...)
+	output, err := ExecuteCommandCombined(ctx, p.binary, args...)
+	if err != nil {
+		return p.handleUpgradeError(err, output, strings.Join(packages, ", "))
+	}
+	return nil
+}
+
 // SelfInstall installs Pixi using official installer
 func (p *PixiManager) SelfInstall(ctx context.Context) error {
 	// Check if already available (idempotent)
@@ -355,6 +390,48 @@ func (p *PixiManager) getBinDirectory(ctx context.Context) (string, error) {
 
 	binDir := strings.TrimSpace(string(output))
 	return binDir, nil
+}
+
+// handleUpgradeError processes upgrade command errors
+func (p *PixiManager) handleUpgradeError(err error, output []byte, packages string) error {
+	outputStr := string(output)
+
+	if exitCode, ok := ExtractExitCode(err); ok {
+		// Check for known error patterns
+		if strings.Contains(outputStr, "No environment named") ||
+			strings.Contains(outputStr, "not found") ||
+			strings.Contains(outputStr, "does not exist") {
+			return fmt.Errorf("one or more environments not found: %s", packages)
+		}
+		if strings.Contains(outputStr, "already up-to-date") ||
+			strings.Contains(outputStr, "Nothing to update") ||
+			strings.Contains(outputStr, "up to date") {
+			return nil // Already up-to-date is success
+		}
+		if strings.Contains(outputStr, "permission denied") ||
+			strings.Contains(outputStr, "Permission denied") {
+			return fmt.Errorf("permission denied upgrading %s", packages)
+		}
+		if strings.Contains(outputStr, "failed to solve the environment") {
+			return fmt.Errorf("failed to resolve dependencies for packages: %s", packages)
+		}
+
+		if exitCode != 0 {
+			// Include command output for better error messages
+			if len(output) > 0 {
+				// Trim the output and limit length for readability
+				errorOutput := strings.TrimSpace(string(output))
+				if len(errorOutput) > 500 {
+					errorOutput = errorOutput[:500] + "..."
+				}
+				return fmt.Errorf("environment upgrade failed: %s", errorOutput)
+			}
+			return fmt.Errorf("environment upgrade failed (exit code %d): %w", exitCode, err)
+		}
+		return nil
+	}
+
+	return fmt.Errorf("failed to execute upgrade command: %w", err)
 }
 
 // handleInstallError processes install command errors

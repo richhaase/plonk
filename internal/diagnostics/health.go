@@ -446,7 +446,7 @@ func calculateOverallPackageManagerHealth(checks []HealthCheck, homebrewAvailabl
 		check.Message = "Limited package manager availability"
 		check.Suggestions = []string{
 			"Consider installing additional package managers as needed",
-			"Available: npm (Node.js), pip (Python), cargo (Rust), gem (Ruby), go",
+			"Available: npm (Node.js), uv (Python), cargo (Rust), gem (Ruby), go",
 		}
 	} else {
 		check.Message = fmt.Sprintf("Package management ecosystem healthy (%d managers available)", availableCount)

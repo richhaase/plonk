@@ -116,12 +116,12 @@ func TestSortItemsByManager(t *testing.T) {
 		{
 			name: "handles go before npm alphabetically",
 			input: map[string][]resources.Item{
-				"pip":  {{Name: "black"}},
+				"uv":   {{Name: "black"}},
 				"go":   {{Name: "gopls"}},
 				"npm":  {{Name: "prettier"}},
 				"brew": {{Name: "jq"}},
 			},
-			expected: []string{"brew", "go", "npm", "pip"},
+			expected: []string{"brew", "go", "npm", "uv"},
 		},
 	}
 

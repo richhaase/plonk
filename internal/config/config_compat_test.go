@@ -67,15 +67,15 @@ ignore_patterns:
 		{
 			name: "config with unknown fields (should ignore)",
 			content: `version: 1
-default_manager: pip
+default_manager: uv
 unknown_field: should be ignored
 packages:
   - name: git
     manager: brew
 `,
 			check: func(t *testing.T, cfg *Config) {
-				if cfg.DefaultManager != "pip" {
-					t.Errorf("Expected default_manager pip, got %s", cfg.DefaultManager)
+				if cfg.DefaultManager != "uv" {
+					t.Errorf("Expected default_manager uv, got %s", cfg.DefaultManager)
 				}
 				// Should successfully parse despite unknown fields
 			},

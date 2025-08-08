@@ -332,6 +332,26 @@ func (c *ComposerManager) installWithHashVerification(ctx context.Context) error
 	return executeInstallScript(ctx, script, "Composer")
 }
 
+// Upgrade upgrades one or more packages to their latest versions
+func (c *ComposerManager) Upgrade(ctx context.Context, packages []string) error {
+	if len(packages) == 0 {
+		// Upgrade all global packages
+		output, err := ExecuteCommandCombined(ctx, c.binary, "global", "update")
+		if err != nil {
+			return c.handleUpgradeError(err, output, "all packages")
+		}
+		return nil
+	}
+
+	// Upgrade specific packages
+	args := append([]string{"global", "update"}, packages...)
+	output, err := ExecuteCommandCombined(ctx, c.binary, args...)
+	if err != nil {
+		return c.handleUpgradeError(err, output, strings.Join(packages, ", "))
+	}
+	return nil
+}
+
 func init() {
 	RegisterManager("composer", func() PackageManager {
 		return NewComposerManager()
@@ -433,6 +453,48 @@ func (c *ComposerManager) getBinDirectory(ctx context.Context) (string, error) {
 
 	binDir := strings.TrimSpace(string(output))
 	return binDir, nil
+}
+
+// handleUpgradeError processes upgrade command errors
+func (c *ComposerManager) handleUpgradeError(err error, output []byte, packages string) error {
+	outputStr := string(output)
+
+	if exitCode, ok := ExtractExitCode(err); ok {
+		// Check for known error patterns
+		if strings.Contains(outputStr, "could not find package") ||
+			strings.Contains(outputStr, "Package not found") ||
+			strings.Contains(outputStr, "No matching package found") {
+			return fmt.Errorf("one or more packages not found: %s", packages)
+		}
+		if strings.Contains(outputStr, "nothing to update") ||
+			strings.Contains(outputStr, "already up-to-date") ||
+			strings.Contains(outputStr, "Nothing to install or update") {
+			return nil // Already up-to-date is success
+		}
+		if strings.Contains(outputStr, "permission denied") ||
+			strings.Contains(outputStr, "Permission denied") {
+			return fmt.Errorf("permission denied upgrading %s", packages)
+		}
+		if strings.Contains(outputStr, "Your requirements could not be resolved") {
+			return fmt.Errorf("dependency resolution failed for packages: %s", packages)
+		}
+
+		if exitCode != 0 {
+			// Include command output for better error messages
+			if len(output) > 0 {
+				// Trim the output and limit length for readability
+				errorOutput := strings.TrimSpace(string(output))
+				if len(errorOutput) > 500 {
+					errorOutput = errorOutput[:500] + "..."
+				}
+				return fmt.Errorf("package upgrade failed: %s", errorOutput)
+			}
+			return fmt.Errorf("package upgrade failed (exit code %d): %w", exitCode, err)
+		}
+		return nil
+	}
+
+	return fmt.Errorf("failed to execute upgrade command: %w", err)
 }
 
 // handleInstallError processes install command errors

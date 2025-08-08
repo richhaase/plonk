@@ -5,14 +5,16 @@ Upgrade packages to their latest versions across supported package managers.
 ## Syntax
 
 ```bash
-# Upgrade all outdated packages across all managers
+# Upgrade all packages across all managers
 plonk upgrade
 
 # Upgrade all packages for a specific package manager
+plonk upgrade [manager]
 plonk upgrade [manager]:
 
 # Upgrade specific packages
 plonk upgrade [manager:]package1 [manager:]package2 ...
+plonk upgrade package1 package2 ...
 
 # Upgrade with options
 plonk upgrade --dry-run
@@ -21,12 +23,11 @@ plonk upgrade --format json
 
 ## Description
 
-The `plonk upgrade` command identifies and upgrades packages that have newer versions available. It works with all supported package managers and updates the plonk.lock file to reflect new versions.
+The `plonk upgrade` command upgrades packages across supported package managers and updates the plonk.lock file to reflect new versions.
 
-The command operates in three phases:
-1. **Discovery**: Identify outdated packages using each package manager's `Outdated()` method
-2. **Upgrade**: Execute upgrades using each package manager's `Upgrade()` method
-3. **Reconciliation**: Update plonk.lock with new package versions
+The command operates in two phases:
+1. **Upgrade**: Execute upgrades using each package manager's `Upgrade()` method
+2. **Reconciliation**: Update plonk.lock with new package versions
 
 ## Examples
 
@@ -34,29 +35,40 @@ The command operates in three phases:
 ```bash
 plonk upgrade
 ```
-Checks all installed packages across all package managers and upgrades any that have newer versions available.
+Upgrades all packages managed by plonk across all package managers.
 
 ### Upgrade Specific Package Manager
 ```bash
+plonk upgrade brew
+plonk upgrade npm
+plonk upgrade uv
+
+# Alternative syntax with colon
 plonk upgrade brew:
 plonk upgrade npm:
-plonk upgrade pip:
+plonk upgrade uv:
 ```
 Upgrades all packages managed by the specified package manager.
 
 ### Upgrade Specific Packages
 ```bash
+# Upgrade specific packages from specific managers
 plonk upgrade brew:neovim
 plonk upgrade npm:typescript brew:ripgrep
-plonk upgrade pip:requests
+plonk upgrade uv:httpx
+
+# Upgrade packages by name across all managers that have them
+plonk upgrade ripgrep neovim
+plonk upgrade typescript requests
 ```
-Upgrades only the specified packages.
+When a package manager is specified (e.g., `brew:neovim`), only that specific package is upgraded.
+When no manager is specified (e.g., `ripgrep`), all packages with that name across all managers are upgraded.
 
 ### Dry Run
 ```bash
 plonk upgrade --dry-run
 ```
-Shows what packages would be upgraded without actually performing the upgrades.
+Shows what upgrade commands would be executed without actually performing the upgrades.
 
 ## Flags
 
@@ -73,7 +85,6 @@ Each package manager handles upgrades according to its own capabilities:
 
 - **Homebrew**: Runs `brew update` internally if needed, then `brew upgrade`
 - **NPM**: Upgrades global packages via `npm update -g`
-- **Pip**: Upgrades packages via `pip install --upgrade`
 - **Cargo**: Updates via `cargo install` (reinstalls latest version)
 - **Go**: Reinstalls packages with `go install package@latest`
 - **Gem**: Upgrades via `gem update`
@@ -96,7 +107,6 @@ After successful upgrades, plonk automatically updates the lock file with:
 
 ### Progress Indication
 The command provides progress feedback during:
-- Discovery phase (checking for outdated packages)
 - Upgrade execution (per-package progress)
 - Lock file reconciliation
 
@@ -107,7 +117,7 @@ The command provides progress feedback during:
 PACKAGE MANAGER    PACKAGE         FROM      TO        STATUS
 brew              ripgrep         14.1.0    14.1.1    upgraded
 npm               typescript      5.3.3     5.4.2     upgraded
-pip               requests        2.31.0    2.32.0    failed
+uv                httpx           0.26.0    0.27.0    failed
 ```
 
 ### JSON Format
@@ -138,9 +148,6 @@ pip               requests        2.31.0    2.32.0    failed
 
 ## Integration with Other Commands
 
-### Relationship to plonk status
-Use `plonk status --outdated` to preview what packages would be upgraded before running `plonk upgrade`.
-
 ### Relationship to plonk doctor
 Run `plonk doctor` if upgrade operations are failing to check for package manager configuration issues.
 
@@ -149,7 +156,6 @@ The `plonk apply` command focuses on achieving desired state from lock files, wh
 
 ## Performance Considerations
 
-- Checking for outdated packages can be slow for some package managers
 - Bulk upgrade operations are used when supported by the package manager
 - Operations are cancellable and respect context timeouts
 - Network-dependent operations may require retry logic
@@ -158,8 +164,7 @@ The `plonk apply` command focuses on achieving desired state from lock files, wh
 
 - Dry-run capability for preview operations
 - Atomic lock file updates (all or nothing)
-- Backup creation before destructive operations
-- Clear rollback instructions for failed upgrades
+- Safety is delegated to the underlying package managers
 
 ## Limitations
 

@@ -81,7 +81,6 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - `homebrew.go` - Homebrew package manager
 - `npm.go` - NPM package manager
 - `cargo.go` - Cargo package manager
-- `pip.go` - Pip package manager
 - `gem.go` - Gem package manager
 - `goinstall.go` - Go install package manager
 - `uv.go` - UV package manager

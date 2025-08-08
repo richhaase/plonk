@@ -76,7 +76,6 @@ Supported package managers:
 - Homebrew (brew) - macOS and Linux
 - NPM (npm)
 - Cargo (cargo)
-- Pip (pip)
 - Gem (gem)
 - Go (go install)
 - UV (uv) - Python tool manager

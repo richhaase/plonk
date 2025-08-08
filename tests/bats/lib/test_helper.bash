@@ -162,6 +162,61 @@ require_safe_dotfile() {
   fi
 }
 
+# Require a package manager to be available or skip
+require_package_manager() {
+  local manager="$1"
+  case "$manager" in
+    brew|homebrew)
+      if ! command -v brew >/dev/null 2>&1; then
+        skip "Homebrew not available"
+      fi
+      ;;
+    npm)
+      if ! command -v npm >/dev/null 2>&1; then
+        skip "NPM not available"
+      fi
+      ;;
+    gem)
+      if ! command -v gem >/dev/null 2>&1; then
+        skip "Gem not available"
+      fi
+      ;;
+    go)
+      if ! command -v go >/dev/null 2>&1; then
+        skip "Go not available"
+      fi
+      ;;
+    cargo)
+      if ! command -v cargo >/dev/null 2>&1; then
+        skip "Cargo not available"
+      fi
+      ;;
+    uv)
+      if ! command -v uv >/dev/null 2>&1; then
+        skip "UV not available"
+      fi
+      ;;
+    pixi)
+      if ! command -v pixi >/dev/null 2>&1; then
+        skip "Pixi not available"
+      fi
+      ;;
+    composer)
+      if ! command -v composer >/dev/null 2>&1; then
+        skip "Composer not available"
+      fi
+      ;;
+    dotnet)
+      if ! command -v dotnet >/dev/null 2>&1; then
+        skip "DotNet not available"
+      fi
+      ;;
+    *)
+      skip "Unknown package manager: $manager"
+      ;;
+  esac
+}
+
 # Create a test config file
 create_test_config() {
   local content="$1"

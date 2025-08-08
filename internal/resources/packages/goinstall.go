@@ -496,6 +496,70 @@ func (g *GoInstallManager) installLinux(ctx context.Context) error {
 	return fmt.Errorf("Go installation requires a supported package manager (apt/yum/dnf) or manual installation from https://golang.org/dl/")
 }
 
+// Upgrade upgrades one or more packages to their latest versions
+func (g *GoInstallManager) Upgrade(ctx context.Context, packages []string) error {
+	if len(packages) == 0 {
+		// Get all installed packages first
+		output, err := ExecuteCommand(ctx, g.binary, "list", "-m", "all")
+		if err != nil {
+			return fmt.Errorf("failed to list installed modules: %w", err)
+		}
+
+		// Parse output to get module paths and reinstall each with @latest
+		lines := strings.Split(string(output), "\n")
+		var moduleErrors []string
+
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line == "" || strings.HasPrefix(line, "go: ") {
+				continue
+			}
+
+			// Extract module path from lines like "module/path version"
+			fields := strings.Fields(line)
+			if len(fields) >= 1 {
+				modulePath := fields[0]
+				// Skip the main module (first line)
+				if !strings.Contains(modulePath, "/") {
+					continue
+				}
+
+				// Reinstall with @latest
+				reinstallOutput, err := ExecuteCommandCombined(ctx, g.binary, "install", modulePath+"@latest")
+				if err != nil {
+					moduleErrors = append(moduleErrors, fmt.Sprintf("failed to upgrade %s: %v", modulePath, err))
+					continue
+				}
+				_ = reinstallOutput // Unused but required for ExecuteCommandCombined
+			}
+		}
+
+		if len(moduleErrors) > 0 {
+			return fmt.Errorf("some packages failed to upgrade: %s", strings.Join(moduleErrors, "; "))
+		}
+		return nil
+	}
+
+	// Upgrade specific packages
+	var upgradeErrors []string
+	for _, pkg := range packages {
+		modulePath, _ := parseModulePath(pkg)
+		upgradeSpec := fmt.Sprintf("%s@latest", modulePath)
+
+		output, err := ExecuteCommandCombined(ctx, g.binary, "install", upgradeSpec)
+		if err != nil {
+			upgradeErr := g.handleUpgradeError(err, output, pkg)
+			upgradeErrors = append(upgradeErrors, upgradeErr.Error())
+			continue
+		}
+	}
+
+	if len(upgradeErrors) > 0 {
+		return fmt.Errorf("failed to upgrade packages: %s", strings.Join(upgradeErrors, "; "))
+	}
+	return nil
+}
+
 func init() {
 	RegisterManager("go", func() PackageManager {
 		return NewGoInstallManager()
@@ -512,6 +576,50 @@ func (g *GoInstallManager) handleInstall(ctx context.Context, name string) error
 		return g.handleInstallError(err, output, name)
 	}
 	return nil
+}
+
+// handleUpgradeError processes upgrade command errors
+func (g *GoInstallManager) handleUpgradeError(err error, output []byte, packageName string) error {
+	outputStr := strings.ToLower(string(output))
+
+	if exitCode, ok := ExtractExitCode(err); ok {
+		// Check for known error patterns
+		if strings.Contains(outputStr, "cannot find module") ||
+			strings.Contains(outputStr, "cannot find package") ||
+			strings.Contains(outputStr, "404 not found") ||
+			strings.Contains(outputStr, "unknown revision") {
+			return fmt.Errorf("package '%s' not found", packageName)
+		}
+		if strings.Contains(outputStr, "already up-to-date") ||
+			strings.Contains(outputStr, "already installed") {
+			return nil // Already up-to-date is success
+		}
+		if strings.Contains(outputStr, "permission denied") ||
+			strings.Contains(outputStr, "access is denied") {
+			return fmt.Errorf("permission denied upgrading %s", packageName)
+		}
+		if strings.Contains(outputStr, "build failed") ||
+			strings.Contains(outputStr, "compilation error") ||
+			strings.Contains(outputStr, "cannot compile") {
+			return fmt.Errorf("failed to build package '%s'", packageName)
+		}
+
+		if exitCode != 0 {
+			// Include command output for better error messages
+			if len(output) > 0 {
+				// Trim the output and limit length for readability
+				errorOutput := strings.TrimSpace(string(output))
+				if len(errorOutput) > 500 {
+					errorOutput = errorOutput[:500] + "..."
+				}
+				return fmt.Errorf("package upgrade failed: %s", errorOutput)
+			}
+			return fmt.Errorf("package upgrade failed (exit code %d): %w", exitCode, err)
+		}
+		return nil
+	}
+
+	return fmt.Errorf("failed to execute upgrade command: %w", err)
 }
 
 // handleInstallError processes install command errors

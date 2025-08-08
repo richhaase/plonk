@@ -24,7 +24,6 @@ Plonk can manage packages from these language-specific package managers:
 
 - **Cargo** (Rust) - For Rust-based CLI tools, automatically installed by `plonk clone` when needed
 - **npm** (Node.js) - For global JavaScript packages
-- **pip** (Python) - For Python packages
 - **gem** (Ruby) - For Ruby gems
 - **go** (Go) - For Go modules
 - **uv** (Python) - For Python tools management
@@ -169,7 +168,7 @@ plonk clone user/dotfiles      # GitHub shorthand
 - Homebrew must be installed first (https://brew.sh)
 - Homebrew on Linux installs to `/home/linuxbrew/.linuxbrew`
 - Ensure Homebrew is in your PATH after installation
-- Language package managers (npm, pip, etc.) work identically to macOS
+- Language package managers (npm, uv, etc.) work identically to macOS
 - Ensure your PATH includes `$GOPATH/bin` (usually `~/go/bin`)
 - Docker/container environments are supported
 

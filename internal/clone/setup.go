@@ -182,8 +182,8 @@ func getManagerDescription(manager string) string {
 		return "Cargo (Rust package manager)"
 	case "npm":
 		return "npm (Node.js package manager)"
-	case "pip":
-		return "pip (Python package manager)"
+	case "uv":
+		return "uv (Python package manager)"
 	case "gem":
 		return "gem (Ruby package manager)"
 	case "go":
@@ -202,8 +202,8 @@ func getManualInstallInstructions(manager string) string {
 		return "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
 	case "npm":
 		return "Install Node.js from https://nodejs.org/ or use brew install node"
-	case "pip":
-		return "Install Python from https://python.org/ or use brew install python"
+	case "uv":
+		return "Install UV from https://docs.astral.sh/uv/ or use brew install uv"
 	case "gem":
 		return "Install Ruby from https://ruby-lang.org/ or use brew install ruby"
 	case "go":

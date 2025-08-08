@@ -93,39 +93,6 @@ setup() {
 }
 
 
-# Python/pip tests
-@test "install pip package" {
-  require_safe_package "pip:six"
-
-  # Check if pip is available
-  run which pip3
-  if [[ $status -ne 0 ]]; then
-    run which pip
-    if [[ $status -ne 0 ]]; then
-      skip "pip not available"
-    fi
-  fi
-
-  run plonk install pip:six
-  assert_success
-  assert_output --partial "six"
-  assert_output --partial "added"
-
-  track_artifact "package" "pip:six"
-
-  # Verify it's actually installed by pip
-  run pip3 show six
-  assert_success
-
-  # Verify it's in lock file
-  run cat "$PLONK_DIR/plonk.lock"
-  assert_success
-  assert_output --partial "six"
-
-  # Verify in status
-  run plonk status
-  assert_output --partial "six"
-}
 
 # Ruby/gem tests
 @test "install gem package" {

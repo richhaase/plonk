@@ -307,10 +307,10 @@ func getManagerInstallSuggestion(manager string) string {
 	suggestions := map[string]string{
 		"brew":  "install with: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"",
 		"npm":   "install Node.js from https://nodejs.org/",
-		"pip":   "install Python from https://python.org/",
 		"cargo": "install Rust from https://rustup.rs/",
 		"gem":   "install Ruby from https://ruby-lang.org/",
 		"go":    "install Go from https://golang.org/",
+		"uv":    "install UV from https://docs.astral.sh/uv/",
 	}
 	if suggestion, ok := suggestions[manager]; ok {
 		return suggestion

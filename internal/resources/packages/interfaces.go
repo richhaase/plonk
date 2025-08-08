@@ -40,6 +40,10 @@ type PackageManager interface {
 
 	// Self-installation - automatically installs the package manager if not available
 	SelfInstall(ctx context.Context) error
+
+	// Upgrade upgrades one or more packages to their latest versions
+	// If packages slice is empty, upgrades all installed packages for this manager
+	Upgrade(ctx context.Context, packages []string) error
 }
 
 // PackageInfo represents detailed information about a package

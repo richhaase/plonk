@@ -58,22 +58,17 @@ This document outlines the plan to extend the PackageManager interface with new 
 - Return meaningful errors for failed upgrades
 - Update package versions in plonk.lock via existing mechanisms
 
-### Outdated(ctx context.Context) ([]PackageUpdate, error)
-**Purpose**: List packages that have newer versions available.
+### ~~Outdated(ctx context.Context) ([]PackageUpdate, error)~~ ❌ REMOVED
+**Decision**: This interface method has been removed from the scope as it provides limited value relative to implementation complexity.
 
-**Returns**: Slice of PackageUpdate structs containing current and available versions.
+**Reasons for removal**:
+- Network-dependent operations would slow down `plonk status` significantly
+- Information becomes stale quickly as packages are published frequently
+- Not immediately actionable - users still need separate upgrade workflow
+- Complex maintenance burden across 10 different package managers
+- Users can run native package manager commands (`brew outdated`, `npm outdated`, etc.) when needed
 
-**Usage**: Called by `plonk status --outdated` to show update information.
-
-**PackageUpdate struct**:
-```go
-type PackageUpdate struct {
-    Name           string
-    CurrentVersion string
-    LatestVersion  string
-    Manager        string
-}
-```
+**Alternative approach**: Focus implementation effort on robust `Upgrade()` functionality that provides direct user value.
 
 ## Command Integration
 
@@ -94,22 +89,20 @@ type PackageUpdate struct {
 
 ### plonk upgrade (NEW COMMAND)
 **Syntax**:
-- `plonk upgrade` - Upgrade all outdated packages across all managers
+- `plonk upgrade` - Upgrade all installed packages across all managers
 - `plonk upgrade [manager:]package` - Upgrade specific package(s)
 - `plonk upgrade [manager]:` - Upgrade all packages for specific manager
 
 **Behavior**:
-- Check for outdated packages using `Outdated()`
-- Call `Upgrade()` on relevant package managers
+- Call `Upgrade()` on relevant package managers for specified packages
 - Update plonk.lock with new versions
 - Provide progress feedback and error handling
+- For bulk upgrades, delegate to native package manager upgrade commands
 
-### plonk status --outdated
-**Behavior**:
-- Existing status output plus outdated package information
-- Call `Outdated()` on all managers with installed packages
-- Display packages with available updates
-- Performance consideration: Only call when flag is explicitly used
+### ~~plonk status --outdated~~ ❌ REMOVED
+**Decision**: The `--outdated` flag for status command has been removed as it would depend on the removed `Outdated()` interface method.
+
+**Alternative**: Users can check for outdated packages using native package manager commands when needed.
 
 ## Migration Plan
 
@@ -136,10 +129,10 @@ type PackageUpdate struct {
 - ✅ Tested environment setup scenarios with comprehensive unit and integration tests
 
 ### Phase 4: Upgrade Functionality
-- Implement `Outdated()` and `Upgrade()` for all package managers
+- Implement `Upgrade()` for all package managers
 - Create new `upgrade` command
-- Update `status` command with `--outdated` flag
 - Add comprehensive testing for upgrade scenarios
+- Focus on robust upgrade workflows rather than outdated package detection
 
 ## Implementation Considerations
 
@@ -149,9 +142,9 @@ type PackageUpdate struct {
 - Clear error messages for user-facing operations
 
 ### Performance
-- `Outdated()` calls should be efficient and cancellable
+- `Upgrade()` operations should be efficient and cancellable
 - Bulk operations should be optimized where possible
-- Consider caching for expensive operations
+- Delegate to native package manager bulk upgrade commands when available
 
 ### Testing
 - Unit tests for all new interface methods
@@ -169,8 +162,9 @@ type PackageUpdate struct {
 2. ✅ **Dynamic Health Checks**: `plonk doctor` provides comprehensive health checks without hardcoded logic
 3. ✅ **Self-Installation**: `plonk clone` automatically installs required package managers
 4. ⏳ **Upgrade Command**: `plonk upgrade` command works reliably across all supported package managers
-5. ⏳ **Outdated Status**: `plonk status --outdated` provides useful update information
-6. ✅ **No Regression**: No regression in existing functionality - all existing commands work
-7. ✅ **Test Coverage**: Comprehensive test coverage maintained for CheckHealth and SelfInstall functionality
+5. ✅ **No Regression**: No regression in existing functionality - all existing commands work
+6. ✅ **Test Coverage**: Comprehensive test coverage maintained for CheckHealth and SelfInstall functionality
 
 **Phase 3 Complete**: SelfInstall system fully implemented and tested. Ready for Phase 4 (Upgrade Functionality).
+
+**Scope Refinement**: Removed `Outdated()` interface method and `--outdated` flag from scope to focus implementation effort on more valuable upgrade functionality that provides direct user benefit.

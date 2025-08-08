@@ -3,7 +3,7 @@
 ## 🚨 THESE TESTS MODIFY YOUR REAL SYSTEM 🚨
 
 ### What These Tests Do
-- **INSTALL REAL PACKAGES** using your package managers (brew, npm, pip, etc.)
+- **INSTALL REAL PACKAGES** using your package managers (brew, npm, uv, etc.)
 - **CREATE REAL DOTFILES** in your home directory
 - **MODIFY PLONK STATE** (using isolated config in temp directory)
 
@@ -45,7 +45,7 @@ bats tests/bats/cleanup/99-cleanup-all.bats
 plonk apply
 
 # Option 3: Uninstall test packages manually
-plonk uninstall brew:jq brew:tree npm:is-odd pip:cowsay
+plonk uninstall brew:jq brew:tree npm:is-odd uv:cowsay
 ```
 
 ### Environment Variables

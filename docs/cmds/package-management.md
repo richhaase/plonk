@@ -13,7 +13,6 @@ Package state is tracked in `plonk.lock`, which is updated atomically with each 
 - `brew:` - Homebrew (macOS and Linux)
 - `npm:` - NPM (global packages)
 - `cargo:` - Cargo (Rust)
-- `pip:` - Pip (Python)
 - `gem:` - RubyGems
 - `go:` - Go modules
 - `uv:` - UV (Python tool manager)

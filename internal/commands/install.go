@@ -29,7 +29,7 @@ Examples:
   plonk install brew:git                  # Install git specifically with Homebrew
   plonk install npm:lodash                # Install lodash with npm global packages
   plonk install cargo:ripgrep             # Install ripgrep with cargo packages
-  plonk install pip:black pip:flake8      # Install Python tools with pip
+  plonk install uv:black uv:flake8        # Install Python tools with uv
   plonk install gem:bundler gem:rubocop   # Install Ruby tools with gem
   plonk install go:golang.org/x/tools/cmd/gopls  # Install Go tools with go install
   plonk install --dry-run htop neovim     # Preview what would be installed`,

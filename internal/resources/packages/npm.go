@@ -346,6 +346,26 @@ func (n *NpmManager) installViaHomebrew(ctx context.Context) error {
 	return executeInstallCommand(ctx, "brew", []string{"install", "node"}, "Node.js (includes NPM)")
 }
 
+// Upgrade upgrades one or more packages to their latest versions
+func (n *NpmManager) Upgrade(ctx context.Context, packages []string) error {
+	if len(packages) == 0 {
+		// Upgrade all global packages
+		output, err := ExecuteCommandCombined(ctx, n.binary, "update", "-g")
+		if err != nil {
+			return n.handleUpgradeError(err, output, "all packages")
+		}
+		return nil
+	}
+
+	// Upgrade specific packages
+	args := append([]string{"update", "-g"}, packages...)
+	output, err := ExecuteCommandCombined(ctx, n.binary, args...)
+	if err != nil {
+		return n.handleUpgradeError(err, output, strings.Join(packages, ", "))
+	}
+	return nil
+}
+
 func init() {
 	RegisterManager("npm", func() PackageManager {
 		return NewNpmManager()
@@ -450,6 +470,40 @@ func (n *NpmManager) getGlobalBinDirectory(ctx context.Context) (string, error) 
 	}
 
 	return filepath.Join(prefix, "bin"), nil
+}
+
+// handleUpgradeError processes upgrade command errors
+func (n *NpmManager) handleUpgradeError(err error, output []byte, packages string) error {
+	outputStr := string(output)
+
+	if exitCode, ok := ExtractExitCode(err); ok {
+		// Check for known error patterns
+		if strings.Contains(outputStr, "404") || strings.Contains(outputStr, "E404") || strings.Contains(outputStr, "Not found") {
+			return fmt.Errorf("one or more packages not found: %s", packages)
+		}
+		if strings.Contains(outputStr, "EACCES") || strings.Contains(outputStr, "permission denied") {
+			return fmt.Errorf("permission denied upgrading %s", packages)
+		}
+		if strings.Contains(outputStr, "ENOENT") {
+			return fmt.Errorf("npm upgrade error for packages '%s': %w", packages, err)
+		}
+
+		if exitCode != 0 {
+			// Include command output for better error messages
+			if len(output) > 0 {
+				// Trim the output and limit length for readability
+				errorOutput := strings.TrimSpace(string(output))
+				if len(errorOutput) > 500 {
+					errorOutput = errorOutput[:500] + "..."
+				}
+				return fmt.Errorf("package upgrade failed: %s", errorOutput)
+			}
+			return fmt.Errorf("package upgrade failed (exit code %d): %w", exitCode, err)
+		}
+		return nil
+	}
+
+	return err
 }
 
 // handleInstallError processes install command errors
