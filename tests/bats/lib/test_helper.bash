@@ -211,6 +211,11 @@ require_package_manager() {
         skip "DotNet not available"
       fi
       ;;
+    pipx)
+      if ! command -v pipx >/dev/null 2>&1; then
+        skip "Pipx not available"
+      fi
+      ;;
     *)
       skip "Unknown package manager: $manager"
       ;;
