@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 )
 
@@ -447,48 +446,24 @@ func (g *GoInstallManager) getBinDirectory(ctx context.Context) (string, error) 
 	return filepath.Join(homeDir, "go", "bin"), nil
 }
 
-// SelfInstall installs Go using official installer
+// SelfInstall installs Go using Homebrew (canonical method)
 func (g *GoInstallManager) SelfInstall(ctx context.Context) error {
 	// Check if already available (idempotent)
 	if available, _ := g.IsAvailable(ctx); available {
 		return nil
 	}
 
-	// Platform-specific installation
-	switch runtime.GOOS {
-	case "darwin":
-		return g.installMacOS(ctx)
-	case "linux":
-		return g.installLinux(ctx)
-	default:
-		return fmt.Errorf("unsupported platform for Go auto-installation: %s", runtime.GOOS)
-	}
-}
-
-// installMacOS installs Go on macOS using Homebrew if available
-func (g *GoInstallManager) installMacOS(ctx context.Context) error {
-	// Check if Homebrew is available for installation
+	// Install Go via Homebrew (canonical method for plonk)
 	if homebrewAvailable, _ := checkPackageManagerAvailable(ctx, "brew"); homebrewAvailable {
-		return executeInstallCommand(ctx, "brew", []string{"install", "go"}, "Go")
+		return g.installViaHomebrew(ctx)
 	}
 
-	return fmt.Errorf("Go installation requires Homebrew - install Homebrew first or install Go manually from https://golang.org/dl/")
+	return fmt.Errorf("Go installation requires Homebrew - install Homebrew first from https://brew.sh")
 }
 
-// installLinux installs Go on Linux using package managers
-func (g *GoInstallManager) installLinux(ctx context.Context) error {
-	// Try common Linux package managers
-	if _, err := defaultExecutor.LookPath("apt"); err == nil {
-		return executeInstallCommand(ctx, "apt", []string{"install", "-y", "golang-go"}, "Go")
-	}
-	if _, err := defaultExecutor.LookPath("yum"); err == nil {
-		return executeInstallCommand(ctx, "yum", []string{"install", "-y", "go"}, "Go")
-	}
-	if _, err := defaultExecutor.LookPath("dnf"); err == nil {
-		return executeInstallCommand(ctx, "dnf", []string{"install", "-y", "go"}, "Go")
-	}
-
-	return fmt.Errorf("Go installation requires a supported package manager (apt/yum/dnf) or manual installation from https://golang.org/dl/")
+// installViaHomebrew installs Go via Homebrew
+func (g *GoInstallManager) installViaHomebrew(ctx context.Context) error {
+	return executeInstallCommand(ctx, "brew", []string{"install", "go"}, "Go")
 }
 
 // Upgrade upgrades one or more packages to their latest versions
