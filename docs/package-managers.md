@@ -4,10 +4,11 @@ This document outlines plonk's package manager ecosystem strategy based on compe
 
 ## Current Package Manager Support
 
-Plonk currently supports 10 package managers across multiple language ecosystems:
+Plonk currently supports 11 package managers across multiple language ecosystems:
 
 - **Homebrew (brew)** - System tools and applications (macOS/Linux)
 - **NPM (npm)** - JavaScript global packages
+- **PNPM (pnpm)** - Fast, disk efficient JavaScript packages (global)
 - **Cargo (cargo)** - Rust packages
 - **Pipx (pipx)** - Python applications in isolated environments
 - **Gem (gem)** - Ruby gems
@@ -41,13 +42,13 @@ Plonk's multi-package-manager approach is more comprehensive than existing solut
 
 ### Current Implementation Status
 
-#### 1. **pnpm Global Support** - 🚧 **IN DEVELOPMENT**
-- **Status**: Implementation underway
+#### 1. **pnpm Global Support** - ✅ **IMPLEMENTED**
+- **Status**: Complete and fully functional
 - **Performance**: 70% less disk space, significantly faster than npm
 - **Adoption**: Increasingly recommended for new projects in 2024-2025
 - **Commands**: `pnpm add -g`, `pnpm remove -g`, `pnpm list -g`
 - **Value**: Direct npm alternative with better performance
-- **Implementation**: Full PackageManager interface support available
+- **Implementation**: Full PackageManager interface support with single-method installation
 
 #### 2. **Bun/BunX Global Support** - ❌ **NOT READY**
 - **Status**: Blocked by upstream limitations in Bun itself
@@ -70,7 +71,7 @@ Plonk's multi-package-manager approach is more comprehensive than existing solut
 
 ### Key Growth Patterns
 - **Performance Focus**: Bun, pnpm, Zig all emphasize speed and efficiency
-- **AI/ML Growth**: Python's 7 percentage point increase driving pip/uv usage
+- **AI/ML Growth**: Python's 7 percentage point increase driving pipx/uv usage
 - **TypeScript Surge**: 35% adoption (vs 12% in 2017) driving JS tooling needs
 - **Developer Experience**: Tools prioritizing easy setup and consistency
 

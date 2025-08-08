@@ -141,8 +141,8 @@ func TestIsValidManager(t *testing.T) {
 func TestGetValidManagers(t *testing.T) {
 	managers := GetValidManagers()
 
-	// Should return all 10 supported managers
-	expectedCount := 10
+	// Should return all 11 supported managers
+	expectedCount := 11
 	if len(managers) != expectedCount {
 		t.Errorf("GetValidManagers() returned %d managers, want %d", len(managers), expectedCount)
 	}
@@ -151,6 +151,7 @@ func TestGetValidManagers(t *testing.T) {
 	expectedManagers := map[string]bool{
 		"brew":     false,
 		"npm":      false,
+		"pnpm":     false,
 		"cargo":    false,
 		"uv":       false,
 		"gem":      false,

@@ -24,7 +24,7 @@ After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber
 - Just works
 
 **Key innovations:**
-- **Package Manager Manager™**: One interface for 10 package managers (brew, npm, cargo, pip, gem, go, uv, pixi, composer, dotnet)
+- **Package Manager Manager™**: One interface for 11 package managers (brew, npm, pnpm, cargo, pipx, gem, go, uv, pixi, composer, dotnet)
 - **Filesystem as truth**: Your dotfiles directory IS the state - no sync issues
 - **Copy, don't symlink**: Cleaner, simpler, and more compatible
 - **State-based**: Track what should exist, not what commands were run
