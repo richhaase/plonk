@@ -108,10 +108,9 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - `types.go` - Dotfile type definitions
 
 ### Clone Utilities (`internal/clone/`)
-- `setup.go` - Clone command implementation
+- `setup.go` - Clone command implementation and package manager detection
 - `git.go` - Git operations for cloning
-- `tools.go` - Tool installation logic
-- `prompts.go` - Interactive prompt utilities
+- `tools.go` - Automated package manager installation via SelfInstall interface
 
 ### Diagnostics (`internal/diagnostics/`)
 - `health.go` - System health check implementations

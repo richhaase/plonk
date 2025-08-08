@@ -28,12 +28,10 @@ Clone a dotfiles repository and intelligently set up plonk.
 plonk clone user/dotfiles             # Clone GitHub repository (shorthand)
 plonk clone https://github.com/user/repo.git  # Clone with full URL
 plonk clone user/repo --no-apply      # Clone without running apply
-plonk clone --yes user/dotfiles       # Non-interactive mode
 ```
 
 Options:
 - `--no-apply` - Skip running apply after clone
-- `--yes, -y` - Auto-install tools without prompts
 
 
 ### plonk install
