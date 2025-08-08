@@ -63,16 +63,46 @@ type PackageManager interface {
 
 ### Single Limitation: Search Support
 **Issue**: pnpm lacks a native `search` command
-**Solution**: Implement `SupportsSearch() { return false }` and return `ErrOperationNotSupported`
-**Impact**: Not a blocker - this is the only optional method and several existing managers have limited search support
+**Solution**: Simply return empty results from `Search()` method
+**Impact**: Not a blocker - search returns empty results gracefully like other managers
 
 ### Full Interface Compatibility
 pnpm provides **complete implementation** for all required methods:
 - ✅ **All core operations** - standard package management
 - ✅ **CheckHealth()** - via `pnpm --version` and `pnpm root -g`
-- ✅ **SelfInstall()** - via `npm install -g pnpm` or `brew install pnpm`
+- ✅ **SelfInstall()** - perfect single-method installation
 - ✅ **Upgrade()** - via `pnpm update -g [packages]`
-- ❌ **Search()** - only optional method not supported
+- ✅ **Search()** - returns empty results (graceful degradation)
+
+### Perfect Self-Installation Support
+pnpm has **perfect self-installation capabilities** using a single, fully independent method:
+
+#### Single Method Approach
+**Standalone script** - `curl -fsSL https://get.pnpm.io/install.sh | sh -` (FULLY INDEPENDENT)
+
+#### Why Single Method Is Superior
+- **Predictable Behavior**: Users always know exactly how pnpm will be installed
+- **Maximum Independence**: Requires no other package managers or dependencies
+- **First-Class Treatment**: pnpm is treated as an independent package manager, not subordinate to others
+- **Platform Agnostic**: Works consistently across macOS, Linux, and Windows
+- **No Unexpected Fallbacks**: Eliminates potential surprises or configuration drift
+
+This makes pnpm an **exemplar** of proper self-installation design - simple, predictable, and independent.
+
+#### Comparison with Existing Managers
+Based on the self-installation audit (see `docs/self-install-fix.md`), pnpm represents best practices:
+
+| Manager | Independence Level | Single Method | Fallbacks |
+|---------|-------------------|---------------|-----------|
+| **pnpm (proposed)** | ✅ **Perfect** | Standalone script | None |
+| Homebrew | ✅ Perfect | Standalone script | None |
+| Cargo | ✅ Perfect | rustup script | None |
+| UV | ✅ Perfect | Standalone script | None |
+| NPM | ❌ Dependent | brew install node | None (fails if no Homebrew) |
+| Gem | ❌ Dependent | brew install ruby | None (fails if no Homebrew) |
+| .NET | ❌ Dependent | brew install dotnet | None (fails if no Homebrew) |
+
+**pnpm joins the elite group of truly independent package managers**, setting a positive example for the codebase.
 
 ## Implementation Plan
 
@@ -175,9 +205,8 @@ func (p *PnpmManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
         check.Status = "warn"
         check.Message = "PNPM is not available"
         check.Suggestions = []string{
-            "Install pnpm: curl -fsSL https://get.pnpm.io/install.sh | sh -",
-            "Or via npm: npm install -g pnpm",
-            "Or via Homebrew: brew install pnpm",
+            "Install pnpm via standalone script: curl -fsSL https://get.pnpm.io/install.sh | sh -",
+            "See https://pnpm.io/installation for manual installation options",
         }
     }
 
@@ -198,16 +227,15 @@ func (p *PnpmManager) SelfInstall(ctx context.Context) error {
         return nil // Already available
     }
 
-    // Try installation via available package managers
-    if homebrewAvailable, _ := checkPackageManagerAvailable(ctx, "brew"); homebrewAvailable {
-        return executeInstallCommand(ctx, "brew", []string{"install", "pnpm"}, "pnpm")
-    }
+    // Use ONLY the most independent installation method - standalone script
+    // This ensures predictable behavior and treats pnpm as a first-class citizen
+    return p.installViaStandaloneScript(ctx)
+}
 
-    if npmAvailable, _ := checkPackageManagerAvailable(ctx, "npm"); npmAvailable {
-        return executeInstallCommand(ctx, "npm", []string{"install", "-g", "pnpm"}, "pnpm")
-    }
-
-    return fmt.Errorf("pnpm installation requires Homebrew or npm - install manually from https://pnpm.io/installation")
+// installViaStandaloneScript uses pnpm's official installation script
+func (p *PnpmManager) installViaStandaloneScript(ctx context.Context) error {
+    script := `curl -fsSL https://get.pnpm.io/install.sh | sh`
+    return executeInstallScript(ctx, script, "pnpm")
 }
 ```
 
@@ -263,11 +291,11 @@ func TestPnpmManager_ListInstalled(t *testing.T) {
 }
 ```
 
-#### Integration Tests
-- Test against real pnpm installations
-- Verify command execution patterns
-- Test error handling scenarios
-- Cross-platform compatibility testing
+#### BATS Integration Tests
+- Add BATS tests for pnpm package installation/uninstall scenarios
+- Test pnpm integration with `plonk clone` workflows
+- Verify error handling in real CLI usage scenarios
+- Cross-platform compatibility testing via BATS
 
 #### Test Helper Functions
 ```go
@@ -424,5 +452,14 @@ internal/resources/packages/
 ## Conclusion
 
 Adding pnpm support to plonk represents a high-value, low-risk enhancement that aligns perfectly with plonk's goals of unified, efficient package management. The implementation follows established patterns and provides significant performance benefits to users while maintaining full compatibility with plonk's architecture and paradigm.
+
+### Model Implementation
+**pnpm serves as an exemplar of proper self-installation design** within the plonk ecosystem:
+- ✅ **Single independent installation method** - no fallbacks or dependencies
+- ✅ **Predictable behavior** - users always know exactly how pnpm will be installed
+- ✅ **First-class treatment** - treated as independent package manager
+- ✅ **No artificial dependencies** on other package managers
+
+This implementation can serve as a **reference pattern** for improving other package managers' self-installation methods (see `docs/self-install-fix.md` for opportunities).
 
 The straightforward implementation plan, comprehensive testing strategy, and clear success criteria make this an ideal candidate for the next minor release.

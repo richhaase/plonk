@@ -40,7 +40,7 @@ Install packages and add them to management.
 
 ```bash
 plonk install ripgrep                 # Default manager
-plonk install brew:wget npm:prettier uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay  # Specific managers
+plonk install brew:wget npm:prettier pnpm:typescript uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay  # Specific managers
 plonk install --dry-run ripgrep       # Preview changes
 ```
 
@@ -50,7 +50,7 @@ Uninstall packages and remove from management.
 
 ```bash
 plonk uninstall ripgrep
-plonk uninstall brew:wget npm:prettier uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay
+plonk uninstall brew:wget npm:prettier pnpm:typescript uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay
 plonk uninstall --dry-run ripgrep
 ```
 
@@ -178,6 +178,7 @@ Use prefixes to specify package managers:
 
 - `brew:` - Homebrew (macOS and Linux)
 - `npm:` - NPM (global packages)
+- `pnpm:` - PNPM (fast, disk efficient JavaScript packages)
 - `cargo:` - Cargo (Rust)
 - `gem:` - RubyGems
 - `go:` - Go modules
@@ -190,6 +191,7 @@ Examples:
 ```bash
 plonk install brew:wget
 plonk install npm:typescript
+plonk install pnpm:prettier
 plonk install cargo:ripgrep
 plonk install gem:bundler
 plonk install go:golang.org/x/tools/cmd/goimports
