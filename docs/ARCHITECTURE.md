@@ -84,6 +84,7 @@ Supported package managers:
 - .NET (dotnet) - .NET Global Tools
 - Pipx (pipx) - Python applications in isolated environments
 
+
 #### Dotfiles (`internal/resources/dotfiles/`)
 - Dotfile scanning and discovery
 - Directory scanning utilities

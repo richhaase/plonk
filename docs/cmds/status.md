@@ -64,7 +64,7 @@ Using both `--packages` and `--dotfiles` together has the same effect as using n
 
 **Packages Table**:
 - NAME: Package name
-- MANAGER: Package manager (brew, npm, cargo, gem, go, uv, pixi, composer, dotnet)
+- MANAGER: Package manager (brew, npm, cargo, pipx, gem, go, uv, pixi, composer, dotnet)
 - STATUS: Current state with icon
 
 **Packages Table with --outdated**:

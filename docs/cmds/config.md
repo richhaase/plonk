@@ -63,7 +63,8 @@ plonk config edit
 ### Available Settings
 
 - **Package Management:**
-  - `default_manager` - Default package manager (brew, npm, cargo, gem, go, uv, pixi, composer, dotnet)
+
+  - `default_manager` - Default package manager (brew, npm, cargo, pipx, gem, go, uv, pixi, composer, dotnet)
   - `package_timeout` - Timeout for package operations (seconds)
   - `operation_timeout` - Timeout for search operations (seconds)
 

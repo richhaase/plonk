@@ -6,6 +6,7 @@ This document outlines plonk's package manager ecosystem strategy based on compe
 
 Plonk currently supports 9 package managers across multiple language ecosystems:
 
+
 - **Homebrew (brew)** - System tools and applications (macOS/Linux)
 - **NPM (npm)** - JavaScript global packages
 - **Cargo (cargo)** - Rust packages

@@ -10,14 +10,10 @@ plonk upgrade
 
 # Upgrade all packages for a specific package manager
 plonk upgrade [manager]
-plonk upgrade [manager]:
 
 # Upgrade specific packages
 plonk upgrade [manager:]package1 [manager:]package2 ...
 plonk upgrade package1 package2 ...
-
-# Upgrade with options
-plonk upgrade --format json
 ```
 
 ## Description
@@ -41,16 +37,12 @@ Upgrades all packages managed by plonk across all package managers.
 plonk upgrade brew
 plonk upgrade npm
 plonk upgrade uv
-
-# Alternative syntax with colon
-plonk upgrade brew:
-plonk upgrade npm:
-plonk upgrade uv:
 ```
 Upgrades all packages managed by the specified package manager.
 
 ### Upgrade Specific Packages
 ```bash
+
 # Upgrade specific packages from specific managers
 plonk upgrade brew:neovim
 plonk upgrade npm:typescript brew:ripgrep
@@ -62,7 +54,6 @@ plonk upgrade typescript requests
 ```
 When a package manager is specified (e.g., `brew:neovim`), only that specific package is upgraded.
 When no manager is specified (e.g., `ripgrep`), all packages with that name across all managers are upgraded.
-
 
 ## Flags
 
@@ -100,6 +91,7 @@ After successful upgrades, plonk automatically updates the lock file with:
 
 ### Progress Indication
 The command provides progress feedback during:
+- Discovery phase (checking for outdated packages)
 - Upgrade execution (per-package progress)
 - Lock file reconciliation
 
