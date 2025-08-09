@@ -373,7 +373,12 @@ func (p *PipxManager) getBinDirectory(ctx context.Context) (string, error) {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "PIPX_BIN_DIR=") {
 			binDir := strings.TrimPrefix(line, "PIPX_BIN_DIR=")
-			return strings.Trim(binDir, "\"'"), nil
+			binDir = strings.Trim(binDir, "\"'")
+			// Skip empty values (user-set environment variables are often empty)
+			// and return the first non-empty value (derived computed value)
+			if binDir != "" {
+				return binDir, nil
+			}
 		}
 	}
 
