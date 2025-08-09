@@ -74,16 +74,18 @@ Resources are organized by type:
 - Outdated package detection
 
 Supported package managers:
-- Homebrew (brew) - macOS and Linux
-- NPM (npm)
-- Cargo (cargo)
-- Gem (gem)
-- Go (go install)
+- Homebrew (brew) - macOS and Linux packages
+- NPM (npm) - Node.js global packages
+- PNPM (pnpm) - Fast, disk-efficient Node.js packages
+- Cargo (cargo) - Rust packages
+- Pipx (pipx) - Python applications in isolated environments
+- Conda (conda) - Scientific computing and data science packages
+- Gem (gem) - Ruby packages
+- Go (go install) - Go modules and tools
 - UV (uv) - Python tool manager
 - Pixi (pixi) - Conda-forge package manager
 - Composer (composer) - PHP global packages
 - .NET (dotnet) - .NET Global Tools
-- Pipx (pipx) - Python applications in isolated environments
 
 
 #### Dotfiles (`internal/resources/dotfiles/`)

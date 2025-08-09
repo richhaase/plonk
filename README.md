@@ -24,7 +24,7 @@ After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber
 - Just works
 
 **Key innovations:**
-- **Package Manager Manager™**: One interface for 11 package managers (brew, npm, pnpm, cargo, pipx, gem, go, uv, pixi, composer, dotnet)
+- **Package Manager Manager™**: One interface for 12 package managers (brew, npm, pnpm, cargo, pipx, conda, gem, go, uv, pixi, composer, dotnet)
 - **Filesystem as truth**: Your dotfiles directory IS the state - no sync issues
 - **Copy, don't symlink**: Cleaner, simpler, and more compatible
 - **State-based**: Track what should exist, not what commands were run
@@ -130,13 +130,15 @@ plonk config edit                     # Edit configuration
 
 ## Supported Package Managers
 
-Plonk supports 10 package managers across multiple language ecosystems:
+Plonk supports 12 package managers across multiple language ecosystems:
 
 ### Core Package Managers
 - **Homebrew** (brew) - macOS/Linux packages and system tools
 - **NPM** (npm) - Node.js packages (global)
+- **PNPM** (pnpm) - Fast, disk-efficient Node.js packages (global)
 - **Cargo** (cargo) - Rust packages
 - **Pipx** (pipx) - Python applications in isolated environments
+- **Conda** (conda) - Scientific computing and data science packages
 - **Gem** (gem) - Ruby packages
 - **Go** (go) - Go packages via `go install`
 
@@ -149,8 +151,8 @@ Plonk supports 10 package managers across multiple language ecosystems:
 Package manager prefixes in commands:
 ```bash
 # Core managers
-plonk install brew:wget npm:prettier cargo:ripgrep
-plonk install pipx:black gem:rubocop go:golangci-lint
+plonk install brew:wget npm:prettier pnpm:typescript cargo:ripgrep
+plonk install pipx:black conda:numpy gem:rubocop go:golangci-lint
 
 # Extended support
 plonk install uv:ruff pixi:jupyter composer:php-cs-fixer

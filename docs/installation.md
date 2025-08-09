@@ -24,6 +24,9 @@ Plonk can manage packages from these language-specific package managers:
 
 - **Cargo** (Rust) - For Rust-based CLI tools, automatically installed by `plonk clone` when needed
 - **npm** (Node.js) - For global JavaScript packages
+- **pnpm** (Node.js) - For fast, disk-efficient JavaScript packages
+- **pipx** (Python) - For Python applications in isolated environments
+- **conda** (Python) - For scientific computing and data science packages
 - **gem** (Ruby) - For Ruby gems
 - **go** (Go) - For Go modules
 - **uv** (Python) - For Python tools management
