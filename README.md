@@ -141,7 +141,7 @@ plonk config edit                     # Edit configuration
 
 Plonk supports 12 package managers across multiple language ecosystems:
 
-### Core Package Managers
+### Package Managers
 - **Homebrew** (brew) - macOS/Linux packages and system tools
 - **NPM** (npm) - Node.js packages (global)
 - **PNPM** (pnpm) - Fast, disk-efficient Node.js packages (global)
@@ -150,8 +150,6 @@ Plonk supports 12 package managers across multiple language ecosystems:
 - **Conda** (conda) - Scientific computing and data science packages
 - **Gem** (gem) - Ruby packages
 - **Go** (go) - Go packages via `go install`
-
-### Extended Language Support
 - **UV** (uv) - Fast Python tool manager with isolated environments
 - **Pixi** (pixi) - Cross-platform package manager using conda-forge ecosystem
 - **Composer** (composer) - PHP global packages and CLI tools
