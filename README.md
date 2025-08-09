@@ -6,7 +6,8 @@
 **The unified package and dotfile manager for developers who tinker.** One command to set up your entire development environment.
 
 ```bash
-# Clone your dotfiles and set up everything
+# Install plonk and set up your environment
+brew install richhaase/tap/plonk
 plonk clone user/dotfiles
 # Done. Seriously.
 ```
@@ -55,7 +56,7 @@ After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber
 
 2. **Install plonk**:
    ```bash
-   # Via Homebrew
+   # Via Homebrew (recommended)
    brew install richhaase/tap/plonk
 
    # Via Go (requires Go 1.23+)
@@ -91,6 +92,12 @@ The beauty is in what you don't need to do:
 The fastest way to set up a new development machine:
 
 ```bash
+# Install prerequisites
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install plonk
+brew install richhaase/tap/plonk
+
 # Clone existing dotfiles and set up environment
 plonk clone user/dotfiles                # GitHub shorthand
 plonk clone https://github.com/user/dotfiles.git
@@ -104,6 +111,8 @@ The `clone` command:
 2. Intelligently resolves package manager dependencies and installs them in correct order
 3. Runs `plonk apply` to install all packages and deploy dotfiles
 4. Gets your machine ready for development in minutes
+
+**Prerequisites**: Homebrew and Git are required before installing plonk.
 
 ## Key Commands
 
