@@ -26,7 +26,7 @@ Fixes #(issue number)
 ## Testing
 <!-- Describe how you tested your changes -->
 - [ ] Unit tests added/updated
-- [ ] Integration tests added/updated
+- [ ] BATS Integration tests added/updated
 - [ ] Manual testing performed
 - [ ] All existing tests pass
 
