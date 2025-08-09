@@ -7,7 +7,7 @@
 
 ```bash
 # Install plonk and set up your environment
-brew install richhaase/tap/plonk
+brew install --cask richhaase/tap/plonk
 plonk clone user/dotfiles
 # Done. Seriously.
 ```
@@ -55,7 +55,7 @@ After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber
 2. **Install plonk**:
    ```bash
    # Via Homebrew (recommended)
-   brew install richhaase/tap/plonk
+   brew install --cask richhaase/tap/plonk
 
    # Via Go (requires Go 1.23+)
    go install github.com/richhaase/plonk/cmd/plonk@latest
@@ -95,7 +95,7 @@ The fastest way to set up a new development machine:
 # After installing Homebrew:
 
 # Install plonk
-brew install richhaase/tap/plonk
+brew install --cask richhaase/tap/plonk
 
 # Clone existing dotfiles and set up environment
 plonk clone user/dotfiles                # GitHub shorthand

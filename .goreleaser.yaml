@@ -94,7 +94,7 @@ release:
 
     ### Homebrew (Recommended)
     ```bash
-    brew install richhaase/tap/plonk
+    brew install --cask richhaase/tap/plonk
     ```
 
     ### Direct Download
