@@ -320,9 +320,9 @@ func (p *PipxManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	}
 
 	if !available {
-		check.Status = "fail"
-		check.Message = "pipx is required but not available"
-		check.Issues = []string{"pipx is required for managing Python applications"}
+		check.Status = "warn"
+		check.Message = "pipx is not available"
+		check.Issues = []string{"pipx command not found or not functional"}
 		check.Suggestions = []string{
 			"Install pipx via pip: pip3 install --user pipx",
 			"Or via Homebrew: brew install pipx",
@@ -373,7 +373,12 @@ func (p *PipxManager) getBinDirectory(ctx context.Context) (string, error) {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "PIPX_BIN_DIR=") {
 			binDir := strings.TrimPrefix(line, "PIPX_BIN_DIR=")
-			return strings.Trim(binDir, "\"'"), nil
+			binDir = strings.Trim(binDir, "\"'")
+			// Skip empty values (user-set environment variables are often empty)
+			// and return the first non-empty value (derived computed value)
+			if binDir != "" {
+				return binDir, nil
+			}
 		}
 	}
 

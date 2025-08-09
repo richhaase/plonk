@@ -6,6 +6,7 @@ package packages
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -265,9 +266,9 @@ func (u *UvManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	}
 
 	if !available {
-		check.Status = "fail"
-		check.Message = "UV is required but not available"
-		check.Issues = []string{"UV is required for managing Python tools"}
+		check.Status = "warn"
+		check.Message = "UV is not available"
+		check.Issues = []string{"UV command not found or not functional"}
 		check.Suggestions = []string{
 			"Install UV: curl -LsSf https://astral.sh/uv/install.sh | sh",
 			"Or via pipx: pipx install uv",
@@ -305,15 +306,17 @@ func (u *UvManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	return check, nil
 }
 
-// getBinDirectory discovers the UV tool bin directory using uv tool dir
+// getBinDirectory returns the UV tool bin directory where executables are symlinked
 func (u *UvManager) getBinDirectory(ctx context.Context) (string, error) {
-	output, err := ExecuteCommand(ctx, u.binary, "tool", "dir")
+	// UV tools are installed in ~/.local/share/uv/tools/<tool-name>/
+	// but executables are symlinked to ~/.local/bin/<executable-name>
+	// This is the directory that should be in PATH for UV tools to work
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("failed to get UV tool directory: %w", err)
+		return "", fmt.Errorf("failed to get user home directory: %w", err)
 	}
 
-	toolDir := strings.TrimSpace(string(output))
-	return filepath.Join(toolDir, "bin"), nil
+	return filepath.Join(homeDir, ".local", "bin"), nil
 }
 
 // handleUpgradeError processes upgrade command errors

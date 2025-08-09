@@ -6,6 +6,8 @@ package packages
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -341,9 +343,9 @@ func (p *PixiManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	}
 
 	if !available {
-		check.Status = "fail"
-		check.Message = "Pixi is required but not available"
-		check.Issues = []string{"Pixi is required for managing conda-forge packages globally"}
+		check.Status = "warn"
+		check.Message = "Pixi is not available"
+		check.Issues = []string{"Pixi command not found or not functional"}
 		check.Suggestions = []string{
 			"Install Pixi: curl -fsSL https://pixi.sh/install.sh | bash",
 			"Or via Homebrew: brew install pixi",
@@ -381,14 +383,20 @@ func (p *PixiManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	return check, nil
 }
 
-// getBinDirectory discovers the Pixi global bin directory using pixi global bin
+// getBinDirectory returns the Pixi global bin directory using PIXI_HOME or default location
 func (p *PixiManager) getBinDirectory(ctx context.Context) (string, error) {
-	output, err := ExecuteCommand(ctx, p.binary, "global", "bin")
-	if err != nil {
-		return "", fmt.Errorf("failed to get Pixi global bin directory: %w", err)
+	// First check if PIXI_HOME is set
+	pixiHome := os.Getenv("PIXI_HOME")
+	if pixiHome == "" {
+		// Default to ~/.pixi
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("failed to get user home directory: %w", err)
+		}
+		pixiHome = filepath.Join(homeDir, ".pixi")
 	}
 
-	binDir := strings.TrimSpace(string(output))
+	binDir := filepath.Join(pixiHome, "bin")
 	return binDir, nil
 }
 

@@ -25,9 +25,13 @@ func NewPnpmManager() *PnpmManager {
 
 // PnpmListOutput represents the structure of pnpm list -g --json output
 type PnpmListOutput struct {
+	Path         string `json:"path"`
+	Private      bool   `json:"private"`
 	Dependencies map[string]struct {
-		Version string `json:"version"`
-		Path    string `json:"path,omitempty"`
+		From     string `json:"from"`
+		Version  string `json:"version"`
+		Resolved string `json:"resolved"`
+		Path     string `json:"path"`
 	} `json:"dependencies"`
 }
 
@@ -66,14 +70,16 @@ func (p *PnpmManager) ListInstalled(ctx context.Context) ([]string, error) {
 		return nil, fmt.Errorf("failed to list installed packages: %w", err)
 	}
 
-	var listOutput PnpmListOutput
-	if err := json.Unmarshal(output, &listOutput); err != nil {
+	var listOutputArray []PnpmListOutput
+	if err := json.Unmarshal(output, &listOutputArray); err != nil {
 		return nil, fmt.Errorf("failed to parse pnpm list output: %w", err)
 	}
 
 	var packages []string
-	for pkg := range listOutput.Dependencies {
-		packages = append(packages, pkg)
+	for _, listOutput := range listOutputArray {
+		for pkg := range listOutput.Dependencies {
+			packages = append(packages, pkg)
+		}
 	}
 
 	sort.Strings(packages)
@@ -130,13 +136,15 @@ func (p *PnpmManager) InstalledVersion(ctx context.Context, name string) (string
 		return "", fmt.Errorf("failed to get package version information for %s: %w", name, err)
 	}
 
-	var listOutput PnpmListOutput
-	if err := json.Unmarshal(output, &listOutput); err != nil {
+	var listOutputArray []PnpmListOutput
+	if err := json.Unmarshal(output, &listOutputArray); err != nil {
 		return "", fmt.Errorf("failed to parse pnpm list output: %w", err)
 	}
 
-	if pkg, exists := listOutput.Dependencies[name]; exists {
-		return pkg.Version, nil
+	for _, listOutput := range listOutputArray {
+		if pkg, exists := listOutput.Dependencies[name]; exists {
+			return pkg.Version, nil
+		}
 	}
 
 	return "", fmt.Errorf("version information not found for package '%s'", name)

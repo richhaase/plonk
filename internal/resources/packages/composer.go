@@ -395,9 +395,9 @@ func (c *ComposerManager) CheckHealth(ctx context.Context) (*HealthCheck, error)
 	}
 
 	if !available {
-		check.Status = "fail"
-		check.Message = "Composer is required but not available"
-		check.Issues = []string{"Composer is required for managing PHP packages globally"}
+		check.Status = "warn"
+		check.Message = "Composer is not available"
+		check.Issues = []string{"Composer command not found or not functional"}
 		check.Suggestions = []string{
 			"Install Composer: curl -sS https://getcomposer.org/installer | php && sudo mv composer.phar /usr/local/bin/composer",
 			"Or via Homebrew: brew install composer",

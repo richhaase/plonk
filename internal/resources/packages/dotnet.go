@@ -284,21 +284,41 @@ func init() {
 
 // IsAvailable checks if dotnet CLI is installed and accessible
 func (d *DotnetManager) IsAvailable(ctx context.Context) (bool, error) {
-	if !CheckCommandAvailable(d.binary) {
-		return false, nil
-	}
-
-	err := VerifyBinary(ctx, d.binary, []string{"--version"})
-	if err != nil {
-		// Check for context cancellation
-		if IsContextError(err) {
-			return false, err
+	// First check if dotnet is in PATH
+	if CheckCommandAvailable(d.binary) {
+		err := VerifyBinary(ctx, d.binary, []string{"--version"})
+		if err != nil {
+			// Check for context cancellation
+			if IsContextError(err) {
+				return false, err
+			}
+			// Binary exists but not functional - not an error condition
+			return false, nil
 		}
-		// Binary exists but not functional - not an error condition
-		return false, nil
+		return true, nil
 	}
 
-	return true, nil
+	// If not in PATH, check standard installation locations
+	dotnetPaths := d.getStandardInstallPaths()
+	for _, dotnetPath := range dotnetPaths {
+		if _, err := os.Stat(dotnetPath); err == nil {
+			// Found dotnet binary, verify it works
+			err := VerifyBinary(ctx, dotnetPath, []string{"--version"})
+			if err != nil {
+				// Check for context cancellation
+				if IsContextError(err) {
+					return false, err
+				}
+				// This installation is not functional, try next
+				continue
+			}
+			// Update binary path to use the found installation
+			d.binary = dotnetPath
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 // CheckHealth performs a comprehensive health check of the .NET Global Tools installation
@@ -323,9 +343,9 @@ func (d *DotnetManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	}
 
 	if !available {
-		check.Status = "fail"
-		check.Message = ".NET SDK is required but not available"
-		check.Issues = []string{".NET SDK is required for managing global tools"}
+		check.Status = "warn"
+		check.Message = ".NET SDK is not available"
+		check.Issues = []string{".NET SDK command not found or not functional"}
 		check.Suggestions = []string{
 			"Install .NET SDK: https://dotnet.microsoft.com/download",
 			"Or via Homebrew: brew install --cask dotnet",
@@ -361,6 +381,18 @@ func (d *DotnetManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 func (d *DotnetManager) getBinDirectory() string {
 	homeDir, _ := os.UserHomeDir()
 	return filepath.Join(homeDir, ".dotnet", "tools")
+}
+
+// getStandardInstallPaths returns standard locations where .NET might be installed
+func (d *DotnetManager) getStandardInstallPaths() []string {
+	homeDir, _ := os.UserHomeDir()
+	return []string{
+		filepath.Join(homeDir, ".dotnet", "dotnet"),     // User installation (Linux/macOS)
+		"/usr/local/share/dotnet/dotnet",                // System-wide installation (macOS)
+		"/usr/share/dotnet/dotnet",                      // System-wide installation (Linux)
+		"C:\\Program Files\\dotnet\\dotnet.exe",         // System-wide installation (Windows)
+		filepath.Join(homeDir, ".dotnet", "dotnet.exe"), // User installation (Windows)
+	}
 }
 
 // handleUpgradeError processes upgrade command errors

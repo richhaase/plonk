@@ -19,12 +19,14 @@ func TestPnpmManager_ListInstalled(t *testing.T) {
 			name: "list with packages",
 			mockResponses: map[string]CommandResponse{
 				"pnpm list -g --json": {
-					Output: []byte(`{
+					Output: []byte(`[{
+						"path": "/test/global",
+						"private": false,
 						"dependencies": {
 							"typescript": {"version": "5.3.3"},
 							"prettier": {"version": "3.1.0"}
 						}
-					}`),
+					}]`),
 					Error: nil,
 				},
 			},
@@ -35,7 +37,7 @@ func TestPnpmManager_ListInstalled(t *testing.T) {
 			name: "empty list",
 			mockResponses: map[string]CommandResponse{
 				"pnpm list -g --json": {
-					Output: []byte(`{"dependencies": {}}`),
+					Output: []byte(`[{"path": "/test/global", "private": false, "dependencies": {}}]`),
 					Error:  nil,
 				},
 			},
@@ -265,12 +267,14 @@ func TestPnpmManager_IsInstalled(t *testing.T) {
 			packageName: "typescript",
 			mockResponses: map[string]CommandResponse{
 				"pnpm list -g --json": {
-					Output: []byte(`{
+					Output: []byte(`[{
+						"path": "/test/global",
+						"private": false,
 						"dependencies": {
 							"typescript": {"version": "5.3.3"},
 							"prettier": {"version": "3.1.0"}
 						}
-					}`),
+					}]`),
 					Error: nil,
 				},
 			},
@@ -282,11 +286,13 @@ func TestPnpmManager_IsInstalled(t *testing.T) {
 			packageName: "nonexistent",
 			mockResponses: map[string]CommandResponse{
 				"pnpm list -g --json": {
-					Output: []byte(`{
+					Output: []byte(`[{
+						"path": "/test/global",
+						"private": false,
 						"dependencies": {
 							"typescript": {"version": "5.3.3"}
 						}
-					}`),
+					}]`),
 					Error: nil,
 				},
 			},
@@ -298,7 +304,7 @@ func TestPnpmManager_IsInstalled(t *testing.T) {
 			packageName: "typescript",
 			mockResponses: map[string]CommandResponse{
 				"pnpm list -g --json": {
-					Output: []byte(`{"dependencies": {}}`),
+					Output: []byte(`[{"path": "/test/global", "private": false, "dependencies": {}}]`),
 					Error:  nil,
 				},
 			},
@@ -359,12 +365,14 @@ func TestPnpmManager_InstalledVersion(t *testing.T) {
 			packageName: "typescript",
 			mockResponses: map[string]CommandResponse{
 				"pnpm list -g --json": {
-					Output: []byte(`{
+					Output: []byte(`[{
+						"path": "/test/global",
+						"private": false,
 						"dependencies": {
 							"typescript": {"version": "5.3.3"},
 							"prettier": {"version": "3.1.0"}
 						}
-					}`),
+					}]`),
 					Error: nil,
 				},
 			},
@@ -376,11 +384,13 @@ func TestPnpmManager_InstalledVersion(t *testing.T) {
 			packageName: "nonexistent",
 			mockResponses: map[string]CommandResponse{
 				"pnpm list -g --json": {
-					Output: []byte(`{
+					Output: []byte(`[{
+						"path": "/test/global",
+						"private": false,
 						"dependencies": {
 							"typescript": {"version": "5.3.3"}
 						}
-					}`),
+					}]`),
 					Error: nil,
 				},
 			},
@@ -531,11 +541,13 @@ func TestPnpmManager_Info(t *testing.T) {
 			packageName: "typescript",
 			mockResponses: map[string]CommandResponse{
 				"pnpm list -g --json": {
-					Output: []byte(`{
+					Output: []byte(`[{
+						"path": "/test/global",
+						"private": false,
 						"dependencies": {
 							"typescript": {"version": "5.3.3"}
 						}
-					}`),
+					}]`),
 					Error: nil,
 				},
 				"pnpm view typescript --json": {
@@ -556,7 +568,7 @@ func TestPnpmManager_Info(t *testing.T) {
 			packageName: "lodash",
 			mockResponses: map[string]CommandResponse{
 				"pnpm list -g --json": {
-					Output: []byte(`{"dependencies": {}}`),
+					Output: []byte(`[{"path": "/test/global", "private": false, "dependencies": {}}]`),
 					Error:  nil,
 				},
 				"pnpm view lodash --json": {
@@ -637,12 +649,14 @@ func TestPnpmManager_Upgrade(t *testing.T) {
 			packages: []string{}, // empty means all packages
 			mockResponses: map[string]CommandResponse{
 				"pnpm list -g --json": {
-					Output: []byte(`{
+					Output: []byte(`[{
+						"path": "/test/global",
+						"private": false,
 						"dependencies": {
 							"typescript": {"version": "5.3.3"},
 							"prettier": {"version": "3.1.0"}
 						}
-					}`),
+					}]`),
 					Error: nil,
 				},
 				"pnpm update -g typescript": {
