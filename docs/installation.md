@@ -20,19 +20,19 @@ This guide covers installing plonk and setting up your development environment.
 
 ### Optional Language Package Managers
 
-Plonk can manage packages from these language-specific package managers:
+Plonk can manage packages from these language-specific package managers. They can be automatically bootstrapped using `plonk install <manager-name>`:
 
-- **Cargo** (Rust) - For Rust-based CLI tools, automatically installed by `plonk clone` when needed
-- **npm** (Node.js) - For global JavaScript packages
-- **pnpm** (Node.js) - For fast, disk-efficient JavaScript packages
-- **pipx** (Python) - For Python applications in isolated environments
-- **conda** (Python) - For scientific computing and data science packages
-- **gem** (Ruby) - For Ruby gems
-- **go** (Go) - For Go modules
-- **uv** (Python) - For Python tools management
-- **pixi** (Conda-forge) - For conda-forge packages
-- **composer** (PHP) - For PHP global packages
-- **dotnet** (.NET) - For .NET Global Tools
+- **Cargo** (Rust) - For Rust-based CLI tools (`plonk install cargo`)
+- **npm** (Node.js) - For global JavaScript packages (`plonk install npm`)
+- **pnpm** (Node.js) - For fast, disk-efficient JavaScript packages (`plonk install pnpm`)
+- **pipx** (Python) - For Python applications in isolated environments (`plonk install pipx`)
+- **conda** (Python) - For scientific computing and data science packages (`plonk install conda`)
+- **gem** (Ruby) - For Ruby gems (`plonk install gem`)
+- **go** (Go) - For Go modules (`plonk install go`)
+- **uv** (Python) - For Python tools management (`plonk install uv`)
+- **pixi** (Conda-forge) - For conda-forge packages (`plonk install pixi`)
+- **composer** (PHP) - For PHP global packages (`plonk install composer`)
+- **dotnet** (.NET) - For .NET Global Tools (`plonk install dotnet`)
 
 ## Installation Methods
 
@@ -235,6 +235,9 @@ mkdir -p ~/.config/plonk
 # Add your existing dotfiles
 plonk add ~/.zshrc ~/.vimrc ~/.gitconfig
 
+# Bootstrap package managers you need
+plonk install pnpm cargo uv
+
 # Add packages you want to track
 plonk install ripgrep fd bat exa
 
@@ -264,7 +267,8 @@ plonk apply
 
 **Package manager not found**
 - For Homebrew: Install manually from https://brew.sh (required prerequisite)
-- For language package managers: Use `plonk clone` to automatically install those needed by your managed packages, or install manually
+- For language package managers: Use `plonk install <manager-name>` (e.g., `plonk install pnpm`) for automatic bootstrapping
+- Use `plonk clone` to automatically install package managers needed by your managed packages
 - See [Configuration Guide](configuration.md#package-manager-settings) for manual setup
 
 ### Getting Help

@@ -5,6 +5,7 @@ package commands
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -23,16 +24,30 @@ This command installs packages using the specified package manager and adds them
 to your lock file so they can be managed by plonk. Use prefix syntax to specify
 the package manager, or omit the prefix to use your default manager.
 
+Package Manager Bootstrapping:
+  Bare package manager names automatically trigger self-installation to bootstrap
+  the manager. Prefixed names install packages normally via the specified manager.
+
 Examples:
-  plonk install htop                      # Install htop using default manager
-  plonk install git neovim ripgrep        # Install multiple packages
+  # Bootstrap package managers (automatic detection)
+  plonk install pnpm cargo uv pipx        # Self-installs the managers themselves
+
+  # Install packages using default manager
+  plonk install htop git neovim ripgrep   # Install multiple packages
+
+  # Install packages with specific managers
   plonk install brew:git                  # Install git specifically with Homebrew
   plonk install npm:lodash                # Install lodash with npm global packages
   plonk install cargo:ripgrep             # Install ripgrep with cargo packages
   plonk install uv:black uv:flake8        # Install Python tools with uv
   plonk install gem:bundler gem:rubocop   # Install Ruby tools with gem
   plonk install go:golang.org/x/tools/cmd/gopls  # Install Go tools with go install
-  plonk install --dry-run htop neovim     # Preview what would be installed`,
+
+  # Mixed operations (manager bootstrap + package install)
+  plonk install pnpm ripgrep npm:prettier # Bootstrap pnpm, install ripgrep via default, install prettier via npm
+
+  # Preview installation
+  plonk install --dry-run pnpm htop       # Preview what would be installed`,
 	Args:         cobra.MinimumNArgs(1),
 	RunE:         runInstall,
 	SilenceUsage: true,
@@ -60,12 +75,46 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	configDir := config.GetDefaultConfigDirectory()
 	cfg := config.LoadWithDefaults(configDir)
 
-	// Parse and validate all package specifications
+	// Check for package manager self-installation requests before normal processing
+	registry := packages.NewManagerRegistry()
+	var managerSelfInstallResults []resources.OperationResult
+	var remainingArgs []string
+
+	// Count manager self-installs and remaining args for progress
+	managerInstallCount := 0
+	for _, arg := range args {
+		if !strings.Contains(arg, ":") && registry.HasManager(arg) {
+			managerInstallCount++
+		}
+	}
+
+	managerInstallIdx := 0
+	for _, arg := range args {
+		// Only treat as manager self-install if it's a bare name (no prefix)
+		if !strings.Contains(arg, ":") && registry.HasManager(arg) {
+			// Show progress for manager self-installation
+			managerInstallIdx++
+			output.ProgressUpdate(managerInstallIdx, len(args), "Installing", arg+" (self-install)")
+
+			// Handle self-installation
+			result := handleManagerSelfInstall(context.Background(), arg, dryRun, cfg)
+			managerSelfInstallResults = append(managerSelfInstallResults, result)
+		} else {
+			// Process normally (includes prefixed packages like "brew:npm")
+			remainingArgs = append(remainingArgs, arg)
+		}
+	}
+
+	// Parse and validate remaining package specifications
 	defaultManager := packages.DefaultManager
 	if cfg != nil && cfg.DefaultManager != "" {
 		defaultManager = cfg.DefaultManager
 	}
-	validationResult := packages.ValidateSpecs(args, packages.ValidationModeInstall, defaultManager)
+
+	var validationResult packages.BatchValidationResult
+	if len(remainingArgs) > 0 {
+		validationResult = packages.ValidateSpecs(remainingArgs, packages.ValidationModeInstall, defaultManager)
+	}
 
 	// Convert validation errors to OperationResults
 	var validationErrors []resources.OperationResult
@@ -78,16 +127,20 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		})
 	}
 
-	// Process each package with prefix parsing
+	// Combine all results
 	var allResults []resources.OperationResult
+
+	// Add manager self-install results first
+	allResults = append(allResults, managerSelfInstallResults...)
 
 	// Add validation errors to results
 	allResults = append(allResults, validationErrors...)
 
 	// Process valid specifications
 	for i, spec := range validationResult.Valid {
-		// Show progress for multi-package operations
-		output.ProgressUpdate(i+1, len(validationResult.Valid), "Installing", spec.String())
+		// Show progress for multi-package operations (offset by self-install count)
+		currentOperation := len(managerSelfInstallResults) + i + 1
+		output.ProgressUpdate(currentOperation, len(args), "Installing", spec.String())
 
 		// Configure installation options for this package
 		opts := packages.InstallOptions{
@@ -142,4 +195,40 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 	// Check if all operations failed and return appropriate error
 	return resources.ValidateOperationResults(allResults, "install packages")
+}
+
+// handleManagerSelfInstall executes self-installation for a package manager
+func handleManagerSelfInstall(ctx context.Context, managerName string, dryRun bool, cfg *config.Config) resources.OperationResult {
+	result := resources.OperationResult{
+		Name:    managerName,
+		Manager: "self-install",
+	}
+
+	if dryRun {
+		result.Status = "would-install"
+		return result
+	}
+
+	registry := packages.NewManagerRegistry()
+	manager, err := registry.GetManager(managerName)
+	if err != nil {
+		result.Status = "failed"
+		result.Error = err
+		return result
+	}
+
+	// Use configured timeout for self-installation
+	timeout := time.Duration(cfg.PackageTimeout) * time.Second
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	err = manager.SelfInstall(ctxWithTimeout)
+	if err != nil {
+		result.Status = "failed"
+		result.Error = err
+	} else {
+		result.Status = "installed"
+	}
+
+	return result
 }

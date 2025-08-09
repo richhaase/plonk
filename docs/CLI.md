@@ -36,12 +36,23 @@ Options:
 
 ### plonk install
 
-Install packages and add them to management.
+Install packages and add them to management. Supports automatic package manager bootstrapping.
 
 ```bash
-plonk install ripgrep                 # Default manager
-plonk install brew:wget npm:prettier pnpm:typescript conda:numpy uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay  # Specific managers
-plonk install --dry-run ripgrep       # Preview changes
+# Bootstrap package managers (automatic detection)
+plonk install pnpm cargo uv pipx     # Self-installs the managers themselves
+
+# Install packages with default manager
+plonk install ripgrep fd bat         # Default manager
+
+# Install packages with specific managers
+plonk install brew:wget npm:prettier pnpm:typescript conda:numpy uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay
+
+# Mixed operations
+plonk install pnpm ripgrep npm:prettier  # Bootstrap pnpm, install ripgrep via default, install prettier via npm
+
+# Preview changes
+plonk install --dry-run pnpm ripgrep # Preview what would be installed
 ```
 
 ### plonk uninstall
