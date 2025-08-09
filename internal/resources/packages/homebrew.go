@@ -342,9 +342,9 @@ func (h *HomebrewManager) CheckHealth(ctx context.Context) (*HealthCheck, error)
 	}
 
 	if !available {
-		check.Status = "fail"
-		check.Message = "Homebrew is required but not available"
-		check.Issues = []string{"Homebrew is required for plonk to function properly"}
+		check.Status = "warn"
+		check.Message = "Homebrew is recommended but not available"
+		check.Issues = []string{"Homebrew is recommended for best compatibility"}
 		check.Suggestions = []string{
 			`Install Homebrew: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`,
 			"After installation, ensure brew is in your PATH",

@@ -343,9 +343,9 @@ func (d *DotnetManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	}
 
 	if !available {
-		check.Status = "fail"
-		check.Message = ".NET SDK is required but not available"
-		check.Issues = []string{".NET SDK is required for managing global tools"}
+		check.Status = "warn"
+		check.Message = ".NET SDK is not available"
+		check.Issues = []string{".NET SDK command not found or not functional"}
 		check.Suggestions = []string{
 			"Install .NET SDK: https://dotnet.microsoft.com/download",
 			"Or via Homebrew: brew install --cask dotnet",

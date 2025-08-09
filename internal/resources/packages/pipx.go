@@ -320,9 +320,9 @@ func (p *PipxManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	}
 
 	if !available {
-		check.Status = "fail"
-		check.Message = "pipx is required but not available"
-		check.Issues = []string{"pipx is required for managing Python applications"}
+		check.Status = "warn"
+		check.Message = "pipx is not available"
+		check.Issues = []string{"pipx command not found or not functional"}
 		check.Suggestions = []string{
 			"Install pipx via pip: pip3 install --user pipx",
 			"Or via Homebrew: brew install pipx",

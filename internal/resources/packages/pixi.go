@@ -343,9 +343,9 @@ func (p *PixiManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	}
 
 	if !available {
-		check.Status = "fail"
-		check.Message = "Pixi is required but not available"
-		check.Issues = []string{"Pixi is required for managing conda-forge packages globally"}
+		check.Status = "warn"
+		check.Message = "Pixi is not available"
+		check.Issues = []string{"Pixi command not found or not functional"}
 		check.Suggestions = []string{
 			"Install Pixi: curl -fsSL https://pixi.sh/install.sh | bash",
 			"Or via Homebrew: brew install pixi",

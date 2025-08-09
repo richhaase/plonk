@@ -266,9 +266,9 @@ func (u *UvManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	}
 
 	if !available {
-		check.Status = "fail"
-		check.Message = "UV is required but not available"
-		check.Issues = []string{"UV is required for managing Python tools"}
+		check.Status = "warn"
+		check.Message = "UV is not available"
+		check.Issues = []string{"UV command not found or not functional"}
 		check.Suggestions = []string{
 			"Install UV: curl -LsSf https://astral.sh/uv/install.sh | sh",
 			"Or via pipx: pipx install uv",
