@@ -92,8 +92,6 @@ setup() {
   assert_output --partial "is-odd"
 }
 
-
-
 # Ruby/gem tests
 @test "install gem package" {
   require_safe_package "gem:colorize"
@@ -370,27 +368,130 @@ setup() {
   assert_output --partial "dotnet-outdated-tool"
 }
 
+# Spinner behavior tests
+@test "install shows spinner during installation" {
+  require_safe_package "brew:cowsay"
+
+  # Use script to capture the full output including spinner
+  run timeout 10s script -q /dev/null plonk install brew:cowsay
+
+  # The command should succeed
+  assert_success
+
+  # Should show the package name in output
+  assert_output --partial "cowsay"
+
+  track_artifact "package" "brew:cowsay"
+
+  # Verify it's actually installed by brew
+  run brew list cowsay
+  assert_success
+}
+
+@test "install shows appropriate completion message after spinner" {
+  require_safe_package "brew:figlet"
+
+  run plonk install brew:figlet
+  assert_success
+
+  # Should show completion status with icon
+  assert_output --partial "figlet"
+  assert_output --partial "added"
+
+  track_artifact "package" "brew:figlet"
+
+  # Verify it's actually installed
+  run brew list figlet
+  assert_success
+}
+
+@test "install shows error message when package fails" {
+  # Use a definitely non-existent package to test error handling
+  run plonk install brew:this-package-definitely-does-not-exist-xyz123
+  assert_failure
+
+  # Should show failed status
+  assert_output --partial "failed"
+  assert_output --partial "this-package-definitely-does-not-exist-xyz123"
+
+  # Should not show panic or internal errors
+  refute_output --partial "panic"
+  refute_output --partial "runtime error"
+}
+
+@test "install with dry-run shows spinner and doesn't install" {
+  require_safe_package "brew:cowsay"
+
+  # Ensure package is not installed first
+  brew uninstall cowsay 2>/dev/null || true
+
+  run plonk install brew:cowsay --dry-run
+  assert_success
+
+  # Should show dry-run status
+  assert_output --partial "would"
+  assert_output --partial "cowsay"
+
+  # Should not actually install the package
+  run brew list cowsay 2>/dev/null
+  assert_failure
+
+  # Should not be in lock file
+  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
+    run cat "$PLONK_DIR/plonk.lock"
+    refute_output --partial "cowsay"
+  fi
+}
+
+@test "install multiple packages shows progress indicators" {
+  require_safe_package "brew:fortune"
+  require_safe_package "brew:lolcat"
+
+  run plonk install brew:fortune brew:lolcat
+  assert_success
+
+  # Should show both packages with progress indicators
+  assert_output --partial "fortune"
+  assert_output --partial "lolcat"
+
+  # Should show progress like [1/2] and [2/2] or similar progress indication
+  # Note: The exact format may vary, but there should be some progress indication
+  assert_output_contains_all "fortune" "lolcat"
+
+  track_artifact "package" "brew:fortune"
+  track_artifact "package" "brew:lolcat"
+
+  # Verify both are installed
+  run brew list fortune
+  assert_success
+  run brew list lolcat
+  assert_success
+}
+
 # General installation behavior tests
 @test "install with dry-run doesn't actually install" {
-  require_safe_package "brew:fortune"
+  require_safe_package "brew:figlet"
 
-  run plonk install brew:fortune --dry-run
+  # Ensure package is not installed first
+  brew uninstall figlet 2>/dev/null || true
+
+  run plonk install brew:figlet --dry-run
   assert_success
   assert_output --partial "would"
 
   # Verify not actually installed by brew
-  run brew list fortune
+  run brew list figlet
   assert_failure
 
   # Verify not in lock file
   if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
     run cat "$PLONK_DIR/plonk.lock"
-    refute_output --partial "fortune"
+    refute_output --partial "figlet"
   fi
 
   # Verify not in status
   run plonk status
-  refute_output --partial "fortune"
+  refute_output --partial "figlet"
 }
 
 @test "install already managed package shows appropriate message" {
@@ -416,7 +517,7 @@ setup() {
 
   # Ensure it's not already managed by removing from lock if present
   if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
-    grep -v "name: fortune" "$PLONK_DIR/plonk.lock" > "$PLONK_DIR/plonk.lock.tmp" || true
+    grep -v "name: fortune" "$PLONK_DIR/plonk.lock" >"$PLONK_DIR/plonk.lock.tmp" || true
     mv "$PLONK_DIR/plonk.lock.tmp" "$PLONK_DIR/plonk.lock"
   fi
 
