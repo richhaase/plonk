@@ -135,18 +135,23 @@ plonk search [options] <query>
 - Uses configurable timeout (default: 5 minutes)
 - Slow managers may not return results due to timeout
 
+**Search Support by Manager:**
+- **Supported**: brew, npm, cargo, conda, gem, pixi, composer
+- **Not Supported**: pnpm, pipx, uv, go, dotnet (return empty results)
+
 ### Examples
 
 ```bash
 # Search all managers
 plonk search ripgrep
 
-# Search specific manager
+# Search specific manager (only supported managers)
 plonk search brew:ripgrep conda:numpy pixi:tree composer:phpunit
 
-# Note: UV and .NET do not support search
-plonk search uv:ruff     # Will return no results
-plonk search dotnet:test # Will return no results
+# Managers without search support return empty results
+plonk search uv:ruff          # No results (UV doesn't support search)
+plonk search pnpm:typescript  # No results (PNPM doesn't support search)
+plonk search dotnet:test      # No results (.NET doesn't support search)
 
 # Output as JSON
 plonk search -o json ripgrep
@@ -221,7 +226,7 @@ plonk info -o json ripgrep
 
 Operations have configurable timeouts via `plonk.yaml`:
 - `package_timeout` - Install/uninstall operations (default: 180s)
-- `operation_timeout` - Search operations (default: 300s)
+- `operation_timeout` - Search operations (default: 300s / 5 minutes)
 
 ## Integration
 

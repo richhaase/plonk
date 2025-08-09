@@ -119,7 +119,7 @@ User configuration file for customizing plonk behavior. This file is optional - 
 
 ```yaml
 # Default package manager when no prefix is specified
-default_manager: brew    # Options: brew, npm, cargo, gem, go, uv, pixi, composer, dotnet
+default_manager: brew    # Options: brew, npm, pnpm, cargo, pipx, conda, gem, go, uv, pixi, composer, dotnet
 
 # Alternative examples:
 # default_manager: npm    # Use npm for global JavaScript tools
