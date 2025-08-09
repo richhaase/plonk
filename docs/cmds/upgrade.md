@@ -91,7 +91,7 @@ After successful upgrades, plonk automatically updates the lock file with:
 
 ### Progress Indication
 The command provides progress feedback during:
-- Discovery phase (checking for outdated packages)
+- Discovery phase (checking package versions)
 - Upgrade execution (per-package progress)
 - Lock file reconciliation
 

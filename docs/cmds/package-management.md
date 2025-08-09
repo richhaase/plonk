@@ -29,7 +29,7 @@ Without prefix, uses `default_manager` from configuration (default: brew).
 
 ## Install Command
 
-Installs packages and adds them to plonk management.
+Installs packages and adds them to plonk management. Also supports automatic package manager bootstrapping.
 
 ### Synopsis
 
@@ -43,6 +43,11 @@ plonk install [options] <package>...
 
 ### Behavior
 
+**Package Manager Self-Installation:**
+- **Bare manager names** (e.g., `pnpm`, `cargo`) → triggers manager self-installation
+- **Prefixed names** (e.g., `brew:npm`) → installs package normally via specified manager
+
+**Regular Package Installation:**
 - **Not installed** → installs package, adds to plonk.lock
 - **Already installed** → adds to plonk.lock (success)
 - **Already managed** → skips (no reinstall)
@@ -53,14 +58,20 @@ plonk install [options] <package>...
 ### Examples
 
 ```bash
-# Install with default manager
+# Bootstrap package managers (automatic detection)
+plonk install pnpm cargo uv pipx
+
+# Install packages with default manager
 plonk install ripgrep fd bat
 
-# Install with specific managers
+# Install packages with specific managers
 plonk install brew:wget npm:prettier pnpm:typescript cargo:exa pipx:black conda:numpy uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay
 
+# Mixed operations (manager bootstrap + package install)
+plonk install pnpm ripgrep npm:prettier
+
 # Preview installation
-plonk install --dry-run ripgrep
+plonk install --dry-run pnpm ripgrep
 ```
 
 ---
@@ -124,18 +135,23 @@ plonk search [options] <query>
 - Uses configurable timeout (default: 5 minutes)
 - Slow managers may not return results due to timeout
 
+**Search Support by Manager:**
+- **Supported**: brew, npm, cargo, conda, gem, pixi, composer
+- **Not Supported**: pnpm, pipx, uv, go, dotnet (return empty results)
+
 ### Examples
 
 ```bash
 # Search all managers
 plonk search ripgrep
 
-# Search specific manager
+# Search specific manager (only supported managers)
 plonk search brew:ripgrep conda:numpy pixi:tree composer:phpunit
 
-# Note: UV and .NET do not support search
-plonk search uv:ruff     # Will return no results
-plonk search dotnet:test # Will return no results
+# Managers without search support return empty results
+plonk search uv:ruff          # No results (UV doesn't support search)
+plonk search pnpm:typescript  # No results (PNPM doesn't support search)
+plonk search dotnet:test      # No results (.NET doesn't support search)
 
 # Output as JSON
 plonk search -o json ripgrep
@@ -210,7 +226,7 @@ plonk info -o json ripgrep
 
 Operations have configurable timeouts via `plonk.yaml`:
 - `package_timeout` - Install/uninstall operations (default: 180s)
-- `operation_timeout` - Search operations (default: 300s)
+- `operation_timeout` - Search operations (default: 300s / 5 minutes)
 
 ## Integration
 

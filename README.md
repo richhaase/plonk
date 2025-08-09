@@ -50,9 +50,7 @@ After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber
 ### Prerequisites
 
 1. **Install Homebrew** (if not already installed):
-   ```bash
-   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-   ```
+   Visit [brew.sh](https://brew.sh) for installation instructions
 
 2. **Install plonk**:
    ```bash
@@ -73,6 +71,7 @@ After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber
 # Track your existing setup
 plonk add ~/.zshrc ~/.vimrc ~/.config/nvim/    # Add dotfiles
 plonk install ripgrep fd bat                   # Install & track packages
+plonk install pnpm cargo                      # Bootstrap package managers
 
 # See what plonk manages
 plonk status                                   # Show all resources
@@ -92,8 +91,8 @@ The beauty is in what you don't need to do:
 The fastest way to set up a new development machine:
 
 ```bash
-# Install prerequisites
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+# Install prerequisites (visit brew.sh for installation instructions)
+# After installing Homebrew:
 
 # Install plonk
 brew install richhaase/tap/plonk
@@ -119,6 +118,7 @@ The `clone` command:
 ```bash
 # Package management
 plonk install ripgrep fd              # Install and track packages
+plonk install pnpm cargo              # Bootstrap package managers automatically
 plonk uninstall ripgrep               # Uninstall and stop tracking
 plonk search ripgrep                  # Search across all package managers
 plonk info ripgrep                    # Show package details
@@ -157,15 +157,15 @@ Plonk supports 12 package managers across multiple language ecosystems:
 - **Composer** (composer) - PHP global packages and CLI tools
 - **.NET Global Tools** (dotnet) - .NET CLI tools and utilities
 
-Package manager prefixes in commands:
+Package manager prefixes and self-installation:
 ```bash
-# Core managers
+# Bootstrap package managers (auto-detected)
+plonk install pnpm cargo uv pipx     # Installs the managers themselves
+
+# Install packages via specific managers
 plonk install brew:wget npm:prettier pnpm:typescript cargo:ripgrep
 plonk install pipx:black conda:numpy gem:rubocop go:golangci-lint
-
-# Extended support
-plonk install uv:ruff pixi:jupyter composer:php-cs-fixer
-plonk install dotnet:dotnetsay
+plonk install uv:ruff pixi:jupyter composer:php-cs-fixer dotnet:dotnetsay
 ```
 
 ## Configuration
