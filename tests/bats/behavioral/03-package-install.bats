@@ -470,6 +470,48 @@ setup() {
   assert_output --partial "black"
 }
 
+# Conda tests
+@test "install conda package" {
+  require_safe_package "conda:fortls"
+
+  # Check if conda/mamba is available (mamba includes micromamba's mamba command)
+  run which mamba
+  local has_mamba=$status
+  run which conda
+  local has_conda=$status
+
+  if [[ $has_mamba -ne 0 && $has_conda -ne 0 ]]; then
+    skip "conda/mamba not available"
+  fi
+
+  run plonk install conda:fortls
+  assert_success
+  assert_output --partial "fortls"
+  assert_output --partial "added"
+  track_artifact "package" "conda:fortls"
+
+  # Verify it's actually installed by conda/mamba
+  # Use whichever command is available
+  if [[ $has_mamba -eq 0 ]]; then
+    run mamba list -n base fortls
+    assert_success
+    assert_output --partial "fortls"
+  else
+    run conda list -n base fortls
+    assert_success
+    assert_output --partial "fortls"
+  fi
+
+  # Verify it's in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "fortls"
+
+  # Verify in status
+  run plonk status
+  assert_output --partial "fortls"
+}
+
 @test "install shows error for non-existent package" {
   run plonk install brew:definitely-not-real-xyz123
   assert_failure

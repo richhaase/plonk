@@ -215,6 +215,33 @@ setup() {
   assert_output --partial "black"
 }
 
+# Conda upgrade tests
+@test "upgrade single conda package" {
+  require_safe_package "conda:fortls"
+
+  # Check if conda/mamba is available
+  run which mamba
+  local has_mamba=$status
+  run which conda
+  local has_conda=$status
+
+  if [[ $has_mamba -ne 0 && $has_conda -ne 0 ]]; then
+    skip "conda/mamba not available"
+  fi
+
+  # Install package
+  run plonk install conda:fortls
+  if [[ $status -ne 0 ]]; then
+    skip "Failed to install conda:fortls"
+  fi
+  track_artifact "package" "conda:fortls"
+
+  # Upgrade the specific package
+  run plonk upgrade conda:fortls
+  assert_success
+  assert_output --partial "fortls"
+}
+
 # Cross-manager upgrade tests
 @test "upgrade package across managers" {
   require_safe_package "brew:cowsay"

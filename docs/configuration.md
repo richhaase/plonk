@@ -46,6 +46,13 @@ resources:
       version: 3.1.0
     installed_at: "2025-07-28T15:11:08-06:00"
   - type: package
+    id: conda:numpy
+    metadata:
+      manager: conda
+      name: numpy
+      version: 1.24.3
+    installed_at: "2025-08-09T12:30:15-06:00"
+  - type: package
     id: uv:ruff
     metadata:
       manager: uv
@@ -316,7 +323,7 @@ Settings are applied in the following order (highest to lowest priority):
 3. **Configuration file** - Settings in `plonk.yaml`
 4. **Built-in defaults** - Plonk's default values
 
-Example: If you set `default_manager: npm` in plonk.yaml but run `plonk install brew:wget`, the `brew:` prefix overrides the configuration.
+Example: If you set `default_manager: conda` in plonk.yaml but run `plonk install brew:wget`, the `brew:` prefix overrides the configuration.
 
 ## Common Configuration Scenarios
 

@@ -64,11 +64,14 @@ Every feature in plonk has to earn its place. Complex workflows and edge cases a
 
 ## The Package Manager Manager
 
-Plonk's vision for package management is to be the "package manager manager" - one interface for all the package management operations developers need across the 9 package managers we typically juggle:
+Plonk's vision for package management is to be the "package manager manager" - one interface for all the package management operations developers need across the 12 package managers we typically juggle:
 
 - **Homebrew** for system tools
 - **npm** for JavaScript
+- **pnpm** for fast Node.js packages
 - **cargo** for Rust
+- **pipx** for Python applications
+- **conda** for data science and scientific computing
 - **gem** for Ruby
 - **go install** for Go tools
 - **uv** for Python tool management

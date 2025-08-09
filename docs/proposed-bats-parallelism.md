@@ -16,6 +16,7 @@ Our BATS tests currently run sequentially with numbered prefixes (`00-` through 
 2. **Resource Isolation**: Ensure tests don't interfere with each other's resources
 3. **Deterministic Results**: Parallel execution must produce identical results to sequential execution
 4. **Backward Compatibility**: Changes should not break existing test infrastructure
+5. **BATS Best Practices**: Follow official BATS recommendations for dependency detection and conservative rollout
 
 ### Test Classification
 
@@ -74,6 +75,9 @@ Tests can be categorized into several groups based on their resource dependencie
 #### BATS Configuration
 - Utilize BATS `--jobs` flag for controlled parallel execution
 - Configure appropriate job counts based on available resources
+- Use `--parallel-preserve-environment` to maintain environment variables from `setup_file()`
+- Implement `--no-parallelize-across-files` for gradual rollout with immediate output
+- Configure GNU parallel setup with `parallel --record-env` prerequisite
 - Maintain compatibility with existing CI/CD infrastructure
 
 ## Benefits
@@ -91,20 +95,26 @@ Tests can be categorized into several groups based on their resource dependencie
 ## Implementation Considerations
 
 ### Prerequisites
-- Thorough analysis of current test dependencies
-- Validation of resource isolation mechanisms
-- Testing of parallel execution on target platforms
+- **GNU Parallel Installation**: Ensure GNU parallel is available on all target platforms
+- **Environment Setup**: Run `parallel --record-env` as prerequisite setup step
+- **Thorough Dependency Analysis**: Map all inter-test dependencies and shared resource usage
+- **Validation of Resource Isolation**: Ensure tests don't write to shared locations
+- **Multiple Run Testing**: Execute `bats --jobs N` multiple times to identify non-deterministic behavior
 
 ### Rollout Strategy
-- **Phase 1**: Implement parallel-safe test grouping
-- **Phase 2**: Add parallel execution configuration
-- **Phase 3**: Validate performance improvements and stability
-- **Phase 4**: Enable by default with sequential fallback option
+- **Phase 1**: Implement parallel-safe test grouping and identify dependencies
+- **Phase 2**: Enable `--no-parallelize-across-files` for conservative parallel execution
+- **Phase 3**: Gradually remove `--no-parallelize-across-files` for full parallelization
+- **Phase 4**: Extensive validation with multiple test runs to catch race conditions
+- **Phase 5**: Enable by default with sequential fallback option
 
 ### Risk Mitigation
-- **Gradual Rollout**: Enable parallelization incrementally
-- **Fallback Option**: Maintain ability to run tests sequentially
-- **Comprehensive Validation**: Extensive testing before production deployment
+- **Conservative Start**: Begin with `--no-parallelize-across-files` to maintain file-level sequencing
+- **Dependency Detection**: Run tests multiple times as recommended by BATS documentation
+- **Environment Isolation**: Use `--parallel-preserve-environment` to maintain test setup
+- **Fallback Option**: Always maintain ability to run tests sequentially
+- **Shared Resource Audit**: Identify and eliminate tests that write to shared locations
+- **Per-File Control**: Use `BATS_NO_PARALLELIZE_WITHIN_FILE=true` for problematic test files
 
 ## Expected Outcomes
 
@@ -118,5 +128,7 @@ Tests can be categorized into several groups based on their resource dependencie
 1. **Detailed Dependency Analysis**: Map all inter-test dependencies
 2. **Resource Isolation Design**: Plan isolated execution environments
 3. **Implementation Plan**: Create detailed technical implementation roadmap
-4. **Testing Strategy**: Design validation approach for parallel execution
-5. **Documentation Updates**: Update test guidelines for parallel-safe practices
+4. **BATS Technical Setup**: Install GNU parallel and run `parallel --record-env` setup
+5. **Dependency Validation**: Run `bats --jobs N` multiple times to identify race conditions
+6. **Testing Strategy**: Design validation approach with conservative parallelization options
+7. **Documentation Updates**: Update test guidelines for parallel-safe practices

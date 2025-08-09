@@ -40,7 +40,7 @@ Install packages and add them to management.
 
 ```bash
 plonk install ripgrep                 # Default manager
-plonk install brew:wget npm:prettier pnpm:typescript uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay  # Specific managers
+plonk install brew:wget npm:prettier pnpm:typescript conda:numpy uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay  # Specific managers
 plonk install --dry-run ripgrep       # Preview changes
 ```
 
@@ -50,7 +50,7 @@ Uninstall packages and remove from management.
 
 ```bash
 plonk uninstall ripgrep
-plonk uninstall brew:wget npm:prettier pnpm:typescript uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay
+plonk uninstall brew:wget npm:prettier pnpm:typescript conda:numpy uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay
 plonk uninstall --dry-run ripgrep
 ```
 
@@ -180,6 +180,8 @@ Use prefixes to specify package managers:
 - `npm:` - NPM (global packages)
 - `pnpm:` - PNPM (fast, disk efficient JavaScript packages)
 - `cargo:` - Cargo (Rust)
+- `pipx:` - Pipx (Python applications in isolated environments)
+- `conda:` - Conda (scientific computing and data science packages)
 - `gem:` - RubyGems
 - `go:` - Go modules
 - `uv:` - UV (Python tool manager)
@@ -193,6 +195,8 @@ plonk install brew:wget
 plonk install npm:typescript
 plonk install pnpm:prettier
 plonk install cargo:ripgrep
+plonk install pipx:black
+plonk install conda:numpy
 plonk install gem:bundler
 plonk install go:golang.org/x/tools/cmd/goimports
 plonk install uv:ruff
