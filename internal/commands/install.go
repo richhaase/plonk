@@ -5,6 +5,7 @@ package commands
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -88,17 +89,25 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	managerInstallIdx := 0
+	// Create spinner manager for all operations
+	spinnerManager := output.NewSpinnerManager(len(args))
+
 	for _, arg := range args {
 		// Only treat as manager self-install if it's a bare name (no prefix)
 		if !strings.Contains(arg, ":") && registry.HasManager(arg) {
-			// Show progress for manager self-installation
-			managerInstallIdx++
-			output.ProgressUpdate(managerInstallIdx, len(args), "Installing", arg+" (self-install)")
+			// Start spinner for manager self-installation
+			spinner := spinnerManager.StartSpinner("Installing", arg+" (self-install)")
 
 			// Handle self-installation
 			result := handleManagerSelfInstall(context.Background(), arg, dryRun, cfg)
 			managerSelfInstallResults = append(managerSelfInstallResults, result)
+
+			// Stop spinner and show result
+			if result.Status == "failed" && result.Error != nil {
+				spinner.Error(fmt.Sprintf("Failed to install %s: %s", arg, result.Error.Error()))
+			} else {
+				spinner.Success(fmt.Sprintf("%s %s", result.Status, result.Name))
+			}
 		} else {
 			// Process normally (includes prefixed packages like "brew:npm")
 			remainingArgs = append(remainingArgs, arg)
@@ -137,10 +146,9 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	allResults = append(allResults, validationErrors...)
 
 	// Process valid specifications
-	for i, spec := range validationResult.Valid {
-		// Show progress for multi-package operations (offset by self-install count)
-		currentOperation := len(managerSelfInstallResults) + i + 1
-		output.ProgressUpdate(currentOperation, len(args), "Installing", spec.String())
+	for _, spec := range validationResult.Valid {
+		// Start spinner for package installation
+		spinner := spinnerManager.StartSpinner("Installing", spec.String())
 
 		// Configure installation options for this package
 		opts := packages.InstallOptions{
@@ -155,20 +163,33 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		cancel()
 
 		if err != nil {
-			allResults = append(allResults, resources.OperationResult{
+			result := resources.OperationResult{
 				Name:    spec.String(),
 				Manager: spec.Manager,
 				Status:  "failed",
 				Error:   err,
-			})
+			}
+			allResults = append(allResults, result)
+			spinner.Error(fmt.Sprintf("Failed to install %s: %s", spec.String(), err.Error()))
 			continue
 		}
 
 		allResults = append(allResults, results...)
+
+		// Show results for installed packages
+		for _, result := range results {
+			if result.Status == "failed" && result.Error != nil {
+				spinner.Error(fmt.Sprintf("Failed to install %s: %s", result.Name, result.Error.Error()))
+			} else {
+				spinner.Success(fmt.Sprintf("%s %s", result.Status, result.Name))
+			}
+			break // Only show first result since we're installing one package at a time
+		}
 	}
 
-	// Show progress for each result
-	for _, result := range allResults {
+	// Note: Results are now shown immediately after each operation via spinners
+	// This section is kept for any validation errors that weren't processed above
+	for _, result := range validationErrors {
 		icon := output.GetStatusIcon(result.Status)
 		output.Printf("%s %s %s\n", icon, result.Status, result.Name)
 		// Show error details for failed operations

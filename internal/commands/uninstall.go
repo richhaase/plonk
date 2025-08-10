@@ -5,6 +5,7 @@ package commands
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -76,10 +77,13 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	// Add validation errors to results
 	allResults = append(allResults, validationErrors...)
 
+	// Create spinner manager for all uninstall operations
+	spinnerManager := output.NewSpinnerManager(len(validationResult.Valid))
+
 	// Process valid specifications
-	for i, spec := range validationResult.Valid {
-		// Show progress for multi-package operations
-		output.ProgressUpdate(i+1, len(validationResult.Valid), "Uninstalling", spec.String())
+	for _, spec := range validationResult.Valid {
+		// Start spinner for package uninstallation
+		spinner := spinnerManager.StartSpinner("Uninstalling", spec.String())
 
 		// Configure uninstallation options for this package
 		// Pass empty manager if not specified to let UninstallPackages determine it
@@ -95,20 +99,33 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 		cancel()
 
 		if err != nil {
-			allResults = append(allResults, resources.OperationResult{
+			result := resources.OperationResult{
 				Name:    spec.String(),
 				Manager: spec.Manager,
 				Status:  "failed",
 				Error:   err,
-			})
+			}
+			allResults = append(allResults, result)
+			spinner.Error(fmt.Sprintf("Failed to uninstall %s: %s", spec.String(), err.Error()))
 			continue
 		}
 
 		allResults = append(allResults, results...)
+
+		// Show results for uninstalled packages
+		for _, result := range results {
+			if result.Status == "failed" && result.Error != nil {
+				spinner.Error(fmt.Sprintf("Failed to uninstall %s: %s", result.Name, result.Error.Error()))
+			} else {
+				spinner.Success(fmt.Sprintf("%s %s", result.Status, result.Name))
+			}
+			break // Only show first result since we're uninstalling one package at a time
+		}
 	}
 
-	// Show progress for each result
-	for _, result := range allResults {
+	// Note: Results are now shown immediately after each operation via spinners
+	// This section is kept for any validation errors that weren't processed above
+	for _, result := range validationErrors {
 		icon := output.GetStatusIcon(result.Status)
 		output.Printf("%s %s %s\n", icon, result.Status, result.Name)
 		// Show error details for failed operations
