@@ -53,14 +53,16 @@ func (s *Spinner) Start() *Spinner {
 // Stop stops the spinner and clears the line
 func (s *Spinner) Stop() {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	if !s.running {
+		s.mu.Unlock()
 		return
 	}
 
 	s.running = false
 	close(s.done)
+	s.mu.Unlock()
+	
+	// Wait for the spinner goroutine to finish (without holding the mutex)
 	s.wg.Wait()
 
 	// Clear the spinner line
