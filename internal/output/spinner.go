@@ -37,15 +37,15 @@ func NewSpinner(text string) *Spinner {
 func (s *Spinner) Start() *Spinner {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	if s.running {
 		return s
 	}
-	
+
 	s.running = true
 	s.done = make(chan struct{})
 	s.wg.Add(1)
-	
+
 	go s.spin()
 	return s
 }
@@ -54,15 +54,15 @@ func (s *Spinner) Start() *Spinner {
 func (s *Spinner) Stop() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	if !s.running {
 		return
 	}
-	
+
 	s.running = false
 	close(s.done)
 	s.wg.Wait()
-	
+
 	// Clear the spinner line
 	if s.writer.IsTerminal() {
 		s.writer.Printf("\r\033[K")
@@ -93,16 +93,16 @@ func (s *Spinner) UpdateText(text string) {
 // spin runs the spinner animation loop
 func (s *Spinner) spin() {
 	defer s.wg.Done()
-	
+
 	if !s.writer.IsTerminal() {
 		// If not a terminal, just print the text once
 		s.writer.Printf("%s\n", s.text)
 		return
 	}
-	
+
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-s.done:
@@ -141,14 +141,14 @@ func (sm *SpinnerManager) StartSpinner(operation, item string) *Spinner {
 	current := sm.current
 	total := sm.totalItems
 	sm.mu.Unlock()
-	
+
 	var text string
 	if total > 1 {
 		text = fmt.Sprintf("[%d/%d] %s: %s", current, total, operation, item)
 	} else {
 		text = fmt.Sprintf("%s: %s", operation, item)
 	}
-	
+
 	return NewSpinner(text).Start()
 }
 
@@ -156,7 +156,7 @@ func (sm *SpinnerManager) StartSpinner(operation, item string) *Spinner {
 func WithSpinner(text string, fn func(context.Context) error) error {
 	spinner := NewSpinner(text).Start()
 	defer spinner.Stop()
-	
+
 	// Create a context for the operation
 	ctx := context.Background()
 	return fn(ctx)
@@ -165,13 +165,13 @@ func WithSpinner(text string, fn func(context.Context) error) error {
 // WithSpinnerResult executes a function with a spinner and handles the result
 func WithSpinnerResult(text string, fn func(context.Context) error) error {
 	spinner := NewSpinner(text).Start()
-	
+
 	err := fn(context.Background())
 	if err != nil {
 		spinner.Error(fmt.Sprintf("Failed: %s", text))
 		return err
 	}
-	
+
 	spinner.Success(fmt.Sprintf("Completed: %s", text))
 	return nil
 }
