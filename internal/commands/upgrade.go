@@ -287,21 +287,6 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Show progress for each result
-	for _, result := range results.Results {
-		icon := output.GetStatusIcon(result.Status)
-		statusText := result.Status
-		if result.FromVersion != "" && result.ToVersion != "" && result.Status == "upgraded" {
-			statusText = fmt.Sprintf("upgraded %s → %s", result.FromVersion, result.ToVersion)
-		}
-		output.Printf("%s %s %s (%s)\n", icon, statusText, result.Package, result.Manager)
-
-		// Show error details for failed operations
-		if result.Status == "failed" && result.Error != "" {
-			output.Printf("   Error: %s\n", result.Error)
-		}
-	}
-
 	// Create output data
 	outputData := upgradeResultsToOutput(results)
 
@@ -361,7 +346,8 @@ func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, l
 	}
 	results.Summary.Total = totalPackages
 
-	packageIndex := 0
+	// Create spinner manager for all operations
+	spinnerManager := output.NewSpinnerManager(totalPackages)
 
 	for managerName, packageNames := range spec.ManagerTargets {
 		// Get the package manager
@@ -369,6 +355,9 @@ func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, l
 		if err != nil {
 			// Add failures for all packages in this manager
 			for _, pkg := range packageNames {
+				spinner := spinnerManager.StartSpinner("Upgrading", fmt.Sprintf("%s (%s)", pkg, managerName))
+				spinner.Error(fmt.Sprintf("Failed to upgrade %s: package manager '%s' not available", pkg, managerName))
+				
 				results.Results = append(results.Results, packageUpgradeResult{
 					Manager: managerName,
 					Package: pkg,
@@ -385,6 +374,9 @@ func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, l
 		if err != nil || !available {
 			// Add failures for all packages in this manager
 			for _, pkg := range packageNames {
+				spinner := spinnerManager.StartSpinner("Upgrading", fmt.Sprintf("%s (%s)", pkg, managerName))
+				spinner.Error(fmt.Sprintf("Failed to upgrade %s: package manager '%s' is not available", pkg, managerName))
+				
 				results.Results = append(results.Results, packageUpgradeResult{
 					Manager: managerName,
 					Package: pkg,
@@ -409,8 +401,8 @@ func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, l
 
 		// Process results for each package
 		for _, pkg := range packageNames {
-			packageIndex++
-			output.ProgressUpdate(packageIndex, totalPackages, "Upgrading", fmt.Sprintf("%s (%s)", pkg, managerName))
+			// Start spinner for this package
+			spinner := spinnerManager.StartSpinner("Upgrading", fmt.Sprintf("%s (%s)", pkg, managerName))
 
 			result := packageUpgradeResult{
 				Manager:     managerName,
@@ -422,6 +414,7 @@ func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, l
 				result.Status = "failed"
 				result.Error = upgradeErr.Error()
 				results.Summary.Failed++
+				spinner.Error(fmt.Sprintf("Failed to upgrade %s: %s", pkg, upgradeErr.Error()))
 			} else {
 				// Get new version and update lock file
 				if newVersion, err := mgr.InstalledVersion(ctx, pkg); err == nil {
@@ -434,13 +427,17 @@ func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, l
 						if err := updateLockFileForPackage(lockService, managerName, pkg, newVersion); err != nil {
 							output.Printf("Warning: Failed to update lock file for %s: %v\n", pkg, err)
 						}
+						
+						spinner.Success(fmt.Sprintf("upgraded %s %s → %s", pkg, result.FromVersion, result.ToVersion))
 					} else {
 						result.Status = "skipped"
 						results.Summary.Skipped++
+						spinner.Success(fmt.Sprintf("skipped %s (already up-to-date)", pkg))
 					}
 				} else {
 					result.Status = "upgraded" // Assume success even if we can't get version
 					results.Summary.Upgraded++
+					spinner.Success(fmt.Sprintf("upgraded %s", pkg))
 				}
 			}
 

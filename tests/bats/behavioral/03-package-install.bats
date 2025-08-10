@@ -372,14 +372,17 @@ setup() {
 @test "install shows spinner during installation" {
   require_safe_package "brew:cowsay"
 
-  # Use script to capture the full output including spinner
-  run timeout 10s script -q /dev/null plonk install brew:cowsay
+  # Run install command directly without script wrapper
+  # The spinner will still be shown in TTY environments
+  run plonk install brew:cowsay
 
   # The command should succeed
   assert_success
 
-  # Should show the package name in output
+  # Should show spinner-related output
+  assert_output --partial "Installing"
   assert_output --partial "cowsay"
+  assert_output --partial "✓"
 
   track_artifact "package" "brew:cowsay"
 

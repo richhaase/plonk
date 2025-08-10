@@ -106,8 +106,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 			if result.Status == "failed" && result.Error != nil {
 				spinner.Error(fmt.Sprintf("Failed to install %s: %s", arg, result.Error.Error()))
 			} else {
-				icon := output.GetStatusIcon(result.Status)
-				spinner.Success(fmt.Sprintf("%s %s %s", icon, result.Status, result.Name))
+				spinner.Success(fmt.Sprintf("%s %s", result.Status, result.Name))
 			}
 		} else {
 			// Process normally (includes prefixed packages like "brew:npm")
@@ -182,8 +181,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 			if result.Status == "failed" && result.Error != nil {
 				spinner.Error(fmt.Sprintf("Failed to install %s: %s", result.Name, result.Error.Error()))
 			} else {
-				icon := output.GetStatusIcon(result.Status)
-				spinner.Success(fmt.Sprintf("%s %s %s", icon, result.Status, result.Name))
+				spinner.Success(fmt.Sprintf("%s %s", result.Status, result.Name))
 			}
 			break // Only show first result since we're installing one package at a time
 		}

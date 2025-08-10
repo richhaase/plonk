@@ -37,13 +37,13 @@ func Apply(ctx context.Context, configDir string, cfg *config.Config, dryRun boo
 	totalFailed := 0
 	totalWouldInstall := 0
 
-	// Show overall progress for packages
+	// Create spinner manager for all package operations if we have missing packages
+	var spinnerManager *output.SpinnerManager
 	if totalMissing > 0 {
-		output.StageUpdate(fmt.Sprintf("Applying packages (%d missing)...", totalMissing))
+		spinnerManager = output.NewSpinnerManager(totalMissing)
 	}
 
 	// Process each manager's missing packages
-	packageIndex := 0
 	for managerName, missingItems := range missingByManager {
 		var packageResults []output.PackageOperation
 		installedCount := 0
@@ -51,9 +51,11 @@ func Apply(ctx context.Context, configDir string, cfg *config.Config, dryRun boo
 		wouldInstallCount := 0
 
 		for _, item := range missingItems {
-			packageIndex++
-			// Show progress for each package
-			output.ProgressUpdate(packageIndex, totalMissing, "Installing", item.Name)
+			// Start spinner for this package
+			var spinner *output.Spinner
+			if spinnerManager != nil {
+				spinner = spinnerManager.StartSpinner("Installing", fmt.Sprintf("%s (%s)", item.Name, managerName))
+			}
 
 			if dryRun {
 				packageResults = append(packageResults, output.PackageOperation{
@@ -61,6 +63,9 @@ func Apply(ctx context.Context, configDir string, cfg *config.Config, dryRun boo
 					Status: "would-install",
 				})
 				wouldInstallCount++
+				if spinner != nil {
+					spinner.Success(fmt.Sprintf("would-install %s", item.Name))
+				}
 			} else {
 				// Use resource Apply method
 				err := packageResource.Apply(ctx, item)
@@ -71,12 +76,18 @@ func Apply(ctx context.Context, configDir string, cfg *config.Config, dryRun boo
 						Error:  err.Error(),
 					})
 					failedCount++
+					if spinner != nil {
+						spinner.Error(fmt.Sprintf("Failed to install %s: %s", item.Name, err.Error()))
+					}
 				} else {
 					packageResults = append(packageResults, output.PackageOperation{
 						Name:   item.Name,
 						Status: "installed",
 					})
 					installedCount++
+					if spinner != nil {
+						spinner.Success(fmt.Sprintf("installed %s", item.Name))
+					}
 				}
 			}
 		}
