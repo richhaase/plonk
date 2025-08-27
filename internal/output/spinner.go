@@ -61,7 +61,7 @@ func (s *Spinner) Stop() {
 	s.running = false
 	close(s.done)
 	s.mu.Unlock()
-	
+
 	// Wait for the spinner goroutine to finish (without holding the mutex)
 	s.wg.Wait()
 

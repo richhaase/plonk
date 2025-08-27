@@ -357,7 +357,7 @@ func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, l
 			for _, pkg := range packageNames {
 				spinner := spinnerManager.StartSpinner("Upgrading", fmt.Sprintf("%s (%s)", pkg, managerName))
 				spinner.Error(fmt.Sprintf("Failed to upgrade %s: package manager '%s' not available", pkg, managerName))
-				
+
 				results.Results = append(results.Results, packageUpgradeResult{
 					Manager: managerName,
 					Package: pkg,
@@ -376,7 +376,7 @@ func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, l
 			for _, pkg := range packageNames {
 				spinner := spinnerManager.StartSpinner("Upgrading", fmt.Sprintf("%s (%s)", pkg, managerName))
 				spinner.Error(fmt.Sprintf("Failed to upgrade %s: package manager '%s' is not available", pkg, managerName))
-				
+
 				results.Results = append(results.Results, packageUpgradeResult{
 					Manager: managerName,
 					Package: pkg,
@@ -427,7 +427,7 @@ func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, l
 						if err := updateLockFileForPackage(lockService, managerName, pkg, newVersion); err != nil {
 							output.Printf("Warning: Failed to update lock file for %s: %v\n", pkg, err)
 						}
-						
+
 						spinner.Success(fmt.Sprintf("upgraded %s %s → %s", pkg, result.FromVersion, result.ToVersion))
 					} else {
 						result.Status = "skipped"

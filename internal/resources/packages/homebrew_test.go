@@ -496,8 +496,8 @@ func TestHomebrewManager_ListInstalled(t *testing.T) {
 					Output: []byte("git\nvim"),
 					Error:  nil,
 				},
-				"brew info --installed --json=v1": {
-					Output: []byte(`[{"name":"git","aliases":["gitscm"]},{"name":"vim","aliases":["vi"]}]`),
+				"brew info --installed --json=v2": {
+					Output: []byte(`{"formulae":[{"name":"git","aliases":["gitscm"]},{"name":"vim","aliases":["vi"]}],"casks":[]}`),
 					Error:  nil,
 				},
 			},
@@ -546,8 +546,8 @@ func TestHomebrewManager_IsInstalled(t *testing.T) {
 			name:        "package is installed",
 			packageName: "git",
 			mockResponses: map[string]CommandResponse{
-				"brew info --installed --json=v1": {
-					Output: []byte(`[{"name":"git","aliases":[],"installed":[{"version":"2.37.1"}]}]`),
+				"brew info --installed --json=v2": {
+					Output: []byte(`{"formulae":[{"name":"git","aliases":[],"installed":[{"version":"2.37.1"}]}],"casks":[]}`),
 					Error:  nil,
 				},
 			},
@@ -558,8 +558,8 @@ func TestHomebrewManager_IsInstalled(t *testing.T) {
 			name:        "package not installed",
 			packageName: "vim",
 			mockResponses: map[string]CommandResponse{
-				"brew info --installed --json=v1": {
-					Output: []byte(`[{"name":"git","aliases":[]}]`),
+				"brew info --installed --json=v2": {
+					Output: []byte(`{"formulae":[{"name":"git","aliases":[]}],"casks":[]}`),
 					Error:  nil,
 				},
 			},
@@ -570,8 +570,8 @@ func TestHomebrewManager_IsInstalled(t *testing.T) {
 			name:        "check by alias",
 			packageName: "vi",
 			mockResponses: map[string]CommandResponse{
-				"brew info --installed --json=v1": {
-					Output: []byte(`[{"name":"vim","aliases":["vi"]}]`),
+				"brew info --installed --json=v2": {
+					Output: []byte(`{"formulae":[{"name":"vim","aliases":["vi"]}],"casks":[]}`),
 					Error:  nil,
 				},
 			},
@@ -582,7 +582,7 @@ func TestHomebrewManager_IsInstalled(t *testing.T) {
 			name:        "fallback to brew list",
 			packageName: "git",
 			mockResponses: map[string]CommandResponse{
-				"brew info --installed --json=v1": {
+				"brew info --installed --json=v2": {
 					Output: []byte(""),
 					Error:  &MockExitError{Code: 1},
 				},
@@ -708,8 +708,8 @@ func TestHomebrewManager_InstalledVersion(t *testing.T) {
 			name:        "get version from JSON",
 			packageName: "git",
 			mockResponses: map[string]CommandResponse{
-				"brew info --installed --json=v1": {
-					Output: []byte(`[{"name":"git","installed":[{"version":"2.37.1"}],"versions":{"stable":"2.37.1"}}]`),
+				"brew info --installed --json=v2": {
+					Output: []byte(`{"formulae":[{"name":"git","installed":[{"version":"2.37.1"}],"versions":{"stable":"2.37.1"}}],"casks":[]}`),
 					Error:  nil,
 				},
 			},
@@ -720,7 +720,7 @@ func TestHomebrewManager_InstalledVersion(t *testing.T) {
 			name:        "fallback to brew list --versions",
 			packageName: "vim",
 			mockResponses: map[string]CommandResponse{
-				"brew info --installed --json=v1": {
+				"brew info --installed --json=v2": {
 					Output: []byte(""),
 					Error:  &MockExitError{Code: 1},
 				},
@@ -736,8 +736,8 @@ func TestHomebrewManager_InstalledVersion(t *testing.T) {
 			name:        "package not installed",
 			packageName: "nonexistent",
 			mockResponses: map[string]CommandResponse{
-				"brew info --installed --json=v1": {
-					Output: []byte(`[]`),
+				"brew info --installed --json=v2": {
+					Output: []byte(`{"formulae":[],"casks":[]}`),
 					Error:  nil,
 				},
 			},
@@ -789,8 +789,8 @@ func TestHomebrewManager_Info(t *testing.T) {
 					Output: []byte("git: stable 2.37.1\nDistributed revision control system\nFrom: https://github.com/git/git"),
 					Error:  nil,
 				},
-				"brew info --installed --json=v1": {
-					Output: []byte(`[{"name":"git","installed":[{"version":"2.37.1"}]}]`),
+				"brew info --installed --json=v2": {
+					Output: []byte(`{"formulae":[{"name":"git","installed":[{"version":"2.37.1"}]}],"casks":[]}`),
 					Error:  nil,
 				},
 			},

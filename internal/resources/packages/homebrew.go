@@ -16,8 +16,14 @@ type HomebrewManager struct {
 	binary string
 }
 
-// brewInfoJSON represents the JSON structure from brew info --json
-type brewInfoJSON struct {
+// brewInfoV2JSON represents the JSON structure from brew info --json=v2
+type brewInfoV2JSON struct {
+	Formulae []brewFormulaJSON `json:"formulae"`
+	Casks    []brewCaskJSON    `json:"casks"`
+}
+
+// brewFormulaJSON represents a formula in the v2 JSON format
+type brewFormulaJSON struct {
 	Name      string   `json:"name"`
 	Aliases   []string `json:"aliases"`
 	Installed []struct {
@@ -26,6 +32,25 @@ type brewInfoJSON struct {
 	Versions struct {
 		Stable string `json:"stable"`
 	} `json:"versions"`
+}
+
+// brewCaskJSON represents a cask in the v2 JSON format
+type brewCaskJSON struct {
+	Token string   `json:"token"`
+	Name  []string `json:"name"`
+	// Note: Casks don't have the same installed/versions structure as formulae
+}
+
+// brewPackageInfo represents unified package info for both formulae and casks
+type brewPackageInfo struct {
+	Name      string
+	Aliases   []string
+	Installed []struct {
+		Version string `json:"version"`
+	}
+	Versions struct {
+		Stable string `json:"stable"`
+	}
 }
 
 // NewHomebrewManager creates a new homebrew manager.
@@ -87,19 +112,39 @@ func (h *HomebrewManager) Uninstall(ctx context.Context, name string) error {
 	return nil
 }
 
-// getInstalledPackagesInfo returns detailed information about all installed packages
-func (h *HomebrewManager) getInstalledPackagesInfo(ctx context.Context) ([]brewInfoJSON, error) {
-	output, err := ExecuteCommand(ctx, h.binary, "info", "--installed", "--json=v1")
+// getInstalledPackagesInfo returns detailed information about all installed packages (formulae and casks)
+func (h *HomebrewManager) getInstalledPackagesInfo(ctx context.Context) ([]brewPackageInfo, error) {
+	output, err := ExecuteCommand(ctx, h.binary, "info", "--installed", "--json=v2")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get installed packages info: %w", err)
 	}
 
-	var packages []brewInfoJSON
-	if err := json.Unmarshal(output, &packages); err != nil {
+	var v2Data brewInfoV2JSON
+	if err := json.Unmarshal(output, &v2Data); err != nil {
 		return nil, fmt.Errorf("failed to parse brew info JSON: %w", err)
 	}
 
-	return packages, nil
+	var allPackages []brewPackageInfo
+
+	// Convert formulae to unified format
+	for _, formula := range v2Data.Formulae {
+		allPackages = append(allPackages, brewPackageInfo{
+			Name:      formula.Name,
+			Aliases:   formula.Aliases,
+			Installed: formula.Installed,
+			Versions:  formula.Versions,
+		})
+	}
+
+	// Convert casks to unified format
+	for _, cask := range v2Data.Casks {
+		allPackages = append(allPackages, brewPackageInfo{
+			Name:    cask.Token, // Use token as name to match brew list output
+			Aliases: []string{}, // Casks don't have aliases
+		})
+	}
+
+	return allPackages, nil
 }
 
 // IsInstalled checks if a specific package is installed.
