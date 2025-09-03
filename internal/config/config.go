@@ -20,21 +20,7 @@ type Config struct {
 	ExpandDirectories []string `yaml:"expand_directories,omitempty"`
 	IgnorePatterns    []string `yaml:"ignore_patterns,omitempty"`
 	Dotfiles          Dotfiles `yaml:"dotfiles,omitempty"`
-	Hooks             Hooks    `yaml:"hooks,omitempty"`
 	DiffTool          string   `yaml:"diff_tool,omitempty"`
-}
-
-// Hooks contains pre and post apply hooks
-type Hooks struct {
-	PreApply  []Hook `yaml:"pre_apply,omitempty"`
-	PostApply []Hook `yaml:"post_apply,omitempty"`
-}
-
-// Hook represents a single hook command
-type Hook struct {
-	Command         string `yaml:"command" validate:"required"`
-	Timeout         string `yaml:"timeout,omitempty"`
-	ContinueOnError bool   `yaml:"continue_on_error,omitempty"`
 }
 
 // Dotfiles contains dotfile-specific configuration

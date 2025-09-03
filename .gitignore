@@ -13,8 +13,7 @@ build/
 *.out
 *.coverprofile
 coverage.*
-coverage.html
-coverage.txt
+coverage.html coverage.txt
 
 # Go workspace file
 go.work
@@ -52,6 +51,7 @@ plonk-linux
 # Code Line Counters
 scc.out
 
+# AI
 .claude
-.bmad-core
-docs/stories
+CLAUDE.md
+.monkey

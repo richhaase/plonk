@@ -212,12 +212,6 @@ func writeAnnotatedConfig(w *os.File, cfg *config.Config, configDir string) erro
 		writeField("dotfiles", cfg.Dotfiles, false)
 	}
 
-	if checker.IsFieldUserDefined("hooks", cfg.Hooks) {
-		writeField("hooks", cfg.Hooks, true)
-	} else if len(cfg.Hooks.PreApply) > 0 || len(cfg.Hooks.PostApply) > 0 {
-		writeField("hooks", cfg.Hooks, false)
-	}
-
 	return nil
 }
 
