@@ -130,7 +130,6 @@ ignore_patterns:
 			Dotfiles: Dotfiles{
 				UnmanagedFilters: []string{"custom_filter"},
 			},
-			Hooks: Hooks{}, // empty hooks
 		}
 
 		nonDefaults := checker.GetNonDefaultFields(cfg)
@@ -146,35 +145,6 @@ ignore_patterns:
 		}
 	})
 
-	t.Run("modified hooks config", func(t *testing.T) {
-		checker := NewUserDefinedChecker(tempDir)
-
-		// Create a new config with modified hooks
-		cfg := &Config{
-			DefaultManager:    "brew",
-			OperationTimeout:  300,
-			PackageTimeout:    180,
-			DotfileTimeout:    60,
-			ExpandDirectories: []string{".config"},
-			IgnorePatterns:    checker.defaults.IgnorePatterns,
-			Dotfiles:          checker.defaults.Dotfiles,
-			Hooks: Hooks{
-				PreApply: []Hook{{Command: "echo test"}},
-			},
-		}
-
-		nonDefaults := checker.GetNonDefaultFields(cfg)
-
-		// Check if hooks is marked as non-default
-		if hooksVal, ok := nonDefaults["hooks"]; ok {
-			hooks := hooksVal.(Hooks)
-			assert.Len(t, hooks.PreApply, 1)
-			assert.Equal(t, "echo test", hooks.PreApply[0].Command)
-		} else {
-			// If not detected, it might be a reflect.DeepEqual issue with empty vs nil slices
-			t.Logf("hooks not detected as different")
-		}
-	})
 }
 
 func TestGetDefaultFieldValue(t *testing.T) {
@@ -227,18 +197,4 @@ func TestGetDefaultFieldValue(t *testing.T) {
 		assert.Greater(t, len(dotfiles.UnmanagedFilters), 0)
 	})
 
-	t.Run("hooks returns empty struct", func(t *testing.T) {
-		result := checker.getDefaultFieldValue("hooks")
-		hooks, ok := result.(Hooks)
-		assert.True(t, ok)
-		// Log to debug what's in the hooks
-		if len(hooks.PreApply) > 0 {
-			t.Logf("PreApply hooks: %+v", hooks.PreApply)
-		}
-		if len(hooks.PostApply) > 0 {
-			t.Logf("PostApply hooks: %+v", hooks.PostApply)
-		}
-		assert.Empty(t, hooks.PreApply)
-		assert.Empty(t, hooks.PostApply)
-	})
 }

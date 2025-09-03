@@ -26,7 +26,6 @@ func TestNewOrchestrator(t *testing.T) {
 			opts: nil,
 			validate: func(t *testing.T, o *Orchestrator) {
 				assert.NotNil(t, o)
-				assert.NotNil(t, o.hookRunner)
 				assert.Nil(t, o.config)
 				assert.Nil(t, o.lock)
 				assert.False(t, o.dryRun)
@@ -168,73 +167,6 @@ func TestOptionFunctions(t *testing.T) {
 	})
 }
 
-// Test hook configuration structure only
-func TestOrchestratorHookConfiguration(t *testing.T) {
-	tests := []struct {
-		name         string
-		config       *config.Config
-		hasPreApply  bool
-		hasPostApply bool
-	}{
-		{
-			name:         "no hooks configured",
-			config:       &config.Config{},
-			hasPreApply:  false,
-			hasPostApply: false,
-		},
-		{
-			name: "pre-apply hook only",
-			config: &config.Config{
-				Hooks: config.Hooks{
-					PreApply: []config.Hook{{Command: "echo test"}},
-				},
-			},
-			hasPreApply:  true,
-			hasPostApply: false,
-		},
-		{
-			name: "post-apply hook only",
-			config: &config.Config{
-				Hooks: config.Hooks{
-					PostApply: []config.Hook{{Command: "echo done"}},
-				},
-			},
-			hasPreApply:  false,
-			hasPostApply: true,
-		},
-		{
-			name: "both hooks configured",
-			config: &config.Config{
-				Hooks: config.Hooks{
-					PreApply:  []config.Hook{{Command: "echo start"}},
-					PostApply: []config.Hook{{Command: "echo end"}},
-				},
-			},
-			hasPreApply:  true,
-			hasPostApply: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Just verify the configuration structure
-			if tt.hasPreApply {
-				assert.NotEmpty(t, tt.config.Hooks.PreApply)
-				assert.NotEmpty(t, tt.config.Hooks.PreApply[0].Command)
-			} else {
-				assert.Empty(t, tt.config.Hooks.PreApply)
-			}
-
-			if tt.hasPostApply {
-				assert.NotEmpty(t, tt.config.Hooks.PostApply)
-				assert.NotEmpty(t, tt.config.Hooks.PostApply[0].Command)
-			} else {
-				assert.Empty(t, tt.config.Hooks.PostApply)
-			}
-		})
-	}
-}
-
 func TestApply_SelectiveApplication(t *testing.T) {
 	// This test verifies the selective application logic without actually calling Apply
 	// which could modify the system. We test the flags behavior only.
@@ -274,7 +206,6 @@ func TestApply_SelectiveApplication(t *testing.T) {
 				packagesOnly: tt.packagesOnly,
 				dotfilesOnly: tt.dotfilesOnly,
 				dryRun:       true,
-				hookRunner:   NewHookRunner(),
 			}
 
 			// Test the logic without calling Apply

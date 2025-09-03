@@ -74,10 +74,6 @@ func (c *UserDefinedChecker) GetNonDefaultFields(cfg *Config) map[string]interfa
 		nonDefaults["dotfiles"] = cfg.Dotfiles
 	}
 
-	if !reflect.DeepEqual(cfg.Hooks, c.defaults.Hooks) {
-		nonDefaults["hooks"] = cfg.Hooks
-	}
-
 	return nonDefaults
 }
 
@@ -98,8 +94,6 @@ func (c *UserDefinedChecker) getDefaultFieldValue(fieldName string) interface{} 
 		return c.defaults.IgnorePatterns
 	case "dotfiles":
 		return c.defaults.Dotfiles
-	case "hooks":
-		return c.defaults.Hooks
 	case "diff_tool":
 		return c.defaults.DiffTool
 	default:

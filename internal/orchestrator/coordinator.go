@@ -20,7 +20,6 @@ type Orchestrator struct {
 	lock         lock.LockService
 	configDir    string
 	homeDir      string
-	hookRunner   *HookRunner
 	dryRun       bool
 	packagesOnly bool
 	dotfilesOnly bool
@@ -28,9 +27,7 @@ type Orchestrator struct {
 
 // New creates a new orchestrator instance with options
 func New(opts ...Option) *Orchestrator {
-	o := &Orchestrator{
-		hookRunner: NewHookRunner(),
-	}
+	o := &Orchestrator{}
 
 	for _, opt := range opts {
 		opt(o)
@@ -53,14 +50,6 @@ func (o *Orchestrator) Apply(ctx context.Context) (ApplyResult, error) {
 	// Store context
 	o.ctx = ctx
 
-	// Run pre-apply hooks
-	if o.config != nil && len(o.config.Hooks.PreApply) > 0 {
-		if err := o.hookRunner.RunPreApply(ctx, o.config.Hooks.PreApply); err != nil {
-			result.Error = fmt.Sprintf("pre-apply hook failed: %v", err)
-			return result, fmt.Errorf("pre-apply hook failed: %w", err)
-		}
-	}
-
 	// Apply packages (unless dotfiles-only)
 	if !o.dotfilesOnly {
 		packageResult, err := packages.Apply(ctx, o.configDir, o.config, o.dryRun)
@@ -76,14 +65,6 @@ func (o *Orchestrator) Apply(ctx context.Context) (ApplyResult, error) {
 		result.Dotfiles = &dotfileResult
 		if err != nil {
 			result.AddDotfileError(fmt.Errorf("dotfile apply failed: %w", err))
-		}
-	}
-
-	// Run post-apply hooks only if we had some success
-	if o.config != nil && len(o.config.Hooks.PostApply) > 0 {
-		if err := o.hookRunner.RunPostApply(ctx, o.config.Hooks.PostApply); err != nil {
-			// Post-apply hook failure is not fatal, just add to errors
-			result.Error = fmt.Sprintf("post-apply hook failed: %v", err)
 		}
 	}
 
