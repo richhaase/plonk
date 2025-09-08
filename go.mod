@@ -8,7 +8,7 @@ require (
 	github.com/golangci/golangci-lint v1.64.8
 	github.com/mattn/go-isatty v0.0.20
 	github.com/spf13/cobra v1.10.1
-	github.com/stretchr/testify v1.11.0
+	github.com/stretchr/testify v1.11.1
 	golang.org/x/text v0.28.0
 	golang.org/x/tools v0.36.0
 	golang.org/x/vuln v1.1.4
