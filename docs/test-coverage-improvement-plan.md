@@ -131,7 +131,7 @@ Use this grid to track the work, results, and learnings.
 | T10 | Dotfiles | Apply scenarios: add/update/unchanged/failed; ignore/expand | | Planned | +3% | | Optional: backup/overwrite checks |
 | F1 | Cleanup | Fix apply comment (remove hooks mention) | | Merged | 0% | ae68375 | Doc-only change in code |
 | F2 | Cleanup | Remove unused install metadata API (or wire into doctor/clone) | | Planned | +1% | | Shrinks surface, clarifies intent |
-| F3 | Cleanup | Unify/remove duplicate default constants | | Planned | 0% | | Single source of truth for defaults |
+| F3 | Cleanup | Unify/remove duplicate default constants | | Merged | 0% | 390db0b | Single source of truth for defaults |
 
 Legend for Status: Planned, In Progress, Merged, Deferred, Blocked.
 
