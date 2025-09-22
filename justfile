@@ -61,8 +61,11 @@ test-coverage:
     #!/usr/bin/env bash
     set -euo pipefail
     echo "Running unit tests with coverage..."
-    # Instrument all packages so cross-package coverage is counted
-    go test -coverpkg=./... -covermode=atomic -coverprofile=coverage.out ./...
+    # Build package list excluding internal/testutil from coverage
+    PKGS=$(go list ./... | grep -vE '/internal/testutil$' | tr '\n' ' ')
+    COVERPKG=$(echo "$PKGS" | tr ' ' ',' | sed 's/,$//')
+    # Run tests with cross-package coverage for selected packages only
+    go test -coverpkg="$COVERPKG" -covermode=atomic -coverprofile=coverage.out $PKGS
     # Generate textual summary and total coverage
     go tool cover -func=coverage.out > coverage.txt
     awk 'END{printf "Total coverage: %s\n", $3}' coverage.txt
