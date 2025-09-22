@@ -15,9 +15,10 @@ import (
 type ItemState string
 
 const (
-	StateManaged   ItemState = "managed"
-	StateMissing   ItemState = "missing"
-	StateDegraded  ItemState = "degraded"
+	StateManaged ItemState = "managed"
+	StateMissing ItemState = "missing"
+	// Align with resources.StateDegraded.String() which returns "drifted"
+	StateDegraded  ItemState = "drifted"
 	StateUntracked ItemState = "untracked"
 )
 
