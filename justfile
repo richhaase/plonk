@@ -58,10 +58,17 @@ test-bats:
 
 # Run tests with coverage
 test-coverage:
-    @echo "Running unit tests with coverage..."
-    @go test -coverprofile=coverage.out ./...
-    @go tool cover -html=coverage.out -o coverage.html
-    @echo "Unit tests passed! Coverage report: coverage.html"
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Running unit tests with coverage..."
+    # Instrument all packages so cross-package coverage is counted
+    go test -coverpkg=./... -covermode=atomic -coverprofile=coverage.out ./...
+    # Generate textual summary and total coverage
+    go tool cover -func=coverage.out > coverage.txt
+    awk 'END{printf "Total coverage: %s\n", $3}' coverage.txt
+    # Generate HTML report
+    go tool cover -html=coverage.out -o coverage.html
+    echo "Unit tests passed! Coverage report: coverage.html (see also coverage.txt)"
 
 # Clean build artifacts and test cache
 clean:
