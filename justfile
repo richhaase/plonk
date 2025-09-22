@@ -60,17 +60,20 @@ test-bats:
 test-coverage:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "Running unit tests with coverage..."
-    # Build package list excluding internal/testutil from coverage
-    PKGS=$(go list ./... | grep -vE '/internal/testutil$' | tr '\n' ' ')
-    COVERPKG=$(echo "$PKGS" | tr ' ' ',' | sed 's/,$//')
-    # Run tests with cross-package coverage for selected packages only
-    go test -coverpkg="$COVERPKG" -covermode=atomic -coverprofile=coverage.out $PKGS
+    echo "Running unit tests with coverage using go-acc..."
+    if ! command -v go-acc >/dev/null 2>&1; then
+        echo "go-acc not found. Install with: go install github.com/ory/go-acc@latest" >&2
+        exit 1
+    fi
+    # Use go-acc to aggregate cross-package coverage
+    go-acc ./... -- -covermode=atomic > coverage.out
     # Generate textual summary and total coverage
     go tool cover -func=coverage.out > coverage.txt
-    awk 'END{printf "Total coverage: %s\n", $3}' coverage.txt
+    awk 'END{printf "Total coverage (go tool cover): %s\n", $3}' coverage.txt
     # Generate HTML report
     go tool cover -html=coverage.out -o coverage.html
+    # Pretty report (per-package + least-covered files)
+    echo "" && echo "Pretty coverage summary:" && go run ./tools/covreport -profile=coverage.out -top=10 || true
     echo "Unit tests passed! Coverage report: coverage.html (see also coverage.txt)"
 
 # Clean build artifacts and test cache
