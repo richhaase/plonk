@@ -1,0 +1,75 @@
+//go:build test
+
+// Copyright (c) 2025 Rich Haase
+// Licensed under the MIT License. See LICENSE file in the project root for license information.
+
+package commands
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/richhaase/plonk/internal/output"
+	packages "github.com/richhaase/plonk/internal/resources/packages"
+	"github.com/richhaase/plonk/internal/testutil"
+)
+
+// CLITestEnv carries handles for configuring a CLI test run.
+type CLITestEnv struct {
+	T         *testing.T
+	HomeDir   string
+	ConfigDir string
+	Writer    *testutil.BufferWriter
+	Executor  *packages.MockCommandExecutor
+}
+
+// RunCLI runs the root cobra command with the provided args in an isolated
+// environment (temp HOME/PLONK_DIR, NO_COLOR). It captures output via a
+// test writer and uses a MockCommandExecutor for package manager calls.
+//
+// The optional setup callback can customize the mock executor responses or
+// seed files in the temp config/home directories before execution.
+func RunCLI(t *testing.T, args []string, setup func(env CLITestEnv)) (string, error) {
+	t.Helper()
+
+	// Create isolated HOME and PLONK_DIR
+	tempHome := t.TempDir()
+	tempConfig := filepath.Join(tempHome, ".config", "plonk")
+	if err := os.MkdirAll(tempConfig, 0o755); err != nil {
+		t.Fatalf("failed to create temp config dir: %v", err)
+	}
+
+	// Set environment for the command run
+	t.Setenv("HOME", tempHome)
+	t.Setenv("PLONK_DIR", tempConfig)
+	t.Setenv("NO_COLOR", "1")
+
+	// Capture output via test writer
+	w := testutil.NewBufferWriter(false)
+	output.SetWriter(w)
+	t.Cleanup(func() { output.SetWriter(&output.StdoutWriter{}) })
+
+	// Use mock executor for all package manager commands
+	mockExec := &packages.MockCommandExecutor{Responses: map[string]packages.CommandResponse{}}
+	packages.SetDefaultExecutor(mockExec)
+	t.Cleanup(func() { packages.SetDefaultExecutor(&packages.RealCommandExecutor{}) })
+
+	env := CLITestEnv{
+		T:         t,
+		HomeDir:   tempHome,
+		ConfigDir: tempConfig,
+		Writer:    w,
+		Executor:  mockExec,
+	}
+
+	if setup != nil {
+		setup(env)
+	}
+
+	// Run the CLI
+	rootCmd.SetArgs(args)
+	err := rootCmd.Execute()
+
+	return w.String(), err
+}
