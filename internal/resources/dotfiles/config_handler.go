@@ -189,6 +189,59 @@ func (ch *ConfigHandlerImpl) GetActualDotfiles(ctx context.Context) ([]resources
 		}
 	}
 
+	// Ensure we include any configured targets that exist even if not expanded by default
+	// This prevents false "missing" for nested paths (e.g., ~/.claude/*) when only top-level
+	// directories are scanned.
+	// Build a quick set of already discovered names to avoid duplicates
+	existing := make(map[string]struct{}, len(items))
+	for _, it := range items {
+		existing[it.Name] = struct{}{}
+	}
+
+	// Discover configured sources/targets from the plonk config directory
+	targets, err := ch.directoryScanner.ExpandConfigDirectory(cfg.IgnorePatterns)
+	if err == nil {
+		for _, destination := range targets {
+			// destination is like "~/.something/path" -> convert to rel name used by scanner
+			relName := destination
+			if strings.HasPrefix(relName, "~/") {
+				relName = relName[2:]
+			}
+
+			// Skip if we already discovered this entry via scanning
+			if _, seen := existing[relName]; seen {
+				continue
+			}
+
+			// Resolve absolute destination path and check existence
+			destPath, err := ch.pathResolver.GetDestinationPath(destination)
+			if err != nil {
+				continue
+			}
+			info, err := os.Stat(destPath)
+			if err != nil {
+				// Does not exist or not accessible; ignore here (will be treated as missing elsewhere)
+				continue
+			}
+
+			// Apply ignore filter (managed scan uses IgnorePatterns only)
+			if filter != nil && filter.ShouldSkip(relName, info) {
+				continue
+			}
+
+			// Add as an actual item so reconciliation can match it to desired
+			items = append(items, resources.Item{
+				Name:   relName,
+				State:  resources.StateUntracked,
+				Domain: "dotfile",
+				Path:   destPath,
+				Metadata: map[string]interface{}{
+					"path": destPath,
+				},
+			})
+		}
+	}
+
 	return items, nil
 }
 
