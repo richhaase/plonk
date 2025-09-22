@@ -129,7 +129,7 @@ Use this grid to track the work, results, and learnings.
 | T8 | Lock | Large lock file round-trip + atomic write sanity | | Planned | +2% | | Performance and stability check |
 | T9 | Output | Golden tests for apply/status/search/info/upgrade | | Planned | +4% | | Sorted, timestamp-normalized outputs |
 | T10 | Dotfiles | Apply scenarios: add/update/unchanged/failed; ignore/expand | | Planned | +3% | | Optional: backup/overwrite checks |
-| F1 | Cleanup | Fix apply comment (remove hooks mention) | | Planned | 0% | | Doc-only change in code |
+| F1 | Cleanup | Fix apply comment (remove hooks mention) | | Merged | 0% | ae68375 | Doc-only change in code |
 | F2 | Cleanup | Remove unused install metadata API (or wire into doctor/clone) | | Planned | +1% | | Shrinks surface, clarifies intent |
 | F3 | Cleanup | Unify/remove duplicate default constants | | Planned | 0% | | Single source of truth for defaults |
 
