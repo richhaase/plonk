@@ -104,7 +104,7 @@ plonk/
 - **Lock File**: Tracks package state in `plonk.lock`
 - **Filesystem as State**: Dotfile state is represented by `$PLONK_DIR` structure
 
-For detailed architecture information, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/code-map.md](docs/code-map.md).
+For detailed architecture information, see [docs/architecture.md](docs/architecture.md) and [docs/code-map.md](docs/code-map.md).
 
 ## Making Contributions
 
@@ -153,7 +153,7 @@ To add a new command:
 5. **Add command completion** if applicable
 6. **Write tests** for the command
 7. **Add documentation** in `docs/cmds/`
-8. **Update CLI reference** in `docs/CLI.md`
+8. **Update CLI reference** in `docs/cli.md`
 
 ## Testing
 
@@ -353,9 +353,9 @@ This makes it easier for both humans and AI to contribute effectively.
 
 ## Additional Resources
 
-- [Architecture Documentation](docs/ARCHITECTURE.md)
+- [Architecture Documentation](docs/architecture.md)
 - [Code Map](docs/code-map.md)
-- [CLI Reference](docs/CLI.md)
+- [CLI Reference](docs/cli.md)
 - [Configuration Guide](docs/configuration.md)
 - [Why Plonk?](docs/why-plonk.md)
 

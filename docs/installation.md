@@ -41,12 +41,9 @@ Plonk can manage packages from these language-specific package managers. They ca
 The easiest way to install plonk on macOS:
 
 ```bash
-# Add the tap and install
+# Add the tap and install (as a cask)
 brew tap richhaase/tap
-brew install plonk
-
-# Or install directly:
-brew install richhaase/tap/plonk
+brew install --cask richhaase/tap/plonk
 ```
 
 **Benefits of Homebrew installation:**
@@ -136,7 +133,7 @@ rm -rf ~/.config/plonk
 
 ```bash
 # Install plonk via Homebrew (recommended)
-brew install richhaase/tap/plonk
+brew install --cask richhaase/tap/plonk
 
 # Or via Go
 go install github.com/richhaase/plonk/cmd/plonk@latest

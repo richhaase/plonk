@@ -73,10 +73,6 @@ plonk config edit
   - `expand_directories` - Directories to scan for dotfiles
   - `ignore_patterns` - Patterns to exclude from dotfile operations
 
-- **Hooks:**
-  - `hooks.pre_apply` - Commands to run before apply
-  - `hooks.post_apply` - Commands to run after apply
-
 - **Tools:**
   - `diff_tool` - Tool for showing dotfile differences
 

@@ -55,7 +55,6 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 ### Orchestration (`internal/orchestrator/`)
 - `coordinator.go` - Main coordination logic
 - `reconcile.go` - Reconciliation orchestration
-- `hooks.go` - Pre/post hook management
 - `options.go` - Orchestrator options
 - `types.go` - Orchestrator type definitions
 
@@ -152,7 +151,6 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - Orchestration: `internal/orchestrator/coordinator.go`, `reconcile.go`
 - Package reconciliation: `internal/resources/packages/reconcile.go`, `apply.go`
 - Dotfile reconciliation: `internal/resources/dotfiles/reconcile.go`, `apply.go`
-- Hook execution: `internal/orchestrator/hooks.go`
 
 ### status command
 - Entry: `internal/commands/status.go`
