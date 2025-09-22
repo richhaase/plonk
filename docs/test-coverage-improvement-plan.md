@@ -120,7 +120,7 @@ Use this grid to track the work, results, and learnings.
 | ID | Workstream | Task | Owner | Status | Target Coverage Δ | PR/Issue | Notes/Learnings |
 |----|------------|------|-------|--------|-------------------|----------|-----------------|
 | T1 | Infra | Add `WithTemporaryRegistry` helper (tests-only) | | Merged | +2% | 77757c8 | Enables hermetic manager tests |
-| T2 | Infra | Add `RunCobra` CLI test harness | | Planned | +3% | | Captures CLI output, sets env + mocks |
+| T2 | Infra | Add `RunCobra` CLI test harness | | Merged | +3% | 08fb6c9 | Captures CLI output, sets env + mocks |
 | T3 | Orchestrator | Apply tests (packages-only, dotfiles-only, combined; dry-run/real; errors) | | Planned | +4% | | Assert `ApplyResult.Success` and error aggregation |
 | T4 | CLI | Integration tests: install/uninstall/status/apply (mock exec) | | Planned | +6% | | Validate JSON/YAML via unmarshal; golden for table |
 | T5 | Managers | Compliance suite scaffold + run for brew/npm/pipx/pnpm | | Planned | +6% | | Enforces uniform contract behavior |
