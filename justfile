@@ -65,15 +65,15 @@ test-coverage:
         echo "go-acc not found. Install with: go install github.com/ory/go-acc@latest" >&2
         exit 1
     fi
-    # Use go-acc to aggregate cross-package coverage
-    go-acc ./... -- -covermode=atomic > coverage.out
+    # Select packages (exclude internal/testutil and tools/* from coverage totals)
+    PKGS=$(go list ./... | grep -vE '/internal/testutil$|/tools($|/)')
+    # Use go-acc to aggregate cross-package coverage for the selected packages
+    go-acc -o coverage.out $PKGS -- -covermode=atomic
     # Generate textual summary and total coverage
     go tool cover -func=coverage.out > coverage.txt
     awk 'END{printf "Total coverage (go tool cover): %s\n", $3}' coverage.txt
     # Generate HTML report
     go tool cover -html=coverage.out -o coverage.html
-    # Pretty report (per-package + least-covered files)
-    echo "" && echo "Pretty coverage summary:" && go run ./tools/covreport -profile=coverage.out -top=10 || true
     echo "Unit tests passed! Coverage report: coverage.html (see also coverage.txt)"
 
 # Clean build artifacts and test cache
