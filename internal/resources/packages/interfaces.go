@@ -77,38 +77,3 @@ type HealthCheck struct {
 	Issues      []string `json:"issues,omitempty" yaml:"issues,omitempty"`
 	Suggestions []string `json:"suggestions,omitempty" yaml:"suggestions,omitempty"`
 }
-
-// InstallationInfo provides metadata about how a package manager can be installed
-type InstallationInfo struct {
-	Method          InstallMethod     `json:"method"`
-	IsIndependent   bool              `json:"is_independent"`
-	RequiresManager string            `json:"requires_manager,omitempty"`
-	SecurityLevel   SecurityLevel     `json:"security_level"`
-	PlatformNotes   map[string]string `json:"platform_notes,omitempty"`
-}
-
-// InstallMethod represents the method used to install a package manager
-type InstallMethod int
-
-const (
-	ShellScript InstallMethod = iota
-	BinaryDownload
-	PackageManagerInstall
-	RuntimeBundled
-	NotSupported
-)
-
-// SecurityLevel represents the security level of an installation method
-type SecurityLevel int
-
-const (
-	HighSecurity     SecurityLevel = iota // Signed releases, official sources
-	MediumSecurity                        // Hash verification, HTTPS
-	StandardSecurity                      // HTTPS only
-	ManualOnly                            // Requires manual installation
-)
-
-// SelfInstaller is an optional interface for package managers that provide installation metadata
-type SelfInstaller interface {
-	GetInstallationInfo() InstallationInfo
-}
