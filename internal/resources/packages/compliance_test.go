@@ -384,3 +384,62 @@ func TestCompliance_Uv_Minimal(t *testing.T) {
 		t.Fatalf("Upgrade: %v", err)
 	}
 }
+
+func TestCompliance_Conda_Minimal(t *testing.T) {
+	responses := map[string]CommandResponse{
+		// Availability
+		"conda --version": {Output: []byte("conda 24.7.0"), Error: nil},
+		// List installed (base env)
+		"conda list -n base --json": {Output: []byte(`[{"name":"numpy","version":"1.26.0","build":"","channel":"conda-forge"}]`), Error: nil},
+		// Search --json
+		"conda search numpy --json": {Output: []byte(`{"numpy":[{"name":"numpy","version":"1.26.0","summary":"NumPy","home":"https://numpy.org","depends":["python >=3.9"]}]}`), Error: nil},
+		// Info --json
+		"conda info --json": {Output: []byte(`{"platform":"osx-64","conda_version":"24.7.0","base_environment":"/opt/conda"}`), Error: nil},
+		// Install/Remove/Update
+		"conda install -n base -y numpy": {Output: []byte(""), Error: nil},
+		"conda remove -n base -y numpy":  {Output: []byte(""), Error: nil},
+		"conda update -n base -y numpy":  {Output: []byte(""), Error: nil},
+		// Info package --info path
+		"conda search numpy --info --json": {Output: []byte(`{"numpy":[{"name":"numpy","version":"1.26.0","summary":"NumPy","home":"https://numpy.org","depends":["python >=3.9"]}]}`), Error: nil},
+	}
+
+	complianceEnv(t, func(r *ManagerRegistry) {
+		r.Register("conda", func() PackageManager { return NewCondaManager() })
+	}, responses)
+
+	mgr, err := NewManagerRegistry().GetManager("conda")
+	if err != nil {
+		t.Fatalf("get manager: %v", err)
+	}
+	ctx := context.Background()
+
+	avail, err := mgr.IsAvailable(ctx)
+	if err != nil || !avail {
+		t.Fatalf("IsAvailable: %v", err)
+	}
+	list, err := mgr.ListInstalled(ctx)
+	if err != nil || len(list) == 0 {
+		t.Fatalf("ListInstalled: %v, %v", err, list)
+	}
+	inst, err := mgr.IsInstalled(ctx, "numpy")
+	if err != nil || !inst {
+		t.Fatalf("IsInstalled: %v, %v", err, inst)
+	}
+	ver, err := mgr.InstalledVersion(ctx, "numpy")
+	if err != nil || ver == "" {
+		t.Fatalf("InstalledVersion: %v, %q", err, ver)
+	}
+	info, err := mgr.Info(ctx, "numpy")
+	if err != nil || info == nil {
+		t.Fatalf("Info: %v, %v", err, info)
+	}
+	if err := mgr.Install(ctx, "numpy"); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if err := mgr.Uninstall(ctx, "numpy"); err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	if err := mgr.Upgrade(ctx, []string{"numpy"}); err != nil {
+		t.Fatalf("Upgrade: %v", err)
+	}
+}
