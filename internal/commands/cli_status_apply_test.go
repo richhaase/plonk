@@ -7,6 +7,7 @@ package commands
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -163,4 +164,77 @@ func TestCLI_Status_Table_GoldenSnippet(t *testing.T) {
 			t.Fatalf("expected output to contain %q, got:\n%s", w, out)
 		}
 	}
+}
+
+func TestCLI_Status_Flags_Table(t *testing.T) {
+	// packages only
+	out, err := RunCLI(t, []string{"status", "--packages"}, func(env CLITestEnv) {
+		seedLock(env.T, env.ConfigDir)
+		seedDotfile(env.T, env.ConfigDir, "zshrc", "export TEST=1\n")
+	})
+	if err != nil {
+		t.Fatalf("status --packages failed: %v\n%s", err, out)
+	}
+	if strings.Contains(out, "DOTFILES\n--------") {
+		t.Fatalf("expected DOTFILES section to be absent, got:\n%s", out)
+	}
+	if !strings.Contains(out, "PACKAGES\n--------") {
+		t.Fatalf("expected PACKAGES section to be present, got:\n%s", out)
+	}
+
+	// dotfiles only
+	out, err = RunCLI(t, []string{"status", "--dotfiles"}, func(env CLITestEnv) {
+		seedLock(env.T, env.ConfigDir)
+		seedDotfile(env.T, env.ConfigDir, "gitconfig", "[user]\n\tname = Test\n")
+	})
+	if err != nil {
+		t.Fatalf("status --dotfiles failed: %v\n%s", err, out)
+	}
+	if strings.Contains(out, "PACKAGES\n--------") {
+		t.Fatalf("expected PACKAGES section to be absent, got:\n%s", out)
+	}
+	if !strings.Contains(out, "DOTFILES\n--------") {
+		t.Fatalf("expected DOTFILES section to be present, got:\n%s", out)
+	}
+
+	// missing only
+	out, err = RunCLI(t, []string{"status", "--missing"}, func(env CLITestEnv) {
+		seedLock(env.T, env.ConfigDir)
+		seedDotfile(env.T, env.ConfigDir, "bashrc", "export X=1\n")
+	})
+	if err != nil {
+		t.Fatalf("status --missing failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "missing") {
+		t.Fatalf("expected 'missing' entries in table, got:\n%s", out)
+	}
+	if strings.Contains(out, " managed\n") {
+		t.Fatalf("unexpected 'managed' rows when --missing: \n%s", out)
+	}
+}
+
+func TestCLI_Apply_Table_DryRun_GoldenSnippet(t *testing.T) {
+	out, err := RunCLI(t, []string{"apply", "--dry-run"}, func(env CLITestEnv) {
+		seedLock(env.T, env.ConfigDir)
+		seedDotfile(env.T, env.ConfigDir, "zshrc", "export TEST=1\n")
+	})
+	if err != nil {
+		t.Fatalf("apply --dry-run failed: %v\n%s", err, out)
+	}
+	wants := []string{
+		"Plonk Apply (Dry Run)",
+		"Summary:",
+		"Packages:",
+		"Dotfiles:",
+	}
+	for _, w := range wants {
+		if !strings.Contains(out, w) {
+			t.Fatalf("expected output to contain %q, got:\n%s", w, out)
+		}
+	}
+	// sanity: show would-install at least once for packages or dotfiles
+	if !strings.Contains(out, "would install") && !strings.Contains(out, "would deploy") {
+		t.Fatalf("expected 'would install' or 'would deploy' markers, got:\n%s", out)
+	}
+	_ = fmt.Sprintf("") // keep fmt import
 }

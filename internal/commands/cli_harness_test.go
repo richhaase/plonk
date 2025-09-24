@@ -6,6 +6,8 @@
 package commands
 
 import (
+	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -67,9 +69,34 @@ func RunCLI(t *testing.T, args []string, setup func(env CLITestEnv)) (string, er
 		setup(env)
 	}
 
+	// Capture stdout (table outputs are printed directly to stdout)
+	oldStdout := os.Stdout
+	r, wpipe, errPipe := os.Pipe()
+	if errPipe != nil {
+		t.Fatalf("failed to create pipe: %v", errPipe)
+	}
+	os.Stdout = wpipe
+
 	// Run the CLI
 	rootCmd.SetArgs(args)
 	err := rootCmd.Execute()
 
-	return w.String(), err
+	// Restore stdout
+	_ = wpipe.Close()
+	os.Stdout = oldStdout
+
+	// Read captured stdout
+	var stdoutBuf bytes.Buffer
+	if _, copyErr := io.Copy(&stdoutBuf, r); copyErr != nil {
+		t.Fatalf("failed to read captured stdout: %v", copyErr)
+	}
+	_ = r.Close()
+
+	// Combine stdout (table) with writer buffer (progress/messages)
+	combined := stdoutBuf.String()
+	if wb := w.String(); wb != "" {
+		combined += wb
+	}
+
+	return combined, err
 }
