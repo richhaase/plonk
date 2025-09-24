@@ -41,7 +41,7 @@ func TestCLI_Apply_Table_DryRun_GoldenRows(t *testing.T) {
 	wants := []string{
 		"jq",            // package name appears
 		"would install", // package dry-run marker
-		"~/.zshrc",      // dotfile target in display
+		".zshrc",        // dotfile destination label in display
 		"would deploy",  // dotfile dry-run marker
 	}
 	for _, w := range wants {
