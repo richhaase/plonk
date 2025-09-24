@@ -132,7 +132,7 @@ Use this grid to track the work, results, and learnings.
 | T1 | Infra | Add `WithTemporaryRegistry` helper (tests-only) | | Merged | +2% | 77757c8 | Enables hermetic manager tests |
 | T2 | Infra | Add `RunCobra` CLI test harness | | Merged | +3% | 08fb6c9 | Captures CLI output, sets env + mocks |
 | T3 | Orchestrator | Apply tests (packages-only, dotfiles-only, combined; dry-run/real; errors) | | Merged | +4% | 1c2d7ab | Flows added with fake manager + temp FS |
-| T4 | CLI | Integration tests: install/uninstall/status/apply (mock exec) | | In Progress | +6% | | Several command tests present; expand coverage and formats |
+| T4 | CLI | Integration tests: install/uninstall/status/apply (mock exec) | | In Progress | +6% | 4b0f1e2 | Added status/apply JSON+YAML and table snippet; expand to others |
 | T5 | Managers | Compliance suite scaffold + run for brew/npm/pipx/pnpm | | Planned | +6% | | Enforces uniform contract behavior |
 | T6 | Timeouts | Timeout/cancellation unit tests for install/uninstall/search | | Planned | +3% | | Use blocking mocks + deadlines |
 | T7 | Reconcile | Property/fuzz tests for `ReconcileItems` (+WithKey) | | Planned | +2% | | Assert invariants and merges |
