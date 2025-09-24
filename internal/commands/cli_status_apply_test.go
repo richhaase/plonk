@@ -43,7 +43,7 @@ func osWriteFileAll(path, contents string) error {
 }
 
 func TestCLI_Status_JSON_and_YAML(t *testing.T) {
-	out, err := RunCLI(t, []string{"status", "-o", "json"}, func(env CLITestEnv) {
+	out, err := RunCLI(t, []string{"status", "-o", "json", "--packages", "--dotfiles"}, func(env CLITestEnv) {
 		seedLock(env.T, env.ConfigDir)
 		seedDotfile(env.T, env.ConfigDir, "zshrc", "export TEST=1\n")
 	})
@@ -94,7 +94,7 @@ func TestCLI_Status_JSON_and_YAML(t *testing.T) {
 	}
 
 	// YAML variant: basic shape check
-	outY, err := RunCLI(t, []string{"status", "-o", "yaml"}, nil)
+	outY, err := RunCLI(t, []string{"status", "-o", "yaml", "--packages", "--dotfiles"}, nil)
 	if err != nil {
 		t.Fatalf("status yaml failed: %v\n%s", err, outY)
 	}
