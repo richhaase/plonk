@@ -113,6 +113,16 @@ This document outlines a detailed, incremental plan to substantially improve aut
 
 ---
 
+## Current Status (as of 2025-09-24)
+
+- Infrastructure: Temporary registry helper and CLI harness are implemented and in use.
+- Orchestrator tests: Aggregation/structure and progress reporting covered; full package-only/dotfiles-only/dry-run flows still pending via mocks.
+- CLI tests: Multiple command tests exist (status, diff, upgrade, config edit, root); broadened coverage and output format assertions still in progress.
+- Dotfiles: Drift restore with backup verified in tests; expand to additional apply scenarios and ignore/expand interactions.
+- Timeouts/cancellation: Timeouts are wired; targeted cancellation tests not yet added across managers/commands.
+- Golden outputs: Not yet introduced; current tests assert substrings.
+- Property/fuzz and large lock file: Not yet added.
+
 ## Tracking Grid
 
 Use this grid to track the work, results, and learnings.
@@ -121,14 +131,14 @@ Use this grid to track the work, results, and learnings.
 |----|------------|------|-------|--------|-------------------|----------|-----------------|
 | T1 | Infra | Add `WithTemporaryRegistry` helper (tests-only) | | Merged | +2% | 77757c8 | Enables hermetic manager tests |
 | T2 | Infra | Add `RunCobra` CLI test harness | | Merged | +3% | 08fb6c9 | Captures CLI output, sets env + mocks |
-| T3 | Orchestrator | Apply tests (packages-only, dotfiles-only, combined; dry-run/real; errors) | | Planned | +4% | | Assert `ApplyResult.Success` and error aggregation |
-| T4 | CLI | Integration tests: install/uninstall/status/apply (mock exec) | | Planned | +6% | | Validate JSON/YAML via unmarshal; golden for table |
+| T3 | Orchestrator | Apply tests (packages-only, dotfiles-only, combined; dry-run/real; errors) | | Merged | +4% | 1c2d7ab | Flows added with fake manager + temp FS |
+| T4 | CLI | Integration tests: install/uninstall/status/apply (mock exec) | | In Progress | +6% | | Several command tests present; expand coverage and formats |
 | T5 | Managers | Compliance suite scaffold + run for brew/npm/pipx/pnpm | | Planned | +6% | | Enforces uniform contract behavior |
 | T6 | Timeouts | Timeout/cancellation unit tests for install/uninstall/search | | Planned | +3% | | Use blocking mocks + deadlines |
 | T7 | Reconcile | Property/fuzz tests for `ReconcileItems` (+WithKey) | | Planned | +2% | | Assert invariants and merges |
 | T8 | Lock | Large lock file round-trip + atomic write sanity | | Planned | +2% | | Performance and stability check |
 | T9 | Output | Golden tests for apply/status/search/info/upgrade | | Planned | +4% | | Sorted, timestamp-normalized outputs |
-| T10 | Dotfiles | Apply scenarios: add/update/unchanged/failed; ignore/expand | | Planned | +3% | | Optional: backup/overwrite checks |
+| T10 | Dotfiles | Apply scenarios: add/update/unchanged/failed; ignore/expand | | In Progress | +3% | | Drift restore + backups tested; broaden scenario matrix |
 | F1 | Cleanup | Fix apply comment (remove hooks mention) | | Merged | 0% | ae68375 | Doc-only change in code |
 | F2 | Cleanup | Remove unused install metadata API (or wire into doctor/clone) | | Merged | +1% | 9c6b400 | Shrinks surface, clarifies intent |
 | F3 | Cleanup | Unify/remove duplicate default constants | | Merged | 0% | 390db0b | Single source of truth for defaults |
@@ -147,8 +157,9 @@ Legend for Status: Planned, In Progress, Merged, Deferred, Blocked.
 
 ## Next Steps
 
-1. Implement registry helper and CLI harness (T1, T2)
-2. Add orchestrator apply tests and initial CLI tests (T3, T4)
-3. Stand up manager compliance suite and port first four managers (T5)
-4. Add timeout tests and golden outputs (T6, T9)
-5. Expand to reconciliation fuzzing, lock scaling, dotfiles scenarios (T7, T8, T10)
+1. Complete orchestrator apply flows with mocks (packages-only, dotfiles-only, combined, dry-run) (T3)
+2. Broaden CLI tests and add JSON/YAML assertions; prep first table golden (status/apply) (T4, T9)
+3. Stand up manager compliance suite scaffold; run for brew, npm, pipx, pnpm (T5)
+4. Add timeout/cancellation tests across install/uninstall/search paths (T6)
+5. Add property/fuzz tests for reconciliation; large-lock round-trip (T7, T8)
+6. Expand dotfiles apply scenarios (add/update/unchanged/ignore/expand) (T10)

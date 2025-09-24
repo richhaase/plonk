@@ -87,4 +87,3 @@ plonk apply --dotfiles
 ## Notes
 
 - The `--packages` and `--dotfiles` flags cannot be used together
-- Hooks are an experimental feature and may change in future versions

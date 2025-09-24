@@ -46,8 +46,7 @@ Key components:
 - `root.go` - Main command setup and global flags
 - Individual command files (`install.go`, `add.go`, `clone.go`, `diff.go`, etc.)
 - `shared.go` - Shared command logic
-- `helpers.go` - Command utilities
-- `package_validation.go` - Package validation utilities
+ - `helpers.go` - Command utilities
 
 ### 2. Orchestration Layer (`internal/orchestrator/`)
 
