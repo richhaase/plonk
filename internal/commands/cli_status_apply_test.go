@@ -238,3 +238,67 @@ func TestCLI_Apply_Table_DryRun_GoldenSnippet(t *testing.T) {
 	}
 	_ = fmt.Sprintf("") // keep fmt import
 }
+
+func TestCLI_Install_Uninstall_DryRun_JSON(t *testing.T) {
+	// install dry run
+	out, err := RunCLI(t, []string{"install", "-n", "-o", "json", "brew:jq", "npm:typescript"}, nil)
+	if err != nil {
+		t.Fatalf("install -n json failed: %v\n%s", err, out)
+	}
+
+	var install struct {
+		Command string `json:"command"`
+		DryRun  bool   `json:"dry_run"`
+		Results []struct {
+			Name    string `json:"name"`
+			Manager string `json:"manager"`
+			Status  string `json:"status"`
+		} `json:"results"`
+	}
+	if e := json.Unmarshal([]byte(out), &install); e != nil {
+		t.Fatalf("invalid json: %v\n%s", e, out)
+	}
+	if install.Command != "install" || !install.DryRun {
+		t.Fatalf("unexpected install payload: %+v", install)
+	}
+	// Expect would-add entries present
+	sawWould := false
+	for _, r := range install.Results {
+		if r.Status == "would-add" {
+			sawWould = true
+			break
+		}
+	}
+	if !sawWould {
+		t.Fatalf("expected at least one would-add, got: %+v", install.Results)
+	}
+
+	// uninstall dry run
+	out, err = RunCLI(t, []string{"uninstall", "-n", "-o", "json", "brew:jq"}, nil)
+	if err != nil {
+		t.Fatalf("uninstall -n json failed: %v\n%s", err, out)
+	}
+	var uninstall struct {
+		Command string `json:"command"`
+		DryRun  bool   `json:"dry_run"`
+		Results []struct {
+			Status string `json:"status"`
+		} `json:"results"`
+	}
+	if e := json.Unmarshal([]byte(out), &uninstall); e != nil {
+		t.Fatalf("invalid json: %v\n%s", e, out)
+	}
+	if uninstall.Command != "uninstall" || !uninstall.DryRun {
+		t.Fatalf("unexpected uninstall payload: %+v", uninstall)
+	}
+	sawWouldRemove := false
+	for _, r := range uninstall.Results {
+		if r.Status == "would-remove" {
+			sawWouldRemove = true
+			break
+		}
+	}
+	if !sawWouldRemove {
+		t.Fatalf("expected would-remove, got: %+v", uninstall.Results)
+	}
+}
