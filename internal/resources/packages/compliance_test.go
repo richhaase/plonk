@@ -112,6 +112,8 @@ func TestCompliance_Npm_Minimal(t *testing.T) {
 		"npm list -g --depth=0 --json": {Output: []byte(`{"dependencies":{"typescript":{"version":"5.4.2"}}}`), Error: nil},
 		// IsInstalled checks
 		"npm list -g typescript": {Output: []byte("/usr/local/lib\n└── typescript@5.4.2"), Error: nil},
+		// InstalledVersion JSON query
+		"npm list -g typescript --depth=0 --json": {Output: []byte(`{"dependencies":{"typescript":{"version":"5.4.2"}}}`), Error: nil},
 		// Info
 		"npm view typescript --json": {Output: []byte(`{"name":"typescript","version":"5.4.2"}`), Error: nil},
 		// Search
