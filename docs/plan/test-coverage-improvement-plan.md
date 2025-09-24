@@ -139,7 +139,7 @@ Use this grid to track the work, results, and learnings.
 | T5 | Managers | Compliance suite scaffold + run across managers | | Merged | +4–6% | d2f1d52, adca498, d2f1d52 | Brew, npm, pnpm, pipx, cargo, uv, conda covered; parser/error-path tests added for brew/npm/conda |
 | T6 | Timeouts | Timeout/cancellation unit tests for install/uninstall/search | | Merged | +3% | 2e1c0aa | Implemented slow manager + CLI timeout tests |
 | T7 | Reconcile | Property/fuzz tests for `ReconcileItems` (+WithKey) | | Merged | +2% | 7b9f1f2 | Invariants on partition/merge; fuzz seed added |
-| T8 | Lock | Large lock file round-trip + atomic write sanity | | Planned | +2% | | Performance and stability check |
+| T8 | Lock | Large lock file round-trip + atomic write sanity | | Merged | +2% | 0f1a6de | 1k-entry round-trip and concurrent atomic read/write |
 | T9 | Output | Golden tests for apply/status/search/info/upgrade | | Planned | +4% | | Sorted, timestamp-normalized outputs |
 | T10 | Dotfiles | Apply scenarios: add/update/unchanged/failed; ignore/expand | | In Progress | +3% | | Drift restore + backups tested; broaden scenario matrix |
 | F1 | Cleanup | Fix apply comment (remove hooks mention) | | Merged | 0% | ae68375 | Doc-only change in code |
