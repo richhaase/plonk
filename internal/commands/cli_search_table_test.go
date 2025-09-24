@@ -42,8 +42,8 @@ func TestCLI_Search_Table_FoundMultiple_Brew_Npm(t *testing.T) {
 	// Expect grouped results section
 	wants := []string{
 		"Results by manager:",
-		"Brew:",
-		"Npm:",
+		"brew:",
+		"npm:",
 		"plonk install brew:jq",
 		"plonk install npm:jq",
 	}

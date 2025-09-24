@@ -21,10 +21,9 @@ func TestCLI_Info_Table_Managed_Brew(t *testing.T) {
 	wants := []string{
 		"Package:",
 		"jq",
-		"Manager:",
-		"brew",
 		"Status:",
 		"Managed by plonk",
+		"Package 'jq' is managed by plonk via brew",
 	}
 	for _, w := range wants {
 		if !strings.Contains(out, w) {
