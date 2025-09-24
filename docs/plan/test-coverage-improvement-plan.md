@@ -118,9 +118,11 @@ This document outlines a detailed, incremental plan to substantially improve aut
 - Infrastructure: Temporary registry helper and CLI harness implemented (stdout capture + flag reset).
 - Orchestrator tests: Package-only/dotfiles-only/combined/dry-run flows validated with fake manager; aggregation + progress covered.
 - CLI tests: Broad coverage added (status/apply/install/uninstall/info/search/dotfiles/config/doctor/upgrade/diff). JSON/YAML validated; core table snippets asserted.
-- Coverage snapshot: Total ~58.4%; internal/commands ~27.9%.
-- Timeouts/cancellation: Timeouts are wired; targeted cancellation tests still pending.
-- Property/fuzz and large lock file: Not yet added.
+- Managers (T5): Compliance suite exercised for brew, npm, pnpm, pipx, cargo, uv, conda. Parser/error-path tests added for brew/npm/conda. Operations flow tests added for InstallPackages/UninstallPackages with lock updates.
+- Output formatters (T9): Added tests for upgrade, doctor, search, info, config, package operations.
+- Coverage snapshot: Total ~61.2%; internal/commands ~27.9%; internal/output ~5.7%; internal/resources/packages ~29.3%.
+- Timeouts/cancellation: Timeouts wired; targeted cancellation tests pending (T6).
+- Property/fuzz and large lock file: Not yet added (T7, T8).
 
 ## Tracking Grid
 
@@ -132,7 +134,7 @@ Use this grid to track the work, results, and learnings.
 | T2 | Infra | Add `RunCobra` CLI test harness | | Merged | +3% | 08fb6c9 | Captures CLI output, sets env + mocks |
 | T3 | Orchestrator | Apply tests (packages-only, dotfiles-only, combined; dry-run/real; errors) | | Merged | +4% | 1c2d7ab | Flows added with fake manager + temp FS |
 | T4 | CLI | Integration tests: install/uninstall/status/apply (mock exec) | | Merged | +8–10% | 4b0f1e2, ba45d3d, 3ca9ea5, ed5bc96, f762cf9, 47a25f6, 684b692 | Added status/apply JSON+YAML + table snippets; install/uninstall dry-run JSON; info/search (brew, npm) JSON; dotfiles JSON; config show JSON; doctor JSON; upgrade JSON; diff (safe tool) |
-| T5 | Managers | Compliance suite scaffold + run for brew/npm/pipx/pnpm | | Planned | +6% | | Enforces uniform contract behavior |
+| T5 | Managers | Compliance suite scaffold + run across managers | | Merged | +4–6% | d2f1d52, adca498, d2f1d52 | Brew, npm, pnpm, pipx, cargo, uv, conda covered; parser/error-path tests added for brew/npm/conda |
 | T6 | Timeouts | Timeout/cancellation unit tests for install/uninstall/search | | Planned | +3% | | Use blocking mocks + deadlines |
 | T7 | Reconcile | Property/fuzz tests for `ReconcileItems` (+WithKey) | | Planned | +2% | | Assert invariants and merges |
 | T8 | Lock | Large lock file round-trip + atomic write sanity | | Planned | +2% | | Performance and stability check |
