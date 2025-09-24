@@ -115,12 +115,11 @@ This document outlines a detailed, incremental plan to substantially improve aut
 
 ## Current Status (as of 2025-09-24)
 
-- Infrastructure: Temporary registry helper and CLI harness are implemented and in use.
-- Orchestrator tests: Aggregation/structure and progress reporting covered; full package-only/dotfiles-only/dry-run flows still pending via mocks.
-- CLI tests: Multiple command tests exist (status, diff, upgrade, config edit, root); broadened coverage and output format assertions still in progress.
-- Dotfiles: Drift restore with backup verified in tests; expand to additional apply scenarios and ignore/expand interactions.
-- Timeouts/cancellation: Timeouts are wired; targeted cancellation tests not yet added across managers/commands.
-- Golden outputs: Not yet introduced; current tests assert substrings.
+- Infrastructure: Temporary registry helper and CLI harness implemented (stdout capture + flag reset).
+- Orchestrator tests: Package-only/dotfiles-only/combined/dry-run flows validated with fake manager; aggregation + progress covered.
+- CLI tests: Broad coverage added (status/apply/install/uninstall/info/search/dotfiles/config/doctor/upgrade/diff). JSON/YAML validated; core table snippets asserted.
+- Coverage snapshot: Total ~58.4%; internal/commands ~27.9%.
+- Timeouts/cancellation: Timeouts are wired; targeted cancellation tests still pending.
 - Property/fuzz and large lock file: Not yet added.
 
 ## Tracking Grid
@@ -132,7 +131,7 @@ Use this grid to track the work, results, and learnings.
 | T1 | Infra | Add `WithTemporaryRegistry` helper (tests-only) | | Merged | +2% | 77757c8 | Enables hermetic manager tests |
 | T2 | Infra | Add `RunCobra` CLI test harness | | Merged | +3% | 08fb6c9 | Captures CLI output, sets env + mocks |
 | T3 | Orchestrator | Apply tests (packages-only, dotfiles-only, combined; dry-run/real; errors) | | Merged | +4% | 1c2d7ab | Flows added with fake manager + temp FS |
-| T4 | CLI | Integration tests: install/uninstall/status/apply (mock exec) | | In Progress | +6% | 4b0f1e2, ba45d3d | Added status/apply JSON+YAML + table snippets; install/uninstall dry-run JSON |
+| T4 | CLI | Integration tests: install/uninstall/status/apply (mock exec) | | Merged | +8–10% | 4b0f1e2, ba45d3d, 3ca9ea5, ed5bc96, f762cf9, 47a25f6, 684b692 | Added status/apply JSON+YAML + table snippets; install/uninstall dry-run JSON; info/search (brew, npm) JSON; dotfiles JSON; config show JSON; doctor JSON; upgrade JSON; diff (safe tool) |
 | T5 | Managers | Compliance suite scaffold + run for brew/npm/pipx/pnpm | | Planned | +6% | | Enforces uniform contract behavior |
 | T6 | Timeouts | Timeout/cancellation unit tests for install/uninstall/search | | Planned | +3% | | Use blocking mocks + deadlines |
 | T7 | Reconcile | Property/fuzz tests for `ReconcileItems` (+WithKey) | | Planned | +2% | | Assert invariants and merges |
