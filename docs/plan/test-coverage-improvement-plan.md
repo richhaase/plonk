@@ -1,5 +1,7 @@
 # Plonk Test Coverage Improvement Plan
 
+Initial test coverage: 47.5%
+
 This document outlines a detailed, incremental plan to substantially improve automated test coverage and test quality for Plonk, while ensuring tests never modify a developer’s real system.
 
 ## Objectives
@@ -135,7 +137,7 @@ Use this grid to track the work, results, and learnings.
 | T3 | Orchestrator | Apply tests (packages-only, dotfiles-only, combined; dry-run/real; errors) | | Merged | +4% | 1c2d7ab | Flows added with fake manager + temp FS |
 | T4 | CLI | Integration tests: install/uninstall/status/apply (mock exec) | | Merged | +8–10% | 4b0f1e2, ba45d3d, 3ca9ea5, ed5bc96, f762cf9, 47a25f6, 684b692 | Added status/apply JSON+YAML + table snippets; install/uninstall dry-run JSON; info/search (brew, npm) JSON; dotfiles JSON; config show JSON; doctor JSON; upgrade JSON; diff (safe tool) |
 | T5 | Managers | Compliance suite scaffold + run across managers | | Merged | +4–6% | d2f1d52, adca498, d2f1d52 | Brew, npm, pnpm, pipx, cargo, uv, conda covered; parser/error-path tests added for brew/npm/conda |
-| T6 | Timeouts | Timeout/cancellation unit tests for install/uninstall/search | | Planned | +3% | | Use blocking mocks + deadlines |
+| T6 | Timeouts | Timeout/cancellation unit tests for install/uninstall/search | | Merged | +3% | 2e1c0aa | Implemented slow manager + CLI timeout tests |
 | T7 | Reconcile | Property/fuzz tests for `ReconcileItems` (+WithKey) | | Planned | +2% | | Assert invariants and merges |
 | T8 | Lock | Large lock file round-trip + atomic write sanity | | Planned | +2% | | Performance and stability check |
 | T9 | Output | Golden tests for apply/status/search/info/upgrade | | Planned | +4% | | Sorted, timestamp-normalized outputs |
@@ -161,6 +163,6 @@ Legend for Status: Planned, In Progress, Merged, Deferred, Blocked.
 1. Complete orchestrator apply flows with mocks (packages-only, dotfiles-only, combined, dry-run) (T3)
 2. Broaden CLI tests and add JSON/YAML assertions; prep first table golden (status/apply) (T4, T9)
 3. Stand up manager compliance suite scaffold; run for brew, npm, pipx, pnpm (T5)
-4. Add timeout/cancellation tests across install/uninstall/search paths (T6)
+4. (Done) Timeout/cancellation tests across install/uninstall/search paths (T6)
 5. Add property/fuzz tests for reconciliation; large-lock round-trip (T7, T8)
 6. Expand dotfiles apply scenarios (add/update/unchanged/ignore/expand) (T10)
