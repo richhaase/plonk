@@ -184,3 +184,203 @@ func TestCompliance_Npm_Minimal(t *testing.T) {
 		t.Fatalf("Upgrade: %v", err)
 	}
 }
+
+func TestCompliance_Pnpm_Minimal(t *testing.T) {
+	responses := map[string]CommandResponse{
+		// Availability
+		"pnpm --version": {Output: []byte("9.0.0"), Error: nil},
+		// List installed (array JSON with dependencies)
+		"pnpm list -g --json": {Output: []byte(`[{"path":"/usr/local","private":false,"dependencies":{"typescript":{"version":"5.4.2"}}}]`), Error: nil},
+		// Info view
+		"pnpm view typescript --json": {Output: []byte(`{"name":"typescript","version":"5.4.2","description":"TS"}`), Error: nil},
+		// Install/Uninstall/Upgrade
+		"pnpm add -g typescript":    {Output: []byte(""), Error: nil},
+		"pnpm remove -g typescript": {Output: []byte(""), Error: nil},
+		"pnpm update -g typescript": {Output: []byte(""), Error: nil},
+	}
+
+	complianceEnv(t, func(r *ManagerRegistry) {
+		r.Register("pnpm", func() PackageManager { return NewPnpmManager() })
+	}, responses)
+
+	mgr, err := NewManagerRegistry().GetManager("pnpm")
+	if err != nil {
+		t.Fatalf("get manager: %v", err)
+	}
+	ctx := context.Background()
+
+	avail, err := mgr.IsAvailable(ctx)
+	if err != nil || !avail {
+		t.Fatalf("IsAvailable: %v", err)
+	}
+	list, err := mgr.ListInstalled(ctx)
+	if err != nil || len(list) == 0 {
+		t.Fatalf("ListInstalled: %v, %v", err, list)
+	}
+	inst, err := mgr.IsInstalled(ctx, "typescript")
+	if err != nil || !inst {
+		t.Fatalf("IsInstalled: %v, %v", err, inst)
+	}
+	ver, err := mgr.InstalledVersion(ctx, "typescript")
+	if err != nil || ver == "" {
+		t.Fatalf("InstalledVersion: %v, %q", err, ver)
+	}
+	info, err := mgr.Info(ctx, "typescript")
+	if err != nil || info == nil {
+		t.Fatalf("Info: %v, %v", err, info)
+	}
+	if err := mgr.Install(ctx, "typescript"); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if err := mgr.Uninstall(ctx, "typescript"); err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	if err := mgr.Upgrade(ctx, []string{"typescript"}); err != nil {
+		t.Fatalf("Upgrade: %v", err)
+	}
+}
+
+func TestCompliance_Pipx_Minimal(t *testing.T) {
+	responses := map[string]CommandResponse{
+		// Availability
+		"pipx --version": {Output: []byte("1.4.3"), Error: nil},
+		// List installed
+		"pipx list --short": {Output: []byte("httpx 0.27.0\n"), Error: nil},
+		// Install/Uninstall/Upgrade
+		"pipx install httpx":   {Output: []byte(""), Error: nil},
+		"pipx uninstall httpx": {Output: []byte(""), Error: nil},
+		"pipx upgrade httpx":   {Output: []byte(""), Error: nil},
+	}
+
+	complianceEnv(t, func(r *ManagerRegistry) {
+		r.Register("pipx", func() PackageManager { return NewPipxManager() })
+	}, responses)
+
+	mgr, err := NewManagerRegistry().GetManager("pipx")
+	if err != nil {
+		t.Fatalf("get manager: %v", err)
+	}
+	ctx := context.Background()
+
+	avail, err := mgr.IsAvailable(ctx)
+	if err != nil || !avail {
+		t.Fatalf("IsAvailable: %v", err)
+	}
+	list, err := mgr.ListInstalled(ctx)
+	if err != nil || len(list) == 0 {
+		t.Fatalf("ListInstalled: %v, %v", err, list)
+	}
+	inst, err := mgr.IsInstalled(ctx, "httpx")
+	if err != nil || !inst {
+		t.Fatalf("IsInstalled: %v, %v", err, inst)
+	}
+	if err := mgr.Install(ctx, "httpx"); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if err := mgr.Uninstall(ctx, "httpx"); err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	if err := mgr.Upgrade(ctx, []string{"httpx"}); err != nil {
+		t.Fatalf("Upgrade: %v", err)
+	}
+}
+
+func TestCompliance_Cargo_Minimal(t *testing.T) {
+	responses := map[string]CommandResponse{
+		// Availability
+		"cargo --version": {Output: []byte("cargo 1.78"), Error: nil},
+		// List installed
+		"cargo install --list": {Output: []byte("ripgrep v14.0.3:\n    rg"), Error: nil},
+		// Search/info
+		"cargo search ripgrep --limit 1": {Output: []byte("ripgrep = \"14.0.3\"  # fast search"), Error: nil},
+		// Install/Uninstall
+		"cargo install ripgrep":   {Output: []byte(""), Error: nil},
+		"cargo uninstall ripgrep": {Output: []byte(""), Error: nil},
+	}
+
+	complianceEnv(t, func(r *ManagerRegistry) {
+		r.Register("cargo", func() PackageManager { return NewCargoManager() })
+	}, responses)
+
+	mgr, err := NewManagerRegistry().GetManager("cargo")
+	if err != nil {
+		t.Fatalf("get manager: %v", err)
+	}
+	ctx := context.Background()
+
+	avail, err := mgr.IsAvailable(ctx)
+	if err != nil || !avail {
+		t.Fatalf("IsAvailable: %v", err)
+	}
+	list, err := mgr.ListInstalled(ctx)
+	if err != nil || len(list) == 0 {
+		t.Fatalf("ListInstalled: %v, %v", err, list)
+	}
+	inst, err := mgr.IsInstalled(ctx, "ripgrep")
+	if err != nil || !inst {
+		t.Fatalf("IsInstalled: %v, %v", err, inst)
+	}
+	ver, err := mgr.InstalledVersion(ctx, "ripgrep")
+	if err != nil || ver == "" {
+		t.Fatalf("InstalledVersion: %v, %q", err, ver)
+	}
+	info, err := mgr.Info(ctx, "ripgrep")
+	if err != nil || info == nil {
+		t.Fatalf("Info: %v, %v", err, info)
+	}
+	if err := mgr.Install(ctx, "ripgrep"); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if err := mgr.Uninstall(ctx, "ripgrep"); err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+}
+
+func TestCompliance_Uv_Minimal(t *testing.T) {
+	responses := map[string]CommandResponse{
+		// Availability
+		"uv --version": {Output: []byte("0.2.0"), Error: nil},
+		// List installed
+		"uv tool list": {Output: []byte("httpx v0.27.0"), Error: nil},
+		// Install/Uninstall/Upgrade
+		"uv tool install httpx":   {Output: []byte(""), Error: nil},
+		"uv tool uninstall httpx": {Output: []byte(""), Error: nil},
+		"uv tool upgrade httpx":   {Output: []byte(""), Error: nil},
+	}
+
+	complianceEnv(t, func(r *ManagerRegistry) {
+		r.Register("uv", func() PackageManager { return NewUvManager() })
+	}, responses)
+
+	mgr, err := NewManagerRegistry().GetManager("uv")
+	if err != nil {
+		t.Fatalf("get manager: %v", err)
+	}
+	ctx := context.Background()
+
+	avail, err := mgr.IsAvailable(ctx)
+	if err != nil || !avail {
+		t.Fatalf("IsAvailable: %v", err)
+	}
+	list, err := mgr.ListInstalled(ctx)
+	if err != nil || len(list) == 0 {
+		t.Fatalf("ListInstalled: %v, %v", err, list)
+	}
+	inst, err := mgr.IsInstalled(ctx, "httpx")
+	if err != nil || !inst {
+		t.Fatalf("IsInstalled: %v, %v", err, inst)
+	}
+	ver, err := mgr.InstalledVersion(ctx, "httpx")
+	if err != nil || ver == "" {
+		t.Fatalf("InstalledVersion: %v, %q", err, ver)
+	}
+	if err := mgr.Install(ctx, "httpx"); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if err := mgr.Uninstall(ctx, "httpx"); err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+	if err := mgr.Upgrade(ctx, []string{"httpx"}); err != nil {
+		t.Fatalf("Upgrade: %v", err)
+	}
+}
