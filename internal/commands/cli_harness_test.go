@@ -85,6 +85,12 @@ func RunCLI(t *testing.T, args []string, setup func(env CLITestEnv)) (string, er
 	_ = statusCmd.Flags().Set("unmanaged", "false")
 	_ = statusCmd.Flags().Set("missing", "false")
 
+	// Reset dotfiles flags (mutually exclusive group) to avoid sticky state
+	_ = dotfilesCmd.Flags().Set("managed", "false")
+	_ = dotfilesCmd.Flags().Set("missing", "false")
+	_ = dotfilesCmd.Flags().Set("untracked", "false")
+	_ = dotfilesCmd.Flags().Set("verbose", "false")
+
 	// Capture stdout (table outputs are printed directly to stdout)
 	oldStdout := os.Stdout
 	r, wpipe, errPipe := os.Pipe()
