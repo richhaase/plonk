@@ -67,6 +67,24 @@ func RunCLI(t *testing.T, args []string, setup func(env CLITestEnv)) (string, er
 		setup(env)
 	}
 
+	// If caller didn't specify an output format, default to table to avoid sticky flag state
+	hasOutputFlag := false
+	for i := 0; i < len(args); i++ {
+		if args[i] == "-o" || args[i] == "--output" {
+			hasOutputFlag = true
+			break
+		}
+	}
+	if !hasOutputFlag {
+		// Best effort: reset persistent flag
+		_ = rootCmd.PersistentFlags().Set("output", "table")
+	}
+	// Reset status flags to defaults to avoid sticky state across invocations
+	_ = statusCmd.Flags().Set("packages", "false")
+	_ = statusCmd.Flags().Set("dotfiles", "false")
+	_ = statusCmd.Flags().Set("unmanaged", "false")
+	_ = statusCmd.Flags().Set("missing", "false")
+
 	// Capture stdout (table outputs are printed directly to stdout)
 	oldStdout := os.Stdout
 	r, wpipe, errPipe := os.Pipe()
