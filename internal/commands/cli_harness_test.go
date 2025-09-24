@@ -79,17 +79,21 @@ func RunCLI(t *testing.T, args []string, setup func(env CLITestEnv)) (string, er
 		// Best effort: reset persistent flag
 		_ = rootCmd.PersistentFlags().Set("output", "table")
 	}
-	// Reset status flags to defaults to avoid sticky state across invocations
-	_ = statusCmd.Flags().Set("packages", "false")
-	_ = statusCmd.Flags().Set("dotfiles", "false")
-	_ = statusCmd.Flags().Set("unmanaged", "false")
-	_ = statusCmd.Flags().Set("missing", "false")
+	// Reset status flags (value + Changed=false)
+	for _, name := range []string{"packages", "dotfiles", "unmanaged", "missing"} {
+		if f := statusCmd.Flags().Lookup(name); f != nil {
+			_ = f.Value.Set(f.DefValue)
+			f.Changed = false
+		}
+	}
 
-	// Reset dotfiles flags (mutually exclusive group) to avoid sticky state
-	_ = dotfilesCmd.Flags().Set("managed", "false")
-	_ = dotfilesCmd.Flags().Set("missing", "false")
-	_ = dotfilesCmd.Flags().Set("untracked", "false")
-	_ = dotfilesCmd.Flags().Set("verbose", "false")
+	// Reset dotfiles flags (mutually exclusive group): value + Changed=false
+	for _, name := range []string{"managed", "missing", "untracked", "verbose"} {
+		if f := dotfilesCmd.Flags().Lookup(name); f != nil {
+			_ = f.Value.Set(f.DefValue)
+			f.Changed = false
+		}
+	}
 
 	// Capture stdout (table outputs are printed directly to stdout)
 	oldStdout := os.Stdout
