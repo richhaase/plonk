@@ -115,11 +115,8 @@ func (g *GoInstallManager) ListInstalled(ctx context.Context) ([]string, error) 
 
 // isGoBinary checks if a file is a Go binary using go version -m
 func (g *GoInstallManager) isGoBinary(ctx context.Context, binaryPath string) bool {
-	// Use a short timeout for this check
-	checkCtx, cancel := context.WithTimeout(ctx, 2*1000*1000*1000) // 2 seconds
-	defer cancel()
-
-	_, err := ExecuteCommand(checkCtx, g.binary, "version", "-m", binaryPath)
+	// Use provided context; caller controls timeout/cancellation
+	_, err := ExecuteCommand(ctx, g.binary, "version", "-m", binaryPath)
 	// If go version -m succeeds, it's a Go binary
 	return err == nil
 }
