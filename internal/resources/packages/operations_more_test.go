@@ -2,6 +2,7 @@ package packages
 
 import (
 	"context"
+	"os"
 	"strings"
 	"testing"
 
@@ -128,6 +129,23 @@ func TestInstall_GoSourcePath_SavedAndBinaryNamedInLock(t *testing.T) {
 	}
 	if lk.Resources[0].Metadata["source_path"] != src {
 		t.Fatalf("missing source_path")
+	}
+}
+
+func TestInstall_LockWriteFailure(t *testing.T) {
+	configDir := t.TempDir()
+	// Make directory read-only to trigger writer failure
+	_ = os.Chmod(configDir, 0500)
+	WithTemporaryRegistry(t, func(r *ManagerRegistry) {
+		r.Register("brew", func() PackageManager { return &fakeAvailMgr{available: true} })
+	})
+
+	res, err := InstallPackages(context.Background(), configDir, []string{"jq"}, InstallOptions{Manager: "brew"})
+	if err != nil {
+		t.Fatalf("InstallPackages: %v", err)
+	}
+	if res[0].Status != "failed" || res[0].Error == nil {
+		t.Fatalf("expected failed due to lock write failure, got: %+v", res[0])
 	}
 }
 
