@@ -6,13 +6,21 @@ package dotfiles
 import (
 	"context"
 
+	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/resources"
 )
 
 // Reconcile performs dotfile reconciliation (backward compatibility)
 func Reconcile(ctx context.Context, homeDir, configDir string) (resources.Result, error) {
+	// Backward-compatible wrapper that loads config
+	cfg := config.LoadWithDefaults(configDir)
+	return ReconcileWithConfig(ctx, homeDir, configDir, cfg)
+}
+
+// ReconcileWithConfig reconciles dotfiles using injected config
+func ReconcileWithConfig(ctx context.Context, homeDir, configDir string, cfg *config.Config) (resources.Result, error) {
 	// Create dotfile resource
-	manager := NewManager(homeDir, configDir)
+	manager := NewManagerWithConfig(homeDir, configDir, cfg)
 	dotfileResource := NewDotfileResource(manager)
 
 	// Get configured dotfiles and set as desired

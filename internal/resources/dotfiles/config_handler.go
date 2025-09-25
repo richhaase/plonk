@@ -21,9 +21,10 @@ type ConfigHandlerImpl struct {
 	pathResolver     PathResolver
 	directoryScanner DirectoryScanner
 	fileComparator   FileComparator
+	cfg              *config.Config
 }
 
-// NewConfigHandler creates a new config handler
+// NewConfigHandler creates a new config handler (loads config internally for backwards compatibility)
 func NewConfigHandler(homeDir, configDir string, resolver PathResolver, scanner DirectoryScanner, comparator FileComparator) *ConfigHandlerImpl {
 	return &ConfigHandlerImpl{
 		homeDir:          homeDir,
@@ -31,13 +32,26 @@ func NewConfigHandler(homeDir, configDir string, resolver PathResolver, scanner 
 		pathResolver:     resolver,
 		directoryScanner: scanner,
 		fileComparator:   comparator,
+		cfg:              config.LoadWithDefaults(configDir),
+	}
+}
+
+// NewConfigHandlerWithConfig creates a new config handler with injected config
+func NewConfigHandlerWithConfig(homeDir, configDir string, cfg *config.Config, resolver PathResolver, scanner DirectoryScanner, comparator FileComparator) *ConfigHandlerImpl {
+	return &ConfigHandlerImpl{
+		homeDir:          homeDir,
+		configDir:        configDir,
+		pathResolver:     resolver,
+		directoryScanner: scanner,
+		fileComparator:   comparator,
+		cfg:              cfg,
 	}
 }
 
 // GetConfiguredDotfiles returns dotfiles defined in configuration
 func (ch *ConfigHandlerImpl) GetConfiguredDotfiles() ([]resources.Item, error) {
-	// Load config to get ignore patterns
-	cfg := config.LoadWithDefaults(ch.configDir)
+	// Use injected config for ignore patterns
+	cfg := ch.cfg
 
 	targets, err := ch.directoryScanner.ExpandConfigDirectory(cfg.IgnorePatterns)
 	if err != nil {
@@ -101,8 +115,8 @@ func (ch *ConfigHandlerImpl) GetConfiguredDotfiles() ([]resources.Item, error) {
 
 // GetActualDotfiles returns dotfiles currently present in the home directory
 func (ch *ConfigHandlerImpl) GetActualDotfiles(ctx context.Context) ([]resources.Item, error) {
-	// Load config to get ignore patterns and expand directories
-	cfg := config.LoadWithDefaults(ch.configDir)
+	// Use injected config to get ignore patterns and expand directories
+	cfg := ch.cfg
 
 	// Only use IgnorePatterns for managed dotfile scanning
 	// UnmanagedFilters should NOT be applied here as they're only for unmanaged file discovery

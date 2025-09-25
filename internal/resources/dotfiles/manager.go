@@ -48,6 +48,27 @@ func NewManager(homeDir, configDir string) *Manager {
 	}
 }
 
+// NewManagerWithConfig creates a new dotfile manager with injected config
+func NewManagerWithConfig(homeDir, configDir string, cfg *config.Config) *Manager {
+	pathResolver := NewPathResolver(homeDir, configDir)
+	pathValidator := NewPathValidator(homeDir, configDir)
+	directoryScanner := NewDirectoryScanner(homeDir, configDir, pathValidator, pathResolver)
+	fileComparator := NewFileComparator()
+	configHandler := NewConfigHandlerWithConfig(homeDir, configDir, cfg, pathResolver, directoryScanner, fileComparator)
+	fileOperations := NewFileOperations(pathResolver)
+
+	return &Manager{
+		homeDir:          homeDir,
+		configDir:        configDir,
+		pathResolver:     pathResolver,
+		pathValidator:    pathValidator,
+		directoryScanner: directoryScanner,
+		configHandler:    configHandler,
+		fileComparator:   fileComparator,
+		fileOperations:   fileOperations,
+	}
+}
+
 // HomeDir returns the home directory path
 func (m *Manager) HomeDir() string {
 	return m.homeDir
