@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
@@ -62,8 +61,8 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	cfg := config.LoadWithDefaults(configDir)
 
 	// Create context with configurable timeout
-	searchTimeout := time.Duration(cfg.OperationTimeout) * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), searchTimeout)
+	t := config.GetTimeouts(cfg)
+	ctx, cancel := context.WithTimeout(context.Background(), t.Operation)
 	defer cancel()
 
 	// Perform search
@@ -185,8 +184,8 @@ func searchAllManagersParallel(ctx context.Context, cfg *config.Config, packageN
 			defer wg.Done()
 
 			// Create a child context for this manager with configurable timeout
-			managerTimeout := time.Duration(cfg.OperationTimeout) * time.Second
-			managerCtx, cancel := context.WithTimeout(ctx, managerTimeout)
+			t := config.GetTimeouts(cfg)
+			managerCtx, cancel := context.WithTimeout(ctx, t.Operation)
 			defer cancel()
 
 			results, err := mgr.Search(managerCtx, packageName)
