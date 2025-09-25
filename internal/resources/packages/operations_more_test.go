@@ -136,6 +136,7 @@ func TestInstall_LockWriteFailure(t *testing.T) {
 	configDir := t.TempDir()
 	// Make directory read-only to trigger writer failure
 	_ = os.Chmod(configDir, 0500)
+	t.Cleanup(func() { _ = os.Chmod(configDir, 0700) })
 	WithTemporaryRegistry(t, func(r *ManagerRegistry) {
 		r.Register("brew", func() PackageManager { return &fakeAvailMgr{available: true} })
 	})
@@ -194,6 +195,7 @@ func TestUninstall_LockWriteFailure_Error(t *testing.T) {
 
 	// Make directory read-only so RemovePackage's write fails
 	_ = os.Chmod(configDir, 0500)
+	t.Cleanup(func() { _ = os.Chmod(configDir, 0700) })
 	WithTemporaryRegistry(t, func(r *ManagerRegistry) {
 		r.Register("brew", func() PackageManager { return &fakeAvailMgr{available: true} })
 	})
