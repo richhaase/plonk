@@ -95,7 +95,7 @@ func TestUpgrade_ManagerUnavailableAndMixedResults(t *testing.T) {
 		t.Fatalf("expected non-nil error due to failures, got nil. Output:\n%s", out)
 	}
 	// Ensure summary line present and mentions failed/skipped/upgraded in some combination
-	if !containsAll(out, []string{"Summary:", "failed", "skipped"}) {
+	if !containsAll(out, []string{"Summary:", "Failed:", "Skipped:"}) {
 		t.Fatalf("expected summary with failed and skipped, got:\n%s", out)
 	}
 }
