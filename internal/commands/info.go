@@ -49,30 +49,12 @@ func runInfo(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid output format: %w", err)
 	}
 
-	packageSpec := args[0]
+	// Load configuration (not strictly required but consistent with other commands)
+	configDir := config.GetDefaultConfigDirectory()
+	_ = config.LoadWithDefaults(configDir)
 
-	// Parse prefix syntax
-	manager, packageName := parsePackageSpec(packageSpec)
-
-	// Validate manager if prefix specified
-	if manager != "" && !isValidManager(manager) {
-		errorMsg := formatNotFoundError("package manager", manager, getValidManagers())
-		return fmt.Errorf("%s", errorMsg)
-	}
-
-	// Create context
-	ctx := context.Background()
-
-	// Perform info lookup
-	var infoResult InfoOutput
-	if manager != "" {
-		// Get info from specific manager
-		infoResult, err = getInfoFromSpecificManager(ctx, manager, packageName)
-	} else {
-		// Use priority logic: managed → installed → available
-		infoResult, err = getInfoWithPriorityLogic(ctx, packageName)
-	}
-
+	// Execute pure info logic
+	infoResult, err := Info(cmd.Context(), args[0])
 	if err != nil {
 		return err
 	}
@@ -86,6 +68,25 @@ func runInfo(cmd *cobra.Command, args []string) error {
 	}
 	formatter := output.NewInfoFormatter(formatterData)
 	return output.RenderOutput(formatter, format)
+}
+
+// Info performs the info lookup and returns typed results (pure logic)
+func Info(ctx context.Context, packageSpec string) (InfoOutput, error) {
+	// Parse prefix syntax
+	manager, packageName := parsePackageSpec(packageSpec)
+
+	// Validate manager if prefix specified
+	if manager != "" && !isValidManager(manager) {
+		errorMsg := formatNotFoundError("package manager", manager, getValidManagers())
+		return InfoOutput{}, fmt.Errorf("%s", errorMsg)
+	}
+
+	if manager != "" {
+		// Get info from specific manager
+		return getInfoFromSpecificManager(ctx, manager, packageName)
+	}
+	// Use priority logic: managed → installed → available
+	return getInfoWithPriorityLogic(ctx, packageName)
 }
 
 // getInfoFromSpecificManager gets info from a specific package manager only

@@ -28,7 +28,15 @@ These are excellent “footholds” for testability. The refactors below leverag
   - Deterministic upgrade ordering and injected registry for upgrade path.
   - Focused unit tests for injection and ordering.
 
-Next: Phase 2 (optional) to normalize timeout threading with a `Timeouts` struct.
+Phase 2 completed. See `docs/plans/test-refactor-phase-2.md`.
+- Centralized timeout handling via `config.GetTimeouts` and wired into install/uninstall/search and doctor.
+- Clone flow refactored to a thin wrapper around `SetupFromClonedRepo`.
+
+Phase 3 completed.
+- Introduced `FileWriter` interface for dotfiles; `AtomicFileWriter` implements it.
+- `FileOperations` now depends on `FileWriter`; added `NewFileOperationsWithWriter` for injection in tests.
+
+Next: Phase 4 – extract pure logic from commands (search/info) with wrappers retaining CLI behavior.
 
 ## High-Impact, Low-Risk Refactors
 
