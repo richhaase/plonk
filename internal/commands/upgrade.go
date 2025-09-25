@@ -6,6 +6,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -281,8 +282,9 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Execute upgrades
-	results, err := executeUpgrade(cmd.Context(), spec, cfg, lockService)
+	// Execute upgrades with injected registry
+	registry := packages.NewManagerRegistry()
+	results, err := executeUpgrade(cmd.Context(), spec, cfg, lockService, registry)
 	if err != nil {
 		return err
 	}
@@ -333,23 +335,31 @@ type upgradeSummary struct {
 }
 
 // executeUpgrade performs the actual upgrade operations
-func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, lockService lock.LockService) (upgradeResults, error) {
+func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, lockService lock.LockService, registry *packages.ManagerRegistry) (upgradeResults, error) {
 	results := upgradeResults{
 		Results: []packageUpgradeResult{},
 		Summary: upgradeSummary{},
 	}
 
-	registry := packages.NewManagerRegistry()
 	totalPackages := 0
-	for _, packages := range spec.ManagerTargets {
-		totalPackages += len(packages)
+	for _, pkgs := range spec.ManagerTargets {
+		totalPackages += len(pkgs)
 	}
 	results.Summary.Total = totalPackages
 
 	// Create spinner manager for all operations
 	spinnerManager := output.NewSpinnerManager(totalPackages)
 
-	for managerName, packageNames := range spec.ManagerTargets {
+	// Iterate managers in deterministic order
+	managerNames := make([]string, 0, len(spec.ManagerTargets))
+	for name := range spec.ManagerTargets {
+		managerNames = append(managerNames, name)
+	}
+	sort.Strings(managerNames)
+
+	for _, managerName := range managerNames {
+		packageNames := append([]string(nil), spec.ManagerTargets[managerName]...)
+		sort.Strings(packageNames)
 		// Get the package manager
 		mgr, err := registry.GetManager(managerName)
 		if err != nil {

@@ -38,6 +38,10 @@ Thumbs.db
 dist/
 bin/
 
+# Local build cache
+.gocache/
+.gocache
+
 # Security reports (if generated locally)
 security-*.json
 *.sarif

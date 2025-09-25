@@ -18,6 +18,18 @@ These are excellent “footholds” for testability. The refactors below leverag
 
 ---
 
+## Status Update (2025-09-25)
+
+- Phase 1 completed. See details in `docs/plans/test-refactor-phase-1.md`.
+- Implemented:
+  - Interface‑first helpers for install/uninstall (`lock.LockService`).
+  - `InstallPackagesWith` / `UninstallPackagesWith` with explicit cfg/lock/registry injection.
+  - Removed hardcoded inner 5‑minute timeouts; callers own timeouts.
+  - Deterministic upgrade ordering and injected registry for upgrade path.
+  - Focused unit tests for injection and ordering.
+
+Next: Phase 2 (optional) to normalize timeout threading with a `Timeouts` struct.
+
 ## High-Impact, Low-Risk Refactors
 
 ### 1) Accept Interfaces, Not Concretes, In Hot Paths
