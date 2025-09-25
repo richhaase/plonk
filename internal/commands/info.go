@@ -6,6 +6,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
@@ -219,7 +220,15 @@ func getInfoWithPriorityLogic(ctx context.Context, packageName string) (InfoOutp
 		}, nil
 	}
 
-	for name, manager := range availableManagers {
+	// Deterministic iteration over managers
+	names := make([]string, 0, len(availableManagers))
+	for name := range availableManagers {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		manager := availableManagers[name]
 		installed, err := manager.IsInstalled(ctx, packageName)
 		if err != nil {
 			continue // Skip managers that fail
@@ -245,7 +254,8 @@ func getInfoWithPriorityLogic(ctx context.Context, packageName string) (InfoOutp
 	}
 
 	// 3. Package not installed, search for available packages
-	for name, manager := range availableManagers {
+	for _, name := range names {
+		manager := availableManagers[name]
 		info, err := manager.Info(ctx, packageName)
 		if err != nil {
 			continue // Package not found in this manager

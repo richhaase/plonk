@@ -5,6 +5,7 @@ package output
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -51,14 +52,19 @@ func (f SearchFormatter) TableOutput() string {
 	case "found-multiple":
 		output.WriteString(fmt.Sprintf("%s\n", s.Message))
 		output.WriteString("\nResults by manager:\n")
-		for _, result := range s.Results {
+		// Ensure deterministic display
+		results := append([]SearchResultEntry(nil), s.Results...)
+		sort.Slice(results, func(i, j int) bool { return results[i].Manager < results[j].Manager })
+		for _, result := range results {
 			output.WriteString(fmt.Sprintf("\n%s:\n", result.Manager))
-			for _, pkg := range result.Packages {
+			pkgs := append([]string(nil), result.Packages...)
+			sort.Strings(pkgs)
+			for _, pkg := range pkgs {
 				output.WriteString(fmt.Sprintf("  • %s\n", pkg))
 			}
 		}
 		output.WriteString(fmt.Sprintf("\nInstall examples:\n"))
-		for _, result := range s.Results {
+		for _, result := range results {
 			output.WriteString(fmt.Sprintf("  • plonk install %s:%s\n", result.Manager, s.Package))
 		}
 

@@ -6,6 +6,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 
@@ -223,6 +224,12 @@ func searchAllManagersParallel(ctx context.Context, cfg *config.Config, packageN
 				Packages: result.Packages,
 			})
 		}
+	}
+
+	// Sort results for determinism
+	sort.Slice(searchResults, func(i, j int) bool { return searchResults[i].Manager < searchResults[j].Manager })
+	for i := range searchResults {
+		sort.Strings(searchResults[i].Packages)
 	}
 
 	// Build response

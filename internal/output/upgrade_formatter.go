@@ -5,6 +5,7 @@ package output
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"golang.org/x/text/cases"
@@ -38,9 +39,17 @@ func (f UpgradeFormatter) TableOutput() string {
 		managerResults[result.Manager] = append(managerResults[result.Manager], result)
 	}
 
-	// Display results grouped by package manager
+	// Display results grouped by package manager in deterministic order
 	titleCaser := cases.Title(language.English)
-	for manager, results := range managerResults {
+	managers := make([]string, 0, len(managerResults))
+	for m := range managerResults {
+		managers = append(managers, m)
+	}
+	sort.Strings(managers)
+
+	for _, manager := range managers {
+		results := managerResults[manager]
+		sort.Slice(results, func(i, j int) bool { return results[i].Package < results[j].Package })
 		output += fmt.Sprintf("%s:\n", titleCaser.String(manager))
 
 		for _, result := range results {
