@@ -284,7 +284,7 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 
 	// Execute upgrades with injected registry
 	registry := packages.NewManagerRegistry()
-	results, err := executeUpgrade(cmd.Context(), spec, cfg, lockService, registry)
+	results, err := Upgrade(cmd.Context(), spec, cfg, lockService, registry)
 	if err != nil {
 		return err
 	}
@@ -308,6 +308,13 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// Upgrade executes the upgrade operation using the provided dependencies.
+// It is a thin wrapper around the internal execution function to enable
+// dependency injection in tests and other callers.
+func Upgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, lockService lock.LockService, registry *packages.ManagerRegistry) (upgradeResults, error) {
+	return executeUpgrade(ctx, spec, cfg, lockService, registry)
 }
 
 // packageUpgradeResult represents the result of upgrading a single package
