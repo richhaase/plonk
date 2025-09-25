@@ -185,3 +185,27 @@ func TestUninstall_NotManaged_PassThrough(t *testing.T) {
 		t.Fatalf("expected removed without error, got: %+v", res[0])
 	}
 }
+
+func TestUninstall_LockWriteFailure_Error(t *testing.T) {
+	configDir := t.TempDir()
+	// Seed lock as managed item
+	svc := lock.NewYAMLLockService(configDir)
+	_ = svc.AddPackage("brew", "jq", "1.0.0", map[string]interface{}{"manager": "brew", "name": "jq"})
+
+	// Make directory read-only so RemovePackage's write fails
+	_ = os.Chmod(configDir, 0500)
+	WithTemporaryRegistry(t, func(r *ManagerRegistry) {
+		r.Register("brew", func() PackageManager { return &fakeAvailMgr{available: true} })
+	})
+
+	res, err := UninstallPackages(context.Background(), configDir, []string{"jq"}, UninstallOptions{Manager: "brew"})
+	if err != nil {
+		t.Fatalf("UninstallPackages: %v", err)
+	}
+	if res[0].Status != "removed" || res[0].Error == nil {
+		t.Fatalf("expected removed with lock update error, got: %+v", res[0])
+	}
+	if !strings.Contains(res[0].Error.Error(), "failed to update lock") {
+		t.Fatalf("expected failed to update lock detail, got: %v", res[0].Error)
+	}
+}
