@@ -6,7 +6,6 @@ package resources_test
 import (
 	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/richhaase/plonk/internal/resources"
 )
@@ -114,7 +113,7 @@ func TestReconcileItems_Properties_Randomized(t *testing.T) {
 }
 
 func TestReconcileItemsWithKey_Properties_Randomized(t *testing.T) {
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	r := rand.New(rand.NewSource(42))
 	key := func(it resources.Item) string { return it.Manager + ":" + it.Name }
 
 	for iter := 0; iter < 200; iter++ {
