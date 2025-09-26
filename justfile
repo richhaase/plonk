@@ -60,15 +60,47 @@ test-bats:
 test-coverage:
     #!/usr/bin/env bash
     set -euo pipefail
-    echo "Running unit tests with coverage..."
-    # Instrument all packages so cross-package coverage is counted
-    go test -coverpkg=./... -covermode=atomic -coverprofile=coverage.out ./...
+    echo "Running unit tests with normalized coverage..."
+
+    # Normalize the denominator by excluding low-signal packages from coverage totals.
+    # Override with COVER_EXCLUDE_REGEX to customize (must match go list package import paths).
+    # Default excludes:
+    #   - internal/testutil: helper/test-only utilities
+    #   - tools: tool stubs not part of runtime
+    #   - cmd/*: CLI entry binaries (thin wrappers over libraries)
+    COVER_EXCLUDE_REGEX=${COVER_EXCLUDE_REGEX:-'/(internal/testutil|tools|cmd/.*)$'}
+
+    # Resolve the list of packages to test and instrument
+    mapfile -t PKGS < <(go list ./... | grep -Ev "${COVER_EXCLUDE_REGEX}")
+    if [ ${#PKGS[@]} -eq 0 ]; then
+        echo "No packages selected for coverage after filtering. Check COVER_EXCLUDE_REGEX." >&2
+        exit 2
+    fi
+
+    # Build comma-separated coverpkg list from the filtered packages
+    COVERPKG=$(printf '%s,' "${PKGS[@]}" | sed 's/,$//')
+
+    # Run tests with cross-package instrumentation over the normalized package set
+    go test -coverpkg="${COVERPKG}" -covermode=atomic -coverprofile=coverage.out "${PKGS[@]}"
+
     # Generate textual summary and total coverage
     go tool cover -func=coverage.out > coverage.txt
-    awk 'END{printf "Total coverage: %s\n", $3}' coverage.txt
+    awk 'END{printf "Total coverage (normalized): %s\n", $3}' coverage.txt
+
     # Generate HTML report
     go tool cover -html=coverage.out -o coverage.html
     echo "Unit tests passed! Coverage report: coverage.html (see also coverage.txt)"
+
+# Run tests with coverage over all packages (unfiltered)
+test-coverage-all:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Running unit tests with full-repo coverage..."
+    go test -coverpkg=./... -covermode=atomic -coverprofile=coverage-all.out ./...
+    go tool cover -func=coverage-all.out > coverage-all.txt
+    awk 'END{printf "Total coverage (all packages): %s\n", $3}' coverage-all.txt
+    go tool cover -html=coverage-all.out -o coverage-all.html
+    echo "Coverage (all) report: coverage-all.html (see also coverage-all.txt)"
 
 # Clean build artifacts and test cache
 clean:
