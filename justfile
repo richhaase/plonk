@@ -106,7 +106,8 @@ test-coverage-all:
 clean:
     @echo "Cleaning build artifacts and caches..."
     rm -rf bin dist
-    rm -f coverage.out coverage.html
+    rm -f coverage.out coverage.html coverage.txt
+    rm -f coverage-all.out coverage-all.html coverage-all.txt
     go clean
     go clean -testcache
     @echo "Build artifacts and test cache cleaned"
