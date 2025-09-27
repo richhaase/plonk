@@ -15,7 +15,7 @@ import (
 // Apply applies dotfile configuration and returns the result
 func Apply(ctx context.Context, configDir, homeDir string, cfg *config.Config, dryRun bool) (output.DotfileResults, error) {
 	// Create dotfile resource
-	manager := NewManager(homeDir, configDir)
+	manager := NewManagerWithConfig(homeDir, configDir, cfg)
 	dotfileResource := NewDotfileResource(manager)
 
 	// Get configured dotfiles and set as desired

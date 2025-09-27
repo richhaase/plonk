@@ -50,9 +50,14 @@ func (o *Orchestrator) Apply(ctx context.Context) (ApplyResult, error) {
 	// Store context
 	o.ctx = ctx
 
+	// Derive per-domain timeouts
+	t := config.GetTimeouts(o.config)
+
 	// Apply packages (unless dotfiles-only)
 	if !o.dotfilesOnly {
-		packageResult, err := packages.Apply(ctx, o.configDir, o.config, o.dryRun)
+		pctx, pcancel := context.WithTimeout(ctx, t.Package)
+		packageResult, err := packages.Apply(pctx, o.configDir, o.config, o.dryRun)
+		pcancel()
 		result.Packages = &packageResult
 		if err != nil {
 			result.AddPackageError(fmt.Errorf("package apply failed: %w", err))
@@ -61,7 +66,9 @@ func (o *Orchestrator) Apply(ctx context.Context) (ApplyResult, error) {
 
 	// Apply dotfiles (unless packages-only)
 	if !o.packagesOnly {
-		dotfileResult, err := dotfiles.Apply(ctx, o.configDir, o.homeDir, o.config, o.dryRun)
+		dctx, dcancel := context.WithTimeout(ctx, t.Dotfile)
+		dotfileResult, err := dotfiles.Apply(dctx, o.configDir, o.homeDir, o.config, o.dryRun)
+		dcancel()
 		result.Dotfiles = &dotfileResult
 		if err != nil {
 			result.AddDotfileError(fmt.Errorf("dotfile apply failed: %w", err))

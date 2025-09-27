@@ -85,8 +85,8 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	// Load config for ignore patterns with defaults
 	cfg := config.LoadWithDefaults(configDir)
 
-	// Create dotfile manager
-	manager := dotfiles.NewManager(homeDir, configDir)
+	// Create dotfile manager with injected config
+	manager := dotfiles.NewManagerWithConfig(homeDir, configDir, cfg)
 
 	// Configure options
 	opts := dotfiles.AddOptions{

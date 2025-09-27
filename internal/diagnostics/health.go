@@ -43,9 +43,14 @@ type HealthReport struct {
 
 // RunHealthChecks performs comprehensive system health checks
 func RunHealthChecks() HealthReport {
+	// Backward-compatible default timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+	return RunHealthChecksWithContext(ctx)
+}
 
+// RunHealthChecksWithContext performs system health checks using the provided context
+func RunHealthChecksWithContext(ctx context.Context) HealthReport {
 	report := HealthReport{
 		Overall: HealthStatus{
 			Status:  "healthy",

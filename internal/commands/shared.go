@@ -51,9 +51,10 @@ func runDotList(cmd *cobra.Command, args []string) error {
 	homeDir := config.GetHomeDir()
 	configDir := config.GetConfigDir()
 
-	// Reconcile dotfiles
+	// Reconcile dotfiles with injected config
+	cfg := config.LoadWithDefaults(configDir)
 	ctx := context.Background()
-	domainResult, err := dotfiles.Reconcile(ctx, homeDir, configDir)
+	domainResult, err := dotfiles.ReconcileWithConfig(ctx, homeDir, configDir, cfg)
 	if err != nil {
 		return err
 	}

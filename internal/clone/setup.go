@@ -67,7 +67,16 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 		output.Printf("Created default plonk.yaml configuration\n")
 	}
 
-	// For clone command, detect required managers from lock file
+	if err := SetupFromClonedRepo(ctx, plonkDir, hasConfig, cfg.NoApply); err != nil {
+		return err
+	}
+	output.Printf("Setup complete! Your dotfiles are now managed by plonk.\n")
+	return nil
+}
+
+// SetupFromClonedRepo performs post-clone setup: detect managers, install, and apply
+func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool, noApply bool) error {
+	// Detect required managers from lock file
 	output.StageUpdate("Detecting required package managers...")
 	lockPath := filepath.Join(plonkDir, "plonk.lock")
 	detectedManagers, err := DetectRequiredManagers(lockPath)
@@ -84,43 +93,34 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 		}
 
 		// Install only detected managers
-		if err := installDetectedManagers(ctx, detectedManagers, cfg); err != nil {
+		if err := installDetectedManagers(ctx, detectedManagers, Config{}); err != nil {
 			return fmt.Errorf("failed to install required tools: %w", err)
 		}
 	} else {
 		output.Printf("No package managers detected from lock file.\n")
 	}
 
-	// If we had existing config and not skipping apply, run plonk apply
-	if hasConfig && !cfg.NoApply {
+	// Optionally run apply
+	if hasConfig && !noApply {
 		output.StageUpdate("Running plonk apply...")
-
-		// Run apply
 		homeDir := config.GetHomeDir()
 		cfg := config.LoadWithDefaults(plonkDir)
-
-		// Create orchestrator
 		orch := orchestrator.New(
 			orchestrator.WithConfig(cfg),
 			orchestrator.WithConfigDir(plonkDir),
 			orchestrator.WithHomeDir(homeDir),
 			orchestrator.WithDryRun(false),
 		)
-
-		// Run apply
 		result, err := orch.Apply(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to apply configuration: %w", err)
 		}
-
 		if result.Success {
 			output.Printf("Applied configuration successfully\n")
 		} else {
 			output.Printf("Apply completed with some issues\n")
 		}
 	}
-
-	output.Printf("Setup complete! Your dotfiles are now managed by plonk.\n")
 	return nil
 }
 

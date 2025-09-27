@@ -86,9 +86,10 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	// Load configuration (may fail if config is invalid, but we handle this gracefully)
 	_, configLoadErr := config.Load(configDir)
 
-	// Reconcile all domains
+	// Reconcile all domains with injected config
+	cfg := config.LoadWithDefaults(configDir)
 	ctx := context.Background()
-	results, err := orchestrator.ReconcileAll(ctx, homeDir, configDir)
+	results, err := orchestrator.ReconcileAllWithConfig(ctx, homeDir, configDir, cfg)
 	if err != nil {
 		return err
 	}

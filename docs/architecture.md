@@ -46,14 +46,12 @@ Key components:
 - `root.go` - Main command setup and global flags
 - Individual command files (`install.go`, `add.go`, `clone.go`, `diff.go`, etc.)
 - `shared.go` - Shared command logic
-- `helpers.go` - Command utilities
-- `package_validation.go` - Package validation utilities
+ - `helpers.go` - Command utilities
 
 ### 2. Orchestration Layer (`internal/orchestrator/`)
 
 The orchestrator coordinates complex operations across multiple resource types:
 - Manages the overall apply workflow through the coordinator
-- Handles hooks execution
 - Coordinates between package and dotfile reconciliation
 - Manages orchestrator options and types
 - Ensures proper error handling
@@ -172,21 +170,24 @@ Plonk uses two distinct storage mechanisms:
 - YAML file containing detailed package information
 - Updated atomically with each install/uninstall operation
 - Tracks name, version, and installation timestamp
-- Example structure:
+- Example structure (v2 schema):
   ```yaml
-  version: 1
-  packages:
-    brew:
-      - name: ripgrep
-        installed_at: 2025-07-27T11:01:03.519704-06:00
+  version: 2
+  resources:
+    - type: package
+      id: brew:ripgrep
+      metadata:
+        manager: brew
+        name: ripgrep
         version: 14.1.1
-      - name: neovim
-        installed_at: 2025-07-27T11:00:51.028708-06:00
-        version: 0.11.3
-    npm:
-      - name: '@google/gemini-cli'
-        installed_at: 2025-07-28T15:11:08.74692-06:00
+      installed_at: "2025-07-27T11:01:03-06:00"
+    - type: package
+      id: npm:@google/gemini-cli
+      metadata:
+        manager: npm
+        name: "@google/gemini-cli"
         version: 0.1.14
+      installed_at: "2025-07-28T15:11:08-06:00"
   ```
 
 **Dotfile State** (filesystem-based):
@@ -257,8 +258,6 @@ User -> CLI Command -> Package Spec Parser -> Package Manager -> Lock File
 ### Apply Flow
 ```
 Lock File -> Orchestrator/Coordinator -> Reconcile Resources -> Apply Changes
-                                      |
-                                      -> Execute Hooks
 ```
 
 ### Status Flow

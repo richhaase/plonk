@@ -6,9 +6,9 @@ package commands
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
@@ -46,49 +46,48 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid output format: %w", err)
 	}
 
-	packageSpec := args[0]
-
-	// Parse and validate search specification
-	spec, err := packages.ValidateSpec(packageSpec, packages.ValidationModeSearch, "")
-	if err != nil {
-		return err
-	}
-
-	manager := spec.Manager
-	packageName := spec.Name
-
-	// Load configuration for timeout settings
+	// Load configuration
 	configDir := config.GetDefaultConfigDirectory()
 	cfg := config.LoadWithDefaults(configDir)
 
-	// Create context with configurable timeout
-	searchTimeout := time.Duration(cfg.OperationTimeout) * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), searchTimeout)
-	defer cancel()
-
-	// Perform search
-	var searchResult SearchOutput
-	if manager != "" {
-		// Search specific manager
-		searchResult, err = searchSpecificManager(ctx, manager, packageName)
-	} else {
-		// Search all managers in parallel
-		searchResult, err = searchAllManagersParallel(ctx, cfg, packageName)
-	}
-
+	// Execute pure search logic
+	res, err := Search(cmd.Context(), cfg, args[0])
 	if err != nil {
 		return err
 	}
 
 	// Convert to output package type and create formatter
 	formatterData := output.SearchOutput{
-		Package: searchResult.Package,
-		Status:  searchResult.Status,
-		Message: searchResult.Message,
-		Results: convertSearchResults(searchResult.Results),
+		Package: res.Package,
+		Status:  res.Status,
+		Message: res.Message,
+		Results: convertSearchResults(res.Results),
 	}
 	formatter := output.NewSearchFormatter(formatterData)
 	return output.RenderOutput(formatter, format)
+}
+
+// Search performs package search based on config and returns typed results (pure logic)
+func Search(ctx context.Context, cfg *config.Config, packageSpec string) (SearchOutput, error) {
+	// Parse and validate search specification
+	spec, err := packages.ValidateSpec(packageSpec, packages.ValidationModeSearch, "")
+	if err != nil {
+		return SearchOutput{}, err
+	}
+
+	manager := spec.Manager
+	packageName := spec.Name
+
+	// Create context with configurable timeout
+	t := config.GetTimeouts(cfg)
+	ctx, cancel := context.WithTimeout(ctx, t.Operation)
+	defer cancel()
+
+	// Perform search
+	if manager != "" {
+		return searchSpecificManager(ctx, manager, packageName)
+	}
+	return searchAllManagersParallel(ctx, cfg, packageName)
 }
 
 // convertSearchResults converts from command types to output types
@@ -185,8 +184,8 @@ func searchAllManagersParallel(ctx context.Context, cfg *config.Config, packageN
 			defer wg.Done()
 
 			// Create a child context for this manager with configurable timeout
-			managerTimeout := time.Duration(cfg.OperationTimeout) * time.Second
-			managerCtx, cancel := context.WithTimeout(ctx, managerTimeout)
+			t := config.GetTimeouts(cfg)
+			managerCtx, cancel := context.WithTimeout(ctx, t.Operation)
 			defer cancel()
 
 			results, err := mgr.Search(managerCtx, packageName)
@@ -225,6 +224,12 @@ func searchAllManagersParallel(ctx context.Context, cfg *config.Config, packageN
 				Packages: result.Packages,
 			})
 		}
+	}
+
+	// Sort results for determinism
+	sort.Slice(searchResults, func(i, j int) bool { return searchResults[i].Manager < searchResults[j].Manager })
+	for i := range searchResults {
+		sort.Strings(searchResults[i].Packages)
 	}
 
 	// Build response

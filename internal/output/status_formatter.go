@@ -6,6 +6,7 @@ package output
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 )
 
@@ -367,7 +368,7 @@ func (f StatusFormatter) StructuredData() any {
 					State:    string(item.State),
 					Manager:  item.Manager,
 					Path:     item.Path,
-					Metadata: item.Metadata,
+					Metadata: sanitizeMetadata(item.Metadata),
 				}
 				// Add target for dotfiles
 				if target, ok := item.Metadata["destination"].(string); ok {
@@ -386,7 +387,7 @@ func (f StatusFormatter) StructuredData() any {
 					State:    string(item.State),
 					Manager:  item.Manager,
 					Path:     item.Path,
-					Metadata: item.Metadata,
+					Metadata: sanitizeMetadata(item.Metadata),
 				}
 				// Add target for dotfiles
 				if target, ok := item.Metadata["destination"].(string); ok {
@@ -405,7 +406,7 @@ func (f StatusFormatter) StructuredData() any {
 					State:    string(item.State),
 					Manager:  item.Manager,
 					Path:     item.Path,
-					Metadata: item.Metadata,
+					Metadata: sanitizeMetadata(item.Metadata),
 				}
 				items = append(items, managedItem)
 			}
@@ -419,6 +420,57 @@ func (f StatusFormatter) StructuredData() any {
 		ConfigExists: s.ConfigExists,
 		ConfigValid:  s.ConfigValid,
 		LockExists:   s.LockExists,
-		StateSummary: s.StateSummary,
+		StateSummary: sanitizeSummary(s.StateSummary),
 	}
+}
+
+// sanitizeMetadata returns a shallow copy of metadata without function-typed values
+func sanitizeMetadata(meta map[string]interface{}) map[string]interface{} {
+	if meta == nil {
+		return nil
+	}
+	cleaned := make(map[string]interface{}, len(meta))
+	for k, v := range meta {
+		if reflect.ValueOf(v).Kind() == reflect.Func {
+			continue
+		}
+		cleaned[k] = v
+	}
+	return cleaned
+}
+
+// sanitizeSummary removes function-typed metadata values from summary items
+func sanitizeSummary(sum Summary) Summary {
+	cleaned := Summary{
+		TotalManaged:   sum.TotalManaged,
+		TotalMissing:   sum.TotalMissing,
+		TotalUntracked: sum.TotalUntracked,
+		Results:        make([]Result, len(sum.Results)),
+	}
+	for i, r := range sum.Results {
+		cr := Result{Domain: r.Domain}
+		if len(r.Managed) > 0 {
+			cr.Managed = make([]Item, len(r.Managed))
+			for j, it := range r.Managed {
+				it.Metadata = sanitizeMetadata(it.Metadata)
+				cr.Managed[j] = it
+			}
+		}
+		if len(r.Missing) > 0 {
+			cr.Missing = make([]Item, len(r.Missing))
+			for j, it := range r.Missing {
+				it.Metadata = sanitizeMetadata(it.Metadata)
+				cr.Missing[j] = it
+			}
+		}
+		if len(r.Untracked) > 0 {
+			cr.Untracked = make([]Item, len(r.Untracked))
+			for j, it := range r.Untracked {
+				it.Metadata = sanitizeMetadata(it.Metadata)
+				cr.Untracked[j] = it
+			}
+		}
+		cleaned.Results[i] = cr
+	}
+	return cleaned
 }

@@ -40,13 +40,11 @@ Apply specifically targets "missing" and "drifted" resources.
 
 ### Execution Flow
 
-1. Execute pre-apply hooks (if configured)
-2. Read plonk.lock (if exists) to determine packages to install
-3. Read $PLONK_DIR contents to determine dotfiles to deploy
-4. Apply packages first (if --packages or no flags)
-5. Apply dotfiles second (if --dotfiles or no flags)
-6. Execute post-apply hooks (if configured)
-7. Report results with summary counts
+1. Read plonk.lock (if exists) to determine packages to install
+2. Read $PLONK_DIR contents to determine dotfiles to deploy
+3. Apply packages first (if --packages or no flags)
+4. Apply dotfiles second (if --dotfiles or no flags)
+5. Report results with summary counts
 
 ### File Mapping
 
@@ -85,9 +83,7 @@ plonk apply --dotfiles
 - Use `plonk status` to see what resources need to be applied
 - Run after `plonk clone` to set up a new system
 - Run after adding packages with `plonk install` or dotfiles with `plonk add`
-- Pre/post-apply hooks can be configured in `plonk.yaml`
 
 ## Notes
 
 - The `--packages` and `--dotfiles` flags cannot be used together
-- Hooks are an experimental feature and may change in future versions

@@ -33,9 +33,6 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - `config_show.go` - Display configuration values
 - `config_edit.go` - Edit configuration file
 
-#### Utility Commands
-- `package_validation.go` - Package validation utilities
-
 #### Command Support Files
 - `helpers.go` - Shared command utilities and helpers
 - `shared.go` - Shared command logic
@@ -43,8 +40,7 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 ## Core Components
 
 ### Configuration (`internal/config/`)
-- `config.go` - Configuration loading and management
-- `constants.go` - Configuration constants and defaults
+- `config.go` - Configuration loading, defaults, and management
 - `compat.go` - Configuration compatibility handling
 
 ### Lock File Management (`internal/lock/`)
@@ -55,7 +51,6 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 ### Orchestration (`internal/orchestrator/`)
 - `coordinator.go` - Main coordination logic
 - `reconcile.go` - Reconciliation orchestration
-- `hooks.go` - Pre/post hook management
 - `options.go` - Orchestrator options
 - `types.go` - Orchestrator type definitions
 
@@ -145,14 +140,13 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - Dependency resolution: `internal/resources/packages/dependencies.go`
 - Git operations: `internal/clone/git.go`
 - Tool installation: `internal/clone/tools.go`
-- Uses: `internal/diagnostics/health.go` (via doctor --fix for language package managers only)
+- Uses: `internal/diagnostics/health.go` for health checks; package manager installation handled via `SelfInstall()` during clone
 
 ### apply command
 - Entry: `internal/commands/apply.go`
 - Orchestration: `internal/orchestrator/coordinator.go`, `reconcile.go`
 - Package reconciliation: `internal/resources/packages/reconcile.go`, `apply.go`
 - Dotfile reconciliation: `internal/resources/dotfiles/reconcile.go`, `apply.go`
-- Hook execution: `internal/orchestrator/hooks.go`
 
 ### status command
 - Entry: `internal/commands/status.go`
@@ -163,7 +157,7 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 ### doctor command
 - Entry: `internal/commands/doctor.go`
 - Health checks: `internal/diagnostics/health.go`
-- Tool installation: `internal/clone/tools.go` (for --fix)
+- Tool installation: `internal/clone/tools.go`
 
 ### diff command
 - Entry: `internal/commands/diff.go`

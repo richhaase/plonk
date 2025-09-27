@@ -14,14 +14,25 @@ import (
 // FileOperations handles file system operations for dotfiles
 type FileOperations struct {
 	pathResolver PathResolver
-	atomicWriter *AtomicFileWriter
+	writer       FileWriter
 }
 
 // NewFileOperations creates a new file operations handler
 func NewFileOperations(pathResolver PathResolver) *FileOperations {
 	return &FileOperations{
 		pathResolver: pathResolver,
-		atomicWriter: NewAtomicFileWriter(),
+		writer:       NewAtomicFileWriter(),
+	}
+}
+
+// NewFileOperationsWithWriter allows injecting a custom FileWriter (for testing)
+func NewFileOperationsWithWriter(pathResolver PathResolver, writer FileWriter) *FileOperations {
+	if writer == nil {
+		writer = NewAtomicFileWriter()
+	}
+	return &FileOperations{
+		pathResolver: pathResolver,
+		writer:       writer,
 	}
 }
 
@@ -90,7 +101,7 @@ func (f *FileOperations) createBackup(ctx context.Context, source, backupPath st
 // copyFileContents copies the contents of one file to another atomically
 func (f *FileOperations) copyFileContents(ctx context.Context, source, destination string) error {
 	// Use atomic file writer to copy file with proper permissions
-	return f.atomicWriter.CopyFile(ctx, source, destination, 0)
+	return f.writer.CopyFile(ctx, source, destination, 0)
 }
 
 // CopyFileWithAttributes is a simple utility function that copies a file while preserving attributes

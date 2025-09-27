@@ -103,7 +103,7 @@ func runDiff(cmd *cobra.Command, args []string) error {
 // getDriftedDotfiles reconciles dotfiles and returns only drifted ones
 func getDriftedDotfiles(ctx context.Context, cfg *config.Config, configDir, homeDir string) ([]resources.Item, error) {
 	// Reconcile all domains
-	results, err := orchestrator.ReconcileAll(ctx, homeDir, configDir)
+	results, err := orchestrator.ReconcileAllWithConfig(ctx, homeDir, configDir, cfg)
 	if err != nil {
 		return nil, err
 	}

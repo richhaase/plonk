@@ -6,6 +6,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
@@ -49,30 +50,12 @@ func runInfo(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid output format: %w", err)
 	}
 
-	packageSpec := args[0]
+	// Load configuration (not strictly required but consistent with other commands)
+	configDir := config.GetDefaultConfigDirectory()
+	_ = config.LoadWithDefaults(configDir)
 
-	// Parse prefix syntax
-	manager, packageName := parsePackageSpec(packageSpec)
-
-	// Validate manager if prefix specified
-	if manager != "" && !isValidManager(manager) {
-		errorMsg := formatNotFoundError("package manager", manager, getValidManagers())
-		return fmt.Errorf("%s", errorMsg)
-	}
-
-	// Create context
-	ctx := context.Background()
-
-	// Perform info lookup
-	var infoResult InfoOutput
-	if manager != "" {
-		// Get info from specific manager
-		infoResult, err = getInfoFromSpecificManager(ctx, manager, packageName)
-	} else {
-		// Use priority logic: managed → installed → available
-		infoResult, err = getInfoWithPriorityLogic(ctx, packageName)
-	}
-
+	// Execute pure info logic
+	infoResult, err := Info(cmd.Context(), args[0])
 	if err != nil {
 		return err
 	}
@@ -86,6 +69,25 @@ func runInfo(cmd *cobra.Command, args []string) error {
 	}
 	formatter := output.NewInfoFormatter(formatterData)
 	return output.RenderOutput(formatter, format)
+}
+
+// Info performs the info lookup and returns typed results (pure logic)
+func Info(ctx context.Context, packageSpec string) (InfoOutput, error) {
+	// Parse prefix syntax
+	manager, packageName := parsePackageSpec(packageSpec)
+
+	// Validate manager if prefix specified
+	if manager != "" && !isValidManager(manager) {
+		errorMsg := formatNotFoundError("package manager", manager, getValidManagers())
+		return InfoOutput{}, fmt.Errorf("%s", errorMsg)
+	}
+
+	if manager != "" {
+		// Get info from specific manager
+		return getInfoFromSpecificManager(ctx, manager, packageName)
+	}
+	// Use priority logic: managed → installed → available
+	return getInfoWithPriorityLogic(ctx, packageName)
 }
 
 // getInfoFromSpecificManager gets info from a specific package manager only
@@ -218,7 +220,15 @@ func getInfoWithPriorityLogic(ctx context.Context, packageName string) (InfoOutp
 		}, nil
 	}
 
-	for name, manager := range availableManagers {
+	// Deterministic iteration over managers
+	names := make([]string, 0, len(availableManagers))
+	for name := range availableManagers {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		manager := availableManagers[name]
 		installed, err := manager.IsInstalled(ctx, packageName)
 		if err != nil {
 			continue // Skip managers that fail
@@ -244,7 +254,8 @@ func getInfoWithPriorityLogic(ctx context.Context, packageName string) (InfoOutp
 	}
 
 	// 3. Package not installed, search for available packages
-	for name, manager := range availableManagers {
+	for _, name := range names {
+		manager := availableManagers[name]
 		info, err := manager.Info(ctx, packageName)
 		if err != nil {
 			continue // Package not found in this manager

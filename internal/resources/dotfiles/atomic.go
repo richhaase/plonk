@@ -11,6 +11,12 @@ import (
 	"path/filepath"
 )
 
+// FileWriter defines atomic write/copy operations for files
+type FileWriter interface {
+	WriteFile(filename string, data []byte, perm os.FileMode) error
+	CopyFile(ctx context.Context, src, dst string, perm os.FileMode) error
+}
+
 // AtomicFileWriter handles atomic file operations using temp file + rename pattern
 type AtomicFileWriter struct{}
 

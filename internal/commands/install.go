@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
@@ -157,8 +156,8 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		}
 
 		// Process this package with configurable timeout
-		timeout := time.Duration(cfg.PackageTimeout) * time.Second
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		t := config.GetTimeouts(cfg)
+		ctx, cancel := context.WithTimeout(context.Background(), t.Package)
 		results, err := packages.InstallPackages(ctx, configDir, []string{spec.Name}, opts)
 		cancel()
 
@@ -239,8 +238,8 @@ func handleManagerSelfInstall(ctx context.Context, managerName string, dryRun bo
 	}
 
 	// Use configured timeout for self-installation
-	timeout := time.Duration(cfg.PackageTimeout) * time.Second
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, timeout)
+	t := config.GetTimeouts(cfg)
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, t.Package)
 	defer cancel()
 
 	err = manager.SelfInstall(ctxWithTimeout)

@@ -4,6 +4,9 @@
 package commands
 
 import (
+	"context"
+
+	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/diagnostics"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/spf13/cobra"
@@ -48,8 +51,15 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Run comprehensive health checks using diagnostics
-	healthReport := diagnostics.RunHealthChecks()
+	// Build a context with configured operation timeout
+	configDir := config.GetDefaultConfigDirectory()
+	cfg := config.LoadWithDefaults(configDir)
+	t := config.GetTimeouts(cfg)
+	ctx, cancel := context.WithTimeout(cmd.Context(), t.Operation)
+	defer cancel()
+
+	// Run comprehensive health checks using diagnostics with context
+	healthReport := diagnostics.RunHealthChecksWithContext(ctx)
 
 	// Convert to command output type
 	doctorOutput := DoctorOutput{

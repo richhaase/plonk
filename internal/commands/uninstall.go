@@ -6,7 +6,6 @@ package commands
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
@@ -93,8 +92,8 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 		}
 
 		// Process this package with configurable timeout
-		timeout := time.Duration(cfg.PackageTimeout) * time.Second
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		t := config.GetTimeouts(cfg)
+		ctx, cancel := context.WithTimeout(context.Background(), t.Package)
 		results, err := packages.UninstallPackages(ctx, configDir, []string{spec.Name}, opts)
 		cancel()
 

@@ -9,7 +9,6 @@ This is the comprehensive guide to configuring plonk. Plonk uses two configurati
 - [Configuration File (plonk.yaml)](#configuration-file-plonkyaml)
 - [Basic Configuration](#basic-configuration)
 - [Dotfile Configuration](#dotfile-configuration)
-- [Hook Configuration](#hook-configuration)
 - [Timeout Configuration](#timeout-configuration)
 - [Advanced Configuration](#advanced-configuration)
 - [Environment Variables](#environment-variables)
@@ -107,7 +106,7 @@ This approach provides several benefits:
 
 **Always Excluded**:
 - `plonk.yaml` and `plonk.lock` - Configuration and package state files
-- `.plonk/` directory - Reserved for future plonk metadata (hooks, templates, etc.)
+- `.plonk/` directory - Reserved for future plonk metadata (templates, etc.)
 
 ## Configuration File (plonk.yaml)
 
@@ -181,40 +180,7 @@ expand_directories:
   # - ".ssh"            # SSH configuration
 ```
 
-## Hook Configuration
-
-### Pre and Post Apply Hooks
-
-Execute commands before and after apply operations:
-
-```yaml
-hooks:
-  # Commands run before apply starts
-  pre_apply:
-    - command: "echo 'Starting plonk apply...'"
-    - command: "brew update"      # Update Homebrew before installing
-    - command: "git pull"         # Pull latest dotfiles changes
-
-  # Commands run after apply completes
-  post_apply:
-    - command: "echo 'Apply completed successfully'"
-    - command: "source ~/.zshrc"  # Reload shell configuration
-    - command: "tmux source-file ~/.tmux.conf"  # Reload tmux config
-```
-
-### Hook Timeout and Error Handling
-
-```yaml
-hooks:
-  pre_apply:
-    - command: "brew doctor"     # Check Homebrew health
-      timeout: "60s"              # Individual hook timeout
-      continue_on_error: true     # Don't fail if this hook fails
-  post_apply:
-    - command: "plonk doctor"    # Verify system after apply
-      timeout: "30s"
-      continue_on_error: false    # Fail if doctor check fails
-```
+##
 
 ## Timeout Configuration
 
@@ -284,20 +250,6 @@ dotfiles:
   unmanaged_filters:
     - "*.backup"
 
-# Hooks for automated maintenance
-hooks:
-  pre_apply:
-    - command: "echo 'Updating package managers...'"
-    - command: "brew update"
-      timeout: "300s"
-    - command: "npm update -g"
-      timeout: "300s"
-  post_apply:
-    - command: "echo 'Sourcing shell configuration...'"
-    - command: "source ~/.zshrc || true"
-      continue_on_error: true
-    - command: "echo 'Apply completed successfully'"
-
 # Conservative timeouts for reliability
 package_timeout: 600      # 10 minutes for large packages
 operation_timeout: 600    # 10 minutes for searches
@@ -343,21 +295,7 @@ ignore_patterns:
 # Manually add only specific files with `plonk add`
 ```
 
-### Scenario 3: Automated CI/CD Integration
-For automated environments:
-```yaml
-hooks:
-  pre_apply:
-    - command: "git status --porcelain | wc -l | grep -q '^0$'"  # Ensure clean repo
-      timeout: "10s"
-      continue_on_error: false  # Fail on hook errors
-  post_apply:
-    - command: "plonk doctor"      # Verify system health
-      timeout: "60s"
-      continue_on_error: false
-```
-
-### Scenario 4: Multi-Language Development
+### Scenario 3: Multi-Language Development
 For polyglot developers:
 ```yaml
 default_manager: brew     # System tools via Homebrew
@@ -366,10 +304,6 @@ expand_directories:
   - ".local/share"
   - ".cargo"            # Rust configuration
   - ".npm"              # NPM configuration
-hooks:
-  pre_apply:
-    - command: "brew update"
-    - command: "rustup update"     # Keep Rust toolchain updated
 ```
 
 ## Creating and Managing Configuration

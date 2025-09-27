@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
@@ -28,14 +27,19 @@ type UninstallOptions struct {
 
 // InstallPackages orchestrates the installation of multiple packages
 func InstallPackages(ctx context.Context, configDir string, packages []string, opts InstallOptions) ([]resources.OperationResult, error) {
-	// Initialize lock file service
+	// Thin wrapper: resolve defaults and delegate to InstallPackagesWith
+	cfg := config.LoadWithDefaults(configDir)
 	lockService := lock.NewYAMLLockService(configDir)
+	registry := NewManagerRegistry()
+	return InstallPackagesWith(ctx, cfg, lockService, registry, packages, opts)
+}
 
+// InstallPackagesWith orchestrates installation with explicit dependencies
+func InstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lock.LockService, registry *ManagerRegistry, packages []string, opts InstallOptions) ([]resources.OperationResult, error) {
 	// Get manager - use default if not specified
 	manager := opts.Manager
 	if manager == "" {
-		cfg := config.LoadWithDefaults(configDir)
-		if cfg.DefaultManager != "" {
+		if cfg != nil && cfg.DefaultManager != "" {
 			manager = cfg.DefaultManager
 		} else {
 			manager = DefaultManager // fallback default
@@ -43,37 +47,35 @@ func InstallPackages(ctx context.Context, configDir string, packages []string, o
 	}
 
 	var results []resources.OperationResult
-
 	for _, packageName := range packages {
-		// Check if context was canceled
 		if ctx.Err() != nil {
 			break
 		}
-
-		// Install single package
-		result := installSinglePackage(ctx, configDir, lockService, packageName, manager, opts.DryRun)
+		result := installSinglePackage(ctx, lockService, packageName, manager, opts.DryRun, registry)
 		results = append(results, result)
 	}
-
 	return results, nil
 }
 
 // UninstallPackages orchestrates the uninstallation of multiple packages
 func UninstallPackages(ctx context.Context, configDir string, packages []string, opts UninstallOptions) ([]resources.OperationResult, error) {
-	// Initialize lock file service
-	lockService := lock.NewYAMLLockService(configDir)
-
-	// Load config for default manager
+	// Thin wrapper: resolve defaults and delegate to UninstallPackagesWith
 	cfg := config.LoadWithDefaults(configDir)
-	defaultManager := cfg.DefaultManager
-	if defaultManager == "" {
-		defaultManager = DefaultManager // fallback default
+	lockService := lock.NewYAMLLockService(configDir)
+	registry := NewManagerRegistry()
+	return UninstallPackagesWith(ctx, cfg, lockService, registry, packages, opts)
+}
+
+// UninstallPackagesWith orchestrates uninstallation with explicit dependencies
+func UninstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lock.LockService, registry *ManagerRegistry, packages []string, opts UninstallOptions) ([]resources.OperationResult, error) {
+	// Load config for default manager
+	defaultManager := DefaultManager
+	if cfg != nil && cfg.DefaultManager != "" {
+		defaultManager = cfg.DefaultManager
 	}
 
 	var results []resources.OperationResult
-
 	for _, packageName := range packages {
-		// Check if context was canceled
 		if ctx.Err() != nil {
 			break
 		}
@@ -84,28 +86,24 @@ func UninstallPackages(ctx context.Context, configDir string, packages []string,
 			// Check if package exists in lock file first
 			locations := lockService.FindPackage(packageName)
 			if len(locations) > 0 {
-				// Use the manager from the lock file
 				if mgr, ok := locations[0].Metadata["manager"].(string); ok {
 					manager = mgr
 				} else {
 					manager = defaultManager
 				}
 			} else {
-				// Package not managed, use default manager as pass-through
 				manager = defaultManager
 			}
 		}
 
-		// Uninstall single package
-		result := uninstallSinglePackage(ctx, configDir, lockService, packageName, manager, opts.DryRun)
+		result := uninstallSinglePackage(ctx, lockService, packageName, manager, opts.DryRun, registry)
 		results = append(results, result)
 	}
-
 	return results, nil
 }
 
 // installSinglePackage installs a single package
-func installSinglePackage(ctx context.Context, configDir string, lockService *lock.YAMLLockService, packageName, manager string, dryRun bool) resources.OperationResult {
+func installSinglePackage(ctx context.Context, lockService lock.LockService, packageName, manager string, dryRun bool, registry *ManagerRegistry) resources.OperationResult {
 	result := resources.OperationResult{
 		Name:    packageName,
 		Manager: manager,
@@ -130,19 +128,15 @@ func installSinglePackage(ctx context.Context, configDir string, lockService *lo
 	}
 
 	// Get package manager instance
-	pkgManager, err := getPackageManager(manager)
+	pkgManager, err := getPackageManager(registry, manager)
 	if err != nil {
 		result.Status = "failed"
 		result.Error = fmt.Errorf("install %s: failed to get package manager: %w", packageName, err)
 		return result
 	}
 
-	// Create context with timeout
-	installCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-
 	// Check if manager is available
-	available, err := pkgManager.IsAvailable(installCtx)
+	available, err := pkgManager.IsAvailable(ctx)
 	if err != nil {
 		result.Status = "failed"
 		result.Error = fmt.Errorf("install %s: failed to check %s availability: %w", packageName, manager, err)
@@ -155,7 +149,7 @@ func installSinglePackage(ctx context.Context, configDir string, lockService *lo
 	}
 
 	// Install the package
-	err = pkgManager.Install(installCtx, packageName)
+	err = pkgManager.Install(ctx, packageName)
 	if err != nil {
 		result.Status = "failed"
 		result.Error = fmt.Errorf("install %s via %s: %w", packageName, manager, err)
@@ -170,7 +164,7 @@ func installSinglePackage(ctx context.Context, configDir string, lockService *lo
 	}
 
 	// Get package version after installation
-	version, err := pkgManager.InstalledVersion(installCtx, lockPackageName)
+	version, err := pkgManager.InstalledVersion(ctx, lockPackageName)
 	if err == nil && version != "" {
 		result.Version = version
 	}
@@ -210,7 +204,7 @@ func installSinglePackage(ctx context.Context, configDir string, lockService *lo
 }
 
 // uninstallSinglePackage uninstalls a single package
-func uninstallSinglePackage(ctx context.Context, configDir string, lockService *lock.YAMLLockService, packageName, manager string, dryRun bool) resources.OperationResult {
+func uninstallSinglePackage(ctx context.Context, lockService lock.LockService, packageName, manager string, dryRun bool, registry *ManagerRegistry) resources.OperationResult {
 	result := resources.OperationResult{
 		Name:    packageName,
 		Manager: manager,
@@ -231,19 +225,15 @@ func uninstallSinglePackage(ctx context.Context, configDir string, lockService *
 	}
 
 	// Get package manager instance
-	pkgManager, err := getPackageManager(manager)
+	pkgManager, err := getPackageManager(registry, manager)
 	if err != nil {
 		result.Status = "failed"
 		result.Error = fmt.Errorf("uninstall %s: failed to get package manager: %w", packageName, err)
 		return result
 	}
 
-	// Create context with timeout
-	uninstallCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-
 	// Check if manager is available
-	available, err := pkgManager.IsAvailable(uninstallCtx)
+	available, err := pkgManager.IsAvailable(ctx)
 	if err != nil {
 		result.Status = "failed"
 		result.Error = fmt.Errorf("uninstall %s: failed to check %s availability: %w", packageName, manager, err)
@@ -256,7 +246,7 @@ func uninstallSinglePackage(ctx context.Context, configDir string, lockService *
 	}
 
 	// Uninstall the package
-	uninstallErr := pkgManager.Uninstall(uninstallCtx, packageName)
+	uninstallErr := pkgManager.Uninstall(ctx, packageName)
 
 	// If package is managed, remove from lock file
 	if isManaged {
@@ -296,8 +286,10 @@ func uninstallSinglePackage(ctx context.Context, configDir string, lockService *
 }
 
 // getPackageManager returns the appropriate package manager instance
-func getPackageManager(manager string) (PackageManager, error) {
-	registry := NewManagerRegistry()
+func getPackageManager(registry *ManagerRegistry, manager string) (PackageManager, error) {
+	if registry == nil {
+		registry = NewManagerRegistry()
+	}
 	return registry.GetManager(manager)
 }
 

@@ -6,6 +6,7 @@ package packages
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
@@ -43,13 +44,23 @@ func Apply(ctx context.Context, configDir string, cfg *config.Config, dryRun boo
 		spinnerManager = output.NewSpinnerManager(totalMissing)
 	}
 
+	// Deterministic iteration over managers
+	managerNames := make([]string, 0, len(missingByManager))
+	for m := range missingByManager {
+		managerNames = append(managerNames, m)
+	}
+	sort.Strings(managerNames)
+
 	// Process each manager's missing packages
-	for managerName, missingItems := range missingByManager {
+	for _, managerName := range managerNames {
+		missingItems := missingByManager[managerName]
 		var packageResults []output.PackageOperation
 		installedCount := 0
 		failedCount := 0
 		wouldInstallCount := 0
 
+		// Sort items by name for deterministic output
+		sort.Slice(missingItems, func(i, j int) bool { return missingItems[i].Name < missingItems[j].Name })
 		for _, item := range missingItems {
 			// Start spinner for this package
 			var spinner *output.Spinner
