@@ -6,6 +6,7 @@ package orchestrator
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -225,7 +226,9 @@ func TestApplyResult_Success(t *testing.T) {
 		packageResult *PackageApplyResult
 		dotfileResult *DotfileApplyResult
 		dryRun        bool
+		hasErrors     bool
 		expectSuccess bool
+		expectChanged bool
 	}{
 		{
 			name: "packages installed in normal mode",
@@ -234,7 +237,9 @@ func TestApplyResult_Success(t *testing.T) {
 				TotalInstalled: 3,
 			},
 			dryRun:        false,
+			hasErrors:     false,
 			expectSuccess: true,
+			expectChanged: true,
 		},
 		{
 			name: "packages would install in dry run",
@@ -243,7 +248,9 @@ func TestApplyResult_Success(t *testing.T) {
 				TotalWouldInstall: 3,
 			},
 			dryRun:        true,
+			hasErrors:     false,
 			expectSuccess: true,
+			expectChanged: true,
 		},
 		{
 			name: "dotfiles added in normal mode",
@@ -254,7 +261,9 @@ func TestApplyResult_Success(t *testing.T) {
 				},
 			},
 			dryRun:        false,
+			hasErrors:     false,
 			expectSuccess: true,
+			expectChanged: true,
 		},
 		{
 			name: "dotfiles would add in dry run",
@@ -265,10 +274,12 @@ func TestApplyResult_Success(t *testing.T) {
 				},
 			},
 			dryRun:        true,
+			hasErrors:     false,
 			expectSuccess: true,
+			expectChanged: true,
 		},
 		{
-			name: "no changes in normal mode",
+			name: "no changes in normal mode - idempotent success",
 			packageResult: &PackageApplyResult{
 				DryRun:         false,
 				TotalInstalled: 0,
@@ -280,10 +291,12 @@ func TestApplyResult_Success(t *testing.T) {
 				},
 			},
 			dryRun:        false,
-			expectSuccess: false,
+			hasErrors:     false,
+			expectSuccess: true, // Changed from false - no-op with no errors is success
+			expectChanged: false,
 		},
 		{
-			name: "mixed success",
+			name: "mixed success - packages changed, dotfiles unchanged",
 			packageResult: &PackageApplyResult{
 				DryRun:         false,
 				TotalInstalled: 2,
@@ -295,7 +308,21 @@ func TestApplyResult_Success(t *testing.T) {
 				},
 			},
 			dryRun:        false,
+			hasErrors:     false,
 			expectSuccess: true,
+			expectChanged: true,
+		},
+		{
+			name: "errors present - success is false even with changes",
+			packageResult: &PackageApplyResult{
+				DryRun:         false,
+				TotalInstalled: 2,
+				TotalFailed:    1,
+			},
+			dryRun:        false,
+			hasErrors:     true,
+			expectSuccess: false,
+			expectChanged: true,
 		},
 	}
 
@@ -307,24 +334,34 @@ func TestApplyResult_Success(t *testing.T) {
 				Dotfiles: tt.dotfileResult,
 			}
 
+			// Simulate error injection if needed
+			if tt.hasErrors {
+				result.AddPackageError(fmt.Errorf("simulated package error"))
+			}
+
 			// Simulate the success determination logic from Apply()
-			success := false
+			// Success = no errors (HasErrors() returns false)
+			success := !result.HasErrors()
+
+			// Determine if changes were made
+			changed := false
 			if result.Packages != nil {
 				if !tt.dryRun && result.Packages.TotalInstalled > 0 {
-					success = true
+					changed = true
 				} else if tt.dryRun && result.Packages.TotalWouldInstall > 0 {
-					success = true
+					changed = true
 				}
 			}
 			if result.Dotfiles != nil {
 				if !tt.dryRun && result.Dotfiles.Summary.Added > 0 {
-					success = true
+					changed = true
 				} else if tt.dryRun && result.Dotfiles.Summary.Added > 0 {
-					success = true
+					changed = true
 				}
 			}
 
-			assert.Equal(t, tt.expectSuccess, success)
+			assert.Equal(t, tt.expectSuccess, success, "success mismatch")
+			assert.Equal(t, tt.expectChanged, changed, "changed mismatch")
 		})
 	}
 }
