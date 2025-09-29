@@ -45,7 +45,7 @@ func TestApplyDriftedFiles(t *testing.T) {
 
 		// Create manager and resource
 		manager := NewManager(homeDir, configDir)
-		resource := NewDotfileResource(manager)
+		resource := NewDotfileResource(manager, false)
 
 		// Get configured dotfiles
 		configured, err := manager.GetConfiguredDotfiles()

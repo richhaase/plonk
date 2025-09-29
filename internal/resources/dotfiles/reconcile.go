@@ -21,7 +21,7 @@ func Reconcile(ctx context.Context, homeDir, configDir string) (resources.Result
 func ReconcileWithConfig(ctx context.Context, homeDir, configDir string, cfg *config.Config) (resources.Result, error) {
 	// Create dotfile resource
 	manager := NewManagerWithConfig(homeDir, configDir, cfg)
-	dotfileResource := NewDotfileResource(manager)
+	dotfileResource := NewDotfileResource(manager, false)
 
 	// Get configured dotfiles and set as desired
 	configured, err := manager.GetConfiguredDotfiles()

@@ -14,11 +14,15 @@ import (
 type DotfileResource struct {
 	manager *Manager
 	desired []resources.Item
+	dryRun  bool
 }
 
 // NewDotfileResource creates a new dotfile resource adapter
-func NewDotfileResource(manager *Manager) *DotfileResource {
-	return &DotfileResource{manager: manager}
+func NewDotfileResource(manager *Manager, dryRun bool) *DotfileResource {
+	return &DotfileResource{
+		manager: manager,
+		dryRun:  dryRun,
+	}
 }
 
 // ID returns a unique identifier for this resource
@@ -116,7 +120,7 @@ func (d *DotfileResource) applyMissing(ctx context.Context, item resources.Item)
 
 	// Use the manager's ProcessDotfileForApply method
 	opts := ApplyOptions{
-		DryRun: false,
+		DryRun: d.dryRun,
 		Backup: true,
 	}
 
