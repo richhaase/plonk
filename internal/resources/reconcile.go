@@ -7,8 +7,17 @@ import (
 	"context"
 )
 
-// ReconcileItems compares desired vs actual state and categorizes items
+// ReconcileItems compares desired vs actual state and categorizes items.
+// This is a convenience wrapper around ReconcileItemsWithKey using Item.Name as the key.
 func ReconcileItems(desired, actual []Item) []Item {
+	return ReconcileItemsWithKey(desired, actual, func(item Item) string {
+		return item.Name
+	})
+}
+
+// ReconcileItemsDeprecated is the old implementation, kept for reference
+// TODO: Remove after verifying new implementation works correctly
+func ReconcileItemsDeprecated(desired, actual []Item) []Item {
 	// Build lookup map for actual items by name
 	actualMap := make(map[string]*Item)
 	for i := range actual {
@@ -44,27 +53,11 @@ func ReconcileItems(desired, actual []Item) []Item {
 				}
 			}
 
-			// Merge metadata from actual if needed
-			if item.Metadata == nil {
-				item.Metadata = actualItem.Metadata
-			} else if actualItem.Metadata != nil {
-				// Merge actual metadata into desired
-				for k, v := range actualItem.Metadata {
-					if _, exists := item.Metadata[k]; !exists {
-						item.Metadata[k] = v
-					}
-				}
-			}
-			// Merge Meta string map similarly
-			if item.Meta == nil {
-				item.Meta = actualItem.Meta
-			} else if actualItem.Meta != nil {
-				for k, v := range actualItem.Meta {
-					if _, exists := item.Meta[k]; !exists {
-						item.Meta[k] = v
-					}
-				}
-			}
+			// Merge metadata from actual using deep copy to avoid aliasing
+			item.Metadata = MergeMetadata(item.Metadata, actualItem.Metadata)
+
+			// Merge Meta string map using deep copy
+			item.Meta = MergeStringMap(item.Meta, actualItem.Meta)
 			// Use actual path if available (for dotfiles)
 			if item.Path == "" && actualItem.Path != "" {
 				item.Path = actualItem.Path
@@ -134,27 +127,11 @@ func ReconcileItemsWithKey(desired, actual []Item, keyFunc func(Item) string) []
 				}
 			}
 
-			// Merge metadata from actual if needed
-			if item.Metadata == nil {
-				item.Metadata = actualItem.Metadata
-			} else if actualItem.Metadata != nil {
-				// Merge actual metadata into desired
-				for k, v := range actualItem.Metadata {
-					if _, exists := item.Metadata[k]; !exists {
-						item.Metadata[k] = v
-					}
-				}
-			}
-			// Merge Meta string map similarly
-			if item.Meta == nil {
-				item.Meta = actualItem.Meta
-			} else if actualItem.Meta != nil {
-				for k, v := range actualItem.Meta {
-					if _, exists := item.Meta[k]; !exists {
-						item.Meta[k] = v
-					}
-				}
-			}
+			// Merge metadata from actual using deep copy to avoid aliasing
+			item.Metadata = MergeMetadata(item.Metadata, actualItem.Metadata)
+
+			// Merge Meta string map using deep copy
+			item.Meta = MergeStringMap(item.Meta, actualItem.Meta)
 			// Use actual path if available (for dotfiles)
 			if item.Path == "" && actualItem.Path != "" {
 				item.Path = actualItem.Path
