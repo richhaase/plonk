@@ -5,6 +5,7 @@
 .plonk-test-profile
 .plonk-test-gitconfig
 .plonk-test-bashrc
+.plonk-test-spinner
 .config/plonk-test/config.yaml
 .config/plonk-test/settings.json
 .config/plonk-test-app/prefs
