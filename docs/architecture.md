@@ -278,8 +278,9 @@ Plonk uses structured error handling:
 - No elevated privileges required for user packages
 - Atomic file operations prevent corruption
 - Backup files created before modifications
-- No automatic execution of downloaded scripts
+- Package manager self-installation may execute remote scripts (opt-in via SelfInstall capability)
 - Git operations use standard git binary
+- Users should review package manager installation scripts before using automatic installation
 
 ## Future Considerations
 
