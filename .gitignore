@@ -14,6 +14,10 @@ build/
 *.coverprofile
 coverage.*
 coverage.html coverage.txt
+coverage-all.html
+coverage-all.txt
+coverage-all.out
+coverage-unit-only.out
 
 # Go workspace file
 go.work
