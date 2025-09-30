@@ -65,6 +65,20 @@ plonk uninstall brew:wget npm:prettier pnpm:typescript conda:numpy uv:ruff pixi:
 plonk uninstall --dry-run ripgrep
 ```
 
+### plonk upgrade
+
+Upgrade packages to their latest versions.
+
+```bash
+plonk upgrade                         # Upgrade all packages
+plonk upgrade brew                    # Upgrade all Homebrew packages
+plonk upgrade ripgrep                 # Upgrade ripgrep across all managers
+plonk upgrade brew:neovim             # Upgrade specific package
+plonk upgrade htop neovim             # Upgrade multiple packages
+```
+
+**📖 [Complete Upgrade Documentation →](cmds/upgrade.md)**
+
 ### plonk add
 
 Add dotfiles to management.

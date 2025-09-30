@@ -65,7 +65,7 @@ If you prefer not to use `just`:
 
 ```bash
 # Build
-go build -o bin/plonk cmd/plonk/main.go
+go build -o bin/plonk ./cmd/plonk
 
 # Install
 go install ./cmd/plonk
@@ -368,21 +368,3 @@ If you have questions about contributing, please:
 4. Mention maintainers in your issue if urgent
 
 Thank you for contributing to Plonk! 🚀
-#### Capability Interfaces: Calling Patterns
-
-Optional capabilities must be guarded with a type assertion, or the `SupportsX` helpers from `internal/resources/packages`:
-
-```
-// Prefer explicit assertions when calling optional methods
-if infoProvider, ok := mgr.(packages.PackageInfoProvider); ok {
-    info, err := infoProvider.Info(ctx, pkg)
-    _ = info; _ = err
-}
-
-if packages.SupportsUpgrade(mgr) {
-    upgrader := mgr.(packages.PackageUpgrader)
-    _ = upgrader.Upgrade(ctx, []string{pkg})
-}
-```
-
-When writing tests that operate on variables typed as `PackageManager`, do not call optional methods directly without an assertion. Tests that instantiate concrete managers (e.g., `manager := NewNpmManager()`) may call those methods directly because the concrete type implements them.

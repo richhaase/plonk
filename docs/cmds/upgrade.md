@@ -58,9 +58,7 @@ When no manager is specified (e.g., `ripgrep`), all packages with that name acro
 ## Flags
 
 ### Global Flags
-- `--format`: Output format (table, json, yaml)
-- `--verbose`: Show detailed upgrade information
-- `--quiet`: Suppress non-error output
+- `--output, -o`: Output format (table, json, yaml)
 
 ## Behavior
 
