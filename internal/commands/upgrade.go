@@ -405,15 +405,7 @@ func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, l
 			continue
 		}
 
-		// Get current versions before upgrade
-		packageVersions := make(map[string]string)
-		for _, pkg := range packageNames {
-			if version, err := mgr.InstalledVersion(ctx, pkg); err == nil {
-				packageVersions[pkg] = version
-			}
-		}
-
-		// Upgrade packages for this manager
+		// Check if manager supports upgrade
 		upgrader, ok := mgr.(packages.PackageUpgrader)
 		if !ok {
 			// Add failures for all packages in this manager
@@ -431,18 +423,24 @@ func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, l
 			}
 			continue
 		}
-		upgradeErr := upgrader.Upgrade(ctx, packageNames)
 
-		// Process results for each package
+		// Upgrade each package individually to provide per-package error handling
 		for _, pkg := range packageNames {
 			// Start spinner for this package
 			spinner := spinnerManager.StartSpinner("Upgrading", fmt.Sprintf("%s (%s)", pkg, managerName))
 
 			result := packageUpgradeResult{
-				Manager:     managerName,
-				Package:     pkg,
-				FromVersion: packageVersions[pkg],
+				Manager: managerName,
+				Package: pkg,
 			}
+
+			// Get current version before upgrade
+			if version, err := mgr.InstalledVersion(ctx, pkg); err == nil {
+				result.FromVersion = version
+			}
+
+			// Upgrade this package
+			upgradeErr := upgrader.Upgrade(ctx, []string{pkg})
 
 			if upgradeErr != nil {
 				result.Status = "failed"
