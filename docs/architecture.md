@@ -227,7 +227,7 @@ All commands support multiple output formats (table, JSON, YAML) to support:
 
 1. Implement the `PackageManager` interface in `internal/resources/packages/`
 2. Implement required operations (Install, Uninstall, ListInstalled, etc.)
-3. Implement optional capabilities through interfaces (search, info)
+3. Implement optional capabilities through interfaces (search, info, upgrade, health, self-install)
 4. Implement health checking via CheckHealth() method
 5. Implement self-installation via SelfInstall() method
 6. Implement package upgrade capabilities via Upgrade() and Outdated() methods
@@ -290,3 +290,47 @@ The architecture is designed to support:
 - Team/organization configurations
 - Service management (Docker, systemd, etc.)
 - Configuration templating
+### Capability Usage Examples
+
+Optional capabilities are exposed via small interfaces. Callers must perform a type assertion before invoking optional methods, or use the helper predicates for readability.
+
+Type assertions:
+```
+// Info (PackageInfoProvider)
+if infoProvider, ok := mgr.(packages.PackageInfoProvider); ok {
+    info, err := infoProvider.Info(ctx, name)
+    _ = info; _ = err
+}
+
+// Search (PackageSearcher)
+if searcher, ok := mgr.(packages.PackageSearcher); ok {
+    results, err := searcher.Search(ctx, query)
+    _ = results; _ = err
+}
+
+// Upgrade (PackageUpgrader)
+if upgrader, ok := mgr.(packages.PackageUpgrader); ok {
+    _ = upgrader.Upgrade(ctx, []string{name})
+}
+
+// Health (PackageHealthChecker)
+if hc, ok := mgr.(packages.PackageHealthChecker); ok {
+    _, _ = hc.CheckHealth(ctx)
+}
+
+// Self-install (PackageSelfInstaller)
+if si, ok := mgr.(packages.PackageSelfInstaller); ok {
+    _ = si.SelfInstall(ctx)
+}
+```
+
+Helper predicates:
+```
+if packages.SupportsInfo(mgr) { /* safe to assert PackageInfoProvider */ }
+if packages.SupportsSearch(mgr) { /* safe to assert PackageSearcher */ }
+if packages.SupportsUpgrade(mgr) { /* safe to assert PackageUpgrader */ }
+if packages.SupportsHealthCheck(mgr) { /* safe to assert PackageHealthChecker */ }
+if packages.SupportsSelfInstall(mgr) { /* safe to assert PackageSelfInstaller */ }
+```
+
+These examples demonstrate the intent of the capability model: managers may omit optional features; callers should not assume availability without checking.

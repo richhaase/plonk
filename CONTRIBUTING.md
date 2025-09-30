@@ -132,7 +132,7 @@ One of the most impactful contributions is adding support for new package manage
 
 1. **Implement the PackageManager interface** in `internal/resources/packages/`
 2. **Add required operations**: Install, Uninstall, ListInstalled, etc.
-3. **Implement optional capabilities**: Search, Info (through capability interfaces)
+3. **Implement optional capabilities**: Search, Info, Upgrade, Health, Self-Install (through capability interfaces)
 4. **Add health checking**: Implement `CheckHealth()` method
 5. **Add self-installation**: Implement `SelfInstall()` method
 6. **Add upgrade support**: Implement `Upgrade()` and `Outdated()` methods
@@ -368,3 +368,21 @@ If you have questions about contributing, please:
 4. Mention maintainers in your issue if urgent
 
 Thank you for contributing to Plonk! 🚀
+#### Capability Interfaces: Calling Patterns
+
+Optional capabilities must be guarded with a type assertion, or the `SupportsX` helpers from `internal/resources/packages`:
+
+```
+// Prefer explicit assertions when calling optional methods
+if infoProvider, ok := mgr.(packages.PackageInfoProvider); ok {
+    info, err := infoProvider.Info(ctx, pkg)
+    _ = info; _ = err
+}
+
+if packages.SupportsUpgrade(mgr) {
+    upgrader := mgr.(packages.PackageUpgrader)
+    _ = upgrader.Upgrade(ctx, []string{pkg})
+}
+```
+
+When writing tests that operate on variables typed as `PackageManager`, do not call optional methods directly without an assertion. Tests that instantiate concrete managers (e.g., `manager := NewNpmManager()`) may call those methods directly because the concrete type implements them.
