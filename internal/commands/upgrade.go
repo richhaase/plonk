@@ -414,7 +414,24 @@ func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, l
 		}
 
 		// Upgrade packages for this manager
-		upgradeErr := mgr.Upgrade(ctx, packageNames)
+		upgrader, ok := mgr.(packages.PackageUpgrader)
+		if !ok {
+			// Add failures for all packages in this manager
+			for _, pkg := range packageNames {
+				spinner := spinnerManager.StartSpinner("Upgrading", fmt.Sprintf("%s (%s)", pkg, managerName))
+				spinner.Error(fmt.Sprintf("Failed to upgrade %s: package manager '%s' does not support upgrade", pkg, managerName))
+
+				results.Results = append(results.Results, packageUpgradeResult{
+					Manager: managerName,
+					Package: pkg,
+					Status:  "failed",
+					Error:   fmt.Sprintf("package manager '%s' does not support upgrade", managerName),
+				})
+				results.Summary.Failed++
+			}
+			continue
+		}
+		upgradeErr := upgrader.Upgrade(ctx, packageNames)
 
 		// Process results for each package
 		for _, pkg := range packageNames {

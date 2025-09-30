@@ -242,7 +242,13 @@ func handleManagerSelfInstall(ctx context.Context, managerName string, dryRun bo
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, t.Package)
 	defer cancel()
 
-	err = manager.SelfInstall(ctxWithTimeout)
+	selfInstaller, ok := manager.(packages.PackageSelfInstaller)
+	if !ok {
+		result.Status = "failed"
+		result.Error = fmt.Errorf("package manager %s does not support automatic installation", managerName)
+		return result
+	}
+	err = selfInstaller.SelfInstall(ctxWithTimeout)
 	if err != nil {
 		result.Status = "failed"
 		result.Error = err

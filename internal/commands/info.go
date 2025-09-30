@@ -124,7 +124,11 @@ func getInfoFromSpecificManager(ctx context.Context, managerName, packageName st
 	}
 
 	// Get package info
-	info, err := manager.Info(ctx, packageName)
+	infoProvider, ok := manager.(packages.PackageInfoProvider)
+	if !ok {
+		return InfoOutput{}, fmt.Errorf("package manager %s does not support info", managerName)
+	}
+	info, err := infoProvider.Info(ctx, packageName)
 	if err != nil {
 		return InfoOutput{
 			Package: packageName,
@@ -172,18 +176,20 @@ func getInfoWithPriorityLogic(ctx context.Context, packageName string) (InfoOutp
 		registry := packages.NewManagerRegistry()
 		if manager, err := registry.GetManager(managerName); err == nil {
 			if available, err := manager.IsAvailable(ctx); err == nil && available {
-				if info, err := manager.Info(ctx, packageName); err == nil {
-					info.Installed = true // Override to reflect managed status
-					message := fmt.Sprintf("Package '%s' is managed by plonk via %s", packageName, managerName)
-					if len(packageLocations) > 1 {
-						message += fmt.Sprintf(" (and %d other manager(s))", len(packageLocations)-1)
+				if infoProvider, ok := manager.(packages.PackageInfoProvider); ok {
+					if info, err := infoProvider.Info(ctx, packageName); err == nil {
+						info.Installed = true // Override to reflect managed status
+						message := fmt.Sprintf("Package '%s' is managed by plonk via %s", packageName, managerName)
+						if len(packageLocations) > 1 {
+							message += fmt.Sprintf(" (and %d other manager(s))", len(packageLocations)-1)
+						}
+						return InfoOutput{
+							Package:     packageName,
+							Status:      "managed",
+							Message:     message,
+							PackageInfo: info,
+						}, nil
 					}
-					return InfoOutput{
-						Package:     packageName,
-						Status:      "managed",
-						Message:     message,
-						PackageInfo: info,
-					}, nil
 				}
 			}
 		}
@@ -235,9 +241,19 @@ func getInfoWithPriorityLogic(ctx context.Context, packageName string) (InfoOutp
 		}
 		if installed {
 			// Get detailed info
-			info, err := manager.Info(ctx, packageName)
-			if err != nil {
-				// Fallback info if detailed lookup fails
+			var info *packages.PackageInfo
+			if infoProvider, ok := manager.(packages.PackageInfoProvider); ok {
+				info, err = infoProvider.Info(ctx, packageName)
+				if err != nil {
+					// Fallback info if detailed lookup fails
+					info = &packages.PackageInfo{
+						Name:      packageName,
+						Manager:   name,
+						Installed: true,
+					}
+				}
+			} else {
+				// Fallback info if manager doesn't support info
 				info = &packages.PackageInfo{
 					Name:      packageName,
 					Manager:   name,
@@ -256,7 +272,11 @@ func getInfoWithPriorityLogic(ctx context.Context, packageName string) (InfoOutp
 	// 3. Package not installed, search for available packages
 	for _, name := range names {
 		manager := availableManagers[name]
-		info, err := manager.Info(ctx, packageName)
+		infoProvider, ok := manager.(packages.PackageInfoProvider)
+		if !ok {
+			continue // Skip managers that don't support info
+		}
+		info, err := infoProvider.Info(ctx, packageName)
 		if err != nil {
 			continue // Package not found in this manager
 		}
