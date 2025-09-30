@@ -7,6 +7,7 @@ brew:cowsay      # ASCII cow, harmless fun tool
 brew:figlet      # ASCII art text generator
 brew:sl          # Steam locomotive typo corrector
 brew:fortune     # Fortune cookie messages
+brew:lolcat      # Rainbow text colorizer, harmless fun tool
 
 # NPM packages (Node.js)
 npm:is-odd       # Checks if number is odd, ~4KB, no deps
