@@ -3,7 +3,7 @@ package packages
 import "testing"
 
 func TestCondaParseSearchOutput(t *testing.T) {
-	c := &CondaManager{}
+	c := NewCondaManager()
 	out := []byte(`{"numpy":[{"name":"numpy","version":"1.26.0"}],"pandas":[{"name":"pandas","version":"2.2.0"}]}`)
 	res := c.parseSearchOutput(out)
 	if len(res) != 2 {
@@ -12,7 +12,7 @@ func TestCondaParseSearchOutput(t *testing.T) {
 }
 
 func TestCondaParseInfoOutput(t *testing.T) {
-	c := &CondaManager{}
+	c := NewCondaManager()
 	out := []byte(`{"numpy":[{"name":"numpy","version":"1.26.0","summary":"NumPy","home":"https://numpy.org","depends":["python >=3.9"]}]}`)
 	info := c.parseInfoOutput(out, "numpy")
 	if info == nil || info.Version != "1.26.0" {

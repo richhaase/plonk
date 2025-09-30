@@ -74,7 +74,7 @@ func TestCondaManager_ListInstalled(t *testing.T) {
 			}
 			SetDefaultExecutor(mock)
 
-			manager := &CondaManager{binary: "mamba", useMamba: true}
+			manager := &CondaManager{binary: "mamba", useMamba: true, exec: mock}
 			result, err := manager.ListInstalled(context.Background())
 
 			if tt.expectError && err == nil {
@@ -169,7 +169,7 @@ func TestCondaManager_Install(t *testing.T) {
 			}
 			SetDefaultExecutor(mock)
 
-			manager := &CondaManager{binary: "mamba", useMamba: true}
+			manager := &CondaManager{binary: "mamba", useMamba: true, exec: mock}
 			err := manager.Install(context.Background(), tt.packageName)
 
 			if tt.expectError && err == nil {
@@ -242,7 +242,7 @@ func TestCondaManager_Uninstall(t *testing.T) {
 			}
 			SetDefaultExecutor(mock)
 
-			manager := &CondaManager{binary: "mamba", useMamba: true}
+			manager := &CondaManager{binary: "mamba", useMamba: true, exec: mock}
 			err := manager.Uninstall(context.Background(), tt.packageName)
 
 			if tt.expectError && err == nil {
@@ -349,7 +349,7 @@ func TestCondaManager_IsInstalled(t *testing.T) {
 			}
 			SetDefaultExecutor(mock)
 
-			manager := &CondaManager{binary: "mamba", useMamba: true}
+			manager := &CondaManager{binary: "mamba", useMamba: true, exec: mock}
 			result, err := manager.IsInstalled(context.Background(), tt.packageName)
 
 			if tt.expectError && err == nil {
@@ -442,7 +442,7 @@ func TestCondaManager_InstalledVersion(t *testing.T) {
 			}
 			SetDefaultExecutor(mock)
 
-			manager := &CondaManager{binary: "mamba", useMamba: true}
+			manager := &CondaManager{binary: "mamba", useMamba: true, exec: mock}
 			result, err := manager.InstalledVersion(context.Background(), tt.packageName)
 
 			if tt.expectError && err == nil {
@@ -522,7 +522,7 @@ func TestCondaManager_IsAvailable(t *testing.T) {
 			}
 			SetDefaultExecutor(mock)
 
-			manager := &CondaManager{binary: tt.binary}
+			manager := &CondaManager{binary: tt.binary, exec: mock}
 			result, _ := manager.IsAvailable(context.Background())
 
 			if result != tt.expected {
@@ -606,7 +606,7 @@ func TestCondaManager_Search(t *testing.T) {
 			}
 			SetDefaultExecutor(mock)
 
-			manager := &CondaManager{binary: "mamba", useMamba: true}
+			manager := &CondaManager{binary: "mamba", useMamba: true, exec: mock}
 			result, err := manager.Search(context.Background(), tt.query)
 
 			if tt.expectError && err == nil {
@@ -728,7 +728,7 @@ func TestCondaManager_Info(t *testing.T) {
 			}
 			SetDefaultExecutor(mock)
 
-			manager := &CondaManager{binary: "mamba", useMamba: true}
+			manager := &CondaManager{binary: "mamba", useMamba: true, exec: mock}
 			result, err := manager.Info(context.Background(), tt.packageName)
 
 			if tt.expectError && err == nil {
@@ -855,7 +855,7 @@ func TestCondaManager_Upgrade(t *testing.T) {
 			}
 			SetDefaultExecutor(mock)
 
-			manager := &CondaManager{binary: "mamba", useMamba: true}
+			manager := &CondaManager{binary: "mamba", useMamba: true, exec: mock}
 			err := manager.Upgrade(context.Background(), tt.packages)
 
 			if tt.expectError && err == nil {

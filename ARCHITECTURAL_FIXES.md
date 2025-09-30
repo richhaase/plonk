@@ -43,19 +43,21 @@ This document tracks the architectural improvements identified in the code revie
 - Updated all tests with type assertions
 - Created comprehensive capability tests
 
-### 4. Create CommandExecutor Interface ✅ FOUNDATION COMPLETE
+### 4. Create CommandExecutor Interface ✅ COMPLETE
 **File**: `internal/resources/packages/executor.go`
 **Issue**: Package-level functions can't be mocked
 **Impact**: Testing requires complex setup, tight coupling
 **Fix**: Define `CommandExecutor` interface and inject into managers
-**Status**: ✅ Foundation complete in commit `345ea44`
+**Status**: ✅ Complete - All 12 managers migrated
 - CommandExecutor interface already existed
 - Added ExecuteWith(), CombinedOutputWith(), VerifyBinaryWith() helpers
 - Extended registry with V2 factory support (ManagerFactoryV2)
 - Added GetManagerWithExecutor() API
-- Migrated Homebrew as reference implementation
-- 100% backward compatible
-**Remaining**: 11 managers can follow Homebrew pattern (mechanical work)
+- Migrated all 12 managers: Homebrew, npm, pnpm, cargo, pipx, conda, gem, go, uv, pixi, composer, dotnet
+- All managers now have NewXxxManagerWithExecutor() constructors
+- 100% backward compatible - existing NewXxxManager() constructors unchanged
+- Fixed test files to use constructors instead of struct literals
+- All tests pass, linter passes, build succeeds
 
 ### 5. Refactor Orchestrator to Use Resource Abstraction 🔄 OPTIONAL
 **File**: `internal/orchestrator/coordinator.go`

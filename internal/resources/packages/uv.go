@@ -15,18 +15,29 @@ import (
 // UvManager manages UV tool packages.
 type UvManager struct {
 	binary string
+	exec   CommandExecutor
 }
 
-// NewUvManager creates a new UV manager.
+// NewUvManager creates a new UV manager with default executor.
 func NewUvManager() *UvManager {
+	return NewUvManagerWithExecutor(nil)
+}
+
+// NewUvManagerWithExecutor creates a new UV manager with the provided executor.
+// If executor is nil, uses the default executor.
+func NewUvManagerWithExecutor(executor CommandExecutor) *UvManager {
+	if executor == nil {
+		executor = defaultExecutor
+	}
 	return &UvManager{
 		binary: "uv",
+		exec:   executor,
 	}
 }
 
 // ListInstalled lists all installed UV tools.
 func (u *UvManager) ListInstalled(ctx context.Context) ([]string, error) {
-	output, err := ExecuteCommand(ctx, u.binary, "tool", "list")
+	output, err := ExecuteWith(ctx, u.exec, u.binary, "tool", "list")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list installed tools: %w", err)
 	}
@@ -67,18 +78,18 @@ func (u *UvManager) parseListOutput(output []byte) []string {
 
 // Install installs a UV tool.
 func (u *UvManager) Install(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, u.binary, "tool", "install", name)
+	output, err := CombinedOutputWith(ctx, u.exec, u.binary, "tool", "install", name)
 	if err != nil {
-		return u.handleInstallError(err, output, name)
+		return u.handleInstallError(err, []byte(output), name)
 	}
 	return nil
 }
 
 // Uninstall removes a UV tool.
 func (u *UvManager) Uninstall(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, u.binary, "tool", "uninstall", name)
+	output, err := CombinedOutputWith(ctx, u.exec, u.binary, "tool", "uninstall", name)
 	if err != nil {
-		return u.handleUninstallError(err, output, name)
+		return u.handleUninstallError(err, []byte(output), name)
 	}
 	return nil
 }
@@ -145,7 +156,7 @@ func (u *UvManager) InstalledVersion(ctx context.Context, name string) (string, 
 	}
 
 	// Get detailed tool list output
-	output, err := ExecuteCommand(ctx, u.binary, "tool", "list")
+	output, err := ExecuteWith(ctx, u.exec, u.binary, "tool", "list")
 	if err != nil {
 		return "", fmt.Errorf("failed to get tool version information for %s: %w", name, err)
 	}
@@ -179,9 +190,9 @@ func (u *UvManager) Upgrade(ctx context.Context, packages []string) error {
 		// Upgrade each tool individually
 		var upgradeErrors []string
 		for _, tool := range installed {
-			output, err := ExecuteCommandCombined(ctx, u.binary, "tool", "upgrade", tool)
+			output, err := CombinedOutputWith(ctx, u.exec, u.binary, "tool", "upgrade", tool)
 			if err != nil {
-				upgradeErr := u.handleUpgradeError(err, output, tool)
+				upgradeErr := u.handleUpgradeError(err, []byte(output), tool)
 				upgradeErrors = append(upgradeErrors, upgradeErr.Error())
 				continue
 			}
@@ -195,9 +206,9 @@ func (u *UvManager) Upgrade(ctx context.Context, packages []string) error {
 
 	// Upgrade specific packages
 	args := append([]string{"tool", "upgrade"}, packages...)
-	output, err := ExecuteCommandCombined(ctx, u.binary, args...)
+	output, err := CombinedOutputWith(ctx, u.exec, u.binary, args...)
 	if err != nil {
-		return u.handleUpgradeError(err, output, strings.Join(packages, ", "))
+		return u.handleUpgradeError(err, []byte(output), strings.Join(packages, ", "))
 	}
 	return nil
 }
@@ -227,11 +238,11 @@ func init() {
 
 // IsAvailable checks if uv is installed and accessible
 func (u *UvManager) IsAvailable(ctx context.Context) (bool, error) {
-	if !CheckCommandAvailable(u.binary) {
+	if !CheckCommandAvailableWith(u.exec, u.binary) {
 		return false, nil
 	}
 
-	err := VerifyBinary(ctx, u.binary, []string{"--version"})
+	err := VerifyBinaryWith(ctx, u.exec, u.binary, []string{"--version"})
 	if err != nil {
 		// Check for context cancellation
 		if IsContextError(err) {

@@ -16,28 +16,44 @@ import (
 type CondaManager struct {
 	binary   string // Detected binary: "mamba" or "conda"
 	useMamba bool   // Performance optimization indicator
+	exec     CommandExecutor
 }
 
-// NewCondaManager creates a new conda manager with intelligent binary detection.
+// NewCondaManager creates a new conda manager with default executor.
 func NewCondaManager() *CondaManager {
-	binary, useMamba := detectCondaVariant()
+	return NewCondaManagerWithExecutor(nil)
+}
+
+// NewCondaManagerWithExecutor creates a new conda manager with the provided executor.
+// If executor is nil, uses the default executor.
+func NewCondaManagerWithExecutor(executor CommandExecutor) *CondaManager {
+	if executor == nil {
+		executor = defaultExecutor
+	}
+	binary, useMamba := detectCondaVariantWithExecutor(executor)
 	return &CondaManager{
 		binary:   binary,
 		useMamba: useMamba,
+		exec:     executor,
 	}
 }
 
 // detectCondaVariant performs two-way conda variant detection (mamba → conda).
 func detectCondaVariant() (string, bool) {
+	return detectCondaVariantWithExecutor(defaultExecutor)
+}
+
+// detectCondaVariantWithExecutor performs two-way conda variant detection with the provided executor.
+func detectCondaVariantWithExecutor(exec CommandExecutor) (string, bool) {
 	// Priority order: mamba → conda (mamba includes micromamba's mamba command)
 
 	// Try mamba first (10-100x faster than conda, includes all mamba variants)
-	if CheckCommandAvailable("mamba") && isCondaVariantFunctional("mamba") {
+	if CheckCommandAvailableWith(exec, "mamba") && isCondaVariantFunctionalWith(exec, "mamba") {
 		return "mamba", true
 	}
 
 	// Fall back to conda (reliable baseline)
-	if CheckCommandAvailable("conda") && isCondaVariantFunctional("conda") {
+	if CheckCommandAvailableWith(exec, "conda") && isCondaVariantFunctionalWith(exec, "conda") {
 		return "conda", false
 	}
 
@@ -46,16 +62,17 @@ func detectCondaVariant() (string, bool) {
 }
 
 // isCondaVariantFunctional validates binary using existing plonk patterns.
-func isCondaVariantFunctional(binary string) bool {
+// isCondaVariantFunctionalWith validates binary with the provided executor.
+func isCondaVariantFunctionalWith(exec CommandExecutor, binary string) bool {
 	// Follow existing plonk validation pattern exactly
-	if !CheckCommandAvailable(binary) {
+	if !CheckCommandAvailableWith(exec, binary) {
 		return false
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err := VerifyBinary(ctx, binary, []string{"--version"})
+	err := VerifyBinaryWith(ctx, exec, binary, []string{"--version"})
 	return err == nil
 }
 
@@ -104,11 +121,11 @@ type CondaInfo struct {
 
 // IsAvailable checks if conda/mamba is installed and accessible.
 func (c *CondaManager) IsAvailable(ctx context.Context) (bool, error) {
-	if !CheckCommandAvailable(c.binary) {
+	if !CheckCommandAvailableWith(c.exec, c.binary) {
 		return false, nil
 	}
 
-	err := VerifyBinary(ctx, c.binary, []string{"--version"})
+	err := VerifyBinaryWith(ctx, c.exec, c.binary, []string{"--version"})
 	if err != nil {
 		// Check for context cancellation
 		if IsContextError(err) {
@@ -123,7 +140,7 @@ func (c *CondaManager) IsAvailable(ctx context.Context) (bool, error) {
 
 // ListInstalled lists all packages installed in the base environment.
 func (c *CondaManager) ListInstalled(ctx context.Context) ([]string, error) {
-	output, err := ExecuteCommand(ctx, c.binary, "list", "-n", "base", "--json")
+	output, err := ExecuteWith(ctx, c.exec, c.binary, "list", "-n", "base", "--json")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list installed conda packages: %w", err)
 	}
@@ -145,9 +162,9 @@ func (c *CondaManager) ListInstalled(ctx context.Context) ([]string, error) {
 // Install installs a conda package globally in the base environment.
 func (c *CondaManager) Install(ctx context.Context, name string) error {
 	// Both mamba and conda use identical syntax
-	output, err := ExecuteCommandCombined(ctx, c.binary, "install", "-n", "base", "-y", name)
+	output, err := CombinedOutputWith(ctx, c.exec, c.binary, "install", "-n", "base", "-y", name)
 	if err != nil {
-		return c.handleInstallError(err, output, name)
+		return c.handleInstallError(err, []byte(output), name)
 	}
 	return nil
 }
@@ -155,9 +172,9 @@ func (c *CondaManager) Install(ctx context.Context, name string) error {
 // Uninstall removes a conda package from the base environment.
 func (c *CondaManager) Uninstall(ctx context.Context, name string) error {
 	// Both mamba and conda use identical syntax
-	output, err := ExecuteCommandCombined(ctx, c.binary, "remove", "-n", "base", "-y", name)
+	output, err := CombinedOutputWith(ctx, c.exec, c.binary, "remove", "-n", "base", "-y", name)
 	if err != nil {
-		return c.handleUninstallError(err, output, name)
+		return c.handleUninstallError(err, []byte(output), name)
 	}
 	return nil
 }
@@ -189,7 +206,7 @@ func (c *CondaManager) InstalledVersion(ctx context.Context, name string) (strin
 	}
 
 	// Get detailed package list
-	output, err := ExecuteCommand(ctx, c.binary, "list", "-n", "base", "--json")
+	output, err := ExecuteWith(ctx, c.exec, c.binary, "list", "-n", "base", "--json")
 	if err != nil {
 		return "", fmt.Errorf("failed to get package version information for %s: %w", name, err)
 	}
@@ -211,7 +228,7 @@ func (c *CondaManager) InstalledVersion(ctx context.Context, name string) (strin
 // Search searches for conda packages in available repositories.
 func (c *CondaManager) Search(ctx context.Context, query string) ([]string, error) {
 	// Both mamba and conda use identical search syntax
-	output, err := ExecuteCommand(ctx, c.binary, "search", query, "--json")
+	output, err := ExecuteWith(ctx, c.exec, c.binary, "search", query, "--json")
 	if err != nil {
 		// Check for no results vs real errors
 		if exitCode, ok := ExtractExitCode(err); ok && exitCode == 1 {
@@ -273,7 +290,7 @@ func (c *CondaManager) Info(ctx context.Context, name string) (*PackageInfo, err
 	}
 
 	// Get package information from conda search
-	output, err := ExecuteCommand(ctx, c.binary, "search", name, "--info", "--json")
+	output, err := ExecuteWith(ctx, c.exec, c.binary, "search", name, "--info", "--json")
 	if err != nil {
 		if exitCode, ok := ExtractExitCode(err); ok && exitCode == 1 {
 			return nil, fmt.Errorf("package '%s' not found", name)
@@ -412,7 +429,7 @@ func (c *CondaManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 
 // getCondaInfo retrieves comprehensive conda system information.
 func (c *CondaManager) getCondaInfo(ctx context.Context) (*CondaInfo, error) {
-	output, err := ExecuteCommand(ctx, c.binary, "info", "--json")
+	output, err := ExecuteWith(ctx, c.exec, c.binary, "info", "--json")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get conda info: %w", err)
 	}
@@ -457,9 +474,9 @@ func (c *CondaManager) Upgrade(ctx context.Context, packages []string) error {
 		// Update all packages
 		var upgradeErrors []string
 		for _, pkg := range installed {
-			output, err := ExecuteCommandCombined(ctx, c.binary, "update", "-n", "base", "-y", pkg)
+			output, err := CombinedOutputWith(ctx, c.exec, c.binary, "update", "-n", "base", "-y", pkg)
 			if err != nil {
-				upgradeErr := c.handleUpgradeError(err, output, pkg)
+				upgradeErr := c.handleUpgradeError(err, []byte(output), pkg)
 				if upgradeErr != nil {
 					upgradeErrors = append(upgradeErrors, upgradeErr.Error())
 				}
@@ -476,9 +493,9 @@ func (c *CondaManager) Upgrade(ctx context.Context, packages []string) error {
 	// Upgrade specific packages
 	var upgradeErrors []string
 	for _, pkg := range packages {
-		output, err := ExecuteCommandCombined(ctx, c.binary, "update", "-n", "base", "-y", pkg)
+		output, err := CombinedOutputWith(ctx, c.exec, c.binary, "update", "-n", "base", "-y", pkg)
 		if err != nil {
-			upgradeErr := c.handleUpgradeError(err, output, pkg)
+			upgradeErr := c.handleUpgradeError(err, []byte(output), pkg)
 			if upgradeErr != nil {
 				upgradeErrors = append(upgradeErrors, upgradeErr.Error())
 			}
@@ -618,7 +635,7 @@ func (c *CondaManager) Dependencies() []string {
 }
 
 func init() {
-	RegisterManager("conda", func() PackageManager {
-		return NewCondaManager()
+	RegisterManagerV2("conda", func(exec CommandExecutor) PackageManager {
+		return NewCondaManagerWithExecutor(exec)
 	})
 }

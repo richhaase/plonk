@@ -15,18 +15,29 @@ import (
 // DotnetManager manages .NET Global Tools.
 type DotnetManager struct {
 	binary string
+	exec   CommandExecutor
 }
 
-// NewDotnetManager creates a new .NET Global Tools manager.
+// NewDotnetManager creates a new .NET Global Tools manager with default executor.
 func NewDotnetManager() *DotnetManager {
+	return NewDotnetManagerWithExecutor(nil)
+}
+
+// NewDotnetManagerWithExecutor creates a new .NET Global Tools manager with the provided executor.
+// If executor is nil, uses the default executor.
+func NewDotnetManagerWithExecutor(executor CommandExecutor) *DotnetManager {
+	if executor == nil {
+		executor = defaultExecutor
+	}
 	return &DotnetManager{
 		binary: "dotnet",
+		exec:   executor,
 	}
 }
 
 // ListInstalled lists all globally installed .NET tools.
 func (d *DotnetManager) ListInstalled(ctx context.Context) ([]string, error) {
-	output, err := ExecuteCommand(ctx, d.binary, "tool", "list", "-g")
+	output, err := ExecuteWith(ctx, d.exec, d.binary, "tool", "list", "-g")
 	if err != nil {
 		// dotnet tool list can return non-zero exit codes when no tools are installed
 		if exitCode, ok := ExtractExitCode(err); ok {
@@ -95,18 +106,18 @@ func (d *DotnetManager) parseListOutput(output []byte) []string {
 
 // Install installs a global .NET tool.
 func (d *DotnetManager) Install(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, d.binary, "tool", "install", "-g", name)
+	output, err := CombinedOutputWith(ctx, d.exec, d.binary, "tool", "install", "-g", name)
 	if err != nil {
-		return d.handleInstallError(err, output, name)
+		return d.handleInstallError(err, []byte(output), name)
 	}
 	return nil
 }
 
 // Uninstall removes a global .NET tool.
 func (d *DotnetManager) Uninstall(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, d.binary, "tool", "uninstall", "-g", name)
+	output, err := CombinedOutputWith(ctx, d.exec, d.binary, "tool", "uninstall", "-g", name)
 	if err != nil {
-		return d.handleUninstallError(err, output, name)
+		return d.handleUninstallError(err, []byte(output), name)
 	}
 	return nil
 }
@@ -169,7 +180,7 @@ func (d *DotnetManager) Info(ctx context.Context, name string) (*PackageInfo, er
 
 // getInstalledVersion extracts the version of an installed tool
 func (d *DotnetManager) getInstalledVersion(ctx context.Context, name string) (string, error) {
-	output, err := ExecuteCommand(ctx, d.binary, "tool", "list", "-g")
+	output, err := ExecuteWith(ctx, d.exec, d.binary, "tool", "list", "-g")
 	if err != nil {
 		return "", err
 	}
@@ -245,9 +256,9 @@ func (d *DotnetManager) Upgrade(ctx context.Context, packages []string) error {
 		// Upgrade each tool individually
 		var upgradeErrors []string
 		for _, tool := range installed {
-			output, err := ExecuteCommandCombined(ctx, d.binary, "tool", "update", "-g", tool)
+			output, err := CombinedOutputWith(ctx, d.exec, d.binary, "tool", "update", "-g", tool)
 			if err != nil {
-				upgradeErr := d.handleUpgradeError(err, output, tool)
+				upgradeErr := d.handleUpgradeError(err, []byte(output), tool)
 				upgradeErrors = append(upgradeErrors, upgradeErr.Error())
 				continue
 			}
@@ -262,9 +273,9 @@ func (d *DotnetManager) Upgrade(ctx context.Context, packages []string) error {
 	// Upgrade specific packages
 	var upgradeErrors []string
 	for _, pkg := range packages {
-		output, err := ExecuteCommandCombined(ctx, d.binary, "tool", "update", "-g", pkg)
+		output, err := CombinedOutputWith(ctx, d.exec, d.binary, "tool", "update", "-g", pkg)
 		if err != nil {
-			upgradeErr := d.handleUpgradeError(err, output, pkg)
+			upgradeErr := d.handleUpgradeError(err, []byte(output), pkg)
 			upgradeErrors = append(upgradeErrors, upgradeErr.Error())
 			continue
 		}
@@ -277,16 +288,16 @@ func (d *DotnetManager) Upgrade(ctx context.Context, packages []string) error {
 }
 
 func init() {
-	RegisterManager("dotnet", func() PackageManager {
-		return NewDotnetManager()
+	RegisterManagerV2("dotnet", func(exec CommandExecutor) PackageManager {
+		return NewDotnetManagerWithExecutor(exec)
 	})
 }
 
 // IsAvailable checks if dotnet CLI is installed and accessible
 func (d *DotnetManager) IsAvailable(ctx context.Context) (bool, error) {
 	// First check if dotnet is in PATH
-	if CheckCommandAvailable(d.binary) {
-		err := VerifyBinary(ctx, d.binary, []string{"--version"})
+	if CheckCommandAvailableWith(d.exec, d.binary) {
+		err := VerifyBinaryWith(ctx, d.exec, d.binary, []string{"--version"})
 		if err != nil {
 			// Check for context cancellation
 			if IsContextError(err) {
@@ -303,7 +314,7 @@ func (d *DotnetManager) IsAvailable(ctx context.Context) (bool, error) {
 	for _, dotnetPath := range dotnetPaths {
 		if _, err := os.Stat(dotnetPath); err == nil {
 			// Found dotnet binary, verify it works
-			err := VerifyBinary(ctx, dotnetPath, []string{"--version"})
+			err := VerifyBinaryWith(ctx, d.exec, dotnetPath, []string{"--version"})
 			if err != nil {
 				// Check for context cancellation
 				if IsContextError(err) {

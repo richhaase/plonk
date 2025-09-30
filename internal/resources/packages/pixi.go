@@ -15,18 +15,29 @@ import (
 // PixiManager manages pixi global packages.
 type PixiManager struct {
 	binary string
+	exec   CommandExecutor
 }
 
-// NewPixiManager creates a new pixi manager.
+// NewPixiManager creates a new pixi manager with default executor.
 func NewPixiManager() *PixiManager {
+	return NewPixiManagerWithExecutor(nil)
+}
+
+// NewPixiManagerWithExecutor creates a new pixi manager with the provided executor.
+// If executor is nil, uses the default executor.
+func NewPixiManagerWithExecutor(executor CommandExecutor) *PixiManager {
+	if executor == nil {
+		executor = defaultExecutor
+	}
 	return &PixiManager{
 		binary: "pixi",
+		exec:   executor,
 	}
 }
 
 // ListInstalled lists all installed pixi global environments.
 func (p *PixiManager) ListInstalled(ctx context.Context) ([]string, error) {
-	output, err := ExecuteCommand(ctx, p.binary, "global", "list")
+	output, err := ExecuteWith(ctx, p.exec, p.binary, "global", "list")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list installed environments: %w", err)
 	}
@@ -65,18 +76,18 @@ func (p *PixiManager) parseListOutput(output []byte) []string {
 
 // Install installs a pixi global package.
 func (p *PixiManager) Install(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, p.binary, "global", "install", name)
+	output, err := CombinedOutputWith(ctx, p.exec, p.binary, "global", "install", name)
 	if err != nil {
-		return p.handleInstallError(err, output, name)
+		return p.handleInstallError(err, []byte(output), name)
 	}
 	return nil
 }
 
 // Uninstall removes a pixi global environment.
 func (p *PixiManager) Uninstall(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, p.binary, "global", "uninstall", name)
+	output, err := CombinedOutputWith(ctx, p.exec, p.binary, "global", "uninstall", name)
 	if err != nil {
-		return p.handleUninstallError(err, output, name)
+		return p.handleUninstallError(err, []byte(output), name)
 	}
 	return nil
 }
@@ -98,7 +109,7 @@ func (p *PixiManager) IsInstalled(ctx context.Context, name string) (bool, error
 
 // Search searches for packages in conda-forge.
 func (p *PixiManager) Search(ctx context.Context, query string) ([]string, error) {
-	output, err := ExecuteCommand(ctx, p.binary, "search", query)
+	output, err := ExecuteWith(ctx, p.exec, p.binary, "search", query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search for packages: %w", err)
 	}
@@ -207,7 +218,7 @@ func (p *PixiManager) InstalledVersion(ctx context.Context, name string) (string
 	}
 
 	// Get detailed environment info
-	output, err := ExecuteCommand(ctx, p.binary, "global", "list", "--environment", name)
+	output, err := ExecuteWith(ctx, p.exec, p.binary, "global", "list", "--environment", name)
 	if err != nil {
 		return "", fmt.Errorf("failed to get environment version information for %s: %w", name, err)
 	}
@@ -224,7 +235,7 @@ func (p *PixiManager) InstalledVersion(ctx context.Context, name string) (string
 	}
 
 	// Fallback: try to get version from global list output
-	globalOutput, err := ExecuteCommand(ctx, p.binary, "global", "list")
+	globalOutput, err := ExecuteWith(ctx, p.exec, p.binary, "global", "list")
 	if err != nil {
 		return "", fmt.Errorf("failed to get global environment list for %s: %w", name, err)
 	}
@@ -256,9 +267,9 @@ func (p *PixiManager) Upgrade(ctx context.Context, packages []string) error {
 		// Upgrade each environment individually
 		var upgradeErrors []string
 		for _, env := range installed {
-			output, err := ExecuteCommandCombined(ctx, p.binary, "global", "update", env)
+			output, err := CombinedOutputWith(ctx, p.exec, p.binary, "global", "update", env)
 			if err != nil {
-				upgradeErr := p.handleUpgradeError(err, output, env)
+				upgradeErr := p.handleUpgradeError(err, []byte(output), env)
 				upgradeErrors = append(upgradeErrors, upgradeErr.Error())
 				continue
 			}
@@ -272,9 +283,9 @@ func (p *PixiManager) Upgrade(ctx context.Context, packages []string) error {
 
 	// Upgrade specific packages
 	args := append([]string{"global", "update"}, packages...)
-	output, err := ExecuteCommandCombined(ctx, p.binary, args...)
+	output, err := CombinedOutputWith(ctx, p.exec, p.binary, args...)
 	if err != nil {
-		return p.handleUpgradeError(err, output, strings.Join(packages, ", "))
+		return p.handleUpgradeError(err, []byte(output), strings.Join(packages, ", "))
 	}
 	return nil
 }
@@ -304,11 +315,11 @@ func init() {
 
 // IsAvailable checks if pixi is installed and accessible
 func (p *PixiManager) IsAvailable(ctx context.Context) (bool, error) {
-	if !CheckCommandAvailable(p.binary) {
+	if !CheckCommandAvailableWith(p.exec, p.binary) {
 		return false, nil
 	}
 
-	err := VerifyBinary(ctx, p.binary, []string{"--version"})
+	err := VerifyBinaryWith(ctx, p.exec, p.binary, []string{"--version"})
 	if err != nil {
 		// Check for context cancellation
 		if IsContextError(err) {

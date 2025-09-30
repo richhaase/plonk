@@ -14,12 +14,23 @@ import (
 // PnpmManager manages pnpm packages.
 type PnpmManager struct {
 	binary string
+	exec   CommandExecutor
 }
 
-// NewPnpmManager creates a new pnpm manager.
+// NewPnpmManager creates a new pnpm manager with default executor.
 func NewPnpmManager() *PnpmManager {
+	return NewPnpmManagerWithExecutor(nil)
+}
+
+// NewPnpmManagerWithExecutor creates a new pnpm manager with the provided executor.
+// If executor is nil, uses the default executor.
+func NewPnpmManagerWithExecutor(executor CommandExecutor) *PnpmManager {
+	if executor == nil {
+		executor = defaultExecutor
+	}
 	return &PnpmManager{
 		binary: "pnpm",
+		exec:   executor,
 	}
 }
 
@@ -46,11 +57,11 @@ type PnpmViewOutput struct {
 
 // IsAvailable checks if pnpm is installed and accessible
 func (p *PnpmManager) IsAvailable(ctx context.Context) (bool, error) {
-	if !CheckCommandAvailable(p.binary) {
+	if !CheckCommandAvailableWith(p.exec, p.binary) {
 		return false, nil
 	}
 
-	err := VerifyBinary(ctx, p.binary, []string{"--version"})
+	err := VerifyBinaryWith(ctx, p.exec, p.binary, []string{"--version"})
 	if err != nil {
 		// Check for context cancellation
 		if IsContextError(err) {
@@ -65,7 +76,7 @@ func (p *PnpmManager) IsAvailable(ctx context.Context) (bool, error) {
 
 // ListInstalled lists all globally installed pnpm packages.
 func (p *PnpmManager) ListInstalled(ctx context.Context) ([]string, error) {
-	output, err := ExecuteCommand(ctx, p.binary, "list", "-g", "--json")
+	output, err := ExecuteWith(ctx, p.exec, p.binary, "list", "-g", "--json")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list installed packages: %w", err)
 	}
@@ -88,18 +99,18 @@ func (p *PnpmManager) ListInstalled(ctx context.Context) ([]string, error) {
 
 // Install installs a pnpm package globally.
 func (p *PnpmManager) Install(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, p.binary, "add", "-g", name)
+	output, err := CombinedOutputWith(ctx, p.exec, p.binary, "add", "-g", name)
 	if err != nil {
-		return p.handleInstallError(err, output, name)
+		return p.handleInstallError(err, []byte(output), name)
 	}
 	return nil
 }
 
 // Uninstall removes a pnpm package.
 func (p *PnpmManager) Uninstall(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, p.binary, "remove", "-g", name)
+	output, err := CombinedOutputWith(ctx, p.exec, p.binary, "remove", "-g", name)
 	if err != nil {
-		return p.handleUninstallError(err, output, name)
+		return p.handleUninstallError(err, []byte(output), name)
 	}
 	return nil
 }
@@ -131,7 +142,7 @@ func (p *PnpmManager) InstalledVersion(ctx context.Context, name string) (string
 	}
 
 	// Get detailed package list
-	output, err := ExecuteCommand(ctx, p.binary, "list", "-g", "--json")
+	output, err := ExecuteWith(ctx, p.exec, p.binary, "list", "-g", "--json")
 	if err != nil {
 		return "", fmt.Errorf("failed to get package version information for %s: %w", name, err)
 	}
@@ -179,7 +190,7 @@ func (p *PnpmManager) Info(ctx context.Context, name string) (*PackageInfo, erro
 	}
 
 	// Get package info from registry
-	output, err := ExecuteCommand(ctx, p.binary, "view", name, "--json")
+	output, err := ExecuteWith(ctx, p.exec, p.binary, "view", name, "--json")
 	if err == nil {
 		var viewOutput PnpmViewOutput
 		if json.Unmarshal(output, &viewOutput) == nil {
@@ -242,7 +253,7 @@ func (p *PnpmManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 // getGlobalDirectory discovers the pnpm global directory
 func (p *PnpmManager) getGlobalDirectory(ctx context.Context) (string, error) {
 	// Get pnpm global directory
-	output, err := ExecuteCommand(ctx, p.binary, "root", "-g")
+	output, err := ExecuteWith(ctx, p.exec, p.binary, "root", "-g")
 	if err != nil {
 		return "", fmt.Errorf("failed to get pnpm global directory: %w", err)
 	}
@@ -279,9 +290,9 @@ func (p *PnpmManager) Upgrade(ctx context.Context, packages []string) error {
 		// Update all packages
 		var upgradeErrors []string
 		for _, pkg := range installed {
-			output, err := ExecuteCommandCombined(ctx, p.binary, "update", "-g", pkg)
+			output, err := CombinedOutputWith(ctx, p.exec, p.binary, "update", "-g", pkg)
 			if err != nil {
-				upgradeErr := p.handleUpgradeError(err, output, pkg)
+				upgradeErr := p.handleUpgradeError(err, []byte(output), pkg)
 				if upgradeErr != nil {
 					upgradeErrors = append(upgradeErrors, upgradeErr.Error())
 				}
@@ -298,9 +309,9 @@ func (p *PnpmManager) Upgrade(ctx context.Context, packages []string) error {
 	// Upgrade specific packages
 	var upgradeErrors []string
 	for _, pkg := range packages {
-		output, err := ExecuteCommandCombined(ctx, p.binary, "update", "-g", pkg)
+		output, err := CombinedOutputWith(ctx, p.exec, p.binary, "update", "-g", pkg)
 		if err != nil {
-			upgradeErr := p.handleUpgradeError(err, output, pkg)
+			upgradeErr := p.handleUpgradeError(err, []byte(output), pkg)
 			if upgradeErr != nil {
 				upgradeErrors = append(upgradeErrors, upgradeErr.Error())
 			}
@@ -439,7 +450,7 @@ func (p *PnpmManager) Dependencies() []string {
 }
 
 func init() {
-	RegisterManager("pnpm", func() PackageManager {
-		return NewPnpmManager()
+	RegisterManagerV2("pnpm", func(exec CommandExecutor) PackageManager {
+		return NewPnpmManagerWithExecutor(exec)
 	})
 }
