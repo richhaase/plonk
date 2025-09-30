@@ -23,7 +23,7 @@ func WithTemporaryRegistry(t *testing.T, register func(*ManagerRegistry)) {
 	original := defaultRegistry
 
 	// Create a clean registry for tests
-	temp := &ManagerRegistry{managers: make(map[string]ManagerFactory)}
+	temp := &ManagerRegistry{managers: make(map[string]*managerEntry)}
 	defaultRegistry = temp
 
 	// Allow caller to register desired fake managers

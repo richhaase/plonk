@@ -15,15 +15,24 @@ const DefaultManager = "brew"
 // ManagerFactory defines a function that creates a package manager instance
 type ManagerFactory func() PackageManager
 
+// ManagerFactoryV2 defines a function that creates a package manager with an injected executor
+type ManagerFactoryV2 func(CommandExecutor) PackageManager
+
+// managerEntry holds both v1 and v2 factories for a package manager
+type managerEntry struct {
+	v1 ManagerFactory
+	v2 ManagerFactoryV2
+}
+
 // ManagerRegistry manages package manager creation and availability checking
 type ManagerRegistry struct {
 	mu       sync.RWMutex
-	managers map[string]ManagerFactory
+	managers map[string]*managerEntry
 }
 
 // defaultRegistry is the global registry instance
 var defaultRegistry = &ManagerRegistry{
-	managers: make(map[string]ManagerFactory),
+	managers: make(map[string]*managerEntry),
 }
 
 // RegisterManager registers a package manager with the global registry.
@@ -32,11 +41,36 @@ func RegisterManager(name string, factory ManagerFactory) {
 	defaultRegistry.Register(name, factory)
 }
 
-// Register adds a manager to the registry
+// RegisterManagerV2 registers a V2 package manager with the global registry.
+// V2 managers accept an executor for dependency injection.
+func RegisterManagerV2(name string, factory ManagerFactoryV2) {
+	defaultRegistry.RegisterV2(name, factory)
+}
+
+// Register adds a V1 manager to the registry
 func (r *ManagerRegistry) Register(name string, factory ManagerFactory) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.managers[name] = factory
+
+	entry := r.managers[name]
+	if entry == nil {
+		entry = &managerEntry{}
+		r.managers[name] = entry
+	}
+	entry.v1 = factory
+}
+
+// RegisterV2 adds a V2 manager to the registry
+func (r *ManagerRegistry) RegisterV2(name string, factory ManagerFactoryV2) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	entry := r.managers[name]
+	if entry == nil {
+		entry = &managerEntry{}
+		r.managers[name] = entry
+	}
+	entry.v2 = factory
 }
 
 // NewManagerRegistry creates a new manager registry that uses the global registrations
@@ -44,16 +78,37 @@ func NewManagerRegistry() *ManagerRegistry {
 	return defaultRegistry
 }
 
-// GetManager returns a package manager instance by name
+// GetManager returns a package manager instance by name using the default executor
 func (r *ManagerRegistry) GetManager(name string) (PackageManager, error) {
+	return r.GetManagerWithExecutor(name, nil)
+}
+
+// GetManagerWithExecutor returns a package manager instance with an injected executor.
+// If exec is nil, uses the default executor. Prefers V2 factories over V1.
+func (r *ManagerRegistry) GetManagerWithExecutor(name string, exec CommandExecutor) (PackageManager, error) {
 	r.mu.RLock()
-	factory, exists := r.managers[name]
+	entry, exists := r.managers[name]
 	r.mu.RUnlock()
 
-	if !exists {
+	if !exists || entry == nil {
 		return nil, fmt.Errorf("unsupported package manager: %s", name)
 	}
-	return factory(), nil
+
+	if exec == nil {
+		exec = defaultExecutor
+	}
+
+	// Prefer V2 factory if present
+	if entry.v2 != nil {
+		return entry.v2(exec), nil
+	}
+
+	// Fall back to V1 factory
+	if entry.v1 != nil {
+		return entry.v1(), nil
+	}
+
+	return nil, fmt.Errorf("no factory registered for package manager: %s", name)
 }
 
 // GetAllManagerNames returns all registered manager names sorted alphabetically
