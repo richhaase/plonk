@@ -6,6 +6,7 @@
 .plonk-test-gitconfig
 .plonk-test-bashrc
 .plonk-test-spinner
+.test-delete-source
 .config/plonk-test/config.yaml
 .config/plonk-test/settings.json
 .config/plonk-test-app/prefs

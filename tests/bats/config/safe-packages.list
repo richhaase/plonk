@@ -8,6 +8,7 @@ brew:figlet      # ASCII art text generator
 brew:sl          # Steam locomotive typo corrector
 brew:fortune     # Fortune cookie messages
 brew:lolcat      # Rainbow text colorizer, harmless fun tool
+brew:nonexistent-package-xyz-123456  # For testing network error handling
 
 # NPM packages (Node.js)
 npm:is-odd       # Checks if number is odd, ~4KB, no deps
