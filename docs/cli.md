@@ -46,7 +46,7 @@ plonk install pnpm cargo uv pipx     # Self-installs the managers themselves
 plonk install ripgrep fd bat         # Default manager
 
 # Install packages with specific managers
-plonk install brew:wget npm:prettier pnpm:typescript conda:numpy uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay
+plonk install brew:wget npm:prettier pnpm:typescript conda:numpy uv:ruff pixi:tree
 
 # Mixed operations
 plonk install pnpm ripgrep npm:prettier  # Bootstrap pnpm, install ripgrep via default, install prettier via npm
@@ -61,7 +61,7 @@ Uninstall packages and remove from management.
 
 ```bash
 plonk uninstall ripgrep
-plonk uninstall brew:wget npm:prettier pnpm:typescript conda:numpy uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay
+plonk uninstall brew:wget npm:prettier pnpm:typescript conda:numpy uv:ruff pixi:tree
 plonk uninstall --dry-run ripgrep
 ```
 
@@ -147,7 +147,7 @@ plonk search ripgrep                  # Search all managers
 plonk search brew:ripgrep             # Search specific manager (if supported)
 ```
 
-**Note**: Search is supported by brew, npm, cargo, conda, gem, pixi, and composer. Other managers (pnpm, pipx, uv, go, dotnet) return no results.
+**Note**: Search is supported by brew, npm, cargo, conda, gem, and pixi. Other managers (pnpm, pipx, uv, go) return no results.
 
 ### plonk info
 
@@ -223,8 +223,7 @@ Use prefixes to specify package managers:
 - `go:` - Go modules
 - `uv:` - UV (Python tool manager)
 - `pixi:` - Pixi (Conda-forge packages)
-- `composer:` - Composer (PHP global packages)
-- `dotnet:` - .NET Global Tools
+
 
 Examples:
 ```bash
@@ -238,8 +237,7 @@ plonk install gem:bundler
 plonk install go:golang.org/x/tools/cmd/goimports
 plonk install uv:ruff
 plonk install pixi:tree
-plonk install composer:phpunit/phpunit
-plonk install dotnet:dotnetsay
+
 ```
 
 ## Output and Colors

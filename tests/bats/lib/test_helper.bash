@@ -201,16 +201,6 @@ require_package_manager() {
         skip "Pixi not available"
       fi
       ;;
-    composer)
-      if ! command -v composer >/dev/null 2>&1; then
-        skip "Composer not available"
-      fi
-      ;;
-    dotnet)
-      if ! command -v dotnet >/dev/null 2>&1; then
-        skip "DotNet not available"
-      fi
-      ;;
     pipx)
       if ! command -v pipx >/dev/null 2>&1; then
         skip "Pipx not available"

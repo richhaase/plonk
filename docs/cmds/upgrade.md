@@ -78,8 +78,7 @@ Each package manager handles upgrades according to its own capabilities:
 - **Go**: Reinstalls packages with `go install package@latest`
 - **UV**: Upgrades tools via `uv tool upgrade`
 - **Pixi**: Upgrades global environments via `pixi global upgrade`
-- **Composer**: Upgrades global packages via `composer global update`
-- **dotnet**: Upgrades tools via `dotnet tool update -g`
+
 
 ### Lock File Updates
 After successful upgrades, plonk automatically updates the lock file with:

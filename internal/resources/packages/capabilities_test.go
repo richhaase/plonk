@@ -13,18 +13,16 @@ import (
 func TestCapabilityDetection(t *testing.T) {
 	// Create instances of each manager
 	managers := map[string]PackageManager{
-		"brew":     NewHomebrewManager(),
-		"npm":      NewNpmManager(),
-		"pnpm":     NewPnpmManager(),
-		"cargo":    NewCargoManager(),
-		"pipx":     NewPipxManager(),
-		"conda":    NewCondaManager(),
-		"gem":      NewGemManager(),
-		"go":       NewGoInstallManager(),
-		"uv":       NewUvManager(),
-		"pixi":     NewPixiManager(),
-		"composer": NewComposerManager(),
-		"dotnet":   NewDotnetManager(),
+		"brew":  NewHomebrewManager(),
+		"npm":   NewNpmManager(),
+		"pnpm":  NewPnpmManager(),
+		"cargo": NewCargoManager(),
+		"pipx":  NewPipxManager(),
+		"conda": NewCondaManager(),
+		"gem":   NewGemManager(),
+		"go":    NewGoInstallManager(),
+		"uv":    NewUvManager(),
+		"pixi":  NewPixiManager(),
 	}
 
 	// Test each manager's capabilities
@@ -87,8 +85,6 @@ func TestAllManagersSupportCore(t *testing.T) {
 		NewGoInstallManager(),
 		NewUvManager(),
 		NewPixiManager(),
-		NewComposerManager(),
-		NewDotnetManager(),
 	}
 
 	for _, mgr := range managers {

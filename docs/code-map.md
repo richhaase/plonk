@@ -83,8 +83,7 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - `goinstall.go` - Go install package manager
 - `uv.go` - UV package manager
 - `pixi.go` - Pixi package manager
-- `composer.go` - Composer package manager
-- `dotnet.go` - .NET Global Tools manager
+
 
 
 #### Dotfile Resources (`internal/resources/dotfiles/`)

@@ -46,14 +46,14 @@ func TestDependencyResolution(t *testing.T) {
 		},
 		{
 			name:          "all independent managers",
-			managers:      []string{"brew", "pnpm", "cargo", "uv", "pixi", "dotnet"},
-			expectedOrder: []string{"brew", "cargo", "dotnet", "pixi", "pnpm", "uv"}, // alphabetical
+			managers:      []string{"brew", "pnpm", "cargo", "uv", "pixi"},
+			expectedOrder: []string{"brew", "cargo", "pixi", "pnpm", "uv"}, // alphabetical
 			expectError:   false,
 		},
 		{
 			name:          "all dependent managers",
-			managers:      []string{"npm", "gem", "go", "composer", "pipx"},
-			expectedOrder: []string{"brew", "composer", "gem", "go", "npm", "pipx"}, // brew first, then alphabetical
+			managers:      []string{"npm", "gem", "go", "pipx"},
+			expectedOrder: []string{"brew", "gem", "go", "npm", "pipx"}, // brew first, then alphabetical
 			expectError:   false,
 		},
 	}
@@ -117,8 +117,8 @@ func TestGetAllDependencies(t *testing.T) {
 		},
 		{
 			name:        "all dependent managers",
-			managers:    []string{"npm", "gem", "go", "composer", "pipx"},
-			expectedAll: []string{"brew", "composer", "gem", "go", "npm", "pipx"},
+			managers:    []string{"npm", "gem", "go", "pipx"},
+			expectedAll: []string{"brew", "gem", "go", "npm", "pipx"},
 			expectError: false,
 		},
 		{
@@ -195,8 +195,8 @@ func TestCircularDependencyDetection(t *testing.T) {
 func TestManagerDependenciesImplementation(t *testing.T) {
 	registry := NewManagerRegistry()
 
-	independentManagers := []string{"brew", "pnpm", "cargo", "uv", "pixi", "dotnet"}
-	dependentManagers := []string{"npm", "gem", "go", "composer", "pipx"}
+	independentManagers := []string{"brew", "pnpm", "cargo", "uv", "pixi"}
+	dependentManagers := []string{"npm", "gem", "go", "pipx"}
 
 	// Test independent managers return empty dependencies
 	for _, mgr := range independentManagers {

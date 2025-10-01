@@ -20,8 +20,7 @@ Package state is tracked in `plonk.lock`, which is updated atomically with each 
 - `go:` - Go modules
 - `uv:` - UV (Python tool manager)
 - `pixi:` - Pixi (Conda-forge packages)
-- `composer:` - Composer (PHP global packages)
-- `dotnet:` - .NET Global Tools
+
 
 Without prefix, uses `default_manager` from configuration (default: brew).
 
@@ -65,7 +64,7 @@ plonk install pnpm cargo uv pipx
 plonk install ripgrep fd bat
 
 # Install packages with specific managers
-plonk install brew:wget npm:prettier pnpm:typescript cargo:exa pipx:black conda:numpy uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay
+plonk install brew:wget npm:prettier pnpm:typescript cargo:exa pipx:black conda:numpy uv:ruff pixi:tree
 
 # Mixed operations (manager bootstrap + package install)
 plonk install pnpm ripgrep npm:prettier
@@ -105,7 +104,7 @@ plonk uninstall [options] <package>...
 plonk uninstall ripgrep fd
 
 # Uninstall with specific manager
-plonk uninstall brew:wget npm:prettier pnpm:typescript pipx:black conda:numpy uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay
+plonk uninstall brew:wget npm:prettier pnpm:typescript pipx:black conda:numpy uv:ruff pixi:tree
 
 # Preview removal
 plonk uninstall --dry-run ripgrep
@@ -136,8 +135,8 @@ plonk search [options] <query>
 - Slow managers may not return results due to timeout
 
 **Search Support by Manager:**
-- **Supported**: brew, npm, cargo, conda, gem, pixi, composer
-- **Not Supported**: pnpm, pipx, uv, go, dotnet (return empty results)
+- **Supported**: brew, npm, cargo, conda, gem, pixi
+- **Not Supported**: pnpm, pipx, uv, go (return empty results)
 
 ### Examples
 
@@ -146,12 +145,12 @@ plonk search [options] <query>
 plonk search ripgrep
 
 # Search specific manager (only supported managers)
-plonk search brew:ripgrep conda:numpy pixi:tree composer:phpunit
+plonk search brew:ripgrep conda:numpy pixi:tree
 
 # Managers without search support return empty results
 plonk search uv:ruff          # No results (UV doesn't support search)
 plonk search pnpm:typescript  # No results (PNPM doesn't support search)
-plonk search dotnet:test      # No results (.NET doesn't support search)
+plonk search go:test          # No results (Go doesn't support search)
 
 # Output as JSON
 plonk search -o json ripgrep
@@ -193,7 +192,7 @@ Displays:
 plonk info ripgrep
 
 # Info for specific manager
-plonk info brew:ripgrep pipx:black conda:numpy uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay
+plonk info brew:ripgrep pipx:black conda:numpy uv:ruff pixi:tree
 
 # Output as JSON
 plonk info -o json ripgrep

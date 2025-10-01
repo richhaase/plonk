@@ -83,8 +83,6 @@ Supported package managers:
 - Go (go install) - Go modules and tools
 - UV (uv) - Python tool manager
 - Pixi (pixi) - Conda-forge package manager
-- Composer (composer) - PHP global packages
-- .NET (dotnet) - .NET Global Tools
 
 
 #### Dotfiles (`internal/resources/dotfiles/`)

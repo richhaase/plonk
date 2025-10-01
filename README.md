@@ -25,7 +25,7 @@ After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber
 - Just works
 
 **Key innovations:**
-- **Package Manager Manager™**: One interface for 12 package managers (brew, npm, pnpm, cargo, pipx, conda, gem, go, uv, pixi, composer, dotnet)
+- **Package Manager Manager™**: One interface for 10 package managers (brew, npm, pnpm, cargo, pipx, conda, gem, go, uv, pixi)
 - **Filesystem as truth**: Your dotfiles directory IS the state - no sync issues
 - **Copy, don't symlink**: Cleaner, simpler, and more compatible
 - **State-based**: Track what should exist, not what commands were run
@@ -143,7 +143,7 @@ plonk config edit                     # Edit configuration
 
 ## Supported Package Managers
 
-Plonk supports 12 package managers across multiple language ecosystems:
+Plonk supports 10 package managers across multiple language ecosystems:
 
 ### Package Managers
 - **Homebrew** (brew) - macOS/Linux packages and system tools
@@ -156,8 +156,6 @@ Plonk supports 12 package managers across multiple language ecosystems:
 - **Go** (go) - Go packages via `go install`
 - **UV** (uv) - Fast Python tool manager with isolated environments
 - **Pixi** (pixi) - Cross-platform package manager using conda-forge ecosystem
-- **Composer** (composer) - PHP global packages and CLI tools
-- **.NET Global Tools** (dotnet) - .NET CLI tools and utilities
 
 Package manager prefixes and self-installation:
 ```bash
@@ -167,7 +165,7 @@ plonk install pnpm cargo uv pipx     # Installs the managers themselves
 # Install packages via specific managers
 plonk install brew:wget npm:prettier pnpm:typescript cargo:ripgrep
 plonk install pipx:black conda:numpy gem:rubocop go:golangci-lint
-plonk install uv:ruff pixi:jupyter composer:php-cs-fixer dotnet:dotnetsay
+plonk install uv:ruff pixi:jupyter
 ```
 
 ## Configuration

@@ -64,7 +64,7 @@ Every feature in plonk has to earn its place. Complex workflows and edge cases a
 
 ## The Package Manager Manager
 
-Plonk's vision for package management is to be the "package manager manager" - one interface for all the package management operations developers need across the 12 package managers we typically juggle:
+Plonk's vision for package management is to be the "package manager manager" - one interface for all the package management operations developers need across the 10 package managers we typically juggle:
 
 - **Homebrew** for system tools
 - **npm** for JavaScript
@@ -76,8 +76,6 @@ Plonk's vision for package management is to be the "package manager manager" - o
 - **go install** for Go tools
 - **uv** for Python tool management
 - **pixi** for conda-forge packages
-- **composer** for PHP global packages
-- **dotnet** for .NET Global Tools
 
 Today, plonk provides a unified interface for common operations. Tomorrow, it could enable:
 - Transitioning tools between package managers (e.g., moving from npm to cargo-based tools)
