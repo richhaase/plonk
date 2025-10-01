@@ -36,6 +36,9 @@ Upgrades all packages managed by plonk across all package managers.
 ```bash
 plonk upgrade brew
 plonk upgrade npm
+plonk upgrade pnpm
+plonk upgrade pipx
+plonk upgrade conda
 plonk upgrade uv
 ```
 Upgrades all packages managed by the specified package manager.
@@ -65,11 +68,14 @@ When no manager is specified (e.g., `ripgrep`), all packages with that name acro
 ### Package Manager Integration
 Each package manager handles upgrades according to its own capabilities:
 
-- **Homebrew**: Runs `brew update` internally if needed, then `brew upgrade`
-- **NPM**: Upgrades global packages via `npm update -g`
+- **Homebrew** (brew): Runs `brew update` internally if needed, then `brew upgrade`
+- **npm**: Upgrades global packages via `npm update -g` (bulk) or `npm install -g <pkg>@latest` (per-package)
+- **pnpm**: Upgrades global packages via `pnpm update -g` (bulk) or `pnpm add -g <pkg>@latest` (per-package)
 - **Cargo**: Updates via `cargo install` (reinstalls latest version)
-- **Go**: Reinstalls packages with `go install package@latest`
+- **Pipx**: Upgrades via `pipx upgrade <pkg>` or `pipx upgrade-all` (bulk)
+- **Conda**: Upgrades via `conda update <pkg>` (or `conda update --all` for bulk)
 - **Gem**: Upgrades via `gem update`
+- **Go**: Reinstalls packages with `go install package@latest`
 - **UV**: Upgrades tools via `uv tool upgrade`
 - **Pixi**: Upgrades global environments via `pixi global upgrade`
 - **Composer**: Upgrades global packages via `composer global update`

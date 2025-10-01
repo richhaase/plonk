@@ -6,7 +6,7 @@ All commands support these options:
 
 - `--output, -o` - Output format: `table` (default), `json`, `yaml`
 - `--help, -h` - Show help for any command
-- `--version, -v` - Show plonk version
+- `--version, -V` - Show plonk version
 
 ## Commands
 

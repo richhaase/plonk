@@ -128,10 +128,12 @@ plonk info ripgrep                    # Show package details
 # Dotfile management
 plonk add ~/.vimrc ~/.zshrc           # Start tracking dotfiles
 plonk rm ~/.vimrc                     # Stop tracking (doesn't delete file)
+plonk dotfiles                        # List dotfiles with state info
 
 # System state
 plonk status                          # Show all managed items (including drift)
 plonk apply                           # Sync system to desired state
+plonk diff                            # Show differences between desired and actual state
 plonk doctor                          # Check system health
 
 # Configuration

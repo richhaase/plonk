@@ -23,6 +23,7 @@ This approach ensures idempotent operations - running `plonk apply` multiple tim
 Plonk treats packages and dotfiles as "resources" with a common interface:
 
 ```go
+// Simplified for documentation - see internal/resources/resource.go for exact signatures
 type Resource interface {
     ID() string
     Desired() []Item
@@ -92,9 +93,11 @@ Supported package managers:
 - File copying and deployment operations
 - Atomic file operations
 - Path resolution and validation
-- File comparison utilities
+- **Drift detection** via `DriftComparator` interface - compares source files in `$PLONK_DIR` with deployed files in home directory
+- File comparison utilities (byte-level comparison for detecting modifications)
 - Configuration file handling
 - Apply operations for dotfile state
+- Integration with external diff tools (configurable via `diff_tool` setting)
 
 ### 4. Configuration Layer (`internal/config/`)
 
@@ -147,13 +150,16 @@ Plonk works without any configuration files by using sensible defaults:
 
 ### 2. Package Manager Abstraction
 
-Each package manager implements a common interface, allowing:
+Each package manager implements a common interface following the Interface Segregation Principle (ISP). This allows:
 - Consistent behavior across different tools
 - Easy addition of new package managers
-- Capability detection (search, info, etc.)
+- Optional capability detection via type assertions (search, info, upgrade, health checks, self-install)
+- Managers implement only the capabilities they support
 - Self-health checking and diagnostics
 - Automatic self-installation during environment setup
 - Package upgrade management
+
+See [Capability Usage Examples](#capability-usage-examples) for implementation patterns.
 
 ### 3. State-Based Management
 
