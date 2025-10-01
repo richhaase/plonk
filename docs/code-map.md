@@ -75,7 +75,10 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 ##### Package Manager Implementations
 - `homebrew.go` - Homebrew package manager
 - `npm.go` - NPM package manager
+- `pnpm.go` - PNPM package manager
 - `cargo.go` - Cargo package manager
+- `pipx.go` - Pipx package manager
+- `conda.go` - Conda package manager
 - `gem.go` - Gem package manager
 - `goinstall.go` - Go install package manager
 - `uv.go` - UV package manager

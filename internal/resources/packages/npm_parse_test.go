@@ -6,7 +6,7 @@ import (
 )
 
 func TestNpmParseListOutput(t *testing.T) {
-	n := &NpmManager{}
+	n := NewNpmManager()
 	out := []byte(`{"dependencies":{"typescript":{},"eslint":{}}}`)
 	got := n.parseListOutput(out)
 	if len(got) != 2 {
@@ -15,7 +15,7 @@ func TestNpmParseListOutput(t *testing.T) {
 }
 
 func TestNpmParseInfoOutput(t *testing.T) {
-	n := &NpmManager{}
+	n := NewNpmManager()
 	out := []byte(`{"name":"typescript","version":"5.4.2","description":"TS"}`)
 	info := n.parseInfoOutput(out, "typescript")
 	if info == nil || info.Version != "5.4.2" {
@@ -24,7 +24,7 @@ func TestNpmParseInfoOutput(t *testing.T) {
 }
 
 func TestNpmParseSearchOutput(t *testing.T) {
-	n := &NpmManager{}
+	n := NewNpmManager()
 	out := []byte(`[{"name":"typescript"},{"name":"ts-node"}]`)
 	res := n.parseSearchOutput(out)
 	if len(res) != 2 {
@@ -45,7 +45,7 @@ func TestNpmInstalledVersion_JSONError(t *testing.T) {
 	// InstalledVersion JSON call returns invalid JSON
 	mock.Responses["npm list -g typescript --depth=0 --json"] = CommandResponse{Output: []byte("{"), Error: nil}
 
-	n := &NpmManager{}
+	n := NewNpmManager()
 	if _, err := n.InstalledVersion(context.Background(), "typescript"); err == nil {
 		t.Fatalf("expected JSON parse error")
 	}

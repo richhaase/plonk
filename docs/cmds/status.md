@@ -38,8 +38,6 @@ Without flags, status shows all managed and missing resources in two sections:
 - **PACKAGES**: Shows name, manager, and status
 - **DOTFILES**: Shows source (in $PLONK_DIR), target (in $HOME), and status
 
-Always displays summary counts at the end.
-
 ### Filter Combinations
 
 Filters can be combined:
@@ -63,6 +61,8 @@ Using both `--packages` and `--dotfiles` together has the same effect as using n
 
 **Dotfiles List** (unmanaged):
 - Simple list of unmanaged dotfile paths (no source/target/status columns)
+
+Summary counts are displayed at the end, except when using `--unmanaged` in table format.
 
 ### Structured Output
 

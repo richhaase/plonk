@@ -23,6 +23,7 @@ This approach ensures idempotent operations - running `plonk apply` multiple tim
 Plonk treats packages and dotfiles as "resources" with a common interface:
 
 ```go
+// Simplified for documentation - see internal/resources/resource.go for exact signatures
 type Resource interface {
     ID() string
     Desired() []Item
@@ -92,9 +93,11 @@ Supported package managers:
 - File copying and deployment operations
 - Atomic file operations
 - Path resolution and validation
-- File comparison utilities
+- **Drift detection** via `DriftComparator` interface - compares source files in `$PLONK_DIR` with deployed files in home directory
+- File comparison utilities (byte-level comparison for detecting modifications)
 - Configuration file handling
 - Apply operations for dotfile state
+- Integration with external diff tools (configurable via `diff_tool` setting)
 
 ### 4. Configuration Layer (`internal/config/`)
 
@@ -147,13 +150,16 @@ Plonk works without any configuration files by using sensible defaults:
 
 ### 2. Package Manager Abstraction
 
-Each package manager implements a common interface, allowing:
+Each package manager implements a common interface following the Interface Segregation Principle (ISP). This allows:
 - Consistent behavior across different tools
 - Easy addition of new package managers
-- Capability detection (search, info, etc.)
+- Optional capability detection via type assertions (search, info, upgrade, health checks, self-install)
+- Managers implement only the capabilities they support
 - Self-health checking and diagnostics
 - Automatic self-installation during environment setup
 - Package upgrade management
+
+See [Capability Usage Examples](#capability-usage-examples) for implementation patterns.
 
 ### 3. State-Based Management
 
@@ -227,7 +233,7 @@ All commands support multiple output formats (table, JSON, YAML) to support:
 
 1. Implement the `PackageManager` interface in `internal/resources/packages/`
 2. Implement required operations (Install, Uninstall, ListInstalled, etc.)
-3. Implement optional capabilities through interfaces (search, info)
+3. Implement optional capabilities through interfaces (search, info, upgrade, health, self-install)
 4. Implement health checking via CheckHealth() method
 5. Implement self-installation via SelfInstall() method
 6. Implement package upgrade capabilities via Upgrade() and Outdated() methods
@@ -278,8 +284,9 @@ Plonk uses structured error handling:
 - No elevated privileges required for user packages
 - Atomic file operations prevent corruption
 - Backup files created before modifications
-- No automatic execution of downloaded scripts
+- Package manager self-installation may execute remote scripts (opt-in via SelfInstall capability)
 - Git operations use standard git binary
+- Users should review package manager installation scripts before using automatic installation
 
 ## Future Considerations
 
@@ -289,3 +296,47 @@ The architecture is designed to support:
 - Team/organization configurations
 - Service management (Docker, systemd, etc.)
 - Configuration templating
+### Capability Usage Examples
+
+Optional capabilities are exposed via small interfaces. Callers must perform a type assertion before invoking optional methods, or use the helper predicates for readability.
+
+Type assertions:
+```
+// Info (PackageInfoProvider)
+if infoProvider, ok := mgr.(packages.PackageInfoProvider); ok {
+    info, err := infoProvider.Info(ctx, name)
+    _ = info; _ = err
+}
+
+// Search (PackageSearcher)
+if searcher, ok := mgr.(packages.PackageSearcher); ok {
+    results, err := searcher.Search(ctx, query)
+    _ = results; _ = err
+}
+
+// Upgrade (PackageUpgrader)
+if upgrader, ok := mgr.(packages.PackageUpgrader); ok {
+    _ = upgrader.Upgrade(ctx, []string{name})
+}
+
+// Health (PackageHealthChecker)
+if hc, ok := mgr.(packages.PackageHealthChecker); ok {
+    _, _ = hc.CheckHealth(ctx)
+}
+
+// Self-install (PackageSelfInstaller)
+if si, ok := mgr.(packages.PackageSelfInstaller); ok {
+    _ = si.SelfInstall(ctx)
+}
+```
+
+Helper predicates:
+```
+if packages.SupportsInfo(mgr) { /* safe to assert PackageInfoProvider */ }
+if packages.SupportsSearch(mgr) { /* safe to assert PackageSearcher */ }
+if packages.SupportsUpgrade(mgr) { /* safe to assert PackageUpgrader */ }
+if packages.SupportsHealthCheck(mgr) { /* safe to assert PackageHealthChecker */ }
+if packages.SupportsSelfInstall(mgr) { /* safe to assert PackageSelfInstaller */ }
+```
+
+These examples demonstrate the intent of the capability model: managers may omit optional features; callers should not assume availability without checking.

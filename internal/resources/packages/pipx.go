@@ -14,18 +14,29 @@ import (
 // PipxManager manages pipx packages.
 type PipxManager struct {
 	binary string
+	exec   CommandExecutor
 }
 
-// NewPipxManager creates a new pipx manager.
+// NewPipxManager creates a new pipx manager with default executor.
 func NewPipxManager() *PipxManager {
+	return NewPipxManagerWithExecutor(nil)
+}
+
+// NewPipxManagerWithExecutor creates a new pipx manager with the provided executor.
+// If executor is nil, uses the default executor.
+func NewPipxManagerWithExecutor(executor CommandExecutor) *PipxManager {
+	if executor == nil {
+		executor = defaultExecutor
+	}
 	return &PipxManager{
 		binary: "pipx",
+		exec:   executor,
 	}
 }
 
 // ListInstalled lists all installed pipx packages.
 func (p *PipxManager) ListInstalled(ctx context.Context) ([]string, error) {
-	output, err := ExecuteCommand(ctx, p.binary, "list", "--short")
+	output, err := ExecuteWith(ctx, p.exec, p.binary, "list", "--short")
 	if err != nil {
 		// pipx list can return non-zero exit codes when no packages are installed
 		if exitCode, ok := ExtractExitCode(err); ok {
@@ -78,18 +89,18 @@ func (p *PipxManager) parseListOutput(output []byte) []string {
 
 // Install installs a pipx package.
 func (p *PipxManager) Install(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, p.binary, "install", name)
+	output, err := CombinedOutputWith(ctx, p.exec, p.binary, "install", name)
 	if err != nil {
-		return p.handleInstallError(err, output, name)
+		return p.handleInstallError(err, []byte(output), name)
 	}
 	return nil
 }
 
 // Uninstall removes a pipx package.
 func (p *PipxManager) Uninstall(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, p.binary, "uninstall", name)
+	output, err := CombinedOutputWith(ctx, p.exec, p.binary, "uninstall", name)
 	if err != nil {
-		return p.handleUninstallError(err, output, name)
+		return p.handleUninstallError(err, []byte(output), name)
 	}
 	return nil
 }
@@ -140,7 +151,7 @@ func (p *PipxManager) Info(ctx context.Context, name string) (*PackageInfo, erro
 		}
 
 		// Get detailed info using pipx list (without --short)
-		output, err := ExecuteCommand(ctx, p.binary, "list")
+		output, err := ExecuteWith(ctx, p.exec, p.binary, "list")
 		if err == nil {
 			p.parseInfoFromListOutput(string(output), name, info)
 		}
@@ -189,7 +200,7 @@ func (p *PipxManager) parseInfoFromListOutput(output, packageName string, info *
 
 // getInstalledVersion extracts the version of an installed package
 func (p *PipxManager) getInstalledVersion(ctx context.Context, name string) (string, error) {
-	output, err := ExecuteCommand(ctx, p.binary, "list", "--short")
+	output, err := ExecuteWith(ctx, p.exec, p.binary, "list", "--short")
 	if err != nil {
 		return "", err
 	}
@@ -244,9 +255,9 @@ func (p *PipxManager) installViaHomebrew(ctx context.Context) error {
 func (p *PipxManager) Upgrade(ctx context.Context, packages []string) error {
 	if len(packages) == 0 {
 		// Upgrade all packages using pipx upgrade-all
-		output, err := ExecuteCommandCombined(ctx, p.binary, "upgrade-all")
+		output, err := CombinedOutputWith(ctx, p.exec, p.binary, "upgrade-all")
 		if err != nil {
-			return p.handleUpgradeError(err, output, "all packages")
+			return p.handleUpgradeError(err, []byte(output), "all packages")
 		}
 		return nil
 	}
@@ -254,9 +265,9 @@ func (p *PipxManager) Upgrade(ctx context.Context, packages []string) error {
 	// Upgrade specific packages
 	var upgradeErrors []string
 	for _, pkg := range packages {
-		output, err := ExecuteCommandCombined(ctx, p.binary, "upgrade", pkg)
+		output, err := CombinedOutputWith(ctx, p.exec, p.binary, "upgrade", pkg)
 		if err != nil {
-			upgradeErr := p.handleUpgradeError(err, output, pkg)
+			upgradeErr := p.handleUpgradeError(err, []byte(output), pkg)
 			upgradeErrors = append(upgradeErrors, upgradeErr.Error())
 			continue
 		}
@@ -274,18 +285,18 @@ func (p *PipxManager) Dependencies() []string {
 }
 
 func init() {
-	RegisterManager("pipx", func() PackageManager {
-		return NewPipxManager()
+	RegisterManagerV2("pipx", func(exec CommandExecutor) PackageManager {
+		return NewPipxManagerWithExecutor(exec)
 	})
 }
 
 // IsAvailable checks if pipx is installed and accessible
 func (p *PipxManager) IsAvailable(ctx context.Context) (bool, error) {
-	if !CheckCommandAvailable(p.binary) {
+	if !CheckCommandAvailableWith(p.exec, p.binary) {
 		return false, nil
 	}
 
-	err := VerifyBinary(ctx, p.binary, []string{"--version"})
+	err := VerifyBinaryWith(ctx, p.exec, p.binary, []string{"--version"})
 	if err != nil {
 		// Check for context cancellation
 		if IsContextError(err) {
@@ -362,7 +373,7 @@ func (p *PipxManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 
 // getBinDirectory discovers the pipx binary directory using pipx environment
 func (p *PipxManager) getBinDirectory(ctx context.Context) (string, error) {
-	output, err := ExecuteCommand(ctx, p.binary, "environment")
+	output, err := ExecuteWith(ctx, p.exec, p.binary, "environment")
 	if err != nil {
 		return "", fmt.Errorf("failed to get pipx environment: %w", err)
 	}

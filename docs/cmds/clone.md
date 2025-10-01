@@ -88,9 +88,9 @@ plonk clone git@github.com:user/repo.git
 ## Integration
 
 - Automatically runs `plonk apply` after setup (unless --no-apply)
-- Uses `plonk doctor` health checks to verify package managers
 - Creates default `plonk.yaml` if missing
 - Works with v2 lock file format for accurate manager detection
+- Package manager health can be verified post-clone using `plonk doctor`
 
 ## Notes
 

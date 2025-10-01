@@ -78,16 +78,24 @@ func TestCompliance_Brew_Minimal(t *testing.T) {
 		t.Fatalf("InstalledVersion jq: %v, ver=%q", err, ver)
 	}
 
-	// Info
-	info, err := mgr.Info(ctx, "jq")
-	if err != nil || info == nil || info.Name != "jq" {
-		t.Fatalf("Info jq: %v, info=%+v", err, info)
+	// Info (capability check)
+	if infoProvider, ok := mgr.(PackageInfoProvider); ok {
+		info, err := infoProvider.Info(ctx, "jq")
+		if err != nil || info == nil || info.Name != "jq" {
+			t.Fatalf("Info jq: %v, info=%+v", err, info)
+		}
+	} else {
+		t.Fatalf("manager does not support Info")
 	}
 
-	// Search
-	res, err := mgr.Search(ctx, "jq")
-	if err != nil || len(res) == 0 {
-		t.Fatalf("Search jq: %v, res=%v", err, res)
+	// Search (capability check)
+	if searcher, ok := mgr.(PackageSearcher); ok {
+		res, err := searcher.Search(ctx, "jq")
+		if err != nil || len(res) == 0 {
+			t.Fatalf("Search jq: %v, res=%v", err, res)
+		}
+	} else {
+		t.Fatalf("manager does not support Search")
 	}
 
 	// Install/Uninstall
@@ -98,9 +106,13 @@ func TestCompliance_Brew_Minimal(t *testing.T) {
 		t.Fatalf("Uninstall jq: %v", err)
 	}
 
-	// Upgrade
-	if err := mgr.Upgrade(ctx, []string{"jq"}); err != nil {
-		t.Fatalf("Upgrade jq: %v", err)
+	// Upgrade (capability check)
+	if upgrader, ok := mgr.(PackageUpgrader); ok {
+		if err := upgrader.Upgrade(ctx, []string{"jq"}); err != nil {
+			t.Fatalf("Upgrade jq: %v", err)
+		}
+	} else {
+		t.Fatalf("manager does not support Upgrade")
 	}
 }
 
@@ -160,13 +172,21 @@ func TestCompliance_Npm_Minimal(t *testing.T) {
 	}
 
 	// Info
-	info, err := mgr.Info(ctx, "typescript")
+	infoProvider, ok := mgr.(PackageInfoProvider)
+	if !ok {
+		t.Fatalf("manager does not support Info capability")
+	}
+	info, err := infoProvider.Info(ctx, "typescript")
 	if err != nil || info == nil || info.Name != "typescript" {
 		t.Fatalf("Info: %v, info=%+v", err, info)
 	}
 
 	// Search
-	srch, err := mgr.Search(ctx, "typescript")
+	searcher, ok := mgr.(PackageSearcher)
+	if !ok {
+		t.Fatalf("manager does not support Search capability")
+	}
+	srch, err := searcher.Search(ctx, "typescript")
 	if err != nil || len(srch) == 0 {
 		t.Fatalf("Search: %v, res=%v", err, srch)
 	}
@@ -180,7 +200,11 @@ func TestCompliance_Npm_Minimal(t *testing.T) {
 	}
 
 	// Upgrade
-	if err := mgr.Upgrade(ctx, []string{"typescript"}); err != nil {
+	upgrader, ok := mgr.(PackageUpgrader)
+	if !ok {
+		t.Fatalf("manager does not support Upgrade capability")
+	}
+	if err := upgrader.Upgrade(ctx, []string{"typescript"}); err != nil {
 		t.Fatalf("Upgrade: %v", err)
 	}
 }
@@ -225,7 +249,11 @@ func TestCompliance_Pnpm_Minimal(t *testing.T) {
 	if err != nil || ver == "" {
 		t.Fatalf("InstalledVersion: %v, %q", err, ver)
 	}
-	info, err := mgr.Info(ctx, "typescript")
+	infoProvider, ok := mgr.(PackageInfoProvider)
+	if !ok {
+		t.Fatalf("manager does not support Info capability")
+	}
+	info, err := infoProvider.Info(ctx, "typescript")
 	if err != nil || info == nil {
 		t.Fatalf("Info: %v, %v", err, info)
 	}
@@ -235,7 +263,11 @@ func TestCompliance_Pnpm_Minimal(t *testing.T) {
 	if err := mgr.Uninstall(ctx, "typescript"); err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
-	if err := mgr.Upgrade(ctx, []string{"typescript"}); err != nil {
+	upgrader, ok := mgr.(PackageUpgrader)
+	if !ok {
+		t.Fatalf("manager does not support Upgrade capability")
+	}
+	if err := upgrader.Upgrade(ctx, []string{"typescript"}); err != nil {
 		t.Fatalf("Upgrade: %v", err)
 	}
 }
@@ -280,7 +312,11 @@ func TestCompliance_Pipx_Minimal(t *testing.T) {
 	if err := mgr.Uninstall(ctx, "httpx"); err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
-	if err := mgr.Upgrade(ctx, []string{"httpx"}); err != nil {
+	upgrader, ok := mgr.(PackageUpgrader)
+	if !ok {
+		t.Fatalf("manager does not support Upgrade capability")
+	}
+	if err := upgrader.Upgrade(ctx, []string{"httpx"}); err != nil {
 		t.Fatalf("Upgrade: %v", err)
 	}
 }
@@ -324,7 +360,11 @@ func TestCompliance_Cargo_Minimal(t *testing.T) {
 	if err != nil || ver == "" {
 		t.Fatalf("InstalledVersion: %v, %q", err, ver)
 	}
-	info, err := mgr.Info(ctx, "ripgrep")
+	infoProvider, ok := mgr.(PackageInfoProvider)
+	if !ok {
+		t.Fatalf("manager does not support Info capability")
+	}
+	info, err := infoProvider.Info(ctx, "ripgrep")
 	if err != nil || info == nil {
 		t.Fatalf("Info: %v, %v", err, info)
 	}
@@ -380,7 +420,11 @@ func TestCompliance_Uv_Minimal(t *testing.T) {
 	if err := mgr.Uninstall(ctx, "httpx"); err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
-	if err := mgr.Upgrade(ctx, []string{"httpx"}); err != nil {
+	upgrader, ok := mgr.(PackageUpgrader)
+	if !ok {
+		t.Fatalf("manager does not support Upgrade capability")
+	}
+	if err := upgrader.Upgrade(ctx, []string{"httpx"}); err != nil {
 		t.Fatalf("Upgrade: %v", err)
 	}
 }
@@ -429,7 +473,11 @@ func TestCompliance_Conda_Minimal(t *testing.T) {
 	if err != nil || ver == "" {
 		t.Fatalf("InstalledVersion: %v, %q", err, ver)
 	}
-	info, err := mgr.Info(ctx, "numpy")
+	infoProvider, ok := mgr.(PackageInfoProvider)
+	if !ok {
+		t.Fatalf("manager does not support Info capability")
+	}
+	info, err := infoProvider.Info(ctx, "numpy")
 	if err != nil || info == nil {
 		t.Fatalf("Info: %v, %v", err, info)
 	}
@@ -439,7 +487,11 @@ func TestCompliance_Conda_Minimal(t *testing.T) {
 	if err := mgr.Uninstall(ctx, "numpy"); err != nil {
 		t.Fatalf("Uninstall: %v", err)
 	}
-	if err := mgr.Upgrade(ctx, []string{"numpy"}); err != nil {
+	upgrader, ok := mgr.(PackageUpgrader)
+	if !ok {
+		t.Fatalf("manager does not support Upgrade capability")
+	}
+	if err := upgrader.Upgrade(ctx, []string{"numpy"}); err != nil {
 		t.Fatalf("Upgrade: %v", err)
 	}
 }

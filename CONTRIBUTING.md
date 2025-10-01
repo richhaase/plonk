@@ -65,7 +65,7 @@ If you prefer not to use `just`:
 
 ```bash
 # Build
-go build -o bin/plonk cmd/plonk/main.go
+go build -o bin/plonk ./cmd/plonk
 
 # Install
 go install ./cmd/plonk
@@ -132,7 +132,7 @@ One of the most impactful contributions is adding support for new package manage
 
 1. **Implement the PackageManager interface** in `internal/resources/packages/`
 2. **Add required operations**: Install, Uninstall, ListInstalled, etc.
-3. **Implement optional capabilities**: Search, Info (through capability interfaces)
+3. **Implement optional capabilities**: Search, Info, Upgrade, Health, Self-Install (through capability interfaces)
 4. **Add health checking**: Implement `CheckHealth()` method
 5. **Add self-installation**: Implement `SelfInstall()` method
 6. **Add upgrade support**: Implement `Upgrade()` and `Outdated()` methods

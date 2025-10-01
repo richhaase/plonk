@@ -125,7 +125,18 @@ func searchSpecificManager(ctx context.Context, managerName, packageName string)
 	}
 
 	// Search for the package
-	results, err := manager.Search(ctx, packageName)
+	// Check if manager supports search
+	searcher, ok := manager.(packages.PackageSearcher)
+	if !ok {
+		// Manager doesn't support search
+		return SearchOutput{
+			Package: packageName,
+			Status:  "not-found",
+			Message: fmt.Sprintf("Package manager '%s' does not support search", managerName),
+		}, nil
+	}
+
+	results, err := searcher.Search(ctx, packageName)
 	if err != nil {
 		return SearchOutput{}, fmt.Errorf("failed to search for %s in %s: %w", packageName, managerName, err)
 	}
@@ -188,7 +199,14 @@ func searchAllManagersParallel(ctx context.Context, cfg *config.Config, packageN
 			managerCtx, cancel := context.WithTimeout(ctx, t.Operation)
 			defer cancel()
 
-			results, err := mgr.Search(managerCtx, packageName)
+			// Check if manager supports search
+			searcher, ok := mgr.(packages.PackageSearcher)
+			if !ok {
+				// Manager doesn't support search, skip silently
+				return
+			}
+
+			results, err := searcher.Search(managerCtx, packageName)
 			resultsChan <- managerResult{
 				Manager:  managerName,
 				Packages: results,

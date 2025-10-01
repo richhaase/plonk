@@ -11,8 +11,9 @@ import (
 // ApplyResult represents the top-level result of any apply operation
 type ApplyResult struct {
 	DryRun        bool            `json:"dry_run" yaml:"dry_run"`
-	Success       bool            `json:"success" yaml:"success"`
-	Scope         string          `json:"scope" yaml:"scope"` // "packages", "dotfiles", "all"
+	Success       bool            `json:"success" yaml:"success"` // True if no errors occurred (includes clean no-op)
+	Changed       bool            `json:"changed" yaml:"changed"` // True if any changes were made
+	Scope         string          `json:"scope" yaml:"scope"`     // "packages", "dotfiles", "all"
 	Packages      *PackageResults `json:"packages,omitempty" yaml:"packages,omitempty"`
 	Dotfiles      *DotfileResults `json:"dotfiles,omitempty" yaml:"dotfiles,omitempty"`
 	Error         string          `json:"error,omitempty" yaml:"error,omitempty"`

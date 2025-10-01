@@ -377,7 +377,14 @@ func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
 		}
 
 		// Call the manager's CheckHealth method
-		healthCheck, err := mgr.CheckHealth(ctx)
+		// Check if manager supports health checking
+		healthChecker, ok := mgr.(packages.PackageHealthChecker)
+		if !ok {
+			// Manager doesn't support health checking, skip
+			continue
+		}
+
+		healthCheck, err := healthChecker.CheckHealth(ctx)
 		if err != nil {
 			if packages.IsContextError(err) {
 				// Context errors should bubble up

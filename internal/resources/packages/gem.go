@@ -13,18 +13,29 @@ import (
 // GemManager manages Ruby gems.
 type GemManager struct {
 	binary string
+	exec   CommandExecutor
 }
 
-// NewGemManager creates a new gem manager.
+// NewGemManager creates a new gem manager with default executor.
 func NewGemManager() *GemManager {
+	return NewGemManagerWithExecutor(nil)
+}
+
+// NewGemManagerWithExecutor creates a new gem manager with the provided executor.
+// If executor is nil, uses the default executor.
+func NewGemManagerWithExecutor(executor CommandExecutor) *GemManager {
+	if executor == nil {
+		executor = defaultExecutor
+	}
 	return &GemManager{
 		binary: "gem",
+		exec:   executor,
 	}
 }
 
 // ListInstalled lists all installed gems.
 func (g *GemManager) ListInstalled(ctx context.Context) ([]string, error) {
-	output, err := ExecuteCommand(ctx, g.binary, "list", "--local", "--no-versions")
+	output, err := ExecuteWith(ctx, g.exec, g.binary, "list", "--local", "--no-versions")
 	if err != nil {
 		return nil, err
 	}
@@ -47,23 +58,23 @@ func (g *GemManager) parseListOutput(output []byte) []string {
 // Install installs a Ruby gem.
 func (g *GemManager) Install(ctx context.Context, name string) error {
 	// First try with --user-install
-	output, err := ExecuteCommandCombined(ctx, g.binary, "install", name, "--user-install")
+	output, err := CombinedOutputWith(ctx, g.exec, g.binary, "install", name, "--user-install")
 	if err != nil {
-		outputStr := string(output)
+		outputStr := output
 
 		// Check if we should retry without --user-install
 		if strings.Contains(outputStr, "--user-install") || strings.Contains(outputStr, "Use --user-install") {
 			// Try without --user-install
-			output2, err2 := ExecuteCommandCombined(ctx, g.binary, "install", name)
+			output2, err2 := CombinedOutputWith(ctx, g.exec, g.binary, "install", name)
 			if err2 == nil {
 				return nil
 			}
 			// If this also fails, handle the new error
-			return g.handleGemInstallError(err2, output2, name)
+			return g.handleGemInstallError(err2, []byte(output2), name)
 		}
 
 		// Handle the original error
-		return g.handleGemInstallError(err, output, name)
+		return g.handleGemInstallError(err, []byte(output), name)
 	}
 
 	return nil
@@ -115,16 +126,16 @@ func (g *GemManager) handleGemInstallError(err error, output []byte, packageName
 
 // Uninstall removes a Ruby gem.
 func (g *GemManager) Uninstall(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, g.binary, "uninstall", name, "-x", "-a", "-I")
+	output, err := CombinedOutputWith(ctx, g.exec, g.binary, "uninstall", name, "-x", "-a", "-I")
 	if err != nil {
-		return g.handleUninstallError(err, output, name)
+		return g.handleUninstallError(err, []byte(output), name)
 	}
 	return nil
 }
 
 // IsInstalled checks if a specific gem is installed.
 func (g *GemManager) IsInstalled(ctx context.Context, name string) (bool, error) {
-	output, err := ExecuteCommand(ctx, g.binary, "list", "--local", name)
+	output, err := ExecuteWith(ctx, g.exec, g.binary, "list", "--local", name)
 	if err != nil {
 		return false, fmt.Errorf("failed to check gem installation status for %s: %w", name, err)
 	}
@@ -137,7 +148,7 @@ func (g *GemManager) IsInstalled(ctx context.Context, name string) (bool, error)
 
 // Search searches for gems in RubyGems.org.
 func (g *GemManager) Search(ctx context.Context, query string) ([]string, error) {
-	output, err := ExecuteCommand(ctx, g.binary, "search", query)
+	output, err := ExecuteWith(ctx, g.exec, g.binary, "search", query)
 	if err != nil {
 		// Check if this is a real error vs expected conditions
 		if exitCode, ok := ExtractExitCode(err); ok {
@@ -188,7 +199,7 @@ func (g *GemManager) Info(ctx context.Context, name string) (*PackageInfo, error
 	}
 
 	// Get gem specification
-	output, err := ExecuteCommand(ctx, g.binary, "specification", name)
+	output, err := ExecuteWith(ctx, g.exec, g.binary, "specification", name)
 	if err != nil {
 		if exitCode, ok := ExtractExitCode(err); ok && exitCode == 1 {
 			return nil, fmt.Errorf("gem '%s' not found", name)
@@ -235,7 +246,7 @@ func (g *GemManager) parseInfoOutput(output []byte, name string) *PackageInfo {
 
 // getDependencies gets the dependencies of an installed gem
 func (g *GemManager) getDependencies(ctx context.Context, name string) []string {
-	output, err := ExecuteCommand(ctx, g.binary, "dependency", name)
+	output, err := ExecuteWith(ctx, g.exec, g.binary, "dependency", name)
 	if err != nil {
 		return []string{}
 	}
@@ -273,7 +284,7 @@ func (g *GemManager) InstalledVersion(ctx context.Context, name string) (string,
 	}
 
 	// Get version using gem list with specific gem
-	output, err := ExecuteCommand(ctx, g.binary, "list", "--local", name)
+	output, err := ExecuteWith(ctx, g.exec, g.binary, "list", "--local", name)
 	if err != nil {
 		return "", fmt.Errorf("failed to get gem version information for %s: %w", name, err)
 	}
@@ -306,11 +317,11 @@ func (g *GemManager) extractVersion(output []byte, name string) string {
 
 // IsAvailable checks if gem is installed and accessible
 func (g *GemManager) IsAvailable(ctx context.Context) (bool, error) {
-	if !CheckCommandAvailable(g.binary) {
+	if !CheckCommandAvailableWith(g.exec, g.binary) {
 		return false, nil
 	}
 
-	err := VerifyBinary(ctx, g.binary, []string{"--version"})
+	err := VerifyBinaryWith(ctx, g.exec, g.binary, []string{"--version"})
 	if err != nil {
 		// Check for context cancellation
 		if IsContextError(err) {
@@ -385,7 +396,7 @@ func (g *GemManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 // getBinDirectory discovers the Gem bin directory
 func (g *GemManager) getBinDirectory(ctx context.Context) (string, error) {
 	// Use gem environment to get executable directory
-	output, err := ExecuteCommand(ctx, g.binary, "environment")
+	output, err := ExecuteWith(ctx, g.exec, g.binary, "environment")
 	if err != nil {
 		return "", fmt.Errorf("failed to get gem environment: %w", err)
 	}
@@ -431,18 +442,18 @@ func (g *GemManager) installViaHomebrew(ctx context.Context) error {
 func (g *GemManager) Upgrade(ctx context.Context, packages []string) error {
 	if len(packages) == 0 {
 		// Upgrade all gems
-		output, err := ExecuteCommandCombined(ctx, g.binary, "update")
+		output, err := CombinedOutputWith(ctx, g.exec, g.binary, "update")
 		if err != nil {
-			return g.handleUpgradeError(err, output, "all gems")
+			return g.handleUpgradeError(err, []byte(output), "all gems")
 		}
 		return nil
 	}
 
 	// Upgrade specific gems
 	args := append([]string{"update"}, packages...)
-	output, err := ExecuteCommandCombined(ctx, g.binary, args...)
+	output, err := CombinedOutputWith(ctx, g.exec, g.binary, args...)
 	if err != nil {
-		return g.handleUpgradeError(err, output, strings.Join(packages, ", "))
+		return g.handleUpgradeError(err, []byte(output), strings.Join(packages, ", "))
 	}
 	return nil
 }
@@ -453,8 +464,8 @@ func (g *GemManager) Dependencies() []string {
 }
 
 func init() {
-	RegisterManager("gem", func() PackageManager {
-		return NewGemManager()
+	RegisterManagerV2("gem", func(exec CommandExecutor) PackageManager {
+		return NewGemManagerWithExecutor(exec)
 	})
 }
 

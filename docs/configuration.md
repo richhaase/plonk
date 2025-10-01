@@ -10,6 +10,7 @@ This is the comprehensive guide to configuring plonk. Plonk uses two configurati
 - [Basic Configuration](#basic-configuration)
 - [Dotfile Configuration](#dotfile-configuration)
 - [Timeout Configuration](#timeout-configuration)
+- [Diff Tool Configuration](#diff-tool-configuration)
 - [Advanced Configuration](#advanced-configuration)
 - [Environment Variables](#environment-variables)
 - [Configuration Precedence](#configuration-precedence)
@@ -179,8 +180,6 @@ expand_directories:
   # - ".local/share"    # User data files
   # - ".ssh"            # SSH configuration
 ```
-
-##
 
 ## Timeout Configuration
 

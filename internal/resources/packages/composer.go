@@ -14,18 +14,29 @@ import (
 // ComposerManager manages Composer global packages.
 type ComposerManager struct {
 	binary string
+	exec   CommandExecutor
 }
 
-// NewComposerManager creates a new Composer manager.
+// NewComposerManager creates a new Composer manager with default executor.
 func NewComposerManager() *ComposerManager {
+	return NewComposerManagerWithExecutor(nil)
+}
+
+// NewComposerManagerWithExecutor creates a new Composer manager with the provided executor.
+// If executor is nil, uses the default executor.
+func NewComposerManagerWithExecutor(executor CommandExecutor) *ComposerManager {
+	if executor == nil {
+		executor = defaultExecutor
+	}
 	return &ComposerManager{
 		binary: "composer",
+		exec:   executor,
 	}
 }
 
 // ListInstalled lists all globally installed Composer packages.
 func (c *ComposerManager) ListInstalled(ctx context.Context) ([]string, error) {
-	output, err := ExecuteCommand(ctx, c.binary, "global", "show", "--format=json")
+	output, err := ExecuteWith(ctx, c.exec, c.binary, "global", "show", "--format=json")
 	if err != nil {
 		// Composer global show can return non-zero exit codes when no packages are installed
 		if exitCode, ok := ExtractExitCode(err); ok {
@@ -79,25 +90,25 @@ func (c *ComposerManager) parseListOutput(output []byte) []string {
 
 // Install installs a global Composer package.
 func (c *ComposerManager) Install(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, c.binary, "global", "require", name)
+	output, err := CombinedOutputWith(ctx, c.exec, c.binary, "global", "require", name)
 	if err != nil {
-		return c.handleInstallError(err, output, name)
+		return c.handleInstallError(err, []byte(output), name)
 	}
 	return nil
 }
 
 // Uninstall removes a global Composer package.
 func (c *ComposerManager) Uninstall(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, c.binary, "global", "remove", name)
+	output, err := CombinedOutputWith(ctx, c.exec, c.binary, "global", "remove", name)
 	if err != nil {
-		return c.handleUninstallError(err, output, name)
+		return c.handleUninstallError(err, []byte(output), name)
 	}
 	return nil
 }
 
 // IsInstalled checks if a specific package is installed globally.
 func (c *ComposerManager) IsInstalled(ctx context.Context, name string) (bool, error) {
-	_, err := ExecuteCommand(ctx, c.binary, "global", "show", name)
+	_, err := ExecuteWith(ctx, c.exec, c.binary, "global", "show", name)
 	if err != nil {
 		if exitCode, ok := ExtractExitCode(err); ok && exitCode == 1 {
 			// Package not found - this is not an error condition
@@ -111,7 +122,7 @@ func (c *ComposerManager) IsInstalled(ctx context.Context, name string) (bool, e
 
 // Search searches for packages in Packagist registry.
 func (c *ComposerManager) Search(ctx context.Context, query string) ([]string, error) {
-	output, err := ExecuteCommand(ctx, c.binary, "search", query, "--format=json")
+	output, err := ExecuteWith(ctx, c.exec, c.binary, "search", query, "--format=json")
 	if err != nil {
 		// Check if this is a real error vs expected conditions
 		if exitCode, ok := ExtractExitCode(err); ok {
@@ -176,7 +187,7 @@ func (c *ComposerManager) Info(ctx context.Context, name string) (*PackageInfo, 
 	}
 
 	// Use composer show for info (works for both installed and available packages)
-	output, err := ExecuteCommand(ctx, c.binary, "show", name, "--format=json")
+	output, err := ExecuteWith(ctx, c.exec, c.binary, "show", name, "--format=json")
 	if err != nil {
 		if exitCode, ok := ExtractExitCode(err); ok && exitCode == 1 {
 			return nil, fmt.Errorf("package '%s' not found", name)
@@ -255,7 +266,7 @@ func (c *ComposerManager) InstalledVersion(ctx context.Context, name string) (st
 	}
 
 	// Get version using composer global show with specific package
-	output, err := ExecuteCommand(ctx, c.binary, "global", "show", name, "--format=json")
+	output, err := ExecuteWith(ctx, c.exec, c.binary, "global", "show", name, "--format=json")
 	if err != nil {
 		return "", fmt.Errorf("failed to get package version information for %s: %w", name, err)
 	}
@@ -327,18 +338,18 @@ func (c *ComposerManager) installViaHomebrew(ctx context.Context) error {
 func (c *ComposerManager) Upgrade(ctx context.Context, packages []string) error {
 	if len(packages) == 0 {
 		// Upgrade all global packages
-		output, err := ExecuteCommandCombined(ctx, c.binary, "global", "update")
+		output, err := CombinedOutputWith(ctx, c.exec, c.binary, "global", "update")
 		if err != nil {
-			return c.handleUpgradeError(err, output, "all packages")
+			return c.handleUpgradeError(err, []byte(output), "all packages")
 		}
 		return nil
 	}
 
 	// Upgrade specific packages
 	args := append([]string{"global", "update"}, packages...)
-	output, err := ExecuteCommandCombined(ctx, c.binary, args...)
+	output, err := CombinedOutputWith(ctx, c.exec, c.binary, args...)
 	if err != nil {
-		return c.handleUpgradeError(err, output, strings.Join(packages, ", "))
+		return c.handleUpgradeError(err, []byte(output), strings.Join(packages, ", "))
 	}
 	return nil
 }
@@ -349,18 +360,18 @@ func (c *ComposerManager) Dependencies() []string {
 }
 
 func init() {
-	RegisterManager("composer", func() PackageManager {
-		return NewComposerManager()
+	RegisterManagerV2("composer", func(exec CommandExecutor) PackageManager {
+		return NewComposerManagerWithExecutor(exec)
 	})
 }
 
 // IsAvailable checks if composer is installed and accessible
 func (c *ComposerManager) IsAvailable(ctx context.Context) (bool, error) {
-	if !CheckCommandAvailable(c.binary) {
+	if !CheckCommandAvailableWith(c.exec, c.binary) {
 		return false, nil
 	}
 
-	err := VerifyBinary(ctx, c.binary, []string{"--version"})
+	err := VerifyBinaryWith(ctx, c.exec, c.binary, []string{"--version"})
 	if err != nil {
 		// Check for context cancellation
 		if IsContextError(err) {
@@ -437,7 +448,7 @@ func (c *ComposerManager) CheckHealth(ctx context.Context) (*HealthCheck, error)
 
 // getBinDirectory discovers the Composer global bin directory using composer global config bin-dir
 func (c *ComposerManager) getBinDirectory(ctx context.Context) (string, error) {
-	output, err := ExecuteCommand(ctx, c.binary, "global", "config", "bin-dir", "--absolute")
+	output, err := ExecuteWith(ctx, c.exec, c.binary, "global", "config", "bin-dir", "--absolute")
 	if err != nil {
 		return "", fmt.Errorf("failed to get Composer global bin directory: %w", err)
 	}

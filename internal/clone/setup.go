@@ -348,7 +348,14 @@ func installDetectedManagers(ctx context.Context, managers []string, cfg Config)
 			continue
 		}
 
-		if err := packageManager.SelfInstall(ctx); err != nil {
+		// Check if manager supports self-installation
+		selfInstaller, ok := packageManager.(packages.PackageSelfInstaller)
+		if !ok {
+			output.Printf("Package manager %s does not support automatic installation\n", manager)
+			return fmt.Errorf("package manager %s cannot be automatically installed", manager)
+		}
+
+		if err := selfInstaller.SelfInstall(ctx); err != nil {
 			failed++
 			output.Printf("Failed to install %s: %v\n", manager, err)
 			output.Printf("Manual installation: %s\n", getManualInstallInstructions(manager))

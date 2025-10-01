@@ -6,7 +6,7 @@ import (
 )
 
 func TestBrewExtractVersion(t *testing.T) {
-	h := &HomebrewManager{}
+	h := NewHomebrewManager()
 	out := []byte("jq 1.6 1.5\n")
 	got := h.extractVersion(out, "jq")
 	if got != "1.6" {
@@ -15,7 +15,7 @@ func TestBrewExtractVersion(t *testing.T) {
 }
 
 func TestBrewParseSearchOutput(t *testing.T) {
-	h := &HomebrewManager{}
+	h := NewHomebrewManager()
 	out := []byte("jq\nfd\nIf you meant \n================\n")
 	pkgs := h.parseSearchOutput(out)
 	if len(pkgs) != 2 {
@@ -24,7 +24,7 @@ func TestBrewParseSearchOutput(t *testing.T) {
 }
 
 func TestBrewParseInfoOutput(t *testing.T) {
-	h := &HomebrewManager{}
+	h := NewHomebrewManager()
 	out := []byte("jq: stable 1.6\nFrom: https://example.com\n")
 	info := h.parseInfoOutput(out, "jq")
 	if info == nil || info.Version != "1.6" {
@@ -38,7 +38,7 @@ func (e *exitErr) Error() string { return "exit" }
 func (e *exitErr) ExitCode() int { return e.code }
 
 func TestBrewHandleUpgradeError(t *testing.T) {
-	h := &HomebrewManager{}
+	h := NewHomebrewManager()
 	// not found
 	if err := h.handleUpgradeError(&exitErr{1}, []byte("No formula found"), "jq"); err == nil {
 		t.Fatalf("expected error for not found")

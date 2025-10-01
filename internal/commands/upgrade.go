@@ -405,27 +405,42 @@ func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, l
 			continue
 		}
 
-		// Get current versions before upgrade
-		packageVersions := make(map[string]string)
-		for _, pkg := range packageNames {
-			if version, err := mgr.InstalledVersion(ctx, pkg); err == nil {
-				packageVersions[pkg] = version
+		// Check if manager supports upgrade
+		upgrader, ok := mgr.(packages.PackageUpgrader)
+		if !ok {
+			// Add failures for all packages in this manager
+			for _, pkg := range packageNames {
+				spinner := spinnerManager.StartSpinner("Upgrading", fmt.Sprintf("%s (%s)", pkg, managerName))
+				spinner.Error(fmt.Sprintf("Failed to upgrade %s: package manager '%s' does not support upgrade", pkg, managerName))
+
+				results.Results = append(results.Results, packageUpgradeResult{
+					Manager: managerName,
+					Package: pkg,
+					Status:  "failed",
+					Error:   fmt.Sprintf("package manager '%s' does not support upgrade", managerName),
+				})
+				results.Summary.Failed++
 			}
+			continue
 		}
 
-		// Upgrade packages for this manager
-		upgradeErr := mgr.Upgrade(ctx, packageNames)
-
-		// Process results for each package
+		// Upgrade each package individually to provide per-package error handling
 		for _, pkg := range packageNames {
 			// Start spinner for this package
 			spinner := spinnerManager.StartSpinner("Upgrading", fmt.Sprintf("%s (%s)", pkg, managerName))
 
 			result := packageUpgradeResult{
-				Manager:     managerName,
-				Package:     pkg,
-				FromVersion: packageVersions[pkg],
+				Manager: managerName,
+				Package: pkg,
 			}
+
+			// Get current version before upgrade
+			if version, err := mgr.InstalledVersion(ctx, pkg); err == nil {
+				result.FromVersion = version
+			}
+
+			// Upgrade this package
+			upgradeErr := upgrader.Upgrade(ctx, []string{pkg})
 
 			if upgradeErr != nil {
 				result.Status = "failed"

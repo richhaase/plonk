@@ -14,6 +14,7 @@ import (
 // HomebrewManager manages Homebrew packages.
 type HomebrewManager struct {
 	binary string
+	exec   CommandExecutor
 }
 
 // brewInfoV2JSON represents the JSON structure from brew info --json=v2
@@ -53,17 +54,27 @@ type brewPackageInfo struct {
 	}
 }
 
-// NewHomebrewManager creates a new homebrew manager.
+// NewHomebrewManager creates a new homebrew manager with default executor.
 func NewHomebrewManager() *HomebrewManager {
+	return NewHomebrewManagerWithExecutor(nil)
+}
+
+// NewHomebrewManagerWithExecutor creates a new homebrew manager with the provided executor.
+// If executor is nil, uses the default executor.
+func NewHomebrewManagerWithExecutor(executor CommandExecutor) *HomebrewManager {
+	if executor == nil {
+		executor = defaultExecutor
+	}
 	return &HomebrewManager{
 		binary: "brew",
+		exec:   executor,
 	}
 }
 
 // ListInstalled lists all installed Homebrew packages.
 func (h *HomebrewManager) ListInstalled(ctx context.Context) ([]string, error) {
 	// Get basic list first
-	output, err := ExecuteCommand(ctx, h.binary, "list")
+	output, err := ExecuteWith(ctx, h.exec, h.binary, "list")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list installed packages: %w", err)
 	}
@@ -96,25 +107,25 @@ func (h *HomebrewManager) ListInstalled(ctx context.Context) ([]string, error) {
 
 // Install installs a Homebrew package.
 func (h *HomebrewManager) Install(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, h.binary, "install", name)
+	output, err := CombinedOutputWith(ctx, h.exec, h.binary, "install", name)
 	if err != nil {
-		return h.handleInstallError(err, output, name)
+		return h.handleInstallError(err, []byte(output), name)
 	}
 	return nil
 }
 
 // Uninstall removes a Homebrew package.
 func (h *HomebrewManager) Uninstall(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, h.binary, "uninstall", name)
+	output, err := CombinedOutputWith(ctx, h.exec, h.binary, "uninstall", name)
 	if err != nil {
-		return h.handleUninstallError(err, output, name)
+		return h.handleUninstallError(err, []byte(output), name)
 	}
 	return nil
 }
 
 // getInstalledPackagesInfo returns detailed information about all installed packages (formulae and casks)
 func (h *HomebrewManager) getInstalledPackagesInfo(ctx context.Context) ([]brewPackageInfo, error) {
-	output, err := ExecuteCommand(ctx, h.binary, "info", "--installed", "--json=v2")
+	output, err := ExecuteWith(ctx, h.exec, h.binary, "info", "--installed", "--json=v2")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get installed packages info: %w", err)
 	}
@@ -152,7 +163,7 @@ func (h *HomebrewManager) IsInstalled(ctx context.Context, name string) (bool, e
 	packages, err := h.getInstalledPackagesInfo(ctx)
 	if err != nil {
 		// Fallback to simple brew list check
-		_, err := ExecuteCommand(ctx, h.binary, "list", name)
+		_, err := ExecuteWith(ctx, h.exec, h.binary, "list", name)
 		if err == nil {
 			return true, nil
 		}
@@ -179,7 +190,7 @@ func (h *HomebrewManager) IsInstalled(ctx context.Context, name string) (bool, e
 
 // Search searches for packages in Homebrew repositories.
 func (h *HomebrewManager) Search(ctx context.Context, query string) ([]string, error) {
-	output, err := ExecuteCommand(ctx, h.binary, "search", query)
+	output, err := ExecuteWith(ctx, h.exec, h.binary, "search", query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search homebrew packages for %s: %w", query, err)
 	}
@@ -211,7 +222,7 @@ func (h *HomebrewManager) parseSearchOutput(output []byte) []string {
 
 // Info retrieves detailed information about a package.
 func (h *HomebrewManager) Info(ctx context.Context, name string) (*PackageInfo, error) {
-	output, err := ExecuteCommand(ctx, h.binary, "info", name)
+	output, err := ExecuteWith(ctx, h.exec, h.binary, "info", name)
 	if err != nil {
 		if exitCode, ok := ExtractExitCode(err); ok && exitCode == 1 {
 			return nil, fmt.Errorf("package '%s' not found", name)
@@ -305,7 +316,7 @@ func (h *HomebrewManager) InstalledVersion(ctx context.Context, name string) (st
 	packages, err := h.getInstalledPackagesInfo(ctx)
 	if err != nil {
 		// Fallback to brew list --versions
-		output, err := ExecuteCommand(ctx, h.binary, "list", "--versions", name)
+		output, err := ExecuteWith(ctx, h.exec, h.binary, "list", "--versions", name)
 		if err != nil {
 			return "", fmt.Errorf("failed to get package version information for %s: %w", name, err)
 		}
@@ -348,11 +359,11 @@ func (h *HomebrewManager) extractVersion(output []byte, name string) string {
 
 // IsAvailable checks if homebrew is installed and accessible
 func (h *HomebrewManager) IsAvailable(ctx context.Context) (bool, error) {
-	if !CheckCommandAvailable(h.binary) {
+	if !CheckCommandAvailableWith(h.exec, h.binary) {
 		return false, nil
 	}
 
-	err := VerifyBinary(ctx, h.binary, []string{"--version"})
+	err := VerifyBinaryWith(ctx, h.exec, h.binary, []string{"--version"})
 	if err != nil {
 		// Check for context cancellation
 		if IsContextError(err) {
@@ -428,7 +439,7 @@ func (h *HomebrewManager) CheckHealth(ctx context.Context) (*HealthCheck, error)
 
 // getBinDirectory discovers the actual homebrew bin directory
 func (h *HomebrewManager) getBinDirectory(ctx context.Context) (string, error) {
-	output, err := ExecuteCommand(ctx, h.binary, "--prefix")
+	output, err := ExecuteWith(ctx, h.exec, h.binary, "--prefix")
 	if err != nil {
 		return "", fmt.Errorf("failed to get homebrew prefix: %w", err)
 	}
@@ -453,25 +464,25 @@ func (h *HomebrewManager) SelfInstall(ctx context.Context) error {
 func (h *HomebrewManager) Upgrade(ctx context.Context, packages []string) error {
 	if len(packages) == 0 {
 		// Upgrade all packages
-		output, err := ExecuteCommandCombined(ctx, h.binary, "upgrade")
+		output, err := CombinedOutputWith(ctx, h.exec, h.binary, "upgrade")
 		if err != nil {
-			return h.handleUpgradeError(err, output, "all packages")
+			return h.handleUpgradeError(err, []byte(output), "all packages")
 		}
 		return nil
 	}
 
 	// Upgrade specific packages
 	args := append([]string{"upgrade"}, packages...)
-	output, err := ExecuteCommandCombined(ctx, h.binary, args...)
+	output, err := CombinedOutputWith(ctx, h.exec, h.binary, args...)
 	if err != nil {
-		return h.handleUpgradeError(err, output, strings.Join(packages, ", "))
+		return h.handleUpgradeError(err, []byte(output), strings.Join(packages, ", "))
 	}
 	return nil
 }
 
 func init() {
-	RegisterManager("brew", func() PackageManager {
-		return NewHomebrewManager()
+	RegisterManagerV2("brew", func(exec CommandExecutor) PackageManager {
+		return NewHomebrewManagerWithExecutor(exec)
 	})
 }
 

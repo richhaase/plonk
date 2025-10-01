@@ -47,6 +47,40 @@ func SetDefaultExecutor(executor CommandExecutor) {
 	defaultExecutor = executor
 }
 
+// ExecuteWith executes a command using the provided executor
+func ExecuteWith(ctx context.Context, exec CommandExecutor, name string, args ...string) ([]byte, error) {
+	return exec.Execute(ctx, name, args...)
+}
+
+// CombinedOutputWith executes a command and returns combined output using the provided executor
+func CombinedOutputWith(ctx context.Context, exec CommandExecutor, name string, args ...string) (string, error) {
+	output, err := exec.CombinedOutput(ctx, name, args...)
+	return string(output), err
+}
+
+// VerifyBinaryWith verifies that a binary exists and optionally runs it with args using the provided executor
+func VerifyBinaryWith(ctx context.Context, exec CommandExecutor, name string, args []string) error {
+	// Check if binary exists in PATH
+	if _, err := exec.LookPath(name); err != nil {
+		return fmt.Errorf("binary not found: %s", name)
+	}
+
+	// If args provided, try to execute the binary
+	if len(args) > 0 {
+		if _, err := exec.CombinedOutput(ctx, name, args...); err != nil {
+			return fmt.Errorf("binary exists but failed to execute: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// CheckCommandAvailableWith checks if a command is available in PATH using the provided executor
+func CheckCommandAvailableWith(exec CommandExecutor, name string) bool {
+	_, err := exec.LookPath(name)
+	return err == nil
+}
+
 // MockCommandExecutor implements CommandExecutor for testing
 type MockCommandExecutor struct {
 	// Commands records all executed commands

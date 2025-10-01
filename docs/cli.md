@@ -6,7 +6,7 @@ All commands support these options:
 
 - `--output, -o` - Output format: `table` (default), `json`, `yaml`
 - `--help, -h` - Show help for any command
-- `--version, -v` - Show plonk version
+- `--version, -V` - Show plonk version
 
 ## Commands
 
@@ -64,6 +64,20 @@ plonk uninstall ripgrep
 plonk uninstall brew:wget npm:prettier pnpm:typescript conda:numpy uv:ruff pixi:tree composer:phpunit/phpunit dotnet:dotnetsay
 plonk uninstall --dry-run ripgrep
 ```
+
+### plonk upgrade
+
+Upgrade packages to their latest versions.
+
+```bash
+plonk upgrade                         # Upgrade all packages
+plonk upgrade brew                    # Upgrade all Homebrew packages
+plonk upgrade ripgrep                 # Upgrade ripgrep across all managers
+plonk upgrade brew:neovim             # Upgrade specific package
+plonk upgrade htop neovim             # Upgrade multiple packages
+```
+
+**📖 [Complete Upgrade Documentation →](cmds/upgrade.md)**
 
 ### plonk add
 

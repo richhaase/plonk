@@ -7,8 +7,17 @@ import (
 	"context"
 )
 
-// ReconcileItems compares desired vs actual state and categorizes items
+// ReconcileItems compares desired vs actual state and categorizes items.
+// This is a convenience wrapper around ReconcileItemsWithKey using Item.Name as the key.
 func ReconcileItems(desired, actual []Item) []Item {
+	return ReconcileItemsWithKey(desired, actual, func(item Item) string {
+		return item.Name
+	})
+}
+
+// ReconcileItemsDeprecated is the old implementation, kept for reference
+// TODO: Remove after verifying new implementation works correctly
+func ReconcileItemsDeprecated(desired, actual []Item) []Item {
 	// Build lookup map for actual items by name
 	actualMap := make(map[string]*Item)
 	for i := range actual {
@@ -31,40 +40,22 @@ func ReconcileItems(desired, actual []Item) []Item {
 			// Item is managed (in both desired and actual)
 			item.State = StateManaged
 
-			// Check for drift if comparison function is provided
-			if compareFn, ok := desiredItem.Metadata["compare_fn"]; ok {
-				if fn, ok := compareFn.(func() (bool, error)); ok {
-					if identical, err := fn(); err == nil && !identical {
-						item.State = StateDegraded // Using existing reserved state for drift
-						if item.Meta == nil {
-							item.Meta = make(map[string]string)
-						}
-						item.Meta["drift_status"] = "modified"
+			// Check for drift using typed comparator
+			if comparator := GetDriftComparator(desiredItem); comparator != nil {
+				if identical, err := comparator.Compare(); err == nil && !identical {
+					item.State = StateDegraded // Drift detected
+					if item.Meta == nil {
+						item.Meta = make(map[string]string)
 					}
+					item.Meta["drift_status"] = "modified"
 				}
 			}
 
-			// Merge metadata from actual if needed
-			if item.Metadata == nil {
-				item.Metadata = actualItem.Metadata
-			} else if actualItem.Metadata != nil {
-				// Merge actual metadata into desired
-				for k, v := range actualItem.Metadata {
-					if _, exists := item.Metadata[k]; !exists {
-						item.Metadata[k] = v
-					}
-				}
-			}
-			// Merge Meta string map similarly
-			if item.Meta == nil {
-				item.Meta = actualItem.Meta
-			} else if actualItem.Meta != nil {
-				for k, v := range actualItem.Meta {
-					if _, exists := item.Meta[k]; !exists {
-						item.Meta[k] = v
-					}
-				}
-			}
+			// Merge metadata from actual using deep copy to avoid aliasing
+			item.Metadata = MergeMetadata(item.Metadata, actualItem.Metadata)
+
+			// Merge Meta string map using deep copy
+			item.Meta = MergeStringMap(item.Meta, actualItem.Meta)
 			// Use actual path if available (for dotfiles)
 			if item.Path == "" && actualItem.Path != "" {
 				item.Path = actualItem.Path
@@ -121,40 +112,22 @@ func ReconcileItemsWithKey(desired, actual []Item, keyFunc func(Item) string) []
 			// Item is managed (in both desired and actual)
 			item.State = StateManaged
 
-			// Check for drift if comparison function is provided
-			if compareFn, ok := desiredItem.Metadata["compare_fn"]; ok {
-				if fn, ok := compareFn.(func() (bool, error)); ok {
-					if identical, err := fn(); err == nil && !identical {
-						item.State = StateDegraded // Using existing reserved state for drift
-						if item.Meta == nil {
-							item.Meta = make(map[string]string)
-						}
-						item.Meta["drift_status"] = "modified"
+			// Check for drift using typed comparator
+			if comparator := GetDriftComparator(desiredItem); comparator != nil {
+				if identical, err := comparator.Compare(); err == nil && !identical {
+					item.State = StateDegraded // Drift detected
+					if item.Meta == nil {
+						item.Meta = make(map[string]string)
 					}
+					item.Meta["drift_status"] = "modified"
 				}
 			}
 
-			// Merge metadata from actual if needed
-			if item.Metadata == nil {
-				item.Metadata = actualItem.Metadata
-			} else if actualItem.Metadata != nil {
-				// Merge actual metadata into desired
-				for k, v := range actualItem.Metadata {
-					if _, exists := item.Metadata[k]; !exists {
-						item.Metadata[k] = v
-					}
-				}
-			}
-			// Merge Meta string map similarly
-			if item.Meta == nil {
-				item.Meta = actualItem.Meta
-			} else if actualItem.Meta != nil {
-				for k, v := range actualItem.Meta {
-					if _, exists := item.Meta[k]; !exists {
-						item.Meta[k] = v
-					}
-				}
-			}
+			// Merge metadata from actual using deep copy to avoid aliasing
+			item.Metadata = MergeMetadata(item.Metadata, actualItem.Metadata)
+
+			// Merge Meta string map using deep copy
+			item.Meta = MergeStringMap(item.Meta, actualItem.Meta)
 			// Use actual path if available (for dotfiles)
 			if item.Path == "" && actualItem.Path != "" {
 				item.Path = actualItem.Path
@@ -185,6 +158,7 @@ func ReconcileItemsWithKey(desired, actual []Item, keyFunc func(Item) string) []
 }
 
 // GroupItemsByState separates items into managed, missing, and untracked slices
+// Note: Degraded items (drifted dotfiles) are grouped with managed items
 func GroupItemsByState(items []Item) (managed, missing, untracked []Item) {
 	managed = make([]Item, 0)
 	missing = make([]Item, 0)
@@ -192,7 +166,7 @@ func GroupItemsByState(items []Item) (managed, missing, untracked []Item) {
 
 	for _, item := range items {
 		switch item.State {
-		case StateManaged:
+		case StateManaged, StateDegraded:
 			managed = append(managed, item)
 		case StateMissing:
 			missing = append(missing, item)

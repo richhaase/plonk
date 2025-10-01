@@ -76,23 +76,29 @@ func (o *Orchestrator) Apply(ctx context.Context) (ApplyResult, error) {
 	}
 
 	// Determine overall success
-	// Success if we had no critical errors and at least some operations succeeded
+	// Success means no errors occurred. A clean no-op is considered success.
+	// This supports idempotent operations - running apply multiple times is safe.
+	result.Success = !result.HasErrors()
+
+	// Determine if any changes were made (useful for reporting)
+	changed := false
 	if result.Packages != nil {
 		if !o.dryRun && result.Packages.TotalInstalled > 0 {
-			result.Success = true
+			changed = true
 		} else if o.dryRun && result.Packages.TotalWouldInstall > 0 {
-			result.Success = true
+			changed = true
 		}
 	}
 	if result.Dotfiles != nil {
 		if !o.dryRun && result.Dotfiles.Summary.Added > 0 {
-			result.Success = true
+			changed = true
 		} else if o.dryRun && result.Dotfiles.Summary.Added > 0 {
-			result.Success = true
+			changed = true
 		}
 	}
+	result.Changed = changed
 
-	// If we had any failures, return an error even if some succeeded
+	// If we had any failures, return an error even if some operations succeeded
 	if result.HasErrors() {
 		return result, result.GetCombinedError()
 	}

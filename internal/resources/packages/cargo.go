@@ -15,18 +15,29 @@ import (
 // CargoManager manages Rust packages via cargo.
 type CargoManager struct {
 	binary string
+	exec   CommandExecutor
 }
 
-// NewCargoManager creates a new cargo manager.
+// NewCargoManager creates a new cargo manager with default executor.
 func NewCargoManager() *CargoManager {
+	return NewCargoManagerWithExecutor(nil)
+}
+
+// NewCargoManagerWithExecutor creates a new cargo manager with the provided executor.
+// If executor is nil, uses the default executor.
+func NewCargoManagerWithExecutor(executor CommandExecutor) *CargoManager {
+	if executor == nil {
+		executor = defaultExecutor
+	}
 	return &CargoManager{
 		binary: "cargo",
+		exec:   executor,
 	}
 }
 
 // ListInstalled lists all installed cargo packages.
 func (c *CargoManager) ListInstalled(ctx context.Context) ([]string, error) {
-	output, err := ExecuteCommand(ctx, c.binary, "install", "--list")
+	output, err := ExecuteWith(ctx, c.exec, c.binary, "install", "--list")
 	if err != nil {
 		return nil, err
 	}
@@ -56,18 +67,18 @@ func (c *CargoManager) parseListOutput(output []byte) []string {
 
 // Install installs a cargo package.
 func (c *CargoManager) Install(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, c.binary, "install", name)
+	output, err := CombinedOutputWith(ctx, c.exec, c.binary, "install", name)
 	if err != nil {
-		return c.handleInstallError(err, output, name)
+		return c.handleInstallError(err, []byte(output), name)
 	}
 	return nil
 }
 
 // Uninstall removes a cargo package.
 func (c *CargoManager) Uninstall(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, c.binary, "uninstall", name)
+	output, err := CombinedOutputWith(ctx, c.exec, c.binary, "uninstall", name)
 	if err != nil {
-		return c.handleUninstallError(err, output, name)
+		return c.handleUninstallError(err, []byte(output), name)
 	}
 	return nil
 }
@@ -90,7 +101,7 @@ func (c *CargoManager) IsInstalled(ctx context.Context, name string) (bool, erro
 
 // Search searches for packages in the cargo registry.
 func (c *CargoManager) Search(ctx context.Context, query string) ([]string, error) {
-	output, err := ExecuteCommand(ctx, c.binary, "search", query)
+	output, err := ExecuteWith(ctx, c.exec, c.binary, "search", query)
 	if err != nil {
 		// cargo search returns a non-zero exit code if no packages are found.
 		if _, ok := ExtractExitCode(err); ok {
@@ -125,7 +136,7 @@ func (c *CargoManager) parseSearchOutput(output []byte) []string {
 // Info retrieves detailed information about a package.
 func (c *CargoManager) Info(ctx context.Context, name string) (*PackageInfo, error) {
 	// Use search with limit 1 to get package info
-	output, err := ExecuteCommand(ctx, c.binary, "search", name, "--limit", "1")
+	output, err := ExecuteWith(ctx, c.exec, c.binary, "search", name, "--limit", "1")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get info for cargo package %s: %w", name, err)
 	}
@@ -209,7 +220,7 @@ func (c *CargoManager) InstalledVersion(ctx context.Context, name string) (strin
 	}
 
 	// Use cargo install --list to get version information
-	output, err := ExecuteCommand(ctx, c.binary, "install", "--list")
+	output, err := ExecuteWith(ctx, c.exec, c.binary, "install", "--list")
 	if err != nil {
 		return "", fmt.Errorf("failed to get package version information for %s: %w", name, err)
 	}
@@ -245,11 +256,11 @@ func (c *CargoManager) extractVersion(output []byte, name string) string {
 
 // IsAvailable checks if cargo is installed and accessible
 func (c *CargoManager) IsAvailable(ctx context.Context) (bool, error) {
-	if !CheckCommandAvailable(c.binary) {
+	if !CheckCommandAvailableWith(c.exec, c.binary) {
 		return false, nil
 	}
 
-	err := VerifyBinary(ctx, c.binary, []string{"--version"})
+	err := VerifyBinaryWith(ctx, c.exec, c.binary, []string{"--version"})
 	if err != nil {
 		// Check for context cancellation
 		if IsContextError(err) {
@@ -354,9 +365,9 @@ func (c *CargoManager) Upgrade(ctx context.Context, packages []string) error {
 
 	// Upgrade packages by reinstalling them (cargo install reinstalls with latest version)
 	for _, pkg := range packages {
-		output, err := ExecuteCommandCombined(ctx, c.binary, "install", pkg)
+		output, err := CombinedOutputWith(ctx, c.exec, c.binary, "install", pkg)
 		if err != nil {
-			return c.handleUpgradeError(err, output, pkg)
+			return c.handleUpgradeError(err, []byte(output), pkg)
 		}
 	}
 	return nil
@@ -380,8 +391,8 @@ func (c *CargoManager) Dependencies() []string {
 }
 
 func init() {
-	RegisterManager("cargo", func() PackageManager {
-		return NewCargoManager()
+	RegisterManagerV2("cargo", func(exec CommandExecutor) PackageManager {
+		return NewCargoManagerWithExecutor(exec)
 	})
 }
 

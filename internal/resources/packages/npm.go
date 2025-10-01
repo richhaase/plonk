@@ -15,19 +15,30 @@ import (
 // NpmManager manages NPM packages.
 type NpmManager struct {
 	binary string
+	exec   CommandExecutor
 }
 
-// NewNpmManager creates a new NPM manager.
+// NewNpmManager creates a new NPM manager with default executor.
 func NewNpmManager() *NpmManager {
+	return NewNpmManagerWithExecutor(nil)
+}
+
+// NewNpmManagerWithExecutor creates a new NPM manager with the provided executor.
+// If executor is nil, uses the default executor.
+func NewNpmManagerWithExecutor(executor CommandExecutor) *NpmManager {
+	if executor == nil {
+		executor = defaultExecutor
+	}
 	return &NpmManager{
 		binary: "npm",
+		exec:   executor,
 	}
 }
 
 // ListInstalled lists all globally installed NPM packages.
 func (n *NpmManager) ListInstalled(ctx context.Context) ([]string, error) {
 	// Call the binary directly to handle npm's unique exit code behavior
-	output, err := ExecuteCommand(ctx, n.binary, "list", "-g", "--depth=0", "--json")
+	output, err := ExecuteWith(ctx, n.exec, n.binary, "list", "-g", "--depth=0", "--json")
 	if err != nil {
 		// npm list can return non-zero exit codes even when working correctly
 		// (e.g., when there are peer dependency warnings)
@@ -77,25 +88,25 @@ func (n *NpmManager) parseListOutput(output []byte) []string {
 
 // Install installs a global NPM package.
 func (n *NpmManager) Install(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, n.binary, "install", "-g", name)
+	output, err := CombinedOutputWith(ctx, n.exec, n.binary, "install", "-g", name)
 	if err != nil {
-		return n.handleInstallError(err, output, name)
+		return n.handleInstallError(err, []byte(output), name)
 	}
 	return nil
 }
 
 // Uninstall removes a global NPM package.
 func (n *NpmManager) Uninstall(ctx context.Context, name string) error {
-	output, err := ExecuteCommandCombined(ctx, n.binary, "uninstall", "-g", name)
+	output, err := CombinedOutputWith(ctx, n.exec, n.binary, "uninstall", "-g", name)
 	if err != nil {
-		return n.handleUninstallError(err, output, name)
+		return n.handleUninstallError(err, []byte(output), name)
 	}
 	return nil
 }
 
 // IsInstalled checks if a specific package is installed globally.
 func (n *NpmManager) IsInstalled(ctx context.Context, name string) (bool, error) {
-	_, err := ExecuteCommand(ctx, n.binary, "list", "-g", name)
+	_, err := ExecuteWith(ctx, n.exec, n.binary, "list", "-g", name)
 	if err != nil {
 		if exitCode, ok := ExtractExitCode(err); ok && exitCode == 1 {
 			// Package not found - this is not an error condition
@@ -109,7 +120,7 @@ func (n *NpmManager) IsInstalled(ctx context.Context, name string) (bool, error)
 
 // Search searches for packages in NPM registry.
 func (n *NpmManager) Search(ctx context.Context, query string) ([]string, error) {
-	output, err := ExecuteCommand(ctx, n.binary, "search", query, "--json")
+	output, err := ExecuteWith(ctx, n.exec, n.binary, "search", query, "--json")
 	if err != nil {
 		// Check if this is a real error vs expected conditions
 		if exitCode, ok := ExtractExitCode(err); ok {
@@ -179,7 +190,7 @@ func (n *NpmManager) Info(ctx context.Context, name string) (*PackageInfo, error
 	}
 
 	// Always use npm view for info (works for both installed and available packages)
-	output, err := ExecuteCommand(ctx, n.binary, "view", name, "--json")
+	output, err := ExecuteWith(ctx, n.exec, n.binary, "view", name, "--json")
 	if err != nil {
 		if exitCode, ok := ExtractExitCode(err); ok && exitCode == 1 {
 			return nil, fmt.Errorf("package '%s' not found", name)
@@ -285,7 +296,7 @@ func (n *NpmManager) InstalledVersion(ctx context.Context, name string) (string,
 	}
 
 	// Get version using npm list with specific package
-	output, err := ExecuteCommand(ctx, n.binary, "list", "-g", name, "--depth=0", "--json")
+	output, err := ExecuteWith(ctx, n.exec, n.binary, "list", "-g", name, "--depth=0", "--json")
 	if err != nil {
 		return "", fmt.Errorf("failed to get package version information for %s: %w", name, err)
 	}
@@ -350,18 +361,18 @@ func (n *NpmManager) installViaHomebrew(ctx context.Context) error {
 func (n *NpmManager) Upgrade(ctx context.Context, packages []string) error {
 	if len(packages) == 0 {
 		// Upgrade all global packages
-		output, err := ExecuteCommandCombined(ctx, n.binary, "update", "-g")
+		output, err := CombinedOutputWith(ctx, n.exec, n.binary, "update", "-g")
 		if err != nil {
-			return n.handleUpgradeError(err, output, "all packages")
+			return n.handleUpgradeError(err, []byte(output), "all packages")
 		}
 		return nil
 	}
 
 	// Upgrade specific packages
 	args := append([]string{"update", "-g"}, packages...)
-	output, err := ExecuteCommandCombined(ctx, n.binary, args...)
+	output, err := CombinedOutputWith(ctx, n.exec, n.binary, args...)
 	if err != nil {
-		return n.handleUpgradeError(err, output, strings.Join(packages, ", "))
+		return n.handleUpgradeError(err, []byte(output), strings.Join(packages, ", "))
 	}
 	return nil
 }
@@ -372,18 +383,18 @@ func (n *NpmManager) Dependencies() []string {
 }
 
 func init() {
-	RegisterManager("npm", func() PackageManager {
-		return NewNpmManager()
+	RegisterManagerV2("npm", func(exec CommandExecutor) PackageManager {
+		return NewNpmManagerWithExecutor(exec)
 	})
 }
 
 // IsAvailable checks if npm is installed and accessible
 func (n *NpmManager) IsAvailable(ctx context.Context) (bool, error) {
-	if !CheckCommandAvailable(n.binary) {
+	if !CheckCommandAvailableWith(n.exec, n.binary) {
 		return false, nil
 	}
 
-	err := VerifyBinary(ctx, n.binary, []string{"--version"})
+	err := VerifyBinaryWith(ctx, n.exec, n.binary, []string{"--version"})
 	if err != nil {
 		// Check for context cancellation
 		if IsContextError(err) {
@@ -459,7 +470,7 @@ func (n *NpmManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 // getGlobalBinDirectory discovers the NPM global bin directory
 func (n *NpmManager) getGlobalBinDirectory(ctx context.Context) (string, error) {
 	// Get npm global prefix
-	output, err := ExecuteCommand(ctx, n.binary, "config", "get", "prefix")
+	output, err := ExecuteWith(ctx, n.exec, n.binary, "config", "get", "prefix")
 	if err != nil {
 		return "", fmt.Errorf("failed to get npm prefix: %w", err)
 	}

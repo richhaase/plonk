@@ -73,7 +73,7 @@ just build
 # Binary will be in bin/plonk
 
 # Or using go directly
-go build -o plonk cmd/plonk/main.go
+go build -o bin/plonk ./cmd/plonk
 
 # Install to system
 sudo mv plonk /usr/local/bin/  # Or add to your PATH
@@ -110,7 +110,7 @@ The `plonk doctor` command will identify any missing dependencies. Use `plonk cl
 ### Uninstall via Homebrew
 
 ```bash
-brew uninstall plonk
+brew uninstall --cask plonk
 brew untap richhaase/tap  # Optional: remove the tap
 ```
 

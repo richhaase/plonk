@@ -120,16 +120,20 @@ The `clone` command:
 plonk install ripgrep fd              # Install and track packages
 plonk install pnpm cargo              # Bootstrap package managers automatically
 plonk uninstall ripgrep               # Uninstall and stop tracking
+plonk upgrade                         # Upgrade all packages to latest versions
+plonk upgrade brew:ripgrep            # Upgrade specific package
 plonk search ripgrep                  # Search across all package managers
 plonk info ripgrep                    # Show package details
 
 # Dotfile management
 plonk add ~/.vimrc ~/.zshrc           # Start tracking dotfiles
 plonk rm ~/.vimrc                     # Stop tracking (doesn't delete file)
+plonk dotfiles                        # List dotfiles with state info
 
 # System state
 plonk status                          # Show all managed items (including drift)
 plonk apply                           # Sync system to desired state
+plonk diff                            # Show differences between desired and actual state
 plonk doctor                          # Check system health
 
 # Configuration
@@ -228,6 +232,7 @@ just install
 - **[Apply](docs/cmds/apply.md)** - Sync your system to desired state
 - **[Status](docs/cmds/status.md)** - View managed packages and dotfiles
 - **[Package Management](docs/cmds/package-management.md)** - install, uninstall, search, info
+- **[Upgrade](docs/cmds/upgrade.md)** - Upgrade packages to latest versions
 - **[Dotfile Management](docs/cmds/dotfile-management.md)** - add, rm
 - **[Config](docs/cmds/config.md)** - Manage plonk configuration
 - **[Doctor](docs/cmds/doctor.md)** - Check system health

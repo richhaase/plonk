@@ -37,19 +37,30 @@ func ExtractBinaryNameFromPath(modulePath string) string {
 // GoInstallManager manages Go packages.
 type GoInstallManager struct {
 	binary string
+	exec   CommandExecutor
 }
 
-// NewGoInstallManager creates a new go install manager.
+// NewGoInstallManager creates a new go install manager with default executor.
 func NewGoInstallManager() *GoInstallManager {
+	return NewGoInstallManagerWithExecutor(nil)
+}
+
+// NewGoInstallManagerWithExecutor creates a new go install manager with the provided executor.
+// If executor is nil, uses the default executor.
+func NewGoInstallManagerWithExecutor(executor CommandExecutor) *GoInstallManager {
+	if executor == nil {
+		executor = defaultExecutor
+	}
 	return &GoInstallManager{
 		binary: "go",
+		exec:   executor,
 	}
 }
 
 // getGoBinDir returns the directory where go installs binaries
 func (g *GoInstallManager) getGoBinDir(ctx context.Context) (string, error) {
 	// First try GOBIN
-	output, err := ExecuteCommand(ctx, g.binary, "env", "GOBIN")
+	output, err := ExecuteWith(ctx, g.exec, g.binary, "env", "GOBIN")
 	if err != nil {
 		return "", fmt.Errorf("failed to get GOBIN: %w", err)
 	}
@@ -60,7 +71,7 @@ func (g *GoInstallManager) getGoBinDir(ctx context.Context) (string, error) {
 	}
 
 	// Fall back to GOPATH/bin
-	output, err = ExecuteCommand(ctx, g.binary, "env", "GOPATH")
+	output, err = ExecuteWith(ctx, g.exec, g.binary, "env", "GOPATH")
 	if err != nil {
 		return "", fmt.Errorf("failed to get GOPATH: %w", err)
 	}
@@ -116,7 +127,7 @@ func (g *GoInstallManager) ListInstalled(ctx context.Context) ([]string, error) 
 // isGoBinary checks if a file is a Go binary using go version -m
 func (g *GoInstallManager) isGoBinary(ctx context.Context, binaryPath string) bool {
 	// Use provided context; caller controls timeout/cancellation
-	_, err := ExecuteCommand(ctx, g.binary, "version", "-m", binaryPath)
+	_, err := ExecuteWith(ctx, g.exec, g.binary, "version", "-m", binaryPath)
 	// If go version -m succeeds, it's a Go binary
 	return err == nil
 }
@@ -252,7 +263,7 @@ func (g *GoInstallManager) Info(ctx context.Context, name string) (*PackageInfo,
 	}
 
 	// Get module information using go version -m
-	output, err := ExecuteCommand(ctx, g.binary, "version", "-m", binaryPath)
+	output, err := ExecuteWith(ctx, g.exec, g.binary, "version", "-m", binaryPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get module information for %s: %w", name, err)
 	}
@@ -310,7 +321,7 @@ func (g *GoInstallManager) InstalledVersion(ctx context.Context, name string) (s
 	}
 
 	// Get version using go version -m
-	output, err := ExecuteCommand(ctx, g.binary, "version", "-m", binaryPath)
+	output, err := ExecuteWith(ctx, g.exec, g.binary, "version", "-m", binaryPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to get version information for %s: %w", name, err)
 	}
@@ -340,11 +351,11 @@ func (g *GoInstallManager) InstalledVersion(ctx context.Context, name string) (s
 
 // IsAvailable checks if go is installed and accessible
 func (g *GoInstallManager) IsAvailable(ctx context.Context) (bool, error) {
-	if !CheckCommandAvailable(g.binary) {
+	if !CheckCommandAvailableWith(g.exec, g.binary) {
 		return false, nil
 	}
 
-	err := VerifyBinary(ctx, g.binary, []string{"version"})
+	err := VerifyBinaryWith(ctx, g.exec, g.binary, []string{"version"})
 	if err != nil {
 		// Check for context cancellation
 		if IsContextError(err) {
@@ -424,7 +435,7 @@ func (g *GoInstallManager) getBinDirectory(ctx context.Context) (string, error) 
 	}
 
 	// Get GOPATH
-	output, err := ExecuteCommand(ctx, g.binary, "env", "GOPATH")
+	output, err := ExecuteWith(ctx, g.exec, g.binary, "env", "GOPATH")
 	if err != nil {
 		return "", fmt.Errorf("failed to get GOPATH: %w", err)
 	}
@@ -467,7 +478,7 @@ func (g *GoInstallManager) installViaHomebrew(ctx context.Context) error {
 func (g *GoInstallManager) Upgrade(ctx context.Context, packages []string) error {
 	if len(packages) == 0 {
 		// Get all installed packages first
-		output, err := ExecuteCommand(ctx, g.binary, "list", "-m", "all")
+		output, err := ExecuteWith(ctx, g.exec, g.binary, "list", "-m", "all")
 		if err != nil {
 			return fmt.Errorf("failed to list installed modules: %w", err)
 		}
@@ -492,12 +503,12 @@ func (g *GoInstallManager) Upgrade(ctx context.Context, packages []string) error
 				}
 
 				// Reinstall with @latest
-				reinstallOutput, err := ExecuteCommandCombined(ctx, g.binary, "install", modulePath+"@latest")
+				reinstallOutput, err := CombinedOutputWith(ctx, g.exec, g.binary, "install", modulePath+"@latest")
 				if err != nil {
 					moduleErrors = append(moduleErrors, fmt.Sprintf("failed to upgrade %s: %v", modulePath, err))
 					continue
 				}
-				_ = reinstallOutput // Unused but required for ExecuteCommandCombined
+				_ = reinstallOutput // Unused but required for CombinedOutputWith
 			}
 		}
 
@@ -513,9 +524,9 @@ func (g *GoInstallManager) Upgrade(ctx context.Context, packages []string) error
 		modulePath, _ := parseModulePath(pkg)
 		upgradeSpec := fmt.Sprintf("%s@latest", modulePath)
 
-		output, err := ExecuteCommandCombined(ctx, g.binary, "install", upgradeSpec)
+		output, err := CombinedOutputWith(ctx, g.exec, g.binary, "install", upgradeSpec)
 		if err != nil {
-			upgradeErr := g.handleUpgradeError(err, output, pkg)
+			upgradeErr := g.handleUpgradeError(err, []byte(output), pkg)
 			upgradeErrors = append(upgradeErrors, upgradeErr.Error())
 			continue
 		}
@@ -543,9 +554,9 @@ func (g *GoInstallManager) handleInstall(ctx context.Context, name string) error
 	modulePath, version := parseModulePath(name)
 	moduleSpec := fmt.Sprintf("%s@%s", modulePath, version)
 
-	output, err := ExecuteCommandCombined(ctx, g.binary, "install", moduleSpec)
+	output, err := CombinedOutputWith(ctx, g.exec, g.binary, "install", moduleSpec)
 	if err != nil {
-		return g.handleInstallError(err, output, name)
+		return g.handleInstallError(err, []byte(output), name)
 	}
 	return nil
 }
