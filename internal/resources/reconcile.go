@@ -158,6 +158,7 @@ func ReconcileItemsWithKey(desired, actual []Item, keyFunc func(Item) string) []
 }
 
 // GroupItemsByState separates items into managed, missing, and untracked slices
+// Note: Degraded items (drifted dotfiles) are grouped with managed items
 func GroupItemsByState(items []Item) (managed, missing, untracked []Item) {
 	managed = make([]Item, 0)
 	missing = make([]Item, 0)
@@ -165,7 +166,7 @@ func GroupItemsByState(items []Item) (managed, missing, untracked []Item) {
 
 	for _, item := range items {
 		switch item.State {
-		case StateManaged:
+		case StateManaged, StateDegraded:
 			managed = append(managed, item)
 		case StateMissing:
 			missing = append(missing, item)
