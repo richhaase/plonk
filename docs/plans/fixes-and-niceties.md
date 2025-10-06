@@ -4,15 +4,16 @@ Actionable improvements identified from comprehensive code review.
 
 ## Critical Fixes
 
-### 1. Fix pipx home directory resolution bug
+### 1. ✅ Fix pipx home directory resolution bug (COMPLETED)
 **Priority**: High (Bug)
 **File**: `internal/resources/packages/pipx.go`
+**Status**: ✅ Completed in Phase 1 (commit 10e9002)
 
 **Problem**: `getBinDirectory` uses `filepath.Abs("~")` which doesn't resolve home directory correctly - it creates a path relative to CWD, not `$HOME`.
 
-**Fix**:
+**Fix Applied**:
 ```go
-// Replace in getBinDirectory fallback:
+// Replaced in getBinDirectory fallback:
 home, err := os.UserHomeDir()
 if err != nil {
     return "", fmt.Errorf("failed to get user home directory: %w", err)
@@ -23,22 +24,23 @@ return filepath.Join(home, ".local", "bin"), nil
 ### 2. ~~Security: Remote install script verification~~ (SUPERSEDED by #4)
 **Status**: No longer needed - removing self-install functionality entirely per #4
 
-### 3. Fix MultiPackageResource concurrency safety
+### 3. ✅ Fix MultiPackageResource concurrency safety (COMPLETED)
 **Priority**: Medium (Potential race condition)
 **File**: `internal/resources/packages/resource.go`
+**Status**: ✅ Completed in Phase 1 (commit 10e9002)
 
 **Problem**: `MultiPackageResource.Actual` directly iterates over `m.registry.managers` map, breaking encapsulation and risking data races if managers are ever registered dynamically.
 
-**Fix**:
+**Fix Applied**:
 ```go
-// In MultiPackageResource.Actual, replace:
+// In MultiPackageResource.Actual, replaced:
 // for managerName := range m.registry.managers
 
 // With:
 for _, managerName := range m.registry.GetAllManagerNames() {
     manager, err := m.registry.GetManager(managerName)
     if err != nil {
-        continue // or handle error appropriately
+        continue
     }
     // ... rest of logic
 }
@@ -46,39 +48,47 @@ for _, managerName := range m.registry.GetAllManagerNames() {
 
 ## High-Priority Improvements
 
-### 4. Remove self-install functionality for package managers
+### 4. ✅ Remove self-install functionality for package managers (COMPLETED)
 **Priority**: High (Security & Architecture)
-**Files**:
-- `internal/resources/packages/homebrew.go` (SelfInstall)
-- `internal/resources/packages/uv.go` (SelfInstall)
-- `internal/resources/packages/pnpm.go` (installViaStandaloneScript)
-- `internal/resources/packages/cargo.go` (SelfInstall)
-- `internal/resources/packages/pixi.go` (SelfInstall)
-- All other managers implementing SelfInstaller interface
+**Status**: ✅ Completed in Phase 1 (commit 10e9002)
 
-**Problem**: Self-install via shell scripts (`curl | sh`) poses security risks and adds complexity.
+**Files Changed**: 26 files (10 managers + 2 commands + 2 interfaces + 12 tests)
+**Files Deleted**: `internal/resources/packages/install_helpers.go`
 
-**New approach**:
-- Package managers should only be installed via other supported package managers
-- For managers with no installation path (like Homebrew itself), report in `plonk doctor` that manual installation is required
-- Remove SelfInstaller interface or make it return "not supported" errors with helpful messages
+**Problem**: Self-install via shell scripts (`curl | sh`) posed security risks and added complexity.
 
-**Benefits**:
-- Eliminates remote script execution security risk
-- Simpler, more maintainable code
-- Clearer user expectations
-- `plonk doctor` becomes the source of truth for missing prerequisites
+**Changes Applied**:
+- ✅ Deleted `PackageSelfInstaller` interface from `interfaces.go`
+- ✅ Deleted `SupportsSelfInstall()` capability check function
+- ✅ Deleted entire `install_helpers.go` file (executeInstallScript, executeInstallCommand, etc.)
+- ✅ Removed `SelfInstall()` methods from all 10 package managers:
+  - homebrew.go, cargo.go, npm.go, pnpm.go, pipx.go
+  - gem.go, pixi.go, uv.go, goinstall.go, conda.go
+- ✅ Updated `install.go` to return clear error directing users to manual installation
+- ✅ Updated `clone/setup.go` to skip unavailable managers with helpful messages
+- ✅ Updated all test files to remove SelfInstall stubs
 
-**Example flow**:
+**Results**:
+- 🔒 Eliminates remote script execution security vulnerability
+- 🧹 Removed ~326 lines of complex installation code
+- 📝 Clearer user expectations and better error messages
+- 🏥 `plonk doctor` is now the authoritative source for installation help
+
+**New User Flow**:
 ```bash
-# User tries to install cargo (Rust)
-plonk install cargo
-# Error: cargo package manager not found. Install via: brew install rust
+# User tries to install package but manager is missing
+$ plonk install pipx:black
+Error: Package manager 'pipx' is not available.
+Install it manually or via another package manager, then try again.
+Run 'plonk doctor' for installation instructions.
 
-# Or in doctor:
-plonk doctor
-# ✗ Homebrew not installed - manual installation required: https://brew.sh
-# ✗ Cargo not found - install via: brew install rust
+# User runs doctor to see how to install
+$ plonk doctor
+### Pipx Package Manager
+**Status**: WARN
+**Suggestions:**
+- Install pipx via pip: pip3 install --user pipx
+- Or via Homebrew: brew install pipx
 ```
 
 ### 5. Standardize manager registration to V2
@@ -314,10 +324,13 @@ func NewIsolatedRegistry() *ManagerRegistry {
 
 ## Implementation Priority
 
-### Phase 1: Critical (Do First)
-1. Fix pipx home directory bug (#1)
-2. Fix MultiPackageResource concurrency (#3)
-3. Remove self-install functionality (#4)
+### Phase 1: Critical ✅ COMPLETED
+1. ✅ Fix pipx home directory bug (#1)
+2. ✅ Fix MultiPackageResource concurrency (#3)
+3. ✅ Remove self-install functionality (#4)
+
+**Completed**: 2025-01-06 in commits 619924f, 10e9002
+**Results**: 3 critical fixes, 26 files changed, 1 file deleted, -293 LOC, all tests passing
 
 ### Phase 2: UX Improvements
 4. Fix duplicate drifted dotfiles in status (#8)
