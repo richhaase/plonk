@@ -442,26 +442,6 @@ func (c *CondaManager) getCondaInfo(ctx context.Context) (*CondaInfo, error) {
 	return &info, nil
 }
 
-// SelfInstall installs mamba (preferred) for optimal performance.
-func (c *CondaManager) SelfInstall(ctx context.Context) error {
-	// Check if already available (any variant)
-	if available, _ := c.IsAvailable(ctx); available {
-		return nil
-	}
-
-	// Install micromamba via Homebrew (recommended method)
-	return c.installMicromambaViaHomebrew(ctx)
-}
-
-// installMicromambaViaHomebrew installs micromamba via Homebrew (recommended method).
-func (c *CondaManager) installMicromambaViaHomebrew(ctx context.Context) error {
-	if available, _ := checkPackageManagerAvailable(ctx, "brew"); !available {
-		return fmt.Errorf("homebrew not available")
-	}
-	// micromamba is the recommended conda variant via Homebrew as of 2025
-	return executeInstallCommand(ctx, "brew", []string{"install", "micromamba"}, "micromamba")
-}
-
 // Upgrade upgrades one or more packages to their latest versions.
 func (c *CondaManager) Upgrade(ctx context.Context, packages []string) error {
 	if len(packages) == 0 {

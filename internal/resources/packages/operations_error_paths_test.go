@@ -25,7 +25,6 @@ func (u *unavailMgr) Search(ctx context.Context, q string) ([]string, error) { r
 func (u *unavailMgr) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	return &HealthCheck{Name: "u"}, nil
 }
-func (u *unavailMgr) SelfInstall(ctx context.Context) error            { return nil }
 func (u *unavailMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
 func (u *unavailMgr) Dependencies() []string                           { return nil }
 

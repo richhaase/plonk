@@ -29,7 +29,6 @@ func (s *slowManager) Search(ctx context.Context, query string) ([]string, error
 func (s *slowManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	return &HealthCheck{Name: "slow", Category: "package-manager", Status: "PASS"}, nil
 }
-func (s *slowManager) SelfInstall(ctx context.Context) error { return nil }
 func (s *slowManager) Upgrade(ctx context.Context, packages []string) error {
 	return blockUntilDone(ctx)
 }

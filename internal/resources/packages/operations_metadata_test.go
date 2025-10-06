@@ -27,7 +27,6 @@ func (f *fakeSimpleMgr) Search(ctx context.Context, q string) ([]string, error) 
 func (f *fakeSimpleMgr) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	return &HealthCheck{Name: "x"}, nil
 }
-func (f *fakeSimpleMgr) SelfInstall(ctx context.Context) error            { return nil }
 func (f *fakeSimpleMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
 func (f *fakeSimpleMgr) Dependencies() []string                           { return nil }
 

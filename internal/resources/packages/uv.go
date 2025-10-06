@@ -213,18 +213,6 @@ func (u *UvManager) Upgrade(ctx context.Context, packages []string) error {
 	return nil
 }
 
-// SelfInstall installs UV using official installer
-func (u *UvManager) SelfInstall(ctx context.Context) error {
-	// Check if already available (idempotent)
-	if available, _ := u.IsAvailable(ctx); available {
-		return nil
-	}
-
-	// Execute official UV installer script
-	script := `curl -LsSf https://astral.sh/uv/install.sh | sh`
-	return executeInstallScript(ctx, script, "UV")
-}
-
 // Dependencies returns package managers this manager depends on for self-installation
 func (u *UvManager) Dependencies() []string {
 	return []string{} // UV is independent - uses official installer script

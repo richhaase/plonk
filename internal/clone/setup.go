@@ -328,52 +328,15 @@ func installDetectedManagers(ctx context.Context, managers []string, cfg Config)
 		return nil
 	}
 
-	output.Printf("Installing missing package managers in dependency order:\n")
+	output.Printf("\nMissing package managers (automatic installation not supported):\n")
 	for _, manager := range missingManagers {
 		output.Printf("- %s\n", getManagerDescription(manager))
+		output.Printf("  Installation: %s\n", getManualInstallInstructions(manager))
 	}
 
-	// Install in dependency order
-	successful := 0
-	failed := 0
-
-	for i, manager := range missingManagers {
-		output.ProgressUpdate(i+1, len(missingManagers), "Installing", getManagerDescription(manager))
-
-		packageManager, err := registry.GetManager(manager)
-		if err != nil {
-			failed++
-			output.Printf("Failed to get manager for %s: %v\n", manager, err)
-			output.Printf("Manual installation: %s\n", getManualInstallInstructions(manager))
-			continue
-		}
-
-		// Check if manager supports self-installation
-		selfInstaller, ok := packageManager.(packages.PackageSelfInstaller)
-		if !ok {
-			output.Printf("Package manager %s does not support automatic installation\n", manager)
-			return fmt.Errorf("package manager %s cannot be automatically installed", manager)
-		}
-
-		if err := selfInstaller.SelfInstall(ctx); err != nil {
-			failed++
-			output.Printf("Failed to install %s: %v\n", manager, err)
-			output.Printf("Manual installation: %s\n", getManualInstallInstructions(manager))
-			continue
-		}
-
-		successful++
-		output.Printf("%s installed successfully\n", getManagerDescription(manager))
-	}
-
-	if failed > 0 {
-		output.Printf("Installation summary: %d successful, %d failed\n", successful, failed)
-		if successful > 0 {
-			return nil // Don't treat partial success as failure
-		}
-		return fmt.Errorf("failed to install %d package managers", failed)
-	}
-
-	output.Printf("All package managers installed successfully\n")
-	return nil
+	return fmt.Errorf(
+		"automatic installation of package managers is not supported for security reasons\n" +
+			"Please install the missing package managers manually using the instructions above\n" +
+			"Run 'plonk doctor' for more detailed installation instructions",
+	)
 }

@@ -260,24 +260,6 @@ func (p *PnpmManager) getGlobalDirectory(ctx context.Context) (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
-// SelfInstall installs pnpm using the single standalone script method
-func (p *PnpmManager) SelfInstall(ctx context.Context) error {
-	// Check if already available (idempotent)
-	if available, _ := p.IsAvailable(ctx); available {
-		return nil
-	}
-
-	// Use ONLY the most independent installation method - standalone script
-	// This ensures predictable behavior and treats pnpm as a first-class citizen
-	return p.installViaStandaloneScript(ctx)
-}
-
-// installViaStandaloneScript uses pnpm's official installation script
-func (p *PnpmManager) installViaStandaloneScript(ctx context.Context) error {
-	script := `curl -fsSL https://get.pnpm.io/install.sh | sh`
-	return executeInstallScript(ctx, script, "pnpm")
-}
-
 // Upgrade upgrades one or more packages to their latest versions
 func (p *PnpmManager) Upgrade(ctx context.Context, packages []string) error {
 	if len(packages) == 0 {

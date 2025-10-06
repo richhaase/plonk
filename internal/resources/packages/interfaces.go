@@ -65,14 +65,6 @@ type PackageHealthChecker interface {
 	CheckHealth(ctx context.Context) (*HealthCheck, error)
 }
 
-// PackageSelfInstaller is an optional capability interface for self-installation.
-// Implement this interface to enable automatic installation of the package manager itself.
-type PackageSelfInstaller interface {
-	PackageManager
-	// SelfInstall automatically installs the package manager if not available
-	SelfInstall(ctx context.Context) error
-}
-
 // PackageInfo represents detailed information about a package
 type PackageInfo struct {
 	Name          string   `json:"name"`
@@ -136,11 +128,5 @@ func SupportsUpgrade(pm PackageManager) bool {
 // SupportsHealthCheck returns true if the manager implements PackageHealthChecker
 func SupportsHealthCheck(pm PackageManager) bool {
 	_, ok := pm.(PackageHealthChecker)
-	return ok
-}
-
-// SupportsSelfInstall returns true if the manager implements PackageSelfInstaller
-func SupportsSelfInstall(pm PackageManager) bool {
-	_, ok := pm.(PackageSelfInstaller)
 	return ok
 }

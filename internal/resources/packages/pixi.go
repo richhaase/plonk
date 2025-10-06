@@ -290,18 +290,6 @@ func (p *PixiManager) Upgrade(ctx context.Context, packages []string) error {
 	return nil
 }
 
-// SelfInstall installs Pixi using official installer
-func (p *PixiManager) SelfInstall(ctx context.Context) error {
-	// Check if already available (idempotent)
-	if available, _ := p.IsAvailable(ctx); available {
-		return nil
-	}
-
-	// Execute official Pixi installer script
-	script := `curl -fsSL https://pixi.sh/install.sh | sh`
-	return executeInstallScript(ctx, script, "Pixi")
-}
-
 // Dependencies returns package managers this manager depends on for self-installation
 func (p *PixiManager) Dependencies() []string {
 	return []string{} // Pixi is independent - uses official installer script

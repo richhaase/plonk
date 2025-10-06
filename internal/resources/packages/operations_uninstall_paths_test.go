@@ -28,7 +28,6 @@ func (f *fakeUninstallMgr) Search(ctx context.Context, q string) ([]string, erro
 func (f *fakeUninstallMgr) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	return &HealthCheck{Name: "u"}, nil
 }
-func (f *fakeUninstallMgr) SelfInstall(ctx context.Context) error            { return nil }
 func (f *fakeUninstallMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
 func (f *fakeUninstallMgr) Dependencies() []string                           { return nil }
 

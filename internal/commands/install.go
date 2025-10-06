@@ -217,43 +217,18 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	return resources.ValidateOperationResults(allResults, "install packages")
 }
 
-// handleManagerSelfInstall executes self-installation for a package manager
+// handleManagerSelfInstall reports that self-installation is no longer supported
 func handleManagerSelfInstall(ctx context.Context, managerName string, dryRun bool, cfg *config.Config) resources.OperationResult {
 	result := resources.OperationResult{
 		Name:    managerName,
 		Manager: "self-install",
-	}
-
-	if dryRun {
-		result.Status = "would-install"
-		return result
-	}
-
-	registry := packages.NewManagerRegistry()
-	manager, err := registry.GetManager(managerName)
-	if err != nil {
-		result.Status = "failed"
-		result.Error = err
-		return result
-	}
-
-	// Use configured timeout for self-installation
-	t := config.GetTimeouts(cfg)
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, t.Package)
-	defer cancel()
-
-	selfInstaller, ok := manager.(packages.PackageSelfInstaller)
-	if !ok {
-		result.Status = "failed"
-		result.Error = fmt.Errorf("package manager %s does not support automatic installation", managerName)
-		return result
-	}
-	err = selfInstaller.SelfInstall(ctxWithTimeout)
-	if err != nil {
-		result.Status = "failed"
-		result.Error = err
-	} else {
-		result.Status = "installed"
+		Status:  "failed",
+		Error: fmt.Errorf(
+			"automatic installation of package managers is not supported for security reasons\n"+
+				"Please install %s manually or via another package manager\n"+
+				"Run 'plonk doctor' for installation instructions",
+			managerName,
+		),
 	}
 
 	return result

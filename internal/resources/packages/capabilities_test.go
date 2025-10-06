@@ -37,10 +37,9 @@ func TestCapabilityDetection(t *testing.T) {
 			hasInfo := SupportsInfo(mgr)
 			hasUpgrade := SupportsUpgrade(mgr)
 			hasHealth := SupportsHealthCheck(mgr)
-			hasSelfInstall := SupportsSelfInstall(mgr)
 
-			t.Logf("%s capabilities: search=%v info=%v upgrade=%v health=%v selfinstall=%v",
-				name, hasSearch, hasInfo, hasUpgrade, hasHealth, hasSelfInstall)
+			t.Logf("%s capabilities: search=%v info=%v upgrade=%v health=%v",
+				name, hasSearch, hasInfo, hasUpgrade, hasHealth)
 
 			// Verify that capability detection is consistent
 			// If we detect a capability, we should be able to type assert to it
@@ -62,11 +61,6 @@ func TestCapabilityDetection(t *testing.T) {
 			if hasHealth {
 				_, ok := mgr.(PackageHealthChecker)
 				assert.True(t, ok, "SupportsHealthCheck returned true but type assertion failed")
-			}
-
-			if hasSelfInstall {
-				_, ok := mgr.(PackageSelfInstaller)
-				assert.True(t, ok, "SupportsSelfInstall returned true but type assertion failed")
 			}
 		})
 	}
@@ -103,5 +97,4 @@ func TestCapabilityFunctionsReturnBool(t *testing.T) {
 	assert.IsType(t, true, SupportsInfo(brew))
 	assert.IsType(t, true, SupportsUpgrade(brew))
 	assert.IsType(t, true, SupportsHealthCheck(brew))
-	assert.IsType(t, true, SupportsSelfInstall(brew))
 }

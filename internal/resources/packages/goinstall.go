@@ -454,26 +454,6 @@ func (g *GoInstallManager) getBinDirectory(ctx context.Context) (string, error) 
 	return filepath.Join(homeDir, "go", "bin"), nil
 }
 
-// SelfInstall installs Go using Homebrew (canonical method)
-func (g *GoInstallManager) SelfInstall(ctx context.Context) error {
-	// Check if already available (idempotent)
-	if available, _ := g.IsAvailable(ctx); available {
-		return nil
-	}
-
-	// Install Go via Homebrew (canonical method for plonk)
-	if homebrewAvailable, _ := checkPackageManagerAvailable(ctx, "brew"); homebrewAvailable {
-		return g.installViaHomebrew(ctx)
-	}
-
-	return fmt.Errorf("Go installation requires Homebrew - install Homebrew first from https://brew.sh")
-}
-
-// installViaHomebrew installs Go via Homebrew
-func (g *GoInstallManager) installViaHomebrew(ctx context.Context) error {
-	return executeInstallCommand(ctx, "brew", []string{"install", "go"}, "Go")
-}
-
 // Upgrade upgrades one or more packages to their latest versions
 func (g *GoInstallManager) Upgrade(ctx context.Context, packages []string) error {
 	if len(packages) == 0 {
