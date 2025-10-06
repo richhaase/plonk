@@ -332,12 +332,15 @@ func NewIsolatedRegistry() *ManagerRegistry {
 **Completed**: 2025-01-06 in commits 619924f, 10e9002
 **Results**: 3 critical fixes, 26 files changed, 1 file deleted, -293 LOC, all tests passing
 
-### Phase 2: UX Improvements
-4. Fix duplicate drifted dotfiles in status (#8)
-5. Improve dotfile column headers in status (#9)
-6. Fix diff output column ordering (#10)
-7. Add `plonk add -y` to sync drifted files (#11)
-8. Add selective file deployment to `plonk apply` (#12)
+### Phase 2: UX Improvements ✅ COMPLETED
+4. ✅ Fix duplicate drifted dotfiles in status (#8)
+5. ✅ Improve dotfile column headers in status (#9)
+6. ✅ Fix diff output column ordering (#10)
+7. ✅ Add `plonk add -y` to sync drifted files (#11)
+8. ✅ Add selective file deployment to `plonk apply` (#12)
+
+**Completed**: 2025-01-06 in commit 55e9249
+**Results**: 5 UX improvements, 4 files changed, +190 LOC, all tests passing
 
 ### Phase 3: Architecture & Performance
 9. Standardize V2 registration (#5)
