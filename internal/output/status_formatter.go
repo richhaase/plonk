@@ -221,9 +221,8 @@ func (f StatusFormatter) TableOutput() string {
 			itemsToShow = dotfileResult.Missing
 		} else {
 			// Include managed and missing items
+			// Drifted files are already in Managed with State==StateDegraded
 			itemsToShow = append(dotfileResult.Managed, dotfileResult.Missing...)
-			// Also need to check for drifted items (they won't be in Managed due to GroupItemsByState)
-			// We'll handle drifted items separately below
 		}
 
 		if len(itemsToShow) > 0 {
@@ -259,7 +258,7 @@ func (f StatusFormatter) TableOutput() string {
 				}
 			} else {
 				// For managed/missing, use the three-column format
-				dotBuilder.SetHeaders("SOURCE", "TARGET", "STATUS")
+				dotBuilder.SetHeaders("$HOME", "$PLONKDIR", "STATUS")
 
 				// Sort managed and missing dotfiles
 				sortItems(dotfileResult.Managed)
@@ -282,7 +281,8 @@ func (f StatusFormatter) TableOutput() string {
 						if item.State == StateDegraded {
 							status = "drifted"
 						}
-						dotBuilder.AddRow(source, target, status)
+						// Swap column order: target ($HOME), source ($PLONKDIR), status
+						dotBuilder.AddRow(target, source, status)
 					}
 				}
 
@@ -297,7 +297,8 @@ func (f StatusFormatter) TableOutput() string {
 					if dest, ok := item.Metadata["destination"].(string); ok {
 						target = dest
 					}
-					dotBuilder.AddRow(source, target, "missing")
+					// Swap column order: target ($HOME), source ($PLONKDIR), status
+					dotBuilder.AddRow(target, source, "missing")
 				}
 			}
 

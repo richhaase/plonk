@@ -175,8 +175,8 @@ func executeDiffTool(tool string, source, dest string) error {
 		return fmt.Errorf("invalid diff tool: %s", tool)
 	}
 
-	// Append source and destination paths
-	args := append(parts[1:], source, dest)
+	// Append destination and source paths (shows $HOME on left, $PLONKDIR on right)
+	args := append(parts[1:], dest, source)
 
 	cmd := exec.Command(parts[0], args...)
 	cmd.Stdout = os.Stdout
