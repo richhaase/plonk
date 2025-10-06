@@ -20,7 +20,6 @@ func (d *depMgr) Search(ctx context.Context, q string) ([]string, error) { retur
 func (d *depMgr) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	return &HealthCheck{Name: "x"}, nil
 }
-func (d *depMgr) SelfInstall(ctx context.Context) error            { return nil }
 func (d *depMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
 func (d *depMgr) Dependencies() []string                           { return d.deps }
 

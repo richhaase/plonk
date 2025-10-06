@@ -418,26 +418,6 @@ func (g *GemManager) getBinDirectory(ctx context.Context) (string, error) {
 	return "", fmt.Errorf("could not find executable directory in gem environment output")
 }
 
-// SelfInstall attempts to install Gem via available package managers
-func (g *GemManager) SelfInstall(ctx context.Context) error {
-	// Check if already available (idempotent)
-	if available, _ := g.IsAvailable(ctx); available {
-		return nil
-	}
-
-	// Try to install Ruby via Homebrew if available
-	if homebrewAvailable, _ := checkPackageManagerAvailable(ctx, "brew"); homebrewAvailable {
-		return g.installViaHomebrew(ctx)
-	}
-
-	return fmt.Errorf("gem requires Ruby installation - install Ruby manually or ensure Homebrew is available")
-}
-
-// installViaHomebrew installs Ruby (which includes Gem) via Homebrew
-func (g *GemManager) installViaHomebrew(ctx context.Context) error {
-	return executeInstallCommand(ctx, "brew", []string{"install", "ruby"}, "Ruby (includes Gem)")
-}
-
 // Upgrade upgrades one or more packages to their latest versions
 func (g *GemManager) Upgrade(ctx context.Context, packages []string) error {
 	if len(packages) == 0 {

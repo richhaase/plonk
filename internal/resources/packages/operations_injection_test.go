@@ -33,7 +33,6 @@ func (m *simpleFakeManager) Search(ctx context.Context, query string) ([]string,
 func (m *simpleFakeManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	return &HealthCheck{Name: "brew"}, nil
 }
-func (m *simpleFakeManager) SelfInstall(ctx context.Context) error            { return nil }
 func (m *simpleFakeManager) Upgrade(ctx context.Context, pkgs []string) error { return nil }
 func (m *simpleFakeManager) Dependencies() []string                           { return nil }
 

@@ -6,6 +6,7 @@ package packages
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -231,26 +232,6 @@ func (p *PipxManager) InstalledVersion(ctx context.Context, name string) (string
 	return p.getInstalledVersion(ctx, name)
 }
 
-// SelfInstall attempts to install pipx via available package managers
-func (p *PipxManager) SelfInstall(ctx context.Context) error {
-	// Check if already available (idempotent)
-	if available, _ := p.IsAvailable(ctx); available {
-		return nil
-	}
-
-	// Install pipx via Homebrew (canonical method)
-	if homebrewAvailable, _ := checkPackageManagerAvailable(ctx, "brew"); homebrewAvailable {
-		return p.installViaHomebrew(ctx)
-	}
-
-	return fmt.Errorf("pipx installation requires Homebrew - install Homebrew first from https://brew.sh")
-}
-
-// installViaHomebrew installs pipx via Homebrew
-func (p *PipxManager) installViaHomebrew(ctx context.Context) error {
-	return executeInstallCommand(ctx, "brew", []string{"install", "pipx"}, "pipx")
-}
-
 // Upgrade upgrades one or more packages to their latest versions
 func (p *PipxManager) Upgrade(ctx context.Context, packages []string) error {
 	if len(packages) == 0 {
@@ -394,7 +375,10 @@ func (p *PipxManager) getBinDirectory(ctx context.Context) (string, error) {
 	}
 
 	// Fallback to default location
-	homeDir, _ := filepath.Abs("~")
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get user home directory: %w", err)
+	}
 	return filepath.Join(homeDir, ".local", "bin"), nil
 }
 

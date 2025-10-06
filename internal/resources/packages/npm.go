@@ -337,26 +337,6 @@ func cleanJSONValue(value string) string {
 	return value
 }
 
-// SelfInstall attempts to install NPM via available package managers
-func (n *NpmManager) SelfInstall(ctx context.Context) error {
-	// Check if already available (idempotent)
-	if available, _ := n.IsAvailable(ctx); available {
-		return nil
-	}
-
-	// Try to install Node.js via Homebrew if available
-	if homebrewAvailable, _ := checkPackageManagerAvailable(ctx, "brew"); homebrewAvailable {
-		return n.installViaHomebrew(ctx)
-	}
-
-	return fmt.Errorf("npm requires Node.js installation - install Node.js manually from https://nodejs.org or ensure Homebrew is available")
-}
-
-// installViaHomebrew installs Node.js (which includes NPM) via Homebrew
-func (n *NpmManager) installViaHomebrew(ctx context.Context) error {
-	return executeInstallCommand(ctx, "brew", []string{"install", "node"}, "Node.js (includes NPM)")
-}
-
 // Upgrade upgrades one or more packages to their latest versions
 func (n *NpmManager) Upgrade(ctx context.Context, packages []string) error {
 	if len(packages) == 0 {

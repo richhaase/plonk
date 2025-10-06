@@ -27,7 +27,6 @@ func (f *fakeAvailMgr) Search(ctx context.Context, q string) ([]string, error) {
 func (f *fakeAvailMgr) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	return &HealthCheck{Name: "fake"}, nil
 }
-func (f *fakeAvailMgr) SelfInstall(ctx context.Context) error            { return nil }
 func (f *fakeAvailMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
 func (f *fakeAvailMgr) Dependencies() []string                           { return nil }
 
@@ -54,7 +53,6 @@ func (f *fakeUninstallErrorMgr) Search(ctx context.Context, q string) ([]string,
 func (f *fakeUninstallErrorMgr) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	return &HealthCheck{Name: "fake"}, nil
 }
-func (f *fakeUninstallErrorMgr) SelfInstall(ctx context.Context) error            { return nil }
 func (f *fakeUninstallErrorMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
 func (f *fakeUninstallErrorMgr) Dependencies() []string                           { return nil }
 

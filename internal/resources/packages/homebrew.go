@@ -448,18 +448,6 @@ func (h *HomebrewManager) getBinDirectory(ctx context.Context) (string, error) {
 	return filepath.Join(prefix, "bin"), nil
 }
 
-// SelfInstall installs Homebrew using the official installer script
-func (h *HomebrewManager) SelfInstall(ctx context.Context) error {
-	// Check if already available (idempotent)
-	if available, _ := h.IsAvailable(ctx); available {
-		return nil
-	}
-
-	// Execute official installer script
-	script := `curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh | bash`
-	return executeInstallScript(ctx, script, "Homebrew")
-}
-
 // Upgrade upgrades one or more packages to their latest versions
 func (h *HomebrewManager) Upgrade(ctx context.Context, packages []string) error {
 	if len(packages) == 0 {

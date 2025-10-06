@@ -54,7 +54,6 @@ func (f *fakePM) Search(ctx context.Context, query string) ([]string, error) { r
 func (f *fakePM) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	return &HealthCheck{Name: "fake", Category: "pm", Status: "pass"}, nil
 }
-func (f *fakePM) SelfInstall(ctx context.Context) error { f.available = true; return nil }
 func (f *fakePM) Upgrade(ctx context.Context, packages []string) error {
 	for _, p := range packages {
 		if f.installed[p] {

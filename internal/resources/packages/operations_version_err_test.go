@@ -26,7 +26,6 @@ func (v *verErrMgr) Search(ctx context.Context, q string) ([]string, error) { re
 func (v *verErrMgr) CheckHealth(ctx context.Context) (*HealthCheck, error) {
 	return &HealthCheck{Name: "x"}, nil
 }
-func (v *verErrMgr) SelfInstall(ctx context.Context) error            { return nil }
 func (v *verErrMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
 func (v *verErrMgr) Dependencies() []string                           { return nil }
 

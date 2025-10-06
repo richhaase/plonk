@@ -373,18 +373,6 @@ func (c *CargoManager) Upgrade(ctx context.Context, packages []string) error {
 	return nil
 }
 
-// SelfInstall installs Rust/Cargo using the official rustup installer
-func (c *CargoManager) SelfInstall(ctx context.Context) error {
-	// Check if already available (idempotent)
-	if available, _ := c.IsAvailable(ctx); available {
-		return nil
-	}
-
-	// Execute official rustup installer
-	script := `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y`
-	return executeInstallScript(ctx, script, "Rust/Cargo")
-}
-
 // Dependencies returns package managers this manager depends on for self-installation
 func (c *CargoManager) Dependencies() []string {
 	return []string{} // Cargo is independent - uses official rustup installer script
