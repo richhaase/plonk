@@ -7,7 +7,7 @@ setup() {
   setup_test_env
 }
 
-# Test for duplicate drifted dotfiles fix (Phase 2, item #8)
+# Test that drifted dotfiles appear only once in status output
 @test "status does not show drifted dotfiles twice" {
   local testfile=".plonk-test-drift"
   require_safe_dotfile "$testfile"
@@ -36,7 +36,7 @@ setup() {
   fi
 }
 
-# Test for improved column headers (Phase 2, item #9)
+# Test that status displays clear column headers
 @test "status shows \$HOME and \$PLONKDIR column headers" {
   local testfile=".plonk-test-headers"
   require_safe_dotfile "$testfile"
@@ -60,7 +60,7 @@ setup() {
   refute_output --partial "TARGET"
 }
 
-# Test for diff column ordering (Phase 2, item #10)
+# Test that diff follows standard conventions (current state on left, source on right)
 @test "diff shows \$HOME on left and \$PLONKDIR on right" {
   local testfile=".plonk-test-diff-order"
   require_safe_dotfile "$testfile"
@@ -86,7 +86,7 @@ setup() {
   assert_output --partial "line 1"
 }
 
-# Test for plonk add -y (Phase 2, item #11)
+# Test the --sync-drifted flag to copy modified files back to plonk
 @test "plonk add -y syncs drifted files back to \$PLONKDIR" {
   local testfile=".plonk-test-sync"
   require_safe_dotfile "$testfile"
@@ -163,7 +163,7 @@ setup() {
   assert_output --partial "No drifted"
 }
 
-# Test for selective apply (Phase 2, item #12)
+# Test selective file deployment with plonk apply
 @test "plonk apply with file argument only applies that file" {
   local file1=".plonk-test-apply1"
   local file2=".plonk-test-apply2"
@@ -234,7 +234,7 @@ setup() {
   assert_output --partial "$file2"
 }
 
-# Integration test combining multiple Phase 2 features
+# Integration test for drift detection and sync workflow
 @test "complete workflow: drift, check status, sync back, apply selectively" {
   local testfile=".plonk-test-workflow"
   require_safe_dotfile "$testfile"
