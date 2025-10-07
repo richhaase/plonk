@@ -39,7 +39,8 @@ The diff command accepts various path formats for the file argument:
 ### Default Behavior
 
 - Uses `git diff --no-index` by default (zero-config)
-- Shows differences with source file first, deployed file second
+- Shows differences with deployed file ($HOME) first, source file ($PLONKDIR) second
+- Follows standard diff conventions (current state vs. source of truth)
 - Processes all drifted files when no argument provided
 - Continues with remaining files if individual diff fails
 - GUI diff tools open in their own windows
@@ -58,7 +59,7 @@ Common configurations:
 - `diff_tool: "code --diff --wait"` - VS Code diff
 - `diff_tool: "meld"` - GUI diff tool
 
-The diff tool is executed as: `{tool} {source_path} {deployed_path}`
+The diff tool is executed as: `{tool} {deployed_path} {source_path}`
 
 ### Error Handling
 
@@ -86,8 +87,8 @@ plonk diff .vimrc
 ## Integration
 
 - Use `plonk status` to see which files have drifted
-- Use `plonk apply` to restore drifted files from source
-- Use `plonk add` to update source with current deployed version
+- Use `plonk apply` to restore drifted files from $PLONKDIR
+- Use `plonk add -y` to sync all drifted files from $HOME back to $PLONKDIR
 
 ## Notes
 

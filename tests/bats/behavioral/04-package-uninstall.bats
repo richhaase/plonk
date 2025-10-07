@@ -287,24 +287,6 @@ setup() {
   refute_output --partial "gcal"
 }
 
-    refute_output --partial "tree"
-  else
-    run conda list -n base tree
-    assert_success
-    refute_output --partial "tree"
-  fi
-
-  # Verify gone from lock file
-  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
-    run cat "$PLONK_DIR/plonk.lock"
-    refute_output --partial "tree"
-  fi
-
-  # Verify gone from status
-  run plonk status
-  refute_output --partial "tree"
-}
-
 # General uninstall behavior tests
 @test "uninstall non-managed package acts as pass-through" {
   require_safe_package "brew:fortune"

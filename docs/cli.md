@@ -81,12 +81,14 @@ plonk upgrade htop neovim             # Upgrade multiple packages
 
 ### plonk add
 
-Add dotfiles to management.
+Add dotfiles to management or sync drifted files back.
 
 ```bash
 plonk add ~/.vimrc ~/.zshrc           # Add files
 plonk add ~/.config/nvim/             # Add directory
-plonk add --dry-run ~/.vimrc          # Preview
+plonk add -y                          # Sync all drifted files from $HOME to $PLONKDIR
+plonk add -y --dry-run                # Preview drift sync
+plonk add --dry-run ~/.vimrc          # Preview add
 ```
 
 ### plonk rm
@@ -133,9 +135,10 @@ Install missing packages and deploy missing dotfiles.
 
 ```bash
 plonk apply                           # Apply all changes
+plonk apply ~/.vimrc ~/.zshrc         # Apply only specific dotfiles
 plonk apply --dry-run                 # Preview changes
-plonk apply --packages               # Apply packages only
-plonk apply --dotfiles               # Apply dotfiles only
+plonk apply --packages                # Apply packages only
+plonk apply --dotfiles                # Apply dotfiles only
 ```
 
 ### plonk search

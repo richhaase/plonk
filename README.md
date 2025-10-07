@@ -118,7 +118,7 @@ The `clone` command:
 ```bash
 # Package management
 plonk install ripgrep fd              # Install and track packages
-plonk install pnpm cargo              # Bootstrap package managers automatically
+plonk install pnpm cargo              # Install package managers (must be available via another manager)
 plonk uninstall ripgrep               # Uninstall and stop tracking
 plonk upgrade                         # Upgrade all packages to latest versions
 plonk upgrade brew:ripgrep            # Upgrade specific package
@@ -127,13 +127,15 @@ plonk info ripgrep                    # Show package details
 
 # Dotfile management
 plonk add ~/.vimrc ~/.zshrc           # Start tracking dotfiles
+plonk add -y                          # Sync all drifted files from $HOME to $PLONKDIR
 plonk rm ~/.vimrc                     # Stop tracking (doesn't delete file)
 plonk dotfiles                        # List dotfiles with state info
 
 # System state
 plonk status                          # Show all managed items (including drift)
 plonk apply                           # Sync system to desired state
-plonk diff                            # Show differences between desired and actual state
+plonk apply ~/.vimrc ~/.zshrc         # Apply only specific dotfiles
+plonk diff                            # Show differences for drifted dotfiles
 plonk doctor                          # Check system health
 
 # Configuration
