@@ -141,3 +141,12 @@ format:
 lint:
     @echo "Running linter..."
     go run github.com/golangci/golangci-lint/cmd/golangci-lint run --timeout=10m
+
+# Find dead code (unreachable functions)
+find-dead-code:
+    @echo "Finding dead code..."
+    @if ! command -v deadcode &> /dev/null; then \
+        echo "Installing deadcode tool..."; \
+        go install golang.org/x/tools/cmd/deadcode@latest; \
+    fi
+    deadcode -test ./...
