@@ -91,8 +91,10 @@ $ plonk doctor
 - Or via Homebrew: brew install pipx
 ```
 
-### 5. Standardize manager registration to V2
+### 5. ✅ Standardize manager registration to V2 (COMPLETED)
 **Priority**: High (Architecture consistency)
+**Status**: ✅ Completed in Phase 3 (commit 66e5531)
+
 **Files**:
 - `internal/resources/packages/uv.go`
 - `internal/resources/packages/goinstall.go`
@@ -100,79 +102,43 @@ $ plonk doctor
 
 **Problem**: Some managers still use V1 `RegisterManager` and don't accept injected executors, while most use V2. This reduces testability and creates inconsistency.
 
-**Fix**: Update each to use `RegisterManagerV2` with `NewXxxManagerWithExecutor` constructors:
-```go
-// Example for uv.go:
-func init() {
-    RegisterManagerV2("uv", NewUvManagerWithExecutor)
-}
+**Changes Applied**:
+- Converted all three managers to `RegisterManagerV2` with factory pattern
+- Each now accepts injected `CommandExecutor` for testability
+- Consistent with all other package managers (brew, npm, pnpm, cargo, pipx, conda, gem)
 
-func NewUvManagerWithExecutor(exec CommandExecutor) PackageManager {
-    return &UvManager{executor: exec}
-}
-```
+**Benefits**: Complete testability, consistent execution across all 10 package managers
 
-**Benefits**: Complete testability, consistent execution across all managers
-
-### 5. Parallelize manager operations
+### 6. ✅ Parallelize manager operations (COMPLETED)
 **Priority**: Medium (Performance)
 **File**: `internal/resources/packages/resource.go`
+**Status**: ✅ Completed in Phase 3 (commit 66e5531)
 
 **Problem**: `MultiPackageResource.Actual` runs `IsAvailable` + `ListInstalled` for each manager sequentially, which is slow.
 
-**Fix**: Use `errgroup.WithContext` to parallelize across managers with bounded concurrency:
-```go
-import "golang.org/x/sync/errgroup"
+**Changes Applied**:
+- Implemented `errgroup.WithContext` for parallel execution
+- Concurrency limited to `min(runtime.GOMAXPROCS(0), 4)` for safety
+- Thread-safe with `sync.Mutex` for item collection
+- Honors context cancellation properly
+- Added imports: `golang.org/x/sync/errgroup`, `sync`, `runtime`
 
-func (m *MultiPackageResource) Actual(ctx context.Context) ([]Item, error) {
-    g, ctx := errgroup.WithContext(ctx)
-    g.SetLimit(runtime.GOMAXPROCS(0)) // or fixed limit like 4
+**Benefits**: Significant speedup for `plonk status` and `plonk apply` operations, especially with many managers
 
-    mu := sync.Mutex{}
-    var allItems []Item
-
-    for _, managerName := range m.registry.GetAllManagerNames() {
-        managerName := managerName // capture for goroutine
-        g.Go(func() error {
-            manager, _ := m.registry.GetManager(managerName)
-            // ... IsAvailable + ListInstalled logic
-
-            mu.Lock()
-            allItems = append(allItems, items...)
-            mu.Unlock()
-            return nil
-        })
-    }
-
-    if err := g.Wait(); err != nil {
-        return nil, err
-    }
-    return allItems, nil
-}
-```
-
-**Benefits**: Significant speedup for status/apply operations, especially with many managers
-
-### 6. Switch Homebrew Info to JSON parsing
+### 7. ✅ Switch Homebrew Info to JSON parsing (COMPLETED)
 **Priority**: Medium (Robustness)
 **File**: `internal/resources/packages/homebrew.go`
+**Status**: ✅ Completed in Phase 3 (commit 66e5531)
 
 **Problem**: `Info` method scrapes plain text output, which is brittle and locale-dependent.
 
-**Fix**: Use `brew info --json=v2 <name>` and parse structured JSON (similar to `getInstalledPackagesInfo`):
-```go
-func (h *HomebrewManager) Info(ctx context.Context, name string) (*PackageInfo, error) {
-    output, err := h.executor.ExecuteWithTimeout(
-        ctx, h.config.Timeout, "brew", "info", "--json=v2", name,
-    )
-    if err != nil {
-        return nil, err
-    }
+**Changes Applied**:
+- Changed from `brew info <name>` to `brew info --json=v2 <name>`
+- Parses structured JSON response (formulae and casks)
+- Handles both installed and stable versions
+- Robust, locale-independent implementation
 
-    // Parse brewInfoV2JSON for both formulae and casks
-    // Return structured PackageInfo
-}
-```
+**Benefits**: More reliable package info, easier to maintain, consistent with ListInstalled implementation
 
 ### 7. Centralize package key generation
 **Priority**: Low (Code quality)
@@ -207,14 +173,15 @@ func KeyForPackage(managerName, packageName string) string {
 ### 9. ✅ Improve dotfile column headers in status (COMPLETED)
 **Priority**: Medium (UX improvement)
 **Command**: `plonk status`
-**Status**: ✅ Completed (commit 55e9249)
+**Status**: ✅ Completed (commit 55e9249, refined in 66e5531)
 
 **Problem**: Column headers "source" and "target" are confusing for dotfiles.
 
 **Fix Applied**:
-- Changed headers from "SOURCE", "TARGET", "STATUS" to "$HOME", "$PLONKDIR", "STATUS"
-- Reordered columns: $HOME (deployed location), $PLONKDIR (source), STATUS
+- Changed headers from "SOURCE", "TARGET", "STATUS" to "$HOME", "$PLONK_DIR", "STATUS"
+- Reordered columns: $HOME (deployed location), $PLONK_DIR (source), STATUS
 - Updated all AddRow calls to match new column order
+- Corrected $PLONKDIR → $PLONK_DIR throughout codebase and docs
 - File: `internal/output/status_formatter.go`
 
 ### 10. ✅ Fix diff output column ordering (COMPLETED)
@@ -362,10 +329,13 @@ func NewIsolatedRegistry() *ManagerRegistry {
 **Completed**: 2025-01-06 in commit 55e9249
 **Results**: 5 UX improvements, 4 files changed, +190 LOC, all tests passing
 
-### Phase 3: Architecture & Performance
-9. Standardize V2 registration (#5)
-10. Parallelize manager operations (#6)
-11. Switch Homebrew to JSON (#7)
+### Phase 3: Architecture & Performance ✅ COMPLETED
+9. ✅ Standardize V2 registration (#5)
+10. ✅ Parallelize manager operations (#6)
+11. ✅ Switch Homebrew to JSON (#7)
+
+**Completed**: 2025-01-06 in commit 66e5531
+**Results**: 4 improvements (incl. $PLONK_DIR fix), 15 files changed, +126/-53 LOC, all tests passing, significant performance gains
 
 ### Phase 4: Polish
 12. Centralize package keying (#7)
