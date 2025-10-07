@@ -132,13 +132,12 @@ One of the most impactful contributions is adding support for new package manage
 
 1. **Implement the PackageManager interface** in `internal/resources/packages/`
 2. **Add required operations**: Install, Uninstall, ListInstalled, etc.
-3. **Implement optional capabilities**: Search, Info, Upgrade, Health, Self-Install (through capability interfaces)
-4. **Add health checking**: Implement `CheckHealth()` method
-5. **Add self-installation**: Implement `SelfInstall()` method
-6. **Add upgrade support**: Implement `Upgrade()` and `Outdated()` methods
-7. **Register the manager** in the package manager registry
-8. **Add tests** for all functionality
-9. **Update documentation** with examples and supported operations
+3. **Implement optional capabilities**: Search, Info, Upgrade, Health (through capability interfaces)
+4. **Add health checking**: Implement `CheckHealth()` method with installation instructions
+5. **Add upgrade support**: Implement `Upgrade()` method if applicable
+6. **Register the manager**: Use `RegisterManagerV2` with executor injection pattern
+7. **Add tests** for all functionality
+8. **Update documentation** with examples and supported operations
 
 See existing implementations like `homebrew.go`, `npm.go`, or `cargo.go` as examples.
 

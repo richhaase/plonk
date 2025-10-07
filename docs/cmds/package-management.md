@@ -28,7 +28,7 @@ Without prefix, uses `default_manager` from configuration (default: brew).
 
 ## Install Command
 
-Installs packages and adds them to plonk management. Also supports automatic package manager bootstrapping.
+Installs packages and adds them to plonk management.
 
 ### Synopsis
 
@@ -42,11 +42,9 @@ plonk install [options] <package>...
 
 ### Behavior
 
-**Package Manager Self-Installation:**
-- **Bare manager names** (e.g., `pnpm`, `cargo`) → triggers manager self-installation
-- **Prefixed names** (e.g., `brew:npm`) → installs package normally via specified manager
-
-**Regular Package Installation:**
+**Package Installation:**
+- Package managers must be available before installing packages
+- Use `plonk doctor` to check for missing package managers and view installation instructions
 - **Not installed** → installs package, adds to plonk.lock
 - **Already installed** → adds to plonk.lock (success)
 - **Already managed** → skips (no reinstall)
@@ -57,20 +55,14 @@ plonk install [options] <package>...
 ### Examples
 
 ```bash
-# Bootstrap package managers (automatic detection)
-plonk install pnpm cargo uv pipx
-
 # Install packages with default manager
 plonk install ripgrep fd bat
 
 # Install packages with specific managers
 plonk install brew:wget npm:prettier pnpm:typescript cargo:exa pipx:black conda:numpy uv:ruff pixi:tree
 
-# Mixed operations (manager bootstrap + package install)
-plonk install pnpm ripgrep npm:prettier
-
 # Preview installation
-plonk install --dry-run pnpm ripgrep
+plonk install --dry-run ripgrep
 ```
 
 ---

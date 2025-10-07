@@ -106,7 +106,6 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 ### Clone Utilities (`internal/clone/`)
 - `setup.go` - Clone command implementation and package manager detection
 - `git.go` - Git operations for cloning
-- `tools.go` - Automated package manager installation via SelfInstall interface
 
 ### Diagnostics (`internal/diagnostics/`)
 - `health.go` - System health check implementations
@@ -141,8 +140,7 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - Logic: `internal/clone/setup.go`
 - Dependency resolution: `internal/resources/packages/dependencies.go`
 - Git operations: `internal/clone/git.go`
-- Tool installation: `internal/clone/tools.go`
-- Uses: `internal/diagnostics/health.go` for health checks; package manager installation handled via `SelfInstall()` during clone
+- Uses: `internal/diagnostics/health.go` for health checks; package managers must be pre-installed, `plonk doctor` provides installation instructions
 
 ### apply command
 - Entry: `internal/commands/apply.go`

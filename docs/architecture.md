@@ -69,7 +69,7 @@ Resources are organized by type:
 - Package specification parsing (`spec.go`)
 - Command execution abstraction (`executor.go`)
 - Operations for install, uninstall, search, info, upgrade
-- Health checking and self-installation capabilities
+- Health checking capabilities
 - Outdated package detection
 
 Supported package managers:
@@ -123,7 +123,6 @@ The lock file uses a versioned format for future compatibility.
 
 - Clone command implementation
 - Git repository cloning
-- Automatic package manager installation via SelfInstall()
 - Dependency-aware installation that resolves package manager dependencies and installs in correct order
 - Tool installation
 
@@ -151,11 +150,12 @@ Plonk works without any configuration files by using sensible defaults:
 Each package manager implements a common interface following the Interface Segregation Principle (ISP). This allows:
 - Consistent behavior across different tools
 - Easy addition of new package managers
-- Optional capability detection via type assertions (search, info, upgrade, health checks, self-install)
+- Optional capability detection via type assertions (search, info, upgrade, health checks)
 - Managers implement only the capabilities they support
 - Self-health checking and diagnostics
-- Automatic self-installation during environment setup
 - Package upgrade management
+
+**Note**: Package managers must be installed manually or via other supported package managers before use. The `plonk doctor` command provides installation instructions for missing managers. All managers are registered using `RegisterManagerV2` with executor injection for testability.
 
 See [Capability Usage Examples](#capability-usage-examples) for implementation patterns.
 
@@ -231,10 +231,10 @@ All commands support multiple output formats (table, JSON, YAML) to support:
 
 1. Implement the `PackageManager` interface in `internal/resources/packages/`
 2. Implement required operations (Install, Uninstall, ListInstalled, etc.)
-3. Implement optional capabilities through interfaces (search, info, upgrade, health, self-install)
+3. Implement optional capabilities through interfaces (search, info, upgrade, health)
 4. Implement health checking via CheckHealth() method
-5. Implement self-installation via SelfInstall() method
-6. Implement package upgrade capabilities via Upgrade() and Outdated() methods
+5. Implement package upgrade capabilities via Upgrade() and Outdated() methods
+6. Register using `RegisterManagerV2` with executor injection
 
 ### Adding a New Resource Type
 
@@ -282,9 +282,8 @@ Plonk uses structured error handling:
 - No elevated privileges required for user packages
 - Atomic file operations prevent corruption
 - Backup files created before modifications
-- Package manager self-installation may execute remote scripts (opt-in via SelfInstall capability)
 - Git operations use standard git binary
-- Users should review package manager installation scripts before using automatic installation
+- Package managers must be installed separately before use
 
 ## Future Considerations
 
@@ -321,11 +320,6 @@ if upgrader, ok := mgr.(packages.PackageUpgrader); ok {
 if hc, ok := mgr.(packages.PackageHealthChecker); ok {
     _, _ = hc.CheckHealth(ctx)
 }
-
-// Self-install (PackageSelfInstaller)
-if si, ok := mgr.(packages.PackageSelfInstaller); ok {
-    _ = si.SelfInstall(ctx)
-}
 ```
 
 Helper predicates:
@@ -334,7 +328,6 @@ if packages.SupportsInfo(mgr) { /* safe to assert PackageInfoProvider */ }
 if packages.SupportsSearch(mgr) { /* safe to assert PackageSearcher */ }
 if packages.SupportsUpgrade(mgr) { /* safe to assert PackageUpgrader */ }
 if packages.SupportsHealthCheck(mgr) { /* safe to assert PackageHealthChecker */ }
-if packages.SupportsSelfInstall(mgr) { /* safe to assert PackageSelfInstaller */ }
 ```
 
 These examples demonstrate the intent of the capability model: managers may omit optional features; callers should not assume availability without checking.
