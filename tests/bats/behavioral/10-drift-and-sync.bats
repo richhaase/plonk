@@ -21,17 +21,18 @@ setup() {
   # Modify the deployed file to create drift
   echo "modified content" > "$HOME/$testfile"
 
-  # Run status and count occurrences of the filename
+  # Run status and count rows containing the filename
   run plonk status --dotfiles
   assert_success
 
-  # Count how many times the testfile appears in output
-  count=$(echo "$output" | grep -o "$testfile" | wc -l | tr -d ' ')
+  # Count how many rows contain the testfile (each row should have $HOME and $PLONKDIR columns)
+  # A single dotfile should appear in exactly one row (but in two columns of that row)
+  row_count=$(echo "$output" | grep "$testfile" | grep -c "drifted" || true)
 
-  # Should appear exactly once, not twice
-  if [ "$count" -ne 1 ]; then
-    echo "Expected $testfile to appear once, but appeared $count times"
-    echo "Output: $output"
+  # Should be exactly 1 row with "drifted" status
+  if [ "$row_count" -ne 1 ]; then
+  echo "Expected 1 row with $testfile, but found $row_count rows"
+  echo "Output: $output"
     return 1
   fi
 }
