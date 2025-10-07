@@ -25,12 +25,13 @@ Copies dotfiles from their current location to `$PLONK_DIR` for management.
 ### Synopsis
 
 ```bash
-plonk add [options] <file>...
+plonk add [options] [files...]
 ```
 
 ### Options
 
 - `--dry-run, -n` - Preview changes without adding files
+- `--sync-drifted, -y` - Sync all drifted files from $HOME back to $PLONKDIR
 
 ### Behavior
 
@@ -61,6 +62,12 @@ plonk add ~/.zshrc ~/.gitconfig ~/.tmux.conf
 
 # Add entire directory
 plonk add ~/.config/nvim/
+
+# Sync all drifted files back to $PLONKDIR
+plonk add -y
+
+# Preview drift sync without making changes
+plonk add -y --dry-run
 
 # Preview changes
 plonk add --dry-run ~/.vimrc

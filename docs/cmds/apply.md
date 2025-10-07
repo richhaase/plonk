@@ -5,12 +5,14 @@ Reconciles system state by installing missing packages and deploying missing dot
 ## Synopsis
 
 ```bash
-plonk apply [options]
+plonk apply [options] [files...]
 ```
 
 ## Description
 
 The apply command reconciles the system state with the desired configuration by installing packages listed in `plonk.lock` and deploying dotfiles from `$PLONK_DIR`. It acts like a sync operation, bringing the local environment in line with the managed configuration.
+
+When file arguments are provided, apply validates that the specified files are managed by plonk before proceeding.
 
 Apply targets "missing" resources (tracked but not present) and "drifted" dotfiles (modified since deployment), transitioning them to "managed" state. The command uses plonk's internal reconciliation system to identify what needs to be applied.
 
@@ -68,6 +70,9 @@ Files matching `ignore_patterns` are excluded from deployment.
 # Apply all changes (packages and dotfiles)
 plonk apply
 
+# Apply only specific dotfiles
+plonk apply ~/.vimrc ~/.zshrc
+
 # Preview what would be changed
 plonk apply --dry-run
 
@@ -87,3 +92,5 @@ plonk apply --dotfiles
 ## Notes
 
 - The `--packages` and `--dotfiles` flags cannot be used together
+- File arguments cannot be combined with `--packages` or `--dotfiles` flags
+- All specified files must be managed by plonk or command will fail

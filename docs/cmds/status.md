@@ -55,8 +55,8 @@ Using both `--packages` and `--dotfiles` together has the same effect as using n
 - STATUS: Current state with icon
 
 **Dotfiles Table** (managed/missing):
-- SOURCE: Path relative to `$PLONK_DIR`
-- TARGET: Full path in `$HOME`
+- $HOME: Full path in home directory (deployed location)
+- $PLONKDIR: Path relative to plonk configuration directory
 - STATUS: Current state with icon
 
 **Dotfiles List** (unmanaged):
@@ -108,7 +108,7 @@ plonk status -o json
 
 - Use before `plonk apply` to see what will be changed
 - Missing items can be resolved with `plonk apply`
-- Drifted dotfiles can be restored with `plonk apply` or updated with `plonk add`
+- Drifted dotfiles can be restored with `plonk apply` or synced back with `plonk add -y`
 - Unmanaged items can be added with `plonk install` or `plonk add`
 
 ## Notes

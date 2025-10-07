@@ -10,3 +10,15 @@
 .config/plonk-test/config.yaml
 .config/plonk-test/settings.json
 .config/plonk-test-app/prefs
+.plonk-test-drift
+.plonk-test-headers
+.plonk-test-diff-order
+.plonk-test-sync
+.plonk-test-sync-dry
+.plonk-test-no-drift
+.plonk-test-apply1
+.plonk-test-apply2
+.plonk-test-no-combine
+.plonk-test-multi1
+.plonk-test-multi2
+.plonk-test-workflow

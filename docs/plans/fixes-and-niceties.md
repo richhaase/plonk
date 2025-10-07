@@ -192,76 +192,88 @@ func KeyForPackage(managerName, packageName string) string {
 
 ## UX/Display Improvements
 
-### 8. Fix duplicate listing of drifted dotfiles
+### 8. ✅ Fix duplicate listing of drifted dotfiles (COMPLETED)
 **Priority**: Medium (UX bug)
 **Command**: `plonk status`
+**Status**: ✅ Completed (commit 55e9249)
 
 **Problem**: When a dotfile is in drifted status, it appears twice in the output.
 
-**Fix**: Ensure drifted files only appear once in the status output with their drift state clearly indicated.
+**Fix Applied**:
+- Removed misleading comment about handling drifted items separately
+- Drifted files (State==StateDegraded) already in Managed list now display once with "drifted" status
+- File: `internal/output/status_formatter.go`
 
-### 9. Improve dotfile column headers in status
+### 9. ✅ Improve dotfile column headers in status (COMPLETED)
 **Priority**: Medium (UX improvement)
 **Command**: `plonk status`
+**Status**: ✅ Completed (commit 55e9249)
 
 **Problem**: Column headers "source" and "target" are confusing for dotfiles.
 
-**Fix**:
-- Use actual expanded paths like `/Users/username` and `/Users/username/.config/plonk` instead of generic "source/target"
-- Reorder columns to: `$HOME`, `$PLONKDIR`, `STATUS`
-- Makes it immediately clear which file is where
+**Fix Applied**:
+- Changed headers from "SOURCE", "TARGET", "STATUS" to "$HOME", "$PLONKDIR", "STATUS"
+- Reordered columns: $HOME (deployed location), $PLONKDIR (source), STATUS
+- Updated all AddRow calls to match new column order
+- File: `internal/output/status_formatter.go`
 
-### 10. Fix diff output column ordering
+### 10. ✅ Fix diff output column ordering (COMPLETED)
 **Priority**: Medium (UX improvement)
 **Command**: `plonk diff`
+**Status**: ✅ Completed (commit 55e9249)
 
 **Problem**: Current ordering is inconsistent with user mental model.
 
-**Fix**: Display `$HOME` (deployed location) on the left and `$PLONKDIR` (source) on the right, matching standard diff conventions where "original" is on left and "modified" is on right.
+**Fix Applied**:
+- Swapped diff arguments from `source, dest` to `dest, source`
+- Now shows $HOME (deployed) on left and $PLONKDIR (source) on right
+- Matches standard diff conventions (current state vs. source)
+- File: `internal/commands/diff.go`
 
 ## Feature Additions
 
-### 11. Add `plonk add -y` to sync drifted files back to $PLONKDIR
+### 11. ✅ Add `plonk add -y` to sync drifted files back to $PLONKDIR (COMPLETED)
 **Priority**: Medium (Feature enhancement)
 **Command**: `plonk add`
+**Status**: ✅ Completed (commit 55e9249)
 
 **Feature**: Add a `-y` or `--sync-drifted` flag to automatically copy all drifted files from $HOME back to $PLONKDIR (reverse of `apply`).
 
-**Use case**: When you've edited dotfiles in $HOME and want to quickly capture all changes back to your managed config directory.
-
-**Behavior**:
+**Implementation**:
 ```bash
-plonk add -y
-# Finds all files with "drifted" status
-# Copies them from $HOME to $PLONKDIR
-# Updates timestamps/hashes
+plonk add -y                 # Sync all drifted files
+plonk add -y --dry-run       # Preview what would be synced
 ```
 
-**Implementation considerations**:
-- Should show which files will be synced before copying (or require `-y` for non-interactive)
-- Consider `--dry-run` option to preview changes
-- Respect `.plonkignore` or similar patterns if implemented
+**Changes Applied**:
+- Added `--sync-drifted` flag (short: `-y`) to add command
+- Finds all files with State==StateDegraded (drifted)
+- Copies them from $HOME back to $PLONKDIR
+- Shows summary of synced files
+- Works with `--dry-run` for preview
+- Shows appropriate message when no files are drifted
+- File: `internal/commands/add.go`
 
-### 12. Add selective file deployment to `plonk apply`
+### 12. ✅ Add selective file deployment to `plonk apply` (COMPLETED)
 **Priority**: Medium (Feature enhancement)
 **Command**: `plonk apply`
+**Status**: ✅ Completed (commit 55e9249)
 
 **Feature**: Allow `plonk apply <file1> <file2> ...` to selectively deploy only specified files from $PLONKDIR to $HOME.
 
-**Use case**: When you've updated specific dotfiles and only want to deploy those without touching others.
-
-**Behavior**:
+**Implementation**:
 ```bash
-plonk apply ~/.vimrc ~/.zshrc
-# Only deploys vimrc and zshrc from $PLONKDIR to $HOME
-# Leaves other managed dotfiles untouched
+plonk apply ~/.vimrc ~/.zshrc    # Apply only specified files
+plonk apply                       # Apply all (original behavior)
 ```
 
-**Implementation considerations**:
-- Accept both $HOME paths (`.vimrc`) and $PLONKDIR paths
-- Validate files are actually managed by plonk
-- Provide clear error if file not found or not managed
-- Still show before/after status for specified files
+**Changes Applied**:
+- Modified command to accept optional file arguments: `apply [files...]`
+- Validates that specified files are managed by plonk before proceeding
+- Shows clear error if file not found or not managed
+- Prevents combining file arguments with `--packages` or `--dotfiles` flags
+- Updated help text with examples
+- File: `internal/commands/apply.go`
 
 ## Nice-to-Haves
 
@@ -295,11 +307,19 @@ func NewIsolatedRegistry() *ManagerRegistry {
 }
 ```
 
-### 16. Add comprehensive tests
-**Recommended test additions**:
-1. Self-install path tests per manager (verify correct installer commands via mock executor)
-2. Concurrency smoke test for parallel manager reconciliation
-3. Symlink traversal tests for dotfile operations
+### 16. ✅ Add comprehensive tests (PARTIALLY COMPLETED)
+**Status**: ✅ Added drift and sync tests (commit 5800789, f2646a0)
+
+**Completed**:
+- ✅ Created `tests/bats/behavioral/10-drift-and-sync.bats` with 11 new tests
+- ✅ Tests for duplicate drifted dotfiles, column headers, diff ordering
+- ✅ Tests for `plonk add -y` sync functionality
+- ✅ Tests for selective `plonk apply <files>`
+- ✅ Integration test for complete drift workflow
+
+**Remaining**:
+1. Concurrency smoke test for parallel manager reconciliation
+2. Symlink traversal tests for dotfile operations
 
 ### 17. Documentation updates
 **Files**: README.md
@@ -332,12 +352,15 @@ func NewIsolatedRegistry() *ManagerRegistry {
 **Completed**: 2025-01-06 in commits 619924f, 10e9002
 **Results**: 3 critical fixes, 26 files changed, 1 file deleted, -293 LOC, all tests passing
 
-### Phase 2: UX Improvements
-4. Fix duplicate drifted dotfiles in status (#8)
-5. Improve dotfile column headers in status (#9)
-6. Fix diff output column ordering (#10)
-7. Add `plonk add -y` to sync drifted files (#11)
-8. Add selective file deployment to `plonk apply` (#12)
+### Phase 2: UX Improvements ✅ COMPLETED
+4. ✅ Fix duplicate drifted dotfiles in status (#8)
+5. ✅ Improve dotfile column headers in status (#9)
+6. ✅ Fix diff output column ordering (#10)
+7. ✅ Add `plonk add -y` to sync drifted files (#11)
+8. ✅ Add selective file deployment to `plonk apply` (#12)
+
+**Completed**: 2025-01-06 in commit 55e9249
+**Results**: 5 UX improvements, 4 files changed, +190 LOC, all tests passing
 
 ### Phase 3: Architecture & Performance
 9. Standardize V2 registration (#5)

@@ -5,6 +5,7 @@ package commands
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
@@ -14,7 +15,7 @@ import (
 )
 
 var addCmd = &cobra.Command{
-	Use:   "add <files...>",
+	Use:   "add [files...]",
 	Short: "Add dotfiles to plonk management",
 	Long: `Add dotfiles to plonk management by copying them to the configuration directory.
 
@@ -53,8 +54,8 @@ Examples:
   plonk add vimrc                       # Finds ~/.vimrc automatically
   plonk add .config/nvim                # Adds entire nvim config directory
   plonk add ../myfile                   # Relative to current directory
-  plonk add --dry-run ~/.zshrc ~/.vimrc # Preview what would be added`,
-	Args:         cobra.MinimumNArgs(1),
+  plonk add --dry-run ~/.zshrc ~/.vimrc # Preview what would be added
+  plonk add -y                          # Sync all drifted files back to $PLONKDIR`,
 	RunE:         runAdd,
 	SilenceUsage: true,
 }
@@ -62,6 +63,7 @@ Examples:
 func init() {
 	rootCmd.AddCommand(addCmd)
 	addCmd.Flags().BoolP("dry-run", "n", false, "Show what would be added without making changes")
+	addCmd.Flags().BoolP("sync-drifted", "y", false, "Sync all drifted files from $HOME back to $PLONKDIR")
 
 	// Add file path completion
 	addCmd.ValidArgsFunction = CompleteDotfilePaths
@@ -77,6 +79,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 	// Get flags
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	syncDrifted, _ := cmd.Flags().GetBool("sync-drifted")
 
 	// Get directories
 	homeDir := config.GetHomeDir()
@@ -84,6 +87,18 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 	// Load config for ignore patterns with defaults
 	cfg := config.LoadWithDefaults(configDir)
+
+	ctx := context.Background()
+
+	// Handle sync-drifted flag
+	if syncDrifted {
+		return runSyncDrifted(ctx, cmd, cfg, configDir, homeDir, format, dryRun)
+	}
+
+	// Require at least one file argument if not syncing drifted
+	if len(args) == 0 {
+		return cmd.Usage()
+	}
 
 	// Create dotfile manager with injected config
 	manager := dotfiles.NewManagerWithConfig(homeDir, configDir, cfg)
@@ -94,7 +109,6 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Process dotfiles using domain package
-	ctx := context.Background()
 	results, err := manager.AddFiles(ctx, cfg, args, opts)
 	if err != nil {
 		return err
@@ -131,4 +145,77 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 	// Check if all operations failed and return appropriate error
 	return resources.ValidateOperationResults(results, "add dotfiles")
+}
+
+// runSyncDrifted syncs all drifted files from $HOME back to $PLONKDIR
+func runSyncDrifted(ctx context.Context, cmd *cobra.Command, cfg *config.Config, configDir, homeDir string, format output.OutputFormat, dryRun bool) error {
+	// Get drifted dotfiles from reconciliation
+	driftedFiles, err := getDriftedDotfiles(ctx, cfg, configDir, homeDir)
+	if err != nil {
+		return fmt.Errorf("failed to get drifted files: %w", err)
+	}
+
+	if len(driftedFiles) == 0 {
+		output.Println("No drifted dotfiles found")
+		return nil
+	}
+
+	// Build list of paths to sync (use deployed paths from $HOME)
+	var paths []string
+	for _, item := range driftedFiles {
+		if dest, ok := item.Metadata["destination"].(string); ok {
+			paths = append(paths, dest)
+		}
+	}
+
+	if len(paths) == 0 {
+		output.Println("No drifted files to sync")
+		return nil
+	}
+
+	// Create dotfile manager
+	manager := dotfiles.NewManagerWithConfig(homeDir, configDir, cfg)
+
+	// Configure options
+	opts := dotfiles.AddOptions{
+		DryRun: dryRun,
+	}
+
+	// Process the drifted files
+	results, err := manager.AddFiles(ctx, cfg, paths, opts)
+	if err != nil {
+		return err
+	}
+
+	// Create output data
+	var outputData output.OutputData
+	if len(results) == 1 {
+		// Single file output
+		result := results[0]
+		dotfileOutput := &output.DotfileAddOutput{
+			Source:      getMetadataString(result, "source"),
+			Destination: getMetadataString(result, "destination"),
+			Action:      output.MapStatusToAction(result.Status),
+			Path:        result.Name,
+		}
+		if result.Error != nil {
+			dotfileOutput.Error = result.Error.Error()
+		}
+		outputData = dotfileOutput
+	} else {
+		// Batch output
+		outputData = &output.DotfileBatchAddOutput{
+			TotalFiles: len(results),
+			AddedFiles: output.ConvertToDotfileAddOutput(results),
+			Errors:     output.ExtractErrorMessages(results),
+		}
+	}
+
+	// Render output
+	if err := output.RenderOutput(outputData, format); err != nil {
+		return err
+	}
+
+	// Check if all operations failed and return appropriate error
+	return resources.ValidateOperationResults(results, "sync drifted dotfiles")
 }
