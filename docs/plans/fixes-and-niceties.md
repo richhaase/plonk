@@ -161,14 +161,16 @@ func KeyForPackage(managerName, packageName string) string {
 ### 8. ✅ Fix duplicate listing of drifted dotfiles (COMPLETED)
 **Priority**: Medium (UX bug)
 **Command**: `plonk status`
-**Status**: ✅ Completed (commit 55e9249)
+**Status**: ✅ Completed (commits 55e9249, 406d1db)
 
 **Problem**: When a dotfile is in drifted status, it appears twice in the output.
 
 **Fix Applied**:
-- Removed misleading comment about handling drifted items separately
-- Drifted files (State==StateDegraded) already in Managed list now display once with "drifted" status
-- File: `internal/output/status_formatter.go`
+- Removed misleading comment in status_formatter.go about handling drifted items separately
+- Removed redundant drift collection and append in `dotfiles/reconcile.go` (lines 42-52)
+- GroupItemsByState already includes StateDegraded items in managed list - no need to append again
+- Drifted files now display once with "drifted" status
+- Files: `internal/output/status_formatter.go`, `internal/resources/dotfiles/reconcile.go`
 
 ### 9. ✅ Improve dotfile column headers in status (COMPLETED)
 **Priority**: Medium (UX improvement)
@@ -193,18 +195,18 @@ func KeyForPackage(managerName, packageName string) string {
 
 **Fix Applied**:
 - Swapped diff arguments from `source, dest` to `dest, source`
-- Now shows $HOME (deployed) on left and $PLONKDIR (source) on right
+- Now shows $HOME (deployed) on left and $PLONK_DIR (source) on right
 - Matches standard diff conventions (current state vs. source)
 - File: `internal/commands/diff.go`
 
 ## Feature Additions
 
-### 11. ✅ Add `plonk add -y` to sync drifted files back to $PLONKDIR (COMPLETED)
+### 11. ✅ Add `plonk add -y` to sync drifted files back to $PLONK_DIR (COMPLETED)
 **Priority**: Medium (Feature enhancement)
 **Command**: `plonk add`
 **Status**: ✅ Completed (commit 55e9249)
 
-**Feature**: Add a `-y` or `--sync-drifted` flag to automatically copy all drifted files from $HOME back to $PLONKDIR (reverse of `apply`).
+**Feature**: Add a `-y` or `--sync-drifted` flag to automatically copy all drifted files from $HOME back to $PLONK_DIR (reverse of `apply`).
 
 **Implementation**:
 ```bash
@@ -215,7 +217,7 @@ plonk add -y --dry-run       # Preview what would be synced
 **Changes Applied**:
 - Added `--sync-drifted` flag (short: `-y`) to add command
 - Finds all files with State==StateDegraded (drifted)
-- Copies them from $HOME back to $PLONKDIR
+- Copies them from $HOME back to $PLONK_DIR
 - Shows summary of synced files
 - Works with `--dry-run` for preview
 - Shows appropriate message when no files are drifted
@@ -226,7 +228,7 @@ plonk add -y --dry-run       # Preview what would be synced
 **Command**: `plonk apply`
 **Status**: ✅ Completed (commit 55e9249)
 
-**Feature**: Allow `plonk apply <file1> <file2> ...` to selectively deploy only specified files from $PLONKDIR to $HOME.
+**Feature**: Allow `plonk apply <file1> <file2> ...` to selectively deploy only specified files from $PLONK_DIR to $HOME.
 
 **Implementation**:
 ```bash
@@ -326,8 +328,8 @@ func NewIsolatedRegistry() *ManagerRegistry {
 7. ✅ Add `plonk add -y` to sync drifted files (#11)
 8. ✅ Add selective file deployment to `plonk apply` (#12)
 
-**Completed**: 2025-01-06 in commit 55e9249
-**Results**: 5 UX improvements, 4 files changed, +190 LOC, all tests passing
+**Completed**: 2025-01-06 in commits 55e9249, 5800789, f2646a0, ca5894d, 406d1db, 3b0eda1
+**Results**: 5 UX improvements, 11 BATS tests, comprehensive docs, all tests passing
 
 ### Phase 3: Architecture & Performance ✅ COMPLETED
 9. ✅ Standardize V2 registration (#5)
