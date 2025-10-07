@@ -533,12 +533,6 @@ type ApplyResult = output.DotfileOperation
 
 // Backward compatibility functions for external usage
 
-// GetConfiguredDotfiles is a convenience function that creates a Manager and calls GetConfiguredDotfiles
-func GetConfiguredDotfiles(homeDir, configDir string) ([]resources.Item, error) {
-	manager := NewManager(homeDir, configDir)
-	return manager.GetConfiguredDotfiles()
-}
-
 // SourceToTarget converts a source path to target path using plonk's convention
 // Prepends ~/. to make all files/directories hidden
 func SourceToTarget(source string) string {

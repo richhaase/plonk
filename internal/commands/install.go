@@ -80,14 +80,6 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	var managerSelfInstallResults []resources.OperationResult
 	var remainingArgs []string
 
-	// Count manager self-installs and remaining args for progress
-	managerInstallCount := 0
-	for _, arg := range args {
-		if !strings.Contains(arg, ":") && registry.HasManager(arg) {
-			managerInstallCount++
-		}
-	}
-
 	// Create spinner manager for all operations
 	spinnerManager := output.NewSpinnerManager(len(args))
 

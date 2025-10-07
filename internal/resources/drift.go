@@ -44,11 +44,3 @@ func GetDriftComparator(item Item) DriftComparator {
 
 	return nil
 }
-
-// SetDriftComparator stores a DriftComparator in item metadata
-func SetDriftComparator(item *Item, comparator DriftComparator) {
-	if item.Metadata == nil {
-		item.Metadata = make(map[string]interface{})
-	}
-	item.Metadata["drift_comparator"] = comparator
-}
