@@ -249,7 +249,7 @@ setup() {
 
 # Pixi uninstall tests
 @test "uninstall managed pixi package" {
-  require_safe_package "pixi:gcal"
+  require_safe_package "pixi:hello"
 
   run which pixi
   if [[ $status -ne 0 ]]; then
@@ -257,34 +257,34 @@ setup() {
   fi
 
   # Install first
-  run plonk install pixi:gcal
+  run plonk install pixi:hello
   assert_success
-  track_artifact "package" "pixi:gcal"
+  track_artifact "package" "pixi:hello"
 
   # Verify it's installed by pixi
   run pixi global list
   assert_success
-  assert_output --partial "gcal"
+  assert_output --partial "hello"
 
   # Then uninstall
-  run plonk uninstall pixi:gcal
+  run plonk uninstall pixi:hello
   assert_success
   assert_output --partial "removed"
 
   # Verify actually uninstalled by pixi
   run pixi global list
   assert_success
-  refute_output --partial "gcal"
+  refute_output --partial "hello"
 
   # Verify gone from lock file
   if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
     run cat "$PLONK_DIR/plonk.lock"
-    refute_output --partial "gcal"
+    refute_output --partial "hello"
   fi
 
   # Verify gone from status
   run plonk status
-  refute_output --partial "gcal"
+  refute_output --partial "hello"
 }
 
 # General uninstall behavior tests
