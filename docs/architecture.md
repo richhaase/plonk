@@ -63,14 +63,15 @@ Resources are organized by type:
 
 #### Packages (`internal/resources/packages/`)
 - Package manager interfaces and implementations
-- Registry for dynamic package manager discovery
+- **ManagerRegistry** - Dynamic package manager discovery using V2 factory pattern
+- **RegisterManagerV2** - All managers registered with executor injection for testability
 - Dependency resolution system with topological sorting for correct installation order
-- Reconciliation and apply logic for package state
+- Reconciliation and apply logic for package state using `manager:name` as unique keys
 - Package specification parsing (`spec.go`)
-- Command execution abstraction (`executor.go`)
+- Command execution abstraction (`executor.go`) with injected executors
 - Operations for install, uninstall, search, info, upgrade
-- Health checking capabilities
-- Outdated package detection
+- Health checking capabilities with installation instructions
+- Parallel manager operations using errgroup for performance
 
 Supported package managers:
 - Homebrew (brew) - macOS and Linux packages
@@ -232,9 +233,20 @@ All commands support multiple output formats (table, JSON, YAML) to support:
 1. Implement the `PackageManager` interface in `internal/resources/packages/`
 2. Implement required operations (Install, Uninstall, ListInstalled, etc.)
 3. Implement optional capabilities through interfaces (search, info, upgrade, health)
-4. Implement health checking via CheckHealth() method
-5. Implement package upgrade capabilities via Upgrade() and Outdated() methods
-6. Register using `RegisterManagerV2` with executor injection
+4. Implement health checking via CheckHealth() with clear installation instructions
+5. Create constructor accepting CommandExecutor: `NewXxxManagerWithExecutor(exec CommandExecutor)`
+6. Register using `RegisterManagerV2` with executor injection factory pattern:
+   ```go
+   func init() {
+       RegisterManagerV2("managername", func(exec CommandExecutor) PackageManager {
+           return NewXxxManagerWithExecutor(exec)
+       })
+   }
+   ```
+7. Add comprehensive tests using mock executors
+8. Update documentation
+
+**Note**: Package managers cannot self-install. Users must install them manually or via another supported manager. Provide installation instructions in CheckHealth().
 
 ### Adding a New Resource Type
 
