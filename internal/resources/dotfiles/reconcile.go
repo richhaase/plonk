@@ -36,24 +36,14 @@ func ReconcileWithConfig(ctx context.Context, homeDir, configDir string, cfg *co
 		return resources.Result{}, err
 	}
 
-	// Convert to Result format for backward compatibility
+	// Convert to Result format
 	managed, missing, untracked := resources.GroupItemsByState(reconciled)
 
-	// Also collect drifted items (they have StateDegraded but aren't in managed)
-	var drifted []resources.Item
-	for _, item := range reconciled {
-		if item.State == resources.StateDegraded {
-			drifted = append(drifted, item)
-		}
-	}
-
-	// For now, put drifted items in the managed list but they'll have StateDegraded
-	// This preserves backward compatibility while allowing status to detect drift
-	allManaged := append(managed, drifted...)
-
+	// GroupItemsByState already includes StateDegraded items in the managed list
+	// No need to append them again
 	return resources.Result{
 		Domain:    "dotfile",
-		Managed:   allManaged,
+		Managed:   managed,
 		Missing:   missing,
 		Untracked: untracked,
 	}, nil

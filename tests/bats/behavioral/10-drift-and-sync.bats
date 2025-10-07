@@ -108,7 +108,7 @@ setup() {
   run plonk add -y
   assert_success
   assert_output --partial "$testfile"
-  assert_output --partial "Synced"
+  assert_output --partial "Updated"
 
   # Verify the plonk dir has the new content
   local stored_name="${testfile#.}"
@@ -137,7 +137,7 @@ setup() {
   # Dry-run should show what would happen
   run plonk add -y --dry-run
   assert_success
-  assert_output --partial "Would sync"
+  assert_output --partial "Would update"
   assert_output --partial "$testfile"
 
   # Verify plonk dir still has original content
@@ -212,7 +212,7 @@ setup() {
   # Try to combine file argument with --packages
   run plonk apply "$HOME/$testfile" --packages
   assert_failure
-  assert_output --partial "cannot combine"
+  assert_output --partial "cannot specify files"
 }
 
 @test "plonk apply with multiple file arguments validates all" {
