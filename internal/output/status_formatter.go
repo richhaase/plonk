@@ -258,7 +258,7 @@ func (f StatusFormatter) TableOutput() string {
 				}
 			} else {
 				// For managed/missing, use the three-column format
-				dotBuilder.SetHeaders("$HOME", "$PLONKDIR", "STATUS")
+				dotBuilder.SetHeaders("$HOME", "$PLONK_DIR", "STATUS")
 
 				// Sort managed and missing dotfiles
 				sortItems(dotfileResult.Managed)
@@ -281,7 +281,7 @@ func (f StatusFormatter) TableOutput() string {
 						if item.State == StateDegraded {
 							status = "drifted"
 						}
-						// Swap column order: target ($HOME), source ($PLONKDIR), status
+						// Swap column order: target ($HOME), source ($PLONK_DIR), status
 						dotBuilder.AddRow(target, source, status)
 					}
 				}
@@ -297,7 +297,7 @@ func (f StatusFormatter) TableOutput() string {
 					if dest, ok := item.Metadata["destination"].(string); ok {
 						target = dest
 					}
-					// Swap column order: target ($HOME), source ($PLONKDIR), status
+					// Swap column order: target ($HOME), source ($PLONK_DIR), status
 					dotBuilder.AddRow(target, source, "missing")
 				}
 			}

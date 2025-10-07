@@ -6,8 +6,11 @@ package packages
 import (
 	"context"
 	"fmt"
+	"runtime"
+	"sync"
 
 	"github.com/richhaase/plonk/internal/resources"
+	"golang.org/x/sync/errgroup"
 )
 
 // PackageResource adapts package managers to the Resource interface
@@ -132,25 +135,59 @@ func (m *MultiPackageResource) SetDesired(items []resources.Item) {
 
 // Actual returns all actual packages across all available managers
 func (m *MultiPackageResource) Actual(ctx context.Context) []resources.Item {
-	var items []resources.Item
+	var (
+		mu    sync.Mutex
+		items []resources.Item
+	)
 
-	// Get packages from all available managers
+	// Limit concurrency to min(GOMAXPROCS, 4)
+	maxWorkers := runtime.GOMAXPROCS(0)
+	if maxWorkers > 4 {
+		maxWorkers = 4
+	}
+
+	// Create errgroup with limited concurrency
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(maxWorkers)
+
+	// Get packages from all available managers in parallel
 	for managerName := range m.registry.managers {
-		manager, err := m.registry.GetManager(managerName)
-		if err != nil {
-			continue
-		}
+		managerName := managerName // capture loop variable
 
-		// Create a temporary resource to get actual state
-		resource := NewPackageResource(manager)
-		actualItems := resource.Actual(ctx)
+		g.Go(func() error {
+			// Check context cancellation
+			select {
+			case <-gctx.Done():
+				return gctx.Err()
+			default:
+			}
 
-		// Set the manager name on each item
-		for i := range actualItems {
-			actualItems[i].Manager = managerName
-		}
+			manager, err := m.registry.GetManager(managerName)
+			if err != nil {
+				return nil
+			}
 
-		items = append(items, actualItems...)
+			// Create a temporary resource to get actual state
+			resource := NewPackageResource(manager)
+			actualItems := resource.Actual(gctx)
+
+			// Set the manager name on each item
+			for i := range actualItems {
+				actualItems[i].Manager = managerName
+			}
+
+			// Thread-safe append
+			mu.Lock()
+			items = append(items, actualItems...)
+			mu.Unlock()
+
+			return nil
+		})
+	}
+
+	// Wait for all goroutines to complete
+	if err := g.Wait(); err != nil && err != context.Canceled && err != context.DeadlineExceeded {
+		return []resources.Item{}
 	}
 
 	return items

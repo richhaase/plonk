@@ -222,12 +222,18 @@ func (h *HomebrewManager) parseSearchOutput(output []byte) []string {
 
 // Info retrieves detailed information about a package.
 func (h *HomebrewManager) Info(ctx context.Context, name string) (*PackageInfo, error) {
-	output, err := ExecuteWith(ctx, h.exec, h.binary, "info", name)
+	output, err := ExecuteWith(ctx, h.exec, h.binary, "info", "--json=v2", name)
 	if err != nil {
 		if exitCode, ok := ExtractExitCode(err); ok && exitCode == 1 {
 			return nil, fmt.Errorf("package '%s' not found", name)
 		}
 		return nil, fmt.Errorf("failed to get package info for %s: %w", name, err)
+	}
+
+	// Parse JSON output
+	var v2Data brewInfoV2JSON
+	if err := json.Unmarshal(output, &v2Data); err != nil {
+		return nil, fmt.Errorf("failed to parse brew info JSON: %w", err)
 	}
 
 	// Check if installed
@@ -236,9 +242,39 @@ func (h *HomebrewManager) Info(ctx context.Context, name string) (*PackageInfo, 
 		return nil, err
 	}
 
-	info := h.parseInfoOutput(output, name)
-	info.Manager = "brew"
-	info.Installed = installed
+	// Build PackageInfo from JSON data
+	info := &PackageInfo{
+		Name:      name,
+		Manager:   "brew",
+		Installed: installed,
+	}
+
+	// Check formulae first
+	if len(v2Data.Formulae) > 0 {
+		formula := v2Data.Formulae[0]
+		info.Name = formula.Name
+
+		// Set version from installed or stable
+		if len(formula.Installed) > 0 && formula.Installed[0].Version != "" {
+			info.Version = formula.Installed[0].Version
+		} else if formula.Versions.Stable != "" {
+			info.Version = formula.Versions.Stable
+		}
+	}
+
+	// Check casks if no formula found
+	if len(v2Data.Casks) > 0 && len(v2Data.Formulae) == 0 {
+		cask := v2Data.Casks[0]
+		info.Name = cask.Token
+		if len(cask.Name) > 0 {
+			info.Description = strings.Join(cask.Name, ", ")
+		}
+	}
+
+	// If no formulae or casks found, package doesn't exist
+	if len(v2Data.Formulae) == 0 && len(v2Data.Casks) == 0 {
+		return nil, fmt.Errorf("package '%s' not found", name)
+	}
 
 	return info, nil
 }

@@ -524,8 +524,8 @@ func (g *GoInstallManager) Dependencies() []string {
 }
 
 func init() {
-	RegisterManager("go", func() PackageManager {
-		return NewGoInstallManager()
+	RegisterManagerV2("go", func(exec CommandExecutor) PackageManager {
+		return NewGoInstallManagerWithExecutor(exec)
 	})
 }
 

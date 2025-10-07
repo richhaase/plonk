@@ -56,7 +56,7 @@ Using both `--packages` and `--dotfiles` together has the same effect as using n
 
 **Dotfiles Table** (managed/missing):
 - $HOME: Full path in home directory (deployed location)
-- $PLONKDIR: Path relative to plonk configuration directory
+- $PLONK_DIR: Path relative to plonk configuration directory
 - STATUS: Current state with icon
 
 **Dotfiles List** (unmanaged):

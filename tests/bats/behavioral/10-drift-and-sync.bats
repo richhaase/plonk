@@ -25,7 +25,7 @@ setup() {
   run plonk status --dotfiles
   assert_success
 
-  # Count how many rows contain the testfile (each row should have $HOME and $PLONKDIR columns)
+  # Count how many rows contain the testfile (each row should have $HOME and $PLONK_DIR columns)
   # A single dotfile should appear in exactly one row (but in two columns of that row)
   row_count=$(echo "$output" | grep "$testfile" | grep -c "drifted" || true)
 
@@ -38,7 +38,7 @@ setup() {
 }
 
 # Test that status displays clear column headers
-@test "status shows \$HOME and \$PLONKDIR column headers" {
+@test "status shows \$HOME and \$PLONK_DIR column headers" {
   local testfile=".plonk-test-headers"
   require_safe_dotfile "$testfile"
 
@@ -54,7 +54,7 @@ setup() {
 
   # Check for new column headers
   assert_output --partial "\$HOME"
-  assert_output --partial "\$PLONKDIR"
+  assert_output --partial "\$PLONK_DIR"
 
   # Should NOT have old headers
   refute_output --partial "SOURCE"
@@ -62,7 +62,7 @@ setup() {
 }
 
 # Test that diff follows standard conventions (current state on left, source on right)
-@test "diff shows \$HOME on left and \$PLONKDIR on right" {
+@test "diff shows \$HOME on left and \$PLONK_DIR on right" {
   local testfile=".plonk-test-diff-order"
   require_safe_dotfile "$testfile"
 
@@ -81,14 +81,14 @@ setup() {
   run plonk diff "$HOME/$testfile"
 
   # git diff shows old/left with - and new/right with +
-  # We want $HOME (deployed) on left showing as -, and $PLONKDIR (source) on right showing as +
-  # So modified line in $HOME should show as - and original from $PLONKDIR as +
+  # We want $HOME (deployed) on left showing as -, and $PLONK_DIR (source) on right showing as +
+  # So modified line in $HOME should show as - and original from $PLONK_DIR as +
   assert_output --partial "line 1 modified"
   assert_output --partial "line 1"
 }
 
 # Test the --sync-drifted flag to copy modified files back to plonk
-@test "plonk add -y syncs drifted files back to \$PLONKDIR" {
+@test "plonk add -y syncs drifted files back to \$PLONK_DIR" {
   local testfile=".plonk-test-sync"
   require_safe_dotfile "$testfile"
 
@@ -254,7 +254,7 @@ setup() {
   assert_success
   assert_output --partial "drifted"
   assert_output --partial "\$HOME"
-  assert_output --partial "\$PLONKDIR"
+  assert_output --partial "\$PLONK_DIR"
 
   # 4. Use add -y to sync changes back
   run plonk add -y

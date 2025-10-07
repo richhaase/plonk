@@ -29,7 +29,7 @@ func TestCompliance_Brew_Minimal(t *testing.T) {
 		// list --versions fallback
 		"brew list --versions jq": {Output: []byte("jq 1.6"), Error: nil},
 		// Info output
-		"brew info jq": {Output: []byte("jq: stable 1.6\nFrom: https://github.com/Homebrew/homebrew-core\n"), Error: nil},
+		"brew info --json=v2 jq": {Output: []byte(`{"formulae":[{"name":"jq","aliases":[],"installed":[{"version":"1.6"}],"versions":{"stable":"1.6"}}],"casks":[]}`), Error: nil},
 		// Search
 		"brew search jq": {Output: []byte("jq\njq-extra\n"), Error: nil},
 		// Install/Uninstall

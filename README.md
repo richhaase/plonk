@@ -127,7 +127,7 @@ plonk info ripgrep                    # Show package details
 
 # Dotfile management
 plonk add ~/.vimrc ~/.zshrc           # Start tracking dotfiles
-plonk add -y                          # Sync all drifted files from $HOME to $PLONKDIR
+plonk add -y                          # Sync all drifted files from $HOME to $PLONK_DIR
 plonk rm ~/.vimrc                     # Stop tracking (doesn't delete file)
 plonk dotfiles                        # List dotfiles with state info
 

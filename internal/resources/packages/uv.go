@@ -219,8 +219,8 @@ func (u *UvManager) Dependencies() []string {
 }
 
 func init() {
-	RegisterManager("uv", func() PackageManager {
-		return NewUvManager()
+	RegisterManagerV2("uv", func(exec CommandExecutor) PackageManager {
+		return NewUvManagerWithExecutor(exec)
 	})
 }
 

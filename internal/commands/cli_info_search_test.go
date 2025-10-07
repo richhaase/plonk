@@ -16,8 +16,9 @@ func TestCLI_Info_Brew_JSON(t *testing.T) {
 		env.Executor.Responses["brew --version"] = packagesCommandResponse([]byte("Homebrew 4.0"), nil)
 		// IsInstalled path may call either list or info flows; support both
 		env.Executor.Responses["brew list jq"] = packagesCommandResponse([]byte("jq"), nil)
-		// brew info output (simplified but parsable by parser)
-		env.Executor.Responses["brew info jq"] = packagesCommandResponse([]byte("jq: stable 1.6\nhttps://stedolan.github.io/jq/\n"), nil)
+		env.Executor.Responses["brew info --installed --json=v2"] = packagesCommandResponse([]byte(`{"formulae":[{"name":"jq","aliases":[],"installed":[{"version":"1.6"}],"versions":{"stable":"1.6"}}],"casks":[]}`), nil)
+		// brew info output (JSON v2 format)
+		env.Executor.Responses["brew info --json=v2 jq"] = packagesCommandResponse([]byte(`{"formulae":[{"name":"jq","aliases":[],"installed":[{"version":"1.6"}],"versions":{"stable":"1.6"}}],"casks":[]}`), nil)
 	})
 	if err != nil {
 		t.Fatalf("info brew json failed: %v\n%s", err, out)

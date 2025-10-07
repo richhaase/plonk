@@ -296,8 +296,8 @@ func (p *PixiManager) Dependencies() []string {
 }
 
 func init() {
-	RegisterManager("pixi", func() PackageManager {
-		return NewPixiManager()
+	RegisterManagerV2("pixi", func(exec CommandExecutor) PackageManager {
+		return NewPixiManagerWithExecutor(exec)
 	})
 }
 

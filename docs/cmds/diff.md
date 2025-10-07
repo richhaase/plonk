@@ -39,7 +39,7 @@ The diff command accepts various path formats for the file argument:
 ### Default Behavior
 
 - Uses `git diff --no-index` by default (zero-config)
-- Shows differences with deployed file ($HOME) first, source file ($PLONKDIR) second
+- Shows differences with deployed file ($HOME) first, source file ($PLONK_DIR) second
 - Follows standard diff conventions (current state vs. source of truth)
 - Processes all drifted files when no argument provided
 - Continues with remaining files if individual diff fails
@@ -87,8 +87,8 @@ plonk diff .vimrc
 ## Integration
 
 - Use `plonk status` to see which files have drifted
-- Use `plonk apply` to restore drifted files from $PLONKDIR
-- Use `plonk add -y` to sync all drifted files from $HOME back to $PLONKDIR
+- Use `plonk apply` to restore drifted files from $PLONK_DIR
+- Use `plonk add -y` to sync all drifted files from $HOME back to $PLONK_DIR
 
 ## Notes
 

@@ -31,7 +31,7 @@ plonk add [options] [files...]
 ### Options
 
 - `--dry-run, -n` - Preview changes without adding files
-- `--sync-drifted, -y` - Sync all drifted files from $HOME back to $PLONKDIR
+- `--sync-drifted, -y` - Sync all drifted files from $HOME back to $PLONK_DIR
 
 ### Behavior
 
@@ -63,7 +63,7 @@ plonk add ~/.zshrc ~/.gitconfig ~/.tmux.conf
 # Add entire directory
 plonk add ~/.config/nvim/
 
-# Sync all drifted files back to $PLONKDIR
+# Sync all drifted files back to $PLONK_DIR
 plonk add -y
 
 # Preview drift sync without making changes

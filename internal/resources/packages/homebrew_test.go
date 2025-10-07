@@ -785,8 +785,8 @@ func TestHomebrewManager_Info(t *testing.T) {
 			name:        "successful info",
 			packageName: "git",
 			mockResponses: map[string]CommandResponse{
-				"brew info git": {
-					Output: []byte("git: stable 2.37.1\nDistributed revision control system\nFrom: https://github.com/git/git"),
+				"brew info --json=v2 git": {
+					Output: []byte(`{"formulae":[{"name":"git","installed":[{"version":"2.37.1"}],"versions":{"stable":"2.37.1"},"aliases":[]}],"casks":[]}`),
 					Error:  nil,
 				},
 				"brew info --installed --json=v2": {
@@ -797,8 +797,7 @@ func TestHomebrewManager_Info(t *testing.T) {
 			expectedResult: &PackageInfo{
 				Name:        "git",
 				Version:     "2.37.1",
-				Description: "Distributed revision control system",
-				Homepage:    "https://github.com/git/git",
+				Description: "",
 				Manager:     "brew",
 				Installed:   true,
 			},
@@ -808,7 +807,7 @@ func TestHomebrewManager_Info(t *testing.T) {
 			name:        "package not found",
 			packageName: "nonexistent",
 			mockResponses: map[string]CommandResponse{
-				"brew info nonexistent": {
+				"brew info --json=v2 nonexistent": {
 					Output: []byte(""),
 					Error:  &MockExitError{Code: 1},
 				},

@@ -86,7 +86,7 @@ Add dotfiles to management or sync drifted files back.
 ```bash
 plonk add ~/.vimrc ~/.zshrc           # Add files
 plonk add ~/.config/nvim/             # Add directory
-plonk add -y                          # Sync all drifted files from $HOME to $PLONKDIR
+plonk add -y                          # Sync all drifted files from $HOME to $PLONK_DIR
 plonk add -y --dry-run                # Preview drift sync
 plonk add --dry-run ~/.vimrc          # Preview add
 ```
