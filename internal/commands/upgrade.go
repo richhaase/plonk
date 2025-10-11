@@ -434,10 +434,9 @@ func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, l
 				Package: pkg,
 			}
 
-			// Get current version before upgrade
-			if version, err := mgr.InstalledVersion(ctx, pkg); err == nil {
-				result.FromVersion = version
-			}
+			// Note: InstalledVersion() method has been removed
+			// Version tracking is no longer supported
+			result.FromVersion = ""
 
 			// Upgrade this package
 			upgradeErr := upgrader.Upgrade(ctx, []string{pkg})
@@ -448,29 +447,18 @@ func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, l
 				results.Summary.Failed++
 				spinner.Error(fmt.Sprintf("Failed to upgrade %s: %s", pkg, upgradeErr.Error()))
 			} else {
-				// Get new version and update lock file
-				if newVersion, err := mgr.InstalledVersion(ctx, pkg); err == nil {
-					result.ToVersion = newVersion
-					if result.FromVersion != newVersion {
-						result.Status = "upgraded"
-						results.Summary.Upgraded++
+				// Note: InstalledVersion() method has been removed
+				// Version tracking is no longer supported
+				result.ToVersion = ""
+				result.Status = "upgraded"
+				results.Summary.Upgraded++
 
-						// Update lock file immediately
-						if err := updateLockFileForPackage(lockService, managerName, pkg, newVersion); err != nil {
-							output.Printf("Warning: Failed to update lock file for %s: %v\n", pkg, err)
-						}
-
-						spinner.Success(fmt.Sprintf("upgraded %s %s → %s", pkg, result.FromVersion, result.ToVersion))
-					} else {
-						result.Status = "skipped"
-						results.Summary.Skipped++
-						spinner.Success(fmt.Sprintf("skipped %s (already up-to-date)", pkg))
-					}
-				} else {
-					result.Status = "upgraded" // Assume success even if we can't get version
-					results.Summary.Upgraded++
-					spinner.Success(fmt.Sprintf("upgraded %s", pkg))
+				// Update lock file immediately
+				if err := updateLockFileForPackage(lockService, managerName, pkg, ""); err != nil {
+					output.Printf("Warning: Failed to update lock file for %s: %v\n", pkg, err)
 				}
+
+				spinner.Success(fmt.Sprintf("upgraded %s", pkg))
 			}
 
 			results.Results = append(results.Results, result)

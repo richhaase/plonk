@@ -20,13 +20,6 @@ func (f *fakeAvailMgr) IsInstalled(ctx context.Context, name string) (bool, erro
 func (f *fakeAvailMgr) InstalledVersion(ctx context.Context, name string) (string, error) {
 	return "1.0.0", nil
 }
-func (f *fakeAvailMgr) Info(ctx context.Context, name string) (*PackageInfo, error) {
-	return &PackageInfo{Name: name}, nil
-}
-func (f *fakeAvailMgr) Search(ctx context.Context, q string) ([]string, error) { return nil, nil }
-func (f *fakeAvailMgr) CheckHealth(ctx context.Context) (*HealthCheck, error) {
-	return &HealthCheck{Name: "fake"}, nil
-}
 func (f *fakeAvailMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
 func (f *fakeAvailMgr) Dependencies() []string                           { return nil }
 
@@ -43,15 +36,6 @@ func (f *fakeUninstallErrorMgr) IsInstalled(ctx context.Context, name string) (b
 }
 func (f *fakeUninstallErrorMgr) InstalledVersion(ctx context.Context, name string) (string, error) {
 	return "1.0.0", nil
-}
-func (f *fakeUninstallErrorMgr) Info(ctx context.Context, name string) (*PackageInfo, error) {
-	return &PackageInfo{Name: name}, nil
-}
-func (f *fakeUninstallErrorMgr) Search(ctx context.Context, q string) ([]string, error) {
-	return nil, nil
-}
-func (f *fakeUninstallErrorMgr) CheckHealth(ctx context.Context) (*HealthCheck, error) {
-	return &HealthCheck{Name: "fake"}, nil
 }
 func (f *fakeUninstallErrorMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
 func (f *fakeUninstallErrorMgr) Dependencies() []string                           { return nil }

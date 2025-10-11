@@ -4,25 +4,6 @@
 default:
     @just --list
 
-# =============================================================================
-# INTERNAL HELPER FUNCTIONS (prefixed with _)
-# =============================================================================
-
-# Get version information for builds
-_get-version-info:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
-    COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "none")
-    DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    echo "export VERSION='$VERSION'"
-    echo "export COMMIT='$COMMIT'"
-    echo "export DATE='$DATE'"
-
-# =============================================================================
-# MAIN RECIPES
-# =============================================================================
-
 # Build the plonk binary with version information
 build:
     #!/usr/bin/env bash
@@ -30,15 +11,15 @@ build:
     echo "Building plonk with version information..."
     mkdir -p bin
 
-    # Get version info using helper
-    eval $(just _get-version-info)
+    VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "dev")
+    COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "none")
+    DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
     if ! go build -ldflags "-X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$DATE" -o bin/plonk ./cmd/plonk; then
         echo "Build failed"
         exit 1
     fi
     echo "Built versioned plonk binary to bin/ (version: $VERSION)"
-
 
 # Run all unit tests
 test:
@@ -91,23 +72,11 @@ test-coverage:
     go tool cover -html=coverage.out -o coverage.html
     echo "Unit tests passed! Coverage report: coverage.html (see also coverage.txt)"
 
-# Run tests with coverage over all packages (unfiltered)
-test-coverage-all:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    echo "Running unit tests with full-repo coverage..."
-    go test -coverpkg=./... -covermode=atomic -coverprofile=coverage-all.out ./...
-    go tool cover -func=coverage-all.out > coverage-all.txt
-    awk 'END{printf "Total coverage (all packages): %s\n", $3}' coverage-all.txt
-    go tool cover -html=coverage-all.out -o coverage-all.html
-    echo "Coverage (all) report: coverage-all.html (see also coverage-all.txt)"
-
 # Clean build artifacts and test cache
 clean:
     @echo "Cleaning build artifacts and caches..."
     rm -rf bin dist
     rm -f coverage.out coverage.html coverage.txt
-    rm -f coverage-all.out coverage-all.html coverage-all.txt
     go clean
     go clean -testcache
     @echo "Build artifacts and test cache cleaned"
@@ -124,23 +93,12 @@ dev-setup:
         echo "pre-commit not found. Install with: brew install pre-commit"; \
         exit 1; \
     fi
-    @echo "  • Running tests to verify setup..."
-    just test
     @echo "Development environment ready!"
     @echo ""
     @echo "Next steps:"
     @echo "  • Run 'just' to see available commands"
     @echo "  • Run 'just build' to build the binary"
-
-# Format Go code and organize imports
-format:
-    @echo "Formatting Go code and organizing imports..."
-    go run golang.org/x/tools/cmd/goimports -w .
-
-# Run linter
-lint:
-    @echo "Running linter..."
-    go run github.com/golangci/golangci-lint/cmd/golangci-lint run --timeout=10m
+    @echo "  • Run 'just test' to run tests"
 
 # Find dead code (unreachable functions)
 find-dead-code:

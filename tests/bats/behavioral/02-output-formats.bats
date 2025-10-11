@@ -13,18 +13,3 @@ setup() {
   # Look for table-like formatting
   assert_output --partial "Plonk Status"
 }
-
-@test "info supports table format" {
-  run plonk info jq
-  assert_success
-  # Table format should show package details
-  assert_output --partial "Package:"
-  assert_output --partial "jq"
-}
-
-@test "search supports table format" {
-  run plonk search jq
-  assert_success
-  # Table format shows search results
-  assert_output --partial "jq"
-}

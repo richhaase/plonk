@@ -1,6 +1,6 @@
 # Package Management Commands
 
-Commands for managing packages: `install`, `uninstall`, `search`, and `info`.
+Commands for managing packages: `install` and `uninstall`.
 
 ## Description
 
@@ -104,93 +104,6 @@ plonk uninstall --dry-run ripgrep
 
 ---
 
-## Search Command
-
-Searches for packages across package managers.
-
-### Synopsis
-
-```bash
-plonk search [options] <query>
-```
-
-### Options
-
-- `-o, --output` - Output format (table/json/yaml)
-
-### Behavior
-
-- Without prefix: searches all managers in parallel
-- With prefix: searches only specified manager
-- Shows package names only (no descriptions by default)
-- Uses configurable timeout (default: 5 minutes)
-- Slow managers may not return results due to timeout
-
-**Search Support by Manager:**
-- **Supported**: brew, npm, cargo, conda, gem, pixi
-- **Not Supported**: pnpm, pipx, uv, go (return empty results)
-
-### Examples
-
-```bash
-# Search all managers
-plonk search ripgrep
-
-# Search specific manager (only supported managers)
-plonk search brew:ripgrep conda:numpy pixi:tree
-
-# Managers without search support return empty results
-plonk search uv:ruff          # No results (UV doesn't support search)
-plonk search pnpm:typescript  # No results (PNPM doesn't support search)
-plonk search go:test          # No results (Go doesn't support search)
-
-# Output as JSON
-plonk search -o json ripgrep
-```
-
----
-
-## Info Command
-
-Shows detailed package information and installation status.
-
-### Synopsis
-
-```bash
-plonk info [options] <package>
-```
-
-### Options
-
-- `-o, --output` - Output format (table/json/yaml)
-
-### Behavior
-
-Priority order for information:
-1. Managed by plonk (shows from lock file)
-2. Installed but not managed
-3. Available but not installed
-
-Displays:
-- Package name and status
-- Manager and version
-- Description and homepage
-- Installation command
-
-### Examples
-
-```bash
-# Get package info
-plonk info ripgrep
-
-# Info for specific manager
-plonk info brew:ripgrep pipx:black conda:numpy uv:ruff pixi:tree
-
-# Output as JSON
-plonk info -o json ripgrep
-```
-
----
 
 ## Common Behaviors
 
@@ -200,11 +113,6 @@ plonk info -o json ripgrep
 - Modifies `plonk.lock` atomically
 - Updates system packages via manager
 - Lock file preserves full module paths for Go packages
-
-**Search/Info:**
-- Read-only operations
-- No state modifications
-- Query package managers directly
 
 ### Error Handling
 

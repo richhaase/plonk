@@ -20,15 +20,6 @@ func (s *slowManager) IsInstalled(ctx context.Context, name string) (bool, error
 func (s *slowManager) InstalledVersion(ctx context.Context, name string) (string, error) {
 	return "", nil
 }
-func (s *slowManager) Info(ctx context.Context, name string) (*PackageInfo, error) {
-	return &PackageInfo{Name: name, Manager: "slow", Installed: false}, nil
-}
-func (s *slowManager) Search(ctx context.Context, query string) ([]string, error) {
-	return []string{}, nil
-}
-func (s *slowManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
-	return &HealthCheck{Name: "slow", Category: "package-manager", Status: "PASS"}, nil
-}
 func (s *slowManager) Upgrade(ctx context.Context, packages []string) error {
 	return blockUntilDone(ctx)
 }

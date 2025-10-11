@@ -21,16 +21,10 @@ func (l *listOnlyMgr) IsInstalled(ctx context.Context, name string) (bool, error
 func (l *listOnlyMgr) InstalledVersion(ctx context.Context, name string) (string, error) {
 	return "", nil
 }
-func (l *listOnlyMgr) Info(ctx context.Context, name string) (*pkgs.PackageInfo, error) {
-	return &pkgs.PackageInfo{Name: name}, nil
-}
 func (l *listOnlyMgr) Search(ctx context.Context, q string) ([]string, error) { return nil, nil }
-func (l *listOnlyMgr) CheckHealth(ctx context.Context) (*pkgs.HealthCheck, error) {
-	return &pkgs.HealthCheck{Name: "x"}, nil
-}
-func (l *listOnlyMgr) SelfInstall(ctx context.Context) error         { return nil }
-func (l *listOnlyMgr) Upgrade(ctx context.Context, p []string) error { return nil }
-func (l *listOnlyMgr) Dependencies() []string                        { return nil }
+func (l *listOnlyMgr) SelfInstall(ctx context.Context) error                  { return nil }
+func (l *listOnlyMgr) Upgrade(ctx context.Context, p []string) error          { return nil }
+func (l *listOnlyMgr) Dependencies() []string                                 { return nil }
 
 func TestReconcileAllWithConfig_Simple(t *testing.T) {
 	home := t.TempDir()

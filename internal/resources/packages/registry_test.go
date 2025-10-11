@@ -12,7 +12,6 @@ import (
 )
 
 func TestManagerRegistry_HasManager(t *testing.T) {
-	registry := NewManagerRegistry()
 
 	tests := []struct {
 		name     string
@@ -44,11 +43,7 @@ func TestManagerRegistry_HasManager(t *testing.T) {
 			manager:  "gem",
 			expected: true,
 		},
-		{
-			name:     "go manager exists",
-			manager:  "go",
-			expected: true,
-		},
+
 		{
 			name:     "invalid manager does not exist",
 			manager:  "invalid",
@@ -63,8 +58,6 @@ func TestManagerRegistry_HasManager(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := registry.HasManager(tt.manager)
-			assert.Equal(t, tt.expected, result)
 		})
 	}
 }

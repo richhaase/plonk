@@ -20,13 +20,6 @@ func (f *fakeSimpleMgr) IsInstalled(ctx context.Context, name string) (bool, err
 func (f *fakeSimpleMgr) InstalledVersion(ctx context.Context, name string) (string, error) {
 	return "1.0.0", nil
 }
-func (f *fakeSimpleMgr) Info(ctx context.Context, name string) (*PackageInfo, error) {
-	return &PackageInfo{Name: name}, nil
-}
-func (f *fakeSimpleMgr) Search(ctx context.Context, q string) ([]string, error) { return nil, nil }
-func (f *fakeSimpleMgr) CheckHealth(ctx context.Context) (*HealthCheck, error) {
-	return &HealthCheck{Name: "x"}, nil
-}
 func (f *fakeSimpleMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
 func (f *fakeSimpleMgr) Dependencies() []string                           { return nil }
 

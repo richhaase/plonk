@@ -122,8 +122,6 @@ plonk install pnpm cargo              # Install package managers (must be availa
 plonk uninstall ripgrep               # Uninstall and stop tracking
 plonk upgrade                         # Upgrade all packages to latest versions
 plonk upgrade brew:ripgrep            # Upgrade specific package
-plonk search ripgrep                  # Search across all package managers
-plonk info ripgrep                    # Show package details
 
 # Dotfile management
 plonk add ~/.vimrc ~/.zshrc           # Start tracking dotfiles
@@ -257,3 +255,4 @@ Contributions are welcome! Please:
 4. Submit a pull request
 
 See the codebase for examples and patterns.
+test change

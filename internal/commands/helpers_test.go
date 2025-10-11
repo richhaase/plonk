@@ -36,12 +36,7 @@ func TestParsePackageSpec(t *testing.T) {
 			expectedManager: "npm",
 			expectedPackage: "lodash",
 		},
-		{
-			name:            "go package with module path",
-			spec:            "go:golang.org/x/tools/cmd/gopls",
-			expectedManager: "go",
-			expectedPackage: "golang.org/x/tools/cmd/gopls",
-		},
+
 		{
 			name:            "empty prefix with colon",
 			spec:            ":package",
@@ -106,11 +101,7 @@ func TestIsValidManager(t *testing.T) {
 			manager:  "gem",
 			expected: true,
 		},
-		{
-			name:     "valid go manager",
-			manager:  "go",
-			expected: true,
-		},
+
 		{
 			name:     "invalid manager",
 			manager:  "invalid",
@@ -141,8 +132,8 @@ func TestIsValidManager(t *testing.T) {
 func TestGetValidManagers(t *testing.T) {
 	managers := GetValidManagers()
 
-	// Should return all 10 supported managers
-	expectedCount := 10
+	// Should return all 8 supported managers
+	expectedCount := 8
 	if len(managers) != expectedCount {
 		t.Errorf("GetValidManagers() returned %d managers, want %d", len(managers), expectedCount)
 	}
@@ -155,8 +146,6 @@ func TestGetValidManagers(t *testing.T) {
 		"cargo": false,
 		"uv":    false,
 		"gem":   false,
-		"go":    false,
-		"pixi":  false,
 		"pipx":  false,
 		"conda": false,
 	}

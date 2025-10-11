@@ -163,24 +163,6 @@ setup() {
   assert_output --partial "colorize"
 }
 
-# Go upgrade tests
-@test "upgrade single go package" {
-  require_package_manager "go"
-  require_safe_package "go:github.com/rakyll/hey"
-
-  # Install package
-  run plonk install go:github.com/rakyll/hey
-  if [[ $status -ne 0 ]]; then
-    skip "Failed to install go:github.com/rakyll/hey"
-  fi
-  track_artifact "package" "go:github.com/rakyll/hey"
-
-  # Upgrade the specific package (using short name for matching)
-  run plonk upgrade go:github.com/rakyll/hey
-  assert_success
-  assert_output --partial "github.com/rakyll/hey"
-}
-
 # Cargo upgrade tests
 @test "upgrade single cargo package" {
   require_package_manager "cargo"

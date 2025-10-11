@@ -32,14 +32,8 @@ func (f *fakeMgrUpgradeChanging) InstalledVersion(ctx context.Context, name stri
 	}
 	return f.ver, nil
 }
-func (f *fakeMgrUpgradeChanging) Info(ctx context.Context, name string) (*packages.PackageInfo, error) {
-	return &packages.PackageInfo{Name: name, Manager: "brew", Installed: true, Version: f.ver}, nil
-}
 func (f *fakeMgrUpgradeChanging) Search(ctx context.Context, q string) ([]string, error) {
 	return nil, nil
-}
-func (f *fakeMgrUpgradeChanging) CheckHealth(ctx context.Context) (*packages.HealthCheck, error) {
-	return &packages.HealthCheck{Name: "brew"}, nil
 }
 func (f *fakeMgrUpgradeChanging) SelfInstall(ctx context.Context) error { return nil }
 func (f *fakeMgrUpgradeChanging) Upgrade(ctx context.Context, pkgs []string) error {
@@ -62,14 +56,8 @@ func (f *fakeMgrUpgradeNoChange) IsInstalled(ctx context.Context, name string) (
 func (f *fakeMgrUpgradeNoChange) InstalledVersion(ctx context.Context, name string) (string, error) {
 	return "1.0", nil
 }
-func (f *fakeMgrUpgradeNoChange) Info(ctx context.Context, name string) (*packages.PackageInfo, error) {
-	return &packages.PackageInfo{Name: name, Manager: "npm", Installed: true, Version: "1.0"}, nil
-}
 func (f *fakeMgrUpgradeNoChange) Search(ctx context.Context, q string) ([]string, error) {
 	return nil, nil
-}
-func (f *fakeMgrUpgradeNoChange) CheckHealth(ctx context.Context) (*packages.HealthCheck, error) {
-	return &packages.HealthCheck{Name: "npm"}, nil
 }
 func (f *fakeMgrUpgradeNoChange) SelfInstall(ctx context.Context) error            { return nil }
 func (f *fakeMgrUpgradeNoChange) Upgrade(ctx context.Context, pkgs []string) error { return nil }

@@ -18,13 +18,6 @@ func (u *unavailMgr) IsInstalled(ctx context.Context, name string) (bool, error)
 func (u *unavailMgr) InstalledVersion(ctx context.Context, name string) (string, error) {
 	return "", nil
 }
-func (u *unavailMgr) Info(ctx context.Context, name string) (*PackageInfo, error) {
-	return &PackageInfo{Name: name, Manager: "u"}, nil
-}
-func (u *unavailMgr) Search(ctx context.Context, q string) ([]string, error) { return nil, nil }
-func (u *unavailMgr) CheckHealth(ctx context.Context) (*HealthCheck, error) {
-	return &HealthCheck{Name: "u"}, nil
-}
 func (u *unavailMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
 func (u *unavailMgr) Dependencies() []string                           { return nil }
 

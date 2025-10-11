@@ -8,8 +8,13 @@ import (
 )
 
 func init() {
-	// Register all managers with the config validation system
-	// This runs after all package manager init() functions have registered themselves
+	// Load default manager configs into registry
 	registry := NewManagerRegistry()
+	cfg := &config.Config{
+		Managers: config.GetDefaultManagers(),
+	}
+	registry.LoadV2Configs(cfg)
+
+	// Register all managers with the config validation system
 	config.SetValidManagers(registry.GetAllManagerNames())
 }

@@ -219,34 +219,6 @@ setup() {
   assert_output --partial "unsupported format"
 }
 
-# Search Error Scenarios
-@test "search handles package manager errors gracefully" {
-  # Search with invalid manager
-  run plonk search nonexistent-mgr:query
-  assert_failure
-}
-
-@test "search handles no results gracefully" {
-  # Search for something that definitely doesn't exist
-  run plonk search "zzz-nonexistent-package-xyz-999"
-  # Should succeed but show no results
-  assert_success
-  # Output should indicate no results found
-}
-
-# Info Error Scenarios
-@test "info handles non-existent package gracefully" {
-  # Use a package name that truly doesn't exist across any manager
-  run plonk info zzz-truly-nonexistent-pkg-plonk-test-999
-  # May succeed with "not found" status or fail - either is graceful
-  # Just verify it doesn't crash
-}
-
-@test "info handles invalid manager gracefully" {
-  run plonk info invalid-mgr:package
-  assert_failure
-}
-
 # Status Error Scenarios
 @test "status handles corrupted package manager state" {
   # Install a package

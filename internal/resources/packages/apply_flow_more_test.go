@@ -21,13 +21,6 @@ func (i *installOnlyMgr) IsInstalled(ctx context.Context, name string) (bool, er
 func (i *installOnlyMgr) InstalledVersion(ctx context.Context, name string) (string, error) {
 	return "1.0.0", nil
 }
-func (i *installOnlyMgr) Info(ctx context.Context, name string) (*PackageInfo, error) {
-	return &PackageInfo{Name: name, Manager: "brew"}, nil
-}
-func (i *installOnlyMgr) Search(ctx context.Context, q string) ([]string, error) { return nil, nil }
-func (i *installOnlyMgr) CheckHealth(ctx context.Context) (*HealthCheck, error) {
-	return &HealthCheck{Name: "brew"}, nil
-}
 func (i *installOnlyMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
 func (i *installOnlyMgr) Dependencies() []string                           { return nil }
 

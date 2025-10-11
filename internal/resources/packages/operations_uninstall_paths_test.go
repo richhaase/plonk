@@ -21,13 +21,6 @@ func (f *fakeUninstallMgr) IsInstalled(ctx context.Context, name string) (bool, 
 func (f *fakeUninstallMgr) InstalledVersion(ctx context.Context, name string) (string, error) {
 	return "", nil
 }
-func (f *fakeUninstallMgr) Info(ctx context.Context, name string) (*PackageInfo, error) {
-	return &PackageInfo{Name: name}, nil
-}
-func (f *fakeUninstallMgr) Search(ctx context.Context, q string) ([]string, error) { return nil, nil }
-func (f *fakeUninstallMgr) CheckHealth(ctx context.Context) (*HealthCheck, error) {
-	return &HealthCheck{Name: "u"}, nil
-}
 func (f *fakeUninstallMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
 func (f *fakeUninstallMgr) Dependencies() []string                           { return nil }
 

@@ -358,113 +358,32 @@ func checkLockFileValidity() HealthCheck {
 func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
 	var checks []HealthCheck
 
+	// Package manager health checks have been removed
+	// Return basic availability check instead
 	registry := packages.NewManagerRegistry()
-	homebrewAvailable := false
+	availableManagers := 0
 
 	for _, managerName := range registry.GetAllManagerNames() {
 		mgr, err := registry.GetManager(managerName)
 		if err != nil {
-			// Create a basic failure check for registry errors
-			check := HealthCheck{
-				Name:     fmt.Sprintf("%s Manager", strings.Title(managerName)),
-				Category: "package-managers",
-				Status:   "fail",
-				Message:  "Package manager registration failed",
-				Issues:   []string{fmt.Sprintf("Error getting %s manager: %v", managerName, err)},
-			}
-			checks = append(checks, check)
 			continue
 		}
 
-		// Call the manager's CheckHealth method
-		// Check if manager supports health checking
-		healthChecker, ok := mgr.(packages.PackageHealthChecker)
-		if !ok {
-			// Manager doesn't support health checking, skip
-			continue
-		}
-
-		healthCheck, err := healthChecker.CheckHealth(ctx)
-		if err != nil {
-			if packages.IsContextError(err) {
-				// Context errors should bubble up
-				return checks // Return what we have so far
-			}
-			// Convert to basic health check
-			check := HealthCheck{
-				Name:     fmt.Sprintf("%s Manager", strings.Title(managerName)),
-				Category: "package-managers",
-				Status:   "fail",
-				Message:  "Health check failed",
-				Issues:   []string{fmt.Sprintf("Error checking %s health: %v", managerName, err)},
-			}
-			checks = append(checks, check)
-			continue
-		}
-
-		// Convert packages.HealthCheck to diagnostics.HealthCheck
-		diagnosticsCheck := HealthCheck{
-			Name:        healthCheck.Name,
-			Category:    healthCheck.Category,
-			Status:      healthCheck.Status,
-			Message:     healthCheck.Message,
-			Details:     healthCheck.Details,
-			Issues:      healthCheck.Issues,
-			Suggestions: healthCheck.Suggestions,
-		}
-		checks = append(checks, diagnosticsCheck)
-
-		// Track homebrew availability for overall health
-		if managerName == "brew" && healthCheck.Status == "pass" {
-			homebrewAvailable = true
+		available, err := mgr.IsAvailable(ctx)
+		if err == nil && available {
+			availableManagers++
 		}
 	}
 
-	// Add overall package manager status check
-	overallCheck := calculateOverallPackageManagerHealth(checks, homebrewAvailable)
-	checks = append(checks, overallCheck)
-
-	return checks
-}
-
-func calculateOverallPackageManagerHealth(checks []HealthCheck, homebrewAvailable bool) HealthCheck {
 	check := HealthCheck{
-		Name:     "Package Manager Ecosystem",
+		Name:     "Package Managers",
 		Category: "package-managers",
 		Status:   "pass",
-		Message:  "Package management ecosystem is healthy",
+		Message:  fmt.Sprintf("%d package managers available", availableManagers),
 	}
+	checks = append(checks, check)
 
-	if !homebrewAvailable {
-		check.Status = "fail"
-		check.Message = "Critical package manager missing"
-		check.Issues = []string{"Homebrew is required but not available"}
-		check.Suggestions = []string{
-			"Install Homebrew first, then other package managers as needed",
-			"Homebrew is the foundational package manager for plonk",
-		}
-		return check
-	}
-
-	availableCount := 0
-	for _, mgr := range checks {
-		if mgr.Category == "package-managers" && mgr.Status == "pass" {
-			availableCount++
-		}
-	}
-
-	if availableCount == 1 {
-		check.Status = "warn"
-		check.Message = "Limited package manager availability"
-		check.Suggestions = []string{
-			"Consider installing additional package managers as needed",
-			"Available: npm (Node.js), uv (Python), cargo (Rust), gem (Ruby), go",
-		}
-	} else {
-		check.Message = fmt.Sprintf("Package management ecosystem healthy (%d managers available)", availableCount)
-	}
-
-	return check
+	return checks
 }
 
 // checkExecutablePath checks if plonk executable is accessible

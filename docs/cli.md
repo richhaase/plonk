@@ -137,26 +137,6 @@ plonk apply --packages                # Apply packages only
 plonk apply --dotfiles                # Apply dotfiles only
 ```
 
-### plonk search
-
-Search for packages across supported managers.
-
-```bash
-plonk search ripgrep                  # Search all managers
-plonk search brew:ripgrep             # Search specific manager (if supported)
-```
-
-**Note**: Search is supported by brew, npm, cargo, conda, gem, and pixi. Other managers (pnpm, pipx, uv, go) return no results.
-
-### plonk info
-
-Show detailed package information.
-
-```bash
-plonk info ripgrep
-plonk info brew:ripgrep
-```
-
 ### plonk doctor
 
 Check system health and configuration.

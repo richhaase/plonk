@@ -47,13 +47,6 @@ func (f *fakePM) IsInstalled(ctx context.Context, name string) (bool, error) {
 func (f *fakePM) InstalledVersion(ctx context.Context, name string) (string, error) {
 	return f.versions[name], nil
 }
-func (f *fakePM) Info(ctx context.Context, name string) (*PackageInfo, error) {
-	return &PackageInfo{Name: name, Manager: "brew", Installed: f.installed[name], Version: f.versions[name]}, nil
-}
-func (f *fakePM) Search(ctx context.Context, query string) ([]string, error) { return []string{}, nil }
-func (f *fakePM) CheckHealth(ctx context.Context) (*HealthCheck, error) {
-	return &HealthCheck{Name: "fake", Category: "pm", Status: "pass"}, nil
-}
 func (f *fakePM) Upgrade(ctx context.Context, packages []string) error {
 	for _, p := range packages {
 		if f.installed[p] {

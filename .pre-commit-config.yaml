@@ -1,17 +1,17 @@
 repos:
-  # Local hooks using our justfile commands
+  # Local hooks for Go
   - repo: local
     hooks:
       - id: go-fmt-import
         name: Format Go code
-        entry: just format
+        entry: sh -c 'go run golang.org/x/tools/cmd/goimports -w .'
         language: system
         files: \.go$
         pass_filenames: false
 
       - id: go-lint
         name: Lint Go code
-        entry: just lint
+        entry: sh -c 'go run github.com/golangci/golangci-lint/cmd/golangci-lint run --timeout=10m'
         language: system
         files: \.go$
         pass_filenames: false

@@ -36,14 +36,8 @@ func (f *fakeManager) IsInstalled(ctx context.Context, name string) (bool, error
 func (f *fakeManager) InstalledVersion(ctx context.Context, name string) (string, error) {
 	return "", nil
 }
-func (f *fakeManager) Info(ctx context.Context, name string) (*pkgs.PackageInfo, error) {
-	return &pkgs.PackageInfo{Name: name, Manager: "fake", Installed: false}, nil
-}
 func (f *fakeManager) Search(ctx context.Context, query string) ([]string, error) {
 	return []string{}, nil
-}
-func (f *fakeManager) CheckHealth(ctx context.Context) (*pkgs.HealthCheck, error) {
-	return &pkgs.HealthCheck{Name: "fake", Category: "package-manager", Status: "PASS"}, nil
 }
 func (f *fakeManager) SelfInstall(ctx context.Context) error                { return nil }
 func (f *fakeManager) Upgrade(ctx context.Context, packages []string) error { return nil }

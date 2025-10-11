@@ -20,14 +20,8 @@ func (e *errUpgradeMgr) IsInstalled(ctx context.Context, name string) (bool, err
 func (e *errUpgradeMgr) InstalledVersion(ctx context.Context, name string) (string, error) {
 	return "1.0.0", nil
 }
-func (e *errUpgradeMgr) Info(ctx context.Context, name string) (*packages.PackageInfo, error) {
-	return &packages.PackageInfo{Name: name, Installed: true, Version: "1.0.0"}, nil
-}
 func (e *errUpgradeMgr) Search(ctx context.Context, q string) ([]string, error) { return nil, nil }
-func (e *errUpgradeMgr) CheckHealth(ctx context.Context) (*packages.HealthCheck, error) {
-	return &packages.HealthCheck{Name: "x"}, nil
-}
-func (e *errUpgradeMgr) SelfInstall(ctx context.Context) error { return nil }
+func (e *errUpgradeMgr) SelfInstall(ctx context.Context) error                  { return nil }
 func (e *errUpgradeMgr) Upgrade(ctx context.Context, pkgs []string) error {
 	return fmt.Errorf("upgrade failed")
 }

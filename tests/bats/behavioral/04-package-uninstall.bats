@@ -119,54 +119,6 @@ setup() {
   refute_output --partial "colorize"
 }
 
-# Go uninstall tests
-@test "uninstall managed go package" {
-  require_safe_package "go:github.com/rakyll/hey"
-
-  run which go
-  if [[ $status -ne 0 ]]; then
-    skip "go not available"
-  fi
-
-  # Install first
-  run plonk install go:github.com/rakyll/hey
-  assert_success
-  track_artifact "package" "go:github.com/rakyll/hey"
-
-  # Verify it's installed by go - check binary exists
-  # Go installs to GOBIN if set, otherwise GOPATH/bin
-  local gobin="$(go env GOBIN)"
-  if [[ -z "$gobin" ]]; then
-    gobin="$(go env GOPATH)/bin"
-  fi
-  run test -f "$gobin/hey"
-  assert_success
-
-  # Then uninstall
-  run plonk uninstall go:github.com/rakyll/hey
-  assert_success
-  assert_output --partial "removed"
-
-  # Verify actually uninstalled by go - binary should be gone
-  # Go installs to GOBIN if set, otherwise GOPATH/bin
-  local gobin="$(go env GOBIN)"
-  if [[ -z "$gobin" ]]; then
-    gobin="$(go env GOPATH)/bin"
-  fi
-  run test -f "$gobin/hey"
-  assert_failure
-
-  # Verify gone from lock file
-  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
-    run cat "$PLONK_DIR/plonk.lock"
-    refute_output --partial "hey"
-  fi
-
-  # Verify gone from status
-  run plonk status
-  refute_output --partial "hey"
-}
-
 # Cargo uninstall tests
 @test "uninstall managed cargo package" {
   require_safe_package "cargo:ripgrep"
@@ -245,46 +197,6 @@ setup() {
   # Verify gone from status
   run plonk status
   refute_output --partial "rich-cli"
-}
-
-# Pixi uninstall tests
-@test "uninstall managed pixi package" {
-  require_safe_package "pixi:hello"
-
-  run which pixi
-  if [[ $status -ne 0 ]]; then
-    skip "pixi not available"
-  fi
-
-  # Install first
-  run plonk install pixi:hello
-  assert_success
-  track_artifact "package" "pixi:hello"
-
-  # Verify it's installed by pixi
-  run pixi global list
-  assert_success
-  assert_output --partial "hello"
-
-  # Then uninstall
-  run plonk uninstall pixi:hello
-  assert_success
-  assert_output --partial "removed"
-
-  # Verify actually uninstalled by pixi
-  run pixi global list
-  assert_success
-  refute_output --partial "hello"
-
-  # Verify gone from lock file
-  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
-    run cat "$PLONK_DIR/plonk.lock"
-    refute_output --partial "hello"
-  fi
-
-  # Verify gone from status
-  run plonk status
-  refute_output --partial "hello"
 }
 
 # General uninstall behavior tests

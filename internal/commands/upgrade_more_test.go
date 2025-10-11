@@ -32,16 +32,10 @@ func (f *fakeUpgradeMgr) InstalledVersion(ctx context.Context, name string) (str
 	}
 	return f.ver, nil
 }
-func (f *fakeUpgradeMgr) Info(ctx context.Context, name string) (*packages.PackageInfo, error) {
-	return &packages.PackageInfo{Name: name, Manager: "brew", Installed: true, Version: f.ver}, nil
-}
 func (f *fakeUpgradeMgr) Search(ctx context.Context, q string) ([]string, error) { return nil, nil }
-func (f *fakeUpgradeMgr) CheckHealth(ctx context.Context) (*packages.HealthCheck, error) {
-	return &packages.HealthCheck{Name: "brew"}, nil
-}
-func (f *fakeUpgradeMgr) SelfInstall(ctx context.Context) error            { return nil }
-func (f *fakeUpgradeMgr) Upgrade(ctx context.Context, pkgs []string) error { f.ver = "2.0"; return nil }
-func (f *fakeUpgradeMgr) Dependencies() []string                           { return nil }
+func (f *fakeUpgradeMgr) SelfInstall(ctx context.Context) error                  { return nil }
+func (f *fakeUpgradeMgr) Upgrade(ctx context.Context, pkgs []string) error       { f.ver = "2.0"; return nil }
+func (f *fakeUpgradeMgr) Dependencies() []string                                 { return nil }
 
 func TestUpgrade_UpdatesLockMetadata(t *testing.T) {
 	out, err := RunCLI(t, []string{"upgrade"}, func(env CLITestEnv) {
@@ -68,10 +62,6 @@ func TestUpgrade_UpdatesLockMetadata(t *testing.T) {
 	}
 	if len(lk.Resources) != 1 {
 		t.Fatalf("expected 1 resource, got %d", len(lk.Resources))
-	}
-	md := lk.Resources[0].Metadata
-	if md["version"] != "2.0" {
-		t.Fatalf("expected version 2.0, got %#v", md["version"])
 	}
 	if lk.Resources[0].InstalledAt == "" {
 		t.Fatalf("expected InstalledAt to be set")
@@ -131,14 +121,8 @@ func (f *fakeUnavailableUpgradeMgr) IsInstalled(ctx context.Context, name string
 func (f *fakeUnavailableUpgradeMgr) InstalledVersion(ctx context.Context, name string) (string, error) {
 	return "", nil
 }
-func (f *fakeUnavailableUpgradeMgr) Info(ctx context.Context, name string) (*packages.PackageInfo, error) {
-	return &packages.PackageInfo{Name: name, Manager: "pipx"}, nil
-}
 func (f *fakeUnavailableUpgradeMgr) Search(ctx context.Context, q string) ([]string, error) {
 	return nil, nil
-}
-func (f *fakeUnavailableUpgradeMgr) CheckHealth(ctx context.Context) (*packages.HealthCheck, error) {
-	return &packages.HealthCheck{Name: "pipx"}, nil
 }
 func (f *fakeUnavailableUpgradeMgr) SelfInstall(ctx context.Context) error            { return nil }
 func (f *fakeUnavailableUpgradeMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }

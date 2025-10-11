@@ -260,52 +260,19 @@ func DetectRequiredManagers(lockPath string) ([]string, error) {
 	return managers, nil
 }
 
-// installDetectedManagers installs package managers in dependency order
+// installDetectedManagers installs package managers in the order provided
 func installDetectedManagers(ctx context.Context, managers []string, cfg Config) error {
 	if len(managers) == 0 {
 		return nil
 	}
 
-	// Get package manager registry
 	registry := packages.NewManagerRegistry()
-	resolver := packages.NewDependencyResolver(registry)
 
-	// Resolve all dependencies (including transitive)
-	allManagers, err := resolver.GetAllDependencies(managers)
-	if err != nil {
-		return fmt.Errorf("failed to resolve package manager dependencies: %w", err)
-	}
-
-	// Get installation order via topological sort
-	orderedManagers, err := resolver.ResolveDependencyOrder(allManagers)
-	if err != nil {
-		return fmt.Errorf("failed to resolve dependency order: %w", err)
-	}
-
-	output.StageUpdate(fmt.Sprintf("Installing package managers in dependency order (%d total)...", len(orderedManagers)))
-
-	// Show dependency order to user
-	if len(orderedManagers) > len(managers) {
-		output.Printf("Detected additional dependencies:\n")
-		for _, mgr := range orderedManagers {
-			isOriginal := false
-			for _, orig := range managers {
-				if mgr == orig {
-					isOriginal = true
-					break
-				}
-			}
-			if isOriginal {
-				output.Printf("- %s (required)\n", getManagerDescription(mgr))
-			} else {
-				output.Printf("- %s (dependency)\n", getManagerDescription(mgr))
-			}
-		}
-	}
+	output.StageUpdate(fmt.Sprintf("Checking package managers (%d total)...", len(managers)))
 
 	// Find which managers are missing
 	var missingManagers []string
-	for _, mgr := range orderedManagers {
+	for _, mgr := range managers {
 		packageManager, err := registry.GetManager(mgr)
 		if err != nil {
 			output.Printf("Warning: Unknown package manager '%s', skipping\n", mgr)

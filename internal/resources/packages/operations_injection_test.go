@@ -24,15 +24,6 @@ func (m *simpleFakeManager) IsInstalled(ctx context.Context, name string) (bool,
 func (m *simpleFakeManager) InstalledVersion(ctx context.Context, name string) (string, error) {
 	return "1.0.0", nil
 }
-func (m *simpleFakeManager) Info(ctx context.Context, name string) (*PackageInfo, error) {
-	return &PackageInfo{Name: name, Manager: "brew", Installed: true, Version: "1.0.0"}, nil
-}
-func (m *simpleFakeManager) Search(ctx context.Context, query string) ([]string, error) {
-	return nil, nil
-}
-func (m *simpleFakeManager) CheckHealth(ctx context.Context) (*HealthCheck, error) {
-	return &HealthCheck{Name: "brew"}, nil
-}
 func (m *simpleFakeManager) Upgrade(ctx context.Context, pkgs []string) error { return nil }
 func (m *simpleFakeManager) Dependencies() []string                           { return nil }
 

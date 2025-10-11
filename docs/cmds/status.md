@@ -51,7 +51,7 @@ Using both `--packages` and `--dotfiles` together has the same effect as using n
 
 **Packages Table**:
 - NAME: Package name
-- MANAGER: Package manager (brew, npm, pnpm, cargo, pipx, conda, gem, go, uv, pixi)
+- MANAGER: Package manager (brew, npm, pnpm, cargo, gem, conda, uv, pipx)
 - STATUS: Current state with icon
 
 **Dotfiles Table** (managed/missing):

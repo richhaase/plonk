@@ -22,15 +22,9 @@ func (f *fakeInstallMgr) IsInstalled(ctx context.Context, name string) (bool, er
 func (f *fakeInstallMgr) InstalledVersion(ctx context.Context, name string) (string, error) {
 	return "", nil
 }
-func (f *fakeInstallMgr) Info(ctx context.Context, name string) (*packages.PackageInfo, error) {
-	return &packages.PackageInfo{Name: name, Manager: "fake"}, nil
-}
 func (f *fakeInstallMgr) Search(ctx context.Context, q string) ([]string, error) { return nil, nil }
-func (f *fakeInstallMgr) CheckHealth(ctx context.Context) (*packages.HealthCheck, error) {
-	return &packages.HealthCheck{Name: "fake"}, nil
-}
-func (f *fakeInstallMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
-func (f *fakeInstallMgr) Dependencies() []string                           { return nil }
+func (f *fakeInstallMgr) Upgrade(ctx context.Context, pkgs []string) error       { return nil }
+func (f *fakeInstallMgr) Dependencies() []string                                 { return nil }
 
 func TestSetupFromClonedRepo_NoManagers_NoApply(t *testing.T) {
 	dir := t.TempDir()

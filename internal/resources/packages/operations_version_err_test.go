@@ -19,13 +19,6 @@ func (v *verErrMgr) IsInstalled(ctx context.Context, name string) (bool, error) 
 func (v *verErrMgr) InstalledVersion(ctx context.Context, name string) (string, error) {
 	return "", errors.New("oops")
 }
-func (v *verErrMgr) Info(ctx context.Context, name string) (*PackageInfo, error) {
-	return &PackageInfo{Name: name}, nil
-}
-func (v *verErrMgr) Search(ctx context.Context, q string) ([]string, error) { return nil, nil }
-func (v *verErrMgr) CheckHealth(ctx context.Context) (*HealthCheck, error) {
-	return &HealthCheck{Name: "x"}, nil
-}
 func (v *verErrMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
 func (v *verErrMgr) Dependencies() []string                           { return nil }
 

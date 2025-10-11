@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+
+	"github.com/richhaase/plonk/internal/config"
 )
 
 // DefaultManager is the fallback manager when none is configured
@@ -26,13 +28,17 @@ type managerEntry struct {
 
 // ManagerRegistry manages package manager creation and availability checking
 type ManagerRegistry struct {
-	mu       sync.RWMutex
-	managers map[string]*managerEntry
+	mu         sync.RWMutex
+	managers   map[string]*managerEntry
+	v2Managers map[string]config.ManagerConfig
+	enableV2   bool
 }
 
 // defaultRegistry is the global registry instance
 var defaultRegistry = &ManagerRegistry{
-	managers: make(map[string]*managerEntry),
+	managers:   make(map[string]*managerEntry),
+	v2Managers: make(map[string]config.ManagerConfig),
+	enableV2:   true, // Feature flag for v2
 }
 
 // RegisterManager registers a package manager with the global registry.
@@ -78,24 +84,56 @@ func NewManagerRegistry() *ManagerRegistry {
 	return defaultRegistry
 }
 
+// LoadV2Configs loads v2 manager configs from Config
+func (r *ManagerRegistry) LoadV2Configs(cfg *config.Config) {
+	if cfg == nil || cfg.Managers == nil {
+		return
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for name, managerCfg := range cfg.Managers {
+		r.v2Managers[name] = managerCfg
+	}
+}
+
+// EnableV2 enables v2 manager configs
+func (r *ManagerRegistry) EnableV2(enabled bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.enableV2 = enabled
+}
+
 // GetManager returns a package manager instance by name using the default executor
 func (r *ManagerRegistry) GetManager(name string) (PackageManager, error) {
 	return r.GetManagerWithExecutor(name, nil)
 }
 
 // GetManagerWithExecutor returns a package manager instance with an injected executor.
-// If exec is nil, uses the default executor. Prefers V2 factories over V1.
+// If exec is nil, uses the default executor. Checks v2 configs first, then factories.
 func (r *ManagerRegistry) GetManagerWithExecutor(name string, exec CommandExecutor) (PackageManager, error) {
+	if exec == nil {
+		exec = defaultExecutor
+	}
+
+	// Check v2 config first (if enabled)
+	r.mu.RLock()
+	v2Config, hasV2 := r.v2Managers[name]
+	enableV2 := r.enableV2
+	r.mu.RUnlock()
+
+	if enableV2 && hasV2 {
+		return NewGenericManager(v2Config, exec), nil
+	}
+
+	// Fall back to Go factory
 	r.mu.RLock()
 	entry, exists := r.managers[name]
 	r.mu.RUnlock()
 
 	if !exists || entry == nil {
 		return nil, fmt.Errorf("unsupported package manager: %s", name)
-	}
-
-	if exec == nil {
-		exec = defaultExecutor
 	}
 
 	// Prefer V2 factory if present
@@ -116,8 +154,16 @@ func (r *ManagerRegistry) GetAllManagerNames() []string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	names := make([]string, 0, len(r.managers))
+	nameSet := make(map[string]bool)
+	for name := range r.v2Managers {
+		nameSet[name] = true
+	}
 	for name := range r.managers {
+		nameSet[name] = true
+	}
+
+	names := make([]string, 0, len(nameSet))
+	for name := range nameSet {
 		names = append(names, name)
 	}
 	sort.Strings(names)
@@ -129,6 +175,9 @@ func (r *ManagerRegistry) HasManager(name string) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
+	if _, exists := r.v2Managers[name]; exists {
+		return true
+	}
 	_, exists := r.managers[name]
 	return exists
 }

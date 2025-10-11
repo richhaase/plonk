@@ -163,11 +163,9 @@ func installSinglePackage(ctx context.Context, lockService lock.LockService, pac
 		lockPackageName = ExtractBinaryNameFromPath(packageName)
 	}
 
-	// Get package version after installation
-	version, err := pkgManager.InstalledVersion(ctx, lockPackageName)
-	if err == nil && version != "" {
-		result.Version = version
-	}
+	// Note: InstalledVersion() method has been removed from all managers
+	// Version tracking is no longer supported
+	version := ""
 
 	// Create metadata for the package
 	metadata := map[string]interface{}{

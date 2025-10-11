@@ -124,42 +124,6 @@ setup() {
   assert_output --partial "colorize"
 }
 
-# Go tests
-@test "install go package" {
-  require_safe_package "go:github.com/rakyll/hey"
-
-  # Check if go is available
-  run which go
-  if [[ $status -ne 0 ]]; then
-    skip "go not available"
-  fi
-
-  run plonk install go:github.com/rakyll/hey
-  assert_success
-  assert_output --partial "hey"
-  assert_output --partial "added"
-
-  track_artifact "package" "go:github.com/rakyll/hey"
-
-  # Verify it's actually installed by go - check binary exists
-  # Go installs to GOBIN if set, otherwise GOPATH/bin
-  local gobin="$(go env GOBIN)"
-  if [[ -z "$gobin" ]]; then
-    gobin="$(go env GOPATH)/bin"
-  fi
-  run test -f "$gobin/hey"
-  assert_success
-
-  # Verify it's in lock file
-  run cat "$PLONK_DIR/plonk.lock"
-  assert_success
-  assert_output --partial "hey"
-
-  # Verify in status
-  run plonk status
-  assert_output --partial "hey"
-}
-
 # Cargo tests
 @test "install cargo package" {
   require_safe_package "cargo:ripgrep"
@@ -222,36 +186,4 @@ setup() {
   # Verify in status
   run plonk status
   assert_output --partial "cowsay"
-}
-
-# Pixi tests
-@test "install pixi package" {
-  require_safe_package "pixi:hello"
-
-  # Check if pixi is available
-  run which pixi
-  if [[ $status -ne 0 ]]; then
-    skip "pixi not available"
-  fi
-
-  run plonk install pixi:hello
-  assert_success
-  assert_output --partial "hello"
-  assert_output --partial "added"
-
-  track_artifact "package" "pixi:hello"
-
-  # Verify it's actually installed by pixi
-  run pixi global list
-  assert_success
-  assert_output --partial "hello"
-
-  # Verify it's in lock file
-  run cat "$PLONK_DIR/plonk.lock"
-  assert_success
-  assert_output --partial "hello"
-
-  # Verify in status
-  run plonk status
-  assert_output --partial "hello"
 }

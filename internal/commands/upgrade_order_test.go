@@ -37,14 +37,8 @@ func (f *fixedVersionManager) IsInstalled(ctx context.Context, name string) (boo
 func (f *fixedVersionManager) InstalledVersion(ctx context.Context, name string) (string, error) {
 	return "1.0.0", nil
 }
-func (f *fixedVersionManager) Info(ctx context.Context, name string) (*packages.PackageInfo, error) {
-	return &packages.PackageInfo{Name: name, Manager: "x", Installed: true, Version: "1.0.0"}, nil
-}
 func (f *fixedVersionManager) Search(ctx context.Context, q string) ([]string, error) {
 	return nil, nil
-}
-func (f *fixedVersionManager) CheckHealth(ctx context.Context) (*packages.HealthCheck, error) {
-	return &packages.HealthCheck{Name: "x"}, nil
 }
 func (f *fixedVersionManager) SelfInstall(ctx context.Context) error            { return nil }
 func (f *fixedVersionManager) Upgrade(ctx context.Context, pkgs []string) error { return nil }
