@@ -66,7 +66,8 @@ plonk config edit
 
   - `default_manager` - Default package manager (brew, npm, pnpm, cargo, gem, conda, uv, pipx)
   - `package_timeout` - Timeout for package operations (seconds)
-  - `operation_timeout` - Timeout for search operations (seconds)
+  - `operation_timeout` - Timeout for other operations (seconds)
+  - `managers` - Per-manager configuration overrides (see [Configuration Guide](../configuration.md))
 
 - **Dotfile Management:**
   - `dotfile_timeout` - Timeout for dotfile operations (seconds)

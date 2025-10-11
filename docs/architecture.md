@@ -62,18 +62,16 @@ The orchestrator coordinates complex operations across multiple resource types:
 Resources are organized by type:
 
 #### Packages (`internal/resources/packages/`)
-- Package manager interfaces and implementations
-- **ManagerRegistry** - Dynamic package manager discovery using V2 factory pattern
-- **RegisterManagerV2** - All managers registered with executor injection for testability
-- Dependency resolution system with topological sorting for correct installation order
+- Package manager interfaces and implementations defined in YAML configuration files
+- **ManagerRegistry** - Dynamic package manager discovery and loading from YAML definitions
 - Reconciliation and apply logic for package state using `manager:name` as unique keys
 - Package specification parsing (`spec.go`)
 - Command execution abstraction (`executor.go`) with injected executors
-- Operations for install, uninstall, search, info, upgrade
+- Operations for install, uninstall, upgrade
 - Health checking capabilities with installation instructions
 - Parallel manager operations using errgroup for performance
 
-Supported package managers:
+Supported package managers (8 total):
 - Homebrew (brew) - macOS and Linux packages
 - NPM (npm) - Node.js global packages
 - PNPM (pnpm) - Fast, disk-efficient Node.js packages
@@ -81,9 +79,7 @@ Supported package managers:
 - Pipx (pipx) - Python applications in isolated environments
 - Conda (conda) - Scientific computing and data science packages
 - Gem (gem) - Ruby packages
-- Go (go install) - Go modules and tools
 - UV (uv) - Python tool manager
-- Pixi (pixi) - Conda-forge package manager
 
 
 #### Dotfiles (`internal/resources/dotfiles/`)
@@ -124,7 +120,7 @@ The lock file uses a versioned format for future compatibility.
 
 - Clone command implementation
 - Git repository cloning
-- Dependency-aware installation that resolves package manager dependencies and installs in correct order
+- Package and dotfile deployment from cloned repositories
 - Tool installation
 
 #### Output Formatting (`internal/output/`)
@@ -146,19 +142,16 @@ Plonk works without any configuration files by using sensible defaults:
 - Default config location: `~/.config/plonk`
 - Automatic dotfile discovery with smart filtering
 
-### 2. Package Manager Abstraction
+### 2. Package Manager Configuration
 
-Each package manager implements a common interface following the Interface Segregation Principle (ISP). This allows:
+Package managers are defined using YAML configuration files instead of code-based implementations. This allows:
 - Consistent behavior across different tools
-- Easy addition of new package managers
-- Optional capability detection via type assertions (search, info, upgrade, health checks)
-- Managers implement only the capabilities they support
+- Easy addition of new package managers without code changes
+- Declarative configuration of manager capabilities (install, uninstall, list, upgrade, health)
 - Self-health checking and diagnostics
 - Package upgrade management
 
-**Note**: Package managers must be installed manually or via other supported package managers before use. The `plonk doctor` command provides installation instructions for missing managers. All managers are registered using `RegisterManagerV2` with executor injection for testability.
-
-See [Capability Usage Examples](#capability-usage-examples) for implementation patterns.
+**Note**: Package managers must be installed manually or via other supported package managers before use. The `plonk doctor` command provides installation instructions for missing managers.
 
 ### 3. State-Based Management
 
@@ -172,9 +165,9 @@ Instead of tracking operations (install X, remove Y), Plonk tracks desired state
 Plonk uses two distinct storage mechanisms:
 
 **Package State** (`plonk.lock`):
-- YAML file containing detailed package information
+- YAML file containing package information
 - Updated atomically with each install/uninstall operation
-- Tracks name, version, and installation timestamp
+- Tracks manager, name, and installation timestamp (no per-package version tracking)
 - Example structure (v2 schema):
   ```yaml
   version: 2
@@ -184,14 +177,12 @@ Plonk uses two distinct storage mechanisms:
       metadata:
         manager: brew
         name: ripgrep
-        version: 14.1.1
       installed_at: "2025-07-27T11:01:03-06:00"
     - type: package
       id: npm:@google/gemini-cli
       metadata:
         manager: npm
         name: "@google/gemini-cli"
-        version: 0.1.14
       installed_at: "2025-07-28T15:11:08-06:00"
   ```
 
@@ -230,23 +221,32 @@ All commands support multiple output formats (table, JSON, YAML) to support:
 
 ### Adding a New Package Manager
 
-1. Implement the `PackageManager` interface in `internal/resources/packages/`
-2. Implement required operations (Install, Uninstall, ListInstalled, etc.)
-3. Implement optional capabilities through interfaces (search, info, upgrade, health)
-4. Implement health checking via CheckHealth() with clear installation instructions
-5. Create constructor accepting CommandExecutor: `NewXxxManagerWithExecutor(exec CommandExecutor)`
-6. Register using `RegisterManagerV2` with executor injection factory pattern:
-   ```go
-   func init() {
-       RegisterManagerV2("managername", func(exec CommandExecutor) PackageManager {
-           return NewXxxManagerWithExecutor(exec)
-       })
-   }
-   ```
-7. Add comprehensive tests using mock executors
-8. Update documentation
+Package managers are now defined using YAML configuration files. To add a new package manager:
 
-**Note**: Package managers cannot self-install. Users must install them manually or via another supported manager. Provide installation instructions in CheckHealth().
+1. Create a YAML configuration file in `internal/resources/packages/managers/` (e.g., `mynewmgr.yaml`)
+2. Define the manager's capabilities and command templates:
+   ```yaml
+   name: mynewmgr
+   description: My New Package Manager
+   check_installed:
+     command: ["mynewmgr", "--version"]
+   install:
+     command: ["mynewmgr", "install", "{{.Package}}"]
+   uninstall:
+     command: ["mynewmgr", "uninstall", "{{.Package}}"]
+   list:
+     command: ["mynewmgr", "list", "--json"]
+     parser: json  # or regex, line, etc.
+   upgrade:
+     command: ["mynewmgr", "upgrade", "{{.Package}}"]
+   health_check:
+     install_instructions: "Install using: curl -fsSL https://mynewmgr.io/install.sh | sh"
+   ```
+3. The manager will be automatically discovered and registered by the YAML-based registry
+4. Add tests for the manager configuration
+5. Update documentation
+
+**Note**: Package managers cannot self-install. Users must install them manually or via another supported manager. Provide installation instructions in the YAML configuration.
 
 ### Adding a New Resource Type
 
@@ -305,41 +305,11 @@ The architecture is designed to support:
 - Team/organization configurations
 - Service management (Docker, systemd, etc.)
 - Configuration templating
-### Capability Usage Examples
 
-Optional capabilities are exposed via small interfaces. Callers must perform a type assertion before invoking optional methods, or use the helper predicates for readability.
+## Removed Features in V2
 
-Type assertions:
-```
-// Info (PackageInfoProvider)
-if infoProvider, ok := mgr.(packages.PackageInfoProvider); ok {
-    info, err := infoProvider.Info(ctx, name)
-    _ = info; _ = err
-}
+The following features were removed in the v2 architecture to simplify the system:
 
-// Search (PackageSearcher)
-if searcher, ok := mgr.(packages.PackageSearcher); ok {
-    results, err := searcher.Search(ctx, query)
-    _ = results; _ = err
-}
-
-// Upgrade (PackageUpgrader)
-if upgrader, ok := mgr.(packages.PackageUpgrader); ok {
-    _ = upgrader.Upgrade(ctx, []string{name})
-}
-
-// Health (PackageHealthChecker)
-if hc, ok := mgr.(packages.PackageHealthChecker); ok {
-    _, _ = hc.CheckHealth(ctx)
-}
-```
-
-Helper predicates:
-```
-if packages.SupportsInfo(mgr) { /* safe to assert PackageInfoProvider */ }
-if packages.SupportsSearch(mgr) { /* safe to assert PackageSearcher */ }
-if packages.SupportsUpgrade(mgr) { /* safe to assert PackageUpgrader */ }
-if packages.SupportsHealthCheck(mgr) { /* safe to assert PackageHealthChecker */ }
-```
-
-These examples demonstrate the intent of the capability model: managers may omit optional features; callers should not assume availability without checking.
+- **Search and Info commands**: Removed to reduce complexity. Users can search packages using their package manager's native tools.
+- **Dependency resolution**: Package managers handle their own dependencies; Plonk no longer performs topological sorting or installation ordering.
+- **Per-package version tracking**: Lock file only tracks that a package is managed, not its specific version.

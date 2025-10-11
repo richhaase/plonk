@@ -20,8 +20,6 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 #### Package Management Commands
 - `install.go` - Install and track packages
 - `uninstall.go` - Remove packages from system and tracking
-- `search.go` - Search for packages across managers
-- `info.go` - Display package information
 
 #### Dotfile Management Commands
 - `add.go` - Add dotfiles to plonk management
@@ -42,6 +40,8 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 ### Configuration (`internal/config/`)
 - `config.go` - Configuration loading, defaults, and management
 - `compat.go` - Configuration compatibility handling
+- `managers.go` - Package manager configuration types
+- `managers_defaults.go` - Default package manager configurations
 
 ### Lock File Management (`internal/lock/`)
 - `interfaces.go` - Lock file interfaces
@@ -72,7 +72,7 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - `registry.go` - Package manager registry
 - `helpers.go` - Package utilities
 
-##### Package Manager Implementations
+##### Package Manager Implementations (YAML-Configured)
 - `homebrew.go` - Homebrew package manager
 - `npm.go` - NPM package manager
 - `pnpm.go` - PNPM package manager
@@ -80,9 +80,8 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - `pipx.go` - Pipx package manager
 - `conda.go` - Conda package manager
 - `gem.go` - Gem package manager
-- `goinstall.go` - Go install package manager
 - `uv.go` - UV package manager
-- `pixi.go` - Pixi package manager
+- `generic.go` - GenericManager for YAML-configured package managers
 
 
 
@@ -120,10 +119,8 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - `config_formatter.go` - Configuration output formatting
 - `doctor_formatter.go` - Doctor command output formatting
 - `dotfile_list_formatter.go` - Dotfile list output formatting
-- `info_formatter.go` - Info command output formatting
 - `package_formatter.go` - Package output formatting
 - `rm_formatter.go` - Remove command output formatting
-- `search_formatter.go` - Search command output formatting
 - `status_formatter.go` - Status command output formatting
 - `progress.go` - Progress display utilities
 - `progress_writer.go` - Progress writer implementation
@@ -138,7 +135,6 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 ### clone command
 - Entry: `internal/commands/clone.go`
 - Logic: `internal/clone/setup.go`
-- Dependency resolution: `internal/resources/packages/dependencies.go`
 - Git operations: `internal/clone/git.go`
 - Uses: `internal/diagnostics/health.go` for health checks; package managers must be pre-installed, `plonk doctor` provides installation instructions
 
@@ -169,11 +165,10 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - Entry: `internal/commands/config_show.go`, `config_edit.go`
 - Config management: `internal/config/config.go`
 
-### Package management commands (install/uninstall/search/info)
-- Entries: `internal/commands/install.go`, `uninstall.go`, `search.go`, `info.go`
+### Package management commands (install/uninstall)
+- Entries: `internal/commands/install.go`, `uninstall.go`
 - Operations: `internal/resources/packages/operations.go`
 - Manager registry: `internal/resources/packages/registry.go`
-- Dependency resolution: `internal/resources/packages/dependencies.go`
 - Lock file updates: `internal/lock/yaml_lock.go`
 
 ### Dotfile management commands (add/rm)
@@ -191,9 +186,8 @@ Location: `internal/resources/resource.go`
 
 ### PackageManager Interface
 Location: `internal/resources/packages/interfaces.go`
-- Implemented by: All package managers
-- Defines: Install, Uninstall, List, Search, Info operations
-- Dependencies method: Returns package manager dependencies for installation order
+- Implemented by: 8 package managers (configured via YAML)
+- Defines: Install, Uninstall, List operations
 
 ### Lock Interface
 Location: `internal/lock/interfaces.go`

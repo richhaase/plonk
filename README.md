@@ -25,11 +25,12 @@ After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber
 - Just works
 
 **Key innovations:**
-- **Package Manager Manager™**: One interface for 10 package managers (brew, npm, pnpm, cargo, pipx, conda, gem, go, uv, pixi)
+- **Package Manager Manager™**: One interface for 8 package managers (brew, npm, pnpm, cargo, pipx, conda, gem, uv)
 - **Filesystem as truth**: Your dotfiles directory IS the state - no sync issues
 - **Copy, don't symlink**: Cleaner, simpler, and more compatible
 - **State-based**: Track what should exist, not what commands were run
 - **Drift detection**: Know when deployed dotfiles have been modified (`plonk diff`)
+- **Extensible**: Add custom package managers via YAML config in plonk.yaml
 - **AI-friendly**: Built with and for AI coding assistants
 
 **For developers who:**
@@ -107,7 +108,7 @@ plonk add ~/.zshrc                       # Start tracking your dotfiles
 
 The `clone` command:
 1. Clones your dotfiles repository
-2. Intelligently resolves package manager dependencies and installs them in correct order
+2. Installs required package managers
 3. Runs `plonk apply` to install all packages and deploy dotfiles
 4. Gets your machine ready for development in minutes
 
@@ -143,7 +144,7 @@ plonk config edit                     # Edit configuration
 
 ## Supported Package Managers
 
-Plonk supports 10 package managers across multiple language ecosystems:
+Plonk supports 8 package managers across multiple language ecosystems:
 
 ### Package Managers
 - **Homebrew** (brew) - macOS/Linux packages and system tools
@@ -153,9 +154,7 @@ Plonk supports 10 package managers across multiple language ecosystems:
 - **Pipx** (pipx) - Python applications in isolated environments
 - **Conda** (conda) - Scientific computing and data science packages
 - **Gem** (gem) - Ruby packages
-- **Go** (go) - Go packages via `go install`
 - **UV** (uv) - Fast Python tool manager with isolated environments
-- **Pixi** (pixi) - Cross-platform package manager using conda-forge ecosystem
 
 Package manager prefixes and self-installation:
 ```bash
@@ -164,8 +163,8 @@ plonk install pnpm cargo uv pipx     # Installs the managers themselves
 
 # Install packages via specific managers
 plonk install brew:wget npm:prettier pnpm:typescript cargo:ripgrep
-plonk install pipx:black conda:numpy gem:rubocop go:golangci-lint
-plonk install uv:ruff pixi:jupyter
+plonk install pipx:black conda:numpy gem:rubocop
+plonk install uv:ruff
 ```
 
 ## Configuration
@@ -229,7 +228,7 @@ just install
 - **[Clone](docs/cmds/clone.md)** - Clone and set up existing dotfiles
 - **[Apply](docs/cmds/apply.md)** - Sync your system to desired state
 - **[Status](docs/cmds/status.md)** - View managed packages and dotfiles
-- **[Package Management](docs/cmds/package-management.md)** - install, uninstall, search, info
+- **[Package Management](docs/cmds/package-management.md)** - install, uninstall, upgrade
 - **[Upgrade](docs/cmds/upgrade.md)** - Upgrade packages to latest versions
 - **[Dotfile Management](docs/cmds/dotfile-management.md)** - add, rm
 - **[Config](docs/cmds/config.md)** - Manage plonk configuration
@@ -255,4 +254,3 @@ Contributions are welcome! Please:
 4. Submit a pull request
 
 See the codebase for examples and patterns.
-test change

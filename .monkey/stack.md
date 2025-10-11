@@ -32,7 +32,7 @@
 
 ## External services
 
-- **Package Managers:** Homebrew, npm, pnpm, cargo, gem, pip, pipx, conda, composer, dotnet, go install
+- **Package Managers:** Homebrew, npm, pnpm, cargo, gem, conda, uv, pipx (8 total)
 - **Version Control:** Git operations for cloning and repository management
 - **File System:** Dotfile synchronization and atomic file operations
 - **Lock Files:** YAML-based state tracking for installed packages and dotfiles

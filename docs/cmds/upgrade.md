@@ -18,11 +18,9 @@ plonk upgrade package1 package2 ...
 
 ## Description
 
-The `plonk upgrade` command upgrades packages across supported package managers and updates the plonk.lock file to reflect new versions.
+The `plonk upgrade` command upgrades packages across supported package managers.
 
-The command operates in two phases:
-1. **Upgrade**: Execute upgrades using each package manager's `Upgrade()` method
-2. **Reconciliation**: Update plonk.lock with new package versions
+**Note**: This command does NOT update plonk.lock. The lock file in v2 no longer tracks package versions.
 
 ## Examples
 
@@ -75,16 +73,7 @@ Each package manager handles upgrades according to its own capabilities:
 - **Pipx**: Upgrades via `pipx upgrade <pkg>` or `pipx upgrade-all` (bulk)
 - **Conda**: Upgrades via `conda update <pkg>` (or `conda update --all` for bulk)
 - **Gem**: Upgrades via `gem update`
-- **Go**: Reinstalls packages with `go install package@latest`
 - **UV**: Upgrades tools via `uv tool upgrade`
-- **Pixi**: Upgrades global environments via `pixi global upgrade`
-
-
-### Lock File Updates
-After successful upgrades, plonk automatically updates the lock file with:
-- New version numbers
-- Updated installation timestamps
-- Any metadata changes
 
 ### Error Handling
 - Individual package upgrade failures do not stop the entire operation
@@ -96,7 +85,6 @@ After successful upgrades, plonk automatically updates the lock file with:
 The command provides progress feedback during:
 - Discovery phase (checking package versions)
 - Upgrade execution (per-package progress)
-- Lock file reconciliation
 
 ## Output Formats
 
@@ -150,7 +138,6 @@ The `plonk apply` command focuses on achieving desired state from lock files, wh
 
 ## Safety Features
 
-- Atomic lock file updates (all or nothing)
 - Safety is delegated to the underlying package managers
 
 ## Limitations

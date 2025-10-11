@@ -6,7 +6,7 @@ Commands for managing packages: `install` and `uninstall`.
 
 The package management commands handle system package operations across multiple package managers. All commands support package manager prefixes (e.g., `brew:htop`) to target specific managers, defaulting to the configured `default_manager` when no prefix is specified.
 
-Package state is tracked in `plonk.lock`, which is updated atomically with each operation. The v2 lock format stores both binary names and source paths for accurate reinstallation.
+Package state is tracked in `plonk.lock`, which is updated atomically with each operation.
 
 ## Package Manager Prefixes
 
@@ -17,9 +17,7 @@ Package state is tracked in `plonk.lock`, which is updated atomically with each 
 - `pipx:` - Pipx (Python applications in isolated environments)
 - `conda:` - Conda (scientific computing and data science packages)
 - `gem:` - RubyGems
-- `go:` - Go modules
 - `uv:` - UV (Python tool manager)
-- `pixi:` - Pixi (Conda-forge packages)
 
 
 Without prefix, uses `default_manager` from configuration (default: brew).
@@ -59,7 +57,7 @@ plonk install [options] <package>...
 plonk install ripgrep fd bat
 
 # Install packages with specific managers
-plonk install brew:wget npm:prettier pnpm:typescript cargo:exa pipx:black conda:numpy uv:ruff pixi:tree
+plonk install brew:wget npm:prettier pnpm:typescript cargo:exa pipx:black conda:numpy uv:ruff
 
 # Preview installation
 plonk install --dry-run ripgrep
@@ -96,7 +94,7 @@ plonk uninstall [options] <package>...
 plonk uninstall ripgrep fd
 
 # Uninstall with specific manager
-plonk uninstall brew:wget npm:prettier pnpm:typescript pipx:black conda:numpy uv:ruff pixi:tree
+plonk uninstall brew:wget npm:prettier pnpm:typescript pipx:black conda:numpy uv:ruff
 
 # Preview removal
 plonk uninstall --dry-run ripgrep
@@ -112,7 +110,6 @@ plonk uninstall --dry-run ripgrep
 **Install/Uninstall:**
 - Modifies `plonk.lock` atomically
 - Updates system packages via manager
-- Lock file preserves full module paths for Go packages
 
 ### Error Handling
 
@@ -125,7 +122,6 @@ plonk uninstall --dry-run ripgrep
 
 Operations have configurable timeouts via `plonk.yaml`:
 - `package_timeout` - Install/uninstall operations (default: 180s)
-- `operation_timeout` - Search operations (default: 300s / 5 minutes)
 
 ## Integration
 
@@ -138,5 +134,3 @@ Operations have configurable timeouts via `plonk.yaml`:
 
 - Empty package names are rejected with validation errors
 - Invalid managers show helpful error messages
-- Go packages store both binary name and full source path in v2 lock format
-- Network timeouts are handled gracefully in search operations

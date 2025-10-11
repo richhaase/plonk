@@ -128,18 +128,75 @@ We welcome various types of contributions:
 
 ### Adding New Package Managers
 
-One of the most impactful contributions is adding support for new package managers:
+Plonk supports 8 built-in package managers, plus the ability to add custom managers via YAML configuration. Most package managers can be added through YAML without writing Go code.
 
-1. **Implement the PackageManager interface** in `internal/resources/packages/`
-2. **Add required operations**: Install, Uninstall, ListInstalled, etc.
-3. **Implement optional capabilities**: Search, Info, Upgrade, Health (through capability interfaces)
-4. **Add health checking**: Implement `CheckHealth()` method with installation instructions
-5. **Add upgrade support**: Implement `Upgrade()` method if applicable
-6. **Register the manager**: Use `RegisterManagerV2` with executor injection pattern
-7. **Add tests** for all functionality
-8. **Update documentation** with examples and supported operations
+#### Adding a Manager via YAML Configuration
 
-See existing implementations like `homebrew.go`, `npm.go`, or `cargo.go` as examples.
+The easiest way to add a new package manager is by defining it in `plonk.yaml`:
+
+```yaml
+managers:
+  apt:
+    binary: apt
+    list:
+      command: [apt, list, --installed]
+      parse: regex
+    install:
+      command: [sudo, apt, install, -y]
+    upgrade:
+      command: [sudo, apt, upgrade, -y]
+    upgrade_all:
+      command: [sudo, apt, upgrade, -y]
+    uninstall:
+      command: [sudo, apt, remove, -y]
+```
+
+**Required Fields:**
+- `binary`: Binary name (for health checks)
+- `list.command`: Command to list installed packages
+- `list.parse`: Parser type (`regex`, `simple`, or `json`)
+- `install.command`: Command to install packages (package name appended)
+- `uninstall.command`: Command to uninstall packages
+
+**Optional Fields:**
+- `upgrade.command`: Per-package upgrade command
+- `upgrade_all.command`: Command to upgrade all packages
+- `install.idempotent_errors`: Error patterns that indicate package already installed
+- `uninstall.idempotent_errors`: Error patterns that indicate package already removed
+- `list.json_field`: For JSON output, which field contains package names
+
+**Parser Types:**
+- `simple`: Extract first word from each line (e.g., `npm list`)
+- `regex`: Extract package names from formatted output (e.g., `brew list`)
+- `json`: Parse JSON output using specified field path
+
+**Contributing YAML Manager Definitions:**
+
+To contribute a new YAML manager configuration:
+
+1. **Test locally** by adding the manager config to your `plonk.yaml`
+2. **Verify functionality**: Test install, uninstall, list, and upgrade operations
+3. **Add to default managers** in `internal/config/default_managers.go`
+4. **Submit PR** with the manager definition and example usage
+
+#### When to Write Go Code
+
+You only need to write Go code for a package manager if:
+
+1. **Complex parsing** - Manager output requires custom parsing logic beyond regex/JSON
+2. **Special operations** - Manager needs unique installation/upgrade workflows
+3. **Binary dependencies** - Manager requires detecting or installing its own binary programmatically
+4. **Advanced features** - Manager needs capabilities not supported by YAML config
+
+For Go implementations:
+
+1. **Implement PackageManager interface** in `internal/resources/packages/`
+2. **Add core operations**: Install, Uninstall, ListInstalled, Upgrade, CheckHealth
+3. **Register the manager**: Use `RegisterManagerV2` with executor injection pattern
+4. **Write comprehensive tests** for all functionality
+5. **Update documentation** with examples and supported operations
+
+See `internal/resources/packages/` directory for existing Go implementations (brew, npm, pnpm, cargo, pipx, conda, gem, uv).
 
 ### Adding New Commands
 

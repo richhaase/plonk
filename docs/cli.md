@@ -43,7 +43,7 @@ Install packages and add them to management.
 plonk install ripgrep fd bat
 
 # Install packages with specific managers
-plonk install brew:wget npm:prettier pnpm:typescript conda:numpy uv:ruff pixi:tree
+plonk install brew:wget npm:prettier pnpm:typescript conda:numpy uv:ruff
 
 # Preview changes
 plonk install --dry-run ripgrep
@@ -57,7 +57,7 @@ Uninstall packages and remove from management.
 
 ```bash
 plonk uninstall ripgrep
-plonk uninstall brew:wget npm:prettier pnpm:typescript conda:numpy uv:ruff pixi:tree
+plonk uninstall brew:wget npm:prettier pnpm:typescript conda:numpy uv:ruff
 plonk uninstall --dry-run ripgrep
 ```
 
@@ -199,9 +199,7 @@ Use prefixes to specify package managers:
 - `pipx:` - Pipx (Python applications in isolated environments)
 - `conda:` - Conda (scientific computing and data science packages)
 - `gem:` - RubyGems
-- `go:` - Go modules
 - `uv:` - UV (Python tool manager)
-- `pixi:` - Pixi (Conda-forge packages)
 
 
 Examples:
@@ -213,9 +211,7 @@ plonk install cargo:ripgrep
 plonk install pipx:black
 plonk install conda:numpy
 plonk install gem:bundler
-plonk install go:golang.org/x/tools/cmd/goimports
 plonk install uv:ruff
-plonk install pixi:tree
 
 ```
 

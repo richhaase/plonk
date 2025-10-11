@@ -11,6 +11,7 @@ This is the comprehensive guide to configuring plonk. Plonk uses two configurati
 - [Dotfile Configuration](#dotfile-configuration)
 - [Timeout Configuration](#timeout-configuration)
 - [Diff Tool Configuration](#diff-tool-configuration)
+- [Manager Configuration](#manager-configuration)
 - [Advanced Configuration](#advanced-configuration)
 - [Environment Variables](#environment-variables)
 - [Configuration Precedence](#configuration-precedence)
@@ -29,42 +30,36 @@ resources:
     metadata:
       manager: brew
       name: ripgrep
-      version: 14.0.3
     installed_at: "2025-07-27T11:01:03-06:00"
   - type: package
     id: brew:fd
     metadata:
       manager: brew
       name: fd
-      version: 8.7.0
     installed_at: "2025-07-27T11:00:51-06:00"
   - type: package
     id: npm:prettier
     metadata:
       manager: npm
       name: prettier
-      version: 3.1.0
     installed_at: "2025-07-28T15:11:08-06:00"
   - type: package
     id: conda:numpy
     metadata:
       manager: conda
       name: numpy
-      version: 1.24.3
     installed_at: "2025-08-09T12:30:15-06:00"
   - type: package
     id: uv:ruff
     metadata:
       manager: uv
       name: ruff
-      version: 0.1.14
     installed_at: "2025-08-07T10:15:22-06:00"
   - type: package
     id: pixi:tree
     metadata:
       manager: pixi
       name: tree
-      version: 1.8.0
     installed_at: "2025-08-07T10:20:15-06:00"
 
 ```
@@ -106,7 +101,7 @@ User configuration file for customizing plonk behavior. This file is optional - 
 
 ```yaml
 # Default package manager when no prefix is specified
-default_manager: brew    # Options: brew, npm, pnpm, cargo, pipx, conda, gem, go, uv, pixi
+default_manager: brew    # Options: brew, npm, pnpm, cargo, pipx, conda, gem, go
 
 # Alternative examples:
 # default_manager: npm    # Use npm for global JavaScript tools
@@ -177,7 +172,7 @@ Control how long operations wait before timing out:
 ```yaml
 # All timeouts in seconds
 package_timeout: 180      # Package install/uninstall (3 minutes default)
-operation_timeout: 300    # Search operations (5 minutes default)
+operation_timeout: 300    # General operations (5 minutes default)
 dotfile_timeout: 60       # Dotfile operations (1 minute default)
 
 # Examples for different scenarios:
@@ -208,6 +203,108 @@ diff_tool: "delta"
 ```
 
 The diff tool is executed as: `{tool} {source_path} {deployed_path}`
+
+## Manager Configuration
+
+Plonk v2 introduces a powerful extensibility feature: custom package manager definitions. You can define additional package managers or override built-in ones in your `plonk.yaml`.
+
+### How Package Managers Are Defined
+
+Package managers in plonk are defined using a simple YAML schema that specifies how to interact with each manager. Built-in managers (brew, npm, pnpm, cargo, pipx, conda, gem, go) are hardcoded in Go, but you can extend plonk by adding custom managers in your configuration.
+
+### YAML Schema for Manager Configs
+
+Each package manager is defined with the following fields:
+
+```yaml
+managers:
+  manager-name:
+    binary: "command"           # Required: The executable binary name
+    list: "args to list packages"       # Required: Command to list installed packages
+    install: "args to install {package}"    # Required: Command to install a package
+    upgrade: "args to upgrade {package}"    # Optional: Command to upgrade a package
+    upgrade_all: "args to upgrade all"      # Optional: Command to upgrade all packages
+    uninstall: "args to uninstall {package}" # Required: Command to uninstall a package
+```
+
+**Field Details:**
+- `binary`: The command-line tool name (e.g., `brew`, `npm`, `uv`)
+- `list`: Arguments passed to binary to list installed packages (stdout should be package names, one per line)
+- `install`: Arguments to install a package; use `{package}` placeholder for package name
+- `upgrade`: Arguments to upgrade a package; use `{package}` placeholder (optional)
+- `upgrade_all`: Arguments to upgrade all packages managed by this manager (optional)
+- `uninstall`: Arguments to uninstall a package; use `{package}` placeholder
+
+### How to Add Custom Managers
+
+Add a `managers:` section to your `plonk.yaml`:
+
+```yaml
+# Example: Adding uv and pixi as custom managers
+managers:
+  uv:
+    binary: "uv"
+    list: "tool list"
+    install: "tool install {package}"
+    upgrade: "tool upgrade {package}"
+    upgrade_all: "tool upgrade --all"
+    uninstall: "tool uninstall {package}"
+
+  pixi:
+    binary: "pixi"
+    list: "global list"
+    install: "global install {package}"
+    upgrade: "global upgrade {package}"
+    upgrade_all: "global upgrade-all"
+    uninstall: "global remove {package}"
+```
+
+### Example: Custom Manager YAML Config
+
+Here's a complete example showing how to add a hypothetical custom package manager called "toolbox":
+
+```yaml
+# plonk.yaml
+default_manager: brew
+
+# Custom package managers
+managers:
+  toolbox:
+    binary: "toolbox"
+    list: "installed --names-only"
+    install: "add {package}"
+    upgrade: "update {package}"
+    upgrade_all: "update --all"
+    uninstall: "remove {package}"
+```
+
+After adding this configuration, you can use toolbox with plonk:
+
+```bash
+# Install a package via toolbox
+plonk install toolbox:mytool
+
+# Upgrade a toolbox package
+plonk upgrade toolbox:mytool
+
+# Uninstall a toolbox package
+plonk remove toolbox:mytool
+```
+
+### Overriding Built-in Managers
+
+You can also override built-in manager configurations if you need custom behavior:
+
+```yaml
+managers:
+  npm:
+    binary: "npm"
+    list: "list -g --depth=0 --parseable"  # Custom list format
+    install: "install -g {package}"
+    uninstall: "uninstall -g {package}"
+```
+
+**Note:** When overriding built-in managers, you must specify all required fields (binary, list, install, uninstall).
 
 ## Advanced Configuration
 
