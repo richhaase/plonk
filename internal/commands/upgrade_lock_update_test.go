@@ -15,7 +15,7 @@ func TestUpgrade_UpdatesLockFileVersion(t *testing.T) {
 	svc := lock.NewYAMLLockService(dir)
 	_ = svc.AddPackage("brew", "jq", "1.0.0", map[string]interface{}{"manager": "brew", "name": "jq", "version": "1.0.0"})
 
-	// v2-only: mock brew upgrade success
+	// Mock brew upgrade success
 	mock := &packages.MockCommandExecutor{Responses: map[string]packages.CommandResponse{
 		"brew --version":  {Output: []byte("Homebrew 4.0"), Error: nil},
 		"brew upgrade jq": {Output: []byte("ok"), Error: nil},

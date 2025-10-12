@@ -15,7 +15,7 @@ func TestPackagesApply_InstallsMissing(t *testing.T) {
 	svc := lock.NewYAMLLockService(dir)
 	_ = svc.AddPackage("brew", "jq", "1.0.0", map[string]interface{}{"manager": "brew", "name": "jq", "version": "1.0.0"})
 
-	// v2-only: mark brew available and treat install as success
+	// Mark brew available and treat install as success
 	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
 		"brew --version":  {Output: []byte("Homebrew 4.0"), Error: nil},
 		"brew install jq": {Output: []byte("ok"), Error: nil},

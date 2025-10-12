@@ -42,7 +42,7 @@ func TestUpgrade_PartialFailureWithinSameManager(t *testing.T) {
 		},
 	}
 
-	// v2-only: mock brew availability and per-package results (pkg-fail fails)
+	// Mock brew availability and per-package results (pkg-fail fails)
 	mock := &packages.MockCommandExecutor{Responses: map[string]packages.CommandResponse{
 		"brew --version":             {Output: []byte("Homebrew 4.0"), Error: nil},
 		"brew upgrade pkg-success-1": {Output: []byte("ok"), Error: nil},
@@ -164,7 +164,7 @@ func TestUpgrade_AllPackagesFailInManager(t *testing.T) {
 		},
 	}
 
-	// v2-only: mock failures for all packages
+	// Mock failures for all packages
 	mock := &packages.MockCommandExecutor{Responses: map[string]packages.CommandResponse{
 		"brew --version":     {Output: []byte("Homebrew 4.0"), Error: nil},
 		"brew upgrade pkg-a": {Output: []byte("fail"), Error: &packages.MockExitError{Code: 1}},
@@ -218,7 +218,7 @@ func TestUpgrade_PerPackageUpgradeCalled(t *testing.T) {
 		},
 	}
 
-	// v2-only: verify three separate upgrade commands were issued
+	// Verify three separate upgrade commands were issued
 	mock := &packages.MockCommandExecutor{Responses: map[string]packages.CommandResponse{
 		"brew --version":     {Output: []byte("Homebrew 4.0"), Error: nil},
 		"brew upgrade pkg-1": {Output: []byte("ok"), Error: nil},

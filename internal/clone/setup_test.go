@@ -126,11 +126,11 @@ func TestGetManualInstallInstructions(t *testing.T) {
 }
 
 func TestDetectRequiredManagers(t *testing.T) {
-	t.Run("v2 lock file with metadata", func(t *testing.T) {
+	t.Run("lock file with metadata", func(t *testing.T) {
 		tempDir := t.TempDir()
 		lockPath := filepath.Join(tempDir, "plonk.lock")
 
-		// Create a v2 lock file with manager in metadata
+		// Create a lock file with manager in metadata
 		lockFile := &lock.Lock{
 			Version: 2,
 			Resources: []lock.ResourceEntry{
@@ -183,11 +183,11 @@ func TestDetectRequiredManagers(t *testing.T) {
 		assert.Contains(t, managers, "npm")
 	})
 
-	t.Run("v2 lock file with ID prefix fallback", func(t *testing.T) {
+	t.Run("lock file with ID prefix fallback", func(t *testing.T) {
 		tempDir := t.TempDir()
 		lockPath := filepath.Join(tempDir, "plonk.lock")
 
-		// Create a v2 lock file where manager is extracted from ID
+		// Create a lock file where manager is extracted from ID
 		lockFile := &lock.Lock{
 			Version: 2,
 			Resources: []lock.ResourceEntry{

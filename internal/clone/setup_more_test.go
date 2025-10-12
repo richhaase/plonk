@@ -32,7 +32,7 @@ func TestSetupFromClonedRepo_InstallsDetectedManagers(t *testing.T) {
 	_ = svc.AddPackage("npm", "typescript", "1.0.0", map[string]interface{}{"manager": "npm", "name": "typescript", "version": "1.0.0"})
 
 	// v2: use default managers and mock executor
-	// v2-only: use defaults; mock with empty responses so managers appear unavailable
+	// Use defaults; mock with empty responses so managers appear unavailable
 	mock := &packages.MockCommandExecutor{Responses: map[string]packages.CommandResponse{}}
 	packages.SetDefaultExecutor(mock)
 	t.Cleanup(func() { packages.SetDefaultExecutor(&packages.RealCommandExecutor{}) })

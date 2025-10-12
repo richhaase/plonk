@@ -15,7 +15,7 @@ import (
 
 // Apply applies package configuration and returns the result
 func Apply(ctx context.Context, configDir string, cfg *config.Config, dryRun bool) (output.PackageResults, error) {
-	// Load v2 configs from plonk.yaml before any operations
+	// Load manager configs from plonk.yaml before any operations
 	registry := NewManagerRegistry()
 	if registry != nil {
 		registry.LoadV2Configs(cfg)

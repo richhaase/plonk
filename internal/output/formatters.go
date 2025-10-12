@@ -192,7 +192,7 @@ func ExtractErrorMessages(results []resources.OperationResult) []string {
 	return errors
 }
 
-// MapStatusToAction converts operation status to legacy action string
+// MapStatusToAction converts operation status to an action string
 func MapStatusToAction(status string) string {
 	switch status {
 	case "added", "updated", "would-add", "would-update":

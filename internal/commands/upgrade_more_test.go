@@ -19,7 +19,7 @@ func TestUpgrade_UpdatesLockMetadata(t *testing.T) {
 		if e := svc.AddPackage("brew", "jq", "1.0", map[string]interface{}{"manager": "brew", "name": "jq", "version": "1.0"}); e != nil {
 			t.Fatalf("seed lock: %v", e)
 		}
-		// v2-only: Make brew available and treat upgrade as success
+		// Make brew available and treat upgrade as success
 		env.Executor.Responses["brew --version"] = packages.CommandResponse{Output: []byte("Homebrew 4.0"), Error: nil}
 		env.Executor.Responses["brew upgrade jq"] = packages.CommandResponse{Output: []byte("upgraded"), Error: nil}
 	})
@@ -61,7 +61,7 @@ func TestUpgrade_InstalledAtUpdated(t *testing.T) {
 			t.Fatalf("write lock: %v", e)
 		}
 
-		// v2-only: Make brew available and treat upgrade as success
+		// Make brew available and treat upgrade as success
 		env.Executor.Responses["brew --version"] = packages.CommandResponse{Output: []byte("Homebrew 4.0"), Error: nil}
 		env.Executor.Responses["brew upgrade jq"] = packages.CommandResponse{Output: []byte("upgraded"), Error: nil}
 	})
@@ -86,7 +86,7 @@ func TestUpgrade_ManagerAvailableFalse_Fails(t *testing.T) {
 		// Seed one pipx package
 		svc := lock.NewYAMLLockService(env.ConfigDir)
 		_ = svc.AddPackage("pipx", "httpx", "0.1", map[string]interface{}{"manager": "pipx", "name": "httpx", "version": "0.1"})
-		// v2-only: omit any pipx responses to force IsAvailable=false
+		// Omit any pipx responses to force IsAvailable=false
 	})
 	if err == nil {
 		t.Fatalf("expected error due to manager unavailable, got nil\n%s", out)

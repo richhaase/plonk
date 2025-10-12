@@ -20,7 +20,7 @@ func TestReconcileAllWithConfig_Simple(t *testing.T) {
 	// Seed lock with a desired package
 	svc := lock.NewYAMLLockService(cfgDir)
 	_ = svc.AddPackage("brew", "jq", "1.0.0", map[string]interface{}{"manager": "brew", "name": "jq", "version": "1.0.0"})
-	// v2-only: rely on default managers; no real commands are executed during reconciliation
+	// Rely on default managers; no real commands are executed during reconciliation
 
 	results, err := ReconcileAllWithConfig(context.Background(), home, cfgDir, config.LoadWithDefaults(cfgDir))
 	if err != nil {

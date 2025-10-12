@@ -29,7 +29,7 @@ func (f *failingRemoveLock) FindPackage(name string) []lock.ResourceEntry { retu
 func TestUninstall_Managed_UninstallErrorButRemovedFromLock(t *testing.T) {
 	cfg := &config.Config{}
 	l := &failingRemoveLock{removeErr: nil}
-	// v2-only: mock uninstall error
+	// Mock uninstall error
 	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
 		"brew --version":    {Output: []byte("Homebrew 4.0"), Error: nil},
 		"brew uninstall jq": {Output: []byte("boom"), Error: &MockExitError{Code: 1}},
@@ -49,7 +49,7 @@ func TestUninstall_Managed_UninstallErrorButRemovedFromLock(t *testing.T) {
 func TestUninstall_Managed_RemoveFromLockFails(t *testing.T) {
 	cfg := &config.Config{}
 	l := &failingRemoveLock{removeErr: errors.New("lock fail")}
-	// v2-only: success uninstall
+	// Success uninstall
 	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
 		"brew --version":    {Output: []byte("Homebrew 4.0"), Error: nil},
 		"brew uninstall jq": {Output: []byte("ok"), Error: nil},

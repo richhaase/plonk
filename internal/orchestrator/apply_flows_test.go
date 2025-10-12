@@ -21,7 +21,7 @@ import (
 func setupFakeManagerConfig(t *testing.T, cfg *config.Config, failInstalls map[string]bool) {
 	t.Helper()
 
-	// Add a v2 manager definition for a synthetic binary "fake"
+	// Add a manager definition for a synthetic binary "fake"
 	if cfg.Managers == nil {
 		cfg.Managers = map[string]config.ManagerConfig{}
 	}

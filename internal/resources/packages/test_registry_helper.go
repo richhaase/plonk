@@ -20,8 +20,7 @@ import (
 //
 // This avoids interacting with real package managers during tests.
 func WithTemporaryRegistry(t *testing.T, register func(*ManagerRegistry)) {
-	// Legacy helper no longer registers code managers; kept for compatibility where tests
-	// only need an isolated v2 registry. Callers should use v2 config + MockCommandExecutor.
+	// Helper: provides an isolated registry for tests
 	t.Helper()
 	original := defaultRegistry
 	temp := &ManagerRegistry{v2Managers: make(map[string]config.ManagerConfig), enableV2: true}

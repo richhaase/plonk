@@ -94,7 +94,7 @@ func runApply(cmd *cobra.Command, args []string) error {
 		orchestrator.WithDotfilesOnly(dotfilesOnly),
 	)
 
-	// Run apply with v2 lock
+	// Run apply
 	result, err := orch.Apply(ctx)
 
 	// Set the scope on the result

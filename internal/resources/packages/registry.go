@@ -32,7 +32,7 @@ func NewManagerRegistry() *ManagerRegistry {
 	return defaultRegistry
 }
 
-// LoadV2Configs loads v2 manager configs from Config
+// LoadManagerConfigs loads manager configs from Config
 // It resets the registry and loads defaults first, then merges user configs
 func (r *ManagerRegistry) LoadV2Configs(cfg *config.Config) {
 	r.mu.Lock()
@@ -52,7 +52,7 @@ func (r *ManagerRegistry) LoadV2Configs(cfg *config.Config) {
 	}
 }
 
-// EnableV2 enables v2 manager configs
+// EnableV2 enables config-driven managers
 func (r *ManagerRegistry) EnableV2(enabled bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -65,13 +65,13 @@ func (r *ManagerRegistry) GetManager(name string) (PackageManager, error) {
 }
 
 // GetManagerWithExecutor returns a package manager instance with an injected executor.
-// If exec is nil, uses the default executor. Checks v2 configs first, then factories.
+// If exec is nil, uses the default executor. Checks config-defined managers first.
 func (r *ManagerRegistry) GetManagerWithExecutor(name string, exec CommandExecutor) (PackageManager, error) {
 	if exec == nil {
 		exec = defaultExecutor
 	}
 
-	// Only v2 configs are supported for production
+	// Only config-defined managers are supported
 	r.mu.RLock()
 	v2Config, hasV2 := r.v2Managers[name]
 	enableV2 := r.enableV2

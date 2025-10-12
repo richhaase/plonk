@@ -14,7 +14,7 @@ import (
 
 func TestInstall_ManagerUnavailable_Suggestion(t *testing.T) {
 	configDir := t.TempDir()
-	// v2-only: no responses for npm → unavailable
+	// No responses for npm → unavailable
 	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{}}
 	SetDefaultExecutor(mock)
 	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
@@ -63,7 +63,7 @@ func TestInstall_NpmScoped_MetadataSaved(t *testing.T) {
 
 func TestInstall_GoSourcePath_SavedAndBinaryNamedInLock(t *testing.T) {
 	configDir := t.TempDir()
-	// Define custom v2 manager for go in config file and mock executor
+	// Define custom manager for go in config and mock executor
 	// Note: Install command follows typical pattern for Go tools
 	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
 		"go --version":                         {Output: []byte("go1.22"), Error: nil},

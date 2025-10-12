@@ -11,12 +11,11 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 )
 
-// (legacy slowManager + blockUntilDone removed; v2 tests use config only)
+// Tests define a minimal manager via config; mock executor not needed here
 
 func TestInstallPackages_ContextTimeout(t *testing.T) {
 	// Use a temporary registry with only the slow manager
-	// v2-only: define custom manager in config file and let it time out via context
-	// We don't need actual command exec here; just ensure manager exists in registry
+	// Define custom manager in config and let it time out via context
 	cfg := &config.Config{Managers: map[string]config.ManagerConfig{"slow": {Binary: "slow"}}}
 	reg := NewManagerRegistry()
 	reg.LoadV2Configs(cfg)

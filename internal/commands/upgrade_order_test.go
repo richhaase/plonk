@@ -24,7 +24,7 @@ func (s *stubLockService) GetPackages(manager string) ([]lock.ResourceEntry, err
 func (s *stubLockService) HasPackage(manager, name string) bool                     { return false }
 func (s *stubLockService) FindPackage(name string) []lock.ResourceEntry             { return nil }
 
-// (legacy fixed manager removed; test uses v2 config + mock executor)
+// Test uses config + mock executor to simulate availability
 
 func TestExecuteUpgrade_DeterministicOrdering(t *testing.T) {
 	cfg := &config.Config{}
@@ -36,7 +36,7 @@ func TestExecuteUpgrade_DeterministicOrdering(t *testing.T) {
 		"brew": {"d", "c"},
 	}}
 
-	// v2-only: default managers are present; use mock executor to simulate availability and success
+	// Use default managers; simulate availability and success
 	mock := &packages.MockCommandExecutor{Responses: map[string]packages.CommandResponse{
 		"brew --version":  {Output: []byte("Homebrew 4.0"), Error: nil},
 		"npm --version":   {Output: []byte("10.0.0"), Error: nil},

@@ -36,7 +36,7 @@ func InstallPackages(ctx context.Context, configDir string, packages []string, o
 
 // InstallPackagesWith orchestrates installation with explicit dependencies
 func InstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lock.LockService, registry *ManagerRegistry, packages []string, opts InstallOptions) ([]resources.OperationResult, error) {
-	// Load v2 configs from plonk.yaml before any operations
+	// Load manager configs from plonk.yaml before any operations
 	if registry != nil {
 		registry.LoadV2Configs(cfg)
 	}
@@ -73,7 +73,7 @@ func UninstallPackages(ctx context.Context, configDir string, packages []string,
 
 // UninstallPackagesWith orchestrates uninstallation with explicit dependencies
 func UninstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lock.LockService, registry *ManagerRegistry, packages []string, opts UninstallOptions) ([]resources.OperationResult, error) {
-	// Load v2 configs from plonk.yaml before any operations
+	// Load manager configs from plonk.yaml before any operations
 	if registry != nil {
 		registry.LoadV2Configs(cfg)
 	}

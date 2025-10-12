@@ -11,7 +11,7 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 )
 
-// (legacy in-file simpleFakeManager removed; tests use v2 config + mock executor)
+// Tests use config + mock executor
 
 // failingAddLockService wraps MockLockService to fail AddPackage
 type failingAddLockService struct{ *MockLockService }
@@ -43,7 +43,7 @@ func TestInstallPackagesWith_AlreadyManaged_Skips(t *testing.T) {
 func TestInstallPackagesWith_LockAddFailure_ReportsFailed(t *testing.T) {
 	cfg := &config.Config{DefaultManager: "brew"}
 	lockSvc := &failingAddLockService{NewMockLockService()}
-	// v2 config + mock exec for brew install
+	// Config + mock exec for brew install
 	cfg.Managers = map[string]config.ManagerConfig{
 		"brew": {
 			Binary:  "brew",
@@ -74,7 +74,7 @@ func TestInstallPackagesWith_LockAddFailure_ReportsFailed(t *testing.T) {
 func TestUninstallPackagesWith_PassThrough_WhenNotManaged(t *testing.T) {
 	cfg := &config.Config{DefaultManager: "brew"}
 	lockSvc := NewMockLockService() // empty, so package is not managed
-	// v2 config + mock exec for brew uninstall
+	// Config + mock exec for brew uninstall
 	cfg.Managers = map[string]config.ManagerConfig{
 		"brew": {
 			Binary:    "brew",

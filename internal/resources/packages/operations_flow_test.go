@@ -9,7 +9,7 @@ import (
 	"github.com/richhaase/plonk/internal/lock"
 )
 
-// (legacy in-file fake manager removed; tests use v2 config + mock executor)
+// Tests use config + mock executor for package manager behavior
 
 func TestOperations_Install_Uninstall_Flow_WithLock(t *testing.T) {
 	// temp config dir

@@ -20,7 +20,7 @@ func seedUpgradeLock(t *testing.T, dir string) {
 func TestUpgrade_ManagerUnavailableAndMixedResults(t *testing.T) {
 	out, err := RunCLI(t, []string{"upgrade"}, func(env CLITestEnv) {
 		seedUpgradeLock(env.T, env.ConfigDir)
-		// v2-only: rely on default manager configs; make brew and npm available; omit "foo" to trigger error path
+		// Rely on default manager configs; make brew and npm available; omit "foo" to trigger error path
 		env.Executor.Responses["brew --version"] = packages.CommandResponse{Output: []byte("Homebrew 4.0"), Error: nil}
 		env.Executor.Responses["npm --version"] = packages.CommandResponse{Output: []byte("10.0.0"), Error: nil}
 		// Treat upgrades as success for brew and npm

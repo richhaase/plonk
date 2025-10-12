@@ -14,7 +14,7 @@ func TestUpgrade_ManagerErrorCountsFailed(t *testing.T) {
 	svc := lock.NewYAMLLockService(dir)
 	_ = svc.AddPackage("brew", "a", "1.0.0", map[string]interface{}{"manager": "brew", "name": "a", "version": "1.0.0"})
 
-	// v2-only: mark brew available but make upgrade fail
+	// Mark brew available but make upgrade fail
 	mock := &packages.MockCommandExecutor{Responses: map[string]packages.CommandResponse{
 		"brew --version": {Output: []byte("Homebrew 4.0"), Error: nil},
 		"brew upgrade a": {Output: []byte("failed"), Error: &packages.MockExitError{Code: 1}},
