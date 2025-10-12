@@ -43,6 +43,9 @@ test-coverage:
     set -euo pipefail
     echo "Running unit tests with normalized coverage..."
 
+    # Clean build cache to avoid stale file references
+    go clean -cache -testcache
+
     # Normalize the denominator by excluding low-signal packages from coverage totals.
     # Override with COVER_EXCLUDE_REGEX to customize (must match go list package import paths).
     # Default excludes:
