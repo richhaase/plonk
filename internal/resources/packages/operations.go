@@ -36,6 +36,11 @@ func InstallPackages(ctx context.Context, configDir string, packages []string, o
 
 // InstallPackagesWith orchestrates installation with explicit dependencies
 func InstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lock.LockService, registry *ManagerRegistry, packages []string, opts InstallOptions) ([]resources.OperationResult, error) {
+	// Load v2 configs from plonk.yaml before any operations
+	if registry != nil {
+		registry.LoadV2Configs(cfg)
+	}
+
 	// Get manager - use default if not specified
 	manager := opts.Manager
 	if manager == "" {
@@ -68,6 +73,11 @@ func UninstallPackages(ctx context.Context, configDir string, packages []string,
 
 // UninstallPackagesWith orchestrates uninstallation with explicit dependencies
 func UninstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lock.LockService, registry *ManagerRegistry, packages []string, opts UninstallOptions) ([]resources.OperationResult, error) {
+	// Load v2 configs from plonk.yaml before any operations
+	if registry != nil {
+		registry.LoadV2Configs(cfg)
+	}
+
 	// Load config for default manager
 	defaultManager := DefaultManager
 	if cfg != nil && cfg.DefaultManager != "" {
@@ -148,7 +158,7 @@ func installSinglePackage(ctx context.Context, lockService lock.LockService, pac
 		return result
 	}
 
-	// Install the package
+	// Install the package (relies on manager's idempotency)
 	err = pkgManager.Install(ctx, packageName)
 	if err != nil {
 		result.Status = "failed"

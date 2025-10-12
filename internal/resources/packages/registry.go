@@ -85,16 +85,22 @@ func NewManagerRegistry() *ManagerRegistry {
 }
 
 // LoadV2Configs loads v2 manager configs from Config
+// It resets the registry and loads defaults first, then merges user configs
 func (r *ManagerRegistry) LoadV2Configs(cfg *config.Config) {
-	if cfg == nil || cfg.Managers == nil {
-		return
-	}
-
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	for name, managerCfg := range cfg.Managers {
+	// Reset and load defaults first
+	r.v2Managers = make(map[string]config.ManagerConfig)
+	for name, managerCfg := range config.GetDefaultManagers() {
 		r.v2Managers[name] = managerCfg
+	}
+
+	// Then merge/override with user configs
+	if cfg != nil && cfg.Managers != nil {
+		for name, managerCfg := range cfg.Managers {
+			r.v2Managers[name] = managerCfg
+		}
 	}
 }
 

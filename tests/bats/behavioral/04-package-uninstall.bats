@@ -199,6 +199,101 @@ setup() {
   refute_output --partial "rich-cli"
 }
 
+# Pipx uninstall tests
+@test "uninstall managed pipx package" {
+  require_safe_package "pipx:ruff"
+
+  run which pipx
+  if [[ $status -ne 0 ]]; then
+    skip "pipx not available"
+  fi
+
+  # Install first
+  run plonk install pipx:ruff
+  assert_success
+  track_artifact "package" "pipx:ruff"
+
+  # Verify it's installed by pipx
+  run pipx list --short
+  assert_success
+  assert_output --partial "ruff"
+
+  # Then uninstall
+  run plonk uninstall pipx:ruff
+  assert_success
+  assert_output --partial "removed"
+
+  # Verify actually uninstalled by pipx
+  run pipx list --short
+  assert_success
+  refute_output --partial "ruff"
+
+  # Verify gone from lock file
+  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
+    run cat "$PLONK_DIR/plonk.lock"
+    refute_output --partial "ruff"
+  fi
+
+  # Verify gone from status
+  run plonk status
+  refute_output --partial "ruff"
+}
+
+# Pnpm uninstall tests
+@test "uninstall managed pnpm package" {
+  require_safe_package "pnpm:prettier"
+
+  run which pnpm
+  if [[ $status -ne 0 ]]; then
+    skip "pnpm not available"
+  fi
+
+  # Install first
+  run plonk install pnpm:prettier
+  assert_success
+  track_artifact "package" "pnpm:prettier"
+
+  # Verify it's installed by pnpm
+  run pnpm list -g prettier
+  assert_success
+
+  # Then uninstall
+  run plonk uninstall pnpm:prettier
+  assert_success
+  assert_output --partial "removed"
+
+  # Verify gone from lock file
+  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
+    run cat "$PLONK_DIR/plonk.lock"
+    refute_output --partial "prettier"
+  fi
+
+  # Verify gone from status
+  run plonk status
+  refute_output --partial "prettier"
+}
+
+# Conda uninstall tests
+@test "uninstall managed conda package" {
+  require_safe_package "conda:jq"
+
+  run which conda
+  if [[ $status -ne 0 ]]; then
+    skip "conda not available"
+  fi
+
+  run plonk install conda:jq
+  assert_success
+  track_artifact "package" "conda:jq"
+
+  run plonk uninstall conda:jq
+  assert_success
+  assert_output --partial "removed"
+
+  run plonk status
+  refute_output --partial "jq"
+}
+
 # General uninstall behavior tests
 @test "uninstall non-managed package acts as pass-through" {
   require_safe_package "brew:fortune"

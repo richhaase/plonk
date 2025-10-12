@@ -162,6 +162,14 @@ require_safe_dotfile() {
   fi
 }
 
+# Require a command to be available or skip
+require_command() {
+  local cmd="$1"
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    skip "$cmd not available"
+  fi
+}
+
 # Require a package manager to be available or skip
 require_package_manager() {
   local manager="$1"

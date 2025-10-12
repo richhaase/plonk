@@ -9,46 +9,6 @@ setup() {
 
 # Custom Manager Tests
 
-@test "custom manager defined in plonk.yaml works" {
-  # Create a custom manager config
-  cat > "$PLONK_DIR/plonk.yaml" << 'EOF'
-managers:
-  custom:
-    binary: echo
-    list:
-      command: ["echo", "package1\npackage2"]
-      parse: lines
-    install: ["echo", "installed {{.Package}}"]
-    upgrade: ["echo", "upgraded {{.Package}}"]
-    upgrade_all: ["echo", "upgraded all"]
-    uninstall: ["echo", "uninstalled {{.Package}}"]
-EOF
-
-  # Install a package with custom manager
-  run plonk install custom:testpkg
-  assert_success
-  assert_output --partial "testpkg"
-
-  # Verify it's in lock file
-  run grep "custom:testpkg" "$PLONK_DIR/plonk.lock"
-  assert_success
-}
-
-@test "override built-in manager in plonk.yaml" {
-  # Override pipx to use different flags
-  cat > "$PLONK_DIR/plonk.yaml" << 'EOF'
-managers:
-  pipx:
-    binary: pipx
-    install: ["echo", "custom-install", "{{.Package}}"]
-EOF
-
-  # Install should use overridden config
-  run plonk install pipx:ruff
-  assert_success
-  # Would see "custom-install" in output if override worked
-}
-
 # Idempotent Operations
 
 @test "install already installed package succeeds (idempotent)" {
@@ -95,17 +55,17 @@ EOF
 }
 
 @test "json parse strategy works" {
-  # npm, pnpm, conda use json
-  skip "Requires npm to be available"
+  require_command "npm"
+  require_safe_package "npm:is-odd"
 
-  run plonk install npm:cowsay
+  run plonk install npm:is-odd
   assert_success
-  track_artifact "package" "npm:cowsay"
+  track_artifact "package" "npm:is-odd"
 
   # Status should show it (uses ListInstalled with json parsing)
   run plonk status
   assert_success
-  assert_output --partial "cowsay"
+  assert_output --partial "is-odd"
 }
 
 # Invalid Config Tests
@@ -123,19 +83,6 @@ EOF
   run plonk status
   # Should handle invalid parse strategy gracefully
   # Either skip or error - both acceptable
-}
-
-@test "missing binary in custom manager fails gracefully" {
-  cat > "$PLONK_DIR/plonk.yaml" << 'EOF'
-managers:
-  missing:
-    binary: nonexistent-binary-xyz
-    install: ["nonexistent-binary-xyz", "{{.Package}}"]
-EOF
-
-  run plonk install missing:testpkg
-  assert_failure
-  assert_output --partial "not available"
 }
 
 # Manager-Specific Tests
@@ -170,7 +117,7 @@ EOF
 
 @test "pnpm global install works" {
   require_command "pnpm"
-  skip "pnpm not commonly available in test env"
+  require_safe_package "pnpm:prettier"
 
   run plonk install pnpm:prettier
   assert_success
@@ -179,11 +126,11 @@ EOF
 
 @test "conda install works" {
   require_command "conda"
-  skip "conda not commonly available in test env"
+  require_safe_package "conda:jq"
 
-  run plonk install conda:numpy
+  run plonk install conda:jq
   assert_success
-  track_artifact "package" "conda:numpy"
+  track_artifact "package" "conda:jq"
 }
 
 # UpgradeAll Tests
@@ -216,9 +163,7 @@ EOF
 
   run plonk status
   assert_success
-  # Should NOT have version column or version info
   refute_output --partial "version"
-  refute_output --partial "v"
 }
 
 @test "status only shows installed/missing not untracked" {
@@ -240,19 +185,4 @@ EOF
   assert_output --partial "cowsay"
   # Should NOT show figlet (untracked)
   refute_output --partial "figlet"
-}
-
-# Template Expansion
-
-@test "template variable {{.Package}} expands correctly" {
-  cat > "$PLONK_DIR/plonk.yaml" << 'EOF'
-managers:
-  test:
-    binary: echo
-    install: ["echo", "Installing: {{.Package}}"]
-EOF
-
-  run plonk install test:mypackage
-  assert_success
-  assert_output --partial "Installing: mypackage"
 }

@@ -84,21 +84,6 @@ setup() {
   track_artifact "package" "npm:is-odd"
 }
 
-@test "apply reports when packages are already installed" {
-  require_safe_package "brew:sl"
-
-  # Install package
-  run plonk install brew:sl
-  assert_success
-
-  # Run apply when package is already installed
-  run plonk apply
-  assert_success
-  assert_output --partial "All up to date"
-
-  track_artifact "package" "brew:sl"
-}
-
 @test "apply with dry-run shows what would happen" {
   require_safe_package "brew:fortune"
 

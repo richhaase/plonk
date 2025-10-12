@@ -187,3 +187,87 @@ setup() {
   run plonk status
   assert_output --partial "cowsay"
 }
+
+# Pipx tests
+@test "install pipx package" {
+  require_safe_package "pipx:ruff"
+
+  # Check if pipx is available
+  run which pipx
+  if [[ $status -ne 0 ]]; then
+    skip "pipx not available"
+  fi
+
+  run plonk install pipx:ruff
+  assert_success
+  assert_output --partial "ruff"
+  assert_output --partial "added"
+
+  track_artifact "package" "pipx:ruff"
+
+  # Verify it's actually installed by pipx
+  run pipx list --short
+  assert_success
+  assert_output --partial "ruff"
+
+  # Verify it's in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "ruff"
+
+  # Verify in status
+  run plonk status
+  assert_output --partial "ruff"
+}
+
+# Pnpm tests
+@test "install pnpm package" {
+  require_safe_package "pnpm:prettier"
+
+  # Check if pnpm is available
+  run which pnpm
+  if [[ $status -ne 0 ]]; then
+    skip "pnpm not available"
+  fi
+
+  run plonk install pnpm:prettier
+  assert_success
+  assert_output --partial "prettier"
+  assert_output --partial "added"
+
+  track_artifact "package" "pnpm:prettier"
+
+  # Verify it's actually installed by pnpm
+  run pnpm list -g prettier
+  assert_success
+
+  # Verify it's in lock file
+  run cat "$PLONK_DIR/plonk.lock"
+  assert_success
+  assert_output --partial "prettier"
+
+  # Verify in status
+  run plonk status
+  assert_output --partial "prettier"
+}
+
+# Conda tests
+@test "install conda package" {
+  require_safe_package "conda:jq"
+
+  run which conda
+  if [[ $status -ne 0 ]]; then
+    skip "conda not available"
+  fi
+
+  run plonk install conda:jq
+  assert_success
+  assert_output --partial "jq"
+  assert_output --partial "added"
+
+  track_artifact "package" "conda:jq"
+
+  run plonk status
+  assert_success
+  assert_output --partial "jq"
+}

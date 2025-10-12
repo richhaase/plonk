@@ -60,8 +60,17 @@ func (g *GenericManager) ListInstalled(ctx context.Context) ([]string, error) {
 
 // Install installs a package (idempotent)
 func (g *GenericManager) Install(ctx context.Context, name string) error {
+	if len(g.config.Install.Command) == 0 {
+		return fmt.Errorf("install command not configured for this manager")
+	}
+
 	cmd := g.expandTemplate(g.config.Install.Command, name)
 	output, err := g.exec.CombinedOutput(ctx, cmd[0], cmd[1:]...)
+
+	// Treat "already installed" even on success as idempotent no-op
+	if err == nil && g.isIdempotentError(string(output), g.config.Install.IdempotentErrors) {
+		return nil
+	}
 
 	if err != nil && g.isIdempotentError(string(output), g.config.Install.IdempotentErrors) {
 		return nil
@@ -80,6 +89,11 @@ func (g *GenericManager) Upgrade(ctx context.Context, packages []string) error {
 		cmd := g.expandTemplate(g.config.Upgrade.Command, pkg)
 		output, err := g.exec.CombinedOutput(ctx, cmd[0], cmd[1:]...)
 
+		// Treat "already up-to-date" even on success as idempotent no-op
+		if err == nil && g.isIdempotentError(string(output), g.config.Upgrade.IdempotentErrors) {
+			continue
+		}
+
 		if err != nil && !g.isIdempotentError(string(output), g.config.Upgrade.IdempotentErrors) {
 			return fmt.Errorf("failed to upgrade %s: %w", pkg, err)
 		}
@@ -95,6 +109,11 @@ func (g *GenericManager) UpgradeAll(ctx context.Context) error {
 	}
 
 	output, err := g.exec.CombinedOutput(ctx, g.config.UpgradeAll.Command[0], g.config.UpgradeAll.Command[1:]...)
+
+	// Treat "already up-to-date" even on success as idempotent no-op
+	if err == nil && g.isIdempotentError(string(output), g.config.UpgradeAll.IdempotentErrors) {
+		return nil
+	}
 
 	if err != nil && g.isIdempotentError(string(output), g.config.UpgradeAll.IdempotentErrors) {
 		return nil

@@ -75,8 +75,10 @@ func TestRegistry_LoadV2Configs(t *testing.T) {
 
 	registry.LoadV2Configs(cfg)
 
-	assert.Len(t, registry.v2Managers, 1)
+	// Should have defaults + custom manager
+	assert.Greater(t, len(registry.v2Managers), 1, "should have defaults loaded")
 	assert.Contains(t, registry.v2Managers, "custom")
+	assert.Contains(t, registry.v2Managers, "brew", "should have default managers")
 	assert.Equal(t, "custom-bin", registry.v2Managers["custom"].Binary)
 }
 

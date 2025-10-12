@@ -15,6 +15,12 @@ import (
 
 // Apply applies package configuration and returns the result
 func Apply(ctx context.Context, configDir string, cfg *config.Config, dryRun bool) (output.PackageResults, error) {
+	// Load v2 configs from plonk.yaml before any operations
+	registry := NewManagerRegistry()
+	if registry != nil {
+		registry.LoadV2Configs(cfg)
+	}
+
 	// Reconcile package domain to find missing packages
 	result, err := Reconcile(ctx, configDir)
 	if err != nil {

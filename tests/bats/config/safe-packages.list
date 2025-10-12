@@ -23,10 +23,12 @@ go:github.com/rakyll/hey  # HTTP load generator, small tool
 
 # Cargo packages (Rust)
 cargo:ripgrep    # Fast grep replacement, useful tool
+cargo:bat        # Cat clone with syntax highlighting, useful tool
 
 # UV packages (Python tools)
 uv:cowsay        # ASCII cow, harmless fun tool
 uv:rich-cli      # Rich command-line tools, small package
+uv:httpx         # HTTP client library, small package
 
 # Pixi packages (Conda-forge packages)
 pixi:hello       # Simple hello program, very safe test package
@@ -35,7 +37,10 @@ pixi:gcal        # GNU calendar utility, small and safe
 # Pipx packages (Python applications in isolated environments)
 pipx:black                   # Python code formatter, safe dev tool
 pipx:pycowsay                # Python ASCII cow (different from brew cowsay)
+pipx:ruff                    # Fast Python linter, safe dev tool
+
+# Pnpm packages (Fast npm alternative)
+pnpm:prettier                # Code formatter, safe dev tool
 
 # Conda packages (Scientific computing and data science)
-conda:fortls                 # Fortran Language Server, very niche tool
-conda:tree                   # Directory tree display utility, simple and safe
+conda:jq                     # JSON query tool, small and safe utility

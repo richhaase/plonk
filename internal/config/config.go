@@ -38,7 +38,7 @@ var defaultConfig = Config{
 	ExpandDirectories: []string{
 		".config",
 	},
-	Managers: GetDefaultManagers(),
+	// NOTE: Managers is NOT set here - it's merged in applyDefaults
 	IgnorePatterns: []string{
 		// System files
 		".DS_Store",
@@ -170,6 +170,20 @@ func LoadFromPath(configPath string) (*Config, error) {
 	// Unmarshal YAML over defaults
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
+	}
+
+	// Merge default managers with user managers (user overrides defaults)
+	userManagers := cfg.Managers
+	cfg.Managers = make(map[string]ManagerConfig)
+
+	// Start with defaults
+	for name, defaultMgr := range GetDefaultManagers() {
+		cfg.Managers[name] = defaultMgr
+	}
+
+	// Override/add user managers
+	for name, userMgr := range userManagers {
+		cfg.Managers[name] = userMgr
 	}
 
 	// Validate

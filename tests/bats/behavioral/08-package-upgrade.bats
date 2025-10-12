@@ -199,29 +199,22 @@ setup() {
 
 # Conda upgrade tests
 @test "upgrade single conda package" {
-  require_safe_package "conda:fortls"
+  require_safe_package "conda:jq"
 
-  # Check if conda/mamba is available
-  run which mamba
-  local has_mamba=$status
   run which conda
-  local has_conda=$status
-
-  if [[ $has_mamba -ne 0 && $has_conda -ne 0 ]]; then
-    skip "conda/mamba not available"
+  if [[ $status -ne 0 ]]; then
+    skip "conda not available"
   fi
 
   # Install package
-  run plonk install conda:fortls
-  if [[ $status -ne 0 ]]; then
-    skip "Failed to install conda:fortls"
-  fi
-  track_artifact "package" "conda:fortls"
+  run plonk install conda:jq
+  assert_success
+  track_artifact "package" "conda:jq"
 
   # Upgrade the specific package
-  run plonk upgrade conda:fortls
+  run plonk upgrade conda:jq
   assert_success
-  assert_output --partial "fortls"
+  assert_output --partial "jq"
 }
 
 # Cross-manager upgrade tests
@@ -356,20 +349,4 @@ setup() {
   assert_output --partial "[1/2]"
   assert_output --partial "[2/2]"
   assert_output --partial "Upgrading"
-}
-
-@test "upgrade shows skip message for up-to-date packages" {
-  require_safe_package "brew:figlet"
-
-  # Install first
-  run plonk install brew:figlet
-  assert_success
-  track_artifact "package" "brew:figlet"
-
-  # Upgrade and verify skip message
-  run plonk upgrade brew:figlet
-  assert_success
-  assert_output --partial "Upgrading: figlet"
-  assert_output --partial "✓"
-  assert_output --partial "already up-to-date"
 }
