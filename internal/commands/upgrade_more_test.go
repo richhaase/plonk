@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"encoding/json"
 	"os"
 	"strings"
@@ -12,30 +11,6 @@ import (
 )
 
 // Fake manager that reports available and simulates version change on Upgrade.
-type fakeUpgradeMgr struct{ ver string }
-
-func (f *fakeUpgradeMgr) IsAvailable(ctx context.Context) (bool, error) {
-	if f.ver == "" {
-		f.ver = "1.0"
-	}
-	return true, nil
-}
-func (f *fakeUpgradeMgr) ListInstalled(ctx context.Context) ([]string, error) { return nil, nil }
-func (f *fakeUpgradeMgr) Install(ctx context.Context, name string) error      { return nil }
-func (f *fakeUpgradeMgr) Uninstall(ctx context.Context, name string) error    { return nil }
-func (f *fakeUpgradeMgr) IsInstalled(ctx context.Context, name string) (bool, error) {
-	return true, nil
-}
-func (f *fakeUpgradeMgr) InstalledVersion(ctx context.Context, name string) (string, error) {
-	if f.ver == "" {
-		f.ver = "1.0"
-	}
-	return f.ver, nil
-}
-func (f *fakeUpgradeMgr) Search(ctx context.Context, q string) ([]string, error) { return nil, nil }
-func (f *fakeUpgradeMgr) SelfInstall(ctx context.Context) error                  { return nil }
-func (f *fakeUpgradeMgr) Upgrade(ctx context.Context, pkgs []string) error       { f.ver = "2.0"; return nil }
-func (f *fakeUpgradeMgr) Dependencies() []string                                 { return nil }
 
 func TestUpgrade_UpdatesLockMetadata(t *testing.T) {
 	out, err := RunCLI(t, []string{"upgrade"}, func(env CLITestEnv) {
@@ -44,10 +19,9 @@ func TestUpgrade_UpdatesLockMetadata(t *testing.T) {
 		if e := svc.AddPackage("brew", "jq", "1.0", map[string]interface{}{"manager": "brew", "name": "jq", "version": "1.0"}); e != nil {
 			t.Fatalf("seed lock: %v", e)
 		}
-		// Registry: only brew available
-		packages.WithTemporaryRegistry(env.T, func(r *packages.ManagerRegistry) {
-			r.Register("brew", func() packages.PackageManager { return &fakeUpgradeMgr{} })
-		})
+		// v2-only: Make brew available and treat upgrade as success
+		env.Executor.Responses["brew --version"] = packages.CommandResponse{Output: []byte("Homebrew 4.0"), Error: nil}
+		env.Executor.Responses["brew upgrade jq"] = packages.CommandResponse{Output: []byte("upgraded"), Error: nil}
 	})
 	if err != nil {
 		t.Fatalf("upgrade error: %v\n%s", err, out)
@@ -87,10 +61,9 @@ func TestUpgrade_InstalledAtUpdated(t *testing.T) {
 			t.Fatalf("write lock: %v", e)
 		}
 
-		// Registry: brew available and will upgrade
-		packages.WithTemporaryRegistry(env.T, func(r *packages.ManagerRegistry) {
-			r.Register("brew", func() packages.PackageManager { return &fakeUpgradeMgr{} })
-		})
+		// v2-only: Make brew available and treat upgrade as success
+		env.Executor.Responses["brew --version"] = packages.CommandResponse{Output: []byte("Homebrew 4.0"), Error: nil}
+		env.Executor.Responses["brew upgrade jq"] = packages.CommandResponse{Output: []byte("upgraded"), Error: nil}
 	})
 	if err != nil {
 		t.Fatalf("upgrade error: %v\n%s", err, out)
@@ -107,35 +80,13 @@ func TestUpgrade_InstalledAtUpdated(t *testing.T) {
 }
 
 // Manager IsAvailable=false should mark failures.
-type fakeUnavailableUpgradeMgr struct{}
-
-func (f *fakeUnavailableUpgradeMgr) IsAvailable(ctx context.Context) (bool, error) { return false, nil }
-func (f *fakeUnavailableUpgradeMgr) ListInstalled(ctx context.Context) ([]string, error) {
-	return nil, nil
-}
-func (f *fakeUnavailableUpgradeMgr) Install(ctx context.Context, name string) error   { return nil }
-func (f *fakeUnavailableUpgradeMgr) Uninstall(ctx context.Context, name string) error { return nil }
-func (f *fakeUnavailableUpgradeMgr) IsInstalled(ctx context.Context, name string) (bool, error) {
-	return true, nil
-}
-func (f *fakeUnavailableUpgradeMgr) InstalledVersion(ctx context.Context, name string) (string, error) {
-	return "", nil
-}
-func (f *fakeUnavailableUpgradeMgr) Search(ctx context.Context, q string) ([]string, error) {
-	return nil, nil
-}
-func (f *fakeUnavailableUpgradeMgr) SelfInstall(ctx context.Context) error            { return nil }
-func (f *fakeUnavailableUpgradeMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
-func (f *fakeUnavailableUpgradeMgr) Dependencies() []string                           { return nil }
 
 func TestUpgrade_ManagerAvailableFalse_Fails(t *testing.T) {
 	out, err := RunCLI(t, []string{"upgrade", "pipx"}, func(env CLITestEnv) {
 		// Seed one pipx package
 		svc := lock.NewYAMLLockService(env.ConfigDir)
 		_ = svc.AddPackage("pipx", "httpx", "0.1", map[string]interface{}{"manager": "pipx", "name": "httpx", "version": "0.1"})
-		packages.WithTemporaryRegistry(env.T, func(r *packages.ManagerRegistry) {
-			r.Register("pipx", func() packages.PackageManager { return &fakeUnavailableUpgradeMgr{} })
-		})
+		// v2-only: omit any pipx responses to force IsAvailable=false
 	})
 	if err == nil {
 		t.Fatalf("expected error due to manager unavailable, got nil\n%s", out)

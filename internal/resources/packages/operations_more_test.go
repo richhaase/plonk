@@ -3,6 +3,7 @@ package packages
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -10,42 +11,13 @@ import (
 )
 
 // fake manager variants for targeted branches
-type fakeAvailMgr struct{ available bool }
-
-func (f *fakeAvailMgr) IsAvailable(ctx context.Context) (bool, error)              { return f.available, nil }
-func (f *fakeAvailMgr) ListInstalled(ctx context.Context) ([]string, error)        { return nil, nil }
-func (f *fakeAvailMgr) Install(ctx context.Context, name string) error             { return nil }
-func (f *fakeAvailMgr) Uninstall(ctx context.Context, name string) error           { return nil }
-func (f *fakeAvailMgr) IsInstalled(ctx context.Context, name string) (bool, error) { return true, nil }
-func (f *fakeAvailMgr) InstalledVersion(ctx context.Context, name string) (string, error) {
-	return "1.0.0", nil
-}
-func (f *fakeAvailMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
-func (f *fakeAvailMgr) Dependencies() []string                           { return nil }
-
-type fakeUninstallErrorMgr struct{}
-
-func (f *fakeUninstallErrorMgr) IsAvailable(ctx context.Context) (bool, error)       { return true, nil }
-func (f *fakeUninstallErrorMgr) ListInstalled(ctx context.Context) ([]string, error) { return nil, nil }
-func (f *fakeUninstallErrorMgr) Install(ctx context.Context, name string) error      { return nil }
-func (f *fakeUninstallErrorMgr) Uninstall(ctx context.Context, name string) error {
-	return context.DeadlineExceeded
-}
-func (f *fakeUninstallErrorMgr) IsInstalled(ctx context.Context, name string) (bool, error) {
-	return true, nil
-}
-func (f *fakeUninstallErrorMgr) InstalledVersion(ctx context.Context, name string) (string, error) {
-	return "1.0.0", nil
-}
-func (f *fakeUninstallErrorMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
-func (f *fakeUninstallErrorMgr) Dependencies() []string                           { return nil }
 
 func TestInstall_ManagerUnavailable_Suggestion(t *testing.T) {
 	configDir := t.TempDir()
-	WithTemporaryRegistry(t, func(r *ManagerRegistry) {
-		// Register npm but mark unavailable
-		r.Register("npm", func() PackageManager { return &fakeAvailMgr{available: false} })
-	})
+	// v2-only: no responses for npm → unavailable
+	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{}}
+	SetDefaultExecutor(mock)
+	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
 
 	res, err := InstallPackages(context.Background(), configDir, []string{"prettier"}, InstallOptions{Manager: "npm"})
 	if err != nil {
@@ -61,9 +33,12 @@ func TestInstall_ManagerUnavailable_Suggestion(t *testing.T) {
 
 func TestInstall_NpmScoped_MetadataSaved(t *testing.T) {
 	configDir := t.TempDir()
-	WithTemporaryRegistry(t, func(r *ManagerRegistry) {
-		r.Register("npm", func() PackageManager { return &fakeAvailMgr{available: true} })
-	})
+	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
+		"npm --version":                    {Output: []byte("10.0.0"), Error: nil},
+		"npm install -g @scope/typescript": {Output: []byte("added"), Error: nil},
+	}}
+	SetDefaultExecutor(mock)
+	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
 
 	pkg := "@scope/typescript"
 	res, err := InstallPackages(context.Background(), configDir, []string{pkg}, InstallOptions{Manager: "npm"})
@@ -88,9 +63,17 @@ func TestInstall_NpmScoped_MetadataSaved(t *testing.T) {
 
 func TestInstall_GoSourcePath_SavedAndBinaryNamedInLock(t *testing.T) {
 	configDir := t.TempDir()
-	WithTemporaryRegistry(t, func(r *ManagerRegistry) {
-		r.Register("go", func() PackageManager { return &fakeAvailMgr{available: true} })
-	})
+	// Define custom v2 manager for go in config file and mock executor
+	// Note: Install command follows typical pattern for Go tools
+	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
+		"go --version":                         {Output: []byte("go1.22"), Error: nil},
+		"go install github.com/foo/bar@latest": {Output: []byte("ok"), Error: nil},
+	}}
+	SetDefaultExecutor(mock)
+	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
+	// Write a minimal plonk.yaml to inject the go manager for this test
+	cfgPath := filepath.Join(configDir, "plonk.yaml")
+	_ = os.WriteFile(cfgPath, []byte("managers:\n  go:\n    binary: go\n    install:\n      command: [\"go\", \"install\", \"{{.Package}}@latest\"]\n"), 0o644)
 
 	src := "github.com/foo/bar"
 	res, err := InstallPackages(context.Background(), configDir, []string{src}, InstallOptions{Manager: "go"})
@@ -119,9 +102,12 @@ func TestInstall_LockWriteFailure(t *testing.T) {
 	// Make directory read-only to trigger writer failure
 	_ = os.Chmod(configDir, 0500)
 	t.Cleanup(func() { _ = os.Chmod(configDir, 0700) })
-	WithTemporaryRegistry(t, func(r *ManagerRegistry) {
-		r.Register("brew", func() PackageManager { return &fakeAvailMgr{available: true} })
-	})
+	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
+		"brew --version":  {Output: []byte("Homebrew 4.0"), Error: nil},
+		"brew install jq": {Output: []byte("ok"), Error: nil},
+	}}
+	SetDefaultExecutor(mock)
+	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
 
 	res, err := InstallPackages(context.Background(), configDir, []string{"jq"}, InstallOptions{Manager: "brew"})
 	if err != nil {
@@ -137,10 +123,12 @@ func TestUninstall_PartialSuccess_WhenSystemUninstallFails(t *testing.T) {
 	// Seed lock as managed item
 	svc := lock.NewYAMLLockService(configDir)
 	_ = svc.AddPackage("brew", "jq", "1.0.0", map[string]interface{}{"manager": "brew", "name": "jq"})
-
-	WithTemporaryRegistry(t, func(r *ManagerRegistry) {
-		r.Register("brew", func() PackageManager { return &fakeUninstallErrorMgr{} })
-	})
+	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
+		"brew --version":    {Output: []byte("Homebrew 4.0"), Error: nil},
+		"brew uninstall jq": {Output: []byte("fail"), Error: &MockExitError{Code: 1}},
+	}}
+	SetDefaultExecutor(mock)
+	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
 
 	res, err := UninstallPackages(context.Background(), configDir, []string{"jq"}, UninstallOptions{Manager: "brew"})
 	if err != nil {
@@ -156,9 +144,12 @@ func TestUninstall_PartialSuccess_WhenSystemUninstallFails(t *testing.T) {
 
 func TestUninstall_NotManaged_PassThrough(t *testing.T) {
 	configDir := t.TempDir()
-	WithTemporaryRegistry(t, func(r *ManagerRegistry) {
-		r.Register("brew", func() PackageManager { return &fakeAvailMgr{available: true} })
-	})
+	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
+		"brew --version":    {Output: []byte("Homebrew 4.0"), Error: nil},
+		"brew uninstall jq": {Output: []byte("ok"), Error: nil},
+	}}
+	SetDefaultExecutor(mock)
+	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
 
 	res, err := UninstallPackages(context.Background(), configDir, []string{"jq"}, UninstallOptions{Manager: "brew"})
 	if err != nil {
@@ -178,9 +169,12 @@ func TestUninstall_LockWriteFailure_Error(t *testing.T) {
 	// Make directory read-only so RemovePackage's write fails
 	_ = os.Chmod(configDir, 0500)
 	t.Cleanup(func() { _ = os.Chmod(configDir, 0700) })
-	WithTemporaryRegistry(t, func(r *ManagerRegistry) {
-		r.Register("brew", func() PackageManager { return &fakeAvailMgr{available: true} })
-	})
+	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
+		"brew --version":    {Output: []byte("Homebrew 4.0"), Error: nil},
+		"brew uninstall jq": {Output: []byte("ok"), Error: nil},
+	}}
+	SetDefaultExecutor(mock)
+	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
 
 	res, err := UninstallPackages(context.Background(), configDir, []string{"jq"}, UninstallOptions{Manager: "brew"})
 	if err != nil {

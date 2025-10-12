@@ -2,30 +2,25 @@ package packages
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
 )
 
-type verErrMgr struct{}
-
-func (v *verErrMgr) IsAvailable(ctx context.Context) (bool, error)              { return true, nil }
-func (v *verErrMgr) ListInstalled(ctx context.Context) ([]string, error)        { return nil, nil }
-func (v *verErrMgr) Install(ctx context.Context, name string) error             { return nil }
-func (v *verErrMgr) Uninstall(ctx context.Context, name string) error           { return nil }
-func (v *verErrMgr) IsInstalled(ctx context.Context, name string) (bool, error) { return false, nil }
-func (v *verErrMgr) InstalledVersion(ctx context.Context, name string) (string, error) {
-	return "", errors.New("oops")
-}
-func (v *verErrMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
-func (v *verErrMgr) Dependencies() []string                           { return nil }
-
 func TestInstall_VersionErrorStillAdded(t *testing.T) {
-	cfg := &config.Config{DefaultManager: "brew"}
+	cfg := &config.Config{DefaultManager: "brew", Managers: map[string]config.ManagerConfig{
+		"brew": {Binary: "brew", Install: config.CommandConfig{Command: []string{"brew", "install", "{{.Package}}"}}},
+	}}
+	// Mock executor to allow install
+	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
+		"brew --version":  {Output: []byte("Homebrew 4.0"), Error: nil},
+		"brew install jq": {Output: []byte("installed"), Error: nil},
+	}}
+	SetDefaultExecutor(mock)
+	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
+
 	ls := lock.NewYAMLLockService(t.TempDir())
-	WithTemporaryRegistry(t, func(r *ManagerRegistry) { r.Register("brew", func() PackageManager { return &verErrMgr{} }) })
 	reg := NewManagerRegistry()
 	res, err := InstallPackagesWith(context.Background(), cfg, ls, reg, []string{"jq"}, InstallOptions{})
 	if err != nil {

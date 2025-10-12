@@ -11,21 +11,7 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 )
 
-// simpleFakeManager is a minimal PackageManager used for injection tests
-type simpleFakeManager struct{}
-
-func (m *simpleFakeManager) IsAvailable(ctx context.Context) (bool, error)       { return true, nil }
-func (m *simpleFakeManager) ListInstalled(ctx context.Context) ([]string, error) { return nil, nil }
-func (m *simpleFakeManager) Install(ctx context.Context, name string) error      { return nil }
-func (m *simpleFakeManager) Uninstall(ctx context.Context, name string) error    { return nil }
-func (m *simpleFakeManager) IsInstalled(ctx context.Context, name string) (bool, error) {
-	return true, nil
-}
-func (m *simpleFakeManager) InstalledVersion(ctx context.Context, name string) (string, error) {
-	return "1.0.0", nil
-}
-func (m *simpleFakeManager) Upgrade(ctx context.Context, pkgs []string) error { return nil }
-func (m *simpleFakeManager) Dependencies() []string                           { return nil }
+// (legacy in-file simpleFakeManager removed; tests use v2 config + mock executor)
 
 // failingAddLockService wraps MockLockService to fail AddPackage
 type failingAddLockService struct{ *MockLockService }
@@ -39,10 +25,6 @@ func TestInstallPackagesWith_AlreadyManaged_Skips(t *testing.T) {
 	lockSvc := NewMockLockService()
 	lockSvc.SetPackageExists("brew", "jq")
 
-	// Inject fake manager into temporary registry
-	WithTemporaryRegistry(t, func(r *ManagerRegistry) {
-		r.Register("brew", func() PackageManager { return &simpleFakeManager{} })
-	})
 	reg := NewManagerRegistry()
 
 	ctx := context.Background()
@@ -61,10 +43,19 @@ func TestInstallPackagesWith_AlreadyManaged_Skips(t *testing.T) {
 func TestInstallPackagesWith_LockAddFailure_ReportsFailed(t *testing.T) {
 	cfg := &config.Config{DefaultManager: "brew"}
 	lockSvc := &failingAddLockService{NewMockLockService()}
-
-	WithTemporaryRegistry(t, func(r *ManagerRegistry) {
-		r.Register("brew", func() PackageManager { return &simpleFakeManager{} })
-	})
+	// v2 config + mock exec for brew install
+	cfg.Managers = map[string]config.ManagerConfig{
+		"brew": {
+			Binary:  "brew",
+			Install: config.CommandConfig{Command: []string{"brew", "install", "{{.Package}}"}},
+		},
+	}
+	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
+		"brew --version":  {Output: []byte("Homebrew 4.0"), Error: nil},
+		"brew install jq": {Output: []byte("installed"), Error: nil},
+	}}
+	SetDefaultExecutor(mock)
+	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
 	reg := NewManagerRegistry()
 
 	ctx := context.Background()
@@ -83,10 +74,19 @@ func TestInstallPackagesWith_LockAddFailure_ReportsFailed(t *testing.T) {
 func TestUninstallPackagesWith_PassThrough_WhenNotManaged(t *testing.T) {
 	cfg := &config.Config{DefaultManager: "brew"}
 	lockSvc := NewMockLockService() // empty, so package is not managed
-
-	WithTemporaryRegistry(t, func(r *ManagerRegistry) {
-		r.Register("brew", func() PackageManager { return &simpleFakeManager{} })
-	})
+	// v2 config + mock exec for brew uninstall
+	cfg.Managers = map[string]config.ManagerConfig{
+		"brew": {
+			Binary:    "brew",
+			Uninstall: config.CommandConfig{Command: []string{"brew", "uninstall", "{{.Package}}"}},
+		},
+	}
+	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
+		"brew --version":    {Output: []byte("Homebrew 4.0"), Error: nil},
+		"brew uninstall jq": {Output: []byte("uninstalled"), Error: nil},
+	}}
+	SetDefaultExecutor(mock)
+	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
 	reg := NewManagerRegistry()
 
 	ctx := context.Background()

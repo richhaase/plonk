@@ -9,40 +9,19 @@ import (
 	packages "github.com/richhaase/plonk/internal/resources/packages"
 )
 
-type fakeMgrVersioning struct{ ver string }
-
-func (f *fakeMgrVersioning) IsAvailable(ctx context.Context) (bool, error)       { return true, nil }
-func (f *fakeMgrVersioning) ListInstalled(ctx context.Context) ([]string, error) { return nil, nil }
-func (f *fakeMgrVersioning) Install(ctx context.Context, name string) error      { return nil }
-func (f *fakeMgrVersioning) Uninstall(ctx context.Context, name string) error    { return nil }
-func (f *fakeMgrVersioning) IsInstalled(ctx context.Context, name string) (bool, error) {
-	return true, nil
-}
-func (f *fakeMgrVersioning) InstalledVersion(ctx context.Context, name string) (string, error) {
-	if f.ver == "" {
-		f.ver = "1.0.0"
-	}
-	return f.ver, nil
-}
-func (f *fakeMgrVersioning) Search(ctx context.Context, q string) ([]string, error) { return nil, nil }
-func (f *fakeMgrVersioning) SelfInstall(ctx context.Context) error                  { return nil }
-func (f *fakeMgrVersioning) Upgrade(ctx context.Context, pkgs []string) error {
-	f.ver = "1.1.0"
-	return nil
-}
-func (f *fakeMgrVersioning) Dependencies() []string { return nil }
-
 func TestUpgrade_UpdatesLockFileVersion(t *testing.T) {
 	dir := t.TempDir()
 	// Seed lock with brew:jq@1.0.0
 	svc := lock.NewYAMLLockService(dir)
 	_ = svc.AddPackage("brew", "jq", "1.0.0", map[string]interface{}{"manager": "brew", "name": "jq", "version": "1.0.0"})
 
-	// Register fake brew manager
-	var mgr fakeMgrVersioning
-	packages.WithTemporaryRegistry(t, func(r *packages.ManagerRegistry) {
-		r.Register("brew", func() packages.PackageManager { return &mgr })
-	})
+	// v2-only: mock brew upgrade success
+	mock := &packages.MockCommandExecutor{Responses: map[string]packages.CommandResponse{
+		"brew --version":  {Output: []byte("Homebrew 4.0"), Error: nil},
+		"brew upgrade jq": {Output: []byte("ok"), Error: nil},
+	}}
+	packages.SetDefaultExecutor(mock)
+	t.Cleanup(func() { packages.SetDefaultExecutor(&packages.RealCommandExecutor{}) })
 
 	spec := upgradeSpec{ManagerTargets: map[string][]string{"brew": {"jq"}}}
 	cfg := &config.Config{}

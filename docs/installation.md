@@ -216,7 +216,7 @@ plonk clone https://github.com/user/repo.git # Full URL
 
 This will:
 1. Clone your repository to `~/.config/plonk/`
-2. Install missing language package managers (if needed)
+2. Verify required package managers; if missing, use `plonk doctor` for install instructions
 3. Install all packages from `plonk.lock`
 4. Deploy all dotfiles to your home directory
 
@@ -231,8 +231,8 @@ mkdir -p ~/.config/plonk
 # Add your existing dotfiles
 plonk add ~/.zshrc ~/.vimrc ~/.gitconfig
 
-# Bootstrap package managers you need
-plonk install pnpm cargo uv
+# Ensure package managers you need are installed (pnpm, cargo, uv)
+# Use `plonk doctor` to check and get install instructions
 
 # Add packages you want to track
 plonk install ripgrep fd bat exa
@@ -263,9 +263,8 @@ plonk apply
 
 **Package manager not found**
 - For Homebrew: Install manually from https://brew.sh (required prerequisite)
-- For language package managers: Use `plonk install <manager-name>` (e.g., `plonk install pnpm`) for automatic bootstrapping
-- Use `plonk clone` to automatically install package managers needed by your managed packages
-- See [Configuration Guide](configuration.md#package-manager-settings) for manual setup
+- For language package managers: Install them manually (see upstream docs). `plonk doctor` provides platform-specific guidance.
+- See [Configuration Guide](configuration.md#package-manager-settings) for customizing manager commands
 
 ### Getting Help
 

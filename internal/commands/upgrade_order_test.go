@@ -24,25 +24,7 @@ func (s *stubLockService) GetPackages(manager string) ([]lock.ResourceEntry, err
 func (s *stubLockService) HasPackage(manager, name string) bool                     { return false }
 func (s *stubLockService) FindPackage(name string) []lock.ResourceEntry             { return nil }
 
-// fixedVersionManager allows observing calls without affecting order
-type fixedVersionManager struct{}
-
-func (f *fixedVersionManager) IsAvailable(ctx context.Context) (bool, error)       { return true, nil }
-func (f *fixedVersionManager) ListInstalled(ctx context.Context) ([]string, error) { return nil, nil }
-func (f *fixedVersionManager) Install(ctx context.Context, name string) error      { return nil }
-func (f *fixedVersionManager) Uninstall(ctx context.Context, name string) error    { return nil }
-func (f *fixedVersionManager) IsInstalled(ctx context.Context, name string) (bool, error) {
-	return true, nil
-}
-func (f *fixedVersionManager) InstalledVersion(ctx context.Context, name string) (string, error) {
-	return "1.0.0", nil
-}
-func (f *fixedVersionManager) Search(ctx context.Context, q string) ([]string, error) {
-	return nil, nil
-}
-func (f *fixedVersionManager) SelfInstall(ctx context.Context) error            { return nil }
-func (f *fixedVersionManager) Upgrade(ctx context.Context, pkgs []string) error { return nil }
-func (f *fixedVersionManager) Dependencies() []string                           { return nil }
+// (legacy fixed manager removed; test uses v2 config + mock executor)
 
 func TestExecuteUpgrade_DeterministicOrdering(t *testing.T) {
 	cfg := &config.Config{}
@@ -54,11 +36,17 @@ func TestExecuteUpgrade_DeterministicOrdering(t *testing.T) {
 		"brew": {"d", "c"},
 	}}
 
-	// Inject registry with fake managers for both entries
-	packages.WithTemporaryRegistry(t, func(r *packages.ManagerRegistry) {
-		r.Register("brew", func() packages.PackageManager { return &fixedVersionManager{} })
-		r.Register("npm", func() packages.PackageManager { return &fixedVersionManager{} })
-	})
+	// v2-only: default managers are present; use mock executor to simulate availability and success
+	mock := &packages.MockCommandExecutor{Responses: map[string]packages.CommandResponse{
+		"brew --version":  {Output: []byte("Homebrew 4.0"), Error: nil},
+		"npm --version":   {Output: []byte("10.0.0"), Error: nil},
+		"brew upgrade d":  {Output: []byte("ok"), Error: nil},
+		"brew upgrade c":  {Output: []byte("ok"), Error: nil},
+		"npm update a -g": {Output: []byte("ok"), Error: nil},
+		"npm update b -g": {Output: []byte("ok"), Error: nil},
+	}}
+	packages.SetDefaultExecutor(mock)
+	t.Cleanup(func() { packages.SetDefaultExecutor(&packages.RealCommandExecutor{}) })
 	reg := packages.NewManagerRegistry()
 
 	res, err := executeUpgrade(context.Background(), spec, cfg, lockSvc, reg)

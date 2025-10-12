@@ -62,24 +62,15 @@ The orchestrator coordinates complex operations across multiple resource types:
 Resources are organized by type:
 
 #### Packages (`internal/resources/packages/`)
-- Package manager interfaces and implementations defined in YAML configuration files
-- **ManagerRegistry** - Dynamic package manager discovery and loading from YAML definitions
+- v2-only, configuration-driven managers (no per-manager Go implementations)
+- **ManagerRegistry** loads manager definitions from config and constructs a `GenericManager`
 - Reconciliation and apply logic for package state using `manager:name` as unique keys
 - Package specification parsing (`spec.go`)
 - Command execution abstraction (`executor.go`) with injected executors
 - Operations for install, uninstall, upgrade
-- Health checking capabilities with installation instructions
 - Parallel manager operations using errgroup for performance
 
-Supported package managers (8 total):
-- Homebrew (brew) - macOS and Linux packages
-- NPM (npm) - Node.js global packages
-- PNPM (pnpm) - Fast, disk-efficient Node.js packages
-- Cargo (cargo) - Rust packages
-- Pipx (pipx) - Python applications in isolated environments
-- Conda (conda) - Scientific computing and data science packages
-- Gem (gem) - Ruby packages
-- UV (uv) - Python tool manager
+Built-in defaults (in `internal/config/managers_defaults.go`): brew, npm, pnpm, cargo, pipx, conda, gem, uv. Users can extend/override in `plonk.yaml`.
 
 
 #### Dotfiles (`internal/resources/dotfiles/`)
@@ -142,16 +133,16 @@ Plonk works without any configuration files by using sensible defaults:
 - Default config location: `~/.config/plonk`
 - Automatic dotfile discovery with smart filtering
 
-### 2. Package Manager Configuration
+### 2. Package Manager Configuration (v2)
 
-Package managers are defined using YAML configuration files instead of code-based implementations. This allows:
+Package managers are defined in configuration (not in code). This allows:
 - Consistent behavior across different tools
 - Easy addition of new package managers without code changes
 - Declarative configuration of manager capabilities (install, uninstall, list, upgrade, health)
 - Self-health checking and diagnostics
 - Package upgrade management
 
-**Note**: Package managers must be installed manually or via other supported package managers before use. The `plonk doctor` command provides installation instructions for missing managers.
+Note: Package managers must be installed manually or via other supported managers before use. The `plonk doctor` command provides installation instructions for missing managers.
 
 ### 3. State-Based Management
 
@@ -221,32 +212,25 @@ All commands support multiple output formats (table, JSON, YAML) to support:
 
 ### Adding a New Package Manager
 
-Package managers are now defined using YAML configuration files. To add a new package manager:
+Add or customize managers in `plonk.yaml` under `managers:` (no code or rebuild needed):
 
-1. Create a YAML configuration file in `internal/resources/packages/managers/` (e.g., `mynewmgr.yaml`)
-2. Define the manager's capabilities and command templates:
-   ```yaml
-   name: mynewmgr
-   description: My New Package Manager
-   check_installed:
-     command: ["mynewmgr", "--version"]
-   install:
-     command: ["mynewmgr", "install", "{{.Package}}"]
-   uninstall:
-     command: ["mynewmgr", "uninstall", "{{.Package}}"]
-   list:
-     command: ["mynewmgr", "list", "--json"]
-     parser: json  # or regex, line, etc.
-   upgrade:
-     command: ["mynewmgr", "upgrade", "{{.Package}}"]
-   health_check:
-     install_instructions: "Install using: curl -fsSL https://mynewmgr.io/install.sh | sh"
-   ```
-3. The manager will be automatically discovered and registered by the YAML-based registry
-4. Add tests for the manager configuration
-5. Update documentation
+```yaml
+managers:
+  mynewmgr:
+    binary: mynewmgr
+    list:
+      command: [mynewmgr, list, --json]
+      parse: json
+      json_field: name
+    install:
+      command: [mynewmgr, install, {{.Package}}]
+    uninstall:
+      command: [mynewmgr, uninstall, {{.Package}}]
+    upgrade:
+      command: [mynewmgr, upgrade, {{.Package}}]
+```
 
-**Note**: Package managers cannot self-install. Users must install them manually or via another supported manager. Provide installation instructions in the YAML configuration.
+The registry loads these definitions at runtime. Provide install instructions in project docs if your team uses a new manager.
 
 ### Adding a New Resource Type
 

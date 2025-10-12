@@ -8,19 +8,6 @@ import (
 	"github.com/richhaase/plonk/internal/lock"
 )
 
-type unavailMgr struct{}
-
-func (u *unavailMgr) IsAvailable(ctx context.Context) (bool, error)              { return false, nil }
-func (u *unavailMgr) ListInstalled(ctx context.Context) ([]string, error)        { return nil, nil }
-func (u *unavailMgr) Install(ctx context.Context, name string) error             { return nil }
-func (u *unavailMgr) Uninstall(ctx context.Context, name string) error           { return nil }
-func (u *unavailMgr) IsInstalled(ctx context.Context, name string) (bool, error) { return false, nil }
-func (u *unavailMgr) InstalledVersion(ctx context.Context, name string) (string, error) {
-	return "", nil
-}
-func (u *unavailMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
-func (u *unavailMgr) Dependencies() []string                           { return nil }
-
 func TestInstallPackagesWith_UnsupportedManager(t *testing.T) {
 	cfg := &config.Config{DefaultManager: "brew"}
 	lockSvc := lock.NewYAMLLockService(t.TempDir())
@@ -39,10 +26,17 @@ func TestInstallPackagesWith_UnsupportedManager(t *testing.T) {
 }
 
 func TestInstallPackagesWith_ManagerUnavailable(t *testing.T) {
-	cfg := &config.Config{}
+	cfg := &config.Config{
+		Managers: map[string]config.ManagerConfig{
+			"off": {Binary: "off"},
+		},
+	}
+	// Mock executor with no responses for "off" so LookPath fails → unavailable
+	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{}}
+	SetDefaultExecutor(mock)
+	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
+
 	lockSvc := lock.NewYAMLLockService(t.TempDir())
-	var u unavailMgr
-	WithTemporaryRegistry(t, func(r *ManagerRegistry) { r.Register("off", func() PackageManager { return &u }) })
 	reg := NewManagerRegistry()
 
 	results, err := InstallPackagesWith(context.Background(), cfg, lockSvc, reg, []string{"x"}, InstallOptions{Manager: "off"})

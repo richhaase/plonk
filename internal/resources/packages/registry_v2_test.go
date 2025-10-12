@@ -13,7 +13,6 @@ import (
 
 func TestRegistry_V2ConfigPreferred_WhenEnabled(t *testing.T) {
 	registry := &ManagerRegistry{
-		managers:   make(map[string]*managerEntry),
 		v2Managers: make(map[string]config.ManagerConfig),
 		enableV2:   true,
 	}
@@ -33,9 +32,8 @@ func TestRegistry_V2ConfigPreferred_WhenEnabled(t *testing.T) {
 	assert.IsType(t, &GenericManager{}, mgr)
 }
 
-func TestRegistry_V2Disabled_FallsBackToFactory(t *testing.T) {
+func TestRegistry_V2Disabled_ReturnsError(t *testing.T) {
 	registry := &ManagerRegistry{
-		managers:   make(map[string]*managerEntry),
 		v2Managers: make(map[string]config.ManagerConfig),
 		enableV2:   false,
 	}
@@ -43,20 +41,12 @@ func TestRegistry_V2Disabled_FallsBackToFactory(t *testing.T) {
 	v2Config := config.ManagerConfig{Binary: "test"}
 	registry.v2Managers["testmgr"] = v2Config
 
-	factory := func(exec CommandExecutor) PackageManager {
-		return &mockPackageManagerV2{}
-	}
-	registry.RegisterV2("testmgr", factory)
-
-	mgr, err := registry.GetManager("testmgr")
-
-	require.NoError(t, err)
-	assert.IsType(t, &mockPackageManagerV2{}, mgr)
+	_, err := registry.GetManager("testmgr")
+	require.Error(t, err)
 }
 
 func TestRegistry_LoadV2Configs(t *testing.T) {
 	registry := &ManagerRegistry{
-		managers:   make(map[string]*managerEntry),
 		v2Managers: make(map[string]config.ManagerConfig),
 		enableV2:   true,
 	}
@@ -84,58 +74,49 @@ func TestRegistry_LoadV2Configs(t *testing.T) {
 
 func TestRegistry_GetAllManagerNames_UnionAndSorted(t *testing.T) {
 	registry := &ManagerRegistry{
-		managers:   make(map[string]*managerEntry),
 		v2Managers: make(map[string]config.ManagerConfig),
 	}
 
-	registry.RegisterV2("npm", func(exec CommandExecutor) PackageManager { return nil })
+	registry.v2Managers["npm"] = config.ManagerConfig{}
 	registry.v2Managers["pipx"] = config.ManagerConfig{}
 	registry.v2Managers["cargo"] = config.ManagerConfig{}
-	registry.RegisterV2("brew", func(exec CommandExecutor) PackageManager { return nil })
+	registry.v2Managers["brew"] = config.ManagerConfig{}
 
 	names := registry.GetAllManagerNames()
 
-	assert.ElementsMatch(t, []string{"npm", "pipx", "cargo", "brew"}, names)
-	assert.Equal(t, []string{"brew", "cargo", "npm", "pipx"}, names, "should be sorted")
+	assert.Equal(t, []string{"brew", "cargo", "npm", "pipx"}, names)
 }
 
-func TestRegistry_HasManager_ChecksBothMaps(t *testing.T) {
+func TestRegistry_HasManager_ChecksV2Map(t *testing.T) {
 	registry := &ManagerRegistry{
-		managers:   make(map[string]*managerEntry),
 		v2Managers: make(map[string]config.ManagerConfig),
 	}
 
 	registry.v2Managers["v2mgr"] = config.ManagerConfig{}
-	registry.RegisterV2("gomgr", func(exec CommandExecutor) PackageManager { return nil })
 
 	assert.True(t, registry.HasManager("v2mgr"))
-	assert.True(t, registry.HasManager("gomgr"))
 	assert.False(t, registry.HasManager("nonexistent"))
 }
 
 func TestRegistry_EnableV2_TogglesGetManager(t *testing.T) {
 	registry := &ManagerRegistry{
-		managers:   make(map[string]*managerEntry),
 		v2Managers: make(map[string]config.ManagerConfig),
 		enableV2:   false,
 	}
 
 	registry.v2Managers["test"] = config.ManagerConfig{Binary: "test"}
-	factory := func(exec CommandExecutor) PackageManager { return &mockPackageManagerV2{} }
-	registry.RegisterV2("test", factory)
 
 	registry.EnableV2(false)
-	mgr, _ := registry.GetManager("test")
-	assert.IsType(t, &mockPackageManagerV2{}, mgr, "v2 disabled should use factory")
+	_, err := registry.GetManager("test")
+	assert.Error(t, err, "v2 disabled should not return a manager")
 
 	registry.EnableV2(true)
-	mgr, _ = registry.GetManager("test")
+	mgr, _ := registry.GetManager("test")
 	assert.IsType(t, &GenericManager{}, mgr, "v2 enabled should use config")
 }
 
 func TestRegistry_GetManagerWithExecutor_InjectsExecutor(t *testing.T) {
 	registry := &ManagerRegistry{
-		managers:   make(map[string]*managerEntry),
 		v2Managers: make(map[string]config.ManagerConfig),
 		enableV2:   true,
 	}
@@ -153,7 +134,6 @@ func TestRegistry_GetManagerWithExecutor_InjectsExecutor(t *testing.T) {
 
 func TestRegistry_UnsupportedManager_ReturnsError(t *testing.T) {
 	registry := &ManagerRegistry{
-		managers:   make(map[string]*managerEntry),
 		v2Managers: make(map[string]config.ManagerConfig),
 		enableV2:   true,
 	}

@@ -72,7 +72,8 @@ After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber
 # Track your existing setup
 plonk add ~/.zshrc ~/.vimrc ~/.config/nvim/    # Add dotfiles
 plonk install ripgrep fd bat                   # Install & track packages
-plonk install pnpm cargo                      # Bootstrap package managers
+# Ensure language/package managers (pnpm, cargo, etc.) are installed first
+# Use `plonk doctor` for detection and install guidance
 
 # See what plonk manages
 plonk status                                   # Show all resources
@@ -108,7 +109,7 @@ plonk add ~/.zshrc                       # Start tracking your dotfiles
 
 The `clone` command:
 1. Clones your dotfiles repository
-2. Installs required package managers
+2. Verifies required package managers; if missing, use `plonk doctor` for instructions
 3. Runs `plonk apply` to install all packages and deploy dotfiles
 4. Gets your machine ready for development in minutes
 
@@ -156,11 +157,8 @@ Plonk supports 8 package managers across multiple language ecosystems:
 - **Gem** (gem) - Ruby packages
 - **UV** (uv) - Fast Python tool manager with isolated environments
 
-Package manager prefixes and self-installation:
+Package manager prefixes:
 ```bash
-# Bootstrap package managers (auto-detected)
-plonk install pnpm cargo uv pipx     # Installs the managers themselves
-
 # Install packages via specific managers
 plonk install brew:wget npm:prettier pnpm:typescript cargo:ripgrep
 plonk install pipx:black conda:numpy gem:rubocop

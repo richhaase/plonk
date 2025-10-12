@@ -5,6 +5,8 @@ package packages
 
 import (
 	"testing"
+
+	"github.com/richhaase/plonk/internal/config"
 )
 
 // WithTemporaryRegistry replaces the global manager registry with a fresh instance
@@ -18,21 +20,14 @@ import (
 //
 // This avoids interacting with real package managers during tests.
 func WithTemporaryRegistry(t *testing.T, register func(*ManagerRegistry)) {
+	// Legacy helper no longer registers code managers; kept for compatibility where tests
+	// only need an isolated v2 registry. Callers should use v2 config + MockCommandExecutor.
 	t.Helper()
-
 	original := defaultRegistry
-
-	// Create a clean registry for tests
-	temp := &ManagerRegistry{managers: make(map[string]*managerEntry)}
+	temp := &ManagerRegistry{v2Managers: make(map[string]config.ManagerConfig), enableV2: true}
 	defaultRegistry = temp
-
-	// Allow caller to register desired fake managers
 	if register != nil {
 		register(temp)
 	}
-
-	// Restore original after the test completes
-	t.Cleanup(func() {
-		defaultRegistry = original
-	})
+	t.Cleanup(func() { defaultRegistry = original })
 }

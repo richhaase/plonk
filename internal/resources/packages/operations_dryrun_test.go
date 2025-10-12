@@ -12,8 +12,7 @@ func TestInstall_Uninstall_DryRun_Statuses(t *testing.T) {
 	cfg := &config.Config{DefaultManager: "brew"}
 	ls := lock.NewYAMLLockService(t.TempDir())
 
-	// Register simple available manager
-	WithTemporaryRegistry(t, func(r *ManagerRegistry) { r.Register("brew", func() PackageManager { return &fakeSimpleMgr{} }) })
+	// v2-only path: no manager needed for dry-run
 	reg := NewManagerRegistry()
 
 	res, err := InstallPackagesWith(context.Background(), cfg, ls, reg, []string{"jq"}, InstallOptions{DryRun: true})

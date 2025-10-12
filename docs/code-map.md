@@ -69,19 +69,13 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - `spec.go` - Package specification handling
 - `executor.go` - Command execution abstraction
 - `interfaces.go` - Package manager interfaces
-- `registry.go` - Package manager registry
+- `registry.go` - v2-only registry; creates GenericManager from config
+- `generic.go` - GenericManager executes YAML-defined managers
 - `helpers.go` - Package utilities
 
-##### Package Manager Implementations (YAML-Configured)
-- `homebrew.go` - Homebrew package manager
-- `npm.go` - NPM package manager
-- `pnpm.go` - PNPM package manager
-- `cargo.go` - Cargo package manager
-- `pipx.go` - Pipx package manager
-- `conda.go` - Conda package manager
-- `gem.go` - Gem package manager
-- `uv.go` - UV package manager
-- `generic.go` - GenericManager for YAML-configured package managers
+##### Package Manager Configuration (v2)
+- Built-in defaults: `internal/config/managers_defaults.go`
+- User overrides: `plonk.yaml` under `managers:` (no code changes required)
 
 
 

@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -10,31 +9,18 @@ import (
 	packages "github.com/richhaase/plonk/internal/resources/packages"
 )
 
-type errUpgradeMgr struct{}
-
-func (e *errUpgradeMgr) IsAvailable(ctx context.Context) (bool, error)              { return true, nil }
-func (e *errUpgradeMgr) ListInstalled(ctx context.Context) ([]string, error)        { return nil, nil }
-func (e *errUpgradeMgr) Install(ctx context.Context, name string) error             { return nil }
-func (e *errUpgradeMgr) Uninstall(ctx context.Context, name string) error           { return nil }
-func (e *errUpgradeMgr) IsInstalled(ctx context.Context, name string) (bool, error) { return true, nil }
-func (e *errUpgradeMgr) InstalledVersion(ctx context.Context, name string) (string, error) {
-	return "1.0.0", nil
-}
-func (e *errUpgradeMgr) Search(ctx context.Context, q string) ([]string, error) { return nil, nil }
-func (e *errUpgradeMgr) SelfInstall(ctx context.Context) error                  { return nil }
-func (e *errUpgradeMgr) Upgrade(ctx context.Context, pkgs []string) error {
-	return fmt.Errorf("upgrade failed")
-}
-func (e *errUpgradeMgr) Dependencies() []string { return nil }
-
 func TestUpgrade_ManagerErrorCountsFailed(t *testing.T) {
 	dir := t.TempDir()
 	svc := lock.NewYAMLLockService(dir)
 	_ = svc.AddPackage("brew", "a", "1.0.0", map[string]interface{}{"manager": "brew", "name": "a", "version": "1.0.0"})
 
-	packages.WithTemporaryRegistry(t, func(r *packages.ManagerRegistry) {
-		r.Register("brew", func() packages.PackageManager { return &errUpgradeMgr{} })
-	})
+	// v2-only: mark brew available but make upgrade fail
+	mock := &packages.MockCommandExecutor{Responses: map[string]packages.CommandResponse{
+		"brew --version": {Output: []byte("Homebrew 4.0"), Error: nil},
+		"brew upgrade a": {Output: []byte("failed"), Error: &packages.MockExitError{Code: 1}},
+	}}
+	packages.SetDefaultExecutor(mock)
+	t.Cleanup(func() { packages.SetDefaultExecutor(&packages.RealCommandExecutor{}) })
 
 	spec := upgradeSpec{ManagerTargets: map[string][]string{"brew": {"a"}}}
 	res2, err := Upgrade(context.Background(), spec, &config.Config{}, svc, packages.NewManagerRegistry())

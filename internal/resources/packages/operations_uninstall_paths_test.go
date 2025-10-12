@@ -9,21 +9,6 @@ import (
 	"github.com/richhaase/plonk/internal/lock"
 )
 
-type fakeUninstallMgr struct{ err error }
-
-func (f *fakeUninstallMgr) IsAvailable(ctx context.Context) (bool, error)       { return true, nil }
-func (f *fakeUninstallMgr) ListInstalled(ctx context.Context) ([]string, error) { return nil, nil }
-func (f *fakeUninstallMgr) Install(ctx context.Context, name string) error      { return nil }
-func (f *fakeUninstallMgr) Uninstall(ctx context.Context, name string) error    { return f.err }
-func (f *fakeUninstallMgr) IsInstalled(ctx context.Context, name string) (bool, error) {
-	return true, nil
-}
-func (f *fakeUninstallMgr) InstalledVersion(ctx context.Context, name string) (string, error) {
-	return "", nil
-}
-func (f *fakeUninstallMgr) Upgrade(ctx context.Context, pkgs []string) error { return nil }
-func (f *fakeUninstallMgr) Dependencies() []string                           { return nil }
-
 // lockSvc that reports package as managed and can fail RemovePackage
 type failingRemoveLock struct{ removeErr error }
 
@@ -44,9 +29,13 @@ func (f *failingRemoveLock) FindPackage(name string) []lock.ResourceEntry { retu
 func TestUninstall_Managed_UninstallErrorButRemovedFromLock(t *testing.T) {
 	cfg := &config.Config{}
 	l := &failingRemoveLock{removeErr: nil}
-	WithTemporaryRegistry(t, func(r *ManagerRegistry) {
-		r.Register("brew", func() PackageManager { return &fakeUninstallMgr{err: errors.New("boom")} })
-	})
+	// v2-only: mock uninstall error
+	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
+		"brew --version":    {Output: []byte("Homebrew 4.0"), Error: nil},
+		"brew uninstall jq": {Output: []byte("boom"), Error: &MockExitError{Code: 1}},
+	}}
+	SetDefaultExecutor(mock)
+	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
 	reg := NewManagerRegistry()
 	res, err := UninstallPackagesWith(context.Background(), cfg, l, reg, []string{"jq"}, UninstallOptions{Manager: "brew"})
 	if err != nil {
@@ -60,7 +49,13 @@ func TestUninstall_Managed_UninstallErrorButRemovedFromLock(t *testing.T) {
 func TestUninstall_Managed_RemoveFromLockFails(t *testing.T) {
 	cfg := &config.Config{}
 	l := &failingRemoveLock{removeErr: errors.New("lock fail")}
-	WithTemporaryRegistry(t, func(r *ManagerRegistry) { r.Register("brew", func() PackageManager { return &fakeUninstallMgr{} }) })
+	// v2-only: success uninstall
+	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
+		"brew --version":    {Output: []byte("Homebrew 4.0"), Error: nil},
+		"brew uninstall jq": {Output: []byte("ok"), Error: nil},
+	}}
+	SetDefaultExecutor(mock)
+	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
 	reg := NewManagerRegistry()
 	res, err := UninstallPackagesWith(context.Background(), cfg, l, reg, []string{"jq"}, UninstallOptions{Manager: "brew"})
 	if err != nil {
@@ -75,7 +70,12 @@ func TestUninstall_Unmanaged_PassThrough(t *testing.T) {
 	cfg := &config.Config{DefaultManager: "brew"}
 	// Use real YAML lock in temp dir (empty means unmanaged)
 	l := lock.NewYAMLLockService(t.TempDir())
-	WithTemporaryRegistry(t, func(r *ManagerRegistry) { r.Register("brew", func() PackageManager { return &fakeUninstallMgr{} }) })
+	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
+		"brew --version":    {Output: []byte("Homebrew 4.0"), Error: nil},
+		"brew uninstall jq": {Output: []byte("ok"), Error: nil},
+	}}
+	SetDefaultExecutor(mock)
+	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
 	reg := NewManagerRegistry()
 	res, err := UninstallPackagesWith(context.Background(), cfg, l, reg, []string{"jq"}, UninstallOptions{})
 	if err != nil {

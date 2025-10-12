@@ -9,62 +9,20 @@ import (
 	"github.com/richhaase/plonk/internal/lock"
 )
 
-// fakePM is a simple in-memory PackageManager for flow tests
-type fakePM struct {
-	available bool
-	installed map[string]bool
-	versions  map[string]string
-}
-
-func newFakePM() *fakePM {
-	return &fakePM{available: true, installed: map[string]bool{}, versions: map[string]string{}}
-}
-
-func (f *fakePM) IsAvailable(ctx context.Context) (bool, error) { return f.available, nil }
-func (f *fakePM) ListInstalled(ctx context.Context) ([]string, error) {
-	var out []string
-	for k, v := range f.installed {
-		if v {
-			out = append(out, k)
-		}
-	}
-	return out, nil
-}
-func (f *fakePM) Install(ctx context.Context, name string) error {
-	f.installed[name] = true
-	if f.versions[name] == "" {
-		f.versions[name] = "1.0.0"
-	}
-	return nil
-}
-func (f *fakePM) Uninstall(ctx context.Context, name string) error {
-	delete(f.installed, name)
-	return nil
-}
-func (f *fakePM) IsInstalled(ctx context.Context, name string) (bool, error) {
-	return f.installed[name], nil
-}
-func (f *fakePM) InstalledVersion(ctx context.Context, name string) (string, error) {
-	return f.versions[name], nil
-}
-func (f *fakePM) Upgrade(ctx context.Context, packages []string) error {
-	for _, p := range packages {
-		if f.installed[p] {
-			f.versions[p] = "1.0.1"
-		}
-	}
-	return nil
-}
-func (f *fakePM) Dependencies() []string { return nil }
+// (legacy in-file fake manager removed; tests use v2 config + mock executor)
 
 func TestOperations_Install_Uninstall_Flow_WithLock(t *testing.T) {
 	// temp config dir
 	configDir := t.TempDir()
 
-	// Isolate registry and register fake for brew
-	WithTemporaryRegistry(t, func(r *ManagerRegistry) {
-		r.Register("brew", func() PackageManager { return newFakePM() })
-	})
+	// v2: use default brew manager with mock executor
+	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
+		"brew --version":    {Output: []byte("Homebrew 4.0"), Error: nil},
+		"brew install jq":   {Output: []byte("installed"), Error: nil},
+		"brew uninstall jq": {Output: []byte("uninstalled"), Error: nil},
+	}}
+	SetDefaultExecutor(mock)
+	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
 
 	// Install package (non-dry-run) → writes to lock
 	res, err := InstallPackages(context.Background(), configDir, []string{"jq"}, InstallOptions{})
@@ -105,7 +63,6 @@ func TestOperations_Install_Uninstall_Flow_WithLock(t *testing.T) {
 
 func TestOperations_ManagerSpecified_And_DryRun(t *testing.T) {
 	configDir := t.TempDir()
-	WithTemporaryRegistry(t, func(r *ManagerRegistry) { r.Register("brew", func() PackageManager { return newFakePM() }) })
 
 	// Dry-run should not write lock
 	res, err := InstallPackages(context.Background(), configDir, []string{"jq"}, InstallOptions{Manager: "brew", DryRun: true})

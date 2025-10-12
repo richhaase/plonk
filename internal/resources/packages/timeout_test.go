@@ -7,37 +7,19 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"github.com/richhaase/plonk/internal/config"
 )
 
-// slowManager simulates long-running operations that respect context deadlines.
-type slowManager struct{}
-
-func (s *slowManager) IsAvailable(ctx context.Context) (bool, error)              { return true, nil }
-func (s *slowManager) ListInstalled(ctx context.Context) ([]string, error)        { return []string{}, nil }
-func (s *slowManager) Install(ctx context.Context, name string) error             { return blockUntilDone(ctx) }
-func (s *slowManager) Uninstall(ctx context.Context, name string) error           { return blockUntilDone(ctx) }
-func (s *slowManager) IsInstalled(ctx context.Context, name string) (bool, error) { return false, nil }
-func (s *slowManager) InstalledVersion(ctx context.Context, name string) (string, error) {
-	return "", nil
-}
-func (s *slowManager) Upgrade(ctx context.Context, packages []string) error {
-	return blockUntilDone(ctx)
-}
-func (s *slowManager) Dependencies() []string { return nil }
-
-func blockUntilDone(ctx context.Context) error {
-	// Sleep longer than the test timeout; return when context is done
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-time.After(500 * time.Millisecond):
-		return nil
-	}
-}
+// (legacy slowManager + blockUntilDone removed; v2 tests use config only)
 
 func TestInstallPackages_ContextTimeout(t *testing.T) {
 	// Use a temporary registry with only the slow manager
-	WithTemporaryRegistry(t, func(r *ManagerRegistry) { r.Register("slow", func() PackageManager { return &slowManager{} }) })
+	// v2-only: define custom manager in config file and let it time out via context
+	// We don't need actual command exec here; just ensure manager exists in registry
+	cfg := &config.Config{Managers: map[string]config.ManagerConfig{"slow": {Binary: "slow"}}}
+	reg := NewManagerRegistry()
+	reg.LoadV2Configs(cfg)
 
 	// Very short timeout to trigger cancellation
 	parent, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
@@ -61,7 +43,9 @@ func TestInstallPackages_ContextTimeout(t *testing.T) {
 
 func TestUninstallPackages_ContextTimeout(t *testing.T) {
 	// Use a temporary registry with only the slow manager
-	WithTemporaryRegistry(t, func(r *ManagerRegistry) { r.Register("slow", func() PackageManager { return &slowManager{} }) })
+	cfg := &config.Config{Managers: map[string]config.ManagerConfig{"slow": {Binary: "slow"}}}
+	reg := NewManagerRegistry()
+	reg.LoadV2Configs(cfg)
 
 	parent, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
 	defer cancel()

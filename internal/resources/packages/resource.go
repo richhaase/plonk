@@ -150,9 +150,9 @@ func (m *MultiPackageResource) Actual(ctx context.Context) []resources.Item {
 	g, gctx := errgroup.WithContext(ctx)
 	g.SetLimit(maxWorkers)
 
-	// Get packages from all available managers in parallel
-	for managerName := range m.registry.managers {
-		managerName := managerName // capture loop variable
+	// Get packages from all available managers (v2 YAML + v1 factories)
+	managerNames := m.registry.GetAllManagerNames()
+	for _, managerName := range managerNames {
 
 		g.Go(func() error {
 			// Check context cancellation

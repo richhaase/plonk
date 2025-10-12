@@ -15,36 +15,50 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// --- Fake package manager for tests ---
+// --- Test helpers for v2 GenericManager + mock executor ---
 
-// Global knobs for the fake manager behavior (kept simple: tests here do not run in parallel)
-var fakeAvailable = true
-var fakeFail = map[string]bool{}
+// setupFakeManagerConfig wires a YAML-defined manager named "fake" and a mock executor
+func setupFakeManagerConfig(t *testing.T, cfg *config.Config, failInstalls map[string]bool) {
+	t.Helper()
 
-type fakeManager struct{}
-
-func (f *fakeManager) IsAvailable(ctx context.Context) (bool, error)       { return fakeAvailable, nil }
-func (f *fakeManager) ListInstalled(ctx context.Context) ([]string, error) { return []string{}, nil }
-func (f *fakeManager) Install(ctx context.Context, name string) error {
-	if fakeFail[name] {
-		return os.ErrPermission
+	// Add a v2 manager definition for a synthetic binary "fake"
+	if cfg.Managers == nil {
+		cfg.Managers = map[string]config.ManagerConfig{}
 	}
-	return nil
-}
-func (f *fakeManager) Uninstall(ctx context.Context, name string) error           { return nil }
-func (f *fakeManager) IsInstalled(ctx context.Context, name string) (bool, error) { return false, nil }
-func (f *fakeManager) InstalledVersion(ctx context.Context, name string) (string, error) {
-	return "", nil
-}
-func (f *fakeManager) Search(ctx context.Context, query string) ([]string, error) {
-	return []string{}, nil
-}
-func (f *fakeManager) SelfInstall(ctx context.Context) error                { return nil }
-func (f *fakeManager) Upgrade(ctx context.Context, packages []string) error { return nil }
-func (f *fakeManager) Dependencies() []string                               { return nil }
+	cfg.Managers["fake"] = config.ManagerConfig{
+		Binary: "fake",
+		List: config.ListConfig{
+			Command: []string{"fake", "list"},
+			Parse:   "lines",
+		},
+		Install: config.CommandConfig{
+			Command: []string{"fake", "install", "{{.Package}}"},
+		},
+		Uninstall: config.CommandConfig{
+			Command: []string{"fake", "uninstall", "{{.Package}}"},
+		},
+	}
 
-func registerFakeManager() {
-	pkgs.RegisterManager("fake", func() pkgs.PackageManager { return &fakeManager{} })
+	// Configure a mock executor so no real commands run
+	mock := &pkgs.MockCommandExecutor{Responses: map[string]pkgs.CommandResponse{}}
+
+	// Make the binary discoverable and available
+	mock.Responses["fake --version"] = pkgs.CommandResponse{Output: []byte("fake 1.0.0"), Error: nil}
+	mock.Responses["fake list"] = pkgs.CommandResponse{Output: []byte(""), Error: nil}
+
+	// Provide install responses; optionally fail select packages
+	// We match exact command strings as built by GenericManager
+	for _, name := range []string{"pkg1", "pkg2", "pkg-only", "a", "b"} {
+		key := "fake install " + name
+		if failInstalls != nil && failInstalls[name] {
+			mock.Responses[key] = pkgs.CommandResponse{Output: []byte("permission denied"), Error: &pkgs.MockExitError{Code: 1}}
+		} else {
+			mock.Responses[key] = pkgs.CommandResponse{Output: []byte("installed"), Error: nil}
+		}
+	}
+
+	// Inject executor for package manager operations
+	pkgs.SetDefaultExecutor(mock)
 }
 
 // --- Helpers ---
@@ -72,10 +86,6 @@ func writeDotfileSource(t *testing.T, configDir, name, contents string) {
 // --- Tests ---
 
 func TestApply_Combined_Success(t *testing.T) {
-	registerFakeManager()
-	fakeAvailable = true
-	fakeFail = map[string]bool{}
-
 	configDir := t.TempDir()
 	homeDir := t.TempDir()
 
@@ -87,6 +97,7 @@ func TestApply_Combined_Success(t *testing.T) {
 	writeDotfileSource(t, configDir, "zshrc", "export TEST=1\n")
 
 	cfg := config.LoadWithDefaults(configDir)
+	setupFakeManagerConfig(t, cfg, nil)
 	orch := New(
 		WithConfig(cfg),
 		WithConfigDir(configDir),
@@ -108,16 +119,13 @@ func TestApply_Combined_Success(t *testing.T) {
 }
 
 func TestApply_PackagesOnly(t *testing.T) {
-	registerFakeManager()
-	fakeAvailable = true
-	fakeFail = map[string]bool{}
-
 	configDir := t.TempDir()
 	homeDir := t.TempDir()
 
 	writeLockPackage(t, configDir, "fake", "pkg-only", "1.0.0")
 
 	cfg := config.LoadWithDefaults(configDir)
+	setupFakeManagerConfig(t, cfg, nil)
 	orch := New(
 		WithConfig(cfg),
 		WithConfigDir(configDir),
@@ -132,14 +140,13 @@ func TestApply_PackagesOnly(t *testing.T) {
 }
 
 func TestApply_DotfilesOnly(t *testing.T) {
-	registerFakeManager() // not used here but safe
-
 	configDir := t.TempDir()
 	homeDir := t.TempDir()
 
 	writeDotfileSource(t, configDir, "gitconfig", "[user]\n\tname = Test\n")
 
 	cfg := config.LoadWithDefaults(configDir)
+	// No package manager needed for this test
 	orch := New(
 		WithConfig(cfg),
 		WithConfigDir(configDir),
@@ -156,10 +163,6 @@ func TestApply_DotfilesOnly(t *testing.T) {
 }
 
 func TestApply_DryRun(t *testing.T) {
-	registerFakeManager()
-	fakeAvailable = true
-	fakeFail = map[string]bool{}
-
 	configDir := t.TempDir()
 	homeDir := t.TempDir()
 
@@ -168,6 +171,7 @@ func TestApply_DryRun(t *testing.T) {
 	writeDotfileSource(t, configDir, "bashrc", "export DRY=1\n")
 
 	cfg := config.LoadWithDefaults(configDir)
+	setupFakeManagerConfig(t, cfg, nil)
 	orch := New(
 		WithConfig(cfg),
 		WithConfigDir(configDir),
@@ -188,8 +192,6 @@ func TestApply_DryRun(t *testing.T) {
 }
 
 func TestApply_PackageError_Propagates(t *testing.T) {
-	registerFakeManager()
-
 	configDir := t.TempDir()
 	homeDir := t.TempDir()
 
@@ -203,6 +205,7 @@ func TestApply_PackageError_Propagates(t *testing.T) {
 	writeDotfileSource(t, configDir, "vimrc", "set number\n")
 
 	cfg := config.LoadWithDefaults(configDir)
+	// No package manager needed; failure happens during lock read
 	orch := New(
 		WithConfig(cfg),
 		WithConfigDir(configDir),
