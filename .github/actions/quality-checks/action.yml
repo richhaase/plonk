@@ -23,12 +23,12 @@ runs:
   steps:
     - name: Format code
       if: ${{ inputs.run-formatter == 'true' }}
-      run: just format
+      run: gofmt -w -s .
       shell: bash
 
     - name: Run linter
       if: ${{ inputs.run-linter == 'true' }}
-      run: just lint
+      run: go run github.com/golangci/golangci-lint/cmd/golangci-lint run --timeout=10m
       shell: bash
 
     - name: Run security checks
