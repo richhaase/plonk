@@ -177,7 +177,33 @@ func (g *GenericManager) parseLines(data []byte) []string {
 		if line == "" {
 			continue
 		}
+		// Special handling for managers that return parseable filesystem paths
+		// instead of package names (e.g., npm/pnpm with --parseable).
+		if g.config.Binary == "npm" || g.config.Binary == "pnpm" {
+			// Many npm/pnpm outputs include paths containing node_modules/...
+			// Extract the package name (including scope when present).
+			const marker = "node_modules/"
+			if idx := strings.LastIndex(line, marker); idx != -1 {
+				rest := line[idx+len(marker):]
+				// For scoped packages, the next two segments form the name: @scope/name
+				segs := strings.Split(rest, "/")
+				if len(segs) > 0 {
+					if strings.HasPrefix(segs[0], "@") {
+						if len(segs) >= 2 {
+							packages = append(packages, segs[0]+"/"+segs[1])
+							continue
+						}
+						// Fallback: if incomplete, keep the segment as-is
+						packages = append(packages, segs[0])
+						continue
+					}
+					packages = append(packages, segs[0])
+					continue
+				}
+			}
+		}
 
+		// Default: take the first whitespace-delimited token
 		parts := strings.Fields(line)
 		if len(parts) > 0 {
 			packages = append(packages, parts[0])
