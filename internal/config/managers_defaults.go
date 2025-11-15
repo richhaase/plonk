@@ -94,8 +94,9 @@ func GetDefaultManagers() map[string]ManagerConfig {
 		"npm": {
 			Binary: "npm",
 			List: ListConfig{
-				Command: []string{"npm", "list", "-g", "--depth=0", "--parseable"},
-				Parse:   "lines",
+				Command:   []string{"npm", "list", "-g", "--depth=0", "--json"},
+				Parse:     "json-map",
+				JSONField: "dependencies",
 			},
 			Install: CommandConfig{
 				Command:          []string{"npm", "install", "-g", "{{.Package}}"},
@@ -116,8 +117,9 @@ func GetDefaultManagers() map[string]ManagerConfig {
 		"pnpm": {
 			Binary: "pnpm",
 			List: ListConfig{
-				Command: []string{"pnpm", "list", "-g", "--depth=0", "--parseable"},
-				Parse:   "lines",
+				Command:   []string{"pnpm", "list", "-g", "--depth=0", "--json"},
+				Parse:     "json",
+				JSONField: "name",
 			},
 			Install: CommandConfig{
 				Command:          []string{"pnpm", "add", "-g", "{{.Package}}"},

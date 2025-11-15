@@ -19,10 +19,10 @@ This document catalogs manager-specific code references that violate our goal of
 > **Phase 0 status (2025-11-15)**: Configuration schema fields and metadata pipeline design are now implemented:
 > - `parse_strategy`, `name_transform`, and `metadata_extractors` are defined in `internal/config/managers.go`.
 > - `GenericManager` supports `parse_strategy` as an alias for `parse`.
-> - A prototype `json-map` parsing mode and metadata pipeline design doc (`docs/plans/pkg-mgr-metadata-pipeline.md`) are in place, but not yet wired into default manager configs.
+> - A `json-map` parsing mode and metadata pipeline design doc (`docs/plans/pkg-mgr-metadata-pipeline.md`) are in place and used by the default npm manager configuration.
 
 **Total Progress**: 6/13 violations resolved (46% complete)
-**Phase 0**: Foundation work is partially completed in code; remaining work is to switch npm/pnpm to JSON-based parsing and remove legacy path-based logic in a future phase.
+**Phase 0**: Foundation work is completed in code; Phase 1 has begun by switching npm/pnpm to JSON-based parsing and removing legacy path-based logic from `GenericManager`.
 
 ## ⚠️ Critical Review Findings (2025-11-02)
 

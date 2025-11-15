@@ -56,6 +56,32 @@ func TestGenericManager_ListInstalled(t *testing.T) {
 			output:   "ripgrep v14.0.0:\nfd v8.7.0:\n",
 			expected: []string{"ripgrep", "fd"},
 		},
+		{
+			name: "npm json-map parsing",
+			config: config.ManagerConfig{
+				Binary: "npm",
+				List: config.ListConfig{
+					Command:   []string{"npm", "list", "-g", "--depth=0", "--json"},
+					Parse:     "json-map",
+					JSONField: "dependencies",
+				},
+			},
+			output:   `{"dependencies":{"prettier":{},"typescript":{}}}`,
+			expected: []string{"prettier", "typescript"},
+		},
+		{
+			name: "pnpm json array parsing",
+			config: config.ManagerConfig{
+				Binary: "pnpm",
+				List: config.ListConfig{
+					Command:   []string{"pnpm", "list", "-g", "--depth=0", "--json"},
+					Parse:     "json",
+					JSONField: "name",
+				},
+			},
+			output:   `[{"name":"prettier"},{"name":"typescript"}]`,
+			expected: []string{"prettier", "typescript"},
+		},
 	}
 
 	for _, tt := range tests {
