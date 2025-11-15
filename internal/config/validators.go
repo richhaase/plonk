@@ -7,37 +7,50 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// validManagers holds the list of valid package managers
-// This is populated at runtime by the packages module
-var validManagers []string
+// validManagers holds the list of valid package managers.
+// This is populated at runtime by the packages module via ManagerRegistry
+// or explicitly in tests. When unset, we fall back to the default manager
+// definitions from GetDefaultManagers.
+var (
+	validManagers        []string
+	validManagersDefined bool
+)
 
-// SetValidManagers sets the list of valid package managers for validation
+// SetValidManagers sets the list of valid package managers for validation.
+// In production this is called from the packages module; tests may call it directly.
 func SetValidManagers(managers []string) {
 	validManagers = managers
+	validManagersDefined = true
 }
 
-// knownManagers is a fallback list of known package managers
-// used when the dynamic list hasn't been populated yet
-var knownManagers = []string{"apt", "brew", "npm", "uv", "gem", "go", "cargo", "test-unavailable"}
-
-// RegisterValidators registers custom validators for config validation
+// RegisterValidators registers custom validators for config validation.
 func RegisterValidators(v *validator.Validate) error {
 	return v.RegisterValidation("validmanager", validatePackageManager)
 }
 
-// validatePackageManager validates that a package manager is registered
+// validatePackageManager validates that a package manager is registered.
+// When no managers have been registered yet, any non-empty manager name is treated as invalid.
 func validatePackageManager(fl validator.FieldLevel) bool {
 	managerName := fl.Field().String()
 	if managerName == "" {
-		// Empty is valid (will use default)
+		// Empty is valid (will use default).
 		return true
 	}
 
-	// Check against the valid managers list
 	managers := validManagers
+
+	// If no managers have been registered dynamically, fall back to default managers.
+	if !validManagersDefined {
+		defaults := GetDefaultManagers()
+		managers = make([]string, 0, len(defaults))
+		for name := range defaults {
+			managers = append(managers, name)
+		}
+	}
+
+	// If managers is still empty (explicitly set to empty), treat any explicit manager as invalid.
 	if len(managers) == 0 {
-		// Fallback to known managers if dynamic list not populated yet
-		managers = knownManagers
+		return false
 	}
 
 	for _, valid := range managers {

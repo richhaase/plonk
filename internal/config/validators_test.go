@@ -14,7 +14,7 @@ func TestValidatePackageManager(t *testing.T) {
 	tests := []struct {
 		name       string
 		manager    string
-		setupFunc  func()
+		valid      []string
 		shouldPass bool
 	}{
 		{
@@ -23,18 +23,21 @@ func TestValidatePackageManager(t *testing.T) {
 			shouldPass: true,
 		},
 		{
-			name:       "known manager (brew) is valid",
+			name:       "known manager (brew) is valid when registered",
 			manager:    "brew",
+			valid:      []string{"brew", "npm"},
 			shouldPass: true,
 		},
 		{
-			name:       "known manager (npm) is valid",
+			name:       "known manager (npm) is valid when registered",
 			manager:    "npm",
+			valid:      []string{"brew", "npm"},
 			shouldPass: true,
 		},
 		{
-			name:       "test-unavailable is valid (for testing)",
+			name:       "test-unavailable is valid when registered (for testing)",
 			manager:    "test-unavailable",
+			valid:      []string{"test-unavailable"},
 			shouldPass: true,
 		},
 		{
@@ -43,18 +46,22 @@ func TestValidatePackageManager(t *testing.T) {
 			shouldPass: false,
 		},
 		{
-			name:       "apt is valid (legacy support)",
+			name:       "apt is valid when registered (legacy support)",
 			manager:    "apt",
+			valid:      []string{"apt"},
 			shouldPass: true,
 		},
 		{
-			name:    "dynamically registered manager is valid",
-			manager: "custom-manager",
-			setupFunc: func() {
-				// Simulate dynamic registration
-				SetValidManagers([]string{"brew", "npm", "custom-manager"})
-			},
+			name:       "dynamically registered manager is valid",
+			manager:    "custom-manager",
+			valid:      []string{"brew", "npm", "custom-manager"},
 			shouldPass: true,
+		},
+		{
+			name:       "non-empty manager is invalid when registry is empty",
+			manager:    "brew",
+			valid:      []string{},
+			shouldPass: false,
 		},
 	}
 
@@ -62,9 +69,11 @@ func TestValidatePackageManager(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Reset to default state
 			validManagers = nil
+			validManagersDefined = false
 
-			if tt.setupFunc != nil {
-				tt.setupFunc()
+			// Simulate dynamic registration if requested
+			if tt.valid != nil {
+				SetValidManagers(tt.valid)
 			}
 
 			v := validator.New()
