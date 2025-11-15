@@ -1,6 +1,6 @@
 # Package Manager References - Enhanced Refactoring Guide
 
-> **Status**: 🔄 Revised After Multi-Model Review - 6 of 13 violations resolved (~46% complete)
+> **Status**: 🔄 Revised After Multi-Model Review - 8 of 13 violations resolved (~62% complete)
 > **Priority**: Complete manager-agnostic core architecture
 > **Target**: v2.1 release milestone
 > **Last Updated**: 2025-11-02 (Post-review revisions by Codex CLI, Claude Code, Gemini CLI)
@@ -12,16 +12,16 @@ This document catalogs manager-specific code references that violate our goal of
 ## 📊 Progress Overview
 
 ### Completion Status
-- [ ] **Core Package Code** (2/4 completed - 50%)
+- [ ] **Core Package Code** (3/4 completed - 75%)
 - [ ] **CLI/Orchestration** (0/3 completed - 0%)
-- [ ] **Shared Types/Config** (4/6 completed - 67%)
+- [ ] **Shared Types/Config** (5/6 completed - 83%)
 
 > **Phase 0 status (2025-11-15)**: Configuration schema fields and metadata pipeline design are now implemented:
 > - `parse_strategy`, `name_transform`, and `metadata_extractors` are defined in `internal/config/managers.go`.
 > - `GenericManager` supports `parse_strategy` as an alias for `parse`.
 > - A `json-map` parsing mode and metadata pipeline design doc (`docs/plans/pkg-mgr-metadata-pipeline.md`) are in place and used by the default npm manager configuration.
 
-**Total Progress**: 6/13 violations resolved (46% complete)
+**Total Progress**: 8/13 violations resolved (62% complete)
 **Phase 0**: Foundation work is completed in code; Phase 1 has begun by switching npm/pnpm to JSON-based parsing and removing legacy path-based logic from `GenericManager`.
 
 ## ⚠️ Critical Review Findings (2025-11-02)
@@ -54,28 +54,15 @@ This document catalogs manager-specific code references that violate our goal of
 
 ### Core Package Code
 
-#### 🔴 CRITICAL - npm/pnpm Path Parsing
-- **File**: `internal/resources/packages/generic.go:182`
-- **Impact**: ~20 lines of manager-specific parsing logic
-- **Description**: Special-cases npm/pnpm parseable paths (node_modules) when parsing `list` output
-- **Code Example**:
-  ```go
-  // Current problematic approach
-  if strings.Contains(output, "node_modules") {
-      // npm/pnpm specific parsing logic
-  }
-  ```
-- **Why it exists**: npm/pnpm output format differs significantly from other managers
-- **Refactoring Solution**:
-  ```go
-  // Enhanced ManagerConfig with parsing strategies
-  type ManagerConfig struct {
-      ParseStrategy string `yaml:"parse_strategy"` // "json", "parseable", "plain"
-      PathExtractor string `yaml:"path_extractor"` // regex or template
-  }
-  ```
-- **Effort**: 8 hours
-- **Status**: ❌ Not started
+#### ✅ COMPLETED - npm/pnpm Path Parsing
+- **File**: `internal/resources/packages/generic.go` (historical reference at :182)
+- **Impact**: ~20 lines of manager-specific parsing logic (now removed)
+- **Description**: Previously special-cased npm/pnpm parseable paths (`node_modules`) when parsing `list` output.
+- **Resolution**:
+  - Default npm and pnpm managers now use JSON-based list commands (`--json`).
+  - `GenericManager` gained a `json-map` parser used by the npm default (`dependencies` keys), and pnpm uses JSON-array parsing with `json_field: name`.
+  - All npm/pnpm-specific path parsing has been removed from core logic; behavior is entirely configuration-driven.
+ - **Status**: ✅ **COMPLETED** (implemented November 2025)
 
 #### 🔴 CRITICAL - Go Special-Case Code (Dead Code)
 - **File**: `internal/resources/packages/operations.go:124,171,188,223`
@@ -143,23 +130,15 @@ This document catalogs manager-specific code references that violate our goal of
 - **Effort**: 6 hours
 - **Status**: ❌ Not started
 
-#### 🟡 HIGH - Manager Validation Logic
-- **File**: `internal/config/config.go:45`
-- **Impact**: 1 line, high architectural impact
-- **Description**: Hard-coded list of valid managers for validation
-- **Code Example**:
-  ```go
-  validManagers := []string{"brew", "npm", "cargo", "gem", "go"}
-  ```
-- **Refactoring Solution**:
-  ```go
-  // Registry-driven validation
-  func (r *ManagerRegistry) ValidateManager(name string) error {
-      return r.GetManager(name) != nil
-  }
-  ```
-- **Effort**: 2 hours
-- **Status**: ❌ Not started
+#### ✅ COMPLETED - Manager Validation Logic
+- **File**: `internal/config/validators.go`
+- **Impact**: Removed hard-coded manager lists in validation path
+- **Previous State**: Used a static `knownManagers` slice (`apt, brew, npm, uv, gem, go, cargo, test-unavailable`) as a fallback when dynamic registration was absent.
+- **Current Design**:
+  - Validation is driven by the set registered via `SetValidManagers` (fed from `ManagerRegistry`) when present.
+  - When nothing has been registered yet, validation falls back to the keys of `GetDefaultManagers()` (config-driven defaults, not hand-maintained constants).
+  - Tests can explicitly control the allowed managers by calling `SetValidManagers`.
+- **Status**: ✅ **COMPLETED** (hard-coded `knownManagers` list removed; now derived from config and registry)
 
 ### Shared Types/Config
 

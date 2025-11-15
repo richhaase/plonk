@@ -3,12 +3,13 @@
 Goal: The core should be manager-agnostic. This document lists all places in code that currently embed package-manager specifics and should be removed, normalized behind config, or encapsulated in dedicated adapters.
 
 ## Core Package Code
-- `internal/resources/packages/generic.go:182`
-  - Special-cases npm/pnpm parseable paths (node_modules) when parsing `list` output.
-- `internal/resources/packages/generic.go:215`
-  - Applies Homebrew alias expansion during list parsing.
-- `internal/resources/packages/generic.go:223`
-  - `expandBrewAliases` helper implements brew-specific alias logic.
+- ~~`internal/resources/packages/generic.go:182`~~ ✅ **RESOLVED**
+  - Previously special-cased npm/pnpm parseable paths (`node_modules`) when parsing `list` output.
+  - Now removed; npm/pnpm use JSON-based list output configured via `ManagerConfig` and parsed generically (`json`/`json-map` strategies).
+- ~~`internal/resources/packages/generic.go:215`~~ ✅ **RESOLVED**
+  - Homebrew alias expansion during list parsing has been removed in favor of config-driven behavior.
+- ~~`internal/resources/packages/generic.go:223`~~ ✅ **RESOLVED**
+  - `expandBrewAliases` helper and brew-specific alias logic have been removed from core.
 
 - `internal/resources/packages/operations.go:124,171,188,223`
   - Multiple branches for `manager == "go"` (dead code - Go is NOT a built-in manager).
@@ -34,8 +35,9 @@ Goal: The core should be manager-agnostic. This document lists all places in cod
 - `internal/resources/types.go:48`
   - Comment references "homebrew", "npm".
 
-- `internal/config/validators.go:21`
-  - `knownManagers` slice embeds manager names: `apt, brew, npm, uv, gem, go, cargo, test-unavailable`.
+- `internal/config/validators.go:21` ✅ **RESOLVED**
+  - Previously used a `knownManagers` slice with embedded names (`apt, brew, npm, uv, gem, go, cargo, test-unavailable`) as a fallback.
+  - Now derives allowed managers from the dynamically registered list (via `ManagerRegistry`) or from `GetDefaultManagers()`; no hand-maintained manager-name slice remains.
 
 - `internal/config/config.go:34`
   - Default `DefaultManager: "brew"`.
