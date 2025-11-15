@@ -117,32 +117,27 @@ func TestGetManagerInstallSuggestion(t *testing.T) {
 		{
 			name:     "brew manager",
 			manager:  "brew",
-			expected: `install with: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`,
+			expected: "Visit https://brew.sh for installation instructions (prerequisite)",
 		},
 		{
 			name:     "npm manager",
 			manager:  "npm",
-			expected: "install Node.js from https://nodejs.org/",
+			expected: "Install Node.js from https://nodejs.org/ or use brew install node",
 		},
 		{
 			name:     "uv manager",
 			manager:  "uv",
-			expected: "install UV from https://docs.astral.sh/uv/",
+			expected: "Install UV from https://docs.astral.sh/uv/ or use brew install uv",
 		},
 		{
 			name:     "cargo manager",
 			manager:  "cargo",
-			expected: "install Rust from https://rustup.rs/",
+			expected: "Install Rust from https://rustup.rs/",
 		},
 		{
 			name:     "gem manager",
 			manager:  "gem",
-			expected: "install Ruby from https://ruby-lang.org/",
-		},
-		{
-			name:     "go manager",
-			manager:  "go",
-			expected: "install Go from https://golang.org/",
+			expected: "Install Ruby from https://ruby-lang.org/ or use brew install ruby",
 		},
 		{
 			name:     "unknown manager",

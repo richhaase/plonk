@@ -48,11 +48,10 @@ type upgradeSpec struct {
 
 // packageMatchInfo contains the information needed to match packages
 type packageMatchInfo struct {
-	Manager    string
-	Name       string
-	SourcePath string // for Go packages like github.com/rakyll/hey -> hey
-	FullName   string // for npm scoped packages like @scope/name
-	Resource   lock.ResourceEntry
+	Manager  string
+	Name     string
+	FullName string // for npm scoped packages like @scope/name
+	Resource lock.ResourceEntry
 }
 
 // parseUpgradeArgs parses command arguments into upgrade specification
@@ -82,13 +81,6 @@ func parseUpgradeArgs(args []string, lockFile *lock.Lock) (upgradeSpec, error) {
 					Manager:  manager,
 					Name:     packageName,
 					Resource: resource,
-				}
-
-				// Extract source_path for Go packages
-				if sourcePath, ok := resource.Metadata["source_path"]; ok {
-					if sourcePathStr, ok := sourcePath.(string); ok {
-						matchInfo.SourcePath = sourcePathStr
-					}
 				}
 
 				// Extract full_name for npm scoped packages
@@ -169,11 +161,6 @@ func matchesPackage(info packageMatchInfo, packageName string) bool {
 		return true
 	}
 
-	// Match by source path (Go packages)
-	if info.SourcePath != "" && info.SourcePath == packageName {
-		return true
-	}
-
 	// Match by full name (npm scoped packages)
 	if info.FullName != "" && info.FullName == packageName {
 		return true
@@ -184,12 +171,6 @@ func matchesPackage(info packageMatchInfo, packageName string) bool {
 
 // determineUpgradeTarget determines what target to pass to the package manager for upgrade
 func determineUpgradeTarget(info packageMatchInfo, requestedName string) string {
-	// For Go packages, if they requested the source path, we should upgrade with source path
-	// If they requested the binary name, we still need to upgrade with source path for Go
-	if info.Manager == "go" && info.SourcePath != "" {
-		return info.SourcePath
-	}
-
 	// For npm scoped packages, if they have full_name, use it
 	if info.Manager == "npm" && info.FullName != "" {
 		return info.FullName

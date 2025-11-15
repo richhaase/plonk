@@ -31,29 +31,7 @@ func TestInstallPackagesWith_NpmScopedMetadata(t *testing.T) {
 }
 
 func TestInstallPackagesWith_GoSourcePathMetadata(t *testing.T) {
-	cfg := &config.Config{DefaultManager: "go", Managers: map[string]config.ManagerConfig{
-		"go": {
-			Binary:  "go",
-			Install: config.CommandConfig{Command: []string{"go", "install", "{{.Package}}@latest"}},
-		},
-	}}
-	lockSvc := NewMockLockService()
-	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
-		"go --version":                           {Output: []byte("go1.22"), Error: nil},
-		"go install github.com/acme/tool@latest": {Output: []byte("ok"), Error: nil},
-	}}
-	SetDefaultExecutor(mock)
-	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
-	reg := NewManagerRegistry()
-	_, err := InstallPackagesWith(context.Background(), cfg, lockSvc, reg, []string{"github.com/user/project/cmd/tool"}, InstallOptions{})
-	if err != nil {
-		t.Fatalf("unexpected: %v", err)
-	}
-	if len(lockSvc.addCalls) != 1 {
-		t.Fatalf("expected 1 add call")
-	}
-	meta := lockSvc.addCalls[0].Metadata
-	if meta["source_path"].(string) != "github.com/user/project/cmd/tool" {
-		t.Fatalf("expected source_path recorded, got %#v", meta)
-	}
+	// Go is no longer a built-in manager and does not have special-case
+	// metadata handling in core. Custom managers should be covered by
+	// configuration-driven behavior instead.
 }

@@ -44,17 +44,3 @@ func ExecuteCommand(ctx context.Context, name string, args ...string) ([]byte, e
 func IsContextError(err error) bool {
 	return err == context.Canceled || err == context.DeadlineExceeded
 }
-
-// ExtractBinaryNameFromPath extracts the binary name from a package path
-func ExtractBinaryNameFromPath(fullPath string) string {
-	parts := strings.Split(fullPath, "/")
-	if len(parts) == 0 {
-		return fullPath
-	}
-	lastPart := parts[len(parts)-1]
-
-	if idx := strings.Index(lastPart, "@"); idx > 0 {
-		return lastPart[:idx]
-	}
-	return lastPart
-}

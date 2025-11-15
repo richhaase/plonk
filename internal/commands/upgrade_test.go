@@ -28,26 +28,6 @@ func TestMatchesPackage(t *testing.T) {
 			expected:    true,
 		},
 		{
-			name: "matches by Go source path",
-			info: packageMatchInfo{
-				Manager:    "go",
-				Name:       "hey",
-				SourcePath: "github.com/rakyll/hey",
-			},
-			packageName: "github.com/rakyll/hey",
-			expected:    true,
-		},
-		{
-			name: "matches Go package by binary name",
-			info: packageMatchInfo{
-				Manager:    "go",
-				Name:       "hey",
-				SourcePath: "github.com/rakyll/hey",
-			},
-			packageName: "hey",
-			expected:    true,
-		},
-		{
 			name: "matches npm scoped package by full name",
 			info: packageMatchInfo{
 				Manager:  "npm",
@@ -76,16 +56,6 @@ func TestMatchesPackage(t *testing.T) {
 			packageName: "htop",
 			expected:    false,
 		},
-		{
-			name: "no match for wrong Go source path",
-			info: packageMatchInfo{
-				Manager:    "go",
-				Name:       "hey",
-				SourcePath: "github.com/rakyll/hey",
-			},
-			packageName: "github.com/other/package",
-			expected:    false,
-		},
 	}
 
 	for _, tt := range tests {
@@ -103,26 +73,6 @@ func TestDetermineUpgradeTarget(t *testing.T) {
 		requestedName string
 		expected      string
 	}{
-		{
-			name: "Go package always uses source path",
-			info: packageMatchInfo{
-				Manager:    "go",
-				Name:       "hey",
-				SourcePath: "github.com/rakyll/hey",
-			},
-			requestedName: "hey",
-			expected:      "github.com/rakyll/hey",
-		},
-		{
-			name: "Go package uses source path even when requested by source path",
-			info: packageMatchInfo{
-				Manager:    "go",
-				Name:       "hey",
-				SourcePath: "github.com/rakyll/hey",
-			},
-			requestedName: "github.com/rakyll/hey",
-			expected:      "github.com/rakyll/hey",
-		},
 		{
 			name: "npm scoped package uses full name when available",
 			info: packageMatchInfo{
@@ -168,11 +118,6 @@ func TestFindPackageMatch(t *testing.T) {
 			Name:    "git",
 		},
 		{
-			Manager:    "go",
-			Name:       "hey",
-			SourcePath: "github.com/rakyll/hey",
-		},
-		{
 			Manager:  "npm",
 			Name:     "claude-code",
 			FullName: "@anthropic-ai/claude-code",
@@ -190,18 +135,6 @@ func TestFindPackageMatch(t *testing.T) {
 			manager:     "brew",
 			packageName: "git",
 			expected:    stringPtr("git"),
-		},
-		{
-			name:        "find Go package by binary name",
-			manager:     "go",
-			packageName: "hey",
-			expected:    stringPtr("hey"),
-		},
-		{
-			name:        "find Go package by source path",
-			manager:     "go",
-			packageName: "github.com/rakyll/hey",
-			expected:    stringPtr("hey"),
 		},
 		{
 			name:        "find npm scoped package by full name",
@@ -257,15 +190,6 @@ func TestParseUpgradeArgs(t *testing.T) {
 			},
 			{
 				Type: "package",
-				ID:   "go:hey",
-				Metadata: map[string]interface{}{
-					"manager":     "go",
-					"name":        "hey",
-					"source_path": "github.com/rakyll/hey",
-				},
-			},
-			{
-				Type: "package",
 				ID:   "npm:claude-code",
 				Metadata: map[string]interface{}{
 					"manager":   "npm",
@@ -306,20 +230,6 @@ func TestParseUpgradeArgs(t *testing.T) {
 			expectError:        false,
 		},
 		{
-			name:               "Go package by source path",
-			args:               []string{"go:github.com/rakyll/hey"},
-			expectedUpgradeAll: false,
-			expectedTargets:    map[string][]string{"go": {"github.com/rakyll/hey"}}, // Should use source path for upgrade
-			expectError:        false,
-		},
-		{
-			name:               "Go package by binary name",
-			args:               []string{"go:hey"},
-			expectedUpgradeAll: false,
-			expectedTargets:    map[string][]string{"go": {"github.com/rakyll/hey"}}, // Should use source path for upgrade
-			expectError:        false,
-		},
-		{
 			name:               "npm scoped package by full name",
 			args:               []string{"npm:@anthropic-ai/claude-code"},
 			expectedUpgradeAll: false,
@@ -331,13 +241,6 @@ func TestParseUpgradeArgs(t *testing.T) {
 			args:               []string{"git"},
 			expectedUpgradeAll: false,
 			expectedTargets:    map[string][]string{"brew": {"git"}},
-			expectError:        false,
-		},
-		{
-			name:               "cross-manager Go package by binary name",
-			args:               []string{"hey"},
-			expectedUpgradeAll: false,
-			expectedTargets:    map[string][]string{"go": {"github.com/rakyll/hey"}}, // Should use source path
 			expectError:        false,
 		},
 		{
@@ -357,13 +260,6 @@ func TestParseUpgradeArgs(t *testing.T) {
 			args:          []string{"unknown:git"},
 			expectError:   true,
 			errorContains: "package 'git' is not managed by plonk via 'unknown'",
-		},
-		{
-			name:               "multiple packages",
-			args:               []string{"brew:git", "go:hey"},
-			expectedUpgradeAll: false,
-			expectedTargets:    map[string][]string{"brew": {"git"}, "go": {"github.com/rakyll/hey"}},
-			expectError:        false,
 		},
 	}
 

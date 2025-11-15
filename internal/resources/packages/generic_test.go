@@ -103,7 +103,12 @@ func TestGenericManager_ListInstalled(t *testing.T) {
 			result, err := mgr.ListInstalled(context.Background())
 
 			assert.NoError(t, err)
-			assert.Equal(t, tt.expected, result)
+			// Order of results is not guaranteed for json-map parsing.
+			if tt.name == "npm json-map parsing" {
+				assert.ElementsMatch(t, tt.expected, result)
+			} else {
+				assert.Equal(t, tt.expected, result)
+			}
 		})
 	}
 }
