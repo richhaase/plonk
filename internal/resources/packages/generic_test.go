@@ -317,6 +317,62 @@ func TestGenericManager_ParseJSON_EdgeCases(t *testing.T) {
 	}
 }
 
+func TestGenericManager_ParseJSONMap_Prototype(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		field     string
+		expected  []string
+		wantError bool
+	}{
+		{
+			name:  "top-level map keys",
+			input: `{"pkg1": {"version":"1.0.0"}, "pkg2": {"version":"2.0.0"}}`,
+			field: "",
+			// Order is not guaranteed; we'll sort results in assertions.
+			expected: []string{"pkg1", "pkg2"},
+		},
+		{
+			name:     "nested map keys via field",
+			input:    `{"dependencies": {"pkg1": {}, "pkg2": {}}}`,
+			field:    "dependencies",
+			expected: []string{"pkg1", "pkg2"},
+		},
+		{
+			name:     "missing nested field",
+			input:    `{"devDependencies": {"pkg1": {}}}`,
+			field:    "dependencies",
+			expected: []string{},
+		},
+		{
+			name:      "invalid json",
+			input:     `not json`,
+			field:     "",
+			wantError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mgr := &GenericManager{}
+			result, err := mgr.parseJSONMap([]byte(tt.input), tt.field)
+
+			if tt.wantError {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			if tt.expected == nil {
+				assert.Nil(t, result)
+				return
+			}
+
+			assert.ElementsMatch(t, tt.expected, result)
+		})
+	}
+}
+
 func TestGenericManager_ParseOutput_UnknownStrategy(t *testing.T) {
 	cfg := config.ListConfig{Parse: "unknown"}
 	mgr := &GenericManager{}
@@ -325,6 +381,16 @@ func TestGenericManager_ParseOutput_UnknownStrategy(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unknown parse strategy")
+}
+
+func TestGenericManager_ParseOutput_ParseStrategyAlias(t *testing.T) {
+	cfg := config.ListConfig{ParseStrategy: "lines"}
+	mgr := &GenericManager{}
+
+	result, err := mgr.parseOutput([]byte("one\ntwo\n"), cfg)
+
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"one", "two"}, result)
 }
 
 func TestGenericManager_IdempotentError_CaseInsensitive(t *testing.T) {

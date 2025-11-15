@@ -16,14 +16,20 @@ This document catalogs manager-specific code references that violate our goal of
 - [ ] **CLI/Orchestration** (0/3 completed - 0%)
 - [ ] **Shared Types/Config** (4/6 completed - 67%)
 
+> **Phase 0 status (2025-11-15)**: Configuration schema fields and metadata pipeline design are now implemented:
+> - `parse_strategy`, `name_transform`, and `metadata_extractors` are defined in `internal/config/managers.go`.
+> - `GenericManager` supports `parse_strategy` as an alias for `parse`.
+> - A prototype `json-map` parsing mode and metadata pipeline design doc (`docs/plans/pkg-mgr-metadata-pipeline.md`) are in place, but not yet wired into default manager configs.
+
 **Total Progress**: 6/13 violations resolved (46% complete)
+**Phase 0**: Foundation work is partially completed in code; remaining work is to switch npm/pnpm to JSON-based parsing and remove legacy path-based logic in a future phase.
 
 ## ⚠️ Critical Review Findings (2025-11-02)
 
 **Multi-model review conducted** by Codex CLI, Claude Code, and Gemini CLI identified key issues:
 
 ### 🔴 **Blocking Issues**
-1. **Missing Config Schema Fields**: Proposed fields (`parse_strategy`, `name_transform`, `metadata_extractors`) are not yet defined in code
+1. **Missing Config Schema Fields**: Proposed fields (`parse_strategy`, `name_transform`, `metadata_extractors`) are now defined in code, but still need to be fully validated and adopted by default manager configs
 2. **npm/pnpm Solution Incomplete**: Path extraction approach is overly complex; simpler to migrate to JSON parsing
 3. **npm Scoped Package Metadata**: Need consistent metadata storage for scoped packages (`@scope/name`) across lock file and operations
 4. **Lock File Migration Unaddressed**: Breaking changes to npm metadata storage will invalidate existing lock files without migration tooling
@@ -206,20 +212,21 @@ All documentation violations have been resolved through the v2 configuration sys
    - Document reviewer feedback (✅ COMPLETED 2025-11-02)
 
 2. **Define Missing Config Schema Fields** (4-6 hours)
-   - Add `ParseStrategy`, `NameTransform`, `MetadataExtractors` to `ManagerConfig`
+   - Add `ParseStrategy`, `NameTransform`, `MetadataExtractors` to `ManagerConfig` (✅ COMPLETED 2025-11-15)
    - Write validation logic for regex patterns (ReDoS protection)
-   - Define `TransformConfig` and `ExtractorConfig` types
+   - Define `TransformConfig` and `ExtractorConfig` types (✅ COMPLETED 2025-11-15 as `NameTransformConfig` and `MetadataExtractorConfig`)
 
 3. **Write Metadata Pipeline Design Doc** (4-6 hours)
    - Sequence diagram: raw output → parse → extract → transform → lock
    - Error handling strategy at each stage
    - Backward compatibility approach for lock files
    - Lock file versioning scheme
+   - ✅ COMPLETED 2025-11-15 in `docs/plans/pkg-mgr-metadata-pipeline.md`
 
 4. **Prototype Critical Changes** (2-4 hours)
-   - Test npm JSON parsing approach
+   - Test npm JSON parsing approach (prototype `json-map` parser implemented in `GenericManager`, but not yet used by default configs)
    - Validate Go metadata storage design
-   - Confirm no breaking changes to existing workflows
+   - Confirm no breaking changes to existing workflows (✅ CONFIRMED via `just test`; defaults unchanged for npm/pnpm)
 
 ### Phase 1: Critical Path (Week 2)
 **Goal**: Eliminate core logic violations with simplified approach
