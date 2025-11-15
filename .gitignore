@@ -58,3 +58,6 @@ plonk-linux
 
 # Code Line Counters
 scc.out
+
+# Local planning docs
+docs/plans/**
