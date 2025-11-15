@@ -11,12 +11,15 @@ Goal: The core should be manager-agnostic. This document lists all places in cod
 - ~~`internal/resources/packages/generic.go:223`~~ ✅ **RESOLVED**
   - `expandBrewAliases` helper and brew-specific alias logic have been removed from core.
 
-- `internal/resources/packages/operations.go:124,171,188,223`
-  - Multiple branches for `manager == "go"` (dead code - Go is NOT a built-in manager).
-- `internal/resources/packages/operations.go:193`
-  - npm scoped package handling (adds `full_name`/`scope`).
-- `internal/resources/packages/operations.go:305-313`
-  - Hard-coded install suggestions for brew, npm, cargo, gem, uv (note: includes 'go' which is not a built-in manager).
+- ~~`internal/resources/packages/operations.go:124,171,188,223`~~ ✅ **RESOLVED**
+  - Previously contained multiple branches for `manager == "go"` (dead code – Go is not a built-in manager).
+  - These branches have been removed; Go can now be supported purely as a config-defined manager, without special handling in core logic.
+- ~~`internal/resources/packages/operations.go:193`~~ ✅ **RESOLVED**
+  - Previously had an inline special case for npm scoped packages (`scope`/`full_name`).
+  - This is now handled via `MetadataExtractors` in `ManagerConfig` and a generic `applyMetadataExtractors` helper; core code no longer hard-codes npm semantics.
+- ~~`internal/resources/packages/operations.go:305-313`~~ ✅ **RESOLVED**
+  - Previously used a hard-coded suggestions map for brew, npm, cargo, gem, uv, and go.
+  - `getManagerInstallSuggestion` now prefers config-driven `InstallHint` values (from `ManagerConfig`) and falls back to a generic message for unknown managers.
 
 - `internal/resources/packages/reconcile.go:34-37`
   - Normalizes `homebrew -> brew` during package reconcile.

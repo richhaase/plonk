@@ -1,6 +1,6 @@
 # Package Manager References - Enhanced Refactoring Guide
 
-> **Status**: 🔄 Revised After Multi-Model Review - 8 of 13 violations resolved (~62% complete)
+> **Status**: 🔄 Revised After Multi-Model Review - 10 of 13 violations resolved (~77% complete)
 > **Priority**: Complete manager-agnostic core architecture
 > **Target**: v2.1 release milestone
 > **Last Updated**: 2025-11-02 (Post-review revisions by Codex CLI, Claude Code, Gemini CLI)
@@ -12,8 +12,8 @@ This document catalogs manager-specific code references that violate our goal of
 ## 📊 Progress Overview
 
 ### Completion Status
-- [ ] **Core Package Code** (3/4 completed - 75%)
-- [ ] **CLI/Orchestration** (0/3 completed - 0%)
+- [ ] **Core Package Code** (4/4 completed - 100%)
+- [ ] **CLI/Orchestration** (1/3 completed - 33%)
 - [ ] **Shared Types/Config** (5/6 completed - 83%)
 
 > **Phase 0 status (2025-11-15)**: Configuration schema fields and metadata pipeline design are now implemented:
@@ -21,7 +21,7 @@ This document catalogs manager-specific code references that violate our goal of
 > - `GenericManager` supports `parse_strategy` as an alias for `parse`.
 > - A `json-map` parsing mode and metadata pipeline design doc (`docs/plans/pkg-mgr-metadata-pipeline.md`) are in place and used by the default npm manager configuration.
 
-**Total Progress**: 8/13 violations resolved (62% complete)
+**Total Progress**: 10/13 violations resolved (77% complete)
 **Phase 0**: Foundation work is completed in code; Phase 1 has begun by switching npm/pnpm to JSON-based parsing and removing legacy path-based logic from `GenericManager`.
 
 ## ⚠️ Critical Review Findings (2025-11-02)
@@ -64,26 +64,14 @@ This document catalogs manager-specific code references that violate our goal of
   - All npm/pnpm-specific path parsing has been removed from core logic; behavior is entirely configuration-driven.
  - **Status**: ✅ **COMPLETED** (implemented November 2025)
 
-#### 🔴 CRITICAL - Go Special-Case Code (Dead Code)
-- **File**: `internal/resources/packages/operations.go:124,171,188,223`
-- **Impact**: ~15 lines of manager-specific logic for unsupported manager
-- **Description**: Special logic for Go packages (binary name extraction, source_path metadata) but Go is NOT in default managers
-- **Code Example**:
-  ```go
-  // operations.go:124, 171, 188, 223
-  if manager == "go" {
-      checkPackageName = ExtractBinaryNameFromPath(packageName)
-      metadata["source_path"] = packageName
-  }
-  ```
-- **Why it exists**: Legacy support or custom manager metadata handling
-- **Refactoring Solution**: **Remove entirely** - Go is not a built-in manager, special-case code is dead code
-  ```go
-  // DELETE all "if manager == go" blocks from operations.go
-  ```
-- **Effort**: 1 hour (removal + test updates)
-- **Status**: ❌ Not started
-- **Note**: If Go support is desired, add to managers_defaults.go properly instead of special-casing
+#### ✅ COMPLETED - Go Special-Case Code (Dead Code)
+- **File**: `internal/resources/packages/operations.go` (historical references at :124,171,188,223)
+- **Impact**: Removed ~15 lines of manager-specific logic for Go, which is not a built-in manager.
+- **Previous Behavior**: Special logic for Go packages (binary name extraction, `source_path` metadata) with custom upgrade targeting.
+- **Current Design**:
+  - All `if manager == "go"` branches have been removed from core operations and upgrade logic.
+  - Go can now be added purely as a config-defined manager in `plonk.yaml` without any special handling in core code.
+- **Status**: ✅ **COMPLETED** (implemented November 2025)
 
 #### ✅ COMPLETED - Homebrew Alias Expansion
 - **File**: `internal/resources/packages/generic.go:104`
@@ -98,28 +86,15 @@ This document catalogs manager-specific code references that violate our goal of
 
 ### CLI/Orchestration
 
-#### 🟡 HIGH - npm Scoped Package Handling
-- **File**: `internal/resources/packages/operations.go:193`
-- **Impact**: ~7 lines affecting npm package metadata
-- **Description**: Special case for npm scoped packages (@scope/name format)
-- **Code Example**:
-  ```go
-  // Special handling for npm scoped packages
-  if strings.HasPrefix(pkg.Name, "@") && strings.Contains(pkg.Name, "/") {
-      // Extract scope and name separately
-  }
-  ```
-- **Why it exists**: npm's scoped package format is unique among package managers
-- **Refactoring Solution**:
-  ```yaml
-  # Enhanced config with metadata extraction
-  metadata_extractors:
-    scope:
-      pattern: "^@([^/]+)/(.*)$"
-      groups: ["scope", "name"]
-  ```
-- **Effort**: 4 hours
-- **Status**: ❌ Not started
+#### ✅ COMPLETED - npm Scoped Package Handling
+- **File**: `internal/resources/packages/operations.go`
+- **Impact**: Previously contained inline special-casing for npm scoped packages; now migrated to a generic metadata pipeline.
+- **Previous Behavior**: Hard-coded logic extracted scope/full_name directly from npm package names in core operations.
+- **Current Design**:
+  - `ManagerConfig.MetadataExtractors` lets npm (and others) define how to derive fields like `scope` and `full_name`.
+  - `applyMetadataExtractors` in `operations.go` applies these extractors generically based on config, without referencing manager names in core logic.
+  - Default npm config now defines extractors for `scope` and `full_name` using the parsed package name.
+- **Status**: ✅ **COMPLETED** (inline npm-special code removed; behavior is config-driven)
 
 #### 🟡 HIGH - Upgrade FullName Tracking
 - **Files**: `internal/commands/upgrade.go:54,97,178,194-195`

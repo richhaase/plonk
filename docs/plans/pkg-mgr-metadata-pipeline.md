@@ -124,17 +124,20 @@ The intended end-to-end pipeline for listing packages is:
 ## Backward Compatibility
 
 - Existing managers (brew, gem, cargo, conda, uv, pipx, npm, pnpm) continue
-  to work with their current configuration:
-  - `parse` and `json_field` are unchanged.
-  - `parse_strategy` is an alias for `parse` (for future configuration).
-- New fields (`name_transform`, `metadata_extractors`) are optional and unused
-  by default; they will be wired into the engine in subsequent phases.
+  to work with their configuration:
+  - `parse` / `parse_strategy` and `json_field` remain the primary selectors.
+  - npm and pnpm have been migrated to JSON-based list output using the new
+    strategies (`json` / `json-map`) without changing lock-file semantics.
+- New fields (`name_transform`, `metadata_extractors`) are optional and are
+  currently used for npm only; other managers remain unchanged until explicitly
+  configured.
 
 ## Next Steps
 
-1. Implement support for additional JSON parse modes (e.g., npm `dependencies`
-   maps) driven by `ListConfig`.
+1. Implement support for additional JSON parse modes (e.g., nested maps beyond
+   simple `dependencies` keys) driven by `ListConfig`.
 2. Wire `NameTransform` into the package listing pipeline.
-3. Wire `MetadataExtractors` into lock-file writes and upgrade matching logic.
+3. Extend `MetadataExtractors` usage beyond install-time lock writes to
+   upgrade matching and other operations where richer metadata is useful.
 4. Add validation for regex patterns and extractor configuration in
    `internal/config/validators.go`.
