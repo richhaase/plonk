@@ -50,11 +50,6 @@ func TestGetManagerDescription(t *testing.T) {
 			expected: "gem (Ruby package manager)",
 		},
 		{
-			name:     "go",
-			manager:  "go",
-			expected: "go (Go package manager)",
-		},
-		{
 			name:     "unknown",
 			manager:  "unknown-manager",
 			expected: "unknown-manager package manager",
@@ -88,7 +83,7 @@ func TestGetManualInstallInstructions(t *testing.T) {
 		{
 			name:     "cargo",
 			manager:  "cargo",
-			expected: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh",
+			expected: "Install Rust from https://rustup.rs/",
 		},
 		{
 			name:     "npm",
@@ -104,11 +99,6 @@ func TestGetManualInstallInstructions(t *testing.T) {
 			name:     "gem",
 			manager:  "gem",
 			expected: "Install Ruby from https://ruby-lang.org/ or use brew install ruby",
-		},
-		{
-			name:     "go",
-			manager:  "go",
-			expected: "Install Go from https://golang.org/dl/ or use brew install go",
 		},
 		{
 			name:     "unknown",

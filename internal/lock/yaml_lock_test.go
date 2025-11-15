@@ -62,13 +62,13 @@ func TestYAMLLockService_ReadAndWrite(t *testing.T) {
 			},
 			{
 				Type:        "package",
-				ID:          "go:gopls",
+				ID:          "toolchain:langd",
 				InstalledAt: time.Now().Format(time.RFC3339),
 				Metadata: map[string]interface{}{
-					"manager":     "go",
-					"name":        "gopls",
+					"manager":     "toolchain",
+					"name":        "langd",
 					"version":     "v0.14.2",
-					"source_path": "golang.org/x/tools/cmd/gopls",
+					"source_path": "example.org/tools/cmd/langd",
 				},
 			},
 		},
@@ -99,18 +99,18 @@ func TestYAMLLockService_ReadAndWrite(t *testing.T) {
 		t.Errorf("Resources mismatch: expected 3, got %d", len(loaded.Resources))
 	}
 
-	// Verify Go package has source path
-	var foundGopls bool
+	// Verify toolchain package has source path
+	var foundLangd bool
 	for _, resource := range loaded.Resources {
-		if resource.ID == "go:gopls" {
-			foundGopls = true
-			if sourcePath, ok := resource.Metadata["source_path"].(string); !ok || sourcePath != "golang.org/x/tools/cmd/gopls" {
-				t.Errorf("Expected source_path 'golang.org/x/tools/cmd/gopls', got %v", resource.Metadata["source_path"])
+		if resource.ID == "toolchain:langd" {
+			foundLangd = true
+			if sourcePath, ok := resource.Metadata["source_path"].(string); !ok || sourcePath != "example.org/tools/cmd/langd" {
+				t.Errorf("Expected source_path 'example.org/tools/cmd/langd', got %v", resource.Metadata["source_path"])
 			}
 		}
 	}
-	if !foundGopls {
-		t.Error("gopls package not found in loaded resources")
+	if !foundLangd {
+		t.Error("langd package not found in loaded resources")
 	}
 }
 
@@ -138,15 +138,15 @@ func TestYAMLLockService_AddPackage(t *testing.T) {
 		t.Error("Package not found after adding")
 	}
 
-	// Add Go package with source path
-	goMetadata := map[string]interface{}{
-		"manager":     "go",
-		"name":        "gopls",
+	// Add toolchain package with source path
+	toolchainMetadata := map[string]interface{}{
+		"manager":     "toolchain",
+		"name":        "langd",
 		"version":     "v0.14.2",
-		"source_path": "golang.org/x/tools/cmd/gopls",
+		"source_path": "example.org/tools/cmd/langd",
 	}
-	if err := service.AddPackage("go", "gopls", "v0.14.2", goMetadata); err != nil {
-		t.Fatalf("AddPackage for Go failed: %v", err)
+	if err := service.AddPackage("toolchain", "langd", "v0.14.2", toolchainMetadata); err != nil {
+		t.Fatalf("AddPackage for toolchain failed: %v", err)
 	}
 
 	// Update existing package
@@ -268,12 +268,12 @@ func TestYAMLLockService_GetPackages(t *testing.T) {
 	}
 
 	// Get packages from non-existent manager
-	goPackages, err := service.GetPackages("go")
+	unknownPackages, err := service.GetPackages("unknown")
 	if err != nil {
 		t.Fatalf("GetPackages failed: %v", err)
 	}
-	if len(goPackages) != 0 {
-		t.Errorf("Expected 0 go packages, got %d", len(goPackages))
+	if len(unknownPackages) != 0 {
+		t.Errorf("Expected 0 unknown packages, got %d", len(unknownPackages))
 	}
 }
 

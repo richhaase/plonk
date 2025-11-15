@@ -190,7 +190,7 @@ func GetDefaultManagers() map[string]ManagerConfig {
 		},
 		"uv": {
 			Binary:      "uv",
-			Description: "uv (Python tool manager)",
+			Description: "uv (Python package manager)",
 			InstallHint: "Install UV from https://docs.astral.sh/uv/ or use brew install uv",
 			HelpURL:     "https://docs.astral.sh/uv/",
 			List: ListConfig{

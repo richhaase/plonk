@@ -114,14 +114,14 @@ func TestSortItemsByManager(t *testing.T) {
 			expected: []string{"cargo"},
 		},
 		{
-			name: "handles go before npm alphabetically",
+			name: "handles managers sorted alphabetically",
 			input: map[string][]resources.Item{
-				"uv":   {{Name: "black"}},
-				"go":   {{Name: "gopls"}},
-				"npm":  {{Name: "prettier"}},
-				"brew": {{Name: "jq"}},
+				"uv":    {{Name: "black"}},
+				"gamma": {{Name: "delta"}},
+				"npm":   {{Name: "prettier"}},
+				"brew":  {{Name: "jq"}},
 			},
-			expected: []string{"brew", "go", "npm", "uv"},
+			expected: []string{"brew", "gamma", "npm", "uv"},
 		},
 	}
 

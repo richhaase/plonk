@@ -46,15 +46,6 @@ func TestParsePackageSpec(t *testing.T) {
 			},
 		},
 		{
-			name:  "go package with module path",
-			input: "go:github.com/user/repo",
-			expected: &PackageSpec{
-				Name:         "github.com/user/repo",
-				Manager:      "go",
-				OriginalSpec: "go:github.com/user/repo",
-			},
-		},
-		{
 			name:        "empty specification",
 			input:       "",
 			expectError: true,

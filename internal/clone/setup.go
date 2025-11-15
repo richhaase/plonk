@@ -175,42 +175,35 @@ ignore_patterns:`
 
 // getManagerDescription returns a user-friendly description of the package manager
 func getManagerDescription(manager string) string {
-	switch manager {
-	case "homebrew", "brew":
-		return "Homebrew (macOS/Linux package manager)"
-	case "cargo":
-		return "Cargo (Rust package manager)"
-	case "npm":
-		return "npm (Node.js package manager)"
-	case "uv":
-		return "uv (Python package manager)"
-	case "gem":
-		return "gem (Ruby package manager)"
-	case "go":
-		return "go (Go package manager)"
-	default:
-		return fmt.Sprintf("%s package manager", manager)
+	normalized := manager
+	if manager == "homebrew" {
+		normalized = "brew"
 	}
+
+	// Prefer descriptions from default manager configs when available.
+	for name, cfg := range config.GetDefaultManagers() {
+		if name == normalized && cfg.Description != "" {
+			return cfg.Description
+		}
+	}
+
+	return fmt.Sprintf("%s package manager", manager)
 }
 
 // getManualInstallInstructions returns manual installation instructions
 func getManualInstallInstructions(manager string) string {
-	switch manager {
-	case "homebrew", "brew":
-		return "Visit https://brew.sh for installation instructions (prerequisite)"
-	case "cargo":
-		return "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
-	case "npm":
-		return "Install Node.js from https://nodejs.org/ or use brew install node"
-	case "uv":
-		return "Install UV from https://docs.astral.sh/uv/ or use brew install uv"
-	case "gem":
-		return "Install Ruby from https://ruby-lang.org/ or use brew install ruby"
-	case "go":
-		return "Install Go from https://golang.org/dl/ or use brew install go"
-	default:
-		return "See official documentation for installation instructions"
+	normalized := manager
+	if manager == "homebrew" {
+		normalized = "brew"
 	}
+
+	for name, cfg := range config.GetDefaultManagers() {
+		if name == normalized && cfg.InstallHint != "" {
+			return cfg.InstallHint
+		}
+	}
+
+	return "See official documentation for installation instructions"
 }
 
 // DetectRequiredManagers reads a lock file and returns unique package managers
