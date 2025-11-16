@@ -101,10 +101,11 @@ func GetDefaultManagers() map[string]ManagerConfig {
 			},
 		},
 		"npm": {
-			Binary:      "npm",
-			Description: "npm (Node.js package manager)",
-			InstallHint: "Install Node.js from https://nodejs.org/ or use brew install node",
-			HelpURL:     "https://nodejs.org/",
+			Binary:        "npm",
+			Description:   "npm (Node.js package manager)",
+			InstallHint:   "Install Node.js from https://nodejs.org/ or use brew install node",
+			HelpURL:       "https://nodejs.org/",
+			UpgradeTarget: "full_name_preferred",
 			List: ListConfig{
 				Command:   []string{"npm", "list", "-g", "--depth=0", "--json"},
 				Parse:     "json-map",

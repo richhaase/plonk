@@ -14,6 +14,7 @@ type ManagerConfig struct {
 	Description        string                             `yaml:"description,omitempty"`
 	InstallHint        string                             `yaml:"install_hint,omitempty"`
 	HelpURL            string                             `yaml:"help_url,omitempty"`
+	UpgradeTarget      string                             `yaml:"upgrade_target,omitempty"`
 	NameTransform      *NameTransformConfig               `yaml:"name_transform,omitempty"`
 	MetadataExtractors map[string]MetadataExtractorConfig `yaml:"metadata_extractors,omitempty"`
 }

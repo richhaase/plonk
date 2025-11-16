@@ -218,10 +218,9 @@ All documentation violations have been resolved through the v2 configuration sys
    - Update tests to remove Go-specific test cases
    - Document that Go can be added as custom manager if needed
 
-2. **Upgrade FullName Tracking** (6 hours) → DEMOTED FROM HIGH
-   - Create unified package identifier system
-   - Implement name normalization pipeline
-   - Update upgrade logic to use normalized names
+2. **Upgrade FullName Tracking** (6 hours) → COMPLETED
+   - Per-manager upgrade targeting is now driven by configuration via `ManagerConfig.UpgradeTarget`.
+   - npm uses `UpgradeTarget: "full_name_preferred"` so scoped packages upgrade by `full_name` when present; other managers default to using `name`.
 
 3. **npm Scoped Packages** (4-6 hours) → DEMOTED TO LOW PRIORITY
    - Implement metadata extraction framework (if not covered by JSON parsing)

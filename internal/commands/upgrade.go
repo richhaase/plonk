@@ -168,13 +168,22 @@ func matchesPackage(info packageMatchInfo, packageName string) bool {
 
 // determineUpgradeTarget determines what target to pass to the package manager for upgrade
 func determineUpgradeTarget(info packageMatchInfo, requestedName string) string {
-	// For npm scoped packages, if they have full_name, use it
-	if info.Manager == "npm" && info.FullName != "" {
-		return info.FullName
+	target := info.Name
+
+	// Allow per-manager override of upgrade targeting strategy via config.
+	cfg := config.LoadWithDefaults(config.GetDefaultConfigDirectory())
+	if cfg != nil && cfg.Managers != nil {
+		if mgrCfg, ok := cfg.Managers[info.Manager]; ok {
+			switch mgrCfg.UpgradeTarget {
+			case "full_name_preferred":
+				if info.FullName != "" {
+					return info.FullName
+				}
+			}
+		}
 	}
 
-	// For other cases, use the stored name
-	return info.Name
+	return target
 }
 
 // extractManagerFromResource extracts manager name from lock file resource

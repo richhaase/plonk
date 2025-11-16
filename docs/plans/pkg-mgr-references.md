@@ -33,8 +33,9 @@ Goal: The core should be manager-agnostic. This document lists all places in cod
   - Previously emitted “Homebrew or NPM” explicitly.
   - Now builds the hint using the configured manager names (via `config.LoadWithDefaults` and `cfg.Managers`), showing examples like `brew or npm` only when those managers are configured.
 
-- `internal/commands/upgrade.go:54,97,178,194-195`
-  - Tracks npm scoped `FullName`; explicit checks for `info.Manager == "npm"`. (Behavioral, not messaging; remains as a future config-driven refactor target.)
+- `internal/commands/upgrade.go:54,97,178,194-195` ✅ **RESOLVED**
+  - Previously tracked npm scoped `FullName` with an explicit `info.Manager == "npm"` check.
+  - Now uses a per-manager `UpgradeTarget` setting in `ManagerConfig` (e.g., `full_name_preferred` for npm) so upgrade targeting is configuration-driven rather than manager-hardcoded.
 
 ## Shared Types / Config
 - `internal/resources/types.go:48`
