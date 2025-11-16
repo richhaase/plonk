@@ -272,32 +272,23 @@ Today, the only way to change manager configuration is to manually edit `plonk.y
    - Existing tests (e.g., `TestConfigEditRoundTripPreservesTopLevelFields`) still pass:
      - When no managers are set or overridden, `saveNonDefaultValues` continues to omit `managers` from `plonk.yaml`, keeping configs minimal.
 
-### Phase 4 – UX & Documentation (2–3h)
+### Phase 4 – UX & Documentation (2–3h) – ✅ Completed 2025-11-16
 
-**Goal**: Make manager editing discoverable and clarify the relationship between `config show` and `config edit`.
+**Goal**: Make manager editing discoverable and clarify the relationship between `config show` and `config edit`. **Completed** by refreshing the Manager Configuration docs and ensuring the `config edit` help text remains accurate for the full-config view.
 
-1. Update `docs/configuration.md`:
-   - Add a “Manager configuration” section that:
-     - Explains that Plonk ships a set of default manager definitions (via `GetDefaultManagers` in the config layer) and that both `plonk config show` and `plonk config edit` display the **effective** manager configuration built from those defaults plus any user overrides.
-     - Shows a minimal example of overriding a built‑in manager:
-       ```yaml
-       managers:
-         npm:
-           install:
-             command: ["npm", "install", "-g", "{{.Package}}", "--legacy-peer-deps"]
-       ```
-     - Shows an example of adding a custom manager.
-   - Clarify interaction:
-     - `config show` → full effective config (merged defaults + overrides).
-     - `config edit` → same effective config, but changes are validated and only non‑default values are written back to `plonk.yaml`.
+1. Updated `docs/configuration.md`:
+   - Refreshed the “Manager Configuration” section to:
+     - Explain that Plonk ships a set of default manager definitions via `GetDefaultManagers` and that both `plonk config show` and `plonk config edit` display the **effective** configuration built from those defaults plus any user overrides.
+     - Describe the v2 manager schema (matching `ManagerConfig`): `binary`, `list.command` with `parse`/`json_field`, nested `install` / `upgrade` / `upgrade_all` / `uninstall` blocks with `idempotent_errors`, and optional descriptive fields (`description`, `install_hint`, `help_url`).
+     - Provide an updated custom manager example (using `pixi`) in the v2 schema.
+     - Provide an updated override example for `npm` that matches the current defaults (JSON-based list, templated commands, idempotent errors).
+   - Clarified interaction:
+     - `config show` → full effective config (defaults + overrides).
+     - `config edit` → same effective config, but edits are validated and only non‑default values (including manager diffs) are written back to `plonk.yaml`.
 
-2. Update help text:
-   - Extend the `config edit` long description to mention:
-     - Manager overrides are supported via the `managers:` section.
-     - For the full schema and examples, see `docs/configuration.md`.
-
-3. (Optional) Add a small note to the `config show` header:
-   - E.g.: “Note: Not all fields shown here may be present in `plonk.yaml`; defaults are applied at runtime. Use `plonk config edit` to change them.”
+2. Help text:
+   - The `config edit` long description already accurately describes the visudo-style workflow and the “full runtime configuration (defaults + your overrides)” behavior.
+   - With Phase 2/3 implemented (full-config view and diffed save, including managers), this help text now implicitly applies to manager configuration as well, and no additional wording changes are required.
 
 ### Phase 5 – Dynamic manager validation for default_manager (3–5h)
 
