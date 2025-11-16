@@ -6,12 +6,19 @@ package packages
 import (
 	"context"
 
+	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/resources"
 )
 
 // Reconcile performs package reconciliation (backward compatibility)
 func Reconcile(ctx context.Context, configDir string) (resources.Result, error) {
+	cfg := config.LoadWithDefaults(configDir)
+	return ReconcileWithConfig(ctx, configDir, cfg)
+}
+
+// ReconcileWithConfig performs package reconciliation with injected config
+func ReconcileWithConfig(ctx context.Context, configDir string, cfg *config.Config) (resources.Result, error) {
 	// Get configured packages from lock file
 	lockService := lock.NewYAMLLockService(configDir)
 	lockData, err := lockService.Read()
@@ -21,6 +28,11 @@ func Reconcile(ctx context.Context, configDir string) (resources.Result, error) 
 
 	// Create multi-package resource
 	packageResource := NewMultiPackageResource()
+	if cfg != nil && cfg.Managers != nil {
+		packageResource.registry.LoadV2Configs(cfg)
+	} else {
+		packageResource.registry.LoadV2Configs(config.LoadWithDefaults(configDir))
+	}
 
 	// Convert lock file entries to desired items
 	desired := make([]resources.Item, 0)

@@ -360,7 +360,11 @@ func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
 
 	// Package manager health checks have been removed
 	// Return basic availability check instead
+	cfg := config.LoadWithDefaults(config.GetConfigDir())
 	registry := packages.NewManagerRegistry()
+	if cfg != nil {
+		registry.LoadV2Configs(cfg)
+	}
 	availableManagers := 0
 
 	for _, managerName := range registry.GetAllManagerNames() {
