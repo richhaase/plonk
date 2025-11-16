@@ -290,29 +290,36 @@ Today, the only way to change manager configuration is to manually edit `plonk.y
    - The `config edit` long description already accurately describes the visudo-style workflow and the “full runtime configuration (defaults + your overrides)” behavior.
    - With Phase 2/3 implemented (full-config view and diffed save, including managers), this help text now implicitly applies to manager configuration as well, and no additional wording changes are required.
 
-### Phase 5 – Dynamic manager validation for default_manager (3–5h)
+### Phase 5 – Dynamic manager validation for default_manager (3–5h) – ✅ Completed 2025-11-16
 
-**Goal**: Ensure all configured managers are truly first‑class by allowing `default_manager` to reference any manager present in `cfg.Managers` (shipped or user‑defined), while keeping validation accurate.
+**Goal**: Ensure all configured managers are truly first‑class by allowing `default_manager` to reference any manager present in `cfg.Managers` (shipped or user‑defined), while keeping validation accurate. **Completed** by driving the `validmanager` set from the effective configuration in both Load and SimpleValidator paths.
 
-**Problem**: The `validmanager` validator for `DefaultManager` currently relies on a global `validManagers` slice, populated once in `internal/resources/packages/init.go` from built‑ins. That means:
+Implementation summary:
 
-- Users can define custom managers in `managers:`, but cannot reliably set them as `default_manager` without making `validmanager` aware of those new names.
-- This conflicts with the goal that all configured managers (from `cfg.Managers`) are first‑class.
-
-Planned approach:
-
-1. Allow `validmanager` to consider runtime config managers:
-   - Modify `validatePackageManager` to:
-     - Prefer `validManagers` when explicitly set (test harness).
-     - Otherwise, derive allowed names from:
+1. Config-driven valid manager set:
+   - Added `updateValidManagersFromConfig(cfg *Config)` in `internal/config/config.go`:
+     - Builds a set of manager names from:
        - Keys of `GetDefaultManagers()`.
-       - Plus keys from `cfg.Managers` when validating a config instance (this may require threading a `Config` instance into validation or separating validation modes).
+       - Keys of `cfg.Managers` (which already includes defaults + user managers in the Load path).
+     - Calls `SetValidManagers` with this combined list so `validmanager` sees both shipped and user-defined managers as valid.
+   - `LoadFromPath` now calls `updateValidManagersFromConfig(&cfg)` after merging managers but before validation:
+     - This ensures `default_manager` can be any manager defined in the effective `cfg.Managers`, not just shipped defaults.
 
-2. Alternatively, update `SetValidManagers` at startup based on merged config:
-   - After loading config in the CLI entrypoint, call `SetValidManagers` with the manager names from the active `ManagerRegistry`.
-   - This needs careful design to avoid init‑time cycles (`config` ↔ `packages`) and to keep tests predictable.
+2. SimpleValidator integration:
+   - Updated `SimpleValidator.ValidateConfigFromYAML` in `internal/config/compat.go`:
+     - After `applyDefaults(&cfg)`, it now calls `updateValidManagersFromConfig(&cfg)` before running validation.
+     - In this path, `cfg.Managers` contains user-defined managers only, so `updateValidManagersFromConfig` combines `GetDefaultManagers` and `cfg.Managers` to form the allowed set.
 
-Until this phase is implemented, there is a temporary limitation: users can override built‑ins and add custom managers, but `default_manager` should remain one of the shipped manager names. Completing this phase is required to fully align runtime behavior with the “all configured managers are first‑class” goal.
+3. Tests:
+   - `internal/config/helpers_test.go`:
+     - Added a subtest to `TestValidateConfigFromYAML` verifying that:
+       - A YAML snippet with `default_manager: custom-manager` and a matching `managers.custom-manager` block passes validation.
+   - `internal/config/config_test.go`:
+     - Added `TestLoad_CustomManagerCanBeDefault`:
+       - Writes a `plonk.yaml` with `default_manager: custom-manager` and a `managers.custom-manager` definition.
+       - Confirms `Load` succeeds, `cfg.DefaultManager` is `custom-manager`, and the custom manager’s binary is preserved.
+
+With these changes, any manager present in the effective `cfg.Managers` is treated as a valid `default_manager` value, fully aligning validation behavior with the “all configured managers are first‑class” goal. The existing `validManagers` override mechanism (via `SetValidManagers`) remains available for tests and other specialized contexts.
 
 ---
 
