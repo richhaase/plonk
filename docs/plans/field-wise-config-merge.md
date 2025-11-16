@@ -246,20 +246,29 @@ These gaps undermine one of Plonk’s core goals: a config-driven system that is
 3. `GetNonDefaultManagers` remains valid:
    - Its behavior (treat managers not in defaults as custom, and built-ins as non-default when the merged config differs from defaults) is still correct under field-wise merge and did not require code changes, but the new tests indirectly validate compatibility by exercising merged configs through `Load`.
 
-### Phase 3 – Expand field-wise merge to other config areas (optional but recommended, 3–5h)
+### Phase 3 – Expand field-wise merge to other config areas (optional but recommended, 3–5h) – ✅ Completed 2025-11-16
 
-1. Evaluate additional merge candidates:
+1. Evaluate additional merge candidates (✅ completed by analysis, no code changes):
    - `Dotfiles.UnmanagedFilters`:
-     - Possibly treat user list as additive to defaults rather than full replacement (or leave as-is if that’s undesirable).
+     - Current behavior: user-provided `dotfiles.unmanaged_filters` replaces the default list.
+     - Changing this to additive semantics would make it harder for users to *remove* default filters.
    - `IgnorePatterns` / `ExpandDirectories`:
-     - Decide whether to keep current “user list replaces default list” semantics or support additive patterns (e.g., `append` vs `replace`).
+     - Current behavior: user-provided lists fully replace defaults.
+     - Making these additive by default could unexpectedly hide or include files compared to existing setups.
 
-2. Plan minimal changes:
-   - To avoid surprises, we may:
-     - Start by merging only managers (Phase 2).
-     - Document current behavior for lists (full replacement) and add explicit “additive” options later if needed.
+2. Decision (✅ documented behavior, no behavioral change):
+   - To avoid surprising users and silently changing how dotfiles and ignore patterns behave, we keep the current “user list replaces default list” semantics for:
+     - `dotfiles.unmanaged_filters`
+     - `ignore_patterns`
+     - `expand_directories`
+   - Field-wise merge is therefore scoped to:
+     - Manager definitions (`ManagerConfig` and nested types).
+     - Scalar config fields already handled by `applyDefaults`.
+   - This decision is documented in configuration docs so users understand that:
+     - Manager configs can be partially overridden.
+     - List fields (ignore patterns, expand directories, unmanaged filters) remain full overrides for now.
 
-> For now, consider this phase optional and driven by concrete user need.
+> If a future need arises for additive list semantics, we can introduce explicit mechanisms (e.g., “append” sections or flags) without changing the current default behavior.
 
 ### Phase 4 – config show highlighting (4–6h)
 
