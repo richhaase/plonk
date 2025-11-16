@@ -61,3 +61,104 @@ type MetadataExtractorConfig struct {
 	// Field is the JSON field name when Source is "json_field".
 	Field string `yaml:"field,omitempty"`
 }
+
+// MergeManagerConfig merges a base manager configuration with an override.
+// Non-empty fields in override take precedence; empty fields inherit from base.
+func MergeManagerConfig(base, override ManagerConfig) ManagerConfig {
+	result := base
+
+	if override.Binary != "" {
+		result.Binary = override.Binary
+	}
+
+	result.List = mergeListConfig(base.List, override.List)
+
+	result.Install = mergeCommandConfig(base.Install, override.Install)
+	result.Upgrade = mergeCommandConfig(base.Upgrade, override.Upgrade)
+	result.UpgradeAll = mergeCommandConfig(base.UpgradeAll, override.UpgradeAll)
+	result.Uninstall = mergeCommandConfig(base.Uninstall, override.Uninstall)
+
+	if override.Description != "" {
+		result.Description = override.Description
+	}
+	if override.InstallHint != "" {
+		result.InstallHint = override.InstallHint
+	}
+	if override.HelpURL != "" {
+		result.HelpURL = override.HelpURL
+	}
+	if override.UpgradeTarget != "" {
+		result.UpgradeTarget = override.UpgradeTarget
+	}
+
+	if override.NameTransform != nil {
+		result.NameTransform = override.NameTransform
+	}
+
+	result.MetadataExtractors = mergeMetadataExtractors(base.MetadataExtractors, override.MetadataExtractors)
+
+	return result
+}
+
+func mergeListConfig(base, override ListConfig) ListConfig {
+	result := base
+
+	if len(override.Command) > 0 {
+		result.Command = override.Command
+	}
+
+	if override.Parse != "" {
+		result.Parse = override.Parse
+	}
+
+	if override.ParseStrategy != "" {
+		result.ParseStrategy = override.ParseStrategy
+	}
+
+	if override.JSONField != "" {
+		result.JSONField = override.JSONField
+	}
+
+	return result
+}
+
+func mergeCommandConfig(base, override CommandConfig) CommandConfig {
+	result := base
+
+	if len(override.Command) > 0 {
+		result.Command = override.Command
+	}
+
+	if len(override.IdempotentErrors) > 0 {
+		result.IdempotentErrors = override.IdempotentErrors
+	}
+
+	return result
+}
+
+func mergeMetadataExtractors(base, override map[string]MetadataExtractorConfig) map[string]MetadataExtractorConfig {
+	if base == nil && override == nil {
+		return nil
+	}
+
+	// If no override is provided, return a copy of base to avoid aliasing.
+	if override == nil {
+		result := make(map[string]MetadataExtractorConfig, len(base))
+		for k, v := range base {
+			result[k] = v
+		}
+		return result
+	}
+
+	result := make(map[string]MetadataExtractorConfig, len(base)+len(override))
+
+	for k, v := range base {
+		result[k] = v
+	}
+
+	for k, v := range override {
+		result[k] = v
+	}
+
+	return result
+}
