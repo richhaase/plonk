@@ -181,9 +181,10 @@ func LoadFromPath(configPath string) (*Config, error) {
 		cfg.Managers[name] = defaultMgr
 	}
 
-	// Override/add user managers
+	// Override/add user managers using field-wise merge
 	for name, userMgr := range userManagers {
-		cfg.Managers[name] = userMgr
+		base := cfg.Managers[name]
+		cfg.Managers[name] = MergeManagerConfig(base, userMgr)
 	}
 
 	// Update the valid manager set for validation based on the effective

@@ -167,6 +167,49 @@ managers:
 	}
 }
 
+func TestLoad_ManagerFieldWiseMerge(t *testing.T) {
+	defaults := GetDefaultManagers()
+	defaultNPM, ok := defaults["npm"]
+	if !ok {
+		t.Skip("npm default manager not defined; skipping field-wise merge test")
+	}
+
+	configContent := `
+managers:
+  npm:
+    install:
+      command: ["npm", "install", "-g", "{{.Package}}", "--legacy-peer-deps"]
+`
+	tempDir := testutil.NewTestConfig(t, configContent)
+
+	cfg, err := Load(tempDir)
+	if err != nil {
+		t.Fatalf("Load failed for manager field-wise merge: %v", err)
+	}
+
+	mergedNPM, ok := cfg.Managers["npm"]
+	if !ok {
+		t.Fatalf("Expected npm manager to be present after merge")
+	}
+
+	if !reflect.DeepEqual(mergedNPM.List, defaultNPM.List) {
+		t.Errorf("Expected npm list config to inherit defaults, got %+v vs %+v", mergedNPM.List, defaultNPM.List)
+	}
+
+	expectedInstallCommand := []string{"npm", "install", "-g", "{{.Package}}", "--legacy-peer-deps"}
+	if !reflect.DeepEqual(mergedNPM.Install.Command, expectedInstallCommand) {
+		t.Errorf("Expected install command %v, got %v", expectedInstallCommand, mergedNPM.Install.Command)
+	}
+
+	if !reflect.DeepEqual(mergedNPM.Install.IdempotentErrors, defaultNPM.Install.IdempotentErrors) {
+		t.Errorf("Expected install idempotent errors %v, got %v", defaultNPM.Install.IdempotentErrors, mergedNPM.Install.IdempotentErrors)
+	}
+
+	if !reflect.DeepEqual(mergedNPM.Uninstall, defaultNPM.Uninstall) {
+		t.Errorf("Expected uninstall config to inherit defaults, got %+v vs %+v", mergedNPM.Uninstall, defaultNPM.Uninstall)
+	}
+}
+
 func TestLoad_InvalidTimeout(t *testing.T) {
 	tests := []struct {
 		name    string
