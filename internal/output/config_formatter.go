@@ -94,27 +94,58 @@ func formatConfigWithHighlights(cfg *config.Config, checker *config.UserDefinedC
 	// to see per-item differences (rather than just the entire field).
 	defaults := config.GetDefaults()
 	customExpandDirs := make(map[string]struct{})
+	removedExpandDirs := make(map[string]struct{})
 	if len(nonDefaultFields) > 0 {
-		defaultSet := make(map[string]struct{}, len(defaults.ExpandDirectories))
+		currentSet := make(map[string]struct{}, len(cfg.ExpandDirectories))
+		for _, v := range cfg.ExpandDirectories {
+			currentSet[v] = struct{}{}
+		}
 		for _, v := range defaults.ExpandDirectories {
-			defaultSet[v] = struct{}{}
+			if _, ok := currentSet[v]; !ok {
+				removedExpandDirs[v] = struct{}{}
+			}
 		}
 		for _, v := range cfg.ExpandDirectories {
-			if _, isDefault := defaultSet[v]; !isDefault {
-				customExpandDirs[v] = struct{}{}
+			if _, isDefault := removedExpandDirs[v]; !isDefault {
+				// Item is either default or added; added if not in defaults.
+				foundInDefaults := false
+				for _, dv := range defaults.ExpandDirectories {
+					if dv == v {
+						foundInDefaults = true
+						break
+					}
+				}
+				if !foundInDefaults {
+					customExpandDirs[v] = struct{}{}
+				}
 			}
 		}
 	}
 
 	customIgnorePatterns := make(map[string]struct{})
+	removedIgnorePatterns := make(map[string]struct{})
 	if len(nonDefaultFields) > 0 {
-		defaultSet := make(map[string]struct{}, len(defaults.IgnorePatterns))
+		currentSet := make(map[string]struct{}, len(cfg.IgnorePatterns))
+		for _, v := range cfg.IgnorePatterns {
+			currentSet[v] = struct{}{}
+		}
 		for _, v := range defaults.IgnorePatterns {
-			defaultSet[v] = struct{}{}
+			if _, ok := currentSet[v]; !ok {
+				removedIgnorePatterns[v] = struct{}{}
+			}
 		}
 		for _, v := range cfg.IgnorePatterns {
-			if _, isDefault := defaultSet[v]; !isDefault {
-				customIgnorePatterns[v] = struct{}{}
+			if _, isRemoved := removedIgnorePatterns[v]; !isRemoved {
+				foundInDefaults := false
+				for _, dv := range defaults.IgnorePatterns {
+					if dv == v {
+						foundInDefaults = true
+						break
+					}
+				}
+				if !foundInDefaults {
+					customIgnorePatterns[v] = struct{}{}
+				}
 			}
 		}
 	}
@@ -136,6 +167,22 @@ func formatConfigWithHighlights(cfg *config.Config, checker *config.UserDefinedC
 
 		// Detect top-level keys (no leading spaces).
 		if len(line) > 0 && (line[0] != ' ' && line[0] != '\t') {
+			// If we are leaving a list block, emit removed items as comments.
+			if inExpandDirs && len(removedExpandDirs) > 0 {
+				for item := range removedExpandDirs {
+					comment := fmt.Sprintf("# removed: - %s", item)
+					out.WriteString(ColorRemoved(comment))
+					out.WriteString("\n")
+				}
+			}
+			if inIgnorePatterns && len(removedIgnorePatterns) > 0 {
+				for item := range removedIgnorePatterns {
+					comment := fmt.Sprintf("# removed: - %s", item)
+					out.WriteString(ColorRemoved(comment))
+					out.WriteString("\n")
+				}
+			}
+
 			// Update managers context.
 			if strings.HasPrefix(trimmed, "managers:") {
 				inManagers = true

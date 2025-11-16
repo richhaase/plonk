@@ -60,10 +60,10 @@ func TestFormatConfigWithHighlights_ListItems(t *testing.T) {
 	out, err := formatConfigWithHighlights(&cfg, checker)
 	require.NoError(t, err)
 
-	// Default entry should be present.
+	// Default entry should be present (uncolored).
 	assert.Contains(t, out, "  - .config")
 
-	// Custom entry should be highlighted.
-	coloredItem := ColorInfo("  - .claude")
+	// Custom entry should be highlighted in green.
+	coloredItem := ColorAdded("  - .claude")
 	assert.Contains(t, out, coloredItem)
 }
