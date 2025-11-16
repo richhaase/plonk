@@ -1,6 +1,6 @@
 # plonk config edit – Manager Configuration Support Plan
 
-**Status**: Phase 0 completed – ready for Phase 1
+**Status**: All phases 0–5 completed
 **Scope**: Make `plonk config edit` a first-class way to view and edit package manager configuration in `plonk.yaml`, while ensuring `config edit` and `config show` present the same effective configuration data.
 
 ---
