@@ -25,14 +25,16 @@ Goal: The core should be manager-agnostic. This document lists all places in cod
   - Normalizes `homebrew -> brew` during package reconcile.
 
 ## CLI / Orchestration Surfaces
-- `internal/clone/setup.go:179-210`
-  - Hard-coded manager descriptions and install instructions (Homebrew, npm, cargo, uv, gem, go).
+- `internal/clone/setup.go:179-210` ✅ **RESOLVED**
+  - Previously hard-coded manager descriptions and install instructions (Homebrew, npm, cargo, uv, gem, go).
+  - Now derives descriptions/install hints from `ManagerConfig` defaults via `GetDefaultManagers()`; core logic no longer embeds manager-specific strings.
 
-- `internal/output/search_formatter.go:76`
-  - Message mentions “Homebrew or NPM”.
+- `internal/output/search_formatter.go:76` ✅ **RESOLVED**
+  - Previously emitted “Homebrew or NPM” explicitly.
+  - Now builds the hint using the configured manager names (via `config.LoadWithDefaults` and `cfg.Managers`), showing examples like `brew or npm` only when those managers are configured.
 
 - `internal/commands/upgrade.go:54,97,178,194-195`
-  - Tracks npm scoped `FullName`; explicit checks for `info.Manager == "npm"`.
+  - Tracks npm scoped `FullName`; explicit checks for `info.Manager == "npm"`. (Behavioral, not messaging; remains as a future config-driven refactor target.)
 
 ## Shared Types / Config
 - `internal/resources/types.go:48`

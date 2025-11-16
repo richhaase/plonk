@@ -13,7 +13,7 @@ This document catalogs manager-specific code references that violate our goal of
 
 ### Completion Status
 - [ ] **Core Package Code** (4/4 completed - 100%)
-- [ ] **CLI/Orchestration** (1/3 completed - 33%)
+- [ ] **CLI/Orchestration** (2/3 completed - 67%)
 - [ ] **Shared Types/Config** (5/6 completed - 83%)
 
 > **Phase 0 status (2025-11-15)**: Configuration schema fields and metadata pipeline design are now implemented:
@@ -145,10 +145,10 @@ This document catalogs manager-specific code references that violate our goal of
 #### 🟠 MEDIUM - CLI Help Manager Lists
 - **File**: `cmd/plonk/main.go`, `internal/commands/*.go`
 - **Impact**: User-facing help text mentions specific managers
-- **Description**: Hard-coded manager examples in CLI help (install.go:39-44, uninstall.go:29-30, etc.)
-- **Refactoring Solution**: Generate help text from registry
+- **Description**: Hard-coded manager examples in CLI help (install.go, uninstall.go, upgrade.go) have been replaced with dynamically generated examples for those commands, driven by configured managers; other commands still use static examples.
+- **Refactoring Solution**: Generate help examples from registry/ManagerConfig for all commands, or keep remaining examples generic.
 - **Effort**: 2 hours
-- **Status**: ❌ Not started
+- **Status**: 🟡 PARTIALLY COMPLETED
 
 ## 🟢 Low Priority (Documentation)
 

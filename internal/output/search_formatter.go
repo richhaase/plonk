@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/richhaase/plonk/internal/config"
 )
 
 // SearchResultEntry represents a search result from a specific manager
@@ -73,7 +75,8 @@ func (f SearchFormatter) TableOutput() string {
 
 	case "no-managers":
 		output.WriteString(fmt.Sprintf("%s\n", s.Message))
-		output.WriteString("\nPlease install a package manager (Homebrew or NPM) to search for packages.\n")
+		output.WriteString("\n")
+		output.WriteString(buildManagerInstallHint())
 
 	case "manager-unavailable":
 		output.WriteString(fmt.Sprintf("%s\n", s.Message))
@@ -83,6 +86,30 @@ func (f SearchFormatter) TableOutput() string {
 	}
 
 	return output.String()
+}
+
+// buildManagerInstallHint builds a hint message listing example managers from
+// the current configuration, falling back to a generic message when none are
+// configured.
+func buildManagerInstallHint() string {
+	cfg := config.LoadWithDefaults(config.GetDefaultConfigDirectory())
+	if cfg == nil || cfg.Managers == nil || len(cfg.Managers) == 0 {
+		return "Please install a supported package manager to search for packages.\n"
+	}
+
+	var names []string
+	for name := range cfg.Managers {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	max := 2
+	if len(names) < max {
+		max = len(names)
+	}
+	examples := strings.Join(names[:max], " or ")
+
+	return fmt.Sprintf("Please install a supported package manager (e.g. %s) to search for packages.\n", examples)
 }
 
 // StructuredData returns the structured data for serialization

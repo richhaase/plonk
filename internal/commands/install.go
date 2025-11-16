@@ -28,26 +28,7 @@ Package Manager Bootstrapping:
   Bare package manager names automatically trigger self-installation to bootstrap
   the manager. Prefixed names install packages normally via the specified manager.
 
-Examples:
-  # Bootstrap package managers (automatic detection)
-  plonk install pnpm cargo uv pipx        # Self-installs the managers themselves
-
-  # Install packages using default manager
-  plonk install htop git neovim ripgrep   # Install multiple packages
-
-  # Install packages with specific managers
-  plonk install brew:git                  # Install git specifically with Homebrew
-  plonk install npm:lodash                # Install lodash with npm global packages
-  plonk install cargo:ripgrep             # Install ripgrep with cargo packages
-  plonk install uv:black uv:flake8        # Install Python tools with uv
-  plonk install gem:bundler gem:rubocop   # Install Ruby tools with gem
-  plonk install go:golang.org/x/tools/cmd/gopls  # Install Go tools with go install
-
-  # Mixed operations (manager bootstrap + package install)
-  plonk install pnpm ripgrep npm:prettier # Bootstrap pnpm, install ripgrep via default, install prettier via npm
-
-  # Preview installation
-  plonk install --dry-run pnpm htop       # Preview what would be installed`,
+Examples are generated at runtime based on the configured package managers.`,
 	Args:         cobra.MinimumNArgs(1),
 	RunE:         runInstall,
 	SilenceUsage: true,
@@ -58,6 +39,9 @@ func init() {
 
 	// Common flags
 	installCmd.Flags().BoolP("dry-run", "n", false, "Show what would be installed without making changes")
+
+	// Dynamic examples based on current manager configuration.
+	installCmd.Example = buildInstallExamples()
 }
 
 func runInstall(cmd *cobra.Command, args []string) error {

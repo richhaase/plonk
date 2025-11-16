@@ -25,19 +25,16 @@ var upgradeCmd = &cobra.Command{
 This command only upgrades packages that are currently tracked in your lock file.
 You can upgrade all packages, packages from specific managers, or individual packages.
 
-Examples:
-  plonk upgrade                      # Upgrade all packages managed by plonk
-  plonk upgrade brew                 # Upgrade all Homebrew packages managed by plonk
-  plonk upgrade ripgrep              # Upgrade ripgrep wherever it's managed by plonk
-  plonk upgrade brew:ripgrep         # Upgrade only Homebrew's ripgrep
-  plonk upgrade htop neovim         # Upgrade multiple packages
-  plonk upgrade npm uv gem         # Upgrade all packages for these managers`,
+Examples are generated at runtime based on the configured package managers.`,
 	RunE:         runUpgrade,
 	SilenceUsage: true,
 }
 
 func init() {
 	rootCmd.AddCommand(upgradeCmd)
+
+	// Dynamic examples based on current manager configuration.
+	upgradeCmd.Example = buildUpgradeExamples()
 }
 
 // upgradeSpec represents the parsed upgrade specification

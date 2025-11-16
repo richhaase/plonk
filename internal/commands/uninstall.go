@@ -23,12 +23,7 @@ This command uninstalls packages from your system using the appropriate package
 manager and removes them from plonk management. Use prefix syntax to specify
 the package manager, or omit the prefix to use your default manager.
 
-Examples:
-  plonk uninstall htop                    # Uninstall htop using default manager
-  plonk uninstall git neovim              # Uninstall multiple packages
-  plonk uninstall brew:git                # Uninstall git specifically with Homebrew
-  plonk uninstall npm:lodash              # Uninstall lodash from npm global packages
-  plonk uninstall --dry-run htop          # Preview what would be uninstalled`,
+Examples are generated at runtime based on the configured package managers.`,
 	Args:         cobra.MinimumNArgs(1),
 	RunE:         runUninstall,
 	SilenceUsage: true,
@@ -39,6 +34,9 @@ func init() {
 
 	// Common flags
 	uninstallCmd.Flags().BoolP("dry-run", "n", false, "Show what would be removed without making changes")
+
+	// Dynamic examples based on current manager configuration.
+	uninstallCmd.Example = buildUninstallExamples()
 }
 
 func runUninstall(cmd *cobra.Command, args []string) error {

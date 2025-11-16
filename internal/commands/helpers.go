@@ -5,6 +5,7 @@ package commands
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -42,6 +43,96 @@ func IsValidManager(manager string) bool {
 func GetValidManagers() []string {
 	registry := packages.NewManagerRegistry()
 	return registry.GetAllManagerNames()
+}
+
+// buildInstallExamples generates CLI examples for the install command based on
+// the currently configured package managers.
+func buildInstallExamples() string {
+	cfg := config.LoadWithDefaults(config.GetDefaultConfigDirectory())
+	var lines []string
+
+	// Always include a simple, manager-agnostic example.
+	lines = append(lines, "plonk install htop git neovim ripgrep")
+
+	if cfg == nil || cfg.Managers == nil {
+		return strings.Join(lines, "\n")
+	}
+
+	// Add a few manager-prefixed examples using configured manager names.
+	managerNames := make([]string, 0, len(cfg.Managers))
+	for name := range cfg.Managers {
+		managerNames = append(managerNames, name)
+	}
+	sort.Strings(managerNames)
+
+	const maxManagers = 4
+	for i, name := range managerNames {
+		if i >= maxManagers {
+			break
+		}
+		lines = append(lines, fmt.Sprintf("plonk install %s:PACKAGE", name))
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+// buildUninstallExamples generates CLI examples for the uninstall command
+// based on the currently configured package managers.
+func buildUninstallExamples() string {
+	cfg := config.LoadWithDefaults(config.GetDefaultConfigDirectory())
+	var lines []string
+
+	lines = append(lines, "plonk uninstall htop git")
+
+	if cfg == nil || cfg.Managers == nil {
+		return strings.Join(lines, "\n")
+	}
+
+	managerNames := make([]string, 0, len(cfg.Managers))
+	for name := range cfg.Managers {
+		managerNames = append(managerNames, name)
+	}
+	sort.Strings(managerNames)
+
+	const maxManagers = 2
+	for i, name := range managerNames {
+		if i >= maxManagers {
+			break
+		}
+		lines = append(lines, fmt.Sprintf("plonk uninstall %s:PACKAGE", name))
+	}
+
+	return strings.Join(lines, "\n")
+}
+
+// buildUpgradeExamples generates CLI examples for the upgrade command using
+// the configured managers.
+func buildUpgradeExamples() string {
+	cfg := config.LoadWithDefaults(config.GetDefaultConfigDirectory())
+	var lines []string
+
+	// Generic examples that do not depend on specific manager names.
+	lines = append(lines, "plonk upgrade")
+	lines = append(lines, "plonk upgrade ripgrep")
+
+	if cfg == nil || cfg.Managers == nil {
+		return strings.Join(lines, "\n")
+	}
+
+	managerNames := make([]string, 0, len(cfg.Managers))
+	for name := range cfg.Managers {
+		managerNames = append(managerNames, name)
+	}
+	sort.Strings(managerNames)
+
+	if len(managerNames) > 0 {
+		lines = append(lines, fmt.Sprintf("plonk upgrade %s", managerNames[0]))
+	}
+	if len(managerNames) > 1 {
+		lines = append(lines, fmt.Sprintf("plonk upgrade %s %s", managerNames[0], managerNames[1]))
+	}
+
+	return strings.Join(lines, "\n")
 }
 
 // GetMetadataString safely extracts string metadata from operation results
