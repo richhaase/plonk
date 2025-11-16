@@ -22,7 +22,7 @@ func TestGetManagerDescription(t *testing.T) {
 		{
 			name:     "homebrew",
 			manager:  "homebrew",
-			expected: "Homebrew (macOS/Linux package manager)",
+			expected: "homebrew package manager",
 		},
 		{
 			name:     "brew alias",
@@ -73,7 +73,7 @@ func TestGetManualInstallInstructions(t *testing.T) {
 		{
 			name:     "homebrew",
 			manager:  "homebrew",
-			expected: "Visit https://brew.sh for installation instructions (prerequisite)",
+			expected: "See official documentation for installation instructions",
 		},
 		{
 			name:     "brew alias",
