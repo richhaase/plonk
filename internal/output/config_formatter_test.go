@@ -6,6 +6,8 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestConfigShowFormatter_TableAndStructured(t *testing.T) {
@@ -42,14 +44,26 @@ func TestConfigShowFormatter_HighlightsCustomFields(t *testing.T) {
 	f := NewConfigShowFormatter(data)
 	out := f.TableOutput()
 
-	// default_manager should be highlighted as custom (contains ANSI escapes)
-	if !strings.Contains(out, "default_manager:") {
-		t.Fatalf("expected default_manager key in output:\n%s", out)
-	}
+	// Expect the colored version of the default_manager line.
+	coloredLine := ColorInfo("default_manager: npm")
+	assert.Contains(t, out, coloredLine)
+}
 
-	// We can't rely on exact escape sequences here, but we can at least ensure
-	// the uncolored value still appears somewhere in the output.
-	if !strings.Contains(out, "npm") {
-		t.Fatalf("expected value 'npm' in output:\n%s", out)
-	}
+func TestFormatConfigWithHighlights_ListItems(t *testing.T) {
+	defaults := config.GetDefaults()
+	cfg := *defaults
+	cfg.ExpandDirectories = []string{".config", ".claude"}
+
+	configDir := testutil.NewTestConfig(t, "")
+	checker := config.NewUserDefinedChecker(configDir)
+
+	out, err := formatConfigWithHighlights(&cfg, checker)
+	require.NoError(t, err)
+
+	// Default entry should be present.
+	assert.Contains(t, out, "  - .config")
+
+	// Custom entry should be highlighted.
+	coloredItem := ColorInfo("  - .claude")
+	assert.Contains(t, out, coloredItem)
 }

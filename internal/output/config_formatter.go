@@ -90,8 +90,39 @@ func formatConfigWithHighlights(cfg *config.Config, checker *config.UserDefinedC
 		customManagers[k] = struct{}{}
 	}
 
+	// Build sets of custom list items for selected fields where it's helpful
+	// to see per-item differences (rather than just the entire field).
+	defaults := config.GetDefaults()
+	customExpandDirs := make(map[string]struct{})
+	if len(nonDefaultFields) > 0 {
+		defaultSet := make(map[string]struct{}, len(defaults.ExpandDirectories))
+		for _, v := range defaults.ExpandDirectories {
+			defaultSet[v] = struct{}{}
+		}
+		for _, v := range cfg.ExpandDirectories {
+			if _, isDefault := defaultSet[v]; !isDefault {
+				customExpandDirs[v] = struct{}{}
+			}
+		}
+	}
+
+	customIgnorePatterns := make(map[string]struct{})
+	if len(nonDefaultFields) > 0 {
+		defaultSet := make(map[string]struct{}, len(defaults.IgnorePatterns))
+		for _, v := range defaults.IgnorePatterns {
+			defaultSet[v] = struct{}{}
+		}
+		for _, v := range cfg.IgnorePatterns {
+			if _, isDefault := defaultSet[v]; !isDefault {
+				customIgnorePatterns[v] = struct{}{}
+			}
+		}
+	}
+
 	var out strings.Builder
 	inManagers := false
+	inExpandDirs := false
+	inIgnorePatterns := false
 
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
@@ -108,11 +139,22 @@ func formatConfigWithHighlights(cfg *config.Config, checker *config.UserDefinedC
 			// Update managers context.
 			if strings.HasPrefix(trimmed, "managers:") {
 				inManagers = true
+				inExpandDirs = false
+				inIgnorePatterns = false
 				out.WriteString(line)
 				out.WriteString("\n")
 				continue
 			}
 			inManagers = false
+			inExpandDirs = false
+			inIgnorePatterns = false
+
+			if strings.HasPrefix(trimmed, "expand_directories:") {
+				inExpandDirs = true
+			}
+			if strings.HasPrefix(trimmed, "ignore_patterns:") {
+				inIgnorePatterns = true
+			}
 
 			// Colorize top-level fields that differ from defaults.
 			parts := strings.SplitN(trimmed, ":", 2)
@@ -139,6 +181,28 @@ func formatConfigWithHighlights(cfg *config.Config, checker *config.UserDefinedC
 				if len(parts) > 0 {
 					managerName := parts[0]
 					if _, isCustomMgr := customManagers[managerName]; isCustomMgr {
+						out.WriteString(ColorInfo(line))
+						out.WriteString("\n")
+						continue
+					}
+				}
+			}
+		}
+
+		// Within expand_directories / ignore_patterns, highlight custom list items.
+		if inExpandDirs || inIgnorePatterns {
+			trim := strings.TrimSpace(line)
+			if strings.HasPrefix(trim, "- ") {
+				item := strings.TrimSpace(strings.TrimPrefix(trim, "- "))
+				if inExpandDirs {
+					if _, isCustom := customExpandDirs[item]; isCustom {
+						out.WriteString(ColorInfo(line))
+						out.WriteString("\n")
+						continue
+					}
+				}
+				if inIgnorePatterns {
+					if _, isCustom := customIgnorePatterns[item]; isCustom {
 						out.WriteString(ColorInfo(line))
 						out.WriteString("\n")
 						continue
