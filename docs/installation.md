@@ -20,18 +20,15 @@ This guide covers installing plonk and setting up your development environment.
 
 ### Optional Language Package Managers
 
-Plonk can manage packages from these language-specific package managers. They can be automatically bootstrapped using `plonk install <manager-name>`:
+Plonk can manage packages from these language-specific package managers once **you** install them via their official installers. Plonk no longer self-installs package managers; use `plonk doctor` for install hints if a manager is missing.
 
-- **Cargo** (Rust) - For Rust-based CLI tools (`plonk install cargo`)
-- **npm** (Node.js) - For global JavaScript packages (`plonk install npm`)
-- **pnpm** (Node.js) - For fast, disk-efficient JavaScript packages (`plonk install pnpm`)
-- **pipx** (Python) - For Python applications in isolated environments (`plonk install pipx`)
-- **conda** (Python) - For scientific computing and data science packages (`plonk install conda`)
-- **gem** (Ruby) - For Ruby gems (`plonk install gem`)
-- **go** (Go) - For Go modules (`plonk install go`)
-- **uv** (Python) - For Python tools management (`plonk install uv`)
-- **pixi** (Conda-forge) - For conda-forge packages (`plonk install pixi`)
-
+- **Cargo** (Rust) - For Rust-based CLI tools
+- **npm** (Node.js) - For global JavaScript packages
+- **pnpm** (Node.js) - For fast, disk-efficient JavaScript packages
+- **pipx** (Python) - For Python applications in isolated environments
+- **conda** (Python) - For scientific computing and data science packages
+- **gem** (Ruby) - For Ruby gems
+- **uv** (Python) - For Python tools management
 
 ## Installation Methods
 
@@ -46,6 +43,7 @@ brew install --cask richhaase/tap/plonk
 ```
 
 **Benefits of Homebrew installation:**
+
 - Automatic updates via `brew upgrade`
 - Code signed and notarized for macOS (no security warnings)
 - Managed installation/uninstallation
@@ -59,7 +57,7 @@ Install the latest version directly from source:
 go install github.com/richhaase/plonk/cmd/plonk@latest
 ```
 
-### Method 3: Clone and Build
+## Method 3: Clone and Build
 
 For development or if you need to modify the source:
 
@@ -102,7 +100,7 @@ plonk --version
 plonk doctor
 ```
 
-The `plonk doctor` command will identify any missing dependencies. Use `plonk clone` to automatically install package managers needed by your managed packages.
+The `plonk doctor` command will identify any missing dependencies and provide installation hints for package managers that are not yet available.
 
 ## Uninstallation
 
@@ -140,11 +138,12 @@ go install github.com/richhaase/plonk/cmd/plonk@latest
 # Verify system health
 plonk doctor
 
-# Clone your dotfiles (automatically installs package managers for managed packages)
+# Clone your dotfiles (detects required package managers and reports any that are missing)
 plonk clone user/dotfiles      # GitHub shorthand for existing setup
 ```
 
 **macOS Notes:**
+
 - Homebrew must be installed first (https://brew.sh)
 - Homebrew installation includes code signing and notarization
 - Xcode Command Line Tools may be required for some packages
@@ -159,11 +158,12 @@ go install github.com/richhaase/plonk/cmd/plonk@latest
 # Verify system health
 plonk doctor
 
-# Clone your dotfiles (automatically installs package managers for managed packages)
+# Clone your dotfiles (detects required package managers and reports any that are missing)
 plonk clone user/dotfiles      # GitHub shorthand
 ```
 
 **Linux Notes:**
+
 - Homebrew must be installed first (https://brew.sh)
 - Homebrew on Linux installs to `/home/linuxbrew/.linuxbrew`
 - Ensure Homebrew is in your PATH after installation
@@ -215,6 +215,7 @@ plonk clone https://github.com/user/repo.git # Full URL
 ```
 
 This will:
+
 1. Clone your repository to `~/.config/plonk/`
 2. Verify required package managers; if missing, use `plonk doctor` for install instructions
 3. Install all packages from `plonk.lock`
@@ -249,19 +250,23 @@ plonk apply
 ### Common Issues
 
 **"plonk: command not found"**
+
 - Ensure `$(go env GOPATH)/bin` is in your PATH
 - Try `~/go/bin/plonk` directly to verify installation
 
 **"Go version too old"**
+
 - Update Go to 1.23 or later (1.24+ is also supported)
 - Use `go version` to check current version
 - The project uses Go 1.23.10 but newer versions work
 
 **Permission denied errors**
+
 - Check file permissions on `~/.config/plonk/`
 - Run `plonk doctor` to diagnose permission issues
 
 **Package manager not found**
+
 - For Homebrew: Install manually from https://brew.sh (required prerequisite)
 - For language package managers: Install them manually (see upstream docs). `plonk doctor` provides platform-specific guidance.
 - See [Configuration Guide](configuration.md#package-manager-settings) for customizing manager commands
@@ -274,7 +279,6 @@ plonk doctor                 # System health check with fix suggestions
 ```
 
 For detailed command usage, see the [CLI Reference](cli.md).
-
 
 ## Next Steps
 

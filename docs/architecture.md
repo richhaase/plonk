@@ -112,7 +112,7 @@ The lock file uses a versioned format for future compatibility.
 - Clone command implementation
 - Git repository cloning
 - Package and dotfile deployment from cloned repositories
-- Tool installation
+- Package manager detection and reporting based on the cloned lock file
 
 #### Output Formatting (`internal/output/`)
 - Multiple formatters for different commands

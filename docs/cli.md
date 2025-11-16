@@ -22,7 +22,7 @@ plonk                                     # Show help and available commands
 
 ### plonk clone
 
-Clone a dotfiles repository and intelligently set up plonk. Automatically detects required package managers from the lock file and installs them in dependency order.
+Clone a dotfiles repository and intelligently set up plonk. Automatically detects required package managers from the lock file, reports which ones are missing, and guides you to install them manually.
 
 ```bash
 plonk clone user/dotfiles             # Clone GitHub repository (shorthand)
@@ -147,7 +147,7 @@ plonk doctor -o json                  # Output as JSON
 plonk doctor -o yaml                  # Output as YAML
 ```
 
-Note: To automatically install missing package managers, use `plonk clone`.
+Note: Use `plonk clone` to detect which package managers your repo requires; install any missing managers using the hints from `plonk doctor`.
 
 ### plonk config
 
