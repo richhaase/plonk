@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
 	packages "github.com/richhaase/plonk/internal/resources/packages"
 )
@@ -81,7 +82,8 @@ managers:
 	packages.SetDefaultExecutor(mock)
 	t.Cleanup(func() { packages.SetDefaultExecutor(&packages.RealCommandExecutor{}) })
 
-	err := installDetectedManagers(context.Background(), dir, []string{"custom"}, Config{})
+	cfg := config.LoadWithDefaults(dir)
+	err := installDetectedManagers(context.Background(), cfg, []string{"custom"}, Config{})
 	if err == nil {
 		t.Fatal("expected error due to missing custom manager binary")
 	}

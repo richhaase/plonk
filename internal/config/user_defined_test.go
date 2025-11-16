@@ -89,6 +89,7 @@ func TestGetNonDefaultFields(t *testing.T) {
 		configContent := `
 default_manager: npm
 operation_timeout: 600
+diff_tool: delta
 ignore_patterns:
   - custom_pattern
 `
@@ -106,6 +107,9 @@ ignore_patterns:
 
 		assert.Contains(t, nonDefaults, "operation_timeout")
 		assert.Equal(t, 600, nonDefaults["operation_timeout"])
+
+		assert.Contains(t, nonDefaults, "diff_tool")
+		assert.Equal(t, "delta", nonDefaults["diff_tool"])
 
 		assert.Contains(t, nonDefaults, "ignore_patterns")
 		patterns := nonDefaults["ignore_patterns"].([]string)

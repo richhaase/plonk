@@ -60,6 +60,10 @@ func (c *UserDefinedChecker) GetNonDefaultFields(cfg *Config) map[string]interfa
 		nonDefaults["dotfile_timeout"] = cfg.DotfileTimeout
 	}
 
+	if cfg.DiffTool != c.defaults.DiffTool && cfg.DiffTool != "" {
+		nonDefaults["diff_tool"] = cfg.DiffTool
+	}
+
 	// For lists, save entire list if ANY element differs
 	if !reflect.DeepEqual(cfg.ExpandDirectories, c.defaults.ExpandDirectories) {
 		nonDefaults["expand_directories"] = cfg.ExpandDirectories

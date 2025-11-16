@@ -76,6 +76,8 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 
 // SetupFromClonedRepo performs post-clone setup: detect managers, install, and apply
 func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool, noApply bool) error {
+	repoCfg := config.LoadWithDefaults(plonkDir)
+
 	// Detect required managers from lock file
 	output.StageUpdate("Detecting required package managers...")
 	lockPath := filepath.Join(plonkDir, "plonk.lock")
@@ -89,11 +91,11 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool, n
 	if len(detectedManagers) > 0 {
 		output.Printf("Detected required package managers from lock file:\n")
 		for _, mgr := range detectedManagers {
-			output.Printf("- %s\n", getManagerDescription(mgr))
+			output.Printf("- %s\n", getManagerDescription(repoCfg, mgr))
 		}
 
 		// Install only detected managers
-		if err := installDetectedManagers(ctx, plonkDir, detectedManagers, Config{}); err != nil {
+		if err := installDetectedManagers(ctx, repoCfg, detectedManagers, Config{}); err != nil {
 			return fmt.Errorf("failed to install required tools: %w", err)
 		}
 	} else {
@@ -104,7 +106,10 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool, n
 	if hasConfig && !noApply {
 		output.StageUpdate("Running plonk apply...")
 		homeDir := config.GetHomeDir()
-		cfg := config.LoadWithDefaults(plonkDir)
+		cfg := repoCfg
+		if cfg == nil {
+			cfg = config.LoadWithDefaults(plonkDir)
+		}
 		orch := orchestrator.New(
 			orchestrator.WithConfig(cfg),
 			orchestrator.WithConfigDir(plonkDir),
@@ -174,11 +179,16 @@ ignore_patterns:`
 // Package manager installation is only done by clone command when needed.
 
 // getManagerDescription returns a user-friendly description of the package manager
-func getManagerDescription(manager string) string {
-	// Prefer descriptions from default manager configs when available.
-	for name, cfg := range config.GetDefaultManagers() {
-		if name == manager && cfg.Description != "" {
-			return cfg.Description
+func getManagerDescription(cfg *config.Config, manager string) string {
+	if cfg != nil && cfg.Managers != nil {
+		if m, ok := cfg.Managers[manager]; ok && m.Description != "" {
+			return m.Description
+		}
+	}
+
+	for name, defaultCfg := range config.GetDefaultManagers() {
+		if name == manager && defaultCfg.Description != "" {
+			return defaultCfg.Description
 		}
 	}
 
@@ -186,10 +196,16 @@ func getManagerDescription(manager string) string {
 }
 
 // getManualInstallInstructions returns manual installation instructions
-func getManualInstallInstructions(manager string) string {
-	for name, cfg := range config.GetDefaultManagers() {
-		if name == manager && cfg.InstallHint != "" {
-			return cfg.InstallHint
+func getManualInstallInstructions(cfg *config.Config, manager string) string {
+	if cfg != nil && cfg.Managers != nil {
+		if m, ok := cfg.Managers[manager]; ok && m.InstallHint != "" {
+			return m.InstallHint
+		}
+	}
+
+	for name, defaultCfg := range config.GetDefaultManagers() {
+		if name == manager && defaultCfg.InstallHint != "" {
+			return defaultCfg.InstallHint
 		}
 	}
 
@@ -244,13 +260,16 @@ func DetectRequiredManagers(lockPath string) ([]string, error) {
 }
 
 // installDetectedManagers installs package managers in the order provided
-func installDetectedManagers(ctx context.Context, configDir string, managers []string, cfg Config) error {
+func installDetectedManagers(ctx context.Context, cfgData *config.Config, managers []string, cfg Config) error {
 	if len(managers) == 0 {
 		return nil
 	}
 
 	registry := packages.NewManagerRegistry()
-	cfgData := config.LoadWithDefaults(configDir)
+	if cfgData == nil {
+		defaultCopy := *config.GetDefaults()
+		cfgData = &defaultCopy
+	}
 	registry.LoadV2Configs(cfgData)
 
 	output.StageUpdate(fmt.Sprintf("Checking package managers (%d total)...", len(managers)))
@@ -282,8 +301,8 @@ func installDetectedManagers(ctx context.Context, configDir string, managers []s
 
 	output.Printf("\nMissing package managers (automatic installation not supported):\n")
 	for _, manager := range missingManagers {
-		output.Printf("- %s\n", getManagerDescription(manager))
-		output.Printf("  Installation: %s\n", getManualInstallInstructions(manager))
+		output.Printf("- %s\n", getManagerDescription(cfgData, manager))
+		output.Printf("  Installation: %s\n", getManualInstallInstructions(cfgData, manager))
 	}
 
 	return fmt.Errorf(
