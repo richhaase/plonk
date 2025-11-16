@@ -1,6 +1,6 @@
 # Package Manager References - Enhanced Refactoring Guide
 
-> **Status**: 🔄 Revised After Multi-Model Review - 10 of 13 violations resolved (~77% complete)
+> **Status**: 🔄 Revised After Multi-Model Review - 11 of 13 violations resolved (~85% complete)
 > **Priority**: Complete manager-agnostic core architecture
 > **Target**: v2.1 release milestone
 > **Last Updated**: 2025-11-02 (Post-review revisions by Codex CLI, Claude Code, Gemini CLI)
@@ -13,7 +13,7 @@ This document catalogs manager-specific code references that violate our goal of
 
 ### Completion Status
 - [ ] **Core Package Code** (4/4 completed - 100%)
-- [ ] **CLI/Orchestration** (2/3 completed - 67%)
+- [ ] **CLI/Orchestration** (3/3 completed - 100%)
 - [ ] **Shared Types/Config** (5/6 completed - 83%)
 
 > **Phase 0 status (2025-11-15)**: Configuration schema fields and metadata pipeline design are now implemented:
@@ -21,7 +21,7 @@ This document catalogs manager-specific code references that violate our goal of
 > - `GenericManager` supports `parse_strategy` as an alias for `parse`.
 > - A `json-map` parsing mode and metadata pipeline design doc (`docs/plans/pkg-mgr-metadata-pipeline.md`) are in place and used by the default npm manager configuration.
 
-**Total Progress**: 10/13 violations resolved (77% complete)
+**Total Progress**: 11/13 violations resolved (~85% complete)
 **Phase 0**: Foundation work is completed in code; Phase 1 has begun by switching npm/pnpm to JSON-based parsing and removing legacy path-based logic from `GenericManager`.
 
 ## ⚠️ Critical Review Findings (2025-11-02)
@@ -99,11 +99,12 @@ This document catalogs manager-specific code references that violate our goal of
 #### 🟡 HIGH - Upgrade FullName Tracking
 - **Files**: `internal/commands/upgrade.go:54,97,178,194-195`
 - **Impact**: ~10 lines across 4 locations
-- **Description**: npm-specific FullName tracking for package upgrades
-- **Why it exists**: npm package names can be complex (scoped, aliased)
-- **Refactoring Solution**: Use configurable name normalization rules
-- **Effort**: 6 hours
-- **Status**: ❌ Not started
+- **Previous Description**: npm-specific FullName tracking for package upgrades.
+- **Current Design**:
+  - `ManagerConfig.UpgradeTarget` controls how each manager chooses the upgrade target (`name` vs `full_name_preferred`).
+  - npm uses `full_name_preferred` so scoped packages upgrade by `full_name` when present; other managers default to `name`.
+  - All explicit `info.Manager == "npm"` checks for FullName tracking have been removed from `upgrade.go`.
+- **Status**: ✅ **COMPLETED**
 
 #### ✅ COMPLETED - Manager Validation Logic
 - **File**: `internal/config/validators.go`

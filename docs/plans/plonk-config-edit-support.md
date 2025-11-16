@@ -81,8 +81,9 @@ Today, the only way to change manager configuration is to manually edit `plonk.y
 
 - `plonk config show`:
   - Loads runtime config via `config.LoadWithDefaults(configDir)`.
-  - Prints it via `yaml.Marshal(cfg)` in `internal/output/config_formatter.go`.
-  - This **does** include `managers:` with the merged default+user definitions.
+  - Prints it via `ConfigShowFormatter` in `internal/output/config_formatter.go`, which:
+    - Shows the effective config (including the merged `managers:` map).
+    - Highlights custom fields and managers in table output using color, while leaving JSON/YAML outputs unmodified.
 
 ### Config edit
 
@@ -96,8 +97,8 @@ Today, the only way to change manager configuration is to manually edit `plonk.y
     - On success, unmarshals into `config.Config`, applies simple defaults to top‑level fields, and returns it.
   - `saveNonDefaultValues`:
     - Uses `config.NewUserDefinedChecker(configDir).GetNonDefaultFields(cfg)` to compute a **map of non‑default top‑level fields**.
-    - (After Phase 3) will also use `GetNonDefaultManagers` to add a `managers` entry containing only non‑default/custom managers.
-    - Serializes that map via `yaml.Marshal` and writes it to `plonk.yaml`.
+    - Uses `GetNonDefaultManagers` to add a `managers` entry containing only non‑default/custom managers when present.
+    - Serializes that minimal map via `yaml.Marshal` and writes it to `plonk.yaml`.
 
 ### UserDefinedChecker
 
@@ -112,7 +113,10 @@ Today, the only way to change manager configuration is to manually edit `plonk.y
   - Returns a map with overrides for:
     - `default_manager`, `operation_timeout`, `package_timeout`, `dotfile_timeout`,
       `expand_directories`, `ignore_patterns`, `dotfiles`.
-  - **Ignores `Managers` entirely.**
+- `GetNonDefaultManagers(cfg)`:
+  - Returns a map containing:
+    - User-defined managers (not present in `GetDefaultManagers`).
+    - Built-in managers where the effective `ManagerConfig` differs from the default one.
 
 ---
 

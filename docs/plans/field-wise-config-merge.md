@@ -1,6 +1,6 @@
 # Field-Wise Config Merge & Highlighting Plan
 
-**Status**: Draft – not started
+**Status**: Phases 1–4 completed; design reference for merge & highlighting
 **Scope**: Introduce field-wise merge semantics for configuration (especially `managers:`) and enhance `plonk config show` to clearly highlight customized fields.
 
 ---
@@ -73,24 +73,11 @@ These gaps undermine one of Plonk’s core goals: a config-driven system that is
 
 ---
 
-## Current Behavior (Summary)
+## Original Behavior (Summary – pre-refactor)
 
 ### Load & validation
 
-- `LoadFromPath`:
-  - Copies `defaultConfig` into `cfg`.
-  - Unmarshals YAML over `cfg` (scalar fields overlay; lists/maps override).
-  - Saves `cfg.Managers` into `userManagers`.
-  - Replaces `cfg.Managers` with `GetDefaultManagers()`.
-  - Overwrites defaults with `userManagers` entries (full replacement per manager name).
-  - Calls `updateValidManagersFromConfig(&cfg)` to feed `validmanager`.
-  - Validates via `validator.Struct(&cfg)` with `validmanager`.
-
-- `SimpleValidator.ValidateConfigFromYAML`:
-  - Unmarshals YAML into `cfg`.
-  - Calls `applyDefaults(&cfg)` for scalars & common fields.
-  - Calls `updateValidManagersFromConfig(&cfg)`.
-  - Validates via `validator.Struct(&cfg)`.
+This section documents the behavior before the field-wise merge and highlighting work in this branch. It is kept for historical context.
 
 ### Manager diffing
 
@@ -102,17 +89,14 @@ These gaps undermine one of Plonk’s core goals: a config-driven system that is
 - `saveNonDefaultValues`:
   - Writes `GetNonDefaultFields` and, if non-empty, `managers: GetNonDefaultManagers(cfg)` to `plonk.yaml`.
 
-### config show / config edit
+### config show / config edit (pre-refactor)
 
-- `config show`:
-  - Uses `config.LoadWithDefaults`.
-  - `ConfigShowFormatter.TableOutput` just `yaml.Marshal`s the full `config.Config` to YAML.
+- `config show` previously:
+  - Used `config.LoadWithDefaults`.
+  - `ConfigShowFormatter.TableOutput` directly `yaml.Marshal`ed the full `config.Config` to YAML with no highlighting.
 
 - `config edit`:
-  - Uses `config.LoadWithDefaults`.
-  - `createTempConfigFile` writes a header plus `writeFullConfig` (full YAML).
-  - `parseAndValidateConfig` strips header comments and feeds the YAML through `SimpleValidator`.
-  - `saveNonDefaultValues` persists only diffs (top-level + manager diffs).
+  - Already used `config.LoadWithDefaults`, `writeFullConfig`, and `saveNonDefaultValues` to show the effective config and persist only diffs.
 
 ---
 
