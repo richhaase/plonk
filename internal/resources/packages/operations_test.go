@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/resources"
 )
@@ -109,6 +110,7 @@ func (m *MockLockService) SetFindResults(packageName string, results []lock.Reso
 
 // Test getManagerInstallSuggestion
 func TestGetManagerInstallSuggestion(t *testing.T) {
+	cfg := &config.Config{Managers: config.GetDefaultManagers()}
 	tests := []struct {
 		name     string
 		manager  string
@@ -148,11 +150,25 @@ func TestGetManagerInstallSuggestion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := getManagerInstallSuggestion(tt.manager)
+			got := getManagerInstallSuggestion(cfg, tt.manager)
 			if got != tt.expected {
 				t.Errorf("getManagerInstallSuggestion(%s) = %v, want %v", tt.manager, got, tt.expected)
 			}
 		})
+	}
+}
+
+func TestGetManagerInstallSuggestion_UsesProvidedConfig(t *testing.T) {
+	cfg := &config.Config{
+		Managers: map[string]config.ManagerConfig{
+			"custom": {
+				InstallHint: "Install custom via custom-installer",
+			},
+		},
+	}
+	got := getManagerInstallSuggestion(cfg, "custom")
+	if got != "Install custom via custom-installer" {
+		t.Fatalf("expected custom hint, got %q", got)
 	}
 }
 

@@ -2,7 +2,9 @@ package clone
 
 import (
 	"context"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/richhaase/plonk/internal/lock"
@@ -54,4 +56,36 @@ func TestSetupFromClonedRepo_InstallsDetectedManagers(t *testing.T) {
 		t.Fatalf("failed reading lock: %v", err)
 	}
 	_ = filepath.Join // silence import linters
+}
+
+func TestInstallDetectedManagers_LoadsRepoConfig(t *testing.T) {
+	dir := t.TempDir()
+	configContent := `
+managers:
+  custom:
+    binary: custom-pm
+    install:
+      command: ["custom-pm", "install", "{{.Package}}"]
+    upgrade:
+      command: ["custom-pm", "upgrade", "{{.Package}}"]
+    upgrade_all:
+      command: ["custom-pm", "upgrade-all"]
+    uninstall:
+      command: ["custom-pm", "remove", "{{.Package}}"]
+`
+	if err := os.WriteFile(filepath.Join(dir, "plonk.yaml"), []byte(strings.TrimSpace(configContent)), 0o644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	mock := &packages.MockCommandExecutor{Responses: map[string]packages.CommandResponse{}}
+	packages.SetDefaultExecutor(mock)
+	t.Cleanup(func() { packages.SetDefaultExecutor(&packages.RealCommandExecutor{}) })
+
+	err := installDetectedManagers(context.Background(), dir, []string{"custom"}, Config{})
+	if err == nil {
+		t.Fatal("expected error due to missing custom manager binary")
+	}
+	if !strings.Contains(err.Error(), "automatic installation of package managers is not supported") {
+		t.Fatalf("unexpected error: %v", err)
+	}
 }

@@ -85,6 +85,10 @@ func (g *GenericManager) Upgrade(ctx context.Context, packages []string) error {
 		return g.UpgradeAll(ctx)
 	}
 
+	if len(g.config.Upgrade.Command) == 0 {
+		return fmt.Errorf("upgrade command not configured for this manager")
+	}
+
 	for _, pkg := range packages {
 		cmd := g.expandTemplate(g.config.Upgrade.Command, pkg)
 		output, err := g.exec.CombinedOutput(ctx, cmd[0], cmd[1:]...)

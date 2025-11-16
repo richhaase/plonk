@@ -93,7 +93,7 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool, n
 		}
 
 		// Install only detected managers
-		if err := installDetectedManagers(ctx, detectedManagers, Config{}); err != nil {
+		if err := installDetectedManagers(ctx, plonkDir, detectedManagers, Config{}); err != nil {
 			return fmt.Errorf("failed to install required tools: %w", err)
 		}
 	} else {
@@ -244,12 +244,14 @@ func DetectRequiredManagers(lockPath string) ([]string, error) {
 }
 
 // installDetectedManagers installs package managers in the order provided
-func installDetectedManagers(ctx context.Context, managers []string, cfg Config) error {
+func installDetectedManagers(ctx context.Context, configDir string, managers []string, cfg Config) error {
 	if len(managers) == 0 {
 		return nil
 	}
 
 	registry := packages.NewManagerRegistry()
+	cfgData := config.LoadWithDefaults(configDir)
+	registry.LoadV2Configs(cfgData)
 
 	output.StageUpdate(fmt.Sprintf("Checking package managers (%d total)...", len(managers)))
 

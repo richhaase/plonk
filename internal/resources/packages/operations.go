@@ -56,7 +56,7 @@ func InstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lo
 		if ctx.Err() != nil {
 			break
 		}
-		result := installSinglePackage(ctx, lockService, packageName, manager, opts.DryRun, registry)
+		result := installSinglePackage(ctx, cfg, lockService, packageName, manager, opts.DryRun, registry)
 		results = append(results, result)
 	}
 	return results, nil
@@ -113,7 +113,7 @@ func UninstallPackagesWith(ctx context.Context, cfg *config.Config, lockService 
 }
 
 // installSinglePackage installs a single package
-func installSinglePackage(ctx context.Context, lockService lock.LockService, packageName, manager string, dryRun bool, registry *ManagerRegistry) resources.OperationResult {
+func installSinglePackage(ctx context.Context, cfg *config.Config, lockService lock.LockService, packageName, manager string, dryRun bool, registry *ManagerRegistry) resources.OperationResult {
 	result := resources.OperationResult{
 		Name:    packageName,
 		Manager: manager,
@@ -148,7 +148,7 @@ func installSinglePackage(ctx context.Context, lockService lock.LockService, pac
 	}
 	if !available {
 		result.Status = "failed"
-		result.Error = fmt.Errorf("install %s: %s manager not available (%s)", packageName, manager, getManagerInstallSuggestion(manager))
+		result.Error = fmt.Errorf("install %s: %s manager not available (%s)", packageName, manager, getManagerInstallSuggestion(cfg, manager))
 		return result
 	}
 
@@ -172,7 +172,7 @@ func installSinglePackage(ctx context.Context, lockService lock.LockService, pac
 	}
 
 	// Apply any configured metadata extractors (e.g., npm scopes/full_name).
-	applyMetadataExtractors(metadata, manager, packageName)
+	applyMetadataExtractors(cfg, metadata, manager, packageName)
 
 	// Add to lock file
 	err = lockService.AddPackage(manager, packageName, version, metadata)
@@ -271,11 +271,13 @@ func getPackageManager(registry *ManagerRegistry, manager string) (PackageManage
 }
 
 // getManagerInstallSuggestion returns installation suggestion for a manager
-func getManagerInstallSuggestion(manager string) string {
-	// Prefer config-driven install hints when available.
-	cfg := config.LoadWithDefaults(config.GetConfigDir())
-	if cfg != nil && cfg.Managers != nil {
-		if m, ok := cfg.Managers[manager]; ok && m.InstallHint != "" {
+func getManagerInstallSuggestion(cfg *config.Config, manager string) string {
+	source := cfg
+	if source == nil {
+		source = config.LoadWithDefaults(config.GetConfigDir())
+	}
+	if source != nil && source.Managers != nil {
+		if m, ok := source.Managers[manager]; ok && m.InstallHint != "" {
 			return m.InstallHint
 		}
 	}
@@ -285,12 +287,15 @@ func getManagerInstallSuggestion(manager string) string {
 // applyMetadataExtractors applies configured metadata extractors for a given manager.
 // It currently only uses the package name as the source for extraction. JSON-based
 // extractors can be wired in later without changing the call site.
-func applyMetadataExtractors(metadata map[string]interface{}, manager, packageName string) {
-	cfg := config.LoadWithDefaults(config.GetConfigDir())
-	if cfg == nil || cfg.Managers == nil {
+func applyMetadataExtractors(cfg *config.Config, metadata map[string]interface{}, manager, packageName string) {
+	source := cfg
+	if source == nil {
+		source = config.LoadWithDefaults(config.GetConfigDir())
+	}
+	if source == nil || source.Managers == nil {
 		return
 	}
-	managerCfg, ok := cfg.Managers[manager]
+	managerCfg, ok := source.Managers[manager]
 	if !ok || len(managerCfg.MetadataExtractors) == 0 {
 		return
 	}

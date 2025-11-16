@@ -165,6 +165,19 @@ func TestGenericManager_Upgrade_Idempotent(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestGenericManager_Upgrade_MissingCommand(t *testing.T) {
+	cfg := config.ManagerConfig{
+		Binary:  "pipx",
+		Upgrade: config.CommandConfig{},
+	}
+
+	mgr := NewGenericManager(cfg, &MockCommandExecutor{})
+	err := mgr.Upgrade(context.Background(), []string{"ruff"})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "upgrade command not configured")
+}
+
 func TestGenericManager_UpgradeAll(t *testing.T) {
 	cfg := config.ManagerConfig{
 		Binary: "pipx",
