@@ -145,31 +145,74 @@ ignore_patterns:
 		}
 	})
 
-	t.Run("managers are not included in non-default fields", func(t *testing.T) {
-		checker := NewUserDefinedChecker(tempDir)
+}
 
+func TestGetNonDefaultManagers(t *testing.T) {
+	tempDir := t.TempDir()
+	checker := NewUserDefinedChecker(tempDir)
+
+	t.Run("no managers returns empty map", func(t *testing.T) {
+		cfg := &Config{}
+		nonDefaults := checker.GetNonDefaultManagers(cfg)
+		assert.Empty(t, nonDefaults)
+	})
+
+	t.Run("custom manager not in defaults is returned", func(t *testing.T) {
 		cfg := &Config{
-			DefaultManager:    defaultConfig.DefaultManager,
-			OperationTimeout:  defaultConfig.OperationTimeout,
-			PackageTimeout:    defaultConfig.PackageTimeout,
-			DotfileTimeout:    defaultConfig.DotfileTimeout,
-			ExpandDirectories: defaultConfig.ExpandDirectories,
-			IgnorePatterns:    defaultConfig.IgnorePatterns,
-			Dotfiles:          defaultConfig.Dotfiles,
 			Managers: map[string]ManagerConfig{
-				"custom": {
+				"custom-manager": {
 					Binary: "custom-binary",
 				},
 			},
 		}
 
-		nonDefaults := checker.GetNonDefaultFields(cfg)
+		nonDefaults := checker.GetNonDefaultManagers(cfg)
 
-		// Current behavior: managers are not tracked by GetNonDefaultFields.
-		// This test documents the existing behavior before manager support is added.
-		assert.NotContains(t, nonDefaults, "managers")
+		if assert.Contains(t, nonDefaults, "custom-manager") {
+			assert.Equal(t, "custom-binary", nonDefaults["custom-manager"].Binary)
+		}
 	})
 
+	t.Run("overridden built-in manager is returned", func(t *testing.T) {
+		defaults := GetDefaultManagers()
+		defaultNPM, ok := defaults["npm"]
+		if !ok {
+			t.Skip("npm default manager not defined; skipping overridden manager test")
+		}
+
+		// Create an overridden npm config
+		overridden := defaultNPM
+		overridden.Binary = "npm-custom"
+
+		cfg := &Config{
+			Managers: map[string]ManagerConfig{
+				"npm": overridden,
+			},
+		}
+
+		nonDefaults := checker.GetNonDefaultManagers(cfg)
+
+		if assert.Contains(t, nonDefaults, "npm") {
+			assert.Equal(t, "npm-custom", nonDefaults["npm"].Binary)
+		}
+	})
+
+	t.Run("default built-in manager is not returned", func(t *testing.T) {
+		defaults := GetDefaultManagers()
+		defaultBrew, ok := defaults["brew"]
+		if !ok {
+			t.Skip("brew default manager not defined; skipping default manager test")
+		}
+
+		cfg := &Config{
+			Managers: map[string]ManagerConfig{
+				"brew": defaultBrew,
+			},
+		}
+
+		nonDefaults := checker.GetNonDefaultManagers(cfg)
+		assert.NotContains(t, nonDefaults, "brew")
+	})
 }
 
 func TestGetDefaultFieldValue(t *testing.T) {

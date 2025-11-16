@@ -183,37 +183,30 @@ Today, the only way to change manager configuration is to manually edit `plonk.y
 
 > This phase now locks in the current behavior with tests and documentation; subsequent phases can safely change behavior with clear before/after expectations.
 
-### Phase 1 – Manager diffing support in UserDefinedChecker (3–4h)
+### Phase 1 – Manager diffing support in UserDefinedChecker (3–4h) – ✅ Completed 2025-11-16
 
-**Goal**: Teach `UserDefinedChecker` how to compute “non‑default manager configs” so we can save only manager diffs even when the edit view shows full config.
+**Goal**: Teach `UserDefinedChecker` how to compute “non‑default manager configs” so we can save only manager diffs even when the edit view shows full config. **Completed** via implementation of `GetNonDefaultManagers` and tests.
 
 1. Extend `UserDefinedChecker` with manager‑aware helpers:
    - Add:
      ```go
      func (c *UserDefinedChecker) GetNonDefaultManagers(cfg *Config) map[string]ManagerConfig
      ```
-   - Behavior:
-     - Let `defaults := GetDefaultManagers()`.
+   - Implemented behavior:
+     - `defaults := GetDefaultManagers()`.
      - For each `name, mgrCfg := range cfg.Managers`:
-       - If `defaultMgr, ok := defaults[name]; !ok`:
-         - Treat `mgrCfg` as **custom** → include in result.
-       - Else if `!reflect.DeepEqual(mgrCfg, defaultMgr)`:
-         - Treat `mgrCfg` as an **override** → include in result.
-       - Else:
-         - Skip (pure default; no need to persist).
-     - If no managers differ from defaults, return an empty map.
-   - `userConfig` is not required for this logic; it is purely defaults vs current runtime config.
+       - If `name` is not in `defaults`, treat as **custom** → include in result.
+       - Else if `!reflect.DeepEqual(mgrCfg, defaultMgr)`, treat as an **override** → include in result.
+       - Otherwise, skip (pure default; no need to persist).
+     - If no managers differ from defaults, returns an empty map.
 
-2. Add tests for manager diffing in `internal/config/user_defined_test.go`:
-   - Case: no user config → `GetNonDefaultManagers` returns empty.
-   - Case: user overrides a field for a built‑in manager (e.g., `npm.install.command`) → only `npm` appears in result with updated config.
-   - Case: user adds a new custom manager (`my-custom`) → map contains only `my-custom`.
+2. Tests for manager diffing in `internal/config/user_defined_test.go`:
+   - No managers → `GetNonDefaultManagers` returns empty.
+   - Custom manager (`custom-manager`) → returned with its binary.
+   - Overridden built‑in manager (`npm` with modified `Binary`) → returned as non‑default.
+   - Default built‑in manager (`brew` equal to default) → not returned.
 
-3. (Optional) Add:
-   ```go
-   func (c *UserDefinedChecker) HasNonDefaultManagers(cfg *Config) bool
-   ```
-   if we later want to highlight that in `config show`.
+3. `HasNonDefaultManagers` remains optional and is not yet implemented; we can add it later if we want to surface this in `config show`.
 
 ### Phase 2 – Full‑config view in config edit (4–6h)
 

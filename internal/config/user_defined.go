@@ -100,3 +100,31 @@ func (c *UserDefinedChecker) getDefaultFieldValue(fieldName string) interface{} 
 		return nil
 	}
 }
+
+// GetNonDefaultManagers returns a map of manager configurations that differ from
+// the built-in defaults. Managers that are not part of the defaults are treated
+// as custom and always included in the result.
+func (c *UserDefinedChecker) GetNonDefaultManagers(cfg *Config) map[string]ManagerConfig {
+	result := make(map[string]ManagerConfig)
+	if cfg == nil || cfg.Managers == nil {
+		return result
+	}
+
+	defaults := GetDefaultManagers()
+
+	for name, mgrCfg := range cfg.Managers {
+		defaultMgr, ok := defaults[name]
+		if !ok {
+			// Custom manager not in defaults
+			result[name] = mgrCfg
+			continue
+		}
+
+		if !reflect.DeepEqual(mgrCfg, defaultMgr) {
+			// Built-in manager overridden by user
+			result[name] = mgrCfg
+		}
+	}
+
+	return result
+}
