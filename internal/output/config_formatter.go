@@ -243,14 +243,14 @@ func formatConfigWithHighlights(cfg *config.Config, checker *config.UserDefinedC
 				item := strings.TrimSpace(strings.TrimPrefix(trim, "- "))
 				if inExpandDirs {
 					if _, isCustom := customExpandDirs[item]; isCustom {
-						out.WriteString(ColorInfo(line))
+						out.WriteString(ColorAdded(line))
 						out.WriteString("\n")
 						continue
 					}
 				}
 				if inIgnorePatterns {
 					if _, isCustom := customIgnorePatterns[item]; isCustom {
-						out.WriteString(ColorInfo(line))
+						out.WriteString(ColorAdded(line))
 						out.WriteString("\n")
 						continue
 					}
