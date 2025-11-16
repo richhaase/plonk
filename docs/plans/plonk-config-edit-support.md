@@ -235,43 +235,42 @@ Today, the only way to change manager configuration is to manually edit `plonk.y
      - Strips header comment lines and asserts that the remaining YAML matches `yaml.Marshal(cfg)` exactly.
      - Verifies that `managers:` flows through into the edit view.
 
-### Phase 3 – Save diffs (including managers) back to plonk.yaml (3–5h)
+### Phase 3 – Save diffs (including managers) back to plonk.yaml (3–5h) – ✅ Completed 2025-11-16
 
-**Goal**: Persist only non‑default differences (top‑level and managers) even though the edit view shows full config.
+**Goal**: Persist only non‑default differences (top‑level and managers) even though the edit view shows full config. **Completed** by extending `saveNonDefaultValues` and adding manager-aware round‑trip tests.
 
-1. Update `saveNonDefaultValues` in `internal/commands/config_edit.go`:
+1. Updated `saveNonDefaultValues` in `internal/commands/config_edit.go`:
    - After computing:
      ```go
      nonDefaults := checker.GetNonDefaultFields(cfg)
      ```
-   - Add:
+   - Added:
      ```go
      nonDefaultManagers := checker.GetNonDefaultManagers(cfg)
      if len(nonDefaultManagers) > 0 {
+         if nonDefaults == nil {
+             nonDefaults = make(map[string]interface{})
+         }
          nonDefaults["managers"] = nonDefaultManagers
      }
      ```
-   - The resulting `nonDefaults` map is what gets marshaled to `plonk.yaml`.
+   - The resulting `nonDefaults` map (top‑level fields + manager diffs) is what gets marshaled to `plonk.yaml`.
 
 2. Round‑trip tests:
-   - Use a temp config dir and:
-     - Seed a `plonk.yaml` with:
-       - A custom manager (`my-custom`).
-       - An overridden built‑in manager (e.g., `npm` with a modified `install` command).
-     - Simulate an edit by:
-       - Loading config via `LoadWithDefaults`.
-       - Modifying `cfg.Managers` in memory.
-       - Passing it through `saveNonDefaultValues`.
-     - Reload via `LoadWithDefaults` and assert:
-       - Custom manager is present and matches edits.
-       - Built‑in manager override is applied on top of defaults.
-       - No unexpected managers are written.
+   - Implemented `TestSaveNonDefaultValuesIncludesManagerDiffs` in `internal/commands/config_edit_test.go`:
+     - Uses a temp config dir seeded with an empty `plonk.yaml` (so defaults are merged).
+     - Loads `cfg := config.LoadWithDefaults(configDir)`.
+     - Adds a custom manager (`custom-manager`) and overrides the shipped `npm` config (e.g., changing `Binary` to `npm-custom`).
+     - Calls `saveNonDefaultValues(configDir, cfg)`.
+     - Asserts that `plonk.yaml` contains a `managers:` section with entries for `custom-manager` and `npm`, but not a full dump of all defaults.
+     - Reloads via `LoadWithDefaults` and asserts:
+       - The custom manager is present with the expected binary.
+       - The overridden `npm` manager reflects the custom binary.
+       - An untouched default manager (e.g., `brew`) remains present and unchanged.
 
 3. Backwards compatibility:
-   - Test that configs without `managers:` are unchanged:
-     - Start with a `plonk.yaml` containing only top‑level fields.
-     - Run through the new `parseAndValidateConfig` + `saveNonDefaultValues` path without touching managers.
-     - Verify `plonk.yaml` is unchanged (modulo benign formatting/ordering).
+   - Existing tests (e.g., `TestConfigEditRoundTripPreservesTopLevelFields`) still pass:
+     - When no managers are set or overridden, `saveNonDefaultValues` continues to omit `managers` from `plonk.yaml`, keeping configs minimal.
 
 ### Phase 4 – UX & Documentation (2–3h)
 
