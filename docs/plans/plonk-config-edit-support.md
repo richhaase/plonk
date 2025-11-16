@@ -49,6 +49,9 @@ Today, the only way to change manager configuration is to manually edit `plonk.y
    - Both `config show` and `config edit` operate on the **same effective configuration struct**.
    - `config show` renders it to stdout; `config edit` writes it to a temp file for editing and, on save, persists only non‑default differences back to `plonk.yaml`.
 
+7. **Treat all configured managers as first‑class**
+   - Any manager present in the effective `cfg.Managers` (whether from shipped defaults or user config) should be usable everywhere a manager name is expected (registry, `default_manager`, validation, help/examples) without behavioral distinction.
+
 ---
 
 ## Non‑Goals
@@ -56,7 +59,6 @@ Today, the only way to change manager configuration is to manually edit `plonk.y
 - Do **not** redesign the overall config schema or `ManagerConfig`.
 - Do **not** change lock file format or semantics.
 - Do **not** turn `config edit` into an interactive wizard; it remains an editor‑based workflow on YAML.
-- Optional / future: allowing `default_manager` to point at custom managers (requires improving the `validmanager` validator around dynamic manager lists).
 
 ---
 
@@ -298,13 +300,16 @@ Today, the only way to change manager configuration is to manually edit `plonk.y
 3. (Optional) Add a small note to the `config show` header:
    - E.g.: “Note: Not all fields shown here may be present in `plonk.yaml`; defaults are applied at runtime. Use `plonk config edit` to change them.”
 
-### Phase 5 – Optional: Improve validmanager for custom defaults (future)
+### Phase 5 – Dynamic manager validation for default_manager (3–5h)
+
+**Goal**: Ensure all configured managers are truly first‑class by allowing `default_manager` to reference any manager present in `cfg.Managers` (shipped or user‑defined), while keeping validation accurate.
 
 **Problem**: The `validmanager` validator for `DefaultManager` currently relies on a global `validManagers` slice, populated once in `internal/resources/packages/init.go` from built‑ins. That means:
 
 - Users can define custom managers in `managers:`, but cannot reliably set them as `default_manager` without making `validmanager` aware of those new names.
+- This conflicts with the goal that all configured managers (from `cfg.Managers`) are first‑class.
 
-**Possible approach** (not required for initial feature):
+Planned approach:
 
 1. Allow `validmanager` to consider runtime config managers:
    - Modify `validatePackageManager` to:
@@ -317,7 +322,7 @@ Today, the only way to change manager configuration is to manually edit `plonk.y
    - After loading config in the CLI entrypoint, call `SetValidManagers` with the manager names from the active `ManagerRegistry`.
    - This needs careful design to avoid init‑time cycles (`config` ↔ `packages`) and to keep tests predictable.
 
-For now, this can be documented as a limitation: users can override built‑ins and add custom managers, but `default_manager` should remain one of the built‑in names until validation is made dynamic.
+Until this phase is implemented, there is a temporary limitation: users can override built‑ins and add custom managers, but `default_manager` should remain one of the shipped manager names. Completing this phase is required to fully align runtime behavior with the “all configured managers are first‑class” goal.
 
 ---
 
