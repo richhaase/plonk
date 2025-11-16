@@ -186,6 +186,10 @@ func LoadFromPath(configPath string) (*Config, error) {
 		cfg.Managers[name] = userMgr
 	}
 
+	// Update the valid manager set for validation based on the effective
+	// configuration (defaults + any user-defined managers).
+	updateValidManagersFromConfig(&cfg)
+
 	// Validate
 	validate := validator.New()
 	if err := RegisterValidators(validate); err != nil {
@@ -229,6 +233,39 @@ func applyDefaults(cfg *Config) {
 	if len(cfg.IgnorePatterns) == 0 {
 		cfg.IgnorePatterns = defaultConfig.IgnorePatterns
 	}
+}
+
+// updateValidManagersFromConfig updates the global valid manager list used by
+// the "validmanager" validator. It treats all managers present in the effective
+// configuration as first-class, regardless of whether they were shipped as
+// defaults or defined by the user.
+func updateValidManagersFromConfig(cfg *Config) {
+	if cfg == nil {
+		return
+	}
+
+	seen := make(map[string]struct{})
+
+	// Start with shipped defaults.
+	for name := range GetDefaultManagers() {
+		seen[name] = struct{}{}
+	}
+
+	// Merge in any managers defined in this config.
+	for name := range cfg.Managers {
+		seen[name] = struct{}{}
+	}
+
+	if len(seen) == 0 {
+		return
+	}
+
+	names := make([]string, 0, len(seen))
+	for name := range seen {
+		names = append(names, name)
+	}
+
+	SetValidManagers(names)
 }
 
 // Utility functions for directory management

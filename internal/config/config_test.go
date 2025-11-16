@@ -144,6 +144,29 @@ default_manager: invalid_manager
 	}
 }
 
+func TestLoad_CustomManagerCanBeDefault(t *testing.T) {
+	configContent := `
+default_manager: custom-manager
+managers:
+  custom-manager:
+    binary: "custom-binary"
+`
+	tempDir := testutil.NewTestConfig(t, configContent)
+
+	cfg, err := Load(tempDir)
+	if err != nil {
+		t.Fatalf("Load failed for custom default_manager: %v", err)
+	}
+
+	if cfg.DefaultManager != "custom-manager" {
+		t.Errorf("Expected default manager 'custom-manager', got %s", cfg.DefaultManager)
+	}
+
+	if cfg.Managers["custom-manager"].Binary != "custom-binary" {
+		t.Errorf("Expected custom-manager binary 'custom-binary', got %s", cfg.Managers["custom-manager"].Binary)
+	}
+}
+
 func TestLoad_InvalidTimeout(t *testing.T) {
 	tests := []struct {
 		name    string
