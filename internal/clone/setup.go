@@ -175,14 +175,9 @@ ignore_patterns:`
 
 // getManagerDescription returns a user-friendly description of the package manager
 func getManagerDescription(manager string) string {
-	normalized := manager
-	if manager == "homebrew" {
-		normalized = "brew"
-	}
-
 	// Prefer descriptions from default manager configs when available.
 	for name, cfg := range config.GetDefaultManagers() {
-		if name == normalized && cfg.Description != "" {
+		if name == manager && cfg.Description != "" {
 			return cfg.Description
 		}
 	}
@@ -192,13 +187,8 @@ func getManagerDescription(manager string) string {
 
 // getManualInstallInstructions returns manual installation instructions
 func getManualInstallInstructions(manager string) string {
-	normalized := manager
-	if manager == "homebrew" {
-		normalized = "brew"
-	}
-
 	for name, cfg := range config.GetDefaultManagers() {
-		if name == normalized && cfg.InstallHint != "" {
+		if name == manager && cfg.InstallHint != "" {
 			return cfg.InstallHint
 		}
 	}

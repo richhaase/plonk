@@ -31,16 +31,10 @@ func Reconcile(ctx context.Context, configDir string) (resources.Result, error) 
 			name, _ := resource.Metadata["name"].(string)
 			version, _ := resource.Metadata["version"].(string)
 
-			// Normalize manager name (homebrew -> brew)
-			normalizedManager := manager
-			if manager == "homebrew" {
-				normalizedManager = "brew"
-			}
-
 			desired = append(desired, resources.Item{
 				Name:    name,
 				Domain:  "package",
-				Manager: normalizedManager,
+				Manager: manager,
 				Metadata: map[string]interface{}{
 					"version": version,
 				},
