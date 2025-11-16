@@ -157,6 +157,67 @@ ignore_patterns:
 	assert.NotContains(t, string(data), "managers:")
 }
 
+func TestSaveNonDefaultValuesIncludesManagerDiffs(t *testing.T) {
+	configDir := testutil.NewTestConfig(t, "")
+
+	// Start from the effective defaults (includes default managers).
+	cfg := config.LoadWithDefaults(configDir)
+
+	if cfg.Managers == nil {
+		cfg.Managers = make(map[string]config.ManagerConfig)
+	}
+
+	// Add a custom manager and override a built-in manager.
+	cfg.Managers["custom-manager"] = config.ManagerConfig{
+		Binary: "custom-binary",
+	}
+
+	// Create an overridden npm config based on the shipped default.
+	defaults := config.GetDefaultManagers()
+	if npmDefault, ok := defaults["npm"]; ok {
+		overridden := npmDefault
+		overridden.Binary = "npm-custom"
+		cfg.Managers["npm"] = overridden
+	}
+
+	// Save only non-default values.
+	err := saveNonDefaultValues(configDir, cfg)
+	require.NoError(t, err)
+
+	// plonk.yaml should contain a managers section with custom/overridden managers only.
+	data, err := os.ReadFile(filepath.Join(configDir, "plonk.yaml"))
+	require.NoError(t, err)
+	content := string(data)
+	assert.Contains(t, content, "managers:")
+	assert.Contains(t, content, "custom-manager")
+	assert.Contains(t, content, "custom-binary")
+	// We should see an npm entry, but not a full dump of all defaults.
+	assert.Contains(t, content, "npm:")
+
+	// Reload config and confirm effective managers include defaults plus the overrides.
+	reloadedCfg := config.LoadWithDefaults(configDir)
+
+	// Custom manager should be present.
+	custom, ok := reloadedCfg.Managers["custom-manager"]
+	if assert.True(t, ok) {
+		assert.Equal(t, "custom-binary", custom.Binary)
+	}
+
+	// Overridden npm manager should reflect the custom binary.
+	reloadedNPM, ok := reloadedCfg.Managers["npm"]
+	if assert.True(t, ok) {
+		assert.Equal(t, "npm-custom", reloadedNPM.Binary)
+	}
+
+	// A default manager we didn't touch (e.g., brew) should still be present and unchanged.
+	if brewDefault, ok := defaults["brew"]; ok {
+		reloadedBrew, ok := reloadedCfg.Managers["brew"]
+		if assert.True(t, ok) {
+			assert.Equal(t, brewDefault, reloadedBrew)
+		}
+	}
+}
+
 func TestCreateTempConfigFileWritesFullConfig(t *testing.T) {
 	// Create a test config with some values, including a managers block.
 	configContent := `
