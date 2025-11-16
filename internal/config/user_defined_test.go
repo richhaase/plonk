@@ -213,6 +213,51 @@ func TestGetNonDefaultManagers(t *testing.T) {
 		nonDefaults := checker.GetNonDefaultManagers(cfg)
 		assert.NotContains(t, nonDefaults, "brew")
 	})
+
+	t.Run("overridden built-in manager only saves diffs", func(t *testing.T) {
+		defaults := GetDefaultManagers()
+		defaultNPM, ok := defaults["npm"]
+		if !ok {
+			t.Skip("npm default manager not defined; skipping diff test")
+		}
+
+		override := ManagerConfig{
+			Install: CommandConfig{
+				Command: []string{"npm", "install", "-g", "{{.Package}}", "--legacy-peer-deps"},
+			},
+		}
+		effective := ManagerConfig{
+			Binary:             defaultNPM.Binary,
+			List:               defaultNPM.List,
+			Install:            MergeManagerConfig(defaultNPM, override).Install,
+			Upgrade:            defaultNPM.Upgrade,
+			UpgradeAll:         defaultNPM.UpgradeAll,
+			Uninstall:          defaultNPM.Uninstall,
+			Description:        defaultNPM.Description,
+			InstallHint:        defaultNPM.InstallHint,
+			HelpURL:            defaultNPM.HelpURL,
+			MetadataExtractors: defaultNPM.MetadataExtractors,
+		}
+
+		cfg := &Config{
+			Managers: map[string]ManagerConfig{
+				"npm": effective,
+			},
+		}
+
+		nonDefaults := checker.GetNonDefaultManagers(cfg)
+		diff, ok := nonDefaults["npm"]
+		if !ok {
+			t.Fatalf("expected npm diff to be returned")
+		}
+
+		require.Equal(t, []string{"npm", "install", "-g", "{{.Package}}", "--legacy-peer-deps"}, diff.Install.Command)
+		assert.Empty(t, diff.List.Command)
+		assert.Empty(t, diff.Binary)
+
+		merged := MergeManagerConfig(defaultNPM, diff)
+		assert.Equal(t, effective.Install.Command, merged.Install.Command)
+	})
 }
 
 func TestGetDefaultFieldValue(t *testing.T) {
