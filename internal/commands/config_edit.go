@@ -155,8 +155,8 @@ func createTempConfigFile(configDir string) (string, error) {
 		return "", err
 	}
 
-	// Generate YAML with annotations
-	if err := writeAnnotatedConfig(tempFile, cfg, configDir); err != nil {
+	// Generate full YAML representation of the current config
+	if err := writeFullConfig(tempFile, cfg); err != nil {
 		os.Remove(tempFile.Name())
 		return "", err
 	}
@@ -165,54 +165,16 @@ func createTempConfigFile(configDir string) (string, error) {
 	return tempFile.Name(), nil
 }
 
-// writeAnnotatedConfig writes the config with (user-defined) annotations
-func writeAnnotatedConfig(w *os.File, cfg *config.Config, configDir string) error {
-	// Create checker to identify user-defined values
-	checker := config.NewUserDefinedChecker(configDir)
-
-	// Helper to write a field with optional annotation
-	writeField := func(name string, value interface{}, isUserDef bool) {
-		// Marshal just this field
-		fieldMap := map[string]interface{}{name: value}
-		data, _ := yaml.Marshal(fieldMap)
-		// Remove the trailing newline as we'll add it ourselves
-		line := strings.TrimSpace(string(data))
-
-		fmt.Fprint(w, line)
-		if isUserDef {
-			fmt.Fprint(w, "  # (user-defined)")
-		}
-		fmt.Fprintln(w)
+// writeFullConfig writes the full config to the provided file in YAML format.
+// This is used by config edit to present the same effective configuration that
+// config show displays, without any annotations.
+func writeFullConfig(w *os.File, cfg *config.Config) error {
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return err
 	}
-
-	// Write each field
-	writeField("default_manager", cfg.DefaultManager,
-		checker.IsFieldUserDefined("default_manager", cfg.DefaultManager))
-
-	writeField("operation_timeout", cfg.OperationTimeout,
-		checker.IsFieldUserDefined("operation_timeout", cfg.OperationTimeout))
-
-	writeField("package_timeout", cfg.PackageTimeout,
-		checker.IsFieldUserDefined("package_timeout", cfg.PackageTimeout))
-
-	writeField("dotfile_timeout", cfg.DotfileTimeout,
-		checker.IsFieldUserDefined("dotfile_timeout", cfg.DotfileTimeout))
-
-	// For lists, check if the entire list differs
-	writeField("expand_directories", cfg.ExpandDirectories,
-		checker.IsFieldUserDefined("expand_directories", cfg.ExpandDirectories))
-
-	writeField("ignore_patterns", cfg.IgnorePatterns,
-		checker.IsFieldUserDefined("ignore_patterns", cfg.IgnorePatterns))
-
-	// Handle nested structures
-	if checker.IsFieldUserDefined("dotfiles", cfg.Dotfiles) {
-		writeField("dotfiles", cfg.Dotfiles, true)
-	} else if len(cfg.Dotfiles.UnmanagedFilters) > 0 {
-		writeField("dotfiles", cfg.Dotfiles, false)
-	}
-
-	return nil
+	_, err = w.Write(data)
+	return err
 }
 
 // parseAndValidateConfig reads and validates the temp file

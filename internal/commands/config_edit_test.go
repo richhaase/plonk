@@ -6,12 +6,14 @@ package commands
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestGetEditor(t *testing.T) {
@@ -153,4 +155,45 @@ ignore_patterns:
 	data, err := os.ReadFile(filepath.Join(configDir, "plonk.yaml"))
 	require.NoError(t, err)
 	assert.NotContains(t, string(data), "managers:")
+}
+
+func TestCreateTempConfigFileWritesFullConfig(t *testing.T) {
+	// Create a test config with some values, including a managers block.
+	configContent := `
+default_manager: npm
+operation_timeout: 450
+managers:
+  npm:
+    binary: "npm"
+`
+	configDir := testutil.NewTestConfig(t, configContent)
+
+	// Load the effective config (what config show would use).
+	cfg := config.LoadWithDefaults(configDir)
+	expectedYAML, err := yaml.Marshal(cfg)
+	require.NoError(t, err)
+
+	// Create the temp config file used by config edit.
+	tempFile, err := createTempConfigFile(configDir)
+	require.NoError(t, err)
+	defer os.Remove(tempFile)
+
+	data, err := os.ReadFile(tempFile)
+	require.NoError(t, err)
+
+	// Strip header comments from the temp file content to get the raw config YAML.
+	lines := strings.Split(string(data), "\n")
+	var bodyLines []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		bodyLines = append(bodyLines, line)
+	}
+	body := strings.TrimSpace(strings.Join(bodyLines, "\n"))
+
+	expected := strings.TrimSpace(string(expectedYAML))
+
+	assert.Equal(t, expected, body)
 }
