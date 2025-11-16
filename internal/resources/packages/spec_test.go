@@ -6,6 +6,7 @@ package packages
 import (
 	"testing"
 
+	"github.com/richhaase/plonk/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -307,4 +308,35 @@ func TestPackageSpec_String(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestValidateSpecs_AllowsCustomManagersAfterRegistryLoad(t *testing.T) {
+	registry := NewManagerRegistry()
+	cfg := &config.Config{
+		Managers: map[string]config.ManagerConfig{
+			"custom": {
+				Binary: "custom",
+				List: config.ListConfig{
+					Command: []string{"custom", "list"},
+					Parse:   "lines",
+				},
+				Install: config.CommandConfig{
+					Command: []string{"custom", "install", "{{.Package}}"},
+				},
+				Uninstall: config.CommandConfig{
+					Command: []string{"custom", "uninstall", "{{.Package}}"},
+				},
+			},
+		},
+	}
+	registry.LoadV2Configs(cfg)
+	t.Cleanup(func() {
+		registry.LoadV2Configs(nil)
+	})
+
+	result := ValidateSpecs([]string{"custom:tool"}, ValidationModeInstall, "")
+	require.Len(t, result.Invalid, 0, "expected no validation errors: %v", result.Invalid)
+	require.Len(t, result.Valid, 1)
+	assert.Equal(t, "custom", result.Valid[0].Manager)
+	assert.Equal(t, "tool", result.Valid[0].Name)
 }

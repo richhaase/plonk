@@ -54,6 +54,9 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	configDir := config.GetDefaultConfigDirectory()
 	cfg := config.LoadWithDefaults(configDir)
 
+	// Ensure registry sees config-defined managers before validation
+	packages.NewManagerRegistry().LoadV2Configs(cfg)
+
 	// Parse and validate all package specifications
 	validationResult := packages.ValidateSpecs(args, packages.ValidationModeUninstall, "")
 
