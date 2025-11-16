@@ -208,89 +208,97 @@ The diff tool is executed as: `{tool} {source_path} {deployed_path}`
 
 Plonk v2 introduces a powerful extensibility feature: custom package manager definitions. You can define additional package managers or override built-in ones in your `plonk.yaml`.
 
-> Note: In the current version, `plonk config edit` does not yet surface the `managers:` section in its editor view. Manager definitions can be viewed with `plonk config show` and edited by modifying `plonk.yaml` directly. Planned work to make `config edit` fully manager-aware is tracked in `docs/plans/plonk-config-edit-support.md`.
-
 ### How Package Managers Are Defined
 
-Package managers in plonk are defined using a simple YAML schema that specifies how to interact with each manager. Built-in managers (brew, npm, pnpm, cargo, pipx, conda, gem, go) are hardcoded in Go, but you can extend plonk by adding custom managers in your configuration.
+Package managers in plonk are defined using a YAML schema that specifies how to interact with each manager. Plonk ships a set of default manager definitions via `GetDefaultManagers` (brew, npm, pnpm, cargo, pipx, conda, gem, uv); your `plonk.yaml` can override any of these or add new ones. The effective configuration that plonk uses is:
 
-### YAML Schema for Manager Configs
+- Defaults from `GetDefaultManagers`
+- Merged with any entries you define under `managers:` in `plonk.yaml`
 
-Each package manager is defined with the following fields:
+`plonk config show` and `plonk config edit` both display this effective configuration, including all managers.
+
+### YAML Schema for Manager Configs (v2)
+
+Each manager entry under `managers:` uses the same schema as `ManagerConfig` (`internal/config/managers.go`), with a few core fields you’ll typically care about:
 
 ```yaml
 managers:
   manager-name:
-    binary: "command"           # Required: The executable binary name
-    list: "args to list packages"       # Required: Command to list installed packages
-    install: "args to install {package}"    # Required: Command to install a package
-    upgrade: "args to upgrade {package}"    # Optional: Command to upgrade a package
-    upgrade_all: "args to upgrade all"      # Optional: Command to upgrade all packages
-    uninstall: "args to uninstall {package}" # Required: Command to uninstall a package
+    binary: "command"               # Required: executable binary name
+
+    list:                           # How to list installed packages
+      command: ["cmd", "args"...]   # Required: full argv for the list command
+      parse: "lines"                # One of: "lines", "json", "json-map"
+      json_field: "name"            # For JSON modes: which field/key to use as the package name
+
+    install:                        # How to install a single package
+      command: ["cmd", "install", "{{.Package}}"]
+      idempotent_errors:
+        - "already installed"
+
+    upgrade:                        # How to upgrade a single package (optional)
+      command: ["cmd", "upgrade", "{{.Package}}"]
+      idempotent_errors:
+        - "already up-to-date"
+
+    upgrade_all:                    # How to upgrade all packages (optional)
+      command: ["cmd", "upgrade", "--all"]
+      idempotent_errors:
+        - "already up-to-date"
+
+    uninstall:                      # How to uninstall a single package
+      command: ["cmd", "uninstall", "{{.Package}}"]
+      idempotent_errors:
+        - "not installed"
+
+    # Optional descriptive fields used by UX surfaces like clone/doctor/help:
+    description: "Human readable name"
+    install_hint: "How to install this manager"
+    help_url: "https://example.com/docs"
 ```
 
-**Field Details:**
-- `binary`: The command-line tool name (e.g., `brew`, `npm`, `uv`)
-- `list`: Arguments passed to binary to list installed packages (stdout should be package names, one per line)
-- `install`: Arguments to install a package; use `{package}` placeholder for package name
-- `upgrade`: Arguments to upgrade a package; use `{package}` placeholder (optional)
-- `upgrade_all`: Arguments to upgrade all packages managed by this manager (optional)
-- `uninstall`: Arguments to uninstall a package; use `{package}` placeholder
+**Field Details (core pieces):**
+- `binary`: CLI executable name for the manager (e.g., `brew`, `npm`, `uv`).
+- `list.command`: argv used to list installed packages.
+- `list.parse` / `list.parse_strategy`:
+  - `"lines"`: each line is a package; the first token is treated as the name.
+  - `"json"`: JSON array of objects; `json_field` names the string field used as the package name.
+  - `"json-map"`: JSON object (optionally nested via `json_field`); keys are treated as package names.
+- `install` / `upgrade` / `upgrade_all` / `uninstall`:
+  - Each has a `command` array where `{{.Package}}` is replaced with the package name.
+  - `idempotent_errors` lists substrings that should be treated as “already done” rather than failures.
+
+More advanced features (like `name_transform` and `metadata_extractors` for npm-style scoped packages) are documented in `docs/plans/pkg-mgr-metadata-pipeline.md` and are preconfigured for the shipped managers. Most users only need to override commands or add new managers.
 
 ### How to Add Custom Managers
 
 Add a `managers:` section to your `plonk.yaml`:
 
 ```yaml
-# Example: Adding uv and pixi as custom managers
+# Example: Adding pixi as a custom manager
 managers:
-  uv:
-    binary: "uv"
-    list: "tool list"
-    install: "tool install {package}"
-    upgrade: "tool upgrade {package}"
-    upgrade_all: "tool upgrade --all"
-    uninstall: "tool uninstall {package}"
-
   pixi:
     binary: "pixi"
-    list: "global list"
-    install: "global install {package}"
-    upgrade: "global upgrade {package}"
-    upgrade_all: "global upgrade-all"
-    uninstall: "global remove {package}"
-```
-
-### Example: Custom Manager YAML Config
-
-Here's a complete example showing how to add a hypothetical custom package manager called "toolbox":
-
-```yaml
-# plonk.yaml
-default_manager: brew
-
-# Custom package managers
-managers:
-  toolbox:
-    binary: "toolbox"
-    list: "installed --names-only"
-    install: "add {package}"
-    upgrade: "update {package}"
-    upgrade_all: "update --all"
-    uninstall: "remove {package}"
-```
-
-After adding this configuration, you can use toolbox with plonk:
-
-```bash
-# Install a package via toolbox
-plonk install toolbox:mytool
-
-# Upgrade a toolbox package
-plonk upgrade toolbox:mytool
-
-# Uninstall a toolbox package
-plonk remove toolbox:mytool
+    list:
+      command: ["pixi", "global", "list", "--json"]
+      parse: "json"
+      json_field: "name"
+    install:
+      command: ["pixi", "global", "install", "{{.Package}}"]
+      idempotent_errors:
+        - "already installed"
+    upgrade:
+      command: ["pixi", "global", "upgrade", "{{.Package}}"]
+      idempotent_errors:
+        - "already up-to-date"
+    upgrade_all:
+      command: ["pixi", "global", "upgrade-all"]
+      idempotent_errors:
+        - "already up-to-date"
+    uninstall:
+      command: ["pixi", "global", "remove", "{{.Package}}"]
+      idempotent_errors:
+        - "not installed"
 ```
 
 ### Overriding Built-in Managers
@@ -301,12 +309,21 @@ You can also override built-in manager configurations if you need custom behavio
 managers:
   npm:
     binary: "npm"
-    list: "list -g --depth=0 --parseable"  # Custom list format
-    install: "install -g {package}"
-    uninstall: "uninstall -g {package}"
+    list:
+      command: ["npm", "list", "-g", "--depth=0", "--json"]
+      parse: "json-map"
+      json_field: "dependencies"
+    install:
+      command: ["npm", "install", "-g", "{{.Package}}"]
+      idempotent_errors:
+        - "already installed"
+    uninstall:
+      command: ["npm", "uninstall", "-g", "{{.Package}}"]
+      idempotent_errors:
+        - "not installed"
 ```
 
-**Note:** When overriding built-in managers, you must specify all required fields (binary, list, install, uninstall).
+**Note:** When overriding built-in managers, you only need to specify the fields you want to change. Any fields you omit fall back to the shipped defaults from `GetDefaultManagers`.
 
 ## Advanced Configuration
 
