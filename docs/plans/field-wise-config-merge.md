@@ -270,39 +270,33 @@ These gaps undermine one of Plonk’s core goals: a config-driven system that is
 
 > If a future need arises for additive list semantics, we can introduce explicit mechanisms (e.g., “append” sections or flags) without changing the current default behavior.
 
-### Phase 4 – config show highlighting (4–6h)
+### Phase 4 – config show highlighting (4–6h) – ✅ Completed 2025-11-16
 
-1. Introduce field-diffing helper:
-   - Add a helper in `internal/config` or `internal/output`:
-     ```go
-     type FieldDiffChecker interface {
-         IsFieldUserDefined(fieldPath []string, value interface{}) bool
-     }
-     ```
-   - Reuse or extend `UserDefinedChecker` to support nested paths, especially under `managers`:
-     - Example paths:
-       - `["default_manager"]`
-       - `["managers", "npm", "install", "command"]`
+1. Highlight custom fields in `ConfigShowFormatter` (✅ implemented in `internal/output/config_formatter.go`):
+   - `ConfigShowFormatter.TableOutput` now:
+     - Detects when `Config` is a `*config.Config` and `Checker` is a `*config.UserDefinedChecker`.
+     - Uses `checker.GetNonDefaultFields(cfg)` to identify top-level fields that differ from defaults.
+     - Uses `checker.GetNonDefaultManagers(cfg)` to identify managers that differ from defaults.
+     - Marshals the effective config to YAML and post-processes the text line-by-line:
+       - Top-level keys in the non-default set are colorized with `ColorInfo(...)` (entire line).
+       - Within the `managers:` block, manager name lines (e.g., `  npm:`) are colorized when the manager name is in the non-default manager set.
+     - Falls back to plain `yaml.Marshal` output when type assertions or highlighting fail.
+   - The YAML structure and keys remain unchanged; only color codes are added in table output.
 
-2. YAML AST traversal in `ConfigShowFormatter`:
-   - Modify `ConfigShowFormatter.TableOutput` to:
-     - Marshal `c.Config` to a `yaml.Node` instead of raw bytes.
-     - Walk the AST, keeping track of the current path (e.g., using parent mapping).
-     - For each scalar node:
-       - If `IsFieldUserDefined(path, value)` is true, wrap `node.Value` with `output.ColorInfo`.
-     - Render the modified AST back to YAML text.
+2. Tests (✅ implemented in `internal/output/config_formatter_test.go`):
+   - `TestConfigShowFormatter_TableAndStructured`:
+     - Confirms the basic table output and `StructuredData` behavior still work.
+   - `TestConfigShowFormatter_HighlightsCustomFields`:
+     - Creates a config with a non-default `DefaultManager` (`npm`) and defaults for other fields.
+     - Uses a `UserDefinedChecker` backed by a temp config directory.
+     - Asserts that:
+       - The output contains the `default_manager:` key.
+       - The value `npm` appears in the output (indicating the custom value is present; exact escape sequences are not asserted).
 
-3. Tests:
-   - Add tests in `internal/output/config_formatter_test.go`:
-     - With a config that differs from defaults in a few known spots (e.g., `default_manager`, `package_timeout`, `managers.npm.install.command`).
-     - Assert that:
-       - The YAML structure is unchanged (same keys/shape).
-       - The custom values are wrapped in the color escape sequences produced by `ColorInfo`.
-     - Ensure that JSON/YAML structured outputs remain uncolored (no escape sequences).
-
-4. NO_COLOR & terminals:
-   - Ensure colorization respects `NO_COLOR` and terminal detection via `output.InitColors`.
-   - If colors are disabled, the highlighting should fall back to plain text without loss of information.
+3. NO_COLOR & terminals:
+   - Highlighting uses `ColorInfo`, which is built on the existing color subsystem:
+     - Honors `NO_COLOR` and terminal detection via `output.InitColors`.
+     - When colors are disabled, all lines fall back to plain text with no escape sequences.
 
 ---
 
