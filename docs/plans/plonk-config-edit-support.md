@@ -1,6 +1,6 @@
 # plonk config edit – Manager Configuration Support Plan
 
-**Status**: Draft – not started
+**Status**: Phase 0 completed – ready for Phase 1
 **Scope**: Make `plonk config edit` a first-class way to view and edit package manager configuration in `plonk.yaml`, while ensuring `config edit` and `config show` present the same effective configuration data.
 
 ---
@@ -171,17 +171,17 @@ Today, the only way to change manager configuration is to manually edit `plonk.y
 
 ## Proposed Implementation (Option C – full config view, diffed save)
 
-### Phase 0 – Baseline & Tests (1–2h)
+### Phase 0 – Baseline & Tests (1–2h) – ✅ Completed 2025-11-16
 
-1. Add regression tests documenting current behavior before changes:
+1. Regression tests documenting current behavior before changes:
    - `internal/commands/config_edit_test.go`:
-     - Ensure existing top‑level fields are preserved across edit/save.
+     - Ensures existing top‑level fields are preserved across the current `createTempConfigFile → parseAndValidateConfig → saveNonDefaultValues` pipeline.
    - `internal/config/user_defined_test.go`:
-     - Tests for `GetNonDefaultFields` (current fields only).
-2. Update docs (temporarily) to call out the current limitation:
-   - Short note in `docs/configuration.md` that `config edit` does not yet expose managers, and that this is being addressed (link to this plan).
+     - Documents that `GetNonDefaultFields` tracks only top‑level fields and explicitly **does not** include `managers` yet.
+2. Docs updated to call out the current limitation:
+   - Short note in `docs/configuration.md` under “Manager Configuration” stating that `config edit` does not yet expose managers and pointing to this plan file.
 
-> This phase mainly locks in current behavior so subsequent changes are deliberate.
+> This phase now locks in the current behavior with tests and documentation; subsequent phases can safely change behavior with clear before/after expectations.
 
 ### Phase 1 – Manager diffing support in UserDefinedChecker (3–4h)
 
