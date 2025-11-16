@@ -162,6 +162,8 @@ func LoadFromPath(configPath string) (*Config, error) {
 	if err != nil {
 		if os.IsNotExist(err) {
 			// Zero-config: return defaults if file doesn't exist
+			cfg.Managers = GetDefaultManagers()
+			updateValidManagersFromConfig(&cfg)
 			return &cfg, nil
 		}
 		return nil, err

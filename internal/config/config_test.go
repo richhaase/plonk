@@ -44,6 +44,14 @@ func TestLoad_MissingFile(t *testing.T) {
 	if len(cfg.Dotfiles.UnmanagedFilters) == 0 {
 		t.Error("Expected default unmanaged filters to be set")
 	}
+
+	defaultManagers := GetDefaultManagers()
+	if cfg.Managers == nil {
+		t.Fatal("Expected default managers to be populated for zero-config")
+	}
+	if !reflect.DeepEqual(cfg.Managers, defaultManagers) {
+		t.Errorf("Expected managers to match defaults, got %+v", cfg.Managers)
+	}
 }
 
 func TestLoad_ValidConfig(t *testing.T) {
