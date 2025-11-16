@@ -278,7 +278,7 @@ Today, the only way to change manager configuration is to manually edit `plonk.y
 
 1. Update `docs/configuration.md`:
    - Add a “Manager configuration” section that:
-     - Explains that built‑in manager defaults are defined in code and that both `plonk config show` and `plonk config edit` display the **effective** manager configuration.
+     - Explains that Plonk ships a set of default manager definitions (via `GetDefaultManagers` in the config layer) and that both `plonk config show` and `plonk config edit` display the **effective** manager configuration built from those defaults plus any user overrides.
      - Shows a minimal example of overriding a built‑in manager:
        ```yaml
        managers:
