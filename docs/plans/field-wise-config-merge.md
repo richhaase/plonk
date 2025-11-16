@@ -186,9 +186,9 @@ These gaps undermine one of Plonk’s core goals: a config-driven system that is
 
 > This phase mainly documents the starting point so behavior changes are deliberate and test-driven.
 
-### Phase 1 – ManagerConfig field-wise merge helper (3–4h)
+### Phase 1 – ManagerConfig field-wise merge helper (3–4h) – ✅ Completed 2025-11-16
 
-1. Add merge helpers in `internal/config/managers.go`:
+1. Add merge helpers in `internal/config/managers.go` (✅ implemented):
    ```go
    func MergeManagerConfig(base, override ManagerConfig) ManagerConfig
    func mergeListConfig(base, override ListConfig) ListConfig
@@ -201,20 +201,19 @@ These gaps undermine one of Plonk’s core goals: a config-driven system that is
        - Non-empty override replaces base; empty string means “inherit base”.
      - For maps (`MetadataExtractors`):
        - If override map is non-nil:
-         - For each key in override:
-           - If value is non-zero `MetadataExtractorConfig`, replace base’s value for that key.
+         - Start from a copy of the base map.
+         - For each key in override, set/replace the value in the result.
          - Keys not mentioned in override remain as in base.
-       - Nil override map means “inherit base” (no change).
+       - Nil override map means “inherit base” (return a copy of base or nil when base is nil).
      - For pointer fields (`NameTransform`):
        - If override is nil, keep base.
        - If non-nil, use override as-is.
 
-2. Tests:
-   - Add `internal/config/managers_test.go`:
-     - Cases for each field type (scalars, slices, maps, pointer) verifying:
-       - Empty override fields do not clobber base.
-       - Non-empty override fields override base.
-       - MetadataExtractors merge per-key.
+2. Tests (✅ implemented in `internal/config/managers_test.go`):
+   - Cases for each field type (scalars, slices, maps, pointer) verifying:
+     - Empty override fields do not clobber base.
+     - Non-empty override fields override base.
+     - `MetadataExtractors` merge per-key (existing keys overridden, new keys added, unchanged keys preserved).
 
 ### Phase 2 – Integrate field-wise merge into Load (3–4h)
 
