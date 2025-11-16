@@ -85,17 +85,17 @@ Today, the only way to change manager configuration is to manually edit `plonk.y
 ### Config edit
 
 - `plonk config edit` (`internal/commands/config_edit.go`):
-  - Creates a temp file with header comments and then calls `writeAnnotatedConfig`.
-  - `writeAnnotatedConfig`:
-    - Writes only these fields: `default_manager`, `operation_timeout`, `package_timeout`, `dotfile_timeout`, `expand_directories`, `ignore_patterns`, `dotfiles`.
-    - Never writes `managers:`.
+  - Creates a temp file with header comments and then calls `writeFullConfig`.
+  - `writeFullConfig`:
+    - Serializes the entire effective `config.Config` (from `config.LoadWithDefaults`) to YAML, including the merged `managers:` map.
+    - Ensures that, aside from the header comments, the YAML body in the temp file matches what `config show` would print for the same config.
   - `parseAndValidateConfig`:
-    - Strips header comments (and `(user-defined)` annotations) then uses `config.NewSimpleValidator().ValidateConfigFromYAML`.
+    - Strips header comments (and any legacy `(user-defined)` annotations) then uses `config.NewSimpleValidator().ValidateConfigFromYAML`.
     - On success, unmarshals into `config.Config`, applies simple defaults to top‑level fields, and returns it.
   - `saveNonDefaultValues`:
     - Uses `config.NewUserDefinedChecker(configDir).GetNonDefaultFields(cfg)` to compute a **map of non‑default top‑level fields**.
+    - (After Phase 3) will also use `GetNonDefaultManagers` to add a `managers` entry containing only non‑default/custom managers.
     - Serializes that map via `yaml.Marshal` and writes it to `plonk.yaml`.
-    - `GetNonDefaultFields` currently tracks only scalar/lists/dotfiles – **no `managers` support**.
 
 ### UserDefinedChecker
 
@@ -208,39 +208,30 @@ Today, the only way to change manager configuration is to manually edit `plonk.y
 
 3. `HasNonDefaultManagers` remains optional and is not yet implemented; we can add it later if we want to surface this in `config show`.
 
-### Phase 2 – Full‑config view in config edit (4–6h)
+### Phase 2 – Full‑config view in config edit (4–6h) – ✅ Completed 2025-11-16
 
-**Goal**: Make `config edit` show the same effective config as `config show`, including `managers:`, while keeping the visudo workflow.
+**Goal**: Make `config edit` show the same effective config as `config show`, including `managers:`, while keeping the visudo workflow. **Completed** by switching to a full-config writer and adding a matching test.
 
-1. Replace `writeAnnotatedConfig` with a full‑config writer:
-   - Introduce a new helper in `internal/commands/config_edit.go`, e.g.:
-     ```go
-     func writeFullConfig(w *os.File, cfg *config.Config) error {
-         data, err := yaml.Marshal(cfg)
-         if err != nil {
-             return err
-         }
-         _, err = w.Write(data)
-         return err
-     }
-     ```
-   - In `createTempConfigFile`:
+1. Replaced `writeAnnotatedConfig` with a full‑config writer:
+   - Added `writeFullConfig(w *os.File, cfg *config.Config) error` in `internal/commands/config_edit.go`:
+     - Uses `yaml.Marshal(cfg)` and writes the result to the temp file.
+   - Updated `createTempConfigFile` to:
      - Keep the existing header comments.
-     - After the header, call `writeFullConfig(tempFile, cfg)` instead of `writeAnnotatedConfig`.
+     - Call `writeFullConfig(tempFile, cfg)` after the header instead of `writeAnnotatedConfig`.
    - This ensures:
-     - The YAML data written by `config edit` is identical (structurally) to what `config show` prints for the same `cfg`.
+     - The YAML body written by `config edit` is structurally identical to what `config show` prints for the same `cfg`.
 
-2. Decide what to do with `(user-defined)` annotations:
-   - Simplest path:
-     - Drop inline `(user-defined)` comments for now in `config edit`.
-     - Rely on `config show` + `UserDefinedChecker` in the future if we want a separate “diff view”.
-   - Alternative (more work, optional later):
-     - Build a small comment injector that uses `UserDefinedChecker` and a YAML AST to tag user‑defined fields inside the full config. This is not required to satisfy the primary goal.
+2. `(user-defined)` annotations:
+   - Inline `(user-defined)` comments are no longer emitted by `config edit`.
+   - `parseAndValidateConfig` still strips legacy `(user-defined)` markers for backward compatibility.
 
 3. Tests:
-   - Add tests in `internal/commands/config_edit_test.go` to assert that:
-     - The YAML body (ignoring header comments) written by `config edit` matches the output of `config show` for the same `cfg`.
-     - `managers:` is present in the temp file when `cfg.Managers` is non‑empty.
+   - Added `TestCreateTempConfigFileWritesFullConfig` in `internal/commands/config_edit_test.go`:
+     - Builds a config (including a `managers` block) in a temp directory.
+     - Loads `cfg := config.LoadWithDefaults(configDir)` and marshals it to YAML.
+     - Calls `createTempConfigFile(configDir)` and reads the temp file.
+     - Strips header comment lines and asserts that the remaining YAML matches `yaml.Marshal(cfg)` exactly.
+     - Verifies that `managers:` flows through into the edit view.
 
 ### Phase 3 – Save diffs (including managers) back to plonk.yaml (3–5h)
 
