@@ -208,6 +208,8 @@ The diff tool is executed as: `{tool} {source_path} {deployed_path}`
 
 Plonk v2 introduces a powerful extensibility feature: custom package manager definitions. You can define additional package managers or override built-in ones in your `plonk.yaml`.
 
+> Note: In the current version, `plonk config edit` does not yet surface the `managers:` section in its editor view. Manager definitions can be viewed with `plonk config show` and edited by modifying `plonk.yaml` directly. Planned work to make `config edit` fully manager-aware is tracked in `docs/plans/plonk-config-edit-support.md`.
+
 ### How Package Managers Are Defined
 
 Package managers in plonk are defined using a simple YAML schema that specifies how to interact with each manager. Built-in managers (brew, npm, pnpm, cargo, pipx, conda, gem, go) are hardcoded in Go, but you can extend plonk by adding custom managers in your configuration.

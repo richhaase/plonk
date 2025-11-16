@@ -145,6 +145,31 @@ ignore_patterns:
 		}
 	})
 
+	t.Run("managers are not included in non-default fields", func(t *testing.T) {
+		checker := NewUserDefinedChecker(tempDir)
+
+		cfg := &Config{
+			DefaultManager:    defaultConfig.DefaultManager,
+			OperationTimeout:  defaultConfig.OperationTimeout,
+			PackageTimeout:    defaultConfig.PackageTimeout,
+			DotfileTimeout:    defaultConfig.DotfileTimeout,
+			ExpandDirectories: defaultConfig.ExpandDirectories,
+			IgnorePatterns:    defaultConfig.IgnorePatterns,
+			Dotfiles:          defaultConfig.Dotfiles,
+			Managers: map[string]ManagerConfig{
+				"custom": {
+					Binary: "custom-binary",
+				},
+			},
+		}
+
+		nonDefaults := checker.GetNonDefaultFields(cfg)
+
+		// Current behavior: managers are not tracked by GetNonDefaultFields.
+		// This test documents the existing behavior before manager support is added.
+		assert.NotContains(t, nonDefaults, "managers")
+	})
+
 }
 
 func TestGetDefaultFieldValue(t *testing.T) {

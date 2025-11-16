@@ -5,9 +5,13 @@ package commands
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGetEditor(t *testing.T) {
@@ -102,4 +106,51 @@ func TestGetConfigPath(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestConfigEditRoundTripPreservesTopLevelFields(t *testing.T) {
+	// Create a test config with some non-default values.
+	configContent := `
+default_manager: npm
+operation_timeout: 600
+package_timeout: 200
+dotfile_timeout: 90
+expand_directories:
+  - ".config"
+  - ".local/share"
+ignore_patterns:
+  - "custom_pattern"
+`
+	configDir := testutil.NewTestConfig(t, configContent)
+
+	// Capture the effective config before edit.
+	originalCfg := config.LoadWithDefaults(configDir)
+
+	// Simulate the config edit pipeline without launching an editor.
+	tempFile, err := createTempConfigFile(configDir)
+	require.NoError(t, err)
+	defer os.Remove(tempFile)
+
+	editedCfg, err := parseAndValidateConfig(tempFile)
+	require.NoError(t, err)
+
+	// Save non-default values back to plonk.yaml.
+	err = saveNonDefaultValues(configDir, editedCfg)
+	require.NoError(t, err)
+
+	// Reload config and ensure effective top-level values are preserved.
+	reloadedCfg := config.LoadWithDefaults(configDir)
+
+	assert.Equal(t, originalCfg.DefaultManager, reloadedCfg.DefaultManager)
+	assert.Equal(t, originalCfg.OperationTimeout, reloadedCfg.OperationTimeout)
+	assert.Equal(t, originalCfg.PackageTimeout, reloadedCfg.PackageTimeout)
+	assert.Equal(t, originalCfg.DotfileTimeout, reloadedCfg.DotfileTimeout)
+	assert.Equal(t, originalCfg.ExpandDirectories, reloadedCfg.ExpandDirectories)
+	assert.Equal(t, originalCfg.IgnorePatterns, reloadedCfg.IgnorePatterns)
+	assert.Equal(t, originalCfg.Dotfiles, reloadedCfg.Dotfiles)
+
+	// The on-disk config should not contain a managers section yet.
+	data, err := os.ReadFile(filepath.Join(configDir, "plonk.yaml"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(data), "managers:")
 }
