@@ -134,8 +134,9 @@ func openInEditor(editor, filename string) error {
 
 // createTempConfigFile creates a temp file with the merged runtime config
 func createTempConfigFile(configDir string) (string, error) {
-	// Load current runtime config (defaults + user overrides)
-	cfg := config.LoadWithDefaults(configDir)
+	configPath := getConfigPath(configDir)
+	cfg, loadErr := config.LoadFromPath(configPath)
+	useRaw := false
 
 	// Create temp file
 	tempFile, err := ioutil.TempFile("", "plonk-config-*.yaml")
@@ -155,10 +156,35 @@ func createTempConfigFile(configDir string) (string, error) {
 		return "", err
 	}
 
-	// Generate full YAML representation of the current config
-	if err := writeFullConfig(tempFile, cfg); err != nil {
-		os.Remove(tempFile.Name())
-		return "", err
+	if loadErr == nil {
+		if err := writeFullConfig(tempFile, cfg); err != nil {
+			os.Remove(tempFile.Name())
+			return "", err
+		}
+	} else {
+		if !os.IsNotExist(loadErr) {
+			raw, readErr := ioutil.ReadFile(configPath)
+			if readErr != nil {
+				os.Remove(tempFile.Name())
+				return "", fmt.Errorf("failed to load existing config: %w", loadErr)
+			}
+			useRaw = true
+			if _, err := tempFile.Write(raw); err != nil {
+				os.Remove(tempFile.Name())
+				return "", err
+			}
+		} else {
+			defaultCfg := config.LoadWithDefaults(configDir)
+			if err := writeFullConfig(tempFile, defaultCfg); err != nil {
+				os.Remove(tempFile.Name())
+				return "", err
+			}
+		}
+	}
+
+	if useRaw {
+		tempFile.Close()
+		return tempFile.Name(), nil
 	}
 
 	tempFile.Close()

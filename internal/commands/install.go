@@ -24,9 +24,9 @@ This command installs packages using the specified package manager and adds them
 to your lock file so they can be managed by plonk. Use prefix syntax to specify
 the package manager, or omit the prefix to use your default manager.
 
-Package Manager Bootstrapping:
-  Bare package manager names automatically trigger self-installation to bootstrap
-  the manager. Prefixed names install packages normally via the specified manager.
+To install a package manager itself, follow the instructions from 'plonk doctor'
+or the install hints defined in your plonk.yaml. Bare manager names no longer
+trigger automatic bootstrapping.
 
 Examples are generated at runtime based on the configured package managers.`,
 	Args:         cobra.MinimumNArgs(1),

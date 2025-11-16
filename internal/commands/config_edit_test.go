@@ -258,3 +258,32 @@ managers:
 
 	assert.Equal(t, expected, body)
 }
+
+func TestCreateTempConfigFilePreservesInvalidConfig(t *testing.T) {
+	configContent := `
+default_manager: "npm
+operation_timeout: 600
+`
+	configDir := testutil.NewTestConfig(t, configContent)
+
+	tempFile, err := createTempConfigFile(configDir)
+	require.NoError(t, err)
+	defer os.Remove(tempFile)
+
+	data, err := os.ReadFile(tempFile)
+	require.NoError(t, err)
+
+	lines := strings.Split(string(data), "\n")
+	var bodyLines []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		bodyLines = append(bodyLines, line)
+	}
+	body := strings.TrimSpace(strings.Join(bodyLines, "\n"))
+
+	expected := strings.TrimSpace(configContent)
+	assert.Equal(t, expected, body)
+}
