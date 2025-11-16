@@ -325,6 +325,11 @@ managers:
 
 **Note:** When overriding built-in managers, you only need to specify the fields you want to change. Any fields you omit fall back to the shipped defaults from `GetDefaultManagers`.
 
+Because manager configs are merged field-wise:
+- Providing a non-empty value overrides the default for that field.
+- Omitting a field keeps the shipped default for that field.
+- There is currently no way to explicitly “clear” default values (for example, to remove a default `idempotent_errors` entry or metadata extractor) via YAML alone.
+
 ## Advanced Configuration
 
 ### Complete Real-World Example
