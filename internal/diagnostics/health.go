@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -356,38 +357,70 @@ func checkLockFileValidity() HealthCheck {
 
 // checkPackageManagerHealth runs health checks for all package managers
 func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
-	var checks []HealthCheck
-
-	// Package manager health checks have been removed
-	// Return basic availability check instead
 	cfg := config.LoadWithDefaults(config.GetConfigDir())
 	registry := packages.NewManagerRegistry()
 	if cfg != nil {
 		registry.LoadV2Configs(cfg)
 	}
-	availableManagers := 0
 
-	for _, managerName := range registry.GetAllManagerNames() {
-		mgr, err := registry.GetManager(managerName)
-		if err != nil {
-			continue
-		}
-
-		available, err := mgr.IsAvailable(ctx)
-		if err == nil && available {
-			availableManagers++
-		}
-	}
+	requiredManagers := collectRequiredManagers(cfg, config.GetConfigDir())
 
 	check := HealthCheck{
 		Name:     "Package Managers",
 		Category: "package-managers",
-		Status:   "pass",
-		Message:  fmt.Sprintf("%d package managers available", availableManagers),
+		Status:   "info",
+		Message:  "No package managers configured",
 	}
-	checks = append(checks, check)
 
-	return checks
+	if len(requiredManagers) == 0 {
+		return []HealthCheck{check}
+	}
+
+	missing := make([]string, 0)
+	for _, managerName := range requiredManagers {
+		available := false
+		if mgr, err := registry.GetManager(managerName); err == nil {
+			if ok, err := mgr.IsAvailable(ctx); err == nil && ok {
+				available = true
+			}
+		}
+
+		desc, hint, helpURL := lookupManagerMetadata(cfg, managerName)
+		label := managerName
+		if desc != "" {
+			label = desc
+		}
+
+		if available {
+			check.Details = append(check.Details, fmt.Sprintf("%s: available", label))
+		} else {
+			check.Details = append(check.Details, fmt.Sprintf("%s: missing", label))
+			check.Issues = append(check.Issues, fmt.Sprintf("%s is not installed", label))
+			suggestion := hint
+			if suggestion == "" {
+				suggestion = fmt.Sprintf("Install %s using the appropriate instructions", label)
+			}
+			if helpURL != "" {
+				suggestion = fmt.Sprintf("%s – %s", suggestion, helpURL)
+			}
+			check.Suggestions = append(check.Suggestions, suggestion)
+			missing = append(missing, managerName)
+		}
+	}
+
+	switch {
+	case len(missing) == 0:
+		check.Status = "pass"
+		check.Message = fmt.Sprintf("All %d required package managers available", len(requiredManagers))
+	case len(missing) == len(requiredManagers):
+		check.Status = "fail"
+		check.Message = "All required package managers are missing"
+	default:
+		check.Status = "warn"
+		check.Message = fmt.Sprintf("%d of %d required package managers are missing", len(missing), len(requiredManagers))
+	}
+
+	return []HealthCheck{check}
 }
 
 // checkExecutablePath checks if plonk executable is accessible
@@ -445,4 +478,47 @@ func calculateOverallHealth(checks []HealthCheck) HealthStatus {
 		Status:  "healthy",
 		Message: "All systems operational",
 	}
+}
+
+func collectRequiredManagers(cfg *config.Config, configDir string) []string {
+	seen := make(map[string]struct{})
+
+	lockService := lock.NewYAMLLockService(configDir)
+	if lockFile, err := lockService.Read(); err == nil {
+		for _, resource := range lockFile.Resources {
+			if resource.Type != "package" {
+				continue
+			}
+			if manager, ok := resource.Metadata["manager"].(string); ok && manager != "" {
+				seen[manager] = struct{}{}
+			}
+		}
+	}
+
+	if len(seen) == 0 && cfg != nil && cfg.Managers != nil {
+		for name := range cfg.Managers {
+			seen[name] = struct{}{}
+		}
+	}
+
+	names := make([]string, 0, len(seen))
+	for name := range seen {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+func lookupManagerMetadata(cfg *config.Config, name string) (description, installHint, helpURL string) {
+	if cfg != nil && cfg.Managers != nil {
+		if m, ok := cfg.Managers[name]; ok {
+			return m.Description, m.InstallHint, m.HelpURL
+		}
+	}
+
+	if defaults, ok := config.GetDefaultManagers()[name]; ok {
+		return defaults.Description, defaults.InstallHint, defaults.HelpURL
+	}
+
+	return "", "", ""
 }

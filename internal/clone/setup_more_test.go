@@ -40,16 +40,9 @@ func TestSetupFromClonedRepo_InstallsDetectedManagers(t *testing.T) {
 	packages.SetDefaultExecutor(mock)
 	t.Cleanup(func() { packages.SetDefaultExecutor(&packages.RealCommandExecutor{}) })
 
-	// Run setup without apply - should now fail since self-install is not supported
-	err := SetupFromClonedRepo(context.Background(), dir, true, true)
-	if err == nil {
-		t.Fatal("expected error for missing package managers, got nil")
-	}
-
-	// Verify error message mentions automatic installation is not supported
-	expectedMsg := "automatic installation of package managers is not supported"
-	if err.Error() == "" || len(err.Error()) < len(expectedMsg) {
-		t.Fatalf("expected error message to mention automatic installation, got: %v", err)
+	// Run setup without apply - should report missing managers but not error
+	if err := SetupFromClonedRepo(context.Background(), dir, true, true); err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Sanity: lock still present
@@ -83,11 +76,11 @@ managers:
 	t.Cleanup(func() { packages.SetDefaultExecutor(&packages.RealCommandExecutor{}) })
 
 	cfg := config.LoadWithDefaults(dir)
-	err := installDetectedManagers(context.Background(), cfg, []string{"custom"}, Config{})
-	if err == nil {
-		t.Fatal("expected error due to missing custom manager binary")
-	}
-	if !strings.Contains(err.Error(), "automatic installation of package managers is not supported") {
+	missing, err := installDetectedManagers(context.Background(), cfg, []string{"custom"})
+	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(missing) != 1 || missing[0] != "custom" {
+		t.Fatalf("expected custom manager to be reported missing, got %v", missing)
 	}
 }

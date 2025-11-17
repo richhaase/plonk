@@ -91,6 +91,7 @@ plonk clone git@github.com:user/repo.git
 - Creates default `plonk.yaml` if missing
 - Works with v2 lock file format for accurate manager detection
 - Use `plonk doctor` after clone to install any missing package managers using the provided hints
+- If required managers are missing, clone lists them and skips the automatic `plonk apply` run until you install them
 
 ## Notes
 

@@ -88,6 +88,7 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool, n
 		detectedManagers = []string{} // Empty list
 	}
 
+	missingManagers := []string{}
 	if len(detectedManagers) > 0 {
 		output.Printf("Detected required package managers from lock file:\n")
 		for _, mgr := range detectedManagers {
@@ -95,8 +96,13 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool, n
 		}
 
 		// Install only detected managers
-		if err := installDetectedManagers(ctx, repoCfg, detectedManagers, Config{}); err != nil {
-			return fmt.Errorf("failed to install required tools: %w", err)
+		var installErr error
+		missingManagers, installErr = installDetectedManagers(ctx, repoCfg, detectedManagers)
+		if installErr != nil {
+			return fmt.Errorf("failed to evaluate required tools: %w", installErr)
+		}
+		if len(missingManagers) > 0 {
+			output.Printf("\nThe package managers listed above are missing. Install them manually and run 'plonk doctor' when ready.\n")
 		}
 	} else {
 		output.Printf("No package managers detected from lock file.\n")
@@ -104,6 +110,12 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool, n
 
 	// Optionally run apply
 	if hasConfig && !noApply {
+		if len(missingManagers) > 0 {
+			output.Printf("Skipping 'plonk apply' until the missing package managers are installed.\n")
+			output.Printf("After installing them, run 'plonk doctor' followed by 'plonk apply' to finish setup.\n")
+			return nil
+		}
+
 		output.StageUpdate("Running plonk apply...")
 		homeDir := config.GetHomeDir()
 		cfg := repoCfg
@@ -259,10 +271,10 @@ func DetectRequiredManagers(lockPath string) ([]string, error) {
 	return managers, nil
 }
 
-// installDetectedManagers installs package managers in the order provided
-func installDetectedManagers(ctx context.Context, cfgData *config.Config, managers []string, cfg Config) error {
+// installDetectedManagers evaluates which managers are available and returns the missing ones.
+func installDetectedManagers(ctx context.Context, cfgData *config.Config, managers []string) ([]string, error) {
 	if len(managers) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	registry := packages.NewManagerRegistry()
@@ -280,12 +292,14 @@ func installDetectedManagers(ctx context.Context, cfgData *config.Config, manage
 		packageManager, err := registry.GetManager(mgr)
 		if err != nil {
 			output.Printf("Warning: Unknown package manager '%s', skipping\n", mgr)
+			missingManagers = append(missingManagers, mgr)
 			continue
 		}
 
 		available, err := packageManager.IsAvailable(ctx)
 		if err != nil {
 			output.Printf("Warning: Could not check availability of %s: %v\n", mgr, err)
+			missingManagers = append(missingManagers, mgr)
 			continue
 		}
 
@@ -296,7 +310,7 @@ func installDetectedManagers(ctx context.Context, cfgData *config.Config, manage
 
 	if len(missingManagers) == 0 {
 		output.Printf("All required package managers are already installed\n")
-		return nil
+		return nil, nil
 	}
 
 	output.Printf("\nMissing package managers (automatic installation not supported):\n")
@@ -305,9 +319,5 @@ func installDetectedManagers(ctx context.Context, cfgData *config.Config, manage
 		output.Printf("  Installation: %s\n", getManualInstallInstructions(cfgData, manager))
 	}
 
-	return fmt.Errorf(
-		"automatic installation of package managers is not supported for security reasons\n" +
-			"Please install the missing package managers manually using the instructions above\n" +
-			"Run 'plonk doctor' for more detailed installation instructions",
-	)
+	return missingManagers, nil
 }
