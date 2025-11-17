@@ -85,6 +85,10 @@ func (g *GenericManager) Upgrade(ctx context.Context, packages []string) error {
 		return g.UpgradeAll(ctx)
 	}
 
+	if len(g.config.Upgrade.Command) == 0 {
+		return fmt.Errorf("upgrade command not configured for this manager")
+	}
+
 	for _, pkg := range packages {
 		cmd := g.expandTemplate(g.config.Upgrade.Command, pkg)
 		output, err := g.exec.CombinedOutput(ctx, cmd[0], cmd[1:]...)
@@ -152,13 +156,21 @@ func (g *GenericManager) IsInstalled(ctx context.Context, name string) (bool, er
 
 // parseOutput parses command output based on strategy
 func (g *GenericManager) parseOutput(data []byte, cfg config.ListConfig) ([]string, error) {
-	switch cfg.Parse {
+	// Support both legacy "parse" and newer "parse_strategy" fields.
+	parseMode := cfg.Parse
+	if parseMode == "" {
+		parseMode = cfg.ParseStrategy
+	}
+
+	switch parseMode {
 	case "lines", "":
 		return g.parseLines(data), nil
 	case "json":
 		return g.parseJSON(data, cfg.JSONField)
+	case "json-map":
+		return g.parseJSONMap(data, cfg.JSONField)
 	default:
-		return nil, fmt.Errorf("unknown parse strategy: %s (use 'lines' or 'json')", cfg.Parse)
+		return nil, fmt.Errorf("unknown parse strategy: %s (use 'lines', 'json', or 'json-map')", parseMode)
 	}
 }
 
@@ -177,32 +189,6 @@ func (g *GenericManager) parseLines(data []byte) []string {
 		if line == "" {
 			continue
 		}
-		// Special handling for managers that return parseable filesystem paths
-		// instead of package names (e.g., npm/pnpm with --parseable).
-		if g.config.Binary == "npm" || g.config.Binary == "pnpm" {
-			// Many npm/pnpm outputs include paths containing node_modules/...
-			// Extract the package name (including scope when present).
-			const marker = "node_modules/"
-			if idx := strings.LastIndex(line, marker); idx != -1 {
-				rest := line[idx+len(marker):]
-				// For scoped packages, the next two segments form the name: @scope/name
-				segs := strings.Split(rest, "/")
-				if len(segs) > 0 {
-					if strings.HasPrefix(segs[0], "@") {
-						if len(segs) >= 2 {
-							packages = append(packages, segs[0]+"/"+segs[1])
-							continue
-						}
-						// Fallback: if incomplete, keep the segment as-is
-						packages = append(packages, segs[0])
-						continue
-					}
-					packages = append(packages, segs[0])
-					continue
-				}
-			}
-		}
-
 		// Default: take the first whitespace-delimited token
 		parts := strings.Fields(line)
 		if len(parts) > 0 {
@@ -226,6 +212,37 @@ func (g *GenericManager) parseJSON(data []byte, field string) ([]string, error) 
 			result = append(result, val)
 		}
 	}
+	return result, nil
+}
+
+// parseJSONMap extracts keys from a top-level JSON object or a nested object
+// specified by field. This is a prototype for managers like npm that return
+// package names as map keys instead of array elements.
+func (g *GenericManager) parseJSONMap(data []byte, field string) ([]string, error) {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON map: %w", err)
+	}
+
+	// If a field is specified, drill down into that map.
+	obj := raw
+	if field != "" {
+		val, ok := raw[field]
+		if !ok {
+			return []string{}, nil
+		}
+		nested, ok := val.(map[string]interface{})
+		if !ok {
+			return []string{}, nil
+		}
+		obj = nested
+	}
+
+	var result []string
+	for key := range obj {
+		result = append(result, key)
+	}
+
 	return result, nil
 }
 

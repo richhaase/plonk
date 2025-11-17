@@ -48,9 +48,7 @@ func getVersionInfo() (string, string, string) {
 		// If we have a proper version from go install, use it
 		if buildVersion != "" && buildVersion != "(devel)" {
 			// Clean up the version string - go install sometimes adds extra info
-			if strings.HasPrefix(buildVersion, "v") {
-				buildVersion = strings.TrimPrefix(buildVersion, "v")
-			}
+			buildVersion = strings.TrimPrefix(buildVersion, "v")
 			return "v" + buildVersion, buildCommit, buildDate
 		}
 	}

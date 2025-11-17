@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/richhaase/plonk/internal/ignore"
 )
 
 // PathValidatorImpl implements PathValidator interface
@@ -66,7 +68,7 @@ func (pv *PathValidatorImpl) ValidatePaths(source, destination string) error {
 }
 
 // ShouldSkipPath determines if a path should be skipped based on ignore patterns
-func (pv *PathValidatorImpl) ShouldSkipPath(relPath string, info os.FileInfo, ignorePatterns []string) bool {
+func (pv *PathValidatorImpl) ShouldSkipPath(relPath string, info os.FileInfo, matcher *ignore.Matcher) bool {
 	// Always skip plonk config files
 	if relPath == "plonk.yaml" || relPath == "plonk.lock" {
 		return true
@@ -77,26 +79,9 @@ func (pv *PathValidatorImpl) ShouldSkipPath(relPath string, info os.FileInfo, ig
 		return true
 	}
 
-	// Check against ignore patterns
-	for _, pattern := range ignorePatterns {
-		if strings.HasSuffix(pattern, "/") {
-			dirPattern := strings.TrimSuffix(pattern, "/")
-			if info.IsDir() && strings.Contains(relPath, dirPattern) {
-				return true
-			}
-			if strings.Contains(relPath, dirPattern+"/") {
-				return true
-			}
-		} else {
-			matched, err := filepath.Match(pattern, filepath.Base(relPath))
-			if err == nil && matched {
-				return true
-			}
-			matched, err = filepath.Match(pattern, relPath)
-			if err == nil && matched {
-				return true
-			}
-		}
+	if matcher != nil && matcher.ShouldIgnore(relPath, info.IsDir()) {
+		return true
 	}
+
 	return false
 }

@@ -2,9 +2,12 @@ package clone
 
 import (
 	"context"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
 	packages "github.com/richhaase/plonk/internal/resources/packages"
 )
@@ -37,16 +40,9 @@ func TestSetupFromClonedRepo_InstallsDetectedManagers(t *testing.T) {
 	packages.SetDefaultExecutor(mock)
 	t.Cleanup(func() { packages.SetDefaultExecutor(&packages.RealCommandExecutor{}) })
 
-	// Run setup without apply - should now fail since self-install is not supported
-	err := SetupFromClonedRepo(context.Background(), dir, true, true)
-	if err == nil {
-		t.Fatal("expected error for missing package managers, got nil")
-	}
-
-	// Verify error message mentions automatic installation is not supported
-	expectedMsg := "automatic installation of package managers is not supported"
-	if err.Error() == "" || len(err.Error()) < len(expectedMsg) {
-		t.Fatalf("expected error message to mention automatic installation, got: %v", err)
+	// Run setup without apply - should report missing managers but not error
+	if err := SetupFromClonedRepo(context.Background(), dir, true, true); err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 
 	// Sanity: lock still present
@@ -54,4 +50,37 @@ func TestSetupFromClonedRepo_InstallsDetectedManagers(t *testing.T) {
 		t.Fatalf("failed reading lock: %v", err)
 	}
 	_ = filepath.Join // silence import linters
+}
+
+func TestInstallDetectedManagers_LoadsRepoConfig(t *testing.T) {
+	dir := t.TempDir()
+	configContent := `
+managers:
+  custom:
+    binary: custom-pm
+    install:
+      command: ["custom-pm", "install", "{{.Package}}"]
+    upgrade:
+      command: ["custom-pm", "upgrade", "{{.Package}}"]
+    upgrade_all:
+      command: ["custom-pm", "upgrade-all"]
+    uninstall:
+      command: ["custom-pm", "remove", "{{.Package}}"]
+`
+	if err := os.WriteFile(filepath.Join(dir, "plonk.yaml"), []byte(strings.TrimSpace(configContent)), 0o644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	mock := &packages.MockCommandExecutor{Responses: map[string]packages.CommandResponse{}}
+	packages.SetDefaultExecutor(mock)
+	t.Cleanup(func() { packages.SetDefaultExecutor(&packages.RealCommandExecutor{}) })
+
+	cfg := config.LoadWithDefaults(dir)
+	missing, err := installDetectedManagers(context.Background(), cfg, []string{"custom"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(missing) != 1 || missing[0] != "custom" {
+		t.Fatalf("expected custom manager to be reported missing, got %v", missing)
+	}
 }

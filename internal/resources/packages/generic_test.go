@@ -56,6 +56,32 @@ func TestGenericManager_ListInstalled(t *testing.T) {
 			output:   "ripgrep v14.0.0:\nfd v8.7.0:\n",
 			expected: []string{"ripgrep", "fd"},
 		},
+		{
+			name: "npm json-map parsing",
+			config: config.ManagerConfig{
+				Binary: "npm",
+				List: config.ListConfig{
+					Command:   []string{"npm", "list", "-g", "--depth=0", "--json"},
+					Parse:     "json-map",
+					JSONField: "dependencies",
+				},
+			},
+			output:   `{"dependencies":{"prettier":{},"typescript":{}}}`,
+			expected: []string{"prettier", "typescript"},
+		},
+		{
+			name: "pnpm json array parsing",
+			config: config.ManagerConfig{
+				Binary: "pnpm",
+				List: config.ListConfig{
+					Command:   []string{"pnpm", "list", "-g", "--depth=0", "--json"},
+					Parse:     "json",
+					JSONField: "name",
+				},
+			},
+			output:   `[{"name":"prettier"},{"name":"typescript"}]`,
+			expected: []string{"prettier", "typescript"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -77,7 +103,12 @@ func TestGenericManager_ListInstalled(t *testing.T) {
 			result, err := mgr.ListInstalled(context.Background())
 
 			assert.NoError(t, err)
-			assert.Equal(t, tt.expected, result)
+			// Order of results is not guaranteed for json-map parsing.
+			if tt.name == "npm json-map parsing" {
+				assert.ElementsMatch(t, tt.expected, result)
+			} else {
+				assert.Equal(t, tt.expected, result)
+			}
 		})
 	}
 }
@@ -132,6 +163,19 @@ func TestGenericManager_Upgrade_Idempotent(t *testing.T) {
 	err := mgr.Upgrade(context.Background(), []string{"ruff"})
 
 	assert.NoError(t, err)
+}
+
+func TestGenericManager_Upgrade_MissingCommand(t *testing.T) {
+	cfg := config.ManagerConfig{
+		Binary:  "pipx",
+		Upgrade: config.CommandConfig{},
+	}
+
+	mgr := NewGenericManager(cfg, &MockCommandExecutor{})
+	err := mgr.Upgrade(context.Background(), []string{"ruff"})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "upgrade command not configured")
 }
 
 func TestGenericManager_UpgradeAll(t *testing.T) {
@@ -317,6 +361,62 @@ func TestGenericManager_ParseJSON_EdgeCases(t *testing.T) {
 	}
 }
 
+func TestGenericManager_ParseJSONMap_Prototype(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		field     string
+		expected  []string
+		wantError bool
+	}{
+		{
+			name:  "top-level map keys",
+			input: `{"pkg1": {"version":"1.0.0"}, "pkg2": {"version":"2.0.0"}}`,
+			field: "",
+			// Order is not guaranteed; we'll sort results in assertions.
+			expected: []string{"pkg1", "pkg2"},
+		},
+		{
+			name:     "nested map keys via field",
+			input:    `{"dependencies": {"pkg1": {}, "pkg2": {}}}`,
+			field:    "dependencies",
+			expected: []string{"pkg1", "pkg2"},
+		},
+		{
+			name:     "missing nested field",
+			input:    `{"devDependencies": {"pkg1": {}}}`,
+			field:    "dependencies",
+			expected: []string{},
+		},
+		{
+			name:      "invalid json",
+			input:     `not json`,
+			field:     "",
+			wantError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mgr := &GenericManager{}
+			result, err := mgr.parseJSONMap([]byte(tt.input), tt.field)
+
+			if tt.wantError {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			if tt.expected == nil {
+				assert.Nil(t, result)
+				return
+			}
+
+			assert.ElementsMatch(t, tt.expected, result)
+		})
+	}
+}
+
 func TestGenericManager_ParseOutput_UnknownStrategy(t *testing.T) {
 	cfg := config.ListConfig{Parse: "unknown"}
 	mgr := &GenericManager{}
@@ -325,6 +425,16 @@ func TestGenericManager_ParseOutput_UnknownStrategy(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unknown parse strategy")
+}
+
+func TestGenericManager_ParseOutput_ParseStrategyAlias(t *testing.T) {
+	cfg := config.ListConfig{ParseStrategy: "lines"}
+	mgr := &GenericManager{}
+
+	result, err := mgr.parseOutput([]byte("one\ntwo\n"), cfg)
+
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"one", "two"}, result)
 }
 
 func TestGenericManager_IdempotentError_CaseInsensitive(t *testing.T) {

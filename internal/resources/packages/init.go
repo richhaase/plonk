@@ -8,13 +8,11 @@ import (
 )
 
 func init() {
-	// Load default manager configs into registry
+	// Load default manager configs into the registry so that package operations
+	// have a sensible baseline even before any user configuration is loaded.
 	registry := NewManagerRegistry()
 	cfg := &config.Config{
 		Managers: config.GetDefaultManagers(),
 	}
 	registry.LoadV2Configs(cfg)
-
-	// Register all managers with the config validation system
-	config.SetValidManagers(registry.GetAllManagerNames())
 }

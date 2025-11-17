@@ -44,6 +44,14 @@ func TestLoad_MissingFile(t *testing.T) {
 	if len(cfg.Dotfiles.UnmanagedFilters) == 0 {
 		t.Error("Expected default unmanaged filters to be set")
 	}
+
+	defaultManagers := GetDefaultManagers()
+	if cfg.Managers == nil {
+		t.Fatal("Expected default managers to be populated for zero-config")
+	}
+	if !reflect.DeepEqual(cfg.Managers, defaultManagers) {
+		t.Errorf("Expected managers to match defaults, got %+v", cfg.Managers)
+	}
 }
 
 func TestLoad_ValidConfig(t *testing.T) {
@@ -141,6 +149,72 @@ default_manager: invalid_manager
 	_, err := Load(tempDir)
 	if err == nil {
 		t.Error("Expected validation error for invalid manager")
+	}
+}
+
+func TestLoad_CustomManagerCanBeDefault(t *testing.T) {
+	configContent := `
+default_manager: custom-manager
+managers:
+  custom-manager:
+    binary: "custom-binary"
+`
+	tempDir := testutil.NewTestConfig(t, configContent)
+
+	cfg, err := Load(tempDir)
+	if err != nil {
+		t.Fatalf("Load failed for custom default_manager: %v", err)
+	}
+
+	if cfg.DefaultManager != "custom-manager" {
+		t.Errorf("Expected default manager 'custom-manager', got %s", cfg.DefaultManager)
+	}
+
+	if cfg.Managers["custom-manager"].Binary != "custom-binary" {
+		t.Errorf("Expected custom-manager binary 'custom-binary', got %s", cfg.Managers["custom-manager"].Binary)
+	}
+}
+
+func TestLoad_ManagerFieldWiseMerge(t *testing.T) {
+	defaults := GetDefaultManagers()
+	defaultNPM, ok := defaults["npm"]
+	if !ok {
+		t.Skip("npm default manager not defined; skipping field-wise merge test")
+	}
+
+	configContent := `
+managers:
+  npm:
+    install:
+      command: ["npm", "install", "-g", "{{.Package}}", "--legacy-peer-deps"]
+`
+	tempDir := testutil.NewTestConfig(t, configContent)
+
+	cfg, err := Load(tempDir)
+	if err != nil {
+		t.Fatalf("Load failed for manager field-wise merge: %v", err)
+	}
+
+	mergedNPM, ok := cfg.Managers["npm"]
+	if !ok {
+		t.Fatalf("Expected npm manager to be present after merge")
+	}
+
+	if !reflect.DeepEqual(mergedNPM.List, defaultNPM.List) {
+		t.Errorf("Expected npm list config to inherit defaults, got %+v vs %+v", mergedNPM.List, defaultNPM.List)
+	}
+
+	expectedInstallCommand := []string{"npm", "install", "-g", "{{.Package}}", "--legacy-peer-deps"}
+	if !reflect.DeepEqual(mergedNPM.Install.Command, expectedInstallCommand) {
+		t.Errorf("Expected install command %v, got %v", expectedInstallCommand, mergedNPM.Install.Command)
+	}
+
+	if !reflect.DeepEqual(mergedNPM.Install.IdempotentErrors, defaultNPM.Install.IdempotentErrors) {
+		t.Errorf("Expected install idempotent errors %v, got %v", defaultNPM.Install.IdempotentErrors, mergedNPM.Install.IdempotentErrors)
+	}
+
+	if !reflect.DeepEqual(mergedNPM.Uninstall, defaultNPM.Uninstall) {
+		t.Errorf("Expected uninstall config to inherit defaults, got %+v vs %+v", mergedNPM.Uninstall, defaultNPM.Uninstall)
 	}
 }
 

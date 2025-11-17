@@ -6,7 +6,7 @@ package packages
 import (
 	"context"
 	"fmt"
-	"strings"
+	"regexp"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
@@ -56,7 +56,7 @@ func InstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lo
 		if ctx.Err() != nil {
 			break
 		}
-		result := installSinglePackage(ctx, lockService, packageName, manager, opts.DryRun, registry)
+		result := installSinglePackage(ctx, cfg, lockService, packageName, manager, opts.DryRun, registry)
 		results = append(results, result)
 	}
 	return results, nil
@@ -113,20 +113,14 @@ func UninstallPackagesWith(ctx context.Context, cfg *config.Config, lockService 
 }
 
 // installSinglePackage installs a single package
-func installSinglePackage(ctx context.Context, lockService lock.LockService, packageName, manager string, dryRun bool, registry *ManagerRegistry) resources.OperationResult {
+func installSinglePackage(ctx context.Context, cfg *config.Config, lockService lock.LockService, packageName, manager string, dryRun bool, registry *ManagerRegistry) resources.OperationResult {
 	result := resources.OperationResult{
 		Name:    packageName,
 		Manager: manager,
 	}
 
-	// For Go packages, we need to check with the binary name
-	checkPackageName := packageName
-	if manager == "go" {
-		checkPackageName = ExtractBinaryNameFromPath(packageName)
-	}
-
 	// Check if already managed
-	if lockService.HasPackage(manager, checkPackageName) {
+	if lockService.HasPackage(manager, packageName) {
 		result.Status = "skipped"
 		result.AlreadyManaged = true
 		return result
@@ -154,7 +148,7 @@ func installSinglePackage(ctx context.Context, lockService lock.LockService, pac
 	}
 	if !available {
 		result.Status = "failed"
-		result.Error = fmt.Errorf("install %s: %s manager not available (%s)", packageName, manager, getManagerInstallSuggestion(manager))
+		result.Error = fmt.Errorf("install %s: %s manager not available (%s)", packageName, manager, managerInstallHint(cfg, manager))
 		return result
 	}
 
@@ -166,13 +160,6 @@ func installSinglePackage(ctx context.Context, lockService lock.LockService, pac
 		return result
 	}
 
-	// For Go packages, we need to determine the actual binary name
-	lockPackageName := packageName
-	if manager == "go" {
-		// Extract binary name from module path
-		lockPackageName = ExtractBinaryNameFromPath(packageName)
-	}
-
 	// Note: InstalledVersion() method has been removed from all managers
 	// Version tracking is no longer supported
 	version := ""
@@ -180,27 +167,15 @@ func installSinglePackage(ctx context.Context, lockService lock.LockService, pac
 	// Create metadata for the package
 	metadata := map[string]interface{}{
 		"manager": manager,
-		"name":    lockPackageName,
+		"name":    packageName,
 		"version": version,
 	}
 
-	// Add source path for Go packages
-	if manager == "go" {
-		metadata["source_path"] = packageName
-	}
-
-	// Handle npm scoped packages
-	if manager == "npm" && strings.HasPrefix(packageName, "@") {
-		// Extract scope from scoped package name
-		parts := strings.SplitN(packageName, "/", 2)
-		if len(parts) == 2 {
-			metadata["scope"] = parts[0]
-			metadata["full_name"] = packageName
-		}
-	}
+	// Apply any configured metadata extractors (e.g., npm scopes/full_name).
+	applyMetadataExtractors(cfg, metadata, manager, packageName)
 
 	// Add to lock file
-	err = lockService.AddPackage(manager, lockPackageName, version, metadata)
+	err = lockService.AddPackage(manager, packageName, version, metadata)
 	if err != nil {
 		result.Status = "failed"
 		result.Error = fmt.Errorf("install %s: failed to add to lock file (manager: %s, version: %s): %w", packageName, manager, version, err)
@@ -218,14 +193,8 @@ func uninstallSinglePackage(ctx context.Context, lockService lock.LockService, p
 		Manager: manager,
 	}
 
-	// For Go packages, we need to check with the binary name
-	checkPackageName := packageName
-	if manager == "go" {
-		checkPackageName = ExtractBinaryNameFromPath(packageName)
-	}
-
 	// Check if package is managed
-	isManaged := lockService.HasPackage(manager, checkPackageName)
+	isManaged := lockService.HasPackage(manager, packageName)
 
 	if dryRun {
 		result.Status = "would-remove"
@@ -249,7 +218,7 @@ func uninstallSinglePackage(ctx context.Context, lockService lock.LockService, p
 	}
 	if !available {
 		result.Status = "failed"
-		result.Error = fmt.Errorf("uninstall %s: %s manager not available", packageName, manager)
+		result.Error = fmt.Errorf("uninstall %s: %s manager not available (%s)", packageName, manager, managerInstallHint(nil, manager))
 		return result
 	}
 
@@ -258,7 +227,7 @@ func uninstallSinglePackage(ctx context.Context, lockService lock.LockService, p
 
 	// If package is managed, remove from lock file
 	if isManaged {
-		lockErr := lockService.RemovePackage(manager, checkPackageName)
+		lockErr := lockService.RemovePackage(manager, packageName)
 		if lockErr != nil {
 			// If we removed from system but failed to update lock, still partial success
 			if uninstallErr == nil {
@@ -301,19 +270,50 @@ func getPackageManager(registry *ManagerRegistry, manager string) (PackageManage
 	return registry.GetManager(manager)
 }
 
-// getManagerInstallSuggestion returns installation suggestion for a manager
-func getManagerInstallSuggestion(manager string) string {
-	// All supported package managers are cross-platform
-	suggestions := map[string]string{
-		"brew":  "install with: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"",
-		"npm":   "install Node.js from https://nodejs.org/",
-		"cargo": "install Rust from https://rustup.rs/",
-		"gem":   "install Ruby from https://ruby-lang.org/",
-		"go":    "install Go from https://golang.org/",
-		"uv":    "install UV from https://docs.astral.sh/uv/",
+// applyMetadataExtractors applies configured metadata extractors for a given manager.
+// It currently only uses the package name as the source for extraction. JSON-based
+// extractors can be wired in later without changing the call site.
+func applyMetadataExtractors(cfg *config.Config, metadata map[string]interface{}, manager, packageName string) {
+	source := cfg
+	if source == nil {
+		source = config.LoadWithDefaults(config.GetConfigDir())
 	}
-	if suggestion, ok := suggestions[manager]; ok {
-		return suggestion
+	if source == nil || source.Managers == nil {
+		return
 	}
-	return "check installation instructions for " + manager
+	managerCfg, ok := source.Managers[manager]
+	if !ok || len(managerCfg.MetadataExtractors) == 0 {
+		return
+	}
+	for key, extractor := range managerCfg.MetadataExtractors {
+		switch extractor.Source {
+		case "name", "":
+			value := extractFromName(packageName, extractor)
+			if value != "" {
+				metadata[key] = value
+			}
+		}
+	}
+}
+
+// extractFromName applies a metadata extractor against the package name.
+func extractFromName(name string, extractor config.MetadataExtractorConfig) string {
+	if extractor.Pattern == "" {
+		// No pattern means store the raw name.
+		return name
+	}
+	re, err := regexp.Compile(extractor.Pattern)
+	if err != nil {
+		return ""
+	}
+	match := re.FindStringSubmatch(name)
+	if len(match) == 0 {
+		return ""
+	}
+	// Group 0 is the whole match. If Group is unset or out of range, default to whole match.
+	groupIdx := extractor.Group
+	if groupIdx <= 0 || groupIdx >= len(match) {
+		return match[0]
+	}
+	return match[groupIdx]
 }

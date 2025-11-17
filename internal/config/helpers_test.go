@@ -111,6 +111,18 @@ operation_timeout: -1
 		assert.NotEmpty(t, result.Errors)
 	})
 
+	t.Run("custom manager default is valid when defined in config", func(t *testing.T) {
+		customConfig := []byte(`
+default_manager: custom-manager
+managers:
+  custom-manager:
+    binary: "custom-binary"
+`)
+		result := validator.ValidateConfigFromYAML(customConfig)
+		assert.True(t, result.Valid)
+		assert.Empty(t, result.Errors)
+	})
+
 	t.Run("empty config uses defaults", func(t *testing.T) {
 		emptyYAML := []byte(``)
 		result := validator.ValidateConfigFromYAML(emptyYAML)

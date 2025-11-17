@@ -8,7 +8,10 @@ import (
 )
 
 func TestInstallPackagesWith_NpmScopedMetadata(t *testing.T) {
-	cfg := &config.Config{DefaultManager: "npm"}
+	cfg := &config.Config{
+		DefaultManager: "npm",
+		Managers:       config.GetDefaultManagers(),
+	}
 	lockSvc := NewMockLockService()
 	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
 		"npm --version":             {Output: []byte("10.0.0"), Error: nil},
@@ -31,29 +34,46 @@ func TestInstallPackagesWith_NpmScopedMetadata(t *testing.T) {
 }
 
 func TestInstallPackagesWith_GoSourcePathMetadata(t *testing.T) {
-	cfg := &config.Config{DefaultManager: "go", Managers: map[string]config.ManagerConfig{
-		"go": {
-			Binary:  "go",
-			Install: config.CommandConfig{Command: []string{"go", "install", "{{.Package}}@latest"}},
+	// Go is no longer a built-in manager and does not have special-case
+	// metadata handling in core. Custom managers should be covered by
+	// configuration-driven behavior instead.
+}
+
+func TestInstallPackagesWith_CustomMetadataFromConfig(t *testing.T) {
+	cfg := &config.Config{
+		DefaultManager: "custom",
+		Managers: map[string]config.ManagerConfig{
+			"custom": {
+				Binary: "custom",
+				Install: config.CommandConfig{
+					Command: []string{"custom", "install", "{{.Package}}"},
+				},
+				MetadataExtractors: map[string]config.MetadataExtractorConfig{
+					"tag": {
+						Source: "name",
+					},
+				},
+			},
 		},
-	}}
+	}
 	lockSvc := NewMockLockService()
 	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
-		"go --version":                           {Output: []byte("go1.22"), Error: nil},
-		"go install github.com/acme/tool@latest": {Output: []byte("ok"), Error: nil},
+		"custom --version":       {Output: []byte("1.0"), Error: nil},
+		"custom install my-tool": {Output: []byte("ok"), Error: nil},
 	}}
 	SetDefaultExecutor(mock)
 	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
 	reg := NewManagerRegistry()
-	_, err := InstallPackagesWith(context.Background(), cfg, lockSvc, reg, []string{"github.com/user/project/cmd/tool"}, InstallOptions{})
+
+	_, err := InstallPackagesWith(context.Background(), cfg, lockSvc, reg, []string{"my-tool"}, InstallOptions{Manager: "custom"})
 	if err != nil {
 		t.Fatalf("unexpected: %v", err)
 	}
 	if len(lockSvc.addCalls) != 1 {
-		t.Fatalf("expected 1 add call")
+		t.Fatalf("expected 1 add call, got %d", len(lockSvc.addCalls))
 	}
 	meta := lockSvc.addCalls[0].Metadata
-	if meta["source_path"].(string) != "github.com/user/project/cmd/tool" {
-		t.Fatalf("expected source_path recorded, got %#v", meta)
+	if meta["tag"] != "my-tool" {
+		t.Fatalf("expected custom metadata from config, got %#v", meta)
 	}
 }

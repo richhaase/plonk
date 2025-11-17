@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/richhaase/plonk/internal/ignore"
 )
 
 // DirectoryScannerImpl implements DirectoryScanner interface
@@ -79,6 +81,7 @@ func (ds *DirectoryScannerImpl) ExpandDirectoryPaths(dirPath string) ([]Director
 // ExpandConfigDirectory walks the config directory and returns all files suitable for dotfile management
 func (ds *DirectoryScannerImpl) ExpandConfigDirectory(ignorePatterns []string) (map[string]string, error) {
 	result := make(map[string]string)
+	matcher := ignore.NewMatcher(ignorePatterns)
 
 	err := filepath.Walk(ds.configDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -96,7 +99,7 @@ func (ds *DirectoryScannerImpl) ExpandConfigDirectory(ignorePatterns []string) (
 		}
 
 		// Skip files based on ignore patterns
-		if ds.pathValidator.ShouldSkipPath(relPath, info, ignorePatterns) {
+		if ds.pathValidator.ShouldSkipPath(relPath, info, matcher) {
 			if info.IsDir() {
 				return filepath.SkipDir
 			}

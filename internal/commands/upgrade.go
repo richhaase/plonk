@@ -25,19 +25,16 @@ var upgradeCmd = &cobra.Command{
 This command only upgrades packages that are currently tracked in your lock file.
 You can upgrade all packages, packages from specific managers, or individual packages.
 
-Examples:
-  plonk upgrade                      # Upgrade all packages managed by plonk
-  plonk upgrade brew                 # Upgrade all Homebrew packages managed by plonk
-  plonk upgrade ripgrep              # Upgrade ripgrep wherever it's managed by plonk
-  plonk upgrade brew:ripgrep         # Upgrade only Homebrew's ripgrep
-  plonk upgrade htop neovim         # Upgrade multiple packages
-  plonk upgrade npm uv gem         # Upgrade all packages for these managers`,
+Examples are generated at runtime based on the configured package managers.`,
 	RunE:         runUpgrade,
 	SilenceUsage: true,
 }
 
 func init() {
 	rootCmd.AddCommand(upgradeCmd)
+
+	// Dynamic examples based on current manager configuration.
+	upgradeCmd.Example = buildUpgradeExamples()
 }
 
 // upgradeSpec represents the parsed upgrade specification
@@ -48,11 +45,10 @@ type upgradeSpec struct {
 
 // packageMatchInfo contains the information needed to match packages
 type packageMatchInfo struct {
-	Manager    string
-	Name       string
-	SourcePath string // for Go packages like github.com/rakyll/hey -> hey
-	FullName   string // for npm scoped packages like @scope/name
-	Resource   lock.ResourceEntry
+	Manager  string
+	Name     string
+	FullName string // for npm scoped packages like @scope/name
+	Resource lock.ResourceEntry
 }
 
 // parseUpgradeArgs parses command arguments into upgrade specification
@@ -82,13 +78,6 @@ func parseUpgradeArgs(args []string, lockFile *lock.Lock) (upgradeSpec, error) {
 					Manager:  manager,
 					Name:     packageName,
 					Resource: resource,
-				}
-
-				// Extract source_path for Go packages
-				if sourcePath, ok := resource.Metadata["source_path"]; ok {
-					if sourcePathStr, ok := sourcePath.(string); ok {
-						matchInfo.SourcePath = sourcePathStr
-					}
 				}
 
 				// Extract full_name for npm scoped packages
@@ -169,11 +158,6 @@ func matchesPackage(info packageMatchInfo, packageName string) bool {
 		return true
 	}
 
-	// Match by source path (Go packages)
-	if info.SourcePath != "" && info.SourcePath == packageName {
-		return true
-	}
-
 	// Match by full name (npm scoped packages)
 	if info.FullName != "" && info.FullName == packageName {
 		return true
@@ -184,19 +168,22 @@ func matchesPackage(info packageMatchInfo, packageName string) bool {
 
 // determineUpgradeTarget determines what target to pass to the package manager for upgrade
 func determineUpgradeTarget(info packageMatchInfo, requestedName string) string {
-	// For Go packages, if they requested the source path, we should upgrade with source path
-	// If they requested the binary name, we still need to upgrade with source path for Go
-	if info.Manager == "go" && info.SourcePath != "" {
-		return info.SourcePath
+	target := info.Name
+
+	// Allow per-manager override of upgrade targeting strategy via config.
+	cfg := config.LoadWithDefaults(config.GetDefaultConfigDirectory())
+	if cfg != nil && cfg.Managers != nil {
+		if mgrCfg, ok := cfg.Managers[info.Manager]; ok {
+			switch mgrCfg.UpgradeTarget {
+			case "full_name_preferred":
+				if info.FullName != "" {
+					return info.FullName
+				}
+			}
+		}
 	}
 
-	// For npm scoped packages, if they have full_name, use it
-	if info.Manager == "npm" && info.FullName != "" {
-		return info.FullName
-	}
-
-	// For other cases, use the stored name
-	return info.Name
+	return target
 }
 
 // extractManagerFromResource extracts manager name from lock file resource

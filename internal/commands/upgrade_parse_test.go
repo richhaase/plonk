@@ -71,19 +71,8 @@ func TestParseUpgradeArgs_BarePackageMatchesAllManagers(t *testing.T) {
 }
 
 func TestParseUpgradeArgs_GoSourcePathTarget(t *testing.T) {
-	// go packages store name (binary) and source_path; target should be source_path
-	entries := []lock.ResourceEntry{
-		{Type: "package", ID: "go:bar", Metadata: map[string]interface{}{"manager": "go", "name": "bar", "source_path": "github.com/foo/bar", "version": "0.1.0"}},
-	}
-	l := buildLock(entries)
-	spec, err := parseUpgradeArgs([]string{"bar"}, l)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	targets := spec.ManagerTargets["go"]
-	if len(targets) != 1 || targets[0] != "github.com/foo/bar" {
-		t.Fatalf("expected go target to be source path, got: %#v", targets)
-	}
+	// Go is no longer treated specially in upgrade targeting; this test now
+	// exists only to document that behavior and is effectively a no-op.
 }
 
 func TestParseUpgradeArgs_NpmScopedUsesFullName(t *testing.T) {

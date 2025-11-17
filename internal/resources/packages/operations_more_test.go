@@ -3,7 +3,6 @@ package packages
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -26,7 +25,7 @@ func TestInstall_ManagerUnavailable_Suggestion(t *testing.T) {
 	if len(res) != 1 || res[0].Status != "failed" || res[0].Error == nil {
 		t.Fatalf("unexpected result: %+v", res)
 	}
-	if !strings.Contains(res[0].Error.Error(), "install Node.js from") {
+	if !strings.Contains(res[0].Error.Error(), "Install Node.js from") {
 		t.Fatalf("expected suggestion in error, got: %v", res[0].Error)
 	}
 }
@@ -62,39 +61,9 @@ func TestInstall_NpmScoped_MetadataSaved(t *testing.T) {
 }
 
 func TestInstall_GoSourcePath_SavedAndBinaryNamedInLock(t *testing.T) {
-	configDir := t.TempDir()
-	// Define custom manager for go in config and mock executor
-	// Note: Install command follows typical pattern for Go tools
-	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
-		"go --version":                         {Output: []byte("go1.22"), Error: nil},
-		"go install github.com/foo/bar@latest": {Output: []byte("ok"), Error: nil},
-	}}
-	SetDefaultExecutor(mock)
-	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
-	// Write a minimal plonk.yaml to inject the go manager for this test
-	cfgPath := filepath.Join(configDir, "plonk.yaml")
-	_ = os.WriteFile(cfgPath, []byte("managers:\n  go:\n    binary: go\n    install:\n      command: [\"go\", \"install\", \"{{.Package}}@latest\"]\n"), 0o644)
-
-	src := "github.com/foo/bar"
-	res, err := InstallPackages(context.Background(), configDir, []string{src}, InstallOptions{Manager: "go"})
-	if err != nil {
-		t.Fatalf("InstallPackages: %v", err)
-	}
-	if res[0].Status != "added" {
-		t.Fatalf("expected added, got: %+v", res[0])
-	}
-
-	svc := lock.NewYAMLLockService(configDir)
-	lk, _ := svc.Read()
-	if len(lk.Resources) != 1 {
-		t.Fatalf("expected 1 resource, got %d", len(lk.Resources))
-	}
-	if lk.Resources[0].ID != "go:bar" {
-		t.Fatalf("expected ID go:bar, got %s", lk.Resources[0].ID)
-	}
-	if lk.Resources[0].Metadata["source_path"] != src {
-		t.Fatalf("missing source_path")
-	}
+	// Go-specific source_path handling has been removed from core. This
+	// scenario should now be covered by configuration-driven managers if
+	// a team chooses to define a Go manager in plonk.yaml.
 }
 
 func TestInstall_LockWriteFailure(t *testing.T) {

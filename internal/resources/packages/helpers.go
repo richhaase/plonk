@@ -5,34 +5,9 @@ package packages
 
 import (
 	"context"
-	"strings"
+
+	"github.com/richhaase/plonk/internal/config"
 )
-
-// ExtractExitCode attempts to extract the exit code from an exec error.
-// Returns the exit code and true if successful, 0 and false otherwise.
-func ExtractExitCode(err error) (int, bool) {
-	if execErr, ok := err.(interface{ ExitCode() int }); ok {
-		return execErr.ExitCode(), true
-	}
-	return 0, false
-}
-
-// SplitLines splits output into lines, filtering out empty lines.
-func SplitLines(output []byte) []string {
-	result := strings.TrimSpace(string(output))
-	if result == "" {
-		return []string{}
-	}
-
-	lines := strings.Split(result, "\n")
-	var filtered []string
-	for _, line := range lines {
-		if trimmed := strings.TrimSpace(line); trimmed != "" {
-			filtered = append(filtered, trimmed)
-		}
-	}
-	return filtered
-}
 
 // ExecuteCommand runs a command with the given arguments and returns the output.
 // This is a simple wrapper around exec.CommandContext for common usage patterns.
@@ -40,21 +15,16 @@ func ExecuteCommand(ctx context.Context, name string, args ...string) ([]byte, e
 	return defaultExecutor.Execute(ctx, name, args...)
 }
 
-// IsContextError checks if an error is a context cancellation or deadline error.
-func IsContextError(err error) bool {
-	return err == context.Canceled || err == context.DeadlineExceeded
-}
-
-// ExtractBinaryNameFromPath extracts the binary name from a package path
-func ExtractBinaryNameFromPath(fullPath string) string {
-	parts := strings.Split(fullPath, "/")
-	if len(parts) == 0 {
-		return fullPath
+// managerInstallHint returns the install hint for a manager from config/defaults.
+func managerInstallHint(cfg *config.Config, manager string) string {
+	source := cfg
+	if source == nil {
+		source = config.LoadWithDefaults(config.GetConfigDir())
 	}
-	lastPart := parts[len(parts)-1]
-
-	if idx := strings.Index(lastPart, "@"); idx > 0 {
-		return lastPart[:idx]
+	if source != nil && source.Managers != nil {
+		if m, ok := source.Managers[manager]; ok && m.InstallHint != "" {
+			return m.InstallHint
+		}
 	}
-	return lastPart
+	return "check installation instructions for " + manager
 }

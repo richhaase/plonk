@@ -14,6 +14,7 @@ import (
 
 // ReconcileAll reconciles all domains - coordination logic belongs in orchestrator
 func ReconcileAll(ctx context.Context, homeDir, configDir string) (map[string]resources.Result, error) {
+	cfg := config.LoadWithDefaults(configDir)
 	results := make(map[string]resources.Result)
 
 	// Reconcile dotfiles using domain package (backwards-compatible path)
@@ -24,7 +25,7 @@ func ReconcileAll(ctx context.Context, homeDir, configDir string) (map[string]re
 	results["dotfile"] = dotfileResult
 
 	// Reconcile packages using domain package
-	packageResult, err := packages.Reconcile(ctx, configDir)
+	packageResult, err := packages.ReconcileWithConfig(ctx, configDir, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +46,7 @@ func ReconcileAllWithConfig(ctx context.Context, homeDir, configDir string, cfg 
 	results["dotfile"] = dotfileResult
 
 	// Packages unchanged (no config needed for Reconcile)
-	packageResult, err := packages.Reconcile(ctx, configDir)
+	packageResult, err := packages.ReconcileWithConfig(ctx, configDir, cfg)
 	if err != nil {
 		return nil, err
 	}

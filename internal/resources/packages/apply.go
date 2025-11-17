@@ -16,19 +16,13 @@ import (
 // Apply applies package configuration and returns the result
 func Apply(ctx context.Context, configDir string, cfg *config.Config, dryRun bool) (output.PackageResults, error) {
 	// Load manager configs from plonk.yaml before any operations
-	registry := NewManagerRegistry()
-	if registry != nil {
-		registry.LoadV2Configs(cfg)
-	}
+	multi := NewMultiPackageResource(cfg)
 
 	// Reconcile package domain to find missing packages
-	result, err := Reconcile(ctx, configDir)
+	result, err := ReconcileWithConfig(ctx, configDir, cfg)
 	if err != nil {
 		return output.PackageResults{}, err
 	}
-
-	// Create multi-package resource for applying changes
-	packageResource := NewMultiPackageResource()
 
 	// Group missing packages by manager
 	missingByManager := make(map[string][]resources.Item)
@@ -85,7 +79,7 @@ func Apply(ctx context.Context, configDir string, cfg *config.Config, dryRun boo
 				}
 			} else {
 				// Use resource Apply method
-				err := packageResource.Apply(ctx, item)
+				err := multi.Apply(ctx, item)
 				if err != nil {
 					packageResults = append(packageResults, output.PackageOperation{
 						Name:   item.Name,

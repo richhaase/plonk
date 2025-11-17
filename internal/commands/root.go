@@ -62,10 +62,6 @@ func ExecuteWithExitCode(version, commit, date string) int {
 	return 0
 }
 
-func init() {
-	// Global flags can be added here if needed
-}
-
 // formatVersion formats the version information for display
 func formatVersion() string {
 	if versionInfo.Version == "dev" {

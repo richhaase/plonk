@@ -187,6 +187,20 @@ func TestFilter_ShouldSkip(t *testing.T) {
 			expected:       true,
 		},
 		{
+			name:           "root anchored pattern only matches root file",
+			ignorePatterns: []string{"/AGENTS.md"},
+			relPath:        "AGENTS.md",
+			fileInfo:       mockFileInfo{name: "AGENTS.md", isDir: false},
+			expected:       true,
+		},
+		{
+			name:           "root anchored pattern does not match nested file",
+			ignorePatterns: []string{"/AGENTS.md"},
+			relPath:        "codex/AGENTS.md",
+			fileInfo:       mockFileInfo{name: "AGENTS.md", isDir: false},
+			expected:       false,
+		},
+		{
 			name:           "don't skip non-matching",
 			ignorePatterns: []string{".gitignore", "*.bak"},
 			relPath:        ".vimrc",

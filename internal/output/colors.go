@@ -55,3 +55,7 @@ func Unmanaged() string { return colorize("unmanaged", color.FgYellow) }
 // Additional color functions for specific use cases
 func ColorError(text string) string { return colorize(text, color.FgRed) }
 func ColorInfo(text string) string  { return colorize(text, color.FgBlue) }
+func ColorAdded(text string) string { return colorize(text, color.FgGreen) }
+func ColorRemoved(text string) string {
+	return colorize(text, color.FgRed)
+}

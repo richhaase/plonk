@@ -8,118 +8,153 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGetManagerDescription(t *testing.T) {
+	customCfg := &config.Config{
+		Managers: map[string]config.ManagerConfig{
+			"custom": {
+				Description: "Custom Manager",
+			},
+		},
+	}
+
 	tests := []struct {
 		name     string
+		cfg      *config.Config
 		manager  string
 		expected string
 	}{
 		{
 			name:     "homebrew",
+			cfg:      nil,
 			manager:  "homebrew",
-			expected: "Homebrew (macOS/Linux package manager)",
+			expected: "homebrew package manager",
 		},
 		{
 			name:     "brew alias",
+			cfg:      nil,
 			manager:  "brew",
 			expected: "Homebrew (macOS/Linux package manager)",
 		},
 		{
 			name:     "cargo",
+			cfg:      nil,
 			manager:  "cargo",
 			expected: "Cargo (Rust package manager)",
 		},
 		{
 			name:     "npm",
+			cfg:      nil,
 			manager:  "npm",
 			expected: "npm (Node.js package manager)",
 		},
 		{
 			name:     "uv",
+			cfg:      nil,
 			manager:  "uv",
 			expected: "uv (Python package manager)",
 		},
 		{
 			name:     "gem",
+			cfg:      nil,
 			manager:  "gem",
 			expected: "gem (Ruby package manager)",
 		},
 		{
-			name:     "go",
-			manager:  "go",
-			expected: "go (Go package manager)",
-		},
-		{
 			name:     "unknown",
+			cfg:      nil,
 			manager:  "unknown-manager",
 			expected: "unknown-manager package manager",
+		},
+		{
+			name:     "custom description from config",
+			cfg:      customCfg,
+			manager:  "custom",
+			expected: "Custom Manager",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := getManagerDescription(tt.manager)
+			result := getManagerDescription(tt.cfg, tt.manager)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
 
 func TestGetManualInstallInstructions(t *testing.T) {
+	customCfg := &config.Config{
+		Managers: map[string]config.ManagerConfig{
+			"custom": {
+				InstallHint: "Install custom via custom-installer",
+			},
+		},
+	}
+
 	tests := []struct {
 		name     string
+		cfg      *config.Config
 		manager  string
 		expected string
 	}{
 		{
 			name:     "homebrew",
+			cfg:      nil,
 			manager:  "homebrew",
-			expected: "Visit https://brew.sh for installation instructions (prerequisite)",
+			expected: "See official documentation for installation instructions",
 		},
 		{
 			name:     "brew alias",
+			cfg:      nil,
 			manager:  "brew",
 			expected: "Visit https://brew.sh for installation instructions (prerequisite)",
 		},
 		{
 			name:     "cargo",
+			cfg:      nil,
 			manager:  "cargo",
-			expected: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh",
+			expected: "Install Rust from https://rustup.rs/",
 		},
 		{
 			name:     "npm",
+			cfg:      nil,
 			manager:  "npm",
 			expected: "Install Node.js from https://nodejs.org/ or use brew install node",
 		},
 		{
 			name:     "uv",
+			cfg:      nil,
 			manager:  "uv",
 			expected: "Install UV from https://docs.astral.sh/uv/ or use brew install uv",
 		},
 		{
 			name:     "gem",
+			cfg:      nil,
 			manager:  "gem",
 			expected: "Install Ruby from https://ruby-lang.org/ or use brew install ruby",
 		},
 		{
-			name:     "go",
-			manager:  "go",
-			expected: "Install Go from https://golang.org/dl/ or use brew install go",
-		},
-		{
 			name:     "unknown",
+			cfg:      nil,
 			manager:  "unknown-manager",
 			expected: "See official documentation for installation instructions",
+		},
+		{
+			name:     "custom hint from config",
+			cfg:      customCfg,
+			manager:  "custom",
+			expected: "Install custom via custom-installer",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := getManualInstallInstructions(tt.manager)
+			result := getManualInstallInstructions(tt.cfg, tt.manager)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

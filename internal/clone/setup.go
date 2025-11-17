@@ -76,6 +76,8 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 
 // SetupFromClonedRepo performs post-clone setup: detect managers, install, and apply
 func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool, noApply bool) error {
+	repoCfg := config.LoadWithDefaults(plonkDir)
+
 	// Detect required managers from lock file
 	output.StageUpdate("Detecting required package managers...")
 	lockPath := filepath.Join(plonkDir, "plonk.lock")
@@ -86,15 +88,21 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool, n
 		detectedManagers = []string{} // Empty list
 	}
 
+	missingManagers := []string{}
 	if len(detectedManagers) > 0 {
 		output.Printf("Detected required package managers from lock file:\n")
 		for _, mgr := range detectedManagers {
-			output.Printf("- %s\n", getManagerDescription(mgr))
+			output.Printf("- %s\n", getManagerDescription(repoCfg, mgr))
 		}
 
 		// Install only detected managers
-		if err := installDetectedManagers(ctx, detectedManagers, Config{}); err != nil {
-			return fmt.Errorf("failed to install required tools: %w", err)
+		var installErr error
+		missingManagers, installErr = installDetectedManagers(ctx, repoCfg, detectedManagers)
+		if installErr != nil {
+			return fmt.Errorf("failed to evaluate required tools: %w", installErr)
+		}
+		if len(missingManagers) > 0 {
+			output.Printf("\nThe package managers listed above are missing. Install them manually and run 'plonk doctor' when ready.\n")
 		}
 	} else {
 		output.Printf("No package managers detected from lock file.\n")
@@ -102,9 +110,17 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool, n
 
 	// Optionally run apply
 	if hasConfig && !noApply {
+		if len(missingManagers) > 0 {
+			output.Printf("Some package managers are missing; continuing with 'plonk apply' for everything else.\n")
+			output.Printf("After installing the missing managers, re-run 'plonk doctor' and 'plonk apply' to reconcile remaining packages.\n")
+		}
+
 		output.StageUpdate("Running plonk apply...")
 		homeDir := config.GetHomeDir()
-		cfg := config.LoadWithDefaults(plonkDir)
+		cfg := repoCfg
+		if cfg == nil {
+			cfg = config.LoadWithDefaults(plonkDir)
+		}
 		orch := orchestrator.New(
 			orchestrator.WithConfig(cfg),
 			orchestrator.WithConfigDir(plonkDir),
@@ -174,43 +190,37 @@ ignore_patterns:`
 // Package manager installation is only done by clone command when needed.
 
 // getManagerDescription returns a user-friendly description of the package manager
-func getManagerDescription(manager string) string {
-	switch manager {
-	case "homebrew", "brew":
-		return "Homebrew (macOS/Linux package manager)"
-	case "cargo":
-		return "Cargo (Rust package manager)"
-	case "npm":
-		return "npm (Node.js package manager)"
-	case "uv":
-		return "uv (Python package manager)"
-	case "gem":
-		return "gem (Ruby package manager)"
-	case "go":
-		return "go (Go package manager)"
-	default:
-		return fmt.Sprintf("%s package manager", manager)
+func getManagerDescription(cfg *config.Config, manager string) string {
+	if cfg != nil && cfg.Managers != nil {
+		if m, ok := cfg.Managers[manager]; ok && m.Description != "" {
+			return m.Description
+		}
 	}
+
+	for name, defaultCfg := range config.GetDefaultManagers() {
+		if name == manager && defaultCfg.Description != "" {
+			return defaultCfg.Description
+		}
+	}
+
+	return fmt.Sprintf("%s package manager", manager)
 }
 
 // getManualInstallInstructions returns manual installation instructions
-func getManualInstallInstructions(manager string) string {
-	switch manager {
-	case "homebrew", "brew":
-		return "Visit https://brew.sh for installation instructions (prerequisite)"
-	case "cargo":
-		return "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
-	case "npm":
-		return "Install Node.js from https://nodejs.org/ or use brew install node"
-	case "uv":
-		return "Install UV from https://docs.astral.sh/uv/ or use brew install uv"
-	case "gem":
-		return "Install Ruby from https://ruby-lang.org/ or use brew install ruby"
-	case "go":
-		return "Install Go from https://golang.org/dl/ or use brew install go"
-	default:
-		return "See official documentation for installation instructions"
+func getManualInstallInstructions(cfg *config.Config, manager string) string {
+	if cfg != nil && cfg.Managers != nil {
+		if m, ok := cfg.Managers[manager]; ok && m.InstallHint != "" {
+			return m.InstallHint
+		}
 	}
+
+	for name, defaultCfg := range config.GetDefaultManagers() {
+		if name == manager && defaultCfg.InstallHint != "" {
+			return defaultCfg.InstallHint
+		}
+	}
+
+	return "See official documentation for installation instructions"
 }
 
 // DetectRequiredManagers reads a lock file and returns unique package managers
@@ -260,13 +270,18 @@ func DetectRequiredManagers(lockPath string) ([]string, error) {
 	return managers, nil
 }
 
-// installDetectedManagers installs package managers in the order provided
-func installDetectedManagers(ctx context.Context, managers []string, cfg Config) error {
+// installDetectedManagers evaluates which managers are available and returns the missing ones.
+func installDetectedManagers(ctx context.Context, cfgData *config.Config, managers []string) ([]string, error) {
 	if len(managers) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	registry := packages.NewManagerRegistry()
+	if cfgData == nil {
+		defaultCopy := *config.GetDefaults()
+		cfgData = &defaultCopy
+	}
+	registry.LoadV2Configs(cfgData)
 
 	output.StageUpdate(fmt.Sprintf("Checking package managers (%d total)...", len(managers)))
 
@@ -276,12 +291,14 @@ func installDetectedManagers(ctx context.Context, managers []string, cfg Config)
 		packageManager, err := registry.GetManager(mgr)
 		if err != nil {
 			output.Printf("Warning: Unknown package manager '%s', skipping\n", mgr)
+			missingManagers = append(missingManagers, mgr)
 			continue
 		}
 
 		available, err := packageManager.IsAvailable(ctx)
 		if err != nil {
 			output.Printf("Warning: Could not check availability of %s: %v\n", mgr, err)
+			missingManagers = append(missingManagers, mgr)
 			continue
 		}
 
@@ -292,18 +309,14 @@ func installDetectedManagers(ctx context.Context, managers []string, cfg Config)
 
 	if len(missingManagers) == 0 {
 		output.Printf("All required package managers are already installed\n")
-		return nil
+		return nil, nil
 	}
 
 	output.Printf("\nMissing package managers (automatic installation not supported):\n")
 	for _, manager := range missingManagers {
-		output.Printf("- %s\n", getManagerDescription(manager))
-		output.Printf("  Installation: %s\n", getManualInstallInstructions(manager))
+		output.Printf("- %s\n", getManagerDescription(cfgData, manager))
+		output.Printf("  Installation: %s\n", getManualInstallInstructions(cfgData, manager))
 	}
 
-	return fmt.Errorf(
-		"automatic installation of package managers is not supported for security reasons\n" +
-			"Please install the missing package managers manually using the instructions above\n" +
-			"Run 'plonk doctor' for more detailed installation instructions",
-	)
+	return missingManagers, nil
 }

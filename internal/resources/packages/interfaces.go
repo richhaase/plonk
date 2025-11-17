@@ -42,9 +42,3 @@ type PackageConfigLoader interface {
 type PackageConfigItem struct {
 	Name string
 }
-
-// SupportsUpgrade returns true if the manager implements PackageUpgrader
-func SupportsUpgrade(pm PackageManager) bool {
-	_, ok := pm.(PackageUpgrader)
-	return ok
-}

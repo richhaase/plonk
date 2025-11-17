@@ -10,7 +10,7 @@ plonk clone [options] <git-repo>
 
 ## Description
 
-The clone command provides an intelligent setup experience by cloning an existing dotfiles repository and automatically detecting which package managers are needed based on the repository's lock file. This eliminates the need to manually specify which tools to install - plonk figures it out for you.
+The clone command provides an intelligent setup experience by cloning an existing dotfiles repository and detecting which package managers are needed based on the repository's lock file. It highlights any missing managers so you can install them manually using the install hints surfaced by `plonk doctor`.
 
 The command clones the repository directly into `$PLONK_DIR`, detects required package managers from `plonk.lock`, installs only what's needed, and optionally runs `plonk apply` to complete the setup.
 
@@ -26,7 +26,7 @@ The command clones the repository directly into `$PLONK_DIR`, detects required p
 1. Validates and parses the git repository URL
 2. Clones the repository directly into `$PLONK_DIR`
 3. Reads `plonk.lock` to detect required package managers
-4. Installs ONLY the package managers needed by your managed packages
+4. Reports which managers are missing and provides installation guidance
 5. Runs `plonk apply` to configure your system (unless --no-apply)
 
 ### Repository URL Support
@@ -51,11 +51,11 @@ If no lock file exists or it cannot be read:
 
 ### Automated Behavior
 
-The clone command operates fully automatically:
+The clone command:
 - Detects required package managers from the lock file
-- Automatically installs detected managers using official installation methods
+- Skips automatic installation for security reasons, but clearly lists the missing managers so you can install them yourself
 - Automatically runs apply to complete setup (unless --no-apply)
-- No user interaction required - completely hands-off operation
+- Requires no additional flags to perform detection and reporting
 
 ### Error Handling
 
@@ -68,7 +68,7 @@ The clone command operates fully automatically:
 ## Examples
 
 ```bash
-# Clone and auto-detect managers
+# Clone and detect required managers
 plonk clone user/dotfiles
 
 # Clone specific user's dotfiles
@@ -90,10 +90,11 @@ plonk clone git@github.com:user/repo.git
 - Automatically runs `plonk apply` after setup (unless --no-apply)
 - Creates default `plonk.yaml` if missing
 - Works with v2 lock file format for accurate manager detection
-- Package manager health can be verified post-clone using `plonk doctor`
+- Use `plonk doctor` after clone to install any missing package managers using the provided hints
+- If required managers are missing, clone lists them and skips the automatic `plonk apply` run until you install them
 
 ## Notes
 
 - Homebrew must be installed before using plonk (it's a prerequisite)
-- Only installs package managers that are actually needed by your managed packages
+- Detects which package managers are needed and lists any that are missing (it does not install them automatically)
 - The repository is cloned directly into `$PLONK_DIR` (no subdirectory)

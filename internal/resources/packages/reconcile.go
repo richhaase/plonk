@@ -6,12 +6,13 @@ package packages
 import (
 	"context"
 
+	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/resources"
 )
 
-// Reconcile performs package reconciliation (backward compatibility)
-func Reconcile(ctx context.Context, configDir string) (resources.Result, error) {
+// ReconcileWithConfig performs package reconciliation with injected config
+func ReconcileWithConfig(ctx context.Context, configDir string, cfg *config.Config) (resources.Result, error) {
 	// Get configured packages from lock file
 	lockService := lock.NewYAMLLockService(configDir)
 	lockData, err := lockService.Read()
@@ -20,7 +21,13 @@ func Reconcile(ctx context.Context, configDir string) (resources.Result, error) 
 	}
 
 	// Create multi-package resource
-	packageResource := NewMultiPackageResource()
+	var cfgUsed *config.Config
+	if cfg != nil && cfg.Managers != nil {
+		cfgUsed = cfg
+	} else {
+		cfgUsed = config.LoadWithDefaults(configDir)
+	}
+	packageResource := NewMultiPackageResource(cfgUsed)
 
 	// Convert lock file entries to desired items
 	desired := make([]resources.Item, 0)
@@ -31,16 +38,10 @@ func Reconcile(ctx context.Context, configDir string) (resources.Result, error) 
 			name, _ := resource.Metadata["name"].(string)
 			version, _ := resource.Metadata["version"].(string)
 
-			// Normalize manager name (homebrew -> brew)
-			normalizedManager := manager
-			if manager == "homebrew" {
-				normalizedManager = "brew"
-			}
-
 			desired = append(desired, resources.Item{
 				Name:    name,
 				Domain:  "package",
-				Manager: normalizedManager,
+				Manager: manager,
 				Metadata: map[string]interface{}{
 					"version": version,
 				},

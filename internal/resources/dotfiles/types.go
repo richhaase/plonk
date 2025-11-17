@@ -7,6 +7,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/richhaase/plonk/internal/ignore"
 	"github.com/richhaase/plonk/internal/resources"
 )
 
@@ -24,7 +25,7 @@ type PathResolver interface {
 type PathValidator interface {
 	ValidatePath(path string) error
 	ValidatePaths(source, destination string) error
-	ShouldSkipPath(relPath string, info os.FileInfo, ignorePatterns []string) bool
+	ShouldSkipPath(relPath string, info os.FileInfo, matcher *ignore.Matcher) bool
 }
 
 // DirectoryScanner handles directory operations and file discovery
