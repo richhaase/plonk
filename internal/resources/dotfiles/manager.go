@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/ignore"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources"
 )
@@ -113,8 +114,8 @@ func (m *Manager) ValidatePaths(source, destination string) error {
 	return m.pathValidator.ValidatePaths(source, destination)
 }
 
-func (m *Manager) ShouldSkipPath(relPath string, info os.FileInfo, ignorePatterns []string) bool {
-	return m.pathValidator.ShouldSkipPath(relPath, info, ignorePatterns)
+func (m *Manager) ShouldSkipPath(relPath string, info os.FileInfo, matcher *ignore.Matcher) bool {
+	return m.pathValidator.ShouldSkipPath(relPath, info, matcher)
 }
 
 // Delegate directory operations
@@ -306,6 +307,7 @@ func (m *Manager) AddSingleFile(ctx context.Context, cfg *config.Config, filePat
 func (m *Manager) AddDirectoryFiles(ctx context.Context, cfg *config.Config, dirPath string, dryRun bool) []resources.OperationResult {
 	var results []resources.OperationResult
 	ignorePatterns := cfg.IgnorePatterns
+	patternMatcher := ignore.NewMatcher(ignorePatterns)
 
 	entries, err := m.directoryScanner.ExpandDirectoryPaths(dirPath)
 	if err != nil {
@@ -335,7 +337,7 @@ func (m *Manager) AddDirectoryFiles(ctx context.Context, cfg *config.Config, dir
 		}
 
 		// Check if file should be skipped
-		if m.pathValidator.ShouldSkipPath(entry.RelativePath, info, ignorePatterns) {
+		if m.pathValidator.ShouldSkipPath(entry.RelativePath, info, patternMatcher) {
 			continue
 		}
 

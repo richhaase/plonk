@@ -144,6 +144,8 @@ dotfiles:
   unmanaged_filters: # Filters for marking dotfiles as unmanaged
     - "*.backup"
     - "*.old"
+
+`ignore_patterns` uses the same syntax as `.gitignore`, so you can rely on features like leading `/` for root-only matches, `**` globstars, directory-only entries with a trailing `/`, and negation with `!`. Patterns are evaluated relative to your home directory when scanning for unmanaged files and relative to the plonk config directory when reading managed dotfiles.
 ```
 
 ### Directory Expansion
