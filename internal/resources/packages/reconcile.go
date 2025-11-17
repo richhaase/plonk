@@ -11,12 +11,6 @@ import (
 	"github.com/richhaase/plonk/internal/resources"
 )
 
-// Reconcile performs package reconciliation (backward compatibility)
-func Reconcile(ctx context.Context, configDir string) (resources.Result, error) {
-	cfg := config.LoadWithDefaults(configDir)
-	return ReconcileWithConfig(ctx, configDir, cfg)
-}
-
 // ReconcileWithConfig performs package reconciliation with injected config
 func ReconcileWithConfig(ctx context.Context, configDir string, cfg *config.Config) (resources.Result, error) {
 	// Get configured packages from lock file
