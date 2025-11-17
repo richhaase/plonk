@@ -16,10 +16,7 @@ import (
 // Apply applies package configuration and returns the result
 func Apply(ctx context.Context, configDir string, cfg *config.Config, dryRun bool) (output.PackageResults, error) {
 	// Load manager configs from plonk.yaml before any operations
-	multi := NewMultiPackageResource()
-	if cfg != nil {
-		multi.registry.LoadV2Configs(cfg)
-	}
+	multi := NewMultiPackageResource(cfg)
 
 	// Reconcile package domain to find missing packages
 	result, err := ReconcileWithConfig(ctx, configDir, cfg)

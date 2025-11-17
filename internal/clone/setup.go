@@ -111,9 +111,8 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool, n
 	// Optionally run apply
 	if hasConfig && !noApply {
 		if len(missingManagers) > 0 {
-			output.Printf("Skipping 'plonk apply' until the missing package managers are installed.\n")
-			output.Printf("After installing them, run 'plonk doctor' followed by 'plonk apply' to finish setup.\n")
-			return nil
+			output.Printf("Some package managers are missing; continuing with 'plonk apply' for everything else.\n")
+			output.Printf("After installing the missing managers, re-run 'plonk doctor' and 'plonk apply' to reconcile remaining packages.\n")
 		}
 
 		output.StageUpdate("Running plonk apply...")

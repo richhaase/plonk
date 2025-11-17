@@ -6,6 +6,8 @@ package packages
 import (
 	"context"
 	"strings"
+
+	"github.com/richhaase/plonk/internal/config"
 )
 
 // ExtractExitCode attempts to extract the exit code from an exec error.
@@ -43,4 +45,18 @@ func ExecuteCommand(ctx context.Context, name string, args ...string) ([]byte, e
 // IsContextError checks if an error is a context cancellation or deadline error.
 func IsContextError(err error) bool {
 	return err == context.Canceled || err == context.DeadlineExceeded
+}
+
+// managerInstallHint returns the install hint for a manager from config/defaults.
+func managerInstallHint(cfg *config.Config, manager string) string {
+	source := cfg
+	if source == nil {
+		source = config.LoadWithDefaults(config.GetConfigDir())
+	}
+	if source != nil && source.Managers != nil {
+		if m, ok := source.Managers[manager]; ok && m.InstallHint != "" {
+			return m.InstallHint
+		}
+	}
+	return "check installation instructions for " + manager
 }

@@ -150,15 +150,15 @@ func TestGetManagerInstallSuggestion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := getManagerInstallSuggestion(cfg, tt.manager)
+			got := managerInstallHint(cfg, tt.manager)
 			if got != tt.expected {
-				t.Errorf("getManagerInstallSuggestion(%s) = %v, want %v", tt.manager, got, tt.expected)
+				t.Errorf("managerInstallHint(%s) = %v, want %v", tt.manager, got, tt.expected)
 			}
 		})
 	}
 }
 
-func TestGetManagerInstallSuggestion_UsesProvidedConfig(t *testing.T) {
+func TestManagerInstallHint_UsesProvidedConfig(t *testing.T) {
 	cfg := &config.Config{
 		Managers: map[string]config.ManagerConfig{
 			"custom": {
@@ -166,7 +166,7 @@ func TestGetManagerInstallSuggestion_UsesProvidedConfig(t *testing.T) {
 			},
 		},
 	}
-	got := getManagerInstallSuggestion(cfg, "custom")
+	got := managerInstallHint(cfg, "custom")
 	if got != "Install custom via custom-installer" {
 		t.Fatalf("expected custom hint, got %q", got)
 	}

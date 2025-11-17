@@ -27,12 +27,13 @@ func ReconcileWithConfig(ctx context.Context, configDir string, cfg *config.Conf
 	}
 
 	// Create multi-package resource
-	packageResource := NewMultiPackageResource()
+	var cfgUsed *config.Config
 	if cfg != nil && cfg.Managers != nil {
-		packageResource.registry.LoadV2Configs(cfg)
+		cfgUsed = cfg
 	} else {
-		packageResource.registry.LoadV2Configs(config.LoadWithDefaults(configDir))
+		cfgUsed = config.LoadWithDefaults(configDir)
 	}
+	packageResource := NewMultiPackageResource(cfgUsed)
 
 	// Convert lock file entries to desired items
 	desired := make([]resources.Item, 0)

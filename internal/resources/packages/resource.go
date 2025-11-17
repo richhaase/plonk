@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/resources"
 	"golang.org/x/sync/errgroup"
 )
@@ -89,13 +90,26 @@ func (p *PackageResource) Apply(ctx context.Context, item resources.Item) error 
 type MultiPackageResource struct {
 	resources map[string]*PackageResource
 	registry  *ManagerRegistry
+	cfg       *config.Config
 }
 
 // NewMultiPackageResource creates a resource that manages all package managers
-func NewMultiPackageResource() *MultiPackageResource {
-	return &MultiPackageResource{
+func NewMultiPackageResource(cfg *config.Config) *MultiPackageResource {
+	m := &MultiPackageResource{
 		resources: make(map[string]*PackageResource),
 		registry:  NewManagerRegistry(),
+	}
+	if cfg != nil {
+		m.SetConfig(cfg)
+	}
+	return m
+}
+
+// SetConfig stores config for install hints and loads registry managers.
+func (m *MultiPackageResource) SetConfig(cfg *config.Config) {
+	m.cfg = cfg
+	if cfg != nil {
+		m.registry.LoadV2Configs(cfg)
 	}
 }
 
@@ -202,6 +216,14 @@ func (m *MultiPackageResource) Apply(ctx context.Context, item resources.Item) e
 	manager, err := m.registry.GetManager(item.Manager)
 	if err != nil {
 		return fmt.Errorf("getting manager %s: %w", item.Manager, err)
+	}
+
+	available, err := manager.IsAvailable(ctx)
+	if err != nil {
+		return fmt.Errorf("checking %s availability: %w", item.Manager, err)
+	}
+	if !available {
+		return fmt.Errorf("%s manager not available (%s)", item.Manager, managerInstallHint(m.cfg, item.Manager))
 	}
 
 	resource := NewPackageResource(manager)

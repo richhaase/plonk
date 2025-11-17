@@ -148,7 +148,7 @@ func installSinglePackage(ctx context.Context, cfg *config.Config, lockService l
 	}
 	if !available {
 		result.Status = "failed"
-		result.Error = fmt.Errorf("install %s: %s manager not available (%s)", packageName, manager, getManagerInstallSuggestion(cfg, manager))
+		result.Error = fmt.Errorf("install %s: %s manager not available (%s)", packageName, manager, managerInstallHint(cfg, manager))
 		return result
 	}
 
@@ -218,7 +218,7 @@ func uninstallSinglePackage(ctx context.Context, lockService lock.LockService, p
 	}
 	if !available {
 		result.Status = "failed"
-		result.Error = fmt.Errorf("uninstall %s: %s manager not available", packageName, manager)
+		result.Error = fmt.Errorf("uninstall %s: %s manager not available (%s)", packageName, manager, managerInstallHint(nil, manager))
 		return result
 	}
 
@@ -268,20 +268,6 @@ func getPackageManager(registry *ManagerRegistry, manager string) (PackageManage
 		registry = NewManagerRegistry()
 	}
 	return registry.GetManager(manager)
-}
-
-// getManagerInstallSuggestion returns installation suggestion for a manager
-func getManagerInstallSuggestion(cfg *config.Config, manager string) string {
-	source := cfg
-	if source == nil {
-		source = config.LoadWithDefaults(config.GetConfigDir())
-	}
-	if source != nil && source.Managers != nil {
-		if m, ok := source.Managers[manager]; ok && m.InstallHint != "" {
-			return m.InstallHint
-		}
-	}
-	return "check installation instructions for " + manager
 }
 
 // applyMetadataExtractors applies configured metadata extractors for a given manager.
