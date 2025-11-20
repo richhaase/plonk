@@ -220,30 +220,60 @@ func (g *GenericManager) parseJSON(data []byte, field string) ([]string, error) 
 // package names as map keys instead of array elements.
 func (g *GenericManager) parseJSONMap(data []byte, field string) ([]string, error) {
 	var raw map[string]interface{}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, fmt.Errorf("failed to parse JSON map: %w", err)
-	}
-
-	// If a field is specified, drill down into that map.
-	obj := raw
-	if field != "" {
-		val, ok := raw[field]
-		if !ok {
-			return []string{}, nil
+	err := json.Unmarshal(data, &raw)
+	if err == nil {
+		obj := raw
+		if field != "" {
+			val, ok := raw[field]
+			if !ok {
+				return []string{}, nil
+			}
+			nested, ok := val.(map[string]interface{})
+			if !ok {
+				return []string{}, nil
+			}
+			obj = nested
 		}
-		nested, ok := val.(map[string]interface{})
-		if !ok {
-			return []string{}, nil
+
+		var result []string
+		for key := range obj {
+			result = append(result, key)
 		}
-		obj = nested
+		return result, nil
 	}
 
-	var result []string
-	for key := range obj {
-		result = append(result, key)
+	// Fallback: pnpm returns an array of objects with a dependencies map.
+	var array []map[string]interface{}
+	if errArray := json.Unmarshal(data, &array); errArray == nil {
+		resultMap := make(map[string]struct{})
+
+		for _, entry := range array {
+			obj := entry
+			if field != "" {
+				val, ok := entry[field]
+				if !ok {
+					continue
+				}
+				nested, ok := val.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				obj = nested
+			}
+
+			for key := range obj {
+				resultMap[key] = struct{}{}
+			}
+		}
+
+		result := make([]string, 0, len(resultMap))
+		for key := range resultMap {
+			result = append(result, key)
+		}
+		return result, nil
 	}
 
-	return result, nil
+	return nil, fmt.Errorf("failed to parse JSON map: %w", err)
 }
 
 // expandTemplate replaces template variables in command

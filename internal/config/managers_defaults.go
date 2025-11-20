@@ -144,8 +144,8 @@ func GetDefaultManagers() map[string]ManagerConfig {
 			HelpURL:     "https://pnpm.io/",
 			List: ListConfig{
 				Command:   []string{"pnpm", "list", "-g", "--depth=0", "--json"},
-				Parse:     "json",
-				JSONField: "name",
+				Parse:     "json-map",
+				JSONField: "dependencies",
 			},
 			Install: CommandConfig{
 				Command:          []string{"pnpm", "add", "-g", "{{.Package}}"},

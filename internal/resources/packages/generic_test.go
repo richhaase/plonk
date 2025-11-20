@@ -14,10 +14,11 @@ import (
 
 func TestGenericManager_ListInstalled(t *testing.T) {
 	tests := []struct {
-		name     string
-		config   config.ManagerConfig
-		output   string
-		expected []string
+		name      string
+		config    config.ManagerConfig
+		output    string
+		expected  []string
+		unordered bool
 	}{
 		{
 			name: "lines parsing",
@@ -66,21 +67,30 @@ func TestGenericManager_ListInstalled(t *testing.T) {
 					JSONField: "dependencies",
 				},
 			},
-			output:   `{"dependencies":{"prettier":{},"typescript":{}}}`,
-			expected: []string{"prettier", "typescript"},
+			output:    `{"dependencies":{"prettier":{},"typescript":{}}}`,
+			expected:  []string{"prettier", "typescript"},
+			unordered: true,
 		},
 		{
-			name: "pnpm json array parsing",
+			name: "pnpm json-map dependencies parsing",
 			config: config.ManagerConfig{
 				Binary: "pnpm",
 				List: config.ListConfig{
 					Command:   []string{"pnpm", "list", "-g", "--depth=0", "--json"},
-					Parse:     "json",
-					JSONField: "name",
+					Parse:     "json-map",
+					JSONField: "dependencies",
 				},
 			},
-			output:   `[{"name":"prettier"},{"name":"typescript"}]`,
-			expected: []string{"prettier", "typescript"},
+			output: `[{
+				"name": "pnpm-global",
+				"dependencies": {
+					"@astrojs/language-server": {"version": "2.7.0"},
+					"@google/gemini-cli": {"version": "1.2.3"},
+					"eslint": {"version": "9.0.0"}
+				}
+			}]`,
+			expected:  []string{"@astrojs/language-server", "@google/gemini-cli", "eslint"},
+			unordered: true,
 		},
 	}
 
@@ -104,7 +114,7 @@ func TestGenericManager_ListInstalled(t *testing.T) {
 
 			assert.NoError(t, err)
 			// Order of results is not guaranteed for json-map parsing.
-			if tt.name == "npm json-map parsing" {
+			if tt.unordered {
 				assert.ElementsMatch(t, tt.expected, result)
 			} else {
 				assert.Equal(t, tt.expected, result)
