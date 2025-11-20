@@ -261,7 +261,8 @@ managers:
 - `list.parse` / `list.parse_strategy`:
   - `"lines"`: each line is a package; the first token is treated as the name.
   - `"json"`: JSON array of objects; `json_field` names the string field used as the package name.
-  - `"json-map"`: JSON object (optionally nested via `json_field`); keys are treated as package names (used by npm defaults to read `dependencies`).
+  - `"json-map"`: JSON object (optionally nested via `json_field`); keys are treated as package names.
+  - `"jsonpath"`: JSONPath selectors; use `keys_from` to collect map keys and/or `values_from` to collect string values. Optional `normalize` supports `lower|none`. Invalid JSON or empty extraction on non-empty output causes an error.
 - `install` / `upgrade` / `upgrade_all` / `uninstall`:
   - Each has a `command` array where `{{.Package}}` is replaced with the package name.
   - `idempotent_errors` lists substrings that should be treated as “already done” rather than failures.
@@ -279,8 +280,9 @@ managers:
     binary: "pixi"
     list:
       command: ["pixi", "global", "list", "--json"]
-      parse: "json"
-      json_field: "name"
+      parse: "jsonpath"
+      values_from: "$.packages[*].name"
+      normalize: "lower"
     install:
       command: ["pixi", "global", "install", "{{.Package}}"]
       idempotent_errors:
@@ -309,8 +311,8 @@ managers:
     binary: "npm"
     list:
       command: ["npm", "list", "-g", "--depth=0", "--json"]
-      parse: "json-map"
-      json_field: "dependencies"
+      parse: "jsonpath"
+      keys_from: "$.dependencies"
     install:
       command: ["npm", "install", "-g", "{{.Package}}"]
       idempotent_errors:
@@ -328,6 +330,8 @@ Because manager configs are merged field-wise:
 - Providing a non-empty value overrides the default for that field.
 - Omitting a field keeps the shipped default for that field.
 - There is currently no way to explicitly “clear” default values (for example, to remove a default `idempotent_errors` entry or metadata extractor) via YAML alone.
+
+For an end-to-end walkthrough (with JSONPath examples and a template you can paste), see [Adding Custom Package Managers](adding-package-managers.md).
 
 ## Advanced Configuration
 
