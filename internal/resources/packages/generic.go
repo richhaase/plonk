@@ -7,7 +7,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
+
+	jsonpath "github.com/PaesslerAG/jsonpath"
 
 	"github.com/richhaase/plonk/internal/config"
 )
@@ -156,22 +159,48 @@ func (g *GenericManager) IsInstalled(ctx context.Context, name string) (bool, er
 
 // parseOutput parses command output based on strategy
 func (g *GenericManager) parseOutput(data []byte, cfg config.ListConfig) ([]string, error) {
+	trimmed := strings.TrimSpace(string(data))
+
 	// Support both legacy "parse" and newer "parse_strategy" fields.
 	parseMode := cfg.Parse
 	if parseMode == "" {
 		parseMode = cfg.ParseStrategy
 	}
 
+	var result []string
+	var err error
+
 	switch parseMode {
 	case "lines", "":
-		return g.parseLines(data), nil
+		result = g.normalize(g.parseLines(data), cfg.Normalize)
 	case "json":
-		return g.parseJSON(data, cfg.JSONField)
+		result, err = g.parseJSON(data, cfg.JSONField)
+		if err == nil {
+			result = g.normalize(result, cfg.Normalize)
+		}
 	case "json-map":
-		return g.parseJSONMap(data, cfg.JSONField)
+		result, err = g.parseJSONMap(data, cfg.JSONField)
+		if err == nil {
+			result = g.normalize(result, cfg.Normalize)
+		}
+	case "jsonpath":
+		result, err = g.parseJSONPath(data, cfg)
+		if err == nil {
+			result = g.normalize(result, cfg.Normalize)
+		}
 	default:
-		return nil, fmt.Errorf("unknown parse strategy: %s (use 'lines', 'json', or 'json-map')", parseMode)
+		return nil, fmt.Errorf("unknown parse strategy: %s (use 'lines', 'json', 'json-map', or 'jsonpath')", parseMode)
 	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	if len(result) == 0 && trimmed != "" {
+		return nil, fmt.Errorf("list output parsed with strategy %s but no package names were extracted", parseMode)
+	}
+
+	return result, nil
 }
 
 // parseLines splits by newlines and filters empty
@@ -224,7 +253,6 @@ func (g *GenericManager) parseJSONMap(data []byte, field string) ([]string, erro
 		return nil, fmt.Errorf("failed to parse JSON map: %w", err)
 	}
 
-	// If a field is specified, drill down into that map.
 	obj := raw
 	if field != "" {
 		val, ok := raw[field]
@@ -242,8 +270,105 @@ func (g *GenericManager) parseJSONMap(data []byte, field string) ([]string, erro
 	for key := range obj {
 		result = append(result, key)
 	}
-
 	return result, nil
+}
+
+// parseJSONPath extracts keys and/or values using JSONPath selectors.
+func (g *GenericManager) parseJSONPath(data []byte, cfg config.ListConfig) ([]string, error) {
+	var root interface{}
+	if err := json.Unmarshal(data, &root); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON: %w", err)
+	}
+
+	names := make(map[string]struct{})
+	addName := func(name string) {
+		if name == "" {
+			return
+		}
+		names[name] = struct{}{}
+	}
+
+	if cfg.KeysFrom != "" {
+		res, err := jsonpath.Get(cfg.KeysFrom, root)
+		if err != nil {
+			return nil, fmt.Errorf("jsonpath keys_from %q: %w", cfg.KeysFrom, err)
+		}
+		items, ok := toInterfaceSlice(res)
+		if ok {
+			for _, item := range items {
+				m, ok := item.(map[string]interface{})
+				if !ok {
+					return nil, fmt.Errorf("jsonpath keys_from %q expected object(s), got %T", cfg.KeysFrom, item)
+				}
+				for key := range m {
+					addName(key)
+				}
+			}
+		} else {
+			m, ok := res.(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("jsonpath keys_from %q did not resolve to object(s)", cfg.KeysFrom)
+			}
+			for key := range m {
+				addName(key)
+			}
+		}
+	}
+
+	if cfg.ValuesFrom != "" {
+		res, err := jsonpath.Get(cfg.ValuesFrom, root)
+		if err != nil {
+			return nil, fmt.Errorf("jsonpath values_from %q: %w", cfg.ValuesFrom, err)
+		}
+		items, ok := toInterfaceSlice(res)
+		if ok {
+			for _, item := range items {
+				s, ok := item.(string)
+				if !ok {
+					return nil, fmt.Errorf("jsonpath values_from %q expected string(s), got %T", cfg.ValuesFrom, item)
+				}
+				addName(s)
+			}
+		} else {
+			s, ok := res.(string)
+			if !ok {
+				return nil, fmt.Errorf("jsonpath values_from %q did not resolve to string(s)", cfg.ValuesFrom)
+			}
+			addName(s)
+		}
+	}
+
+	if len(names) == 0 {
+		return []string{}, nil
+	}
+
+	result := make([]string, 0, len(names))
+	for name := range names {
+		result = append(result, name)
+	}
+	sort.Strings(result)
+	return result, nil
+}
+
+// normalize applies optional normalization to package names.
+func (g *GenericManager) normalize(values []string, mode string) []string {
+	if mode == "lower" {
+		out := make([]string, len(values))
+		for i, v := range values {
+			out[i] = strings.ToLower(v)
+		}
+		return out
+	}
+	return values
+}
+
+// toInterfaceSlice attempts to convert a value to []interface{} preserving nil detection.
+func toInterfaceSlice(v interface{}) ([]interface{}, bool) {
+	list, ok := v.([]interface{})
+	if !ok {
+		return nil, false
+	}
+	return list, true
 }
 
 // expandTemplate replaces template variables in command

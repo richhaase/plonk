@@ -226,6 +226,21 @@ func diffListConfig(base, actual ListConfig) (ListConfig, bool) {
 		modified = true
 	}
 
+	if actual.KeysFrom != "" && actual.KeysFrom != base.KeysFrom {
+		diff.KeysFrom = actual.KeysFrom
+		modified = true
+	}
+
+	if actual.ValuesFrom != "" && actual.ValuesFrom != base.ValuesFrom {
+		diff.ValuesFrom = actual.ValuesFrom
+		modified = true
+	}
+
+	if actual.Normalize != "" && actual.Normalize != base.Normalize {
+		diff.Normalize = actual.Normalize
+		modified = true
+	}
+
 	return diff, modified
 }
 

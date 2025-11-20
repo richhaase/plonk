@@ -3,6 +3,7 @@ module github.com/richhaase/plonk
 go 1.24.0
 
 require (
+	github.com/PaesslerAG/jsonpath v0.1.1
 	github.com/fatih/color v1.18.0
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/golangci/golangci-lint v1.64.8
@@ -31,6 +32,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.3.0 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/OpenPeeDeeP/depguard/v2 v2.2.1 // indirect
+	github.com/PaesslerAG/gval v1.0.0 // indirect
 	github.com/ProtonMail/go-crypto v1.1.5 // indirect
 	github.com/alecthomas/go-check-sumtype v0.3.1 // indirect
 	github.com/alexkohler/nakedret/v2 v2.0.5 // indirect
