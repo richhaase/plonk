@@ -107,9 +107,10 @@ func GetDefaultManagers() map[string]ManagerConfig {
 			HelpURL:       "https://nodejs.org/",
 			UpgradeTarget: "full_name_preferred",
 			List: ListConfig{
-				Command:   []string{"npm", "list", "-g", "--depth=0", "--json"},
-				Parse:     "json-map",
-				JSONField: "dependencies",
+				Command:       []string{"npm", "list", "-g", "--depth=0", "--json"},
+				Parse:         "jsonpath",
+				ParseStrategy: "jsonpath",
+				KeysFrom:      "$.dependencies",
 			},
 			Install: CommandConfig{
 				Command:          []string{"npm", "install", "-g", "{{.Package}}"},
@@ -143,9 +144,10 @@ func GetDefaultManagers() map[string]ManagerConfig {
 			InstallHint: "Install pnpm from https://pnpm.io/ or use brew install pnpm",
 			HelpURL:     "https://pnpm.io/",
 			List: ListConfig{
-				Command:   []string{"pnpm", "list", "-g", "--depth=0", "--json"},
-				Parse:     "json-map",
-				JSONField: "dependencies",
+				Command:       []string{"pnpm", "list", "-g", "--depth=0", "--json"},
+				Parse:         "jsonpath",
+				ParseStrategy: "jsonpath",
+				KeysFrom:      "$[*].dependencies",
 			},
 			Install: CommandConfig{
 				Command:          []string{"pnpm", "add", "-g", "{{.Package}}"},

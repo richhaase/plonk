@@ -6,7 +6,7 @@ package config
 // ManagerConfig defines a package manager configuration
 type ManagerConfig struct {
 	Binary             string                             `yaml:"binary,omitempty"`
-	List               ListConfig                         `yaml:"list,omitempty"`
+	List               ListConfig                         `yaml:"list,omitempty" validate:"listconfig"`
 	Install            CommandConfig                      `yaml:"install,omitempty"`
 	Upgrade            CommandConfig                      `yaml:"upgrade,omitempty"`
 	UpgradeAll         CommandConfig                      `yaml:"upgrade_all,omitempty"`
@@ -25,6 +25,9 @@ type ListConfig struct {
 	Parse         string   `yaml:"parse,omitempty"`
 	ParseStrategy string   `yaml:"parse_strategy,omitempty"`
 	JSONField     string   `yaml:"json_field,omitempty"`
+	KeysFrom      string   `yaml:"keys_from,omitempty"`
+	ValuesFrom    string   `yaml:"values_from,omitempty"`
+	Normalize     string   `yaml:"normalize,omitempty"`
 }
 
 // CommandConfig defines a package manager command
@@ -117,6 +120,18 @@ func mergeListConfig(base, override ListConfig) ListConfig {
 
 	if override.JSONField != "" {
 		result.JSONField = override.JSONField
+	}
+
+	if override.KeysFrom != "" {
+		result.KeysFrom = override.KeysFrom
+	}
+
+	if override.ValuesFrom != "" {
+		result.ValuesFrom = override.ValuesFrom
+	}
+
+	if override.Normalize != "" {
+		result.Normalize = override.Normalize
 	}
 
 	return result

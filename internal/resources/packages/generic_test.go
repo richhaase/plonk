@@ -58,13 +58,13 @@ func TestGenericManager_ListInstalled(t *testing.T) {
 			expected: []string{"ripgrep", "fd"},
 		},
 		{
-			name: "npm json-map parsing",
+			name: "npm jsonpath parsing",
 			config: config.ManagerConfig{
 				Binary: "npm",
 				List: config.ListConfig{
-					Command:   []string{"npm", "list", "-g", "--depth=0", "--json"},
-					Parse:     "json-map",
-					JSONField: "dependencies",
+					Command:  []string{"npm", "list", "-g", "--depth=0", "--json"},
+					Parse:    "jsonpath",
+					KeysFrom: "$.dependencies",
 				},
 			},
 			output:    `{"dependencies":{"prettier":{},"typescript":{}}}`,
@@ -72,13 +72,13 @@ func TestGenericManager_ListInstalled(t *testing.T) {
 			unordered: true,
 		},
 		{
-			name: "pnpm json-map dependencies parsing",
+			name: "pnpm jsonpath dependencies parsing",
 			config: config.ManagerConfig{
 				Binary: "pnpm",
 				List: config.ListConfig{
-					Command:   []string{"pnpm", "list", "-g", "--depth=0", "--json"},
-					Parse:     "json-map",
-					JSONField: "dependencies",
+					Command:  []string{"pnpm", "list", "-g", "--depth=0", "--json"},
+					Parse:    "jsonpath",
+					KeysFrom: "$[*].dependencies",
 				},
 			},
 			output: `[{
@@ -91,6 +91,21 @@ func TestGenericManager_ListInstalled(t *testing.T) {
 			}]`,
 			expected:  []string{"@astrojs/language-server", "@google/gemini-cli", "eslint"},
 			unordered: true,
+		},
+		{
+			name: "jsonpath values_from with normalization",
+			config: config.ManagerConfig{
+				Binary: "custom",
+				List: config.ListConfig{
+					Command:       []string{"custom", "list"},
+					Parse:         "jsonpath",
+					ValuesFrom:    "$.pkgs[*].name",
+					Normalize:     "lower",
+					ParseStrategy: "jsonpath",
+				},
+			},
+			output:   `{"pkgs":[{"name":"Alpha"},{"name":"Beta"}]}`,
+			expected: []string{"alpha", "beta"},
 		},
 	}
 
@@ -121,6 +136,31 @@ func TestGenericManager_ListInstalled(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGenericManager_ListInstalled_JSONPathEmptyResultsError(t *testing.T) {
+	cfg := config.ManagerConfig{
+		Binary: "custom",
+		List: config.ListConfig{
+			Command:   []string{"custom", "list"},
+			Parse:     "jsonpath",
+			KeysFrom:  "$.missing",
+			Normalize: "none",
+		},
+	}
+
+	mock := &MockCommandExecutor{
+		Responses: map[string]CommandResponse{
+			"custom list": {
+				Output: []byte(`{"deps": {"foo": {}}}`),
+			},
+		},
+	}
+
+	mgr := NewGenericManager(cfg, mock)
+	_, err := mgr.ListInstalled(context.Background())
+
+	assert.Error(t, err, "should error when JSONPath yields no names on non-empty output")
 }
 
 func TestGenericManager_Install_Idempotent(t *testing.T) {

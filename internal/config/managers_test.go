@@ -35,12 +35,17 @@ func TestMergeListConfig(t *testing.T) {
 		Parse:         "lines",
 		ParseStrategy: "lines",
 		JSONField:     "name",
+		KeysFrom:      "$.base",
+		ValuesFrom:    "$.baseValues",
+		Normalize:     "lower",
 	}
 
 	override := ListConfig{
-		Command:   []string{"override", "list"},
-		Parse:     "json",
-		JSONField: "version",
+		Command:    []string{"override", "list"},
+		Parse:      "json",
+		JSONField:  "version",
+		ValuesFrom: "$.override",
+		Normalize:  "none",
 	}
 
 	result := mergeListConfig(base, override)
@@ -59,6 +64,18 @@ func TestMergeListConfig(t *testing.T) {
 
 	if result.JSONField != "version" {
 		t.Fatalf("expected json field version, got %s", result.JSONField)
+	}
+
+	if result.KeysFrom != base.KeysFrom {
+		t.Fatalf("expected keys_from %s, got %s", base.KeysFrom, result.KeysFrom)
+	}
+
+	if result.ValuesFrom != override.ValuesFrom {
+		t.Fatalf("expected values_from %s, got %s", override.ValuesFrom, result.ValuesFrom)
+	}
+
+	if result.Normalize != override.Normalize {
+		t.Fatalf("expected normalize %s, got %s", override.Normalize, result.Normalize)
 	}
 }
 
