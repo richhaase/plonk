@@ -133,6 +133,8 @@ plonk dotfiles                        # List dotfiles with state info
 
 # System state
 plonk status                          # Show all managed items (including drift)
+plonk packages                        # Show only package status (alias: p)
+plonk dotfiles                        # Show only dotfile status (alias: d)
 plonk apply                           # Sync system to desired state
 plonk apply ~/.vimrc ~/.zshrc         # Apply only specific dotfiles
 plonk diff                            # Show differences for drifted dotfiles
@@ -225,7 +227,9 @@ just install
 ### Command Documentation
 - **[Clone](docs/cmds/clone.md)** - Clone and set up existing dotfiles
 - **[Apply](docs/cmds/apply.md)** - Sync your system to desired state
-- **[Status](docs/cmds/status.md)** - View managed packages and dotfiles
+- **[Status](docs/cmds/status.md)** - View managed packages and dotfiles (combined view)
+- **[Packages](docs/cmds/packages.md)** - View package status (focused view)
+- **[Dotfiles](docs/cmds/dotfiles.md)** - View dotfile status (focused view)
 - **[Package Management](docs/cmds/package-management.md)** - install, uninstall, upgrade
 - **[Upgrade](docs/cmds/upgrade.md)** - Upgrade packages to latest versions
 - **[Dotfile Management](docs/cmds/dotfile-management.md)** - add, rm
