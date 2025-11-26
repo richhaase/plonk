@@ -4,14 +4,8 @@
 package commands
 
 import (
-	"context"
-	"fmt"
-
-	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources"
-	"github.com/richhaase/plonk/internal/resources/dotfiles"
-	"github.com/spf13/cobra"
 )
 
 // Type aliases for UI types (these have been moved to internal/output/types.go)
@@ -35,84 +29,6 @@ type DotfileAddOutput = output.DotfileAddOutput
 type DotfileBatchAddOutput = output.DotfileBatchAddOutput
 
 // TableOutput and StructuredData methods moved to internal/output/formatters.go
-
-// Shared functions for dot list operations
-
-// Simplified runDotList that passes raw data to RenderOutput
-func runDotList(cmd *cobra.Command, args []string) error {
-	// Parse output format
-	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := output.ParseOutputFormat(outputFormat)
-	if err != nil {
-		return fmt.Errorf("invalid output format: %w", err)
-	}
-
-	// Get directories
-	homeDir := config.GetHomeDir()
-	configDir := config.GetConfigDir()
-
-	// Reconcile dotfiles with injected config
-	cfg := config.LoadWithDefaults(configDir)
-	ctx := context.Background()
-	domainResult, err := dotfiles.ReconcileWithConfig(ctx, homeDir, configDir, cfg)
-	if err != nil {
-		return err
-	}
-
-	// Parse filter flags
-	showManaged, _ := cmd.Flags().GetBool("managed")
-	showMissing, _ := cmd.Flags().GetBool("missing")
-	showUntracked, _ := cmd.Flags().GetBool("untracked")
-	verbose, _ := cmd.Flags().GetBool("verbose")
-
-	// Apply filters to the result
-	filteredResult := resources.Result{
-		Domain:    domainResult.Domain,
-		Manager:   domainResult.Manager,
-		Managed:   domainResult.Managed,
-		Missing:   domainResult.Missing,
-		Untracked: domainResult.Untracked,
-	}
-
-	// Filter based on flags
-	if showManaged {
-		filteredResult.Missing = []resources.Item{}
-		filteredResult.Untracked = []resources.Item{}
-	} else if showMissing {
-		filteredResult.Managed = []resources.Item{}
-		filteredResult.Untracked = []resources.Item{}
-	} else if showUntracked {
-		filteredResult.Managed = []resources.Item{}
-		filteredResult.Missing = []resources.Item{}
-	} else if !verbose {
-		// Default: show managed + missing, hide untracked unless verbose
-		filteredResult.Untracked = []resources.Item{}
-	}
-
-	// Convert to dotfile items
-	convertToDotfileItems := func(items []resources.Item) []output.DotfileItem {
-		converted := make([]output.DotfileItem, len(items))
-		for i, item := range items {
-			converted[i] = output.DotfileItem{
-				Name:     item.Name,
-				Path:     item.Path,
-				State:    item.State.String(),
-				Metadata: item.Metadata,
-			}
-		}
-		return converted
-	}
-
-	// Convert to output package type and create formatter
-	formatterData := output.DotfileStatusOutput{
-		Managed:   convertToDotfileItems(filteredResult.Managed),
-		Missing:   convertToDotfileItems(filteredResult.Missing),
-		Untracked: convertToDotfileItems(filteredResult.Untracked),
-		Verbose:   verbose,
-	}
-	formatter := output.NewDotfileListFormatter(formatterData)
-	return output.RenderOutput(formatter, format)
-}
 
 // convertOperationResults converts resources.OperationResult to output.SerializableOperationResult
 func convertOperationResults(results []resources.OperationResult) []output.SerializableOperationResult {

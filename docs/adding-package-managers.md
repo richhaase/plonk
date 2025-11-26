@@ -5,7 +5,7 @@ Plonk can manage any package manager that exposes CLI commands. You do not need 
 ## Quick Start
 1) Ensure the manager’s CLI is installed and on `$PATH`.
 2) Add a `managers.<name>` block in `~/.config/plonk/plonk.yaml`.
-3) Run `plonk doctor` (or `plonk status --packages`) to confirm the manager is detected and its packages are parsed correctly.
+3) Run `plonk doctor` (or `plonk packages`) to confirm the manager is detected and its packages are parsed correctly.
 4) Manage packages with `plonk install <name:pkg>` or set `default_manager` to avoid prefixes.
 
 ## List Parsing Strategies

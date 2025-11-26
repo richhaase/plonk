@@ -11,9 +11,10 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources"
+	"github.com/richhaase/plonk/internal/resources/dotfiles"
+	"github.com/richhaase/plonk/internal/resources/packages"
 	"github.com/spf13/cobra"
 )
 
@@ -89,12 +90,36 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	// Reconcile all domains with injected config
 	cfg := config.LoadWithDefaults(configDir)
 	ctx := context.Background()
-	results, err := orchestrator.ReconcileAllWithConfig(ctx, homeDir, configDir, cfg)
-	if err != nil {
-		return err
+
+	// Reconcile packages and dotfiles independently (composing the commands)
+	var packageResult resources.Result
+	var dotfileResult resources.Result
+
+	if showPackages {
+		var err error
+		packageResult, err = packages.ReconcileWithConfig(ctx, configDir, cfg)
+		if err != nil {
+			return err
+		}
 	}
 
-	// Convert results to summary for compatibility with existing output logic
+	if showDotfiles {
+		var err error
+		dotfileResult, err = dotfiles.ReconcileWithConfig(ctx, homeDir, configDir, cfg)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Compose results into unified summary
+	results := make(map[string]resources.Result)
+	if showPackages {
+		results["package"] = packageResult
+	}
+	if showDotfiles {
+		results["dotfile"] = dotfileResult
+	}
+
 	summary := resources.ConvertResultsToSummary(results)
 
 	// Check file existence and validity

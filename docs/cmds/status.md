@@ -6,13 +6,18 @@ Shows managed packages and dotfiles with their current state.
 
 ```bash
 plonk status [options]
+plonk st [options]  # Short alias
 ```
 
 ## Description
 
-The status command provides a comprehensive view of all plonk-managed resources, including packages and dotfiles. It displays the current state of each resource (managed, missing, drifted, or unmanaged), helping users understand what's tracked, what needs attention, and what exists outside of plonk's management.
+The `status` command provides a comprehensive view of all plonk-managed resources, including packages and dotfiles. It displays the current state of each resource (managed, missing, drifted, or unmanaged), helping users understand what's tracked, what needs attention, and what exists outside of plonk's management.
 
 The command supports filtering by resource type and state, with multiple output formats for different use cases. It's the primary tool for understanding your current plonk configuration state.
+
+**Note**: For focused views of specific resource types, use the dedicated commands:
+- `plonk packages` (or `plonk p`) - Show only package status
+- `plonk dotfiles` (or `plonk d`) - Show only dotfile status
 
 ## Options
 
@@ -102,6 +107,10 @@ plonk status --packages --missing
 
 # Output as JSON
 plonk status -o json
+
+# Alternative: Use focused commands for specific resource types
+plonk packages --missing              # Show only missing packages
+plonk dotfiles --unmanaged            # Show only unmanaged dotfiles
 ```
 
 ## Integration
@@ -110,6 +119,7 @@ plonk status -o json
 - Missing items can be resolved with `plonk apply`
 - Drifted dotfiles can be restored with `plonk apply` or synced back with `plonk add -y`
 - Unmanaged items can be added with `plonk install` or `plonk add`
+- For focused views, use `plonk packages` or `plonk dotfiles` instead
 
 ## Notes
 
