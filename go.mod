@@ -9,7 +9,7 @@ require (
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/golangci/golangci-lint v1.64.8
 	github.com/mattn/go-isatty v0.0.20
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/sync v0.18.0
 	golang.org/x/text v0.31.0
