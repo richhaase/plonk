@@ -171,18 +171,15 @@ func filterItems(items []resources.Item, filter map[string]bool, homeDir string)
 
 // normalizeDestPath normalizes a destination path for comparison
 func normalizeDestPath(path, homeDir string) string {
-	// Expand ~ to home directory
+	path = os.ExpandEnv(path)
+
 	if strings.HasPrefix(path, "~/") {
 		path = filepath.Join(homeDir, path[2:])
 	}
 
-	// Expand environment variables
-	path = os.ExpandEnv(path)
-
-	// Convert to absolute path
 	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return path // Return as-is if we can't resolve
+		return path
 	}
 
 	return filepath.Clean(absPath)
