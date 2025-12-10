@@ -5,6 +5,7 @@ package packages
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"runtime"
 	"sync"
@@ -200,7 +201,7 @@ func (m *MultiPackageResource) Actual(ctx context.Context) []resources.Item {
 	}
 
 	// Wait for all goroutines to complete
-	if err := g.Wait(); err != nil && err != context.Canceled && err != context.DeadlineExceeded {
+	if err := g.Wait(); err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 		return []resources.Item{}
 	}
 

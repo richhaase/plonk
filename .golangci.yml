@@ -1,6 +1,7 @@
 # golangci-lint configuration for Plonk
-# Compatible with both v1 and v2 config formats
 # https://golangci-lint.run/usage/configuration/
+
+version: "2"
 
 run:
   timeout: 10m
@@ -9,10 +10,26 @@ run:
 linters:
   disable-all: true
   enable:
+    # Original linters
     - govet         # Standard Go static analysis
     - ineffassign   # Detect ineffectual assignments
     - misspell      # Fix spelling mistakes
     - unused        # Find unused code
+
+    # Error handling
+    - errcheck      # Check for unchecked errors
+    - errorlint     # Proper error wrapping and checking
+
+    # Static analysis
+    - staticcheck   # Advanced static analysis (includes gosimple)
+
+    # Security
+    - gosec         # Security-focused checks
+
+    # Code quality
+    - gocyclo       # Cyclomatic complexity
+    - prealloc      # Suggest slice preallocation
+    - nolintlint    # Ensure nolint directives are justified
 
 linters-settings:
   govet:
@@ -21,7 +38,48 @@ linters-settings:
   misspell:
     locale: US
 
+  errcheck:
+    # Functions where ignoring the error is acceptable
+    exclude-functions:
+      - (io.Closer).Close
+      - (*os.File).Close
+      - (net.Conn).Close
+      - fmt.Fprint
+      - fmt.Fprintf
+      - fmt.Fprintln
+      - fmt.Print
+      - fmt.Println
+      - fmt.Printf
+
+  gocyclo:
+    # Start with a lenient threshold
+    min-complexity: 20
+
+  gosec:
+    excludes:
+      # G204: Subprocess launched with variable - intentional for package managers
+      - G204
+      # G301: Directory permissions - we use standard 0755 for config dirs
+      - G301
+      # G302: File permissions - we use standard 0644 for readable config files
+      - G302
+      # G304: File path provided as taint input - dotfile paths come from config
+      - G304
+      # G306: WriteFile permissions - we use 0644 for config files intentionally
+      - G306
+
+  nolintlint:
+    # Require an explanation for nolint directives
+    require-explanation: true
+    require-specific: true
 
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
+
+  # Exclude some issues in tests
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - gosec

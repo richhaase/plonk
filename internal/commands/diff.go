@@ -5,6 +5,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -186,7 +187,8 @@ func executeDiffTool(tool string, source, dest string) error {
 	// Run the command
 	if err := cmd.Run(); err != nil {
 		// Check if it's just a non-zero exit code (common for diff tools)
-		if _, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			// This is expected for diff tools when files differ
 			return nil
 		}

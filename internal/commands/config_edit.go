@@ -6,7 +6,6 @@ package commands
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,7 +13,6 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
-	plonkoutput "github.com/richhaase/plonk/internal/output"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -79,7 +77,7 @@ func editConfigVisudoStyle(configDir string) error {
 		// Parse and validate
 		editedConfig, validationErr := parseAndValidateConfig(tempFile)
 		if validationErr != nil {
-			fmt.Fprintf(os.Stderr, "\n%s\n%s\n", plonkoutput.ColorError("Configuration validation failed:"), validationErr)
+			fmt.Fprintf(os.Stderr, "\n%s\n%s\n", output.ColorError("Configuration validation failed:"), validationErr)
 
 			// Prompt for action
 			action := promptAction()
@@ -99,7 +97,7 @@ func editConfigVisudoStyle(configDir string) error {
 			return fmt.Errorf("failed to save configuration: %w", err)
 		}
 
-		output.Printf("%s Configuration saved (only non-default values)\n", plonkoutput.Success())
+		output.Printf("%s Configuration saved (only non-default values)\n", output.Success())
 		return nil
 	}
 }
@@ -139,7 +137,7 @@ func createTempConfigFile(configDir string) (string, error) {
 	useRaw := false
 
 	// Create temp file
-	tempFile, err := ioutil.TempFile("", "plonk-config-*.yaml")
+	tempFile, err := os.CreateTemp("", "plonk-config-*.yaml")
 	if err != nil {
 		return "", err
 	}
@@ -163,7 +161,7 @@ func createTempConfigFile(configDir string) (string, error) {
 		}
 	} else {
 		if !os.IsNotExist(loadErr) {
-			raw, readErr := ioutil.ReadFile(configPath)
+			raw, readErr := os.ReadFile(configPath)
 			if readErr != nil {
 				os.Remove(tempFile.Name())
 				return "", fmt.Errorf("failed to load existing config: %w", loadErr)
@@ -206,7 +204,7 @@ func writeFullConfig(w *os.File, cfg *config.Config) error {
 // parseAndValidateConfig reads and validates the temp file
 func parseAndValidateConfig(filename string) (*config.Config, error) {
 	// Read file
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
@@ -291,7 +289,7 @@ func saveNonDefaultValues(configDir string, cfg *config.Config) error {
 	configPath := filepath.Join(configDir, "plonk.yaml")
 	if len(nonDefaults) == 0 {
 		// Write empty file (or minimal comment)
-		return ioutil.WriteFile(configPath, []byte(""), 0644)
+		return os.WriteFile(configPath, []byte(""), 0644)
 	}
 
 	// Marshal to minimal YAML
@@ -301,7 +299,7 @@ func saveNonDefaultValues(configDir string, cfg *config.Config) error {
 	}
 
 	// Write to plonk.yaml
-	if err := ioutil.WriteFile(configPath, data, 0644); err != nil {
+	if err := os.WriteFile(configPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
 

@@ -74,7 +74,7 @@ func (f DoctorFormatter) TableOutput() string {
 	categoryOrder := []string{"system", "environment", "permissions", "configuration", "package-managers", "installation"}
 	for _, category := range categoryOrder {
 		if checks, exists := categories[category]; exists {
-			output.WriteString(fmt.Sprintf("## %s\n", strings.Title(strings.ReplaceAll(category, "-", " "))))
+			output.WriteString(fmt.Sprintf("## %s\n", titleCase(strings.ReplaceAll(category, "-", " "))))
 
 			for _, check := range checks {
 				// Color-coded status
@@ -137,4 +137,16 @@ func (f DoctorFormatter) TableOutput() string {
 // StructuredData returns the structured data for serialization
 func (f DoctorFormatter) StructuredData() any {
 	return f.Data
+}
+
+// titleCase converts a string to title case (first letter of each word uppercase)
+// This is a simple replacement for the deprecated strings.Title
+func titleCase(s string) string {
+	words := strings.Fields(s)
+	for i, word := range words {
+		if len(word) > 0 {
+			words[i] = strings.ToUpper(word[:1]) + strings.ToLower(word[1:])
+		}
+	}
+	return strings.Join(words, " ")
 }
