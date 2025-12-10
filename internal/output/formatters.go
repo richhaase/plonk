@@ -9,6 +9,17 @@ import (
 	"github.com/richhaase/plonk/internal/resources"
 )
 
+// getMetadataStringValue safely extracts a string value from metadata
+func getMetadataStringValue(metadata map[string]interface{}, key string) string {
+	if metadata == nil {
+		return ""
+	}
+	if value, ok := metadata[key].(string); ok {
+		return value
+	}
+	return ""
+}
+
 // ManagerApplyResult represents the result for a specific manager
 
 // DotfileAction represents a single dotfile deployment action
@@ -111,7 +122,7 @@ func (d DotfileAddOutput) StructuredData() any {
 
 // TableOutput generates human-friendly table output for batch dotfile add
 func (d DotfileBatchAddOutput) TableOutput() string {
-	output := fmt.Sprintf("Dotfile Directory Add\n=====================\n\n")
+	output := "Dotfile Directory Add\n=====================\n\n"
 
 	// Count added vs updated
 	var addedCount, updatedCount, wouldAddCount, wouldUpdateCount int
@@ -164,7 +175,7 @@ func (d DotfileBatchAddOutput) TableOutput() string {
 	}
 
 	if len(d.Errors) > 0 {
-		output += fmt.Sprintf("\nWarnings:\n")
+		output += "\nWarnings:\n"
 		for _, err := range d.Errors {
 			output += fmt.Sprintf("   %s\n", err)
 		}
@@ -211,8 +222,8 @@ func ConvertToDotfileAddOutput(results []resources.OperationResult) []DotfileAdd
 		}
 
 		outputs = append(outputs, DotfileAddOutput{
-			Source:      result.Metadata["source"].(string),
-			Destination: result.Metadata["destination"].(string),
+			Source:      getMetadataStringValue(result.Metadata, "source"),
+			Destination: getMetadataStringValue(result.Metadata, "destination"),
 			Action:      MapStatusToAction(result.Status),
 			Path:        result.Name,
 		})

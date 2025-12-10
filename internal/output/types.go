@@ -71,6 +71,8 @@ type DotfileSummary struct {
 }
 
 // TableOutput generates human-friendly table output for apply
+//
+//nolint:gocyclo // complexity justified: multi-domain apply formatter with package and dotfile results rendering
 func (r ApplyResult) TableOutput() string {
 	output := ""
 

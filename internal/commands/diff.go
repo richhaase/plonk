@@ -5,6 +5,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -178,6 +179,7 @@ func executeDiffTool(tool string, source, dest string) error {
 	// Append destination and source paths (shows $HOME on left, $PLONKDIR on right)
 	args := append(parts[1:], dest, source)
 
+	//nolint:gosec // G204: diff tool from user config (cfg.DiffTool) - intentional user control like $EDITOR
 	cmd := exec.Command(parts[0], args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -186,7 +188,8 @@ func executeDiffTool(tool string, source, dest string) error {
 	// Run the command
 	if err := cmd.Run(); err != nil {
 		// Check if it's just a non-zero exit code (common for diff tools)
-		if _, ok := err.(*exec.ExitError); ok {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			// This is expected for diff tools when files differ
 			return nil
 		}

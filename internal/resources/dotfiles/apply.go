@@ -77,7 +77,8 @@ func applyWithFilter(ctx context.Context, configDir, homeDir string, cfg *config
 
 	// Process missing and drifted dotfiles (need to be created/restored)
 	for _, item := range reconciled {
-		if item.State == resources.StateMissing || item.State == resources.StateDegraded {
+		switch item.State {
+		case resources.StateMissing, resources.StateDegraded:
 			// Start spinner for this dotfile
 			var spinner *output.Spinner
 			if spinnerManager != nil {
@@ -123,7 +124,7 @@ func applyWithFilter(ctx context.Context, configDir, homeDir string, cfg *config
 					spinner.Success(fmt.Sprintf("would-deploy %s", item.Name))
 				}
 			}
-		} else if item.State == resources.StateManaged {
+		case resources.StateManaged:
 			// Already managed files are unchanged
 			summary.Unchanged++
 		}
