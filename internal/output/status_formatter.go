@@ -355,7 +355,7 @@ func (f StatusFormatter) TableOutput() string {
 func (f StatusFormatter) StructuredData() any {
 	s := f.Data
 	// Filter summary based on display flags to match TableOutput behavior
-	filteredSummary := filterSummaryForOutput(s.StateSummary, s.ShowMissing, s.ShowUnmanaged)
+	filteredSummary := filterSummaryForOutput(s.StateSummary, s.ShowPackages, s.ShowDotfiles, s.ShowMissing, s.ShowUnmanaged)
 	return StatusOutputSummary{
 		ConfigPath:   s.ConfigPath,
 		LockPath:     s.LockPath,
@@ -418,12 +418,20 @@ func sanitizeSummary(sum Summary) Summary {
 }
 
 // filterSummaryForOutput filters the summary based on display flags to match TableOutput behavior
-func filterSummaryForOutput(sum Summary, showMissing, showUnmanaged bool) Summary {
+func filterSummaryForOutput(sum Summary, showPackages, showDotfiles, showMissing, showUnmanaged bool) Summary {
 	filtered := Summary{
-		Results: make([]Result, len(sum.Results)),
+		Results: make([]Result, 0, len(sum.Results)),
 	}
 
-	for i, r := range sum.Results {
+	for _, r := range sum.Results {
+		// Apply domain filtering (packages vs dotfiles)
+		if r.Domain == "package" && !showPackages {
+			continue
+		}
+		if r.Domain == "dotfile" && !showDotfiles {
+			continue
+		}
+
 		fr := Result{Domain: r.Domain}
 
 		if showUnmanaged {
@@ -442,7 +450,7 @@ func filterSummaryForOutput(sum Summary, showMissing, showUnmanaged bool) Summar
 			filtered.TotalMissing += len(r.Missing)
 		}
 
-		filtered.Results[i] = fr
+		filtered.Results = append(filtered.Results, fr)
 	}
 
 	return filtered
