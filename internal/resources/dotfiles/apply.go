@@ -6,14 +6,36 @@ package dotfiles
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources"
 )
 
+// ApplyFilterOptions contains options for selective dotfile apply operations
+type ApplyFilterOptions struct {
+	DryRun bool
+	// Filter is a set of normalized destination paths to apply.
+	// If empty or nil, all dotfiles are applied.
+	Filter map[string]bool
+}
+
+// ApplySelective applies only the dotfiles whose destination paths are in the filter set.
+// The filter should contain normalized absolute paths (use filepath.Abs and filepath.Clean).
+func ApplySelective(ctx context.Context, configDir, homeDir string, cfg *config.Config, opts ApplyFilterOptions) (output.DotfileResults, error) {
+	return applyWithFilter(ctx, configDir, homeDir, cfg, opts.DryRun, opts.Filter)
+}
+
 // Apply applies dotfile configuration and returns the result
 func Apply(ctx context.Context, configDir, homeDir string, cfg *config.Config, dryRun bool) (output.DotfileResults, error) {
+	return applyWithFilter(ctx, configDir, homeDir, cfg, dryRun, nil)
+}
+
+// applyWithFilter is the internal implementation that supports optional filtering
+func applyWithFilter(ctx context.Context, configDir, homeDir string, cfg *config.Config, dryRun bool, filter map[string]bool) (output.DotfileResults, error) {
 	// Create dotfile resource
 	manager := NewManagerWithConfig(homeDir, configDir, cfg)
 	dotfileResource := NewDotfileResource(manager, dryRun)
@@ -29,6 +51,11 @@ func Apply(ctx context.Context, configDir, homeDir string, cfg *config.Config, d
 	reconciled, err := resources.ReconcileResource(ctx, dotfileResource)
 	if err != nil {
 		return output.DotfileResults{}, err
+	}
+
+	// If we have a filter, only keep items that match
+	if len(filter) > 0 {
+		reconciled = filterItems(reconciled, filter, homeDir)
 	}
 
 	var actions []output.DotfileOperation
@@ -102,10 +129,61 @@ func Apply(ctx context.Context, configDir, homeDir string, cfg *config.Config, d
 		}
 	}
 
+	// For selective apply, TotalFiles reflects filtered count
+	totalFiles := len(configuredItems)
+	if len(filter) > 0 {
+		totalFiles = len(reconciled)
+	}
+
 	return output.DotfileResults{
 		DryRun:     dryRun,
-		TotalFiles: len(configuredItems),
+		TotalFiles: totalFiles,
 		Actions:    actions,
 		Summary:    summary,
 	}, nil
+}
+
+// filterItems filters reconciled items to only include those matching the filter set
+func filterItems(items []resources.Item, filter map[string]bool, homeDir string) []resources.Item {
+	if len(filter) == 0 {
+		return items
+	}
+
+	var filtered []resources.Item
+	for _, item := range items {
+		// Get the destination path from metadata
+		dest, ok := item.Metadata["destination"].(string)
+		if !ok {
+			// Try using item.Path as fallback
+			dest = item.Path
+		}
+
+		// Normalize the destination path
+		normalizedDest := normalizeDestPath(dest, homeDir)
+
+		// Check if this item is in the filter set
+		if filter[normalizedDest] {
+			filtered = append(filtered, item)
+		}
+	}
+	return filtered
+}
+
+// normalizeDestPath normalizes a destination path for comparison
+func normalizeDestPath(path, homeDir string) string {
+	// Expand ~ to home directory
+	if strings.HasPrefix(path, "~/") {
+		path = filepath.Join(homeDir, path[2:])
+	}
+
+	// Expand environment variables
+	path = os.ExpandEnv(path)
+
+	// Convert to absolute path
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return path // Return as-is if we can't resolve
+	}
+
+	return filepath.Clean(absPath)
 }

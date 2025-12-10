@@ -159,7 +159,8 @@ func runSelectiveApply(ctx context.Context, paths []string, cfg *config.Config, 
 		}
 	}
 
-	// Validate requested paths
+	// Build filter set from requested paths, validating each one
+	filterSet := make(map[string]bool)
 	for _, path := range paths {
 		normalizedPath, err := normalizePath(path)
 		if err != nil {
@@ -169,15 +170,16 @@ func runSelectiveApply(ctx context.Context, paths []string, cfg *config.Config, 
 		if !managedDests[normalizedPath] {
 			return fmt.Errorf("file not managed by plonk: %s", path)
 		}
+
+		filterSet[normalizedPath] = true
 	}
 
-	// Note: For MVP, we'll apply all dotfiles. Filtering would require significant refactoring.
-	// The validation above ensures requested files are managed, and the output will show all actions.
-	// TODO: Implement selective filtering in a future iteration
-	output.Println("Note: Applying all dotfiles. Selective apply filtering coming in a future update.")
-
-	// Apply all dotfiles
-	dotfileResult, err := dotfiles.Apply(ctx, configDir, homeDir, cfg, dryRun)
+	// Apply only the selected dotfiles
+	opts := dotfiles.ApplyFilterOptions{
+		DryRun: dryRun,
+		Filter: filterSet,
+	}
+	dotfileResult, err := dotfiles.ApplySelective(ctx, configDir, homeDir, cfg, opts)
 	if err != nil {
 		return fmt.Errorf("failed to apply dotfiles: %w", err)
 	}
@@ -186,11 +188,11 @@ func runSelectiveApply(ctx context.Context, paths []string, cfg *config.Config, 
 	result := output.ApplyResult{
 		DryRun:   dryRun,
 		Success:  true,
-		Scope:    "dotfiles",
+		Scope:    "dotfiles (selective)",
 		Dotfiles: &dotfileResult,
 	}
 
-	// Render output (shows all files, not just selected ones)
+	// Render output
 	if err := output.RenderOutput(result, format); err != nil {
 		return err
 	}
