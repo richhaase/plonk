@@ -124,6 +124,8 @@ func sortItemsByManager(itemsByManager map[string][]Item) []string {
 }
 
 // TableOutput generates human-friendly table output for status
+//
+//nolint:gocyclo // complexity justified: multi-domain formatter with 4 display modes (packages/dotfiles x managed/missing/unmanaged)
 func (f StatusFormatter) TableOutput() string {
 	s := f.Data
 	var output strings.Builder
@@ -352,15 +354,15 @@ func (f StatusFormatter) TableOutput() string {
 // StructuredData returns the structured data for serialization
 func (f StatusFormatter) StructuredData() any {
 	s := f.Data
-	// Return summary format for structured output
-	// The StateSummary already contains all managed, missing, and untracked items
+	// Filter summary based on display flags to match TableOutput behavior
+	filteredSummary := filterSummaryForOutput(s.StateSummary, s.ShowMissing, s.ShowUnmanaged)
 	return StatusOutputSummary{
 		ConfigPath:   s.ConfigPath,
 		LockPath:     s.LockPath,
 		ConfigExists: s.ConfigExists,
 		ConfigValid:  s.ConfigValid,
 		LockExists:   s.LockExists,
-		StateSummary: sanitizeSummary(s.StateSummary),
+		StateSummary: sanitizeSummary(filteredSummary),
 	}
 }
 
@@ -413,4 +415,35 @@ func sanitizeSummary(sum Summary) Summary {
 		cleaned.Results[i] = cr
 	}
 	return cleaned
+}
+
+// filterSummaryForOutput filters the summary based on display flags to match TableOutput behavior
+func filterSummaryForOutput(sum Summary, showMissing, showUnmanaged bool) Summary {
+	filtered := Summary{
+		Results: make([]Result, len(sum.Results)),
+	}
+
+	for i, r := range sum.Results {
+		fr := Result{Domain: r.Domain}
+
+		if showUnmanaged {
+			// Show only untracked items
+			fr.Untracked = r.Untracked
+			filtered.TotalUntracked += len(r.Untracked)
+		} else if showMissing {
+			// Show only missing items
+			fr.Missing = r.Missing
+			filtered.TotalMissing += len(r.Missing)
+		} else {
+			// Show managed and missing items (default)
+			fr.Managed = r.Managed
+			fr.Missing = r.Missing
+			filtered.TotalManaged += len(r.Managed)
+			filtered.TotalMissing += len(r.Missing)
+		}
+
+		filtered.Results[i] = fr
+	}
+
+	return filtered
 }

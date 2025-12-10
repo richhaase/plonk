@@ -8,7 +8,8 @@ run:
   tests: true
 
 linters:
-  disable-all: true
+  # Use 'none' as default and explicitly enable what we want
+  default: none
   enable:
     # Original linters
     - govet         # Standard Go static analysis
@@ -53,9 +54,6 @@ linters:
           - gosec
 
   settings:
-    govet:
-      shadow: true
-
     misspell:
       locale: US
 
@@ -80,21 +78,17 @@ linters:
         - (*cobra.Command).RegisterFlagCompletionFunc
 
     gocyclo:
-      # Allow higher complexity for formatter functions
-      min-complexity: 55
+      # Standard complexity threshold; specific high-complexity formatters use //nolint:gocyclo
+      min-complexity: 30
 
     gosec:
       excludes:
         # G104: Audit errors not checked - handled by errcheck exclude-functions
         - G104
-        # G204: Subprocess launched with variable - intentional for package managers
-        - G204
         # G301: Directory permissions - we use standard 0755 for config dirs
         - G301
         # G302: File permissions - we use standard 0644 for readable config files
         - G302
-        # G304: File path provided as taint input - dotfile paths come from config
-        - G304
         # G306: WriteFile permissions - we use 0644 for config files intentionally
         - G306
         # G404: Weak random number generator - used for non-security test data
@@ -104,6 +98,11 @@ linters:
       # Require an explanation for nolint directives
       require-explanation: true
       require-specific: true
+
+output:
+  formats:
+    text:
+      print-linter-name: true
 
 issues:
   max-issues-per-linter: 0

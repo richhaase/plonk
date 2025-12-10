@@ -68,6 +68,8 @@ func (f ConfigShowFormatter) StructuredData() any {
 // formatConfigWithHighlights formats the config as YAML and adds color
 // highlighting for user-defined fields in table output, while leaving the
 // YAML structure unchanged.
+//
+//nolint:gocyclo // complexity justified: YAML line processor with per-block highlighting for managers, expand_directories, ignore_patterns
 func formatConfigWithHighlights(cfg *config.Config, checker *config.UserDefinedChecker) (string, error) {
 	// Compute non-default fields and managers.
 	nonDefaultFields := checker.GetNonDefaultFields(cfg)

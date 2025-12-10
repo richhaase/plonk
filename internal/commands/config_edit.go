@@ -122,6 +122,7 @@ func openInEditor(editor, filename string) error {
 		return fmt.Errorf("invalid editor: %s", editor)
 	}
 
+	//nolint:gosec // G204: editor from $VISUAL/$EDITOR env vars - standard Unix pattern
 	cmd := exec.Command(parts[0], append(parts[1:], filename)...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

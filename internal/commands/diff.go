@@ -179,6 +179,7 @@ func executeDiffTool(tool string, source, dest string) error {
 	// Append destination and source paths (shows $HOME on left, $PLONKDIR on right)
 	args := append(parts[1:], dest, source)
 
+	//nolint:gosec // G204: diff tool from user config (cfg.DiffTool) - intentional user control like $EDITOR
 	cmd := exec.Command(parts[0], args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

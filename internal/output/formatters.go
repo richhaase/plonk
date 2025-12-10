@@ -9,6 +9,17 @@ import (
 	"github.com/richhaase/plonk/internal/resources"
 )
 
+// getMetadataStringValue safely extracts a string value from metadata
+func getMetadataStringValue(metadata map[string]interface{}, key string) string {
+	if metadata == nil {
+		return ""
+	}
+	if value, ok := metadata[key].(string); ok {
+		return value
+	}
+	return ""
+}
+
 // ManagerApplyResult represents the result for a specific manager
 
 // DotfileAction represents a single dotfile deployment action
@@ -211,8 +222,8 @@ func ConvertToDotfileAddOutput(results []resources.OperationResult) []DotfileAdd
 		}
 
 		outputs = append(outputs, DotfileAddOutput{
-			Source:      result.Metadata["source"].(string),
-			Destination: result.Metadata["destination"].(string),
+			Source:      getMetadataStringValue(result.Metadata, "source"),
+			Destination: getMetadataStringValue(result.Metadata, "destination"),
 			Action:      MapStatusToAction(result.Status),
 			Path:        result.Name,
 		})
