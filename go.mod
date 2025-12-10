@@ -5,7 +5,7 @@ go 1.24.0
 require (
 	github.com/PaesslerAG/jsonpath v0.1.1
 	github.com/fatih/color v1.18.0
-	github.com/go-git/go-git/v5 v5.13.2
+	github.com/go-git/go-git/v5 v5.16.4
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/golangci/golangci-lint v1.64.8
 	github.com/mattn/go-isatty v0.0.20
@@ -82,7 +82,7 @@ require (
 	github.com/go-xmlfmt/xmlfmt v1.1.3 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gofrs/flock v0.12.1 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golangci/dupl v0.0.0-20250308024227-f665c8d69b32 // indirect
 	github.com/golangci/go-printf-func-name v0.1.0 // indirect
 	github.com/golangci/gofmt v0.0.0-20250106114630-d62b90e6713d // indirect
