@@ -217,10 +217,7 @@ func (ch *ConfigHandlerImpl) GetActualDotfiles(ctx context.Context) ([]resources
 	if err == nil {
 		for _, destination := range targets {
 			// destination is like "~/.something/path" -> convert to rel name used by scanner
-			relName := destination
-			if strings.HasPrefix(relName, "~/") {
-				relName = relName[2:]
-			}
+			relName := strings.TrimPrefix(destination, "~/")
 
 			// Skip if we already discovered this entry via scanning
 			if _, seen := existing[relName]; seen {

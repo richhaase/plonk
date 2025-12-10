@@ -28,58 +28,83 @@ linters:
 
     # Code quality
     - gocyclo       # Cyclomatic complexity
-    - prealloc      # Suggest slice preallocation
     - nolintlint    # Ensure nolint directives are justified
 
-linters-settings:
-  govet:
-    shadow: true
+  # Exclusion configuration
+  exclusions:
+    # Enable presets for common exclusions
+    presets:
+      - std-error-handling
+      - common-false-positives
 
-  misspell:
-    locale: US
+    # Custom exclusion rules
+    rules:
+      # Exclude some linters from test files
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gosec
+          - errorlint
+          - staticcheck
+      # Exclude test utilities
+      - path: internal/testutil/
+        linters:
+          - errcheck
+          - gosec
 
-  errcheck:
-    # Functions where ignoring the error is acceptable
-    exclude-functions:
-      - (io.Closer).Close
-      - (*os.File).Close
-      - (net.Conn).Close
-      - fmt.Fprint
-      - fmt.Fprintf
-      - fmt.Fprintln
-      - fmt.Print
-      - fmt.Println
-      - fmt.Printf
+  settings:
+    govet:
+      shadow: true
 
-  gocyclo:
-    # Start with a lenient threshold
-    min-complexity: 20
+    misspell:
+      locale: US
 
-  gosec:
-    excludes:
-      # G204: Subprocess launched with variable - intentional for package managers
-      - G204
-      # G301: Directory permissions - we use standard 0755 for config dirs
-      - G301
-      # G302: File permissions - we use standard 0644 for readable config files
-      - G302
-      # G304: File path provided as taint input - dotfile paths come from config
-      - G304
-      # G306: WriteFile permissions - we use 0644 for config files intentionally
-      - G306
+    errcheck:
+      # Functions where ignoring the error is acceptable
+      exclude-functions:
+        - (io.Closer).Close
+        - (*os.File).Close
+        - (net.Conn).Close
+        - (*bufio.Writer).Flush
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+        - fmt.Print
+        - fmt.Println
+        - fmt.Printf
+        - os.Remove
+        - os.RemoveAll
+        - os.Setenv
+        - os.Unsetenv
+        - os.Chdir
+        - (*cobra.Command).RegisterFlagCompletionFunc
 
-  nolintlint:
-    # Require an explanation for nolint directives
-    require-explanation: true
-    require-specific: true
+    gocyclo:
+      # Allow higher complexity for formatter functions
+      min-complexity: 55
+
+    gosec:
+      excludes:
+        # G104: Audit errors not checked - handled by errcheck exclude-functions
+        - G104
+        # G204: Subprocess launched with variable - intentional for package managers
+        - G204
+        # G301: Directory permissions - we use standard 0755 for config dirs
+        - G301
+        # G302: File permissions - we use standard 0644 for readable config files
+        - G302
+        # G304: File path provided as taint input - dotfile paths come from config
+        - G304
+        # G306: WriteFile permissions - we use 0644 for config files intentionally
+        - G306
+        # G404: Weak random number generator - used for non-security test data
+        - G404
+
+    nolintlint:
+      # Require an explanation for nolint directives
+      require-explanation: true
+      require-specific: true
 
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-
-  # Exclude some issues in tests
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - gosec

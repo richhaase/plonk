@@ -32,7 +32,7 @@ func NewConfigShowFormatter(data ConfigShowOutput) ConfigShowFormatter {
 // TableOutput generates human-friendly table output for config show
 func (f ConfigShowFormatter) TableOutput() string {
 	c := f.Data
-	output := fmt.Sprintf("# Configuration for plonk\n")
+	output := "# Configuration for plonk\n"
 	output += fmt.Sprintf("# Config file: %s\n\n", c.ConfigPath)
 
 	if c.Config == nil {

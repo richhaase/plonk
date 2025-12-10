@@ -111,7 +111,7 @@ func (d DotfileAddOutput) StructuredData() any {
 
 // TableOutput generates human-friendly table output for batch dotfile add
 func (d DotfileBatchAddOutput) TableOutput() string {
-	output := fmt.Sprintf("Dotfile Directory Add\n=====================\n\n")
+	output := "Dotfile Directory Add\n=====================\n\n"
 
 	// Count added vs updated
 	var addedCount, updatedCount, wouldAddCount, wouldUpdateCount int
@@ -164,7 +164,7 @@ func (d DotfileBatchAddOutput) TableOutput() string {
 	}
 
 	if len(d.Errors) > 0 {
-		output += fmt.Sprintf("\nWarnings:\n")
+		output += "\nWarnings:\n"
 		for _, err := range d.Errors {
 			output += fmt.Sprintf("   %s\n", err)
 		}

@@ -135,9 +135,10 @@ func (f StatusFormatter) TableOutput() string {
 	// Process results by domain
 	var packageResult, dotfileResult *Result
 	for i := range s.StateSummary.Results {
-		if s.StateSummary.Results[i].Domain == "package" {
+		switch s.StateSummary.Results[i].Domain {
+		case "package":
 			packageResult = &s.StateSummary.Results[i]
-		} else if s.StateSummary.Results[i].Domain == "dotfile" {
+		case "dotfile":
 			dotfileResult = &s.StateSummary.Results[i]
 		}
 	}
@@ -156,17 +157,13 @@ func (f StatusFormatter) TableOutput() string {
 			}
 		} else if s.ShowMissing {
 			// Show only missing items
-			for _, item := range packageResult.Missing {
-				missingPackages = append(missingPackages, item)
-			}
+			missingPackages = append(missingPackages, packageResult.Missing...)
 		} else {
 			// Show managed and missing items
 			for _, item := range packageResult.Managed {
 				packagesByManager[item.Manager] = append(packagesByManager[item.Manager], item)
 			}
-			for _, item := range packageResult.Missing {
-				missingPackages = append(missingPackages, item)
-			}
+			missingPackages = append(missingPackages, packageResult.Missing...)
 		}
 
 		// Sort missing packages
