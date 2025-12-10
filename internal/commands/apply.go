@@ -13,7 +13,6 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/resources/dotfiles"
 	"github.com/spf13/cobra"
 )
@@ -153,32 +152,28 @@ func normalizePathWithHome(path, homeDir string) (string, error) {
 // runSelectiveApply applies only specific dotfiles
 func runSelectiveApply(ctx context.Context, paths []string, cfg *config.Config, configDir, homeDir string, format output.OutputFormat, dryRun bool) error {
 	// First, get all managed dotfiles to validate the requested files
-	results, err := orchestrator.ReconcileAllWithConfig(ctx, homeDir, configDir, cfg)
+	// Only reconcile dotfiles, not packages, to avoid failures in environments without package support
+	dotfileResult, err := dotfiles.ReconcileWithConfig(ctx, homeDir, configDir, cfg)
 	if err != nil {
 		return fmt.Errorf("failed to get dotfile status: %w", err)
 	}
 
-	summary := resources.ConvertResultsToSummary(results)
 	managedDests := make(map[string]bool) // normalized dest path -> exists
 
 	// Build map of managed files (by deployed path)
-	for _, result := range summary.Results {
-		if result.Domain == "dotfile" {
-			for _, item := range result.Managed {
-				if dest, ok := item.Metadata["destination"].(string); ok {
-					normalizedDest, err := normalizePathWithHome(dest, homeDir)
-					if err == nil {
-						managedDests[normalizedDest] = true
-					}
-				}
+	for _, item := range dotfileResult.Managed {
+		if dest, ok := item.Metadata["destination"].(string); ok {
+			normalizedDest, err := normalizePathWithHome(dest, homeDir)
+			if err == nil {
+				managedDests[normalizedDest] = true
 			}
-			for _, item := range result.Missing {
-				if dest, ok := item.Metadata["destination"].(string); ok {
-					normalizedDest, err := normalizePathWithHome(dest, homeDir)
-					if err == nil {
-						managedDests[normalizedDest] = true
-					}
-				}
+		}
+	}
+	for _, item := range dotfileResult.Missing {
+		if dest, ok := item.Metadata["destination"].(string); ok {
+			normalizedDest, err := normalizePathWithHome(dest, homeDir)
+			if err == nil {
+				managedDests[normalizedDest] = true
 			}
 		}
 	}
@@ -203,7 +198,7 @@ func runSelectiveApply(ctx context.Context, paths []string, cfg *config.Config, 
 		DryRun: dryRun,
 		Filter: filterSet,
 	}
-	dotfileResult, err := dotfiles.ApplySelective(ctx, configDir, homeDir, cfg, opts)
+	applyResult, err := dotfiles.ApplySelective(ctx, configDir, homeDir, cfg, opts)
 	if err != nil {
 		return fmt.Errorf("failed to apply dotfiles: %w", err)
 	}
@@ -213,7 +208,7 @@ func runSelectiveApply(ctx context.Context, paths []string, cfg *config.Config, 
 		DryRun:   dryRun,
 		Success:  true,
 		Scope:    "dotfiles (selective)",
-		Dotfiles: &dotfileResult,
+		Dotfiles: &applyResult,
 	}
 
 	// Render output
