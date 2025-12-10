@@ -11,7 +11,7 @@ repos:
 
       - id: go-lint
         name: Lint Go code
-        entry: sh -c 'go run github.com/golangci/golangci-lint/cmd/golangci-lint run --timeout=10m'
+        entry: sh -c 'go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint run --timeout=10m'
         language: system
         files: \.go$
         pass_filenames: false

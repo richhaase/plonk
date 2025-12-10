@@ -6,11 +6,13 @@ package commands
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/resources/dotfiles"
 	"github.com/spf13/cobra"
 )
@@ -126,35 +128,52 @@ func getApplyScope(packagesOnly, dotfilesOnly bool) string {
 	return "all"
 }
 
+// normalizePathWithHome normalizes a path using the specified home directory
+// This is used for selective apply to ensure consistent path normalization
+func normalizePathWithHome(path, homeDir string) (string, error) {
+	// First expand any environment variables (e.g., $HOME, $ZSHPATH)
+	path = os.ExpandEnv(path)
+
+	// Then expand tilde using the provided homeDir
+	if strings.HasPrefix(path, "~/") {
+		path = filepath.Join(homeDir, path[2:])
+	}
+
+	// Finally, convert to absolute path (handles relative paths)
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve path %s: %w", path, err)
+	}
+
+	// Clean the path to remove any redundant elements
+	return filepath.Clean(absPath), nil
+}
+
 // runSelectiveApply applies only specific dotfiles
 func runSelectiveApply(ctx context.Context, paths []string, cfg *config.Config, configDir, homeDir string, format output.OutputFormat, dryRun bool) error {
 	// First, get all managed dotfiles to validate the requested files
-	results, err := orchestrator.ReconcileAllWithConfig(ctx, homeDir, configDir, cfg)
+	// Only reconcile dotfiles, not packages, to avoid failures in environments without package support
+	dotfileResult, err := dotfiles.ReconcileWithConfig(ctx, homeDir, configDir, cfg)
 	if err != nil {
 		return fmt.Errorf("failed to get dotfile status: %w", err)
 	}
 
-	summary := resources.ConvertResultsToSummary(results)
 	managedDests := make(map[string]bool) // normalized dest path -> exists
 
 	// Build map of managed files (by deployed path)
-	for _, result := range summary.Results {
-		if result.Domain == "dotfile" {
-			for _, item := range result.Managed {
-				if dest, ok := item.Metadata["destination"].(string); ok {
-					normalizedDest, err := normalizePath(dest)
-					if err == nil {
-						managedDests[normalizedDest] = true
-					}
-				}
+	for _, item := range dotfileResult.Managed {
+		if dest, ok := item.Metadata["destination"].(string); ok {
+			normalizedDest, err := normalizePathWithHome(dest, homeDir)
+			if err == nil {
+				managedDests[normalizedDest] = true
 			}
-			for _, item := range result.Missing {
-				if dest, ok := item.Metadata["destination"].(string); ok {
-					normalizedDest, err := normalizePath(dest)
-					if err == nil {
-						managedDests[normalizedDest] = true
-					}
-				}
+		}
+	}
+	for _, item := range dotfileResult.Missing {
+		if dest, ok := item.Metadata["destination"].(string); ok {
+			normalizedDest, err := normalizePathWithHome(dest, homeDir)
+			if err == nil {
+				managedDests[normalizedDest] = true
 			}
 		}
 	}
@@ -162,7 +181,7 @@ func runSelectiveApply(ctx context.Context, paths []string, cfg *config.Config, 
 	// Build filter set from requested paths, validating each one
 	filterSet := make(map[string]bool)
 	for _, path := range paths {
-		normalizedPath, err := normalizePath(path)
+		normalizedPath, err := normalizePathWithHome(path, homeDir)
 		if err != nil {
 			return fmt.Errorf("invalid path %s: %w", path, err)
 		}
@@ -179,7 +198,7 @@ func runSelectiveApply(ctx context.Context, paths []string, cfg *config.Config, 
 		DryRun: dryRun,
 		Filter: filterSet,
 	}
-	dotfileResult, err := dotfiles.ApplySelective(ctx, configDir, homeDir, cfg, opts)
+	applyResult, err := dotfiles.ApplySelective(ctx, configDir, homeDir, cfg, opts)
 	if err != nil {
 		return fmt.Errorf("failed to apply dotfiles: %w", err)
 	}
@@ -189,7 +208,7 @@ func runSelectiveApply(ctx context.Context, paths []string, cfg *config.Config, 
 		DryRun:   dryRun,
 		Success:  true,
 		Scope:    "dotfiles (selective)",
-		Dotfiles: &dotfileResult,
+		Dotfiles: &applyResult,
 	}
 
 	// Render output
