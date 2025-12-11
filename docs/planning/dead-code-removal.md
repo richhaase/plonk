@@ -89,17 +89,18 @@ just test-bats
 
 ---
 
-### Step 4: output/dotfile_list_formatter.go - Entire File
+### Step 4: output/dotfile_list_formatter.go - Entire File ✅
 
 **Target:** `internal/output/dotfile_list_formatter.go`
 
-**Remove:**
-- [ ] Delete entire file (entire formatter is unused)
+**Removed:**
+- [x] Deleted `dotfile_list_formatter.go` (entire formatter unused)
+- [x] Deleted `dotfile_list_formatter_more_test.go` (tests for deleted code)
 
 **Validation:**
-- [ ] `go test ./...`
-- [ ] `golangci-lint run`
-- [ ] `go build ./...`
+- [x] `go test ./...` - PASS
+- [x] `golangci-lint run` - PASS (0 issues)
+- [x] `go build ./...` - PASS
 - [ ] User: `just test-bats`
 
 ---
@@ -206,8 +207,8 @@ After all steps complete:
 |------|-------------|--------|------|
 | 1 | helpers.go deprecated/duplicate | ✅ Complete | 2025-12-11 |
 | 2 | status.go sort functions | ✅ Complete | 2025-12-11 |
-| 3 | colors.go unused helpers | ✅ Done (awaiting BATS) | 2025-12-11 |
-| 4 | dotfile_list_formatter.go | Pending | |
+| 3 | colors.go unused helpers | ✅ Complete | 2025-12-11 |
+| 4 | dotfile_list_formatter.go | ✅ Done (awaiting BATS) | 2025-12-11 |
 | 5 | progress.go ProgressUpdate | Pending | |
 | 6 | spinner.go unused helpers | Pending | |
 | 7 | utils.go unused utilities | Pending | |
