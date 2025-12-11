@@ -12,40 +12,8 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources"
-	"github.com/richhaase/plonk/internal/resources/packages"
 	"github.com/spf13/cobra"
 )
-
-// ParsePackageSpec splits "manager:package" into (manager, package)
-// Returns ("", package) if no prefix is found
-//
-// Deprecated: Use packages.ParsePackageSpec instead, which returns a
-// structured PackageSpec type with validation methods.
-func ParsePackageSpec(spec string) (manager, packageName string) {
-	parts := strings.SplitN(spec, ":", 2)
-	if len(parts) == 2 {
-		return parts[0], parts[1]
-	}
-	return "", spec
-}
-
-// IsValidManager checks if the given manager name is supported
-func IsValidManager(manager string) bool {
-	registry := packages.NewManagerRegistry()
-	validManagers := registry.GetAllManagerNames()
-	for _, valid := range validManagers {
-		if manager == valid {
-			return true
-		}
-	}
-	return false
-}
-
-// GetValidManagers returns a list of all valid manager names
-func GetValidManagers() []string {
-	registry := packages.NewManagerRegistry()
-	return registry.GetAllManagerNames()
-}
 
 // buildInstallExamples generates CLI examples for the install command based on
 // the currently configured package managers.
@@ -135,17 +103,6 @@ func buildUpgradeExamples() string {
 	}
 
 	return strings.Join(lines, "\n")
-}
-
-// GetMetadataString safely extracts string metadata from operation results
-func GetMetadataString(result resources.OperationResult, key string) string {
-	if result.Metadata == nil {
-		return ""
-	}
-	if value, ok := result.Metadata[key].(string); ok {
-		return value
-	}
-	return ""
 }
 
 // SimpleFlags represents basic command flags
