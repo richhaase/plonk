@@ -1,0 +1,43 @@
+# Git
+.git
+.gitignore
+
+# Build artifacts
+bin/
+dist/
+
+# Coverage files
+coverage.out
+coverage.html
+coverage.txt
+
+# IDE/Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation (not needed for tests)
+docs/
+
+# GitHub specific
+.github/
+
+# Local development
+.envrc
+.env
+.env.local
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Pre-commit config
+.pre-commit-config.yaml
