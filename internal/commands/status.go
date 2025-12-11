@@ -7,8 +7,6 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"sort"
-	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
@@ -204,30 +202,6 @@ func convertItems(items []resources.Item) []output.Item {
 		}
 	}
 	return converted
-}
-
-// sortItems sorts a slice of resources.Item alphabetically by name (case-insensitive)
-func sortItems(items []resources.Item) {
-	sort.Slice(items, func(i, j int) bool {
-		return strings.ToLower(items[i].Name) < strings.ToLower(items[j].Name)
-	})
-}
-
-// sortItemsByManager sorts items first by manager, then by name (case-insensitive)
-func sortItemsByManager(items map[string][]resources.Item) []string {
-	// Get sorted manager names
-	managers := make([]string, 0, len(items))
-	for manager := range items {
-		managers = append(managers, manager)
-	}
-	sort.Strings(managers)
-
-	// Sort items within each manager
-	for _, manager := range managers {
-		sortItems(items[manager])
-	}
-
-	return managers
 }
 
 // Removed - using config.ConfigAdapter instead

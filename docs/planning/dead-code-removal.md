@@ -49,18 +49,20 @@ just test-bats
 
 ---
 
-### Step 2: commands/status.go - Unused Sort Functions
+### Step 2: commands/status.go - Unused Sort Functions ✅
 
 **Target:** `internal/commands/status.go`
 
-**Remove:**
-- [ ] `sortItems` (lines 209-214)
-- [ ] `sortItemsByManager` (lines 217-231)
+**Removed:**
+- [x] `sortItems` (lines 209-214)
+- [x] `sortItemsByManager` (lines 217-231)
+- [x] Removed unused `sort` and `strings` imports
+- [x] Deleted `status_test.go` (only contained tests for removed functions)
 
 **Validation:**
-- [ ] `go test ./...`
-- [ ] `golangci-lint run`
-- [ ] `go build ./...`
+- [x] `go test ./...` - PASS
+- [x] `golangci-lint run` - PASS (0 issues)
+- [x] `go build ./...` - PASS
 - [ ] User: `just test-bats`
 
 ---
@@ -203,8 +205,8 @@ After all steps complete:
 
 | Step | Description | Status | Date |
 |------|-------------|--------|------|
-| 1 | helpers.go deprecated/duplicate | ✅ Done (awaiting BATS) | 2025-12-11 |
-| 2 | status.go sort functions | Pending | |
+| 1 | helpers.go deprecated/duplicate | ✅ Complete | 2025-12-11 |
+| 2 | status.go sort functions | ✅ Done (awaiting BATS) | 2025-12-11 |
 | 3 | colors.go unused helpers | Pending | |
 | 4 | dotfile_list_formatter.go | Pending | |
 | 5 | progress.go ProgressUpdate | Pending | |
