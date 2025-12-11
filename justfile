@@ -111,3 +111,50 @@ find-dead-code:
         go install golang.org/x/tools/cmd/deadcode@latest; \
     fi
     deadcode -test ./...
+
+# ============================================================================
+# Docker Commands - Run BATS tests in containerized environment
+# ============================================================================
+
+# Build the Docker test image
+docker-build:
+    @echo "Building plonk-test Docker image..."
+    docker build -t plonk-test:latest .
+    @echo "Docker image built successfully!"
+
+# Run all BATS tests in Docker
+docker-test:
+    @echo "Running BATS tests in Docker..."
+    docker compose run --rm test
+    @echo "Docker tests completed!"
+
+# Run smoke tests only in Docker (fast verification)
+docker-test-smoke:
+    @echo "Running smoke tests in Docker..."
+    docker compose run --rm smoke
+    @echo "Smoke tests completed!"
+
+# Run specific BATS test file in Docker
+docker-test-file file:
+    @echo "Running {{file}} in Docker..."
+    docker compose run --rm test bats {{file}}
+
+# Verify all package managers are available in Docker
+docker-verify:
+    @echo "Verifying package managers in Docker..."
+    docker compose run --rm test verify
+
+# Start interactive shell in Docker container
+docker-shell:
+    @echo "Starting interactive shell in Docker..."
+    docker compose run --rm shell
+
+# Clean Docker images and containers
+docker-clean:
+    @echo "Cleaning Docker resources..."
+    docker compose down --rmi local --volumes --remove-orphans 2>/dev/null || true
+    docker rmi plonk-test:latest 2>/dev/null || true
+    @echo "Docker resources cleaned!"
+
+# Build and run tests in Docker (one command)
+docker-test-all: docker-build docker-test

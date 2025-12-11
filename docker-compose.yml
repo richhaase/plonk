@@ -1,0 +1,56 @@
+# Plonk BATS Test Docker Compose Configuration
+#
+# Usage:
+#   Build:          docker compose build
+#   Run all tests:  docker compose run --rm test
+#   Run specific:   docker compose run --rm test bats tests/bats/behavioral/01-basic-commands.bats
+#   Interactive:    docker compose run --rm test bash
+#
+# Environment variables:
+#   PLONK_TEST_CLEANUP_PACKAGES - Set to 0 to keep test packages (default: 1)
+#   PLONK_TEST_CLEANUP_DOTFILES - Set to 0 to keep test dotfiles (default: 1)
+
+services:
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: plonk-test:latest
+    container_name: plonk-test
+    environment:
+      - PLONK_TEST_CLEANUP_PACKAGES=${PLONK_TEST_CLEANUP_PACKAGES:-1}
+      - PLONK_TEST_CLEANUP_DOTFILES=${PLONK_TEST_CLEANUP_DOTFILES:-1}
+      - TERM=xterm-256color
+    # Mount source for development (optional - comment out for CI)
+    # volumes:
+    #   - .:/home/plonk/plonk:cached
+    stdin_open: true
+    tty: true
+
+  # Interactive shell for debugging
+  shell:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: plonk-test:latest
+    container_name: plonk-shell
+    environment:
+      - PLONK_TEST_CLEANUP_PACKAGES=0
+      - PLONK_TEST_CLEANUP_DOTFILES=0
+      - TERM=xterm-256color
+    stdin_open: true
+    tty: true
+    command: bash
+
+  # Run smoke tests only (fast verification)
+  smoke:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: plonk-test:latest
+    container_name: plonk-smoke
+    environment:
+      - PLONK_TEST_CLEANUP_PACKAGES=1
+      - PLONK_TEST_CLEANUP_DOTFILES=1
+      - TERM=xterm-256color
+    command: bats tests/bats/behavioral/00-smoke.bats
