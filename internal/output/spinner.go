@@ -4,7 +4,6 @@
 package output
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -85,13 +84,6 @@ func (s *Spinner) Error(message string) {
 	s.writer.Printf("%s %s\n", icon, message)
 }
 
-// UpdateText updates the spinner text while it's running
-func (s *Spinner) UpdateText(text string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.text = text
-}
-
 // spin runs the spinner animation loop
 func (s *Spinner) spin() {
 	defer s.wg.Done()
@@ -152,28 +144,4 @@ func (sm *SpinnerManager) StartSpinner(operation, item string) *Spinner {
 	}
 
 	return NewSpinner(text).Start()
-}
-
-// WithSpinner executes a function with a spinner running
-func WithSpinner(text string, fn func(context.Context) error) error {
-	spinner := NewSpinner(text).Start()
-	defer spinner.Stop()
-
-	// Create a context for the operation
-	ctx := context.Background()
-	return fn(ctx)
-}
-
-// WithSpinnerResult executes a function with a spinner and handles the result
-func WithSpinnerResult(text string, fn func(context.Context) error) error {
-	spinner := NewSpinner(text).Start()
-
-	err := fn(context.Background())
-	if err != nil {
-		spinner.Error(fmt.Sprintf("Failed: %s", text))
-		return err
-	}
-
-	spinner.Success(fmt.Sprintf("Completed: %s", text))
-	return nil
 }

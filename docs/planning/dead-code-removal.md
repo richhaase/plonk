@@ -124,19 +124,22 @@ just test-bats
 
 ---
 
-### Step 6: output/spinner.go - Unused Spinner Helpers
+### Step 6: output/spinner.go - Unused Spinner Helpers ✅
 
 **Target:** `internal/output/spinner.go`
 
-**Remove:**
-- [ ] `Spinner.UpdateText` (lines 89-93)
-- [ ] `WithSpinner` (lines 158-165)
-- [ ] `WithSpinnerResult` (lines 168-179)
+**Removed:**
+- [x] `Spinner.UpdateText` (lines 89-93)
+- [x] `WithSpinner` (lines 158-165)
+- [x] `WithSpinnerResult` (lines 168-179)
+- [x] Removed unused `context` import
+- [x] Removed tests: `TestSpinner_UpdateText`, `TestSpinner_ConcurrentOperations`, `TestWithSpinner*`, `TestSpinner_RaceConditions`
+- [x] Removed unused `context` and `errors` imports from test file
 
 **Validation:**
-- [ ] `go test ./...`
-- [ ] `golangci-lint run`
-- [ ] `go build ./...`
+- [x] `go test ./...` - PASS
+- [x] `golangci-lint run` - PASS (0 issues)
+- [x] `go build ./...` - PASS
 - [ ] User: `just test-bats`
 
 ---
@@ -211,8 +214,8 @@ After all steps complete:
 | 2 | status.go sort functions | ✅ Complete | 2025-12-11 |
 | 3 | colors.go unused helpers | ✅ Complete | 2025-12-11 |
 | 4 | dotfile_list_formatter.go | ✅ Complete | 2025-12-11 |
-| 5 | progress.go ProgressUpdate | ✅ Done (awaiting BATS) | 2025-12-11 |
-| 6 | spinner.go unused helpers | Pending | |
+| 5 | progress.go ProgressUpdate | ✅ Complete | 2025-12-11 |
+| 6 | spinner.go unused helpers | ✅ Done (awaiting BATS) | 2025-12-11 |
 | 7 | utils.go unused utilities | Pending | |
 | 8 | types.go Result methods | Pending | |
 | 9 | manager.go internal helpers | Pending | |

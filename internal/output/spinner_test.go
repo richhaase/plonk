@@ -4,8 +4,6 @@
 package output
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -162,32 +160,6 @@ func TestSpinner_Error(t *testing.T) {
 	}
 }
 
-func TestSpinner_UpdateText(t *testing.T) {
-	originalWriter := progressWriter
-	defer func() { progressWriter = originalWriter }()
-
-	buf := testutil.NewBufferWriter(true)
-	progressWriter = buf
-
-	spinner := NewSpinner("Initial text")
-	spinner.Start()
-
-	// Give spinner time to display initial text
-	time.Sleep(150 * time.Millisecond)
-
-	spinner.UpdateText("Updated text")
-
-	// Give spinner time to display updated text
-	time.Sleep(150 * time.Millisecond)
-
-	spinner.Stop()
-
-	output := buf.String()
-	if !strings.Contains(output, "Updated text") {
-		t.Errorf("Output should contain updated text, got: %q", output)
-	}
-}
-
 func TestSpinner_NonTerminal(t *testing.T) {
 	originalWriter := progressWriter
 	defer func() { progressWriter = originalWriter }()
@@ -237,51 +209,6 @@ func TestSpinner_Animation(t *testing.T) {
 
 	if foundChars < 2 {
 		t.Errorf("Expected to see multiple spinner characters, found %d in output: %q", foundChars, output)
-	}
-}
-
-func TestSpinner_ConcurrentOperations(t *testing.T) {
-	originalWriter := progressWriter
-	defer func() { progressWriter = originalWriter }()
-
-	buf := testutil.NewBufferWriter(true)
-	progressWriter = buf
-
-	spinner := NewSpinner("Concurrent test")
-
-	// Start spinner
-	spinner.Start()
-
-	// Perform concurrent operations
-	var wg sync.WaitGroup
-	wg.Add(3)
-
-	go func() {
-		defer wg.Done()
-		spinner.UpdateText("Update 1")
-	}()
-
-	go func() {
-		defer wg.Done()
-		time.Sleep(10 * time.Millisecond)
-		spinner.UpdateText("Update 2")
-	}()
-
-	go func() {
-		defer wg.Done()
-		time.Sleep(20 * time.Millisecond)
-		spinner.UpdateText("Update 3")
-	}()
-
-	wg.Wait()
-	time.Sleep(100 * time.Millisecond)
-
-	// Should be safe to stop
-	spinner.Stop()
-
-	// Verify final text is one of the updates
-	if spinner.text != "Update 1" && spinner.text != "Update 2" && spinner.text != "Update 3" {
-		t.Errorf("Expected text to be one of the updates, got: %q", spinner.text)
 	}
 }
 
@@ -382,176 +309,6 @@ func TestSpinnerManager_MultipleSpinners(t *testing.T) {
 	if manager.current != 3 {
 		t.Errorf("Expected current to be 3, got %d", manager.current)
 	}
-}
-
-func TestWithSpinner(t *testing.T) {
-	originalWriter := progressWriter
-	defer func() { progressWriter = originalWriter }()
-
-	buf := testutil.NewBufferWriter(true)
-	progressWriter = buf
-
-	executed := false
-	err := WithSpinner("Processing", func(ctx context.Context) error {
-		executed = true
-		// Simulate some work
-		time.Sleep(50 * time.Millisecond)
-		return nil
-	})
-
-	if err != nil {
-		t.Errorf("WithSpinner returned unexpected error: %v", err)
-	}
-
-	if !executed {
-		t.Error("Function was not executed")
-	}
-
-	// WithSpinner clears the spinner when done, so we won't see the text
-	// The test should verify execution and no error, which it does
-}
-
-func TestWithSpinner_Error(t *testing.T) {
-	originalWriter := progressWriter
-	defer func() { progressWriter = originalWriter }()
-
-	buf := testutil.NewBufferWriter(true)
-	progressWriter = buf
-
-	expectedErr := errors.New("test error")
-	err := WithSpinner("Processing", func(ctx context.Context) error {
-		return expectedErr
-	})
-
-	if err != expectedErr {
-		t.Errorf("Expected error %v, got %v", expectedErr, err)
-	}
-}
-
-func TestWithSpinner_Context(t *testing.T) {
-	originalWriter := progressWriter
-	defer func() { progressWriter = originalWriter }()
-
-	buf := testutil.NewBufferWriter(true)
-	progressWriter = buf
-
-	var receivedCtx context.Context
-	err := WithSpinner("Processing", func(ctx context.Context) error {
-		receivedCtx = ctx
-		return nil
-	})
-
-	if err != nil {
-		t.Errorf("WithSpinner returned unexpected error: %v", err)
-	}
-
-	if receivedCtx == nil {
-		t.Error("Function did not receive a context")
-	}
-}
-
-func TestWithSpinnerResult_Success(t *testing.T) {
-	originalWriter := progressWriter
-	defer func() { progressWriter = originalWriter }()
-
-	buf := testutil.NewBufferWriter(true)
-	progressWriter = buf
-
-	executed := false
-	err := WithSpinnerResult("Installing package", func(ctx context.Context) error {
-		executed = true
-		time.Sleep(50 * time.Millisecond)
-		return nil
-	})
-
-	if err != nil {
-		t.Errorf("WithSpinnerResult returned unexpected error: %v", err)
-	}
-
-	if !executed {
-		t.Error("Function was not executed")
-	}
-
-	output := buf.String()
-	if !strings.Contains(output, IconSuccess) {
-		t.Errorf("Output should contain success icon, got: %q", output)
-	}
-	if !strings.Contains(output, "Completed: Installing package") {
-		t.Errorf("Output should contain success message, got: %q", output)
-	}
-}
-
-func TestWithSpinnerResult_Error(t *testing.T) {
-	originalWriter := progressWriter
-	defer func() { progressWriter = originalWriter }()
-
-	buf := testutil.NewBufferWriter(true)
-	progressWriter = buf
-
-	expectedErr := errors.New("installation failed")
-	err := WithSpinnerResult("Installing package", func(ctx context.Context) error {
-		return expectedErr
-	})
-
-	if err != expectedErr {
-		t.Errorf("Expected error %v, got %v", expectedErr, err)
-	}
-
-	output := buf.String()
-	if !strings.Contains(output, IconError) {
-		t.Errorf("Output should contain error icon, got: %q", output)
-	}
-	if !strings.Contains(output, "Failed: Installing package") {
-		t.Errorf("Output should contain error message, got: %q", output)
-	}
-}
-
-func TestSpinner_RaceConditions(t *testing.T) {
-	originalWriter := progressWriter
-	defer func() { progressWriter = originalWriter }()
-
-	buf := testutil.NewBufferWriter(true)
-	progressWriter = buf
-
-	spinner := NewSpinner("Race test")
-
-	// Try to create race conditions with concurrent operations
-	var wg sync.WaitGroup
-
-	// Multiple goroutines trying to start
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			spinner.Start()
-		}()
-	}
-
-	// Multiple goroutines trying to update text
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func(n int) {
-			defer wg.Done()
-			spinner.UpdateText(fmt.Sprintf("Update %d", n))
-		}(i)
-	}
-
-	// Multiple goroutines trying to stop
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			time.Sleep(time.Duration(i) * time.Millisecond)
-			spinner.Stop()
-		}()
-	}
-
-	wg.Wait()
-
-	// Final stop to ensure cleanup
-	spinner.Stop()
-
-	// If we get here without deadlock or panic, the test passes
 }
 
 func TestSpinnerManager_ConcurrentStartSpinner(t *testing.T) {
