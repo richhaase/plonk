@@ -28,7 +28,7 @@ runs:
 
     - name: Run linter
       if: ${{ inputs.run-linter == 'true' }}
-      run: go run github.com/golangci/golangci-lint/cmd/golangci-lint run --timeout=10m
+      run: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint run --timeout=10m
       shell: bash
 
     - name: Run security checks

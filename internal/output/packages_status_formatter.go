@@ -45,17 +45,13 @@ func (f PackagesStatusFormatter) TableOutput() string {
 		}
 	} else if f.Data.ShowMissing {
 		// Show only missing items
-		for _, item := range result.Missing {
-			missingPackages = append(missingPackages, item)
-		}
+		missingPackages = append(missingPackages, result.Missing...)
 	} else {
 		// Show managed and missing items
 		for _, item := range result.Managed {
 			packagesByManager[item.Manager] = append(packagesByManager[item.Manager], item)
 		}
-		for _, item := range result.Missing {
-			missingPackages = append(missingPackages, item)
-		}
+		missingPackages = append(missingPackages, result.Missing...)
 	}
 
 	// Sort missing packages

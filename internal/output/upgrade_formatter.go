@@ -25,7 +25,7 @@ func NewUpgradeFormatter(data UpgradeOutput) UpgradeFormatter {
 // TableOutput generates human-friendly output for upgrade operations
 func (f UpgradeFormatter) TableOutput() string {
 	data := f.Data
-	output := fmt.Sprintf("Package Upgrade Results\n")
+	output := "Package Upgrade Results\n"
 	output += strings.Repeat("=", 23) + "\n\n"
 
 	if len(data.Results) == 0 {

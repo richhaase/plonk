@@ -59,7 +59,7 @@ func cloneRepository(gitURL, targetDir string) error {
 	// Capture output for better error reporting
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("git clone failed: %s\nOutput: %s", err, string(output))
+		return fmt.Errorf("git clone failed: %w\nOutput: %s", err, string(output))
 	}
 
 	return nil

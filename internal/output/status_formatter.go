@@ -124,6 +124,8 @@ func sortItemsByManager(itemsByManager map[string][]Item) []string {
 }
 
 // TableOutput generates human-friendly table output for status
+//
+//nolint:gocyclo // complexity justified: multi-domain formatter with 4 display modes (packages/dotfiles x managed/missing/unmanaged)
 func (f StatusFormatter) TableOutput() string {
 	s := f.Data
 	var output strings.Builder
@@ -135,9 +137,10 @@ func (f StatusFormatter) TableOutput() string {
 	// Process results by domain
 	var packageResult, dotfileResult *Result
 	for i := range s.StateSummary.Results {
-		if s.StateSummary.Results[i].Domain == "package" {
+		switch s.StateSummary.Results[i].Domain {
+		case "package":
 			packageResult = &s.StateSummary.Results[i]
-		} else if s.StateSummary.Results[i].Domain == "dotfile" {
+		case "dotfile":
 			dotfileResult = &s.StateSummary.Results[i]
 		}
 	}
@@ -156,17 +159,13 @@ func (f StatusFormatter) TableOutput() string {
 			}
 		} else if s.ShowMissing {
 			// Show only missing items
-			for _, item := range packageResult.Missing {
-				missingPackages = append(missingPackages, item)
-			}
+			missingPackages = append(missingPackages, packageResult.Missing...)
 		} else {
 			// Show managed and missing items
 			for _, item := range packageResult.Managed {
 				packagesByManager[item.Manager] = append(packagesByManager[item.Manager], item)
 			}
-			for _, item := range packageResult.Missing {
-				missingPackages = append(missingPackages, item)
-			}
+			missingPackages = append(missingPackages, packageResult.Missing...)
 		}
 
 		// Sort missing packages
@@ -355,73 +354,15 @@ func (f StatusFormatter) TableOutput() string {
 // StructuredData returns the structured data for serialization
 func (f StatusFormatter) StructuredData() any {
 	s := f.Data
-	// Filter items based on flags
-	var items []ManagedItem
-
-	// Process each result domain
-	for _, result := range s.StateSummary.Results {
-		// Add managed items unless we're only showing missing or untracked
-		if !s.ShowMissing && !s.ShowUnmanaged {
-			for _, item := range result.Managed {
-				managedItem := ManagedItem{
-					Name:     item.Name,
-					Domain:   result.Domain,
-					State:    string(item.State),
-					Manager:  item.Manager,
-					Path:     item.Path,
-					Metadata: sanitizeMetadata(item.Metadata),
-				}
-				// Add target for dotfiles
-				if target, ok := item.Metadata["destination"].(string); ok {
-					managedItem.Target = target
-				}
-				items = append(items, managedItem)
-			}
-		}
-
-		// Add missing items unless we're only showing untracked
-		if !s.ShowUnmanaged {
-			for _, item := range result.Missing {
-				managedItem := ManagedItem{
-					Name:     item.Name,
-					Domain:   result.Domain,
-					State:    string(item.State),
-					Manager:  item.Manager,
-					Path:     item.Path,
-					Metadata: sanitizeMetadata(item.Metadata),
-				}
-				// Add target for dotfiles
-				if target, ok := item.Metadata["destination"].(string); ok {
-					managedItem.Target = target
-				}
-				items = append(items, managedItem)
-			}
-		}
-
-		// Add untracked items if we're showing unmanaged or showing all
-		if s.ShowUnmanaged || (!s.ShowMissing && !s.ShowPackages && !s.ShowDotfiles) {
-			for _, item := range result.Untracked {
-				managedItem := ManagedItem{
-					Name:     item.Name,
-					Domain:   result.Domain,
-					State:    string(item.State),
-					Manager:  item.Manager,
-					Path:     item.Path,
-					Metadata: sanitizeMetadata(item.Metadata),
-				}
-				items = append(items, managedItem)
-			}
-		}
-	}
-
-	// Return summary format for structured output
+	// Filter summary based on display flags to match TableOutput behavior
+	filteredSummary := filterSummaryForOutput(s.StateSummary, s.ShowPackages, s.ShowDotfiles, s.ShowMissing, s.ShowUnmanaged)
 	return StatusOutputSummary{
 		ConfigPath:   s.ConfigPath,
 		LockPath:     s.LockPath,
 		ConfigExists: s.ConfigExists,
 		ConfigValid:  s.ConfigValid,
 		LockExists:   s.LockExists,
-		StateSummary: sanitizeSummary(s.StateSummary),
+		StateSummary: sanitizeSummary(filteredSummary),
 	}
 }
 
@@ -474,4 +415,43 @@ func sanitizeSummary(sum Summary) Summary {
 		cleaned.Results[i] = cr
 	}
 	return cleaned
+}
+
+// filterSummaryForOutput filters the summary based on display flags to match TableOutput behavior
+func filterSummaryForOutput(sum Summary, showPackages, showDotfiles, showMissing, showUnmanaged bool) Summary {
+	filtered := Summary{
+		Results: make([]Result, 0, len(sum.Results)),
+	}
+
+	for _, r := range sum.Results {
+		// Apply domain filtering (packages vs dotfiles)
+		if r.Domain == "package" && !showPackages {
+			continue
+		}
+		if r.Domain == "dotfile" && !showDotfiles {
+			continue
+		}
+
+		fr := Result{Domain: r.Domain}
+
+		if showUnmanaged {
+			// Show only untracked items
+			fr.Untracked = r.Untracked
+			filtered.TotalUntracked += len(r.Untracked)
+		} else if showMissing {
+			// Show only missing items
+			fr.Missing = r.Missing
+			filtered.TotalMissing += len(r.Missing)
+		} else {
+			// Show managed and missing items (default)
+			fr.Managed = r.Managed
+			fr.Missing = r.Missing
+			filtered.TotalManaged += len(r.Managed)
+			filtered.TotalMissing += len(r.Missing)
+		}
+
+		filtered.Results = append(filtered.Results, fr)
+	}
+
+	return filtered
 }

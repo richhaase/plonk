@@ -44,8 +44,8 @@ func init() {
 	rootCmd.PersistentFlags().StringP("output", "o", "table", "Output format (table|json|yaml)")
 	rootCmd.Flags().BoolP("version", "v", false, "Show version information")
 
-	// Add output format completion
-	rootCmd.RegisterFlagCompletionFunc("output", completeOutputFormats)
+	// Add output format completion (error can be safely ignored for static registration)
+	_ = rootCmd.RegisterFlagCompletionFunc("output", completeOutputFormats)
 }
 
 // ExecuteWithExitCode runs the root command and returns appropriate exit code
