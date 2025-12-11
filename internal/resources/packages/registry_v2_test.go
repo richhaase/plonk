@@ -106,11 +106,12 @@ func TestRegistry_EnableV2_TogglesGetManager(t *testing.T) {
 
 	registry.v2Managers["test"] = config.ManagerConfig{Binary: "test"}
 
-	registry.EnableV2(false)
+	// v2 disabled - should not return a manager
 	_, err := registry.GetManager("test")
 	assert.Error(t, err, "v2 disabled should not return a manager")
 
-	registry.EnableV2(true)
+	// Enable v2 by setting field directly
+	registry.enableV2 = true
 	mgr, _ := registry.GetManager("test")
 	assert.IsType(t, &GenericManager{}, mgr, "v2 enabled should use config")
 }

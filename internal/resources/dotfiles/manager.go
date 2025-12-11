@@ -28,27 +28,6 @@ type Manager struct {
 	fileOperations   *FileOperations
 }
 
-// NewManager creates a new dotfile manager with all components
-func NewManager(homeDir, configDir string) *Manager {
-	pathResolver := NewPathResolver(homeDir, configDir)
-	pathValidator := NewPathValidator(homeDir, configDir)
-	directoryScanner := NewDirectoryScanner(homeDir, configDir, pathValidator, pathResolver)
-	fileComparator := NewFileComparator()
-	configHandler := NewConfigHandler(homeDir, configDir, pathResolver, directoryScanner, fileComparator)
-	fileOperations := NewFileOperations(pathResolver)
-
-	return &Manager{
-		homeDir:          homeDir,
-		configDir:        configDir,
-		pathResolver:     pathResolver,
-		pathValidator:    pathValidator,
-		directoryScanner: directoryScanner,
-		configHandler:    configHandler,
-		fileComparator:   fileComparator,
-		fileOperations:   fileOperations,
-	}
-}
-
 // NewManagerWithConfig creates a new dotfile manager with injected config
 func NewManagerWithConfig(homeDir, configDir string, cfg *config.Config) *Manager {
 	pathResolver := NewPathResolver(homeDir, configDir)

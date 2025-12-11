@@ -12,7 +12,6 @@ import (
 	"runtime"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
@@ -40,14 +39,6 @@ type HealthCheck struct {
 type HealthReport struct {
 	Overall HealthStatus  `json:"overall" yaml:"overall"`
 	Checks  []HealthCheck `json:"checks" yaml:"checks"`
-}
-
-// RunHealthChecks performs comprehensive system health checks
-func RunHealthChecks() HealthReport {
-	// Backward-compatible default timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	return RunHealthChecksWithContext(ctx)
 }
 
 // RunHealthChecksWithContext performs system health checks using the provided context

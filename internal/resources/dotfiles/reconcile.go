@@ -10,9 +10,8 @@ import (
 	"github.com/richhaase/plonk/internal/resources"
 )
 
-// Reconcile performs dotfile reconciliation (backward compatibility)
+// Reconcile performs dotfile reconciliation (backward compatibility wrapper)
 func Reconcile(ctx context.Context, homeDir, configDir string) (resources.Result, error) {
-	// Backward-compatible wrapper that loads config
 	cfg := config.LoadWithDefaults(configDir)
 	return ReconcileWithConfig(ctx, homeDir, configDir, cfg)
 }

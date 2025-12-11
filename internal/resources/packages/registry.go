@@ -52,13 +52,6 @@ func (r *ManagerRegistry) LoadV2Configs(cfg *config.Config) {
 	}
 }
 
-// EnableV2 enables config-driven managers
-func (r *ManagerRegistry) EnableV2(enabled bool) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.enableV2 = enabled
-}
-
 // GetManager returns a package manager instance by name using the default executor
 func (r *ManagerRegistry) GetManager(name string) (PackageManager, error) {
 	return r.GetManagerWithExecutor(name, nil)

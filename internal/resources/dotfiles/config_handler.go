@@ -24,18 +24,6 @@ type ConfigHandlerImpl struct {
 	cfg              *config.Config
 }
 
-// NewConfigHandler creates a new config handler (loads config internally for backwards compatibility)
-func NewConfigHandler(homeDir, configDir string, resolver PathResolver, scanner DirectoryScanner, comparator FileComparator) *ConfigHandlerImpl {
-	return &ConfigHandlerImpl{
-		homeDir:          homeDir,
-		configDir:        configDir,
-		pathResolver:     resolver,
-		directoryScanner: scanner,
-		fileComparator:   comparator,
-		cfg:              config.LoadWithDefaults(configDir),
-	}
-}
-
 // NewConfigHandlerWithConfig creates a new config handler with injected config
 func NewConfigHandlerWithConfig(homeDir, configDir string, cfg *config.Config, resolver PathResolver, scanner DirectoryScanner, comparator FileComparator) *ConfigHandlerImpl {
 	return &ConfigHandlerImpl{

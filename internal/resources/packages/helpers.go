@@ -4,16 +4,8 @@
 package packages
 
 import (
-	"context"
-
 	"github.com/richhaase/plonk/internal/config"
 )
-
-// ExecuteCommand runs a command with the given arguments and returns the output.
-// This is a simple wrapper around exec.CommandContext for common usage patterns.
-func ExecuteCommand(ctx context.Context, name string, args ...string) ([]byte, error) {
-	return defaultExecutor.Execute(ctx, name, args...)
-}
 
 // managerInstallHint returns the install hint for a manager from config/defaults.
 func managerInstallHint(cfg *config.Config, manager string) string {
