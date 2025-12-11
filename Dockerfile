@@ -86,8 +86,13 @@ RUN brew install node && \
     node --version && \
     npm --version
 
-# Install pnpm
-RUN npm install -g pnpm && pnpm --version
+# Install pnpm and set up global bin directory
+ENV PNPM_HOME="${HOME}/.local/share/pnpm"
+ENV PATH="${PNPM_HOME}:${PATH}"
+RUN npm install -g pnpm && \
+    mkdir -p "${PNPM_HOME}" && \
+    pnpm config set global-bin-dir "${PNPM_HOME}" && \
+    pnpm --version
 
 # Install Rust and Cargo
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
@@ -109,8 +114,10 @@ RUN python3 -m pip install --user --break-system-packages pipx && \
     python3 -m pipx ensurepath && \
     ~/.local/bin/pipx --version
 
-# Install Miniconda for conda support
-RUN curl -fsSL https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o miniconda.sh && \
+# Install Miniconda for conda support (architecture-aware)
+ARG TARGETARCH
+RUN ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "aarch64" || echo "x86_64") && \
+    curl -fsSL "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-${ARCH}.sh" -o miniconda.sh && \
     bash miniconda.sh -b -p "${HOME}/miniconda3" && \
     rm miniconda.sh && \
     ~/miniconda3/bin/conda init bash && \
@@ -118,6 +125,10 @@ RUN curl -fsSL https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_6
 
 # Add conda to PATH
 ENV PATH="${HOME}/miniconda3/bin:${PATH}"
+
+# Accept conda Terms of Service for default channels (required for non-interactive use)
+RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
 
 # Install BATS support libraries via Homebrew
 RUN brew install bats-core && \
