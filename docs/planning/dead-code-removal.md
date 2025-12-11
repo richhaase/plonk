@@ -105,19 +105,21 @@ just test-bats
 
 ---
 
-### Step 5: output/progress.go - ProgressUpdate
+### Step 5: output/progress.go - ProgressUpdate ✅
 
 **Target:** `internal/output/progress.go`
 
-**Remove:**
-- [ ] `ProgressUpdate` (lines 8-15)
+**Removed:**
+- [x] `ProgressUpdate` (lines 8-15)
+- [x] Removed tests for `ProgressUpdate` from `progress_test.go`
+- [x] Removed `ProgressUpdate` calls from `utils_more_test.go`
 
-**Note:** Check if `StageUpdate` is also dead after this removal. If so, consider removing entire file.
+**Kept:** `StageUpdate` - used by clone/setup.go
 
 **Validation:**
-- [ ] `go test ./...`
-- [ ] `golangci-lint run`
-- [ ] `go build ./...`
+- [x] `go test ./...` - PASS
+- [x] `golangci-lint run` - PASS (0 issues)
+- [x] `go build ./...` - PASS
 - [ ] User: `just test-bats`
 
 ---
@@ -208,8 +210,8 @@ After all steps complete:
 | 1 | helpers.go deprecated/duplicate | ✅ Complete | 2025-12-11 |
 | 2 | status.go sort functions | ✅ Complete | 2025-12-11 |
 | 3 | colors.go unused helpers | ✅ Complete | 2025-12-11 |
-| 4 | dotfile_list_formatter.go | ✅ Done (awaiting BATS) | 2025-12-11 |
-| 5 | progress.go ProgressUpdate | Pending | |
+| 4 | dotfile_list_formatter.go | ✅ Complete | 2025-12-11 |
+| 5 | progress.go ProgressUpdate | ✅ Done (awaiting BATS) | 2025-12-11 |
 | 6 | spinner.go unused helpers | Pending | |
 | 7 | utils.go unused utilities | Pending | |
 | 8 | types.go Result methods | Pending | |

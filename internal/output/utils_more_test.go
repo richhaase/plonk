@@ -33,6 +33,4 @@ func TestPrintAndProgressHelpers(t *testing.T) {
 	Printf("%s", "hello")
 	Println("world")
 	StageUpdate("Cloning...")
-	ProgressUpdate(1, 1, "Installing", "jq")
-	ProgressUpdate(1, 2, "Installing", "jq")
 }
