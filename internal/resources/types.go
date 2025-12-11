@@ -69,24 +69,6 @@ type Summary struct {
 	Results        []Result `json:"results" yaml:"results"`
 }
 
-// Count returns the total number of items in this result
-func (r *Result) Count() int {
-	return len(r.Managed) + len(r.Missing) + len(r.Untracked)
-}
-
-// IsEmpty returns true if this result contains no items
-func (r *Result) IsEmpty() bool {
-	return r.Count() == 0
-}
-
-// AddToSummary adds this result's counts to the provided summary
-func (r *Result) AddToSummary(summary *Summary) {
-	summary.TotalManaged += len(r.Managed)
-	summary.TotalMissing += len(r.Missing)
-	summary.TotalUntracked += len(r.Untracked)
-	summary.Results = append(summary.Results, *r)
-}
-
 // OperationResult represents the result of a single operation (package install, dotfile add, etc.)
 type OperationResult struct {
 	Name           string                 `json:"name"`                      // Package name or file path
@@ -171,24 +153,6 @@ func ConvertResultsToSummary(results map[string]Result) Summary {
 	}
 
 	return summary
-}
-
-// CreateDomainSummary creates domain summaries with counts only
-func CreateDomainSummary(results []Result) []DomainSummary {
-	var domains []DomainSummary
-	for _, result := range results {
-		if result.IsEmpty() {
-			continue
-		}
-		domains = append(domains, DomainSummary{
-			Domain:         result.Domain,
-			Manager:        result.Manager,
-			ManagedCount:   len(result.Managed),
-			MissingCount:   len(result.Missing),
-			UntrackedCount: len(result.Untracked),
-		})
-	}
-	return domains
 }
 
 // Operation validation utilities for CLI commands
