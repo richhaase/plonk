@@ -270,7 +270,7 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 	}
 
 	// Execute upgrades with injected registry
-	registry := packages.NewManagerRegistry()
+	registry := packages.GetRegistry()
 	results, err := Upgrade(cmd.Context(), spec, cfg, lockService, registry)
 	if err != nil {
 		return err

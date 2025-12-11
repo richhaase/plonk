@@ -30,7 +30,7 @@ func InstallPackages(ctx context.Context, configDir string, packages []string, o
 	// Thin wrapper: resolve defaults and delegate to InstallPackagesWith
 	cfg := config.LoadWithDefaults(configDir)
 	lockService := lock.NewYAMLLockService(configDir)
-	registry := NewManagerRegistry()
+	registry := GetRegistry()
 	return InstallPackagesWith(ctx, cfg, lockService, registry, packages, opts)
 }
 
@@ -67,7 +67,7 @@ func UninstallPackages(ctx context.Context, configDir string, packages []string,
 	// Thin wrapper: resolve defaults and delegate to UninstallPackagesWith
 	cfg := config.LoadWithDefaults(configDir)
 	lockService := lock.NewYAMLLockService(configDir)
-	registry := NewManagerRegistry()
+	registry := GetRegistry()
 	return UninstallPackagesWith(ctx, cfg, lockService, registry, packages, opts)
 }
 
@@ -265,7 +265,7 @@ func uninstallSinglePackage(ctx context.Context, lockService lock.LockService, p
 // getPackageManager returns the appropriate package manager instance
 func getPackageManager(registry *ManagerRegistry, manager string) (PackageManager, error) {
 	if registry == nil {
-		registry = NewManagerRegistry()
+		registry = GetRegistry()
 	}
 	return registry.GetManager(manager)
 }

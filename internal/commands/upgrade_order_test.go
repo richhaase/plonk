@@ -47,7 +47,7 @@ func TestExecuteUpgrade_DeterministicOrdering(t *testing.T) {
 	}}
 	packages.SetDefaultExecutor(mock)
 	t.Cleanup(func() { packages.SetDefaultExecutor(&packages.RealCommandExecutor{}) })
-	reg := packages.NewManagerRegistry()
+	reg := packages.GetRegistry()
 
 	res, err := executeUpgrade(context.Background(), spec, cfg, lockSvc, reg)
 	if err != nil {

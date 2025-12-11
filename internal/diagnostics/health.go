@@ -349,7 +349,7 @@ func checkLockFileValidity() HealthCheck {
 // checkPackageManagerHealth runs health checks for all package managers
 func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
 	cfg := config.LoadWithDefaults(config.GetConfigDir())
-	registry := packages.NewManagerRegistry()
+	registry := packages.GetRegistry()
 	if cfg != nil {
 		registry.LoadV2Configs(cfg)
 	}

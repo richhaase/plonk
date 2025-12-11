@@ -276,7 +276,7 @@ func installDetectedManagers(ctx context.Context, cfgData *config.Config, manage
 		return nil, nil
 	}
 
-	registry := packages.NewManagerRegistry()
+	registry := packages.GetRegistry()
 	if cfgData == nil {
 		defaultCopy := *config.GetDefaults()
 		cfgData = &defaultCopy

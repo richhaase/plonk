@@ -19,7 +19,7 @@ func TestInstallPackagesWith_NpmScopedMetadata(t *testing.T) {
 	}}
 	SetDefaultExecutor(mock)
 	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
-	reg := NewManagerRegistry()
+	reg := GetRegistry()
 	_, err := InstallPackagesWith(context.Background(), cfg, lockSvc, reg, []string{"@scope/tool"}, InstallOptions{})
 	if err != nil {
 		t.Fatalf("unexpected: %v", err)
@@ -63,7 +63,7 @@ func TestInstallPackagesWith_CustomMetadataFromConfig(t *testing.T) {
 	}}
 	SetDefaultExecutor(mock)
 	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
-	reg := NewManagerRegistry()
+	reg := GetRegistry()
 
 	_, err := InstallPackagesWith(context.Background(), cfg, lockSvc, reg, []string{"my-tool"}, InstallOptions{Manager: "custom"})
 	if err != nil {

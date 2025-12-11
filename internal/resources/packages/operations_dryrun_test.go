@@ -13,7 +13,7 @@ func TestInstall_Uninstall_DryRun_Statuses(t *testing.T) {
 	ls := lock.NewYAMLLockService(t.TempDir())
 
 	// No manager needed for dry-run
-	reg := NewManagerRegistry()
+	reg := GetRegistry()
 
 	res, err := InstallPackagesWith(context.Background(), cfg, ls, reg, []string{"jq"}, InstallOptions{DryRun: true})
 	if err != nil {

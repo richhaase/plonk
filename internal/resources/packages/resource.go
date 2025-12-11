@@ -98,7 +98,7 @@ type MultiPackageResource struct {
 func NewMultiPackageResource(cfg *config.Config) *MultiPackageResource {
 	m := &MultiPackageResource{
 		resources: make(map[string]*PackageResource),
-		registry:  NewManagerRegistry(),
+		registry:  GetRegistry(),
 	}
 	if cfg != nil {
 		m.SetConfig(cfg)

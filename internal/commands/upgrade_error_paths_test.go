@@ -23,7 +23,7 @@ func TestUpgrade_ManagerErrorCountsFailed(t *testing.T) {
 	t.Cleanup(func() { packages.SetDefaultExecutor(&packages.RealCommandExecutor{}) })
 
 	spec := upgradeSpec{ManagerTargets: map[string][]string{"brew": {"a"}}}
-	res2, err := Upgrade(context.Background(), spec, &config.Config{}, svc, packages.NewManagerRegistry())
+	res2, err := Upgrade(context.Background(), spec, &config.Config{}, svc, packages.GetRegistry())
 	if err != nil {
 		t.Fatalf("unexpected error from Upgrade: %v", err)
 	}

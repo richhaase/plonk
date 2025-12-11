@@ -27,8 +27,8 @@ var defaultRegistry = &ManagerRegistry{
 	enableV2:   true, // Feature flag for v2
 }
 
-// NewManagerRegistry creates a new manager registry that uses the global registrations
-func NewManagerRegistry() *ManagerRegistry {
+// GetRegistry returns the shared manager registry instance
+func GetRegistry() *ManagerRegistry {
 	return defaultRegistry
 }
 

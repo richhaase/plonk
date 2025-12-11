@@ -311,7 +311,7 @@ func TestPackageSpec_String(t *testing.T) {
 }
 
 func TestValidateSpecs_AllowsCustomManagersAfterRegistryLoad(t *testing.T) {
-	registry := NewManagerRegistry()
+	registry := GetRegistry()
 	cfg := &config.Config{
 		Managers: map[string]config.ManagerConfig{
 			"custom": {

@@ -25,7 +25,7 @@ func TestInstallPackagesWith_AlreadyManaged_Skips(t *testing.T) {
 	lockSvc := NewMockLockService()
 	lockSvc.SetPackageExists("brew", "jq")
 
-	reg := NewManagerRegistry()
+	reg := GetRegistry()
 
 	ctx := context.Background()
 	results, err := InstallPackagesWith(ctx, cfg, lockSvc, reg, []string{"jq"}, InstallOptions{})
@@ -56,7 +56,7 @@ func TestInstallPackagesWith_LockAddFailure_ReportsFailed(t *testing.T) {
 	}}
 	SetDefaultExecutor(mock)
 	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
-	reg := NewManagerRegistry()
+	reg := GetRegistry()
 
 	ctx := context.Background()
 	results, err := InstallPackagesWith(ctx, cfg, lockSvc, reg, []string{"jq"}, InstallOptions{})
@@ -87,7 +87,7 @@ func TestUninstallPackagesWith_PassThrough_WhenNotManaged(t *testing.T) {
 	}}
 	SetDefaultExecutor(mock)
 	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
-	reg := NewManagerRegistry()
+	reg := GetRegistry()
 
 	ctx := context.Background()
 	results, err := UninstallPackagesWith(ctx, cfg, lockSvc, reg, []string{"jq"}, UninstallOptions{Manager: "brew"})
