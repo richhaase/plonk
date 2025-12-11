@@ -549,24 +549,3 @@ func TargetToSource(target string) string {
 	}
 	return target
 }
-
-// computeFileHash computes the SHA256 hash of a file (for backward compatibility)
-func (m *Manager) computeFileHash(path string) (string, error) {
-	return m.fileComparator.ComputeFileHash(path)
-}
-
-// createCompareFunc creates a comparison function for a dotfile (for backward compatibility)
-func (m *Manager) createCompareFunc(source, destination string) func() (bool, error) {
-	return func() (bool, error) {
-		sourcePath := m.pathResolver.GetSourcePath(source)
-		destPath, err := m.pathResolver.GetDestinationPath(destination)
-		if err != nil {
-			return false, err
-		}
-		// If destination doesn't exist, they're not the same
-		if !m.FileExists(destPath) {
-			return false, nil
-		}
-		return m.fileComparator.CompareFiles(sourcePath, destPath)
-	}
-}
