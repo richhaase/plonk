@@ -141,22 +141,6 @@ func (g *GenericManager) Uninstall(ctx context.Context, name string) error {
 	return err
 }
 
-// IsInstalled checks if a package is installed
-func (g *GenericManager) IsInstalled(ctx context.Context, name string) (bool, error) {
-	installed, err := g.ListInstalled(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	for _, pkg := range installed {
-		if pkg == name {
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
-
 // parseOutput parses command output based on strategy
 func (g *GenericManager) parseOutput(data []byte, cfg config.ListConfig) ([]string, error) {
 	trimmed := strings.TrimSpace(string(data))
