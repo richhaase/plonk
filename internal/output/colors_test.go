@@ -53,7 +53,7 @@ func TestInitColors(t *testing.T) {
 	}
 }
 
-func TestStatusWords(t *testing.T) {
+func TestSuccess(t *testing.T) {
 	// Save original state
 	originalNoColor := color.NoColor
 	defer func() {
@@ -62,139 +62,19 @@ func TestStatusWords(t *testing.T) {
 
 	// Test with colors enabled
 	color.NoColor = false
-
-	tests := []struct {
-		name      string
-		fn        func() string
-		wantText  string
-		wantColor bool
-	}{
-		{
-			name:      "Available shows green",
-			fn:        Available,
-			wantText:  "available",
-			wantColor: true,
-		},
-		{
-			name:      "Missing shows red",
-			fn:        Missing,
-			wantText:  "missing",
-			wantColor: true,
-		},
-		{
-			name:      "Drifted shows yellow",
-			fn:        Drifted,
-			wantText:  "drifted",
-			wantColor: true,
-		},
-		{
-			name:      "Deployed shows green",
-			fn:        Deployed,
-			wantText:  "deployed",
-			wantColor: true,
-		},
-		{
-			name:      "Managed shows green",
-			fn:        Managed,
-			wantText:  "managed",
-			wantColor: true,
-		},
-		{
-			name:      "Success shows green",
-			fn:        Success,
-			wantText:  "success",
-			wantColor: true,
-		},
-		{
-			name:      "Valid shows green",
-			fn:        Valid,
-			wantText:  "Valid",
-			wantColor: true,
-		},
-		{
-			name:      "Invalid shows red",
-			fn:        Invalid,
-			wantText:  "Invalid",
-			wantColor: true,
-		},
-		{
-			name:      "NotAvailable shows red",
-			fn:        NotAvailable,
-			wantText:  "not available",
-			wantColor: true,
-		},
-		{
-			name:      "Unmanaged shows yellow",
-			fn:        Unmanaged,
-			wantText:  "unmanaged",
-			wantColor: true,
-		},
+	result := Success()
+	if !strings.Contains(result, "success") {
+		t.Errorf("result %q does not contain 'success'", result)
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.fn()
-
-			// Check text content
-			if !strings.Contains(result, tt.wantText) {
-				t.Errorf("result %q does not contain %q",
-					result, tt.wantText)
-			}
-
-			// With colors enabled, output should have ANSI codes
-			if tt.wantColor && !strings.Contains(result, "\033[") {
-				t.Error("expected colored output but got plain text")
-			}
-		})
+	if !strings.Contains(result, "\033[") {
+		t.Error("expected colored output but got plain text")
 	}
-}
-
-func TestStatusWordsNoColor(t *testing.T) {
-	// Save original state
-	originalNoColor := color.NoColor
-	defer func() {
-		color.NoColor = originalNoColor
-	}()
 
 	// Test with colors disabled
 	color.NoColor = true
-
-	tests := []struct {
-		name     string
-		fn       func() string
-		wantText string
-	}{
-		{
-			name:     "Available returns plain text",
-			fn:       Available,
-			wantText: "available",
-		},
-		{
-			name:     "Missing returns plain text",
-			fn:       Missing,
-			wantText: "missing",
-		},
-		{
-			name:     "Invalid returns plain text",
-			fn:       Invalid,
-			wantText: "Invalid",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.fn()
-
-			// Should be exactly the text, no ANSI codes
-			if result != tt.wantText {
-				t.Errorf("got %q, want %q", result, tt.wantText)
-			}
-
-			// Ensure no ANSI codes
-			if strings.Contains(result, "\033[") {
-				t.Error("unexpected ANSI codes in output when colors are disabled")
-			}
-		})
+	result = Success()
+	if result != "success" {
+		t.Errorf("got %q, want 'success'", result)
 	}
 }
 

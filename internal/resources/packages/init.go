@@ -10,7 +10,7 @@ import (
 func init() {
 	// Load default manager configs into the registry so that package operations
 	// have a sensible baseline even before any user configuration is loaded.
-	registry := NewManagerRegistry()
+	registry := GetRegistry()
 	cfg := &config.Config{
 		Managers: config.GetDefaultManagers(),
 	}

@@ -17,7 +17,7 @@ func TestInstallPackages_ContextTimeout(t *testing.T) {
 	// Use a temporary registry with only the slow manager
 	// Define custom manager in config and let it time out via context
 	cfg := &config.Config{Managers: map[string]config.ManagerConfig{"slow": {Binary: "slow"}}}
-	reg := NewManagerRegistry()
+	reg := GetRegistry()
 	reg.LoadV2Configs(cfg)
 
 	// Very short timeout to trigger cancellation
@@ -43,7 +43,7 @@ func TestInstallPackages_ContextTimeout(t *testing.T) {
 func TestUninstallPackages_ContextTimeout(t *testing.T) {
 	// Use a temporary registry with only the slow manager
 	cfg := &config.Config{Managers: map[string]config.ManagerConfig{"slow": {Binary: "slow"}}}
-	reg := NewManagerRegistry()
+	reg := GetRegistry()
 	reg.LoadV2Configs(cfg)
 
 	parent, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)

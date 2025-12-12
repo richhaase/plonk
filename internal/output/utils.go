@@ -176,34 +176,3 @@ type StateSummary struct {
 	Missing   int `json:"missing" yaml:"missing"`
 	Untracked int `json:"untracked,omitempty" yaml:"untracked,omitempty"`
 }
-
-// TruncateString truncates a string to a specified length with ellipsis
-func TruncateString(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	if maxLen < 3 {
-		return s[:maxLen]
-	}
-	return s[:maxLen-3] + "..."
-}
-
-// Error formatting utilities
-
-// FormatValidationError creates a standardized validation error message
-func FormatValidationError(field, value, expected string) string {
-	return fmt.Sprintf("invalid %s %q: %s", field, value, expected)
-}
-
-// FormatNotFoundError creates a standardized "not found" error message
-func FormatNotFoundError(itemType, name string, suggestions []string) string {
-	msg := fmt.Sprintf("%s %q not found", itemType, name)
-	if len(suggestions) > 0 {
-		if len(suggestions) == 1 {
-			msg += fmt.Sprintf("\nDid you mean: %s", suggestions[0])
-		} else {
-			msg += fmt.Sprintf("\nValid options: %s", strings.Join(suggestions, ", "))
-		}
-	}
-	return msg
-}

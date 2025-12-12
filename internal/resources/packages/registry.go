@@ -27,8 +27,8 @@ var defaultRegistry = &ManagerRegistry{
 	enableV2:   true, // Feature flag for v2
 }
 
-// NewManagerRegistry creates a new manager registry that uses the global registrations
-func NewManagerRegistry() *ManagerRegistry {
+// GetRegistry returns the shared manager registry instance
+func GetRegistry() *ManagerRegistry {
 	return defaultRegistry
 }
 
@@ -50,13 +50,6 @@ func (r *ManagerRegistry) LoadV2Configs(cfg *config.Config) {
 			r.v2Managers[name] = managerCfg
 		}
 	}
-}
-
-// EnableV2 enables config-driven managers
-func (r *ManagerRegistry) EnableV2(enabled bool) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.enableV2 = enabled
 }
 
 // GetManager returns a package manager instance by name using the default executor

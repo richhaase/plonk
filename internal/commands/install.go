@@ -60,7 +60,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	cfg := config.LoadWithDefaults(configDir)
 
 	// Check for package manager self-installation requests before normal processing
-	registry := packages.NewManagerRegistry()
+	registry := packages.GetRegistry()
 	registry.LoadV2Configs(cfg)
 	var managerSelfInstallResults []resources.OperationResult
 	var remainingArgs []string

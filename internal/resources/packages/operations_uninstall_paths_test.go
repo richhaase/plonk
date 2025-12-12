@@ -36,7 +36,7 @@ func TestUninstall_Managed_UninstallErrorButRemovedFromLock(t *testing.T) {
 	}}
 	SetDefaultExecutor(mock)
 	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
-	reg := NewManagerRegistry()
+	reg := GetRegistry()
 	res, err := UninstallPackagesWith(context.Background(), cfg, l, reg, []string{"jq"}, UninstallOptions{Manager: "brew"})
 	if err != nil {
 		t.Fatalf("unexpected: %v", err)
@@ -56,7 +56,7 @@ func TestUninstall_Managed_RemoveFromLockFails(t *testing.T) {
 	}}
 	SetDefaultExecutor(mock)
 	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
-	reg := NewManagerRegistry()
+	reg := GetRegistry()
 	res, err := UninstallPackagesWith(context.Background(), cfg, l, reg, []string{"jq"}, UninstallOptions{Manager: "brew"})
 	if err != nil {
 		t.Fatalf("unexpected: %v", err)
@@ -76,7 +76,7 @@ func TestUninstall_Unmanaged_PassThrough(t *testing.T) {
 	}}
 	SetDefaultExecutor(mock)
 	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
-	reg := NewManagerRegistry()
+	reg := GetRegistry()
 	res, err := UninstallPackagesWith(context.Background(), cfg, l, reg, []string{"jq"}, UninstallOptions{})
 	if err != nil {
 		t.Fatalf("unexpected: %v", err)

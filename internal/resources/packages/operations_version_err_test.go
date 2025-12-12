@@ -21,7 +21,7 @@ func TestInstall_VersionErrorStillAdded(t *testing.T) {
 	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
 
 	ls := lock.NewYAMLLockService(t.TempDir())
-	reg := NewManagerRegistry()
+	reg := GetRegistry()
 	res, err := InstallPackagesWith(context.Background(), cfg, ls, reg, []string{"jq"}, InstallOptions{})
 	if err != nil {
 		t.Fatalf("unexpected: %v", err)

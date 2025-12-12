@@ -52,7 +52,7 @@ func (ps *PackageSpec) ValidateManager() error {
 		return nil // Empty manager is valid (will be resolved later)
 	}
 
-	registry := NewManagerRegistry()
+	registry := GetRegistry()
 	if !registry.HasManager(ps.Manager) {
 		return fmt.Errorf("unknown package manager %q", ps.Manager)
 	}

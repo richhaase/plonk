@@ -55,11 +55,6 @@ func ValidateSpecs(specs []string, mode ValidationMode, defaultManager string) B
 	return result
 }
 
-// ValidateSpec validates a single package specification
-func ValidateSpec(spec string, mode ValidationMode, defaultManager string) (*PackageSpec, error) {
-	return validateSingleSpec(spec, mode, defaultManager)
-}
-
 // validateSingleSpec is the internal validation logic
 func validateSingleSpec(specStr string, mode ValidationMode, defaultManager string) (*PackageSpec, error) {
 	spec, err := ParsePackageSpec(specStr)

@@ -51,7 +51,7 @@ func TestUpgrade_PartialFailureWithinSameManager(t *testing.T) {
 	}}
 	packages.SetDefaultExecutor(mock)
 	t.Cleanup(func() { packages.SetDefaultExecutor(&packages.RealCommandExecutor{}) })
-	reg := packages.NewManagerRegistry()
+	reg := packages.GetRegistry()
 
 	// Execute upgrade
 	results, err := executeUpgrade(context.Background(), spec, &config.Config{}, svc, reg)
@@ -172,7 +172,7 @@ func TestUpgrade_AllPackagesFailInManager(t *testing.T) {
 	}}
 	packages.SetDefaultExecutor(mock)
 	t.Cleanup(func() { packages.SetDefaultExecutor(&packages.RealCommandExecutor{}) })
-	reg := packages.NewManagerRegistry()
+	reg := packages.GetRegistry()
 	results, _ := executeUpgrade(context.Background(), spec, &config.Config{}, svc, reg)
 
 	// executeUpgrade doesn't return error, but sets Failed count
@@ -227,7 +227,7 @@ func TestUpgrade_PerPackageUpgradeCalled(t *testing.T) {
 	}}
 	packages.SetDefaultExecutor(mock)
 	t.Cleanup(func() { packages.SetDefaultExecutor(&packages.RealCommandExecutor{}) })
-	reg := packages.NewManagerRegistry()
+	reg := packages.GetRegistry()
 	_, err := executeUpgrade(context.Background(), spec, &config.Config{}, svc, reg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

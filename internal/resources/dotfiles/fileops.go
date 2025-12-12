@@ -25,17 +25,6 @@ func NewFileOperations(pathResolver PathResolver) *FileOperations {
 	}
 }
 
-// NewFileOperationsWithWriter allows injecting a custom FileWriter (for testing)
-func NewFileOperationsWithWriter(pathResolver PathResolver, writer FileWriter) *FileOperations {
-	if writer == nil {
-		writer = NewAtomicFileWriter()
-	}
-	return &FileOperations{
-		pathResolver: pathResolver,
-		writer:       writer,
-	}
-}
-
 // CopyOptions configures file copy operations
 type CopyOptions struct {
 	CreateBackup      bool

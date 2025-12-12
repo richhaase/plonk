@@ -25,7 +25,7 @@ func TestUpgrade_UpdatesLockFileVersion(t *testing.T) {
 
 	spec := upgradeSpec{ManagerTargets: map[string][]string{"brew": {"jq"}}}
 	cfg := &config.Config{}
-	reg := packages.NewManagerRegistry()
+	reg := packages.GetRegistry()
 	res, err := Upgrade(context.Background(), spec, cfg, svc, reg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

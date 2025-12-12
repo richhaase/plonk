@@ -12,18 +12,20 @@ import (
 	"github.com/richhaase/plonk/internal/resources/packages"
 )
 
-// ReconcileAllWithConfig reconciles all domains using injected config
-func ReconcileAllWithConfig(ctx context.Context, homeDir, configDir string, cfg *config.Config) (map[string]resources.Result, error) {
+// ReconcileAll reconciles all domains.
+// This is a test helper - production code should use ReconcileAllWithConfig.
+func ReconcileAll(ctx context.Context, homeDir, configDir string) (map[string]resources.Result, error) {
+	cfg := config.LoadWithDefaults(configDir)
 	results := make(map[string]resources.Result)
 
-	// Dotfiles with injected config
-	dotfileResult, err := dotfiles.ReconcileWithConfig(ctx, homeDir, configDir, cfg)
+	// Reconcile dotfiles using domain package
+	dotfileResult, err := dotfiles.Reconcile(ctx, homeDir, configDir)
 	if err != nil {
 		return nil, err
 	}
 	results["dotfile"] = dotfileResult
 
-	// Packages unchanged (no config needed for Reconcile)
+	// Reconcile packages using domain package
 	packageResult, err := packages.ReconcileWithConfig(ctx, configDir, cfg)
 	if err != nil {
 		return nil, err

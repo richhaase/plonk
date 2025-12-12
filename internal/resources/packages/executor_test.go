@@ -8,6 +8,11 @@ import (
 	"testing"
 )
 
+// executeCommand is a test helper that runs a command using the default executor.
+func executeCommand(ctx context.Context, name string, args ...string) ([]byte, error) {
+	return defaultExecutor.Execute(ctx, name, args...)
+}
+
 func TestMockExecutor(t *testing.T) {
 	// Save and restore original executor
 	originalExecutor := defaultExecutor
@@ -27,7 +32,7 @@ func TestMockExecutor(t *testing.T) {
 	SetDefaultExecutor(mock)
 
 	// Test using helper
-	output, err := ExecuteCommand(context.Background(), "echo", "hello")
+	output, err := executeCommand(context.Background(), "echo", "hello")
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}

@@ -10,6 +10,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// validateSpec is a test helper for validating a single package specification.
+func validateSpec(spec string, mode ValidationMode, defaultManager string) (*PackageSpec, error) {
+	return validateSingleSpec(spec, mode, defaultManager)
+}
+
 func TestValidateSpec(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -121,7 +126,7 @@ func TestValidateSpec(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			spec, err := ValidateSpec(tt.spec, tt.mode, tt.defaultManager)
+			spec, err := validateSpec(tt.spec, tt.mode, tt.defaultManager)
 
 			if tt.wantErr {
 				assert.Error(t, err)

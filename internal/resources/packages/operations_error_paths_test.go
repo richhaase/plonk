@@ -11,7 +11,7 @@ import (
 func TestInstallPackagesWith_UnsupportedManager(t *testing.T) {
 	cfg := &config.Config{DefaultManager: "brew"}
 	lockSvc := lock.NewYAMLLockService(t.TempDir())
-	reg := NewManagerRegistry() // no registrations
+	reg := GetRegistry() // no registrations
 
 	results, err := InstallPackagesWith(context.Background(), cfg, lockSvc, reg, []string{"tool"}, InstallOptions{Manager: "fake"})
 	if err != nil {
@@ -37,7 +37,7 @@ func TestInstallPackagesWith_ManagerUnavailable(t *testing.T) {
 	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
 
 	lockSvc := lock.NewYAMLLockService(t.TempDir())
-	reg := NewManagerRegistry()
+	reg := GetRegistry()
 
 	results, err := InstallPackagesWith(context.Background(), cfg, lockSvc, reg, []string{"x"}, InstallOptions{Manager: "off"})
 	if err != nil {

@@ -14,9 +14,6 @@ type PackageManager interface {
 	// ListInstalled lists all packages installed by this manager (for status display)
 	ListInstalled(ctx context.Context) ([]string, error)
 
-	// IsInstalled checks if a specific package is installed
-	IsInstalled(ctx context.Context, name string) (bool, error)
-
 	// Install installs a package (idempotent)
 	Install(ctx context.Context, name string) error
 
