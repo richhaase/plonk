@@ -13,6 +13,7 @@ import (
 var (
 	cloneYes     bool
 	cloneNoApply bool
+	cloneDryRun  bool
 )
 
 var cloneCmd = &cobra.Command{
@@ -48,6 +49,7 @@ Examples:
 func init() {
 	cloneCmd.Flags().BoolVar(&cloneYes, "yes", false, "Non-interactive mode - answer yes to all prompts")
 	cloneCmd.Flags().BoolVar(&cloneNoApply, "no-apply", false, "Skip running 'plonk apply' after setup")
+	cloneCmd.Flags().BoolVarP(&cloneDryRun, "dry-run", "n", false, "Show what would be cloned without making changes")
 
 	rootCmd.AddCommand(cloneCmd)
 }
@@ -60,6 +62,7 @@ func runClone(cmd *cobra.Command, args []string) error {
 		Interactive: !cloneYes,
 		Verbose:     false, // Could add --verbose flag later
 		NoApply:     cloneNoApply,
+		DryRun:      cloneDryRun,
 		// No SkipManagers for clone - it auto-detects
 	}
 

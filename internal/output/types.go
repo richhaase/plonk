@@ -211,6 +211,7 @@ func (r ApplyResult) StructuredData() any {
 // UpgradeOutput represents the output format for upgrade operations
 type UpgradeOutput struct {
 	Command    string          `json:"command" yaml:"command"`
+	DryRun     bool            `json:"dry_run" yaml:"dry_run"`
 	TotalItems int             `json:"total_items" yaml:"total_items"`
 	Results    []UpgradeResult `json:"results" yaml:"results"`
 	Summary    UpgradeSummary  `json:"summary" yaml:"summary"`

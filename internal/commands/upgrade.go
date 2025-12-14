@@ -32,6 +32,7 @@ Examples are generated at runtime based on the configured package managers.`,
 
 func init() {
 	rootCmd.AddCommand(upgradeCmd)
+	upgradeCmd.Flags().BoolP("dry-run", "n", false, "Show what would be upgraded without making changes")
 
 	// Dynamic examples based on current manager configuration.
 	upgradeCmd.Example = buildUpgradeExamples()
@@ -234,6 +235,9 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Get dry-run flag
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+
 	// Get directories and config
 	configDir := config.GetDefaultConfigDirectory()
 	cfg := config.LoadWithDefaults(configDir)
@@ -271,13 +275,13 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 
 	// Execute upgrades with injected registry
 	registry := packages.GetRegistry()
-	results, err := Upgrade(cmd.Context(), spec, cfg, lockService, registry)
+	results, err := Upgrade(cmd.Context(), spec, cfg, lockService, registry, dryRun)
 	if err != nil {
 		return err
 	}
 
 	// Create output data
-	outputData := upgradeResultsToOutput(results)
+	outputData := upgradeResultsToOutput(results, dryRun)
 
 	// Create formatter and render
 	formatter := output.NewUpgradeFormatter(outputData)
@@ -300,8 +304,8 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 // Upgrade executes the upgrade operation using the provided dependencies.
 // It is a thin wrapper around the internal execution function to enable
 // dependency injection in tests and other callers.
-func Upgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, lockService lock.LockService, registry *packages.ManagerRegistry) (upgradeResults, error) {
-	return executeUpgrade(ctx, spec, cfg, lockService, registry)
+func Upgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, lockService lock.LockService, registry *packages.ManagerRegistry, dryRun bool) (upgradeResults, error) {
+	return executeUpgrade(ctx, spec, cfg, lockService, registry, dryRun)
 }
 
 // packageUpgradeResult represents the result of upgrading a single package
@@ -329,7 +333,7 @@ type upgradeSummary struct {
 }
 
 // executeUpgrade performs the actual upgrade operations
-func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, lockService lock.LockService, registry *packages.ManagerRegistry) (upgradeResults, error) {
+func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, lockService lock.LockService, registry *packages.ManagerRegistry, dryRun bool) (upgradeResults, error) {
 	// Load manager configs from plonk.yaml before any operations
 	if registry != nil {
 		registry.LoadV2Configs(cfg)
@@ -430,27 +434,34 @@ func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, l
 			// Version tracking is no longer supported
 			result.FromVersion = ""
 
-			// Upgrade this package
-			upgradeErr := upgrader.Upgrade(ctx, []string{pkg})
-
-			if upgradeErr != nil {
-				result.Status = "failed"
-				result.Error = upgradeErr.Error()
-				results.Summary.Failed++
-				spinner.Error(fmt.Sprintf("Failed to upgrade %s: %s", pkg, upgradeErr.Error()))
-			} else {
-				// Note: InstalledVersion() method has been removed
-				// Version tracking is no longer supported
-				result.ToVersion = ""
-				result.Status = "upgraded"
+			if dryRun {
+				// Dry run: just report what would happen
+				result.Status = "would-upgrade"
 				results.Summary.Upgraded++
+				spinner.Success(fmt.Sprintf("would upgrade %s", pkg))
+			} else {
+				// Upgrade this package
+				upgradeErr := upgrader.Upgrade(ctx, []string{pkg})
 
-				// Update lock file immediately
-				if err := updateLockFileForPackage(lockService, managerName, pkg, ""); err != nil {
-					output.Printf("Warning: Failed to update lock file for %s: %v\n", pkg, err)
+				if upgradeErr != nil {
+					result.Status = "failed"
+					result.Error = upgradeErr.Error()
+					results.Summary.Failed++
+					spinner.Error(fmt.Sprintf("Failed to upgrade %s: %s", pkg, upgradeErr.Error()))
+				} else {
+					// Note: InstalledVersion() method has been removed
+					// Version tracking is no longer supported
+					result.ToVersion = ""
+					result.Status = "upgraded"
+					results.Summary.Upgraded++
+
+					// Update lock file immediately
+					if err := updateLockFileForPackage(lockService, managerName, pkg, ""); err != nil {
+						output.Printf("Warning: Failed to update lock file for %s: %v\n", pkg, err)
+					}
+
+					spinner.Success(fmt.Sprintf("upgraded %s", pkg))
 				}
-
-				spinner.Success(fmt.Sprintf("upgraded %s", pkg))
 			}
 
 			results.Results = append(results.Results, result)
@@ -487,9 +498,10 @@ func updateLockFileForPackage(lockService lock.LockService, manager, packageName
 }
 
 // upgradeResultsToOutput converts upgrade results to output format
-func upgradeResultsToOutput(results upgradeResults) output.UpgradeOutput {
+func upgradeResultsToOutput(results upgradeResults, dryRun bool) output.UpgradeOutput {
 	return output.UpgradeOutput{
 		Command:    "upgrade",
+		DryRun:     dryRun,
 		TotalItems: results.Summary.Total,
 		Results:    convertUpgradeResults(results.Results),
 		Summary: output.UpgradeSummary{

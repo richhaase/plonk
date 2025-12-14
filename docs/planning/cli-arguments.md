@@ -2,8 +2,12 @@
 
 This document provides a comprehensive audit of all command-line arguments and options in the Plonk CLI tool.
 
-**Audit Date:** 2025-12-14
+**Audit Date:** 2025-12-14 (Updated)
 **Source Files:** `internal/commands/*.go`
+
+> **Note:** The CLI was recently simplified by removing redundant flags:
+> - `--unmanaged` removed from `status`, `packages`, and `dotfiles` commands
+> - `--packages` and `--dotfiles` removed from `status` command (use `plonk packages` and `plonk dotfiles` subcommands instead)
 
 ---
 
@@ -173,15 +177,13 @@ Upgrade packages managed by plonk to their latest versions. Only upgrades packag
 
 ### Local Flags
 
-None (relies on global `--output` only)
+| Flag        | Short | Type | Default | Description                                          |
+| ----------- | ----- | ---- | ------- | ---------------------------------------------------- |
+| `--dry-run` | `-n`  | bool | `false` | Show what would be upgraded without making changes   |
 
 ### Inherited Flags
 
 - `--output`, `-o` (global)
-
-### Note
-
-Unlike `install` and `uninstall`, `upgrade` does **not** have a `--dry-run` flag.
 
 ---
 
@@ -285,10 +287,11 @@ Clone an existing dotfiles repository and intelligently set up plonk.
 
 ### Local Flags
 
-| Flag         | Short | Type | Default | Description                                      |
-| ------------ | ----- | ---- | ------- | ------------------------------------------------ |
-| `--yes`      |       | bool | `false` | Non-interactive mode - answer yes to all prompts |
-| `--no-apply` |       | bool | `false` | Skip running 'plonk apply' after setup           |
+| Flag         | Short | Type | Default | Description                                        |
+| ------------ | ----- | ---- | ------- | -------------------------------------------------- |
+| `--yes`      |       | bool | `false` | Non-interactive mode - answer yes to all prompts   |
+| `--no-apply` |       | bool | `false` | Skip running 'plonk apply' after setup             |
+| `--dry-run`  | `-n`  | bool | `false` | Show what would be cloned without making changes   |
 
 ### Git Repository Formats
 
@@ -585,29 +588,27 @@ None
 
 ### Flag Naming Conventions
 
-| Pattern            | Commands Using                     | Notes      |
-| ------------------ | ---------------------------------- | ---------- |
-| `--dry-run` / `-n` | install, uninstall, add, rm, apply | Consistent |
+| Pattern            | Commands Using                              | Notes      |
+| ------------------ | ------------------------------------------- | ---------- |
+| `--dry-run` / `-n` | install, uninstall, upgrade, add, rm, clone, apply | Consistent |
 | `--packages`       | apply                              | Consistent |
 | `--dotfiles`       | apply                              | Consistent |
 | `--missing`        | status, packages, dotfiles         | Consistent |
 
 ### Missing Flags Analysis
 
-| Command   | Missing Flag | Recommendation                  |
-| --------- | ------------ | ------------------------------- |
-| `upgrade` | `--dry-run`  | Consider adding for consistency |
-| `diff`    | `--dry-run`  | N/A (read-only operation)       |
-| `clone`   | `--dry-run`  | Consider adding                 |
+| Command | Missing Flag | Recommendation            |
+| ------- | ------------ | ------------------------- |
+| `diff`  | `--dry-run`  | N/A (read-only operation) |
 
 ### Short Flag Usage
 
-| Short | Long Form        | Command(s)                         |
-| ----- | ---------------- | ---------------------------------- |
-| `-n`  | `--dry-run`      | install, uninstall, add, rm, apply |
-| `-o`  | `--output`       | global (all commands)              |
-| `-v`  | `--version`      | root                               |
-| `-y`  | `--sync-drifted` | add                                |
+| Short | Long Form        | Command(s)                                     |
+| ----- | ---------------- | ---------------------------------------------- |
+| `-n`  | `--dry-run`      | install, uninstall, upgrade, add, rm, clone, apply |
+| `-o`  | `--output`       | global (all commands)                          |
+| `-v`  | `--version`      | root                                           |
+| `-y`  | `--sync-drifted` | add                                            |
 
 ### Mutual Exclusivity
 
@@ -683,10 +684,10 @@ No aliases for: install, uninstall, upgrade, add, rm, clone, diff, doctor, apply
 | `plonk`       | -               | `--version`, `--output`                                | -       | -           |
 | `install`     | `<packages...>` | `--dry-run`                                            | -       | Yes         |
 | `uninstall`   | `<packages...>` | `--dry-run`                                            | -       | Yes         |
-| `upgrade`     | `[targets...]`  | -                                                      | -       | **No**      |
+| `upgrade`     | `[targets...]`  | `--dry-run`                                            | -       | Yes         |
 | `add`         | `[files...]`    | `--dry-run`, `--sync-drifted`                          | -       | Yes         |
 | `rm`          | `<files...>`    | `--dry-run`                                            | -       | Yes         |
-| `clone`       | `<git-repo>`    | `--yes`, `--no-apply`                                  | -       | **No**      |
+| `clone`       | `<git-repo>`    | `--yes`, `--no-apply`, `--dry-run`                     | -       | Yes         |
 | `status`      | -               | `--missing`                                            | `st`    | -           |
 | `packages`    | -               | `--missing`                                            | `p`     | -           |
 | `dotfiles`    | -               | `--missing`                                            | `d`     | -           |
@@ -714,6 +715,20 @@ While not CLI arguments, these environment variables affect behavior:
 
 ## Recommendations
 
-1. **Add `--dry-run` to `upgrade`** for consistency with other mutating commands
-2. **Add `--dry-run` to `clone`** to preview what would be cloned/installed
-3. **Consider adding aliases** to commonly used commands (e.g., `i` for install, `u` for upgrade)
+1. **Consider adding aliases** to commonly used commands (e.g., `i` for install, `u` for upgrade)
+
+## Design Notes
+
+### CLI Simplification Philosophy
+
+The CLI follows a principle of using **dedicated subcommands** rather than filter flags where appropriate:
+
+- Use `plonk packages` instead of `plonk status --packages`
+- Use `plonk dotfiles` instead of `plonk status --dotfiles`
+- Use `plonk packages --missing` instead of `plonk status --packages --missing`
+
+This approach:
+- Reduces flag proliferation and cognitive load
+- Makes commands more discoverable via `plonk --help`
+- Keeps each command focused on a single responsibility
+- Simplifies implementation and testing

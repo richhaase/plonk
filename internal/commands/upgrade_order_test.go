@@ -49,7 +49,7 @@ func TestExecuteUpgrade_DeterministicOrdering(t *testing.T) {
 	t.Cleanup(func() { packages.SetDefaultExecutor(&packages.RealCommandExecutor{}) })
 	reg := packages.GetRegistry()
 
-	res, err := executeUpgrade(context.Background(), spec, cfg, lockSvc, reg)
+	res, err := executeUpgrade(context.Background(), spec, cfg, lockSvc, reg, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

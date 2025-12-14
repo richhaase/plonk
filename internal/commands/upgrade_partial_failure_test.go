@@ -54,7 +54,7 @@ func TestUpgrade_PartialFailureWithinSameManager(t *testing.T) {
 	reg := packages.GetRegistry()
 
 	// Execute upgrade
-	results, err := executeUpgrade(context.Background(), spec, &config.Config{}, svc, reg)
+	results, err := executeUpgrade(context.Background(), spec, &config.Config{}, svc, reg, false)
 
 	// Should return error because one package failed
 	if err != nil {
@@ -173,7 +173,7 @@ func TestUpgrade_AllPackagesFailInManager(t *testing.T) {
 	packages.SetDefaultExecutor(mock)
 	t.Cleanup(func() { packages.SetDefaultExecutor(&packages.RealCommandExecutor{}) })
 	reg := packages.GetRegistry()
-	results, _ := executeUpgrade(context.Background(), spec, &config.Config{}, svc, reg)
+	results, _ := executeUpgrade(context.Background(), spec, &config.Config{}, svc, reg, false)
 
 	// executeUpgrade doesn't return error, but sets Failed count
 	// The runUpgrade wrapper converts Failed count to error
@@ -228,7 +228,7 @@ func TestUpgrade_PerPackageUpgradeCalled(t *testing.T) {
 	packages.SetDefaultExecutor(mock)
 	t.Cleanup(func() { packages.SetDefaultExecutor(&packages.RealCommandExecutor{}) })
 	reg := packages.GetRegistry()
-	_, err := executeUpgrade(context.Background(), spec, &config.Config{}, svc, reg)
+	_, err := executeUpgrade(context.Background(), spec, &config.Config{}, svc, reg, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
