@@ -37,10 +37,7 @@ Examples:
 func init() {
 	rootCmd.AddCommand(dotfilesCmd)
 	dotfilesCmd.Flags().Bool("unmanaged", false, "Show only unmanaged dotfiles")
-	dotfilesCmd.Flags().Bool("untracked", false, "Show only untracked dotfiles (alias for --unmanaged)")
 	dotfilesCmd.Flags().Bool("missing", false, "Show only missing dotfiles")
-	dotfilesCmd.Flags().Bool("managed", false, "Show only managed dotfiles")
-	dotfilesCmd.Flags().BoolP("verbose", "v", false, "Show verbose output (includes untracked items)")
 }
 
 func runDotfiles(cmd *cobra.Command, args []string) error {
@@ -53,24 +50,11 @@ func runDotfiles(cmd *cobra.Command, args []string) error {
 
 	// Get filter flags
 	showUnmanaged, _ := cmd.Flags().GetBool("unmanaged")
-	showUntracked, _ := cmd.Flags().GetBool("untracked")
 	showMissing, _ := cmd.Flags().GetBool("missing")
-	showManaged, _ := cmd.Flags().GetBool("managed")
-
-	// Handle aliases: --untracked is alias for --unmanaged
-	if showUntracked {
-		showUnmanaged = true
-	}
 
 	// Validate mutually exclusive flags
 	if err := validateStatusFlags(showUnmanaged, showMissing); err != nil {
 		return err
-	}
-
-	// If --managed is set, show only managed (exclude missing and untracked)
-	if showManaged {
-		showMissing = false
-		showUnmanaged = false
 	}
 
 	// Get directories
@@ -96,21 +80,11 @@ func runDotfiles(cmd *cobra.Command, args []string) error {
 	}
 
 	// Prepare output
-	// If --managed flag is set, we need to filter to show only managed items
-	// Otherwise use the existing filter logic
 	outputData := output.DotfilesStatusOutput{
 		Result:        outputResult,
 		ShowMissing:   showMissing,
 		ShowUnmanaged: showUnmanaged,
 		ConfigDir:     configDir,
-	}
-
-	// For --managed flag, we need to adjust the result to show only managed items
-	if showManaged {
-		outputData.Result.Missing = []output.Item{}
-		outputData.Result.Untracked = []output.Item{}
-		outputData.ShowMissing = false
-		outputData.ShowUnmanaged = false
 	}
 
 	// Create formatter and render
