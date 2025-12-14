@@ -102,18 +102,9 @@ Show managed packages and dotfiles (combined view).
 
 ```bash
 plonk status                          # Show all
-plonk status --packages               # Only packages
-plonk status --dotfiles               # Only dotfiles
-plonk status --unmanaged              # Show only unmanaged items
-plonk status --missing                # Show only missing resources
-plonk status --missing --packages     # Show only missing packages
+plonk status -o json                  # Output as JSON
+plonk status -o yaml                  # Output as YAML
 ```
-
-Options:
-- `--packages` - Show only package status
-- `--dotfiles` - Show only dotfile status
-- `--unmanaged` - Show only unmanaged items
-- `--missing` - Show only missing resources (mutually exclusive with --unmanaged)
 
 **📖 [Complete Status Documentation →](cmds/status.md)**
 
@@ -127,15 +118,11 @@ Show package status (focused view).
 
 ```bash
 plonk packages                        # Show all managed packages
-plonk packages --missing              # Show only missing packages
-plonk packages --unmanaged            # Show only unmanaged packages
 plonk packages -o json                # Output as JSON
-plonk p --missing                     # Short alias
+plonk p                               # Short alias
 ```
 
 Options:
-- `--missing` - Show only missing packages
-- `--unmanaged` - Show only unmanaged packages
 - `-o, --output` - Output format (table/json/yaml)
 
 **📖 [Complete Packages Documentation →](cmds/packages.md)**
@@ -189,21 +176,12 @@ Show dotfile status (focused view).
 
 ```bash
 plonk dotfiles                        # Show all managed dotfiles
-plonk dotfiles --managed              # Show only managed dotfiles
-plonk dotfiles --missing              # Show only missing dotfiles
-plonk dotfiles --unmanaged            # Show only unmanaged dotfiles
-plonk dotfiles --untracked            # Alias for --unmanaged
-plonk dotfiles -v                     # Show verbose output
 plonk dotfiles -o json                # Output as JSON
-plonk d --missing                     # Short alias
+plonk d                               # Short alias
 ```
 
 Options:
-- `--managed` - Show managed dotfiles only
-- `--missing` - Show missing dotfiles only
-- `--unmanaged` - Show unmanaged dotfiles only
-- `--untracked` - Alias for --unmanaged
-- `-v, --verbose` - Show verbose output
+- `-o, --output` - Output format (table/json/yaml)
 
 **📖 [Complete Dotfiles Documentation →](cmds/dotfiles.md)**
 

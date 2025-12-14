@@ -24,17 +24,15 @@ Shows:
 - Drifted dotfiles (modified after deployment)
 
 Examples:
-  plonk dotfiles              # Show all managed dotfiles
-  plonk dotfiles --missing    # Show only missing dotfiles
-  plonk dotfiles -o json      # Show as JSON
-  plonk dotfiles -o yaml      # Show as YAML`,
+  plonk dotfiles           # Show all managed dotfiles
+  plonk dotfiles -o json   # Show as JSON
+  plonk dotfiles -o yaml   # Show as YAML`,
 	RunE:         runDotfiles,
 	SilenceUsage: true,
 }
 
 func init() {
 	rootCmd.AddCommand(dotfilesCmd)
-	dotfilesCmd.Flags().Bool("missing", false, "Show only missing dotfiles")
 }
 
 func runDotfiles(cmd *cobra.Command, args []string) error {
@@ -44,9 +42,6 @@ func runDotfiles(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-
-	// Get filter flags
-	showMissing, _ := cmd.Flags().GetBool("missing")
 
 	// Get directories
 	homeDir := config.GetHomeDir()
@@ -72,9 +67,8 @@ func runDotfiles(cmd *cobra.Command, args []string) error {
 
 	// Prepare output
 	outputData := output.DotfilesStatusOutput{
-		Result:      outputResult,
-		ShowMissing: showMissing,
-		ConfigDir:   configDir,
+		Result:    outputResult,
+		ConfigDir: configDir,
 	}
 
 	// Create formatter and render

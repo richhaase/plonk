@@ -30,17 +30,15 @@ Shows:
 - Configuration and lock file status
 
 Examples:
-  plonk status              # Show all managed items
-  plonk status --missing    # Show only missing resources
-  plonk status -o json      # Show as JSON
-  plonk status -o yaml      # Show as YAML`,
+  plonk status           # Show all managed items
+  plonk status -o json   # Show as JSON
+  plonk status -o yaml   # Show as YAML`,
 	RunE:         runStatus,
 	SilenceUsage: true,
 }
 
 func init() {
 	rootCmd.AddCommand(statusCmd)
-	statusCmd.Flags().Bool("missing", false, "Show only missing resources")
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {
@@ -50,9 +48,6 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-
-	// Get filter flags
-	showMissing, _ := cmd.Flags().GetBool("missing")
 
 	// Get directories
 	homeDir := config.GetHomeDir()
@@ -109,7 +104,6 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		ConfigValid:  configValid,
 		LockExists:   lockExists,
 		StateSummary: summary,
-		ShowMissing:  showMissing,
 		ConfigDir:    configDir,
 	}
 
@@ -121,7 +115,6 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		ConfigValid:  outputData.ConfigValid,
 		LockExists:   outputData.LockExists,
 		StateSummary: convertSummary(outputData.StateSummary),
-		ShowMissing:  outputData.ShowMissing,
 		ConfigDir:    outputData.ConfigDir,
 	}
 	formatter := output.NewStatusFormatter(formatterData)
@@ -172,7 +165,6 @@ type StatusOutput struct {
 	ConfigValid  bool              `json:"config_valid" yaml:"config_valid"`
 	LockExists   bool              `json:"lock_exists" yaml:"lock_exists"`
 	StateSummary resources.Summary `json:"state_summary" yaml:"state_summary"`
-	ShowMissing  bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
 	ConfigDir    string            `json:"-" yaml:"-"` // Not included in JSON/YAML output
 }
 

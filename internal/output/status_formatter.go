@@ -55,7 +55,6 @@ type StatusOutput struct {
 	ConfigValid  bool    `json:"config_valid" yaml:"config_valid"`
 	LockExists   bool    `json:"lock_exists" yaml:"lock_exists"`
 	StateSummary Summary `json:"state_summary" yaml:"state_summary"`
-	ShowMissing  bool    `json:"-" yaml:"-"` // Not included in JSON/YAML output
 	ConfigDir    string  `json:"-" yaml:"-"` // Not included in JSON/YAML output
 }
 
@@ -120,8 +119,6 @@ func sortItemsByManager(itemsByManager map[string][]Item) []string {
 }
 
 // TableOutput generates human-friendly table output for status
-//
-//nolint:gocyclo // complexity justified: multi-domain formatter with 4 display modes (packages/dotfiles x managed/missing/unmanaged)
 func (f StatusFormatter) TableOutput() string {
 	s := f.Data
 	var output strings.Builder
@@ -147,16 +144,11 @@ func (f StatusFormatter) TableOutput() string {
 		packagesByManager := make(map[string][]Item)
 		missingPackages := []Item{}
 
-		if s.ShowMissing {
-			// Show only missing items
-			missingPackages = append(missingPackages, packageResult.Missing...)
-		} else {
-			// Show managed and missing items
-			for _, item := range packageResult.Managed {
-				packagesByManager[item.Manager] = append(packagesByManager[item.Manager], item)
-			}
-			missingPackages = append(missingPackages, packageResult.Missing...)
+		// Show managed and missing items
+		for _, item := range packageResult.Managed {
+			packagesByManager[item.Manager] = append(packagesByManager[item.Manager], item)
 		}
+		missingPackages = append(missingPackages, packageResult.Missing...)
 
 		// Sort missing packages
 		sortItems(missingPackages)
@@ -170,14 +162,12 @@ func (f StatusFormatter) TableOutput() string {
 			pkgBuilder := NewStandardTableBuilder("")
 			pkgBuilder.SetHeaders("NAME", "MANAGER", "STATUS")
 
-			// Show managed packages by manager (unless showing only missing)
-			if !s.ShowMissing {
-				sortedManagers := sortItemsByManager(packagesByManager)
-				for _, manager := range sortedManagers {
-					packages := packagesByManager[manager]
-					for _, pkg := range packages {
-						pkgBuilder.AddRow(pkg.Name, manager, "managed")
-					}
+			// Show managed packages by manager
+			sortedManagers := sortItemsByManager(packagesByManager)
+			for _, manager := range sortedManagers {
+				packages := packagesByManager[manager]
+				for _, pkg := range packages {
+					pkgBuilder.AddRow(pkg.Name, manager, "managed")
 				}
 			}
 
@@ -193,15 +183,9 @@ func (f StatusFormatter) TableOutput() string {
 
 	// Show dotfiles table
 	if dotfileResult != nil {
-		// Determine which items to show based on flags
-		var itemsToShow []Item
-		if s.ShowMissing {
-			itemsToShow = dotfileResult.Missing
-		} else {
-			// Include managed and missing items
-			// Drifted files are already in Managed with State==StateDegraded
-			itemsToShow = append(dotfileResult.Managed, dotfileResult.Missing...)
-		}
+		// Include managed and missing items
+		// Drifted files are already in Managed with State==StateDegraded
+		itemsToShow := append(dotfileResult.Managed, dotfileResult.Missing...)
 
 		if len(itemsToShow) > 0 {
 			output.WriteString("DOTFILES\n")
@@ -217,26 +201,24 @@ func (f StatusFormatter) TableOutput() string {
 			sortItems(dotfileResult.Managed)
 			sortItems(dotfileResult.Missing)
 
-			// Show managed dotfiles (unless showing only missing)
-			if !s.ShowMissing {
-				for _, item := range dotfileResult.Managed {
-					// Use source from metadata if available, otherwise fall back to Name
-					source := item.Name
-					if src, ok := item.Metadata["source"].(string); ok {
-						source = src
-					}
-					target := ""
-					if dest, ok := item.Metadata["destination"].(string); ok {
-						target = dest
-					}
-					// Check if this is actually a drifted file
-					status := "deployed"
-					if item.State == StateDegraded {
-						status = "drifted"
-					}
-					// Swap column order: target ($HOME), source ($PLONK_DIR), status
-					dotBuilder.AddRow(target, source, status)
+			// Show managed dotfiles
+			for _, item := range dotfileResult.Managed {
+				// Use source from metadata if available, otherwise fall back to Name
+				source := item.Name
+				if src, ok := item.Metadata["source"].(string); ok {
+					source = src
 				}
+				target := ""
+				if dest, ok := item.Metadata["destination"].(string); ok {
+					target = dest
+				}
+				// Check if this is actually a drifted file
+				status := "deployed"
+				if item.State == StateDegraded {
+					status = "drifted"
+				}
+				// Swap column order: target ($HOME), source ($PLONK_DIR), status
+				dotBuilder.AddRow(target, source, status)
 			}
 
 			// Show missing dotfiles
@@ -259,35 +241,33 @@ func (f StatusFormatter) TableOutput() string {
 		}
 	}
 
-	// Add summary (skip for missing-only to avoid misleading counts)
-	if !s.ShowMissing {
-		summary := s.StateSummary
+	// Add summary
+	summary := s.StateSummary
 
-		// Count drifted items separately
-		driftedCount := 0
-		for _, result := range s.StateSummary.Results {
-			if result.Domain == "dotfile" {
-				for _, item := range result.Managed {
-					if item.State == StateDegraded {
-						driftedCount++
-					}
+	// Count drifted items separately
+	driftedCount := 0
+	for _, result := range s.StateSummary.Results {
+		if result.Domain == "dotfile" {
+			for _, item := range result.Managed {
+				if item.State == StateDegraded {
+					driftedCount++
 				}
 			}
 		}
-
-		// Adjust managed count to exclude drifted
-		managedCount := summary.TotalManaged - driftedCount
-
-		output.WriteString("Summary: ")
-		output.WriteString(fmt.Sprintf("%d managed", managedCount))
-		if summary.TotalMissing > 0 {
-			output.WriteString(fmt.Sprintf(", %d missing", summary.TotalMissing))
-		}
-		if driftedCount > 0 {
-			output.WriteString(fmt.Sprintf(", %d drifted", driftedCount))
-		}
-		output.WriteString("\n")
 	}
+
+	// Adjust managed count to exclude drifted
+	managedCount := summary.TotalManaged - driftedCount
+
+	output.WriteString("Summary: ")
+	output.WriteString(fmt.Sprintf("%d managed", managedCount))
+	if summary.TotalMissing > 0 {
+		output.WriteString(fmt.Sprintf(", %d missing", summary.TotalMissing))
+	}
+	if driftedCount > 0 {
+		output.WriteString(fmt.Sprintf(", %d drifted", driftedCount))
+	}
+	output.WriteString("\n")
 
 	// If no output was generated (except for title), show helpful message
 	outputStr := output.String()
@@ -295,10 +275,7 @@ func (f StatusFormatter) TableOutput() string {
 		output.Reset()
 		output.WriteString("Plonk Status\n")
 		output.WriteString("============\n\n")
-		output.WriteString("No items match the specified filters.\n")
-		if s.ShowMissing {
-			output.WriteString("(Great! Everything tracked is installed/deployed)\n")
-		}
+		output.WriteString("No managed items.\n")
 	}
 
 	return output.String()
@@ -307,15 +284,13 @@ func (f StatusFormatter) TableOutput() string {
 // StructuredData returns the structured data for serialization
 func (f StatusFormatter) StructuredData() any {
 	s := f.Data
-	// Filter summary based on display flags to match TableOutput behavior
-	filteredSummary := filterSummaryForOutput(s.StateSummary, s.ShowMissing)
 	return StatusOutputSummary{
 		ConfigPath:   s.ConfigPath,
 		LockPath:     s.LockPath,
 		ConfigExists: s.ConfigExists,
 		ConfigValid:  s.ConfigValid,
 		LockExists:   s.LockExists,
-		StateSummary: sanitizeSummary(filteredSummary),
+		StateSummary: sanitizeSummary(s.StateSummary),
 	}
 }
 
@@ -368,31 +343,4 @@ func sanitizeSummary(sum Summary) Summary {
 		cleaned.Results[i] = cr
 	}
 	return cleaned
-}
-
-// filterSummaryForOutput filters the summary based on display flags to match TableOutput behavior
-func filterSummaryForOutput(sum Summary, showMissing bool) Summary {
-	filtered := Summary{
-		Results: make([]Result, 0, len(sum.Results)),
-	}
-
-	for _, r := range sum.Results {
-		fr := Result{Domain: r.Domain}
-
-		if showMissing {
-			// Show only missing items
-			fr.Missing = r.Missing
-			filtered.TotalMissing += len(r.Missing)
-		} else {
-			// Show managed and missing items (default)
-			fr.Managed = r.Managed
-			fr.Missing = r.Missing
-			filtered.TotalManaged += len(r.Managed)
-			filtered.TotalMissing += len(r.Missing)
-		}
-
-		filtered.Results = append(filtered.Results, fr)
-	}
-
-	return filtered
 }

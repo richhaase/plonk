@@ -5,23 +5,23 @@ import (
 	"testing"
 )
 
-func TestCLI_Dotfiles_JSON_Missing(t *testing.T) {
-	// Missing
-	out, err := RunCLI(t, []string{"dotfiles", "-o", "json", "--missing"}, func(env CLITestEnv) {
+func TestCLI_Dotfiles_JSON(t *testing.T) {
+	out, err := RunCLI(t, []string{"dotfiles", "-o", "json"}, func(env CLITestEnv) {
 		seedDotfile(env.T, env.ConfigDir, "zshrc", "export TEST=1\n")
 	})
 	if err != nil {
-		t.Fatalf("dotfiles --missing failed: %v\n%s", err, out)
+		t.Fatalf("dotfiles json failed: %v\n%s", err, out)
 	}
-	var missing struct {
+	var payload struct {
 		Summary struct {
 			Missing int `json:"missing"`
 		} `json:"summary"`
 	}
-	if e := json.Unmarshal([]byte(out), &missing); e != nil {
+	if e := json.Unmarshal([]byte(out), &payload); e != nil {
 		t.Fatalf("invalid json: %v\n%s", e, out)
 	}
-	if missing.Summary.Missing < 1 {
-		t.Fatalf("expected missing >=1, got: %+v", missing)
+	// Should show at least 1 missing (the seeded dotfile)
+	if payload.Summary.Missing < 1 {
+		t.Fatalf("expected missing >=1, got: %+v", payload)
 	}
 }

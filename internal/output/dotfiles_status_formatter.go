@@ -10,9 +10,8 @@ import (
 
 // DotfilesStatusOutput represents the output structure for dotfiles status command
 type DotfilesStatusOutput struct {
-	Result      Result `json:"result" yaml:"result"`
-	ShowMissing bool   `json:"-" yaml:"-"` // Not included in JSON/YAML output
-	ConfigDir   string `json:"-" yaml:"-"` // Not included in JSON/YAML output
+	Result    Result `json:"result" yaml:"result"`
+	ConfigDir string `json:"-" yaml:"-"` // Not included in JSON/YAML output
 }
 
 // DotfilesStatusFormatter formats dotfiles status output
@@ -33,15 +32,9 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 	output.WriteString("Dotfiles Status\n")
 	output.WriteString("===============\n\n")
 
-	// Determine which items to show based on flags
-	var itemsToShow []Item
-	if f.Data.ShowMissing {
-		itemsToShow = result.Missing
-	} else {
-		// Include managed and missing items
-		// Drifted files are already in Managed with State==StateDegraded
-		itemsToShow = append(result.Managed, result.Missing...)
-	}
+	// Include managed and missing items
+	// Drifted files are already in Managed with State==StateDegraded
+	itemsToShow := append(result.Managed, result.Missing...)
 
 	if len(itemsToShow) > 0 {
 		// Create a table for dotfiles
@@ -54,26 +47,24 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 		sortItems(result.Managed)
 		sortItems(result.Missing)
 
-		// Show managed dotfiles (unless showing only missing)
-		if !f.Data.ShowMissing {
-			for _, item := range result.Managed {
-				// Use source from metadata if available, otherwise fall back to Name
-				source := item.Name
-				if src, ok := item.Metadata["source"].(string); ok {
-					source = src
-				}
-				target := ""
-				if dest, ok := item.Metadata["destination"].(string); ok {
-					target = dest
-				}
-				// Check if this is actually a drifted file
-				status := "deployed"
-				if item.State == StateDegraded {
-					status = "drifted"
-				}
-				// Swap column order: target ($HOME), source ($PLONK_DIR), status
-				dotBuilder.AddRow(target, source, status)
+		// Show managed dotfiles
+		for _, item := range result.Managed {
+			// Use source from metadata if available, otherwise fall back to Name
+			source := item.Name
+			if src, ok := item.Metadata["source"].(string); ok {
+				source = src
 			}
+			target := ""
+			if dest, ok := item.Metadata["destination"].(string); ok {
+				target = dest
+			}
+			// Check if this is actually a drifted file
+			status := "deployed"
+			if item.State == StateDegraded {
+				status = "drifted"
+			}
+			// Swap column order: target ($HOME), source ($PLONK_DIR), status
+			dotBuilder.AddRow(target, source, status)
 		}
 
 		// Show missing dotfiles
@@ -95,29 +86,27 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 		output.WriteString("\n")
 	}
 
-	// Add summary (skip for missing-only to avoid misleading counts)
-	if !f.Data.ShowMissing {
-		// Count drifted items separately
-		driftedCount := 0
-		for _, item := range result.Managed {
-			if item.State == StateDegraded {
-				driftedCount++
-			}
+	// Add summary
+	// Count drifted items separately
+	driftedCount := 0
+	for _, item := range result.Managed {
+		if item.State == StateDegraded {
+			driftedCount++
 		}
-
-		// Adjust managed count to exclude drifted
-		managedCount := len(result.Managed) - driftedCount
-
-		output.WriteString("Summary: ")
-		output.WriteString(fmt.Sprintf("%d managed", managedCount))
-		if len(result.Missing) > 0 {
-			output.WriteString(fmt.Sprintf(", %d missing", len(result.Missing)))
-		}
-		if driftedCount > 0 {
-			output.WriteString(fmt.Sprintf(", %d drifted", driftedCount))
-		}
-		output.WriteString("\n")
 	}
+
+	// Adjust managed count to exclude drifted
+	managedCount := len(result.Managed) - driftedCount
+
+	output.WriteString("Summary: ")
+	output.WriteString(fmt.Sprintf("%d managed", managedCount))
+	if len(result.Missing) > 0 {
+		output.WriteString(fmt.Sprintf(", %d missing", len(result.Missing)))
+	}
+	if driftedCount > 0 {
+		output.WriteString(fmt.Sprintf(", %d drifted", driftedCount))
+	}
+	output.WriteString("\n")
 
 	// If no output was generated (except for title), show helpful message
 	outputStr := output.String()
@@ -125,10 +114,7 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 		output.Reset()
 		output.WriteString("Dotfiles Status\n")
 		output.WriteString("===============\n\n")
-		output.WriteString("No dotfiles match the specified filters.\n")
-		if f.Data.ShowMissing {
-			output.WriteString("(Great! All tracked dotfiles are deployed)\n")
-		}
+		output.WriteString("No managed dotfiles.\n")
 	}
 
 	return output.String()
@@ -138,26 +124,23 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 func (f DotfilesStatusFormatter) StructuredData() any {
 	result := f.Data.Result
 
-	// Filter items based on flags
 	var items []ManagedItem
 
-	// Add managed items unless we're only showing missing
-	if !f.Data.ShowMissing {
-		for _, item := range result.Managed {
-			managedItem := ManagedItem{
-				Name:     item.Name,
-				Domain:   "dotfile",
-				State:    string(item.State),
-				Manager:  item.Manager,
-				Path:     item.Path,
-				Metadata: sanitizeMetadata(item.Metadata),
-			}
-			// Add target for dotfiles
-			if target, ok := item.Metadata["destination"].(string); ok {
-				managedItem.Target = target
-			}
-			items = append(items, managedItem)
+	// Add managed items
+	for _, item := range result.Managed {
+		managedItem := ManagedItem{
+			Name:     item.Name,
+			Domain:   "dotfile",
+			State:    string(item.State),
+			Manager:  item.Manager,
+			Path:     item.Path,
+			Metadata: sanitizeMetadata(item.Metadata),
 		}
+		// Add target for dotfiles
+		if target, ok := item.Metadata["destination"].(string); ok {
+			managedItem.Target = target
+		}
+		items = append(items, managedItem)
 	}
 
 	// Add missing items
@@ -177,18 +160,11 @@ func (f DotfilesStatusFormatter) StructuredData() any {
 		items = append(items, managedItem)
 	}
 
-	// Adjust summary counts based on filter flags
 	summary := Summary{
 		TotalManaged:   len(result.Managed),
 		TotalMissing:   len(result.Missing),
 		TotalUntracked: len(result.Untracked),
 		Results:        []Result{result},
-	}
-
-	// If filtering by missing only, adjust counts
-	if f.Data.ShowMissing {
-		summary.TotalManaged = 0
-		summary.TotalUntracked = 0
 	}
 
 	// For backward compatibility with tests, add lowercase field aliases

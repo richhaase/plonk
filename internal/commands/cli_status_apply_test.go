@@ -164,23 +164,6 @@ func TestCLI_Status_Table_GoldenSnippet(t *testing.T) {
 	}
 }
 
-func TestCLI_Status_MissingFlag_Table(t *testing.T) {
-	// missing only
-	out, err := RunCLI(t, []string{"status", "--missing"}, func(env CLITestEnv) {
-		seedLock(env.T, env.ConfigDir)
-		seedDotfile(env.T, env.ConfigDir, "bashrc", "export X=1\n")
-	})
-	if err != nil {
-		t.Fatalf("status --missing failed: %v\n%s", err, out)
-	}
-	if !strings.Contains(out, "missing") {
-		t.Fatalf("expected 'missing' entries in table, got:\n%s", out)
-	}
-	if strings.Contains(out, " managed\n") {
-		t.Fatalf("unexpected 'managed' rows when --missing: \n%s", out)
-	}
-}
-
 func TestCLI_Apply_Table_DryRun_GoldenSnippet(t *testing.T) {
 	out, err := RunCLI(t, []string{"apply", "--dry-run"}, func(env CLITestEnv) {
 		seedLock(env.T, env.ConfigDir)

@@ -10,8 +10,7 @@ import (
 
 // PackagesStatusOutput represents the output structure for packages status command
 type PackagesStatusOutput struct {
-	Result      Result `json:"result" yaml:"result"`
-	ShowMissing bool   `json:"-" yaml:"-"` // Not included in JSON/YAML output
+	Result Result `json:"result" yaml:"result"`
 }
 
 // PackagesStatusFormatter formats packages status output
@@ -36,16 +35,11 @@ func (f PackagesStatusFormatter) TableOutput() string {
 	packagesByManager := make(map[string][]Item)
 	missingPackages := []Item{}
 
-	if f.Data.ShowMissing {
-		// Show only missing items
-		missingPackages = append(missingPackages, result.Missing...)
-	} else {
-		// Show managed and missing items
-		for _, item := range result.Managed {
-			packagesByManager[item.Manager] = append(packagesByManager[item.Manager], item)
-		}
-		missingPackages = append(missingPackages, result.Missing...)
+	// Show managed and missing items
+	for _, item := range result.Managed {
+		packagesByManager[item.Manager] = append(packagesByManager[item.Manager], item)
 	}
+	missingPackages = append(missingPackages, result.Missing...)
 
 	// Sort missing packages
 	sortItems(missingPackages)
@@ -56,14 +50,12 @@ func (f PackagesStatusFormatter) TableOutput() string {
 		pkgBuilder := NewStandardTableBuilder("")
 		pkgBuilder.SetHeaders("NAME", "MANAGER", "STATUS")
 
-		// Show managed packages by manager (unless showing only missing)
-		if !f.Data.ShowMissing {
-			sortedManagers := sortItemsByManager(packagesByManager)
-			for _, manager := range sortedManagers {
-				packages := packagesByManager[manager]
-				for _, pkg := range packages {
-					pkgBuilder.AddRow(pkg.Name, manager, "managed")
-				}
+		// Show managed packages by manager
+		sortedManagers := sortItemsByManager(packagesByManager)
+		for _, manager := range sortedManagers {
+			packages := packagesByManager[manager]
+			for _, pkg := range packages {
+				pkgBuilder.AddRow(pkg.Name, manager, "managed")
 			}
 		}
 
@@ -76,18 +68,16 @@ func (f PackagesStatusFormatter) TableOutput() string {
 		output.WriteString("\n")
 	}
 
-	// Add summary (skip for missing-only to avoid misleading counts)
-	if !f.Data.ShowMissing {
-		managedCount := len(result.Managed)
-		missingCount := len(result.Missing)
+	// Add summary
+	managedCount := len(result.Managed)
+	missingCount := len(result.Missing)
 
-		output.WriteString("Summary: ")
-		output.WriteString(fmt.Sprintf("%d managed", managedCount))
-		if missingCount > 0 {
-			output.WriteString(fmt.Sprintf(", %d missing", missingCount))
-		}
-		output.WriteString("\n")
+	output.WriteString("Summary: ")
+	output.WriteString(fmt.Sprintf("%d managed", managedCount))
+	if missingCount > 0 {
+		output.WriteString(fmt.Sprintf(", %d missing", missingCount))
 	}
+	output.WriteString("\n")
 
 	// If no output was generated (except for title), show helpful message
 	outputStr := output.String()
@@ -95,10 +85,7 @@ func (f PackagesStatusFormatter) TableOutput() string {
 		output.Reset()
 		output.WriteString("Packages Status\n")
 		output.WriteString("===============\n\n")
-		output.WriteString("No packages match the specified filters.\n")
-		if f.Data.ShowMissing {
-			output.WriteString("(Great! All tracked packages are installed)\n")
-		}
+		output.WriteString("No managed packages.\n")
 	}
 
 	return output.String()
@@ -108,21 +95,18 @@ func (f PackagesStatusFormatter) TableOutput() string {
 func (f PackagesStatusFormatter) StructuredData() any {
 	result := f.Data.Result
 
-	// Filter items based on flags
 	var items []ManagedItem
 
-	// Add managed items unless we're only showing missing
-	if !f.Data.ShowMissing {
-		for _, item := range result.Managed {
-			items = append(items, ManagedItem{
-				Name:     item.Name,
-				Domain:   "package",
-				State:    string(item.State),
-				Manager:  item.Manager,
-				Path:     item.Path,
-				Metadata: sanitizeMetadata(item.Metadata),
-			})
-		}
+	// Add managed items
+	for _, item := range result.Managed {
+		items = append(items, ManagedItem{
+			Name:     item.Name,
+			Domain:   "package",
+			State:    string(item.State),
+			Manager:  item.Manager,
+			Path:     item.Path,
+			Metadata: sanitizeMetadata(item.Metadata),
+		})
 	}
 
 	// Add missing items
@@ -137,18 +121,11 @@ func (f PackagesStatusFormatter) StructuredData() any {
 		})
 	}
 
-	// Adjust summary counts based on filter flags
 	summary := Summary{
 		TotalManaged:   len(result.Managed),
 		TotalMissing:   len(result.Missing),
 		TotalUntracked: len(result.Untracked),
 		Results:        []Result{result},
-	}
-
-	// If filtering by missing only, adjust counts
-	if f.Data.ShowMissing {
-		summary.TotalManaged = 0
-		summary.TotalUntracked = 0
 	}
 
 	return PackagesStatusOutputSummary{

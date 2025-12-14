@@ -330,9 +330,7 @@ Display a detailed list of all plonk-managed items and their status.
 
 ### Local Flags
 
-| Flag        | Short | Type | Default | Description                 |
-| ----------- | ----- | ---- | ------- | --------------------------- |
-| `--missing` |       | bool | `false` | Show only missing resources |
+None
 
 ### Inherited Flags
 
@@ -358,9 +356,7 @@ Display the status of all plonk-managed packages.
 
 ### Local Flags
 
-| Flag        | Short | Type | Default | Description                |
-| ----------- | ----- | ---- | ------- | -------------------------- |
-| `--missing` |       | bool | `false` | Show only missing packages |
+None
 
 ### Inherited Flags
 
@@ -386,9 +382,7 @@ Display the status of all plonk-managed dotfiles.
 
 ### Local Flags
 
-| Flag        | Short | Type | Default | Description                |
-| ----------- | ----- | ---- | ------- | -------------------------- |
-| `--missing` |       | bool | `false` | Show only missing dotfiles |
+None
 
 ### Inherited Flags
 
@@ -593,7 +587,6 @@ None
 | `--dry-run` / `-n` | install, uninstall, upgrade, add, rm, clone, apply | Consistent |
 | `--packages`       | apply                              | Consistent |
 | `--dotfiles`       | apply                              | Consistent |
-| `--missing`        | status, packages, dotfiles         | Consistent |
 
 ### Missing Flags Analysis
 
@@ -688,9 +681,9 @@ No aliases for: install, uninstall, upgrade, add, rm, clone, diff, doctor, apply
 | `add`         | `[files...]`    | `--dry-run`, `--sync-drifted`                          | -       | Yes         |
 | `rm`          | `<files...>`    | `--dry-run`                                            | -       | Yes         |
 | `clone`       | `<git-repo>`    | `--yes`, `--no-apply`, `--dry-run`                     | -       | Yes         |
-| `status`      | -               | `--missing`                                            | `st`    | -           |
-| `packages`    | -               | `--missing`                                            | `p`     | -           |
-| `dotfiles`    | -               | `--missing`                                            | `d`     | -           |
+| `status`      | -               | -                                                      | `st`    | -           |
+| `packages`    | -               | -                                                      | `p`     | -           |
+| `dotfiles`    | -               | -                                                      | `d`     | -           |
 | `diff`        | `[file]`        | -                                                      | -       | -           |
 | `apply`       | `[files...]`    | `--dry-run`, `--packages`, `--dotfiles`                | -       | Yes         |
 | `doctor`      | -               | -                                                      | -       | -           |
@@ -725,7 +718,6 @@ The CLI follows a principle of using **dedicated subcommands** rather than filte
 
 - Use `plonk packages` instead of `plonk status --packages`
 - Use `plonk dotfiles` instead of `plonk status --dotfiles`
-- Use `plonk packages --missing` instead of `plonk status --packages --missing`
 
 This approach:
 - Reduces flag proliferation and cognitive load

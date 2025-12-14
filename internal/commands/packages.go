@@ -23,17 +23,15 @@ Shows:
 - Missing packages that need to be installed
 
 Examples:
-  plonk packages             # Show all managed packages
-  plonk packages --missing   # Show only missing packages
-  plonk packages -o json     # Show as JSON
-  plonk packages -o yaml     # Show as YAML`,
+  plonk packages          # Show all managed packages
+  plonk packages -o json  # Show as JSON
+  plonk packages -o yaml  # Show as YAML`,
 	RunE:         runPackages,
 	SilenceUsage: true,
 }
 
 func init() {
 	rootCmd.AddCommand(packagesCmd)
-	packagesCmd.Flags().Bool("missing", false, "Show only missing packages")
 }
 
 func runPackages(cmd *cobra.Command, args []string) error {
@@ -43,9 +41,6 @@ func runPackages(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-
-	// Get filter flags
-	showMissing, _ := cmd.Flags().GetBool("missing")
 
 	// Get directories
 	configDir := config.GetConfigDir()
@@ -70,8 +65,7 @@ func runPackages(cmd *cobra.Command, args []string) error {
 
 	// Prepare output
 	outputData := output.PackagesStatusOutput{
-		Result:      outputResult,
-		ShowMissing: showMissing,
+		Result: outputResult,
 	}
 
 	// Create formatter and render

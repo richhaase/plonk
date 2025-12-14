@@ -17,8 +17,6 @@ This command is useful when you want to focus specifically on packages without t
 
 ## Options
 
-- `--missing` - Show only missing packages (packages tracked but not installed)
-- `--unmanaged` - Show only unmanaged packages (packages installed but not tracked)
 - `-o, --output` - Output format (table/json/yaml)
 
 ## Behavior
@@ -32,25 +30,19 @@ Packages can exist in three states:
 
 ### Default Display
 
-Without flags, `packages` shows all managed and missing packages grouped by manager:
+The `packages` command shows all managed and missing packages grouped by manager:
 - **NAME**: Package name
 - **MANAGER**: Package manager (brew, npm, pnpm, cargo, gem, conda, uv, pipx)
 - **STATUS**: Current state with icon
-
-### Filter Behavior
-
-- `--missing` - Shows only packages that need to be installed
-- `--unmanaged` - Shows only packages that exist but aren't tracked
-- No flags - Shows managed and missing packages (default)
 
 ### Table Format Display
 
 **Packages Table**:
 - NAME: Package name
 - MANAGER: Package manager
-- STATUS: Current state (managed/missing/untracked)
+- STATUS: Current state (managed/missing)
 
-Summary counts are displayed at the end, except when using `--unmanaged` or `--missing` flags.
+Summary counts are displayed at the end.
 
 ### Structured Output
 
@@ -58,19 +50,11 @@ JSON and YAML output formats include:
 - Summary with counts (managed, missing, untracked)
 - Items array with detailed package information
 
-When filtering with `--missing` or `--unmanaged`, the summary reflects only the filtered state.
-
 ## Examples
 
 ```bash
 # Show all managed packages
 plonk packages
-
-# Show only missing packages
-plonk packages --missing
-
-# Show only unmanaged packages
-plonk packages --unmanaged
 
 # Output as JSON
 plonk packages -o json
@@ -79,7 +63,7 @@ plonk packages -o json
 plonk packages -o yaml
 
 # Short alias
-plonk p --missing
+plonk p
 ```
 
 ## Integration
@@ -94,4 +78,3 @@ plonk p --missing
 - Alias: `p` (short form)
 - Colors are applied to status words only
 - Respects NO_COLOR environment variable for accessibility
-- Summary is hidden when using `--unmanaged` or `--missing` flags in table format

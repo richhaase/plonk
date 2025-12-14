@@ -32,12 +32,9 @@ func TestStatusFormatter_Table_Variants(t *testing.T) {
 	if !contains(out, "DOTFILES\n--------") {
 		t.Fatalf("expected dotfiles section: %s", out)
 	}
-
-	// missing only
-	s2 := StatusOutput{StateSummary: summary, ShowMissing: true}
-	out2 := NewStatusFormatter(s2).TableOutput()
-	if !contains(out2, "missing") {
-		t.Fatalf("expected missing entries: %s", out2)
+	// should show missing entries in output
+	if !contains(out, "missing") {
+		t.Fatalf("expected missing entries in output: %s", out)
 	}
 }
 
