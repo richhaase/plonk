@@ -22,7 +22,7 @@ setup() {
   echo "modified content" > "$HOME/$testfile"
 
   # Run status and count rows containing the filename
-  run plonk status --dotfiles
+  run plonk dotfiles
   assert_success
 
   # Count how many rows contain the testfile (each row should have $HOME and $PLONK_DIR columns)
@@ -49,7 +49,7 @@ setup() {
   track_artifact "dotfile" "$testfile"
 
   # Run status
-  run plonk status --dotfiles
+  run plonk dotfiles
   assert_success
 
   # Check for new column headers
@@ -102,7 +102,7 @@ setup() {
   echo "modified in home" > "$HOME/$testfile"
 
   # Verify it's drifted
-  run plonk status --dotfiles
+  run plonk dotfiles
   assert_output --partial "drifted"
 
   # Use add -y to sync back
@@ -118,7 +118,7 @@ setup() {
   assert_output "modified in home"
 
   # Should no longer be drifted
-  run plonk status --dotfiles
+  run plonk dotfiles
   refute_output --partial "drifted"
 }
 
@@ -250,7 +250,7 @@ setup() {
   echo "version 2 - edited in home" > "$HOME/$testfile"
 
   # 3. Check status - should show drifted with new column headers
-  run plonk status --dotfiles
+  run plonk dotfiles
   assert_success
   assert_output --partial "drifted"
   assert_output --partial "\$HOME"
@@ -262,7 +262,7 @@ setup() {
   assert_output --partial "$testfile"
 
   # 5. Status should now show no drift
-  run plonk status --dotfiles
+  run plonk dotfiles
   refute_output --partial "drifted"
 
   # 6. Remove file from home

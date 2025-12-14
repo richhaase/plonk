@@ -250,7 +250,7 @@ setup() {
   assert_output --partial "No drifted dotfiles found"
 
   # Use status to see missing packages
-  run plonk status --missing --packages
+  run plonk packages --missing
   assert_success
   assert_output --partial "cowsay"
 }

@@ -23,32 +23,21 @@ func TestStatusFormatter_Table_Variants(t *testing.T) {
 	udots := []Item{{Name: ".foo", State: StateUntracked, Metadata: map[string]any{"path": "/tmp/.foo"}}}
 	summary := makeSummary(pkgs, miss, upkgs, dots, mdots, udots)
 
-	// packages only
-	s := StatusOutput{StateSummary: summary, ShowPackages: true}
+	// default (show both packages and dotfiles)
+	s := StatusOutput{StateSummary: summary}
 	out := NewStatusFormatter(s).TableOutput()
 	if !contains(out, "PACKAGES\n--------") {
 		t.Fatalf("expected packages section: %s", out)
 	}
+	if !contains(out, "DOTFILES\n--------") {
+		t.Fatalf("expected dotfiles section: %s", out)
+	}
 
-	// dotfiles only
-	s2 := StatusOutput{StateSummary: summary, ShowDotfiles: true}
+	// missing only
+	s2 := StatusOutput{StateSummary: summary, ShowMissing: true}
 	out2 := NewStatusFormatter(s2).TableOutput()
-	if !contains(out2, "DOTFILES\n--------") {
-		t.Fatalf("expected dotfiles section")
-	}
-
-	// unmanaged
-	s3 := StatusOutput{StateSummary: summary, ShowPackages: true, ShowDotfiles: true, ShowUnmanaged: true}
-	out3 := NewStatusFormatter(s3).TableOutput()
-	if !(contains(out3, "untracked") || contains(out3, "UNMANAGED DOTFILES")) {
-		t.Fatalf("expected unmanaged info")
-	}
-
-	// missing
-	s4 := StatusOutput{StateSummary: summary, ShowPackages: true, ShowDotfiles: true, ShowMissing: true}
-	out4 := NewStatusFormatter(s4).TableOutput()
-	if !contains(out4, "missing") {
-		t.Fatalf("expected missing entries: %s", out4)
+	if !contains(out2, "missing") {
+		t.Fatalf("expected missing entries: %s", out2)
 	}
 }
 

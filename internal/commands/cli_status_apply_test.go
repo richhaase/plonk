@@ -43,7 +43,7 @@ func osWriteFileAll(path, contents string) error {
 }
 
 func TestCLI_Status_JSON_and_YAML(t *testing.T) {
-	out, err := RunCLI(t, []string{"status", "-o", "json", "--packages", "--dotfiles"}, func(env CLITestEnv) {
+	out, err := RunCLI(t, []string{"status", "-o", "json"}, func(env CLITestEnv) {
 		seedLock(env.T, env.ConfigDir)
 		seedDotfile(env.T, env.ConfigDir, "zshrc", "export TEST=1\n")
 	})
@@ -94,7 +94,7 @@ func TestCLI_Status_JSON_and_YAML(t *testing.T) {
 	}
 
 	// YAML variant: basic shape check
-	outY, err := RunCLI(t, []string{"status", "-o", "yaml", "--packages", "--dotfiles"}, nil)
+	outY, err := RunCLI(t, []string{"status", "-o", "yaml"}, nil)
 	if err != nil {
 		t.Fatalf("status yaml failed: %v\n%s", err, outY)
 	}
@@ -164,39 +164,9 @@ func TestCLI_Status_Table_GoldenSnippet(t *testing.T) {
 	}
 }
 
-func TestCLI_Status_Flags_Table(t *testing.T) {
-	// packages only
-	out, err := RunCLI(t, []string{"status", "--packages"}, func(env CLITestEnv) {
-		seedLock(env.T, env.ConfigDir)
-		seedDotfile(env.T, env.ConfigDir, "zshrc", "export TEST=1\n")
-	})
-	if err != nil {
-		t.Fatalf("status --packages failed: %v\n%s", err, out)
-	}
-	if strings.Contains(out, "DOTFILES\n--------") {
-		t.Fatalf("expected DOTFILES section to be absent, got:\n%s", out)
-	}
-	if !strings.Contains(out, "PACKAGES\n--------") {
-		t.Fatalf("expected PACKAGES section to be present, got:\n%s", out)
-	}
-
-	// dotfiles only
-	out, err = RunCLI(t, []string{"status", "--dotfiles"}, func(env CLITestEnv) {
-		seedLock(env.T, env.ConfigDir)
-		seedDotfile(env.T, env.ConfigDir, "gitconfig", "[user]\n\tname = Test\n")
-	})
-	if err != nil {
-		t.Fatalf("status --dotfiles failed: %v\n%s", err, out)
-	}
-	if strings.Contains(out, "PACKAGES\n--------") {
-		t.Fatalf("expected PACKAGES section to be absent, got:\n%s", out)
-	}
-	if !strings.Contains(out, "DOTFILES\n--------") {
-		t.Fatalf("expected DOTFILES section to be present, got:\n%s", out)
-	}
-
+func TestCLI_Status_MissingFlag_Table(t *testing.T) {
 	// missing only
-	out, err = RunCLI(t, []string{"status", "--missing"}, func(env CLITestEnv) {
+	out, err := RunCLI(t, []string{"status", "--missing"}, func(env CLITestEnv) {
 		seedLock(env.T, env.ConfigDir)
 		seedDotfile(env.T, env.ConfigDir, "bashrc", "export X=1\n")
 	})

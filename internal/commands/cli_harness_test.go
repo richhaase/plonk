@@ -80,15 +80,15 @@ func RunCLI(t *testing.T, args []string, setup func(env CLITestEnv)) (string, er
 		_ = rootCmd.PersistentFlags().Set("output", "table")
 	}
 	// Reset status flags (value + Changed=false)
-	for _, name := range []string{"packages", "dotfiles", "unmanaged", "missing"} {
+	for _, name := range []string{"missing"} {
 		if f := statusCmd.Flags().Lookup(name); f != nil {
 			_ = f.Value.Set(f.DefValue)
 			f.Changed = false
 		}
 	}
 
-	// Reset dotfiles flags (mutually exclusive group): value + Changed=false
-	for _, name := range []string{"managed", "missing", "untracked", "verbose"} {
+	// Reset dotfiles flags: value + Changed=false
+	for _, name := range []string{"missing"} {
 		if f := dotfilesCmd.Flags().Lookup(name); f != nil {
 			_ = f.Value.Set(f.DefValue)
 			f.Changed = false

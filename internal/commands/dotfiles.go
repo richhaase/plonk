@@ -22,12 +22,10 @@ Shows:
 - All managed dotfiles
 - Missing dotfiles that need to be deployed
 - Drifted dotfiles (modified after deployment)
-- Unmanaged dotfiles (with --unmanaged flag)
 
 Examples:
   plonk dotfiles              # Show all managed dotfiles
   plonk dotfiles --missing    # Show only missing dotfiles
-  plonk dotfiles --unmanaged  # Show only unmanaged dotfiles
   plonk dotfiles -o json      # Show as JSON
   plonk dotfiles -o yaml      # Show as YAML`,
 	RunE:         runDotfiles,
@@ -36,7 +34,6 @@ Examples:
 
 func init() {
 	rootCmd.AddCommand(dotfilesCmd)
-	dotfilesCmd.Flags().Bool("unmanaged", false, "Show only unmanaged dotfiles")
 	dotfilesCmd.Flags().Bool("missing", false, "Show only missing dotfiles")
 }
 
@@ -49,13 +46,7 @@ func runDotfiles(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get filter flags
-	showUnmanaged, _ := cmd.Flags().GetBool("unmanaged")
 	showMissing, _ := cmd.Flags().GetBool("missing")
-
-	// Validate mutually exclusive flags
-	if err := validateStatusFlags(showUnmanaged, showMissing); err != nil {
-		return err
-	}
 
 	// Get directories
 	homeDir := config.GetHomeDir()
@@ -81,10 +72,9 @@ func runDotfiles(cmd *cobra.Command, args []string) error {
 
 	// Prepare output
 	outputData := output.DotfilesStatusOutput{
-		Result:        outputResult,
-		ShowMissing:   showMissing,
-		ShowUnmanaged: showUnmanaged,
-		ConfigDir:     configDir,
+		Result:      outputResult,
+		ShowMissing: showMissing,
+		ConfigDir:   configDir,
 	}
 
 	// Create formatter and render

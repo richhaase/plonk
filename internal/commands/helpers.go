@@ -126,14 +126,6 @@ func ParseSimpleFlags(cmd *cobra.Command) (*SimpleFlags, error) {
 	return flags, nil
 }
 
-// validateStatusFlags checks for incompatible flag combinations
-func validateStatusFlags(showUnmanaged, showMissing bool) error {
-	if showUnmanaged && showMissing {
-		return fmt.Errorf("--unmanaged and --missing are mutually exclusive: items cannot be both untracked and missing")
-	}
-	return nil
-}
-
 // normalizeDisplayFlags sets defaults when no flags specified
 func normalizeDisplayFlags(showPackages, showDotfiles bool) (packages, dotfiles bool) {
 	// If neither flag is set, show both

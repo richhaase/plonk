@@ -28,20 +28,10 @@ Shows:
 - All managed packages and dotfiles
 - Missing items that need to be installed
 - Configuration and lock file status
-- Unmanaged items (with --unmanaged flag)
-
-Flag Behavior:
-- --packages and --dotfiles: Filter by resource type (both shown if neither specified)
-- --unmanaged and --missing: Filter by state (mutually exclusive)
-- Combinations work as expected: --packages --missing shows only missing packages
 
 Examples:
   plonk status              # Show all managed items
-  plonk status --packages   # Show only packages
-  plonk status --dotfiles   # Show only dotfiles
-  plonk status --unmanaged  # Show only unmanaged items
   plonk status --missing    # Show only missing resources
-  plonk status --missing --packages  # Show only missing packages
   plonk status -o json      # Show as JSON
   plonk status -o yaml      # Show as YAML`,
 	RunE:         runStatus,
@@ -50,9 +40,6 @@ Examples:
 
 func init() {
 	rootCmd.AddCommand(statusCmd)
-	statusCmd.Flags().Bool("packages", false, "Show only package status")
-	statusCmd.Flags().Bool("dotfiles", false, "Show only dotfile status")
-	statusCmd.Flags().Bool("unmanaged", false, "Show only unmanaged items")
 	statusCmd.Flags().Bool("missing", false, "Show only missing resources")
 }
 
@@ -65,18 +52,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get filter flags
-	showPackages, _ := cmd.Flags().GetBool("packages")
-	showDotfiles, _ := cmd.Flags().GetBool("dotfiles")
-	showUnmanaged, _ := cmd.Flags().GetBool("unmanaged")
 	showMissing, _ := cmd.Flags().GetBool("missing")
-
-	// Validate mutually exclusive flags
-	if err := validateStatusFlags(showUnmanaged, showMissing); err != nil {
-		return err
-	}
-
-	// Normalize display flags
-	showPackages, showDotfiles = normalizeDisplayFlags(showPackages, showDotfiles)
 
 	// Get directories
 	homeDir := config.GetHomeDir()
@@ -89,33 +65,21 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	cfg := config.LoadWithDefaults(configDir)
 	ctx := context.Background()
 
-	// Reconcile packages and dotfiles independently (composing the commands)
-	var packageResult resources.Result
-	var dotfileResult resources.Result
-
-	if showPackages {
-		var err error
-		packageResult, err = packages.ReconcileWithConfig(ctx, configDir, cfg)
-		if err != nil {
-			return err
-		}
+	// Reconcile packages and dotfiles
+	packageResult, err := packages.ReconcileWithConfig(ctx, configDir, cfg)
+	if err != nil {
+		return err
 	}
 
-	if showDotfiles {
-		var err error
-		dotfileResult, err = dotfiles.ReconcileWithConfig(ctx, homeDir, configDir, cfg)
-		if err != nil {
-			return err
-		}
+	dotfileResult, err := dotfiles.ReconcileWithConfig(ctx, homeDir, configDir, cfg)
+	if err != nil {
+		return err
 	}
 
 	// Compose results into unified summary
-	results := make(map[string]resources.Result)
-	if showPackages {
-		results["package"] = packageResult
-	}
-	if showDotfiles {
-		results["dotfile"] = dotfileResult
+	results := map[string]resources.Result{
+		"package": packageResult,
+		"dotfile": dotfileResult,
 	}
 
 	summary := resources.ConvertResultsToSummary(results)
@@ -139,32 +103,26 @@ func runStatus(cmd *cobra.Command, args []string) error {
 
 	// Prepare output
 	outputData := StatusOutput{
-		ConfigPath:    configPath,
-		LockPath:      lockPath,
-		ConfigExists:  configExists,
-		ConfigValid:   configValid,
-		LockExists:    lockExists,
-		StateSummary:  summary,
-		ShowPackages:  showPackages,
-		ShowDotfiles:  showDotfiles,
-		ShowUnmanaged: showUnmanaged,
-		ShowMissing:   showMissing,
-		ConfigDir:     configDir,
+		ConfigPath:   configPath,
+		LockPath:     lockPath,
+		ConfigExists: configExists,
+		ConfigValid:  configValid,
+		LockExists:   lockExists,
+		StateSummary: summary,
+		ShowMissing:  showMissing,
+		ConfigDir:    configDir,
 	}
 
 	// Convert to output package type and create formatter
 	formatterData := output.StatusOutput{
-		ConfigPath:    outputData.ConfigPath,
-		LockPath:      outputData.LockPath,
-		ConfigExists:  outputData.ConfigExists,
-		ConfigValid:   outputData.ConfigValid,
-		LockExists:    outputData.LockExists,
-		StateSummary:  convertSummary(outputData.StateSummary),
-		ShowPackages:  outputData.ShowPackages,
-		ShowDotfiles:  outputData.ShowDotfiles,
-		ShowUnmanaged: outputData.ShowUnmanaged,
-		ShowMissing:   outputData.ShowMissing,
-		ConfigDir:     outputData.ConfigDir,
+		ConfigPath:   outputData.ConfigPath,
+		LockPath:     outputData.LockPath,
+		ConfigExists: outputData.ConfigExists,
+		ConfigValid:  outputData.ConfigValid,
+		LockExists:   outputData.LockExists,
+		StateSummary: convertSummary(outputData.StateSummary),
+		ShowMissing:  outputData.ShowMissing,
+		ConfigDir:    outputData.ConfigDir,
 	}
 	formatter := output.NewStatusFormatter(formatterData)
 	return output.RenderOutput(formatter, format)
@@ -208,17 +166,14 @@ func convertItems(items []resources.Item) []output.Item {
 
 // StatusOutput represents the output structure for status command
 type StatusOutput struct {
-	ConfigPath    string            `json:"config_path" yaml:"config_path"`
-	LockPath      string            `json:"lock_path" yaml:"lock_path"`
-	ConfigExists  bool              `json:"config_exists" yaml:"config_exists"`
-	ConfigValid   bool              `json:"config_valid" yaml:"config_valid"`
-	LockExists    bool              `json:"lock_exists" yaml:"lock_exists"`
-	StateSummary  resources.Summary `json:"state_summary" yaml:"state_summary"`
-	ShowPackages  bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
-	ShowDotfiles  bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
-	ShowUnmanaged bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
-	ShowMissing   bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
-	ConfigDir     string            `json:"-" yaml:"-"` // Not included in JSON/YAML output
+	ConfigPath   string            `json:"config_path" yaml:"config_path"`
+	LockPath     string            `json:"lock_path" yaml:"lock_path"`
+	ConfigExists bool              `json:"config_exists" yaml:"config_exists"`
+	ConfigValid  bool              `json:"config_valid" yaml:"config_valid"`
+	LockExists   bool              `json:"lock_exists" yaml:"lock_exists"`
+	StateSummary resources.Summary `json:"state_summary" yaml:"state_summary"`
+	ShowMissing  bool              `json:"-" yaml:"-"` // Not included in JSON/YAML output
+	ConfigDir    string            `json:"-" yaml:"-"` // Not included in JSON/YAML output
 }
 
 // StatusOutputSummary represents a summary-focused version for JSON/YAML output

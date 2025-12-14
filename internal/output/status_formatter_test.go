@@ -23,7 +23,6 @@ func TestStatusFormatter_DriftedLabel(t *testing.T) {
 				},
 			},
 		},
-		ShowDotfiles: true,
 	}
 
 	out := NewStatusFormatter(data).TableOutput()
@@ -51,7 +50,6 @@ func TestStatusFormatter_SummaryCountsExcludeDrifted(t *testing.T) {
 				{Domain: "dotfile", Managed: dotfileItems},
 			},
 		},
-		ShowDotfiles: true,
 	}
 
 	out := NewStatusFormatter(data).TableOutput()
