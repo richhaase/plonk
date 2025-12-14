@@ -6,6 +6,7 @@ This document provides a comprehensive audit of all command-line arguments and o
 **Source Files:** `internal/commands/*.go`
 
 > **Note:** The CLI was recently simplified by removing redundant flags:
+> - `--missing` removed from `status`, `packages`, and `dotfiles` commands (status already shows missing items inline)
 > - `--unmanaged` removed from `status`, `packages`, and `dotfiles` commands
 > - `--packages` and `--dotfiles` removed from `status` command (use `plonk packages` and `plonk dotfiles` subcommands instead)
 
