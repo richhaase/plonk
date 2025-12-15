@@ -4,7 +4,6 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/richhaase/plonk/internal/lock"
-	"gopkg.in/yaml.v3"
 )
 
 // helper: seed a simple lock with one brew package
@@ -40,103 +38,6 @@ func osWriteFileAll(path, contents string) error {
 		return err
 	}
 	return os.WriteFile(path, []byte(contents), 0o644)
-}
-
-func TestCLI_Status_JSON_and_YAML(t *testing.T) {
-	out, err := RunCLI(t, []string{"status", "-o", "json"}, func(env CLITestEnv) {
-		seedLock(env.T, env.ConfigDir)
-		seedDotfile(env.T, env.ConfigDir, "zshrc", "export TEST=1\n")
-	})
-	if err != nil {
-		t.Fatalf("status json failed: %v\n%s", err, out)
-	}
-
-	// Decode JSON and assert key fields
-	var payload struct {
-		ConfigPath   string `json:"config_path"`
-		LockPath     string `json:"lock_path"`
-		ConfigExists bool   `json:"config_exists"`
-		LockExists   bool   `json:"lock_exists"`
-		StateSummary struct {
-			TotalMissing int `json:"total_missing"`
-			Results      []struct {
-				Domain  string `json:"domain"`
-				Missing []struct {
-					Name    string `json:"name"`
-					Manager string `json:"manager"`
-				} `json:"missing"`
-			} `json:"results"`
-		} `json:"state_summary"`
-	}
-	if err := json.Unmarshal([]byte(out), &payload); err != nil {
-		t.Fatalf("invalid json: %v\n%s", err, out)
-	}
-
-	if payload.LockPath == "" || !payload.LockExists {
-		t.Fatalf("expected lock to exist in payload: %+v", payload)
-	}
-	// Expect at least 2 missing (1 package + 1 dotfile)
-	if payload.StateSummary.TotalMissing < 2 {
-		t.Fatalf("expected >=2 missing, got %d", payload.StateSummary.TotalMissing)
-	}
-	// Expect both domains present
-	foundPkg, foundDot := false, false
-	for _, r := range payload.StateSummary.Results {
-		if r.Domain == "package" {
-			foundPkg = true
-		}
-		if r.Domain == "dotfile" {
-			foundDot = true
-		}
-	}
-	if !foundPkg || !foundDot {
-		t.Fatalf("expected package and dotfile domains, got: %+v", payload.StateSummary.Results)
-	}
-
-	// YAML variant: basic shape check
-	outY, err := RunCLI(t, []string{"status", "-o", "yaml"}, nil)
-	if err != nil {
-		t.Fatalf("status yaml failed: %v\n%s", err, outY)
-	}
-	var y any
-	if err := yaml.Unmarshal([]byte(outY), &y); err != nil {
-		t.Fatalf("invalid yaml: %v\n%s", err, outY)
-	}
-}
-
-func TestCLI_Apply_DryRun_JSON(t *testing.T) {
-	out, err := RunCLI(t, []string{"apply", "--dry-run", "-o", "json"}, func(env CLITestEnv) {
-		seedLock(env.T, env.ConfigDir)
-		seedDotfile(env.T, env.ConfigDir, "gitconfig", "[user]\n\tname = Test\n")
-	})
-	if err != nil {
-		t.Fatalf("apply dry-run json failed: %v\n%s", err, out)
-	}
-
-	var payload struct {
-		DryRun   bool `json:"dry_run"`
-		Success  bool `json:"success"`
-		Packages *struct {
-			TotalWouldInstall int `json:"total_would_install"`
-		} `json:"packages"`
-		Dotfiles *struct {
-			Summary struct {
-				Added int `json:"added"`
-			} `json:"summary"`
-		} `json:"dotfiles"`
-	}
-	if err := json.Unmarshal([]byte(out), &payload); err != nil {
-		t.Fatalf("invalid json: %v\n%s", err, out)
-	}
-	if !payload.DryRun || !payload.Success {
-		t.Fatalf("expected dry_run and success true: %+v", payload)
-	}
-	if payload.Packages == nil || payload.Packages.TotalWouldInstall < 1 {
-		t.Fatalf("expected packages would-install >=1, got: %+v", payload.Packages)
-	}
-	if payload.Dotfiles == nil || payload.Dotfiles.Summary.Added < 1 {
-		t.Fatalf("expected dotfiles added >=1, got: %+v", payload.Dotfiles)
-	}
 }
 
 func TestCLI_Status_Table_GoldenSnippet(t *testing.T) {
@@ -190,66 +91,28 @@ func TestCLI_Apply_Table_DryRun_GoldenSnippet(t *testing.T) {
 	_ = fmt.Sprintf("") // keep fmt import
 }
 
-func TestCLI_Install_Uninstall_DryRun_JSON(t *testing.T) {
+func TestCLI_Install_DryRun_Table(t *testing.T) {
 	// install dry run
-	out, err := RunCLI(t, []string{"install", "-n", "-o", "json", "brew:jq", "npm:typescript"}, nil)
+	out, err := RunCLI(t, []string{"install", "-n", "brew:jq", "npm:typescript"}, nil)
 	if err != nil {
-		t.Fatalf("install -n json failed: %v\n%s", err, out)
+		t.Fatalf("install -n failed: %v\n%s", err, out)
 	}
 
-	var install struct {
-		Command string `json:"command"`
-		DryRun  bool   `json:"dry_run"`
-		Results []struct {
-			Name    string `json:"name"`
-			Manager string `json:"manager"`
-			Status  string `json:"status"`
-		} `json:"results"`
+	// Verify table output shows would-add entries
+	if !strings.Contains(out, "would-add") {
+		t.Fatalf("expected 'would-add' in output, got:\n%s", out)
 	}
-	if e := json.Unmarshal([]byte(out), &install); e != nil {
-		t.Fatalf("invalid json: %v\n%s", e, out)
-	}
-	if install.Command != "install" || !install.DryRun {
-		t.Fatalf("unexpected install payload: %+v", install)
-	}
-	// Expect would-add entries present
-	sawWould := false
-	for _, r := range install.Results {
-		if r.Status == "would-add" {
-			sawWould = true
-			break
-		}
-	}
-	if !sawWould {
-		t.Fatalf("expected at least one would-add, got: %+v", install.Results)
-	}
+}
 
+func TestCLI_Uninstall_DryRun_Table(t *testing.T) {
 	// uninstall dry run
-	out, err = RunCLI(t, []string{"uninstall", "-n", "-o", "json", "brew:jq"}, nil)
+	out, err := RunCLI(t, []string{"uninstall", "-n", "brew:jq"}, nil)
 	if err != nil {
-		t.Fatalf("uninstall -n json failed: %v\n%s", err, out)
+		t.Fatalf("uninstall -n failed: %v\n%s", err, out)
 	}
-	var uninstall struct {
-		Command string `json:"command"`
-		DryRun  bool   `json:"dry_run"`
-		Results []struct {
-			Status string `json:"status"`
-		} `json:"results"`
-	}
-	if e := json.Unmarshal([]byte(out), &uninstall); e != nil {
-		t.Fatalf("invalid json: %v\n%s", e, out)
-	}
-	if uninstall.Command != "uninstall" || !uninstall.DryRun {
-		t.Fatalf("unexpected uninstall payload: %+v", uninstall)
-	}
-	sawWouldRemove := false
-	for _, r := range uninstall.Results {
-		if r.Status == "would-remove" {
-			sawWouldRemove = true
-			break
-		}
-	}
-	if !sawWouldRemove {
-		t.Fatalf("expected would-remove, got: %+v", uninstall.Results)
+
+	// Verify table output shows would-remove entries
+	if !strings.Contains(out, "would-remove") {
+		t.Fatalf("expected 'would-remove' in output, got:\n%s", out)
 	}
 }

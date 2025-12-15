@@ -42,13 +42,6 @@ func init() {
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {
-	// Parse output format
-	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := output.ParseOutputFormat(outputFormat)
-	if err != nil {
-		return err
-	}
-
 	// Get directories
 	homeDir := config.GetHomeDir()
 	configDir := config.GetConfigDir()
@@ -118,7 +111,8 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		ConfigDir:    outputData.ConfigDir,
 	}
 	formatter := output.NewStatusFormatter(formatterData)
-	return output.RenderOutput(formatter, format)
+	output.RenderOutput(formatter)
+	return nil
 }
 
 // convertSummary converts from resources.Summary to output.Summary

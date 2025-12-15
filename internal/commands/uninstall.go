@@ -40,14 +40,7 @@ func init() {
 }
 
 func runUninstall(cmd *cobra.Command, args []string) error {
-	// Parse output format
-	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := output.ParseOutputFormat(outputFormat)
-	if err != nil {
-		return err
-	}
-
-	// Get flags (only common flags now)
+	// Get flags
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 
 	// Get config directory and load configuration
@@ -144,11 +137,9 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 		DryRun:     dryRun,
 	}
 
-	// Create formatter
+	// Create formatter and render
 	formatter := output.NewPackageOperationFormatter(outputData)
-	if err := output.RenderOutput(formatter, format); err != nil {
-		return err
-	}
+	output.RenderOutput(formatter)
 
 	// Check if all operations failed and return appropriate error
 	return resources.ValidateOperationResults(allResults, "uninstall packages")

@@ -70,13 +70,6 @@ func init() {
 }
 
 func runAdd(cmd *cobra.Command, args []string) error {
-	// Parse output format
-	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := output.ParseOutputFormat(outputFormat)
-	if err != nil {
-		return err
-	}
-
 	// Get flags
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	syncDrifted, _ := cmd.Flags().GetBool("sync-drifted")
@@ -92,7 +85,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 	// Handle sync-drifted flag
 	if syncDrifted {
-		return runSyncDrifted(ctx, cmd, cfg, configDir, homeDir, format, dryRun)
+		return runSyncDrifted(ctx, cmd, cfg, configDir, homeDir, dryRun)
 	}
 
 	// Require at least one file argument if not syncing drifted
@@ -139,16 +132,14 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// Render output
-	if err := output.RenderOutput(outputData, format); err != nil {
-		return err
-	}
+	output.RenderOutput(outputData)
 
 	// Check if all operations failed and return appropriate error
 	return resources.ValidateOperationResults(results, "add dotfiles")
 }
 
 // runSyncDrifted syncs all drifted files from $HOME back to $PLONKDIR
-func runSyncDrifted(ctx context.Context, cmd *cobra.Command, cfg *config.Config, configDir, homeDir string, format output.OutputFormat, dryRun bool) error {
+func runSyncDrifted(ctx context.Context, cmd *cobra.Command, cfg *config.Config, configDir, homeDir string, dryRun bool) error {
 	// Get drifted dotfiles from reconciliation
 	driftedFiles, err := getDriftedDotfiles(ctx, cfg, configDir, homeDir)
 	if err != nil {
@@ -212,9 +203,7 @@ func runSyncDrifted(ctx context.Context, cmd *cobra.Command, cfg *config.Config,
 	}
 
 	// Render output
-	if err := output.RenderOutput(outputData, format); err != nil {
-		return err
-	}
+	output.RenderOutput(outputData)
 
 	// Check if all operations failed and return appropriate error
 	return resources.ValidateOperationResults(results, "sync drifted dotfiles")

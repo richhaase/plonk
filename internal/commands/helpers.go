@@ -110,7 +110,6 @@ type SimpleFlags struct {
 	DryRun  bool
 	Force   bool
 	Verbose bool
-	Output  string
 }
 
 // ParseSimpleFlags parses basic flags for commands
@@ -121,7 +120,6 @@ func ParseSimpleFlags(cmd *cobra.Command) (*SimpleFlags, error) {
 	flags.DryRun, _ = cmd.Flags().GetBool("dry-run")
 	flags.Force, _ = cmd.Flags().GetBool("force")
 	flags.Verbose, _ = cmd.Flags().GetBool("verbose")
-	flags.Output, _ = cmd.Flags().GetString("output")
 
 	return flags, nil
 }

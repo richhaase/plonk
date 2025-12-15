@@ -35,13 +35,6 @@ func init() {
 }
 
 func runPackages(cmd *cobra.Command, args []string) error {
-	// Parse output format
-	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := output.ParseOutputFormat(outputFormat)
-	if err != nil {
-		return err
-	}
-
 	// Get directories
 	configDir := config.GetConfigDir()
 
@@ -70,5 +63,6 @@ func runPackages(cmd *cobra.Command, args []string) error {
 
 	// Create formatter and render
 	formatter := output.NewPackagesStatusFormatter(outputData)
-	return output.RenderOutput(formatter, format)
+	output.RenderOutput(formatter)
+	return nil
 }

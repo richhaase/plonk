@@ -65,13 +65,6 @@ func init() {
 }
 
 func runRm(cmd *cobra.Command, args []string) error {
-	// Parse output format
-	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := output.ParseOutputFormat(outputFormat)
-	if err != nil {
-		return err
-	}
-
 	// Get flags
 	flags, err := parseSimpleFlags(cmd)
 	if err != nil {
@@ -118,9 +111,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 		},
 	}
 	formatter := output.NewDotfileRemovalFormatter(formatterData)
-	if err := output.RenderOutput(formatter, format); err != nil {
-		return err
-	}
+	output.RenderOutput(formatter)
 
 	// Check if all operations failed and return appropriate error
 	return resources.ValidateOperationResults(results, "remove dotfiles")

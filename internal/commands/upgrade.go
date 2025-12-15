@@ -228,13 +228,6 @@ func extractPackageNameFromResource(resource lock.ResourceEntry) string {
 
 // runUpgrade executes the upgrade command
 func runUpgrade(cmd *cobra.Command, args []string) error {
-	// Parse output format
-	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := output.ParseOutputFormat(outputFormat)
-	if err != nil {
-		return err
-	}
-
 	// Get dry-run flag
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 
@@ -285,9 +278,7 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 
 	// Create formatter and render
 	formatter := output.NewUpgradeFormatter(outputData)
-	if err := output.RenderOutput(formatter, format); err != nil {
-		return err
-	}
+	output.RenderOutput(formatter)
 
 	// Print summary
 	output.Printf("\nSummary: %d upgraded, %d failed, %d skipped\n",

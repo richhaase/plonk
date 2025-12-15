@@ -6,6 +6,7 @@ This document provides a comprehensive audit of all command-line arguments and o
 **Source Files:** `internal/commands/*.go`
 
 > **Note:** The CLI was recently simplified by removing redundant flags:
+> - `--output` / `-o` removed globally (table output only, no JSON/YAML)
 > - `--missing` removed from `status`, `packages`, and `dotfiles` commands (status already shows missing items inline)
 > - `--unmanaged` removed from `status`, `packages`, and `dotfiles` commands
 > - `--packages` and `--dotfiles` removed from `status` command (use `plonk packages` and `plonk dotfiles` subcommands instead)
@@ -14,8 +15,7 @@ This document provides a comprehensive audit of all command-line arguments and o
 
 ## Table of Contents
 
-1. [Global Flags](#global-flags)
-2. [Root Command](#root-command)
+1. [Root Command](#root-command)
 3. [Package Management Commands](#package-management-commands)
    - [install](#install)
    - [uninstall](#uninstall)
@@ -38,20 +38,6 @@ This document provides a comprehensive audit of all command-line arguments and o
    - [doctor](#doctor)
 8. [Consistency Analysis](#consistency-analysis)
 9. [Shell Completion](#shell-completion)
-
----
-
-## Global Flags
-
-These flags are available on all commands via `PersistentFlags()`:
-
-| Flag       | Short | Type   | Default | Description                       |
-| ---------- | ----- | ------ | ------- | --------------------------------- |
-| `--output` | `-o`  | string | `table` | Output format (table\|json\|yaml) |
-
-**Source:** `root.go:44`
-
-**Shell Completion:** Registered via `RegisterFlagCompletionFunc` for `--output` flag with values: `table`, `json`, `yaml`
 
 ---
 
@@ -115,10 +101,6 @@ Install packages on your system and add them to your lock file for management.
 
 - Examples are dynamically generated based on configured package managers
 
-### Inherited Flags
-
-- `--output`, `-o` (global)
-
 ---
 
 ### uninstall
@@ -144,10 +126,6 @@ Uninstall packages from your system and remove them from your lock file.
 | Flag        | Short | Type | Default | Description                                       |
 | ----------- | ----- | ---- | ------- | ------------------------------------------------- |
 | `--dry-run` | `-n`  | bool | `false` | Show what would be removed without making changes |
-
-### Inherited Flags
-
-- `--output`, `-o` (global)
 
 ---
 
@@ -181,10 +159,6 @@ Upgrade packages managed by plonk to their latest versions. Only upgrades packag
 | Flag        | Short | Type | Default | Description                                          |
 | ----------- | ----- | ---- | ------- | ---------------------------------------------------- |
 | `--dry-run` | `-n`  | bool | `false` | Show what would be upgraded without making changes   |
-
-### Inherited Flags
-
-- `--output`, `-o` (global)
 
 ---
 
@@ -228,10 +202,6 @@ Plonk accepts paths in multiple formats:
 
 - `ValidArgsFunction` provides completion for common dotfile paths
 
-### Inherited Flags
-
-- `--output`, `-o` (global)
-
 ---
 
 ### rm
@@ -261,10 +231,6 @@ Remove dotfiles from plonk management by deleting them from the configuration di
 ### Shell Completion
 
 - `ValidArgsFunction` provides completion for common dotfile paths
-
-### Inherited Flags
-
-- `--output`, `-o` (global)
 
 ---
 
@@ -305,10 +271,6 @@ Clone an existing dotfiles repository and intelligently set up plonk.
 
 Uses package-level variables `cloneYes` and `cloneNoApply` instead of flag parsing in RunE. These flags do not use short forms.
 
-### Inherited Flags
-
-- `--output`, `-o` (global) - but not used in output
-
 ---
 
 ## Status & Visibility Commands
@@ -333,10 +295,6 @@ Display a detailed list of all plonk-managed items and their status.
 
 None
 
-### Inherited Flags
-
-- `--output`, `-o` (global)
-
 ---
 
 ### packages
@@ -359,10 +317,6 @@ Display the status of all plonk-managed packages.
 
 None
 
-### Inherited Flags
-
-- `--output`, `-o` (global)
-
 ---
 
 ### dotfiles
@@ -384,10 +338,6 @@ Display the status of all plonk-managed dotfiles.
 ### Local Flags
 
 None
-
-### Inherited Flags
-
-- `--output`, `-o` (global)
 
 ---
 
@@ -418,10 +368,6 @@ None
 - With no arguments: shows diffs for all drifted dotfiles
 - With file argument: shows diff for that specific file only
 - Uses `cfg.DiffTool` or defaults to `git diff --no-index`
-
-### Inherited Flags
-
-- `--output`, `-o` (global) - but not used (diff outputs directly)
 
 ---
 
@@ -466,10 +412,6 @@ Display the effective plonk configuration (defaults merged with user settings).
 
 None
 
-### Inherited Flags
-
-- `--output`, `-o` (global)
-
 ---
 
 ### config edit
@@ -499,10 +441,6 @@ None
 - Validates configuration after editing
 - Saves only non-default values to plonk.yaml
 - Supports edit/revert/quit on validation errors
-
-### Inherited Flags
-
-- `--output`, `-o` (global) - but not used
 
 ---
 
@@ -539,10 +477,6 @@ Apply configuration to reconcile system state - installs missing packages and ma
 - `--packages` and `--dotfiles`: **Mutually exclusive** (enforced via `MarkFlagsMutuallyExclusive`)
 - Cannot specify files with `--packages` or `--dotfiles` flags
 
-### Inherited Flags
-
-- `--output`, `-o` (global)
-
 ---
 
 ### doctor
@@ -573,10 +507,6 @@ None
 - Environment variables (PLONK_DIR, etc.)
 - Any issues that would prevent plonk from working
 
-### Inherited Flags
-
-- `--output`, `-o` (global)
-
 ---
 
 ## Consistency Analysis
@@ -600,7 +530,6 @@ None
 | Short | Long Form        | Command(s)                                     |
 | ----- | ---------------- | ---------------------------------------------- |
 | `-n`  | `--dry-run`      | install, uninstall, upgrade, add, rm, clone, apply |
-| `-o`  | `--output`       | global (all commands)                          |
 | `-v`  | `--version`      | root                                           |
 | `-y`  | `--sync-drifted` | add                                            |
 
@@ -647,7 +576,6 @@ No aliases for: install, uninstall, upgrade, add, rm, clone, diff, doctor, apply
 
 | Command/Flag         | Completion Type | Values                       |
 | -------------------- | --------------- | ---------------------------- |
-| `--output` (global)  | Static          | `table`, `json`, `yaml`      |
 | `add` args           | Dynamic         | Common dotfile paths         |
 | `rm` args            | Dynamic         | Common dotfile paths         |
 | `install` examples   | Dynamic         | Based on configured managers |
@@ -675,7 +603,7 @@ No aliases for: install, uninstall, upgrade, add, rm, clone, diff, doctor, apply
 
 | Command       | Args            | Flags                                                  | Aliases | Has dry-run |
 | ------------- | --------------- | ------------------------------------------------------ | ------- | ----------- |
-| `plonk`       | -               | `--version`, `--output`                                | -       | -           |
+| `plonk`       | -               | `--version`                                            | -       | -           |
 | `install`     | `<packages...>` | `--dry-run`                                            | -       | Yes         |
 | `uninstall`   | `<packages...>` | `--dry-run`                                            | -       | Yes         |
 | `upgrade`     | `[targets...]`  | `--dry-run`                                            | -       | Yes         |

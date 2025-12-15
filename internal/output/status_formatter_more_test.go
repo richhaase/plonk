@@ -37,14 +37,3 @@ func TestStatusFormatter_Table_Variants(t *testing.T) {
 		t.Fatalf("expected missing entries in output: %s", out)
 	}
 }
-
-func TestStatusFormatter_JSON_YAML(t *testing.T) {
-	sum := makeSummary(nil, nil, nil, nil, nil, nil)
-	data := StatusOutput{ConfigPath: "/x", LockPath: "/y", ConfigExists: true, LockExists: true, ConfigValid: true, StateSummary: sum}
-	if err := RenderOutput(NewStatusFormatter(data), OutputJSON); err != nil {
-		t.Fatalf("json: %v", err)
-	}
-	if err := RenderOutput(NewStatusFormatter(data), OutputYAML); err != nil {
-		t.Fatalf("yaml: %v", err)
-	}
-}

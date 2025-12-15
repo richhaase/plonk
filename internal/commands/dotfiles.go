@@ -36,13 +36,6 @@ func init() {
 }
 
 func runDotfiles(cmd *cobra.Command, args []string) error {
-	// Parse output format
-	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := output.ParseOutputFormat(outputFormat)
-	if err != nil {
-		return err
-	}
-
 	// Get directories
 	homeDir := config.GetHomeDir()
 	configDir := config.GetConfigDir()
@@ -73,5 +66,6 @@ func runDotfiles(cmd *cobra.Command, args []string) error {
 
 	// Create formatter and render
 	formatter := output.NewDotfilesStatusFormatter(outputData)
-	return output.RenderOutput(formatter, format)
+	output.RenderOutput(formatter)
+	return nil
 }

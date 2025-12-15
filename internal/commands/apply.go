@@ -62,13 +62,6 @@ func runApply(cmd *cobra.Command, args []string) error {
 	packagesOnly, _ := cmd.Flags().GetBool("packages")
 	dotfilesOnly, _ := cmd.Flags().GetBool("dotfiles")
 
-	// Parse output format
-	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := output.ParseOutputFormat(outputFormat)
-	if err != nil {
-		return fmt.Errorf("invalid output format: %w", err)
-	}
-
 	// Get directories
 	homeDir := config.GetHomeDir()
 	configDir := config.GetConfigDir()
@@ -83,7 +76,7 @@ func runApply(cmd *cobra.Command, args []string) error {
 		if packagesOnly || dotfilesOnly {
 			return fmt.Errorf("cannot specify files with --packages or --dotfiles flags")
 		}
-		return runSelectiveApply(ctx, args, cfg, configDir, homeDir, format, dryRun)
+		return runSelectiveApply(ctx, args, cfg, configDir, homeDir, dryRun)
 	}
 
 	// Create new orchestrator with all options
@@ -103,10 +96,7 @@ func runApply(cmd *cobra.Command, args []string) error {
 	result.Scope = getApplyScope(packagesOnly, dotfilesOnly)
 
 	// Render output first
-	renderErr := output.RenderOutput(result, format)
-	if renderErr != nil {
-		return renderErr
-	}
+	output.RenderOutput(result)
 
 	// Now handle any errors from apply
 	if err != nil {
@@ -150,7 +140,7 @@ func normalizePathWithHome(path, homeDir string) (string, error) {
 }
 
 // runSelectiveApply applies only specific dotfiles
-func runSelectiveApply(ctx context.Context, paths []string, cfg *config.Config, configDir, homeDir string, format output.OutputFormat, dryRun bool) error {
+func runSelectiveApply(ctx context.Context, paths []string, cfg *config.Config, configDir, homeDir string, dryRun bool) error {
 	// First, get all managed dotfiles to validate the requested files
 	// Only reconcile dotfiles, not packages, to avoid failures in environments without package support
 	dotfileResult, err := dotfiles.ReconcileWithConfig(ctx, homeDir, configDir, cfg)
@@ -212,9 +202,7 @@ func runSelectiveApply(ctx context.Context, paths []string, cfg *config.Config, 
 	}
 
 	// Render output
-	if err := output.RenderOutput(result, format); err != nil {
-		return err
-	}
+	output.RenderOutput(result)
 
 	return nil
 }

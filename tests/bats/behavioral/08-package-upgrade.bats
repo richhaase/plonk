@@ -260,39 +260,6 @@ setup() {
   assert_output --partial "Summary:"
 }
 
-# Output format tests
-@test "upgrade output in JSON format" {
-  require_safe_package "brew:cowsay"
-
-  # Install package
-  run plonk install brew:cowsay
-  assert_success
-  track_artifact "package" "brew:cowsay"
-
-  # Upgrade with JSON output
-  run plonk upgrade brew:cowsay --output json
-  assert_success
-  assert_output --partial '"command": "upgrade"'
-  assert_output --partial '"manager": "brew"'
-  assert_output --partial '"package": "cowsay"'
-}
-
-@test "upgrade output in YAML format" {
-  require_safe_package "brew:sl"
-
-  # Install package
-  run plonk install brew:sl
-  assert_success
-  track_artifact "package" "brew:sl"
-
-  # Upgrade with YAML output
-  run plonk upgrade brew:sl --output yaml
-  assert_success
-  assert_output --partial "command: upgrade"
-  assert_output --partial "manager: brew"
-  assert_output --partial "package: sl"
-}
-
 # Error handling tests
 @test "upgrade handles unavailable package manager gracefully" {
   # Try to upgrade with a package manager that doesn't exist
