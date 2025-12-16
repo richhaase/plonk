@@ -17,7 +17,7 @@ This command is useful when you want to focus specifically on packages without t
 
 ## Options
 
-- `-o, --output` - Output format (table/json/yaml)
+None. The packages command displays table output only.
 
 ## Behavior
 
@@ -44,26 +44,12 @@ The `packages` command shows all managed and missing packages grouped by manager
 
 Summary counts are displayed at the end.
 
-### Structured Output
-
-JSON and YAML output formats include:
-- Summary with counts (managed, missing, untracked)
-- Items array with detailed package information
-
 ## Examples
 
 ```bash
 # Show all managed packages
 plonk packages
-
-# Output as JSON
-plonk packages -o json
-
-# Output as YAML
-plonk packages -o yaml
-
-# Short alias
-plonk p
+plonk p                     # Short alias
 ```
 
 ## Integration

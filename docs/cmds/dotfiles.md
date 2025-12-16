@@ -17,7 +17,7 @@ This command is useful when you want to focus specifically on dotfiles without t
 
 ## Options
 
-- `-o, --output` - Output format (table/json/yaml)
+None. The dotfiles command displays table output only.
 
 ## Behavior
 
@@ -45,26 +45,12 @@ The `dotfiles` command shows all managed and missing dotfiles:
 
 Summary counts are displayed at the end.
 
-### Structured Output
-
-JSON and YAML output formats include:
-- Summary with counts (managed, missing, untracked)
-- Items array with detailed dotfile information including source and target paths
-
 ## Examples
 
 ```bash
 # Show all managed dotfiles
 plonk dotfiles
-
-# Output as JSON
-plonk dotfiles -o json
-
-# Output as YAML
-plonk dotfiles -o yaml
-
-# Short alias
-plonk d
+plonk d                     # Short alias
 ```
 
 ## Integration

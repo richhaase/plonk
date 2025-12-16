@@ -21,7 +21,7 @@ The command supports filtering by resource type and state, with multiple output 
 
 ## Options
 
-- `-o, --output` - Output format (table/json/yaml)
+None. The status command displays table output only.
 
 ## Behavior
 
@@ -54,13 +54,6 @@ Without flags, status shows all managed and missing resources in two sections:
 
 Summary counts are displayed at the end.
 
-### Structured Output
-
-JSON and YAML output formats include:
-- Configuration file paths and validity
-- Detailed summary with counts by domain
-- Items in array with domain field
-
 ### Error Handling
 
 - Continues operation even with invalid configuration
@@ -72,16 +65,11 @@ JSON and YAML output formats include:
 ```bash
 # Show all managed resources
 plonk status
+plonk st                    # Short alias
 
-# Output as JSON
-plonk status -o json
-
-# Output as YAML
-plonk status -o yaml
-
-# Alternative: Use focused commands for specific resource types
-plonk packages              # Show only package status
-plonk dotfiles              # Show only dotfile status
+# Use focused commands for specific resource types
+plonk packages              # Show only package status (alias: p)
+plonk dotfiles              # Show only dotfile status (alias: d)
 ```
 
 ## Integration

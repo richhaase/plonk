@@ -32,11 +32,16 @@ Installs packages and adds them to plonk management.
 
 ```bash
 plonk install [options] <package>...
+plonk i [options] <package>...        # Short alias
 ```
 
 ### Options
 
 - `--dry-run, -n` - Preview changes without installing
+
+### Alias
+
+- `i`
 
 ### Behavior
 
@@ -73,11 +78,16 @@ Removes packages from system and plonk management.
 
 ```bash
 plonk uninstall [options] <package>...
+plonk u [options] <package>...        # Short alias
 ```
 
 ### Options
 
 - `--dry-run, -n` - Preview changes without uninstalling
+
+### Alias
+
+- `u`
 
 ### Behavior
 
