@@ -24,9 +24,7 @@ Shows the complete configuration that plonk is actually using, including all def
 values merged with any user-specified overrides from the config file.
 
 Examples:
-  plonk config show           # Show effective configuration
-  plonk config show -o json   # Show as JSON
-  plonk config show -o yaml   # Show as YAML (default)`,
+  plonk config show    # Show effective configuration`,
 	RunE:         runConfigShow,
 	SilenceUsage: true,
 	Args:         cobra.NoArgs,

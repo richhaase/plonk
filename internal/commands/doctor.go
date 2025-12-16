@@ -32,9 +32,7 @@ Doctor reports issues with suggestions on how to fix them.
 To automatically install missing package managers, use 'plonk clone'.
 
 Examples:
-  plonk doctor           # Run health checks
-  plonk doctor -o json   # Show as JSON
-  plonk doctor -o yaml   # Show as YAML`,
+  plonk doctor    # Run health checks`,
 	RunE:         runDoctor,
 	SilenceUsage: true,
 }

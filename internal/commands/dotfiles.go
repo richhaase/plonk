@@ -24,9 +24,8 @@ Shows:
 - Drifted dotfiles (modified after deployment)
 
 Examples:
-  plonk dotfiles           # Show all managed dotfiles
-  plonk dotfiles -o json   # Show as JSON
-  plonk dotfiles -o yaml   # Show as YAML`,
+  plonk dotfiles    # Show all managed dotfiles
+  plonk d           # Short alias`,
 	RunE:         runDotfiles,
 	SilenceUsage: true,
 }

@@ -2,7 +2,7 @@
 
 This document provides a comprehensive audit of all command-line arguments and options in the Plonk CLI tool.
 
-**Audit Date:** 2025-12-14 (Updated)
+**Audit Date:** 2025-12-15 (Updated)
 **Source Files:** `internal/commands/*.go`
 
 > **Note:** The CLI was recently simplified by removing redundant flags:
@@ -16,7 +16,7 @@ This document provides a comprehensive audit of all command-line arguments and o
 ## Table of Contents
 
 1. [Root Command](#root-command)
-3. [Package Management Commands](#package-management-commands)
+2. [Package Management Commands](#package-management-commands)
    - [install](#install)
    - [uninstall](#uninstall)
    - [upgrade](#upgrade)

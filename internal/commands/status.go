@@ -30,9 +30,8 @@ Shows:
 - Configuration and lock file status
 
 Examples:
-  plonk status           # Show all managed items
-  plonk status -o json   # Show as JSON
-  plonk status -o yaml   # Show as YAML`,
+  plonk status    # Show all managed items
+  plonk st        # Short alias`,
 	RunE:         runStatus,
 	SilenceUsage: true,
 }

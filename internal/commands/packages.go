@@ -23,9 +23,8 @@ Shows:
 - Missing packages that need to be installed
 
 Examples:
-  plonk packages          # Show all managed packages
-  plonk packages -o json  # Show as JSON
-  plonk packages -o yaml  # Show as YAML`,
+  plonk packages    # Show all managed packages
+  plonk p           # Short alias`,
 	RunE:         runPackages,
 	SilenceUsage: true,
 }
