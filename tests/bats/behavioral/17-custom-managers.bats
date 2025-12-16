@@ -7,38 +7,18 @@ setup() {
   setup_test_env
 }
 
-# Helper to create a Go wrapper script that handles --version flag
-# Plonk's GenericManager checks availability by running `binary --version`
-# Go uses `go version` (no double dash), so we create a wrapper
-create_go_wrapper() {
-  local wrapper_dir="$PLONK_DIR/bin"
-  mkdir -p "$wrapper_dir"
-
-  cat > "$wrapper_dir/go-wrapper" << 'WRAPPER'
-#!/bin/bash
-if [[ "$1" == "--version" ]]; then
-  exec go version
-else
-  exec go "$@"
-fi
-WRAPPER
-  chmod +x "$wrapper_dir/go-wrapper"
-
-  # Add wrapper to PATH for this test
-  export PATH="$wrapper_dir:$PATH"
-}
-
 # Helper to create a Go custom manager config
+# Uses the new 'available' config option to specify a custom availability check
 create_go_manager_config() {
-  create_go_wrapper
-
-  cat > "$PLONK_DIR/plonk.yaml" << EOF
+  cat > "$PLONK_DIR/plonk.yaml" << 'EOF'
 managers:
   go:
-    binary: $PLONK_DIR/bin/go-wrapper
+    binary: go
     description: "Go language package manager"
     install_hint: "Install Go from https://go.dev/dl/"
     help_url: "https://go.dev"
+    available:
+      command: ["go", "version"]
     list:
       command: ["go", "version"]
       parse: lines
@@ -47,15 +27,15 @@ managers:
     upgrade:
       command: ["go", "install", "{{.Package}}@latest"]
     uninstall:
-      command: ["echo", "To uninstall {{.Package}}, remove the binary from \$GOBIN or \$GOPATH/bin"]
+      command: ["echo", "To uninstall {{.Package}}, remove the binary from $GOBIN or $GOPATH/bin"]
 EOF
 }
 
 # Helper to check if go manager actually works with plonk
 check_go_manager_available() {
   create_go_manager_config
-  # Verify the wrapper works with --version
-  run "$PLONK_DIR/bin/go-wrapper" --version
+  # Verify go is available
+  run go version
   if [[ $status -ne 0 ]]; then
     return 1
   fi

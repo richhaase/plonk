@@ -38,7 +38,12 @@ func (g *GenericManager) IsAvailable(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 
-	_, err := g.exec.Execute(ctx, g.config.Binary, "--version")
+	if len(g.config.Available.Command) == 0 {
+		return false, fmt.Errorf("no availability check configured for manager (missing 'available' config)")
+	}
+
+	cmd := g.config.Available.Command
+	_, err := g.exec.Execute(ctx, cmd[0], cmd[1:]...)
 	if err != nil {
 		return false, nil
 	}

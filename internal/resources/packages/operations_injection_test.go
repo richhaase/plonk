@@ -46,8 +46,9 @@ func TestInstallPackagesWith_LockAddFailure_ReportsFailed(t *testing.T) {
 	// Config + mock exec for brew install
 	cfg.Managers = map[string]config.ManagerConfig{
 		"brew": {
-			Binary:  "brew",
-			Install: config.CommandConfig{Command: []string{"brew", "install", "{{.Package}}"}},
+			Binary:    "brew",
+			Available: config.CommandConfig{Command: []string{"brew", "--version"}},
+			Install:   config.CommandConfig{Command: []string{"brew", "install", "{{.Package}}"}},
 		},
 	}
 	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
@@ -78,6 +79,7 @@ func TestUninstallPackagesWith_PassThrough_WhenNotManaged(t *testing.T) {
 	cfg.Managers = map[string]config.ManagerConfig{
 		"brew": {
 			Binary:    "brew",
+			Available: config.CommandConfig{Command: []string{"brew", "--version"}},
 			Uninstall: config.CommandConfig{Command: []string{"brew", "uninstall", "{{.Package}}"}},
 		},
 	}

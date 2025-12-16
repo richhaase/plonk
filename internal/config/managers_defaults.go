@@ -8,6 +8,9 @@ func GetDefaultManagers() map[string]ManagerConfig {
 	return map[string]ManagerConfig{
 		"pipx": {
 			Binary: "pipx",
+			Available: CommandConfig{
+				Command: []string{"pipx", "--version"},
+			},
 			List: ListConfig{
 				Command: []string{"pipx", "list", "--short"},
 				Parse:   "lines",
@@ -33,6 +36,9 @@ func GetDefaultManagers() map[string]ManagerConfig {
 			Description: "Cargo (Rust package manager)",
 			InstallHint: "Install Rust from https://rustup.rs/",
 			HelpURL:     "https://www.rust-lang.org/tools/install",
+			Available: CommandConfig{
+				Command: []string{"cargo", "--version"},
+			},
 			List: ListConfig{
 				Command: []string{"cargo", "install", "--list"},
 				Parse:   "lines",
@@ -55,6 +61,9 @@ func GetDefaultManagers() map[string]ManagerConfig {
 			Description: "gem (Ruby package manager)",
 			InstallHint: "Install Ruby from https://ruby-lang.org/ or use brew install ruby",
 			HelpURL:     "https://ruby-lang.org/",
+			Available: CommandConfig{
+				Command: []string{"gem", "--version"},
+			},
 			List: ListConfig{
 				Command: []string{"gem", "list", "--local", "--no-versions"},
 				Parse:   "lines",
@@ -80,6 +89,9 @@ func GetDefaultManagers() map[string]ManagerConfig {
 			Description: "Homebrew (macOS/Linux package manager)",
 			InstallHint: "Visit https://brew.sh for installation instructions (prerequisite)",
 			HelpURL:     "https://brew.sh",
+			Available: CommandConfig{
+				Command: []string{"brew", "--version"},
+			},
 			List: ListConfig{
 				Command: []string{"brew", "list"},
 				Parse:   "lines",
@@ -106,6 +118,9 @@ func GetDefaultManagers() map[string]ManagerConfig {
 			InstallHint:   "Install Node.js from https://nodejs.org/ or use brew install node",
 			HelpURL:       "https://nodejs.org/",
 			UpgradeTarget: "full_name_preferred",
+			Available: CommandConfig{
+				Command: []string{"npm", "--version"},
+			},
 			List: ListConfig{
 				Command:       []string{"npm", "list", "-g", "--depth=0", "--json"},
 				Parse:         "jsonpath",
@@ -143,6 +158,9 @@ func GetDefaultManagers() map[string]ManagerConfig {
 			Description: "pnpm (Node.js package manager)",
 			InstallHint: "Install pnpm from https://pnpm.io/ or use brew install pnpm",
 			HelpURL:     "https://pnpm.io/",
+			Available: CommandConfig{
+				Command: []string{"pnpm", "--version"},
+			},
 			List: ListConfig{
 				Command:       []string{"pnpm", "list", "-g", "--depth=0", "--json"},
 				Parse:         "jsonpath",
@@ -170,6 +188,9 @@ func GetDefaultManagers() map[string]ManagerConfig {
 			Description: "conda (Python/conda package manager)",
 			InstallHint: "Install conda via Anaconda or Miniconda distributions",
 			HelpURL:     "https://docs.conda.io/",
+			Available: CommandConfig{
+				Command: []string{"conda", "--version"},
+			},
 			List: ListConfig{
 				Command:   []string{"conda", "list", "--json"},
 				Parse:     "json",
@@ -196,6 +217,9 @@ func GetDefaultManagers() map[string]ManagerConfig {
 			Description: "uv (Python package manager)",
 			InstallHint: "Install UV from https://docs.astral.sh/uv/ or use brew install uv",
 			HelpURL:     "https://docs.astral.sh/uv/",
+			Available: CommandConfig{
+				Command: []string{"uv", "--version"},
+			},
 			List: ListConfig{
 				Command: []string{"uv", "tool", "list"},
 				Parse:   "lines",

@@ -27,6 +27,9 @@ func setupFakeManagerConfig(t *testing.T, cfg *config.Config, failInstalls map[s
 	}
 	cfg.Managers["fake"] = config.ManagerConfig{
 		Binary: "fake",
+		Available: config.CommandConfig{
+			Command: []string{"fake", "--version"},
+		},
 		List: config.ListConfig{
 			Command: []string{"fake", "list"},
 			Parse:   "lines",
