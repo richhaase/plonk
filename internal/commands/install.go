@@ -16,8 +16,9 @@ import (
 )
 
 var installCmd = &cobra.Command{
-	Use:   "install <packages...>",
-	Short: "Install packages and add them to plonk management",
+	Use:     "install <packages...>",
+	Aliases: []string{"i"},
+	Short:   "Install packages and add them to plonk management",
 	Long: `Install packages on your system and add them to your lock file for management.
 
 This command installs packages using the specified package manager and adds them

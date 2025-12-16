@@ -541,13 +541,15 @@ None
 
 ### Aliases
 
-| Command    | Aliases |
-| ---------- | ------- |
-| `status`   | `st`    |
-| `packages` | `p`     |
-| `dotfiles` | `d`     |
+| Command     | Aliases |
+| ----------- | ------- |
+| `status`    | `st`    |
+| `packages`  | `p`     |
+| `dotfiles`  | `d`     |
+| `install`   | `i`     |
+| `uninstall` | `u`     |
 
-No aliases for: install, uninstall, upgrade, add, rm, clone, diff, doctor, apply, config
+No aliases for: upgrade, add, rm, clone, diff, doctor, apply, config
 
 ### Argument Validation
 
@@ -604,8 +606,8 @@ No aliases for: install, uninstall, upgrade, add, rm, clone, diff, doctor, apply
 | Command       | Args            | Flags                                                  | Aliases | Has dry-run |
 | ------------- | --------------- | ------------------------------------------------------ | ------- | ----------- |
 | `plonk`       | -               | `--version`                                            | -       | -           |
-| `install`     | `<packages...>` | `--dry-run`                                            | -       | Yes         |
-| `uninstall`   | `<packages...>` | `--dry-run`                                            | -       | Yes         |
+| `install`     | `<packages...>` | `--dry-run`                                            | `i`     | Yes         |
+| `uninstall`   | `<packages...>` | `--dry-run`                                            | `u`     | Yes         |
 | `upgrade`     | `[targets...]`  | `--dry-run`                                            | -       | Yes         |
 | `add`         | `[files...]`    | `--dry-run`, `--sync-drifted`                          | -       | Yes         |
 | `rm`          | `<files...>`    | `--dry-run`                                            | -       | Yes         |

@@ -15,8 +15,9 @@ import (
 )
 
 var uninstallCmd = &cobra.Command{
-	Use:   "uninstall <packages...>",
-	Short: "Uninstall packages and remove from plonk management",
+	Use:     "uninstall <packages...>",
+	Aliases: []string{"u"},
+	Short:   "Uninstall packages and remove from plonk management",
 	Long: `Uninstall packages from your system and remove them from your lock file.
 
 This command uninstalls packages from your system using the appropriate package
