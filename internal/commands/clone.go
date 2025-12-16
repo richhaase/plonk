@@ -10,10 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	cloneYes    bool
-	cloneDryRun bool
-)
+var cloneDryRun bool
 
 var cloneCmd = &cobra.Command{
 	Use:   "clone <git-repo>",
@@ -37,15 +34,13 @@ Git repository formats supported:
 
 Examples:
   plonk clone user/dotfiles              # Clone and auto-detect managers
-  plonk clone richhaase/dotfiles         # Clone specific user's dotfiles
-  plonk clone --yes user/dotfiles        # Non-interactive mode`,
+  plonk clone richhaase/dotfiles         # Clone specific user's dotfiles`,
 	Args:         cobra.ExactArgs(1),
 	RunE:         runClone,
 	SilenceUsage: true,
 }
 
 func init() {
-	cloneCmd.Flags().BoolVar(&cloneYes, "yes", false, "Non-interactive mode - answer yes to all prompts")
 	cloneCmd.Flags().BoolVarP(&cloneDryRun, "dry-run", "n", false, "Show what would be cloned without making changes")
 
 	rootCmd.AddCommand(cloneCmd)
@@ -56,10 +51,7 @@ func runClone(cmd *cobra.Command, args []string) error {
 	gitRepo := args[0]
 
 	cloneConfig := clone.Config{
-		Interactive: !cloneYes,
-		Verbose:     false, // Could add --verbose flag later
-		DryRun:      cloneDryRun,
-		// No SkipManagers for clone - it auto-detects
+		DryRun: cloneDryRun,
 	}
 
 	return clone.CloneAndSetup(ctx, gitRepo, cloneConfig)

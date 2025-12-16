@@ -19,9 +19,7 @@ import (
 
 // Config represents setup configuration options
 type Config struct {
-	Interactive bool // Whether to prompt user for confirmations
-	Verbose     bool // Whether to show verbose output
-	DryRun      bool // Whether to show what would happen without making changes
+	DryRun bool // Whether to show what would happen without making changes
 }
 
 // CloneAndSetup clones a repository and sets up plonk intelligently

@@ -256,7 +256,6 @@ Clone an existing dotfiles repository and intelligently set up plonk.
 
 | Flag        | Short | Type | Default | Description                                        |
 | ----------- | ----- | ---- | ------- | -------------------------------------------------- |
-| `--yes`     |       | bool | `false` | Non-interactive mode - answer yes to all prompts   |
 | `--dry-run` | `-n`  | bool | `false` | Show what would be cloned without making changes   |
 
 ### Git Repository Formats
@@ -265,10 +264,6 @@ Clone an existing dotfiles repository and intelligently set up plonk.
 - HTTPS URL: `https://github.com/user/repo.git`
 - SSH URL: `git@github.com:user/repo.git`
 - Git protocol: `git://github.com/user/repo.git`
-
-### Note
-
-Uses package-level variables for flag storage. The `--yes` flag does not use a short form.
 
 ---
 
@@ -610,7 +605,7 @@ No aliases for: upgrade, add, rm, clone, diff, doctor, apply, config
 | `upgrade`     | `[targets...]`  | `--dry-run`                                            | -       | Yes         |
 | `add`         | `[files...]`    | `--dry-run`, `--sync-drifted`                          | -       | Yes         |
 | `rm`          | `<files...>`    | `--dry-run`                                            | -       | Yes         |
-| `clone`       | `<git-repo>`    | `--yes`, `--dry-run`                                   | -       | Yes         |
+| `clone`       | `<git-repo>`    | `--dry-run`                                            | -       | Yes         |
 | `status`      | -               | -                                                      | `st`    | -           |
 | `packages`    | -               | -                                                      | `p`     | -           |
 | `dotfiles`    | -               | -                                                      | `d`     | -           |
