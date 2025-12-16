@@ -110,7 +110,6 @@ type SimpleFlags struct {
 	DryRun  bool
 	Force   bool
 	Verbose bool
-	Output  string
 }
 
 // ParseSimpleFlags parses basic flags for commands
@@ -121,17 +120,8 @@ func ParseSimpleFlags(cmd *cobra.Command) (*SimpleFlags, error) {
 	flags.DryRun, _ = cmd.Flags().GetBool("dry-run")
 	flags.Force, _ = cmd.Flags().GetBool("force")
 	flags.Verbose, _ = cmd.Flags().GetBool("verbose")
-	flags.Output, _ = cmd.Flags().GetString("output")
 
 	return flags, nil
-}
-
-// validateStatusFlags checks for incompatible flag combinations
-func validateStatusFlags(showUnmanaged, showMissing bool) error {
-	if showUnmanaged && showMissing {
-		return fmt.Errorf("--unmanaged and --missing are mutually exclusive: items cannot be both untracked and missing")
-	}
-	return nil
 }
 
 // normalizeDisplayFlags sets defaults when no flags specified

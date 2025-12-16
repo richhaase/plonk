@@ -58,8 +58,7 @@ When no manager is specified (e.g., `ripgrep`), all packages with that name acro
 
 ## Flags
 
-### Global Flags
-- `--output, -o`: Output format (table, json, yaml)
+- `--dry-run, -n` - Show what would be upgraded without making changes
 
 ## Behavior
 
@@ -85,36 +84,6 @@ Each package manager handles upgrades according to its own capabilities:
 The command provides progress feedback during:
 - Discovery phase (checking package versions)
 - Upgrade execution (per-package progress)
-
-## Output Formats
-
-### Table Format (Default)
-```
-PACKAGE MANAGER    PACKAGE         FROM      TO        STATUS
-brew              ripgrep         14.1.0    14.1.1    upgraded
-npm               typescript      5.3.3     5.4.2     upgraded
-uv                httpx           0.26.0    0.27.0    failed
-```
-
-### JSON Format
-```json
-{
-  "upgrades": [
-    {
-      "manager": "brew",
-      "package": "ripgrep",
-      "from_version": "14.1.0",
-      "to_version": "14.1.1",
-      "status": "upgraded"
-    }
-  ],
-  "summary": {
-    "total": 3,
-    "upgraded": 2,
-    "failed": 1
-  }
-}
-```
 
 ## Exit Codes
 

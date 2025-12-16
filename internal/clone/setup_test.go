@@ -370,12 +370,8 @@ func TestCreateDefaultConfig(t *testing.T) {
 func TestConfigStruct(t *testing.T) {
 	// Test the Config struct fields
 	cfg := Config{
-		Interactive: true,
-		Verbose:     true,
-		NoApply:     false,
+		DryRun: true,
 	}
 
-	assert.True(t, cfg.Interactive)
-	assert.True(t, cfg.Verbose)
-	assert.False(t, cfg.NoApply)
+	assert.True(t, cfg.DryRun)
 }

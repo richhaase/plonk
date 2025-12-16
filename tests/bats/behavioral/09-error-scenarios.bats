@@ -212,13 +212,6 @@ setup() {
   assert [ "$initial_hash" = "$final_hash" ]
 }
 
-# Output Format Errors
-@test "invalid output format shows error" {
-  run plonk status --output invalid-format
-  assert_failure
-  assert_output --partial "unsupported format"
-}
-
 # Status Error Scenarios
 @test "status handles corrupted package manager state" {
   # Install a package
@@ -249,8 +242,9 @@ setup() {
   assert_success
   assert_output --partial "No drifted dotfiles found"
 
-  # Use status to see missing packages
-  run plonk status --missing --packages
+  # Use status to see missing packages (status shows all including missing)
+  run plonk packages
   assert_success
   assert_output --partial "cowsay"
+  assert_output --partial "missing"
 }

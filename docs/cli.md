@@ -4,9 +4,8 @@
 
 All commands support these options:
 
-- `--output, -o` - Output format: `table` (default), `json`, `yaml`
 - `--help, -h` - Show help for any command
-- `--version, -V` - Show plonk version
+- `--version, -v` - Show plonk version
 
 ## Commands
 
@@ -27,11 +26,11 @@ Clone a dotfiles repository and intelligently set up plonk. Automatically detect
 ```bash
 plonk clone user/dotfiles             # Clone GitHub repository (shorthand)
 plonk clone https://github.com/user/repo.git  # Clone with full URL
-plonk clone user/repo --no-apply      # Clone without running apply
+plonk clone --dry-run user/dotfiles   # Preview what would happen
 ```
 
 Options:
-- `--no-apply` - Skip running apply after clone
+- `--dry-run, -n` - Show what would be cloned without making changes
 
 
 ### plonk install
@@ -41,6 +40,7 @@ Install packages and add them to management.
 ```bash
 # Install packages with default manager
 plonk install ripgrep fd bat
+plonk i ripgrep fd bat                # Short alias
 
 # Install packages with specific managers
 plonk install brew:wget npm:prettier pnpm:typescript conda:numpy uv:ruff
@@ -48,6 +48,11 @@ plonk install brew:wget npm:prettier pnpm:typescript conda:numpy uv:ruff
 # Preview changes
 plonk install --dry-run ripgrep
 ```
+
+Options:
+- `--dry-run, -n` - Show what would be installed without making changes
+
+Alias: `i`
 
 **Note**: Package managers must be available before installing packages. Use `plonk doctor` to check for missing managers.
 
@@ -57,9 +62,15 @@ Uninstall packages and remove from management.
 
 ```bash
 plonk uninstall ripgrep
+plonk u ripgrep                       # Short alias
 plonk uninstall brew:wget npm:prettier pnpm:typescript conda:numpy uv:ruff
 plonk uninstall --dry-run ripgrep
 ```
+
+Options:
+- `--dry-run, -n` - Show what would be removed without making changes
+
+Alias: `u`
 
 ### plonk upgrade
 
@@ -102,24 +113,16 @@ Show managed packages and dotfiles (combined view).
 
 ```bash
 plonk status                          # Show all
-plonk status --packages               # Only packages
-plonk status --dotfiles               # Only dotfiles
-plonk status --unmanaged              # Show only unmanaged items
-plonk status --missing                # Show only missing resources
-plonk status --missing --packages     # Show only missing packages
+plonk st                              # Short alias
 ```
-
-Options:
-- `--packages` - Show only package status
-- `--dotfiles` - Show only dotfile status
-- `--unmanaged` - Show only unmanaged items
-- `--missing` - Show only missing resources (mutually exclusive with --unmanaged)
 
 **📖 [Complete Status Documentation →](cmds/status.md)**
 
+Alias: `st`
+
 **Note**: For focused views of specific resource types, use:
-- `plonk packages` - Show only package status
-- `plonk dotfiles` - Show only dotfile status
+- `plonk packages` (or `plonk p`) - Show only package status
+- `plonk dotfiles` (or `plonk d`) - Show only dotfile status
 
 ### plonk packages
 
@@ -127,18 +130,12 @@ Show package status (focused view).
 
 ```bash
 plonk packages                        # Show all managed packages
-plonk packages --missing              # Show only missing packages
-plonk packages --unmanaged            # Show only unmanaged packages
-plonk packages -o json                # Output as JSON
-plonk p --missing                     # Short alias
+plonk p                               # Short alias
 ```
 
-Options:
-- `--missing` - Show only missing packages
-- `--unmanaged` - Show only unmanaged packages
-- `-o, --output` - Output format (table/json/yaml)
-
 **📖 [Complete Packages Documentation →](cmds/packages.md)**
+
+Alias: `p`
 
 ### plonk diff
 
@@ -168,8 +165,6 @@ Check system health and configuration.
 
 ```bash
 plonk doctor                          # Check system health
-plonk doctor -o json                  # Output as JSON
-plonk doctor -o yaml                  # Output as YAML
 ```
 
 Note: Use `plonk clone` to detect which package managers your repo requires; install any missing managers using the hints from `plonk doctor`.
@@ -189,23 +184,12 @@ Show dotfile status (focused view).
 
 ```bash
 plonk dotfiles                        # Show all managed dotfiles
-plonk dotfiles --managed              # Show only managed dotfiles
-plonk dotfiles --missing              # Show only missing dotfiles
-plonk dotfiles --unmanaged            # Show only unmanaged dotfiles
-plonk dotfiles --untracked            # Alias for --unmanaged
-plonk dotfiles -v                     # Show verbose output
-plonk dotfiles -o json                # Output as JSON
-plonk d --missing                     # Short alias
+plonk d                               # Short alias
 ```
 
-Options:
-- `--managed` - Show managed dotfiles only
-- `--missing` - Show missing dotfiles only
-- `--unmanaged` - Show unmanaged dotfiles only
-- `--untracked` - Alias for --unmanaged
-- `-v, --verbose` - Show verbose output
-
 **📖 [Complete Dotfiles Documentation →](cmds/dotfiles.md)**
+
+Alias: `d`
 
 ### plonk completion
 

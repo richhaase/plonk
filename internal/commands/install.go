@@ -16,8 +16,9 @@ import (
 )
 
 var installCmd = &cobra.Command{
-	Use:   "install <packages...>",
-	Short: "Install packages and add them to plonk management",
+	Use:     "install <packages...>",
+	Aliases: []string{"i"},
+	Short:   "Install packages and add them to plonk management",
 	Long: `Install packages on your system and add them to your lock file for management.
 
 This command installs packages using the specified package manager and adds them
@@ -45,14 +46,7 @@ func init() {
 }
 
 func runInstall(cmd *cobra.Command, args []string) error {
-	// Parse output format
-	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := output.ParseOutputFormat(outputFormat)
-	if err != nil {
-		return err
-	}
-
-	// Get flags (only common flags now)
+	// Get flags
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 
 	// Get directories and config
@@ -184,11 +178,9 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		DryRun:     dryRun,
 	}
 
-	// Create formatter
+	// Create formatter and render
 	formatter := output.NewPackageOperationFormatter(outputData)
-	if err := output.RenderOutput(formatter, format); err != nil {
-		return err
-	}
+	output.RenderOutput(formatter)
 
 	// Check if all operations failed and return appropriate error
 	return resources.ValidateOperationResults(allResults, "install packages")

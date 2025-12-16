@@ -4,7 +4,6 @@
 package commands
 
 import (
-	"fmt"
 	"path/filepath"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -25,9 +24,7 @@ Shows the complete configuration that plonk is actually using, including all def
 values merged with any user-specified overrides from the config file.
 
 Examples:
-  plonk config show           # Show effective configuration
-  plonk config show -o json   # Show as JSON
-  plonk config show -o yaml   # Show as YAML (default)`,
+  plonk config show    # Show effective configuration`,
 	RunE:         runConfigShow,
 	SilenceUsage: true,
 	Args:         cobra.NoArgs,
@@ -38,13 +35,6 @@ func init() {
 }
 
 func runConfigShow(cmd *cobra.Command, args []string) error {
-	// Parse output format
-	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := output.ParseOutputFormat(outputFormat)
-	if err != nil {
-		return fmt.Errorf("invalid output format: %w", err)
-	}
-
 	// Get config directory
 	configDir := config.GetDefaultConfigDirectory()
 	configPath := getConfigPath(configDir)
@@ -68,7 +58,8 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 		ConfigDir:  outputData.ConfigDir,
 	}
 	formatter := output.NewConfigShowFormatter(formatterData)
-	return output.RenderOutput(formatter, format)
+	output.RenderOutput(formatter)
+	return nil
 }
 
 // ConfigShowOutput represents the output structure for config show command

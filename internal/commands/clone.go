@@ -10,10 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	cloneYes     bool
-	cloneNoApply bool
-)
+var cloneDryRun bool
 
 var cloneCmd = &cobra.Command{
 	Use:   "clone <git-repo>",
@@ -24,7 +21,7 @@ This command:
 - Clones the repository into your plonk directory
 - Reads the plonk.lock file to detect required package managers
 - Installs ONLY the package managers needed by your dotfiles
-- Runs 'plonk apply' to configure your system (unless --no-apply is used)
+- Runs 'plonk apply' to configure your system
 
 The intelligent detection feature means you don't need to manually specify
 which package managers to install - plonk will figure it out from your lock file.
@@ -37,17 +34,14 @@ Git repository formats supported:
 
 Examples:
   plonk clone user/dotfiles              # Clone and auto-detect managers
-  plonk clone richhaase/dotfiles         # Clone specific user's dotfiles
-  plonk clone user/repo --no-apply       # Clone without running apply
-  plonk clone --yes user/dotfiles        # Non-interactive mode`,
+  plonk clone richhaase/dotfiles         # Clone specific user's dotfiles`,
 	Args:         cobra.ExactArgs(1),
 	RunE:         runClone,
 	SilenceUsage: true,
 }
 
 func init() {
-	cloneCmd.Flags().BoolVar(&cloneYes, "yes", false, "Non-interactive mode - answer yes to all prompts")
-	cloneCmd.Flags().BoolVar(&cloneNoApply, "no-apply", false, "Skip running 'plonk apply' after setup")
+	cloneCmd.Flags().BoolVarP(&cloneDryRun, "dry-run", "n", false, "Show what would be cloned without making changes")
 
 	rootCmd.AddCommand(cloneCmd)
 }
@@ -57,10 +51,7 @@ func runClone(cmd *cobra.Command, args []string) error {
 	gitRepo := args[0]
 
 	cloneConfig := clone.Config{
-		Interactive: !cloneYes,
-		Verbose:     false, // Could add --verbose flag later
-		NoApply:     cloneNoApply,
-		// No SkipManagers for clone - it auto-detects
+		DryRun: cloneDryRun,
 	}
 
 	return clone.CloneAndSetup(ctx, gitRepo, cloneConfig)

@@ -90,56 +90,6 @@ func TestCompleteDotfilePaths(t *testing.T) {
 		})
 	}
 }
-func TestValidateStatusFlags(t *testing.T) {
-	tests := []struct {
-		name          string
-		showUnmanaged bool
-		showMissing   bool
-		wantErr       bool
-		errContains   string
-	}{
-		{
-			name:          "both false is valid",
-			showUnmanaged: false,
-			showMissing:   false,
-			wantErr:       false,
-		},
-		{
-			name:          "unmanaged only is valid",
-			showUnmanaged: true,
-			showMissing:   false,
-			wantErr:       false,
-		},
-		{
-			name:          "missing only is valid",
-			showUnmanaged: false,
-			showMissing:   true,
-			wantErr:       false,
-		},
-		{
-			name:          "both true is invalid",
-			showUnmanaged: true,
-			showMissing:   true,
-			wantErr:       true,
-			errContains:   "mutually exclusive",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := validateStatusFlags(tt.showUnmanaged, tt.showMissing)
-			if tt.wantErr {
-				assert.Error(t, err)
-				if tt.errContains != "" {
-					assert.Contains(t, err.Error(), tt.errContains)
-				}
-			} else {
-				assert.NoError(t, err)
-			}
-		})
-	}
-}
-
 func TestNormalizeDisplayFlags(t *testing.T) {
 	tests := []struct {
 		name         string

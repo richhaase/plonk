@@ -1,42 +1,28 @@
 package commands
 
 import (
-	"encoding/json"
+	"strings"
 	"testing"
 )
 
-func TestCLI_ConfigShow_JSON(t *testing.T) {
-	out, err := RunCLI(t, []string{"config", "show", "-o", "json"}, nil)
+func TestCLI_ConfigShow_Table(t *testing.T) {
+	out, err := RunCLI(t, []string{"config", "show"}, nil)
 	if err != nil {
-		t.Fatalf("config show json failed: %v\n%s", err, out)
+		t.Fatalf("config show failed: %v\n%s", err, out)
 	}
-	var payload struct {
-		ConfigPath string         `json:"config_path"`
-		Config     map[string]any `json:"config"`
-	}
-	if e := json.Unmarshal([]byte(out), &payload); e != nil {
-		t.Fatalf("invalid json: %v\n%s", e, out)
-	}
-	if payload.ConfigPath == "" || payload.Config == nil {
-		t.Fatalf("unexpected payload: %+v", payload)
+	// Verify table output contains expected sections
+	if !strings.Contains(out, "Configuration for plonk") {
+		t.Fatalf("expected 'Configuration for plonk' in output, got:\n%s", out)
 	}
 }
 
-func TestCLI_Doctor_JSON(t *testing.T) {
-	out, err := RunCLI(t, []string{"doctor", "-o", "json"}, nil)
+func TestCLI_Doctor_Table(t *testing.T) {
+	out, err := RunCLI(t, []string{"doctor"}, nil)
 	if err != nil {
-		t.Fatalf("doctor json failed: %v\n%s", err, out)
+		t.Fatalf("doctor failed: %v\n%s", err, out)
 	}
-	var payload struct {
-		Overall struct {
-			Status string `json:"status"`
-		} `json:"overall"`
-		Checks []map[string]any `json:"checks"`
-	}
-	if e := json.Unmarshal([]byte(out), &payload); e != nil {
-		t.Fatalf("invalid json: %v\n%s", e, out)
-	}
-	if payload.Overall.Status == "" {
-		t.Fatalf("expected overall status present, got: %+v", payload)
+	// Verify table output contains expected sections
+	if !strings.Contains(out, "Plonk Doctor Report") {
+		t.Fatalf("expected 'Plonk Doctor Report' in output, got:\n%s", out)
 	}
 }

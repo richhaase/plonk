@@ -12,11 +12,11 @@ plonk clone [options] <git-repo>
 
 The clone command provides an intelligent setup experience by cloning an existing dotfiles repository and detecting which package managers are needed based on the repository's lock file. It highlights any missing managers so you can install them manually using the install hints surfaced by `plonk doctor`.
 
-The command clones the repository directly into `$PLONK_DIR`, detects required package managers from `plonk.lock`, installs only what's needed, and optionally runs `plonk apply` to complete the setup.
+The command clones the repository directly into `$PLONK_DIR`, detects required package managers from `plonk.lock`, and runs `plonk apply` to complete the setup.
 
 ## Options
 
-- `--no-apply` - Skip running `plonk apply` after setup
+- `--dry-run, -n` - Show what would be cloned without making changes
 
 ## Behavior
 
@@ -27,7 +27,7 @@ The command clones the repository directly into `$PLONK_DIR`, detects required p
 2. Clones the repository directly into `$PLONK_DIR`
 3. Reads `plonk.lock` to detect required package managers
 4. Reports which managers are missing and provides installation guidance
-5. Runs `plonk apply` to configure your system (unless --no-apply)
+5. Runs `plonk apply` to configure your system
 
 ### Repository URL Support
 
@@ -54,7 +54,7 @@ If no lock file exists or it cannot be read:
 The clone command:
 - Detects required package managers from the lock file
 - Skips automatic installation for security reasons, but clearly lists the missing managers so you can install them yourself
-- Automatically runs apply to complete setup (unless --no-apply)
+- Automatically runs apply to complete setup
 - Requires no additional flags to perform detection and reporting
 
 ### Error Handling
@@ -74,11 +74,8 @@ plonk clone user/dotfiles
 # Clone specific user's dotfiles
 plonk clone richhaase/dotfiles
 
-# Clone without running apply
-plonk clone user/repo --no-apply
-
-# Clone with manual apply step
-plonk clone user/dotfiles --no-apply
+# Preview what would happen
+plonk clone --dry-run user/dotfiles
 
 # Full URL examples
 plonk clone https://github.com/user/repo.git
@@ -87,11 +84,10 @@ plonk clone git@github.com:user/repo.git
 
 ## Integration
 
-- Automatically runs `plonk apply` after setup (unless --no-apply)
+- Automatically runs `plonk apply` after setup
 - Creates default `plonk.yaml` if missing
 - Works with v2 lock file format for accurate manager detection
 - Use `plonk doctor` after clone to install any missing package managers using the provided hints
-- If required managers are missing, clone lists them and skips the automatic `plonk apply` run until you install them
 
 ## Notes
 

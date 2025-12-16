@@ -19,9 +19,7 @@ import (
 
 // Config represents setup configuration options
 type Config struct {
-	Interactive bool // Whether to prompt user for confirmations
-	Verbose     bool // Whether to show verbose output
-	NoApply     bool // Whether to skip running apply (for clone)
+	DryRun bool // Whether to show what would happen without making changes
 }
 
 // CloneAndSetup clones a repository and sets up plonk intelligently
@@ -32,10 +30,29 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 		return fmt.Errorf("invalid git repository: %w", err)
 	}
 
-	output.Printf("Setting up plonk with repository: %s\n", gitURL)
-
 	// Get plonk directory
 	plonkDir := config.GetConfigDir()
+
+	// Dry run mode: just show what would happen
+	if cfg.DryRun {
+		output.Printf("Dry run: would set up plonk with repository: %s\n", gitURL)
+		output.Printf("Dry run: would clone to: %s\n", plonkDir)
+
+		// Check if PLONK_DIR already exists
+		if _, err := os.Stat(plonkDir); err == nil {
+			output.Printf("Dry run: plonk directory already exists at: %s\n", plonkDir)
+			output.Printf("Dry run: would skip clone (directory exists)\n")
+			return nil
+		}
+
+		output.Printf("Dry run: would create default plonk.yaml configuration\n")
+		output.Printf("Dry run: would detect required package managers from lock file\n")
+		output.Printf("Dry run: would run 'plonk apply' after setup\n")
+		output.Printf("Dry run: no changes made\n")
+		return nil
+	}
+
+	output.Printf("Setting up plonk with repository: %s\n", gitURL)
 
 	// Check if PLONK_DIR already exists
 	if _, err := os.Stat(plonkDir); err == nil {
@@ -67,7 +84,7 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 		output.Printf("Created default plonk.yaml configuration\n")
 	}
 
-	if err := SetupFromClonedRepo(ctx, plonkDir, hasConfig, cfg.NoApply); err != nil {
+	if err := SetupFromClonedRepo(ctx, plonkDir, hasConfig); err != nil {
 		return err
 	}
 	output.Printf("Setup complete! Your dotfiles are now managed by plonk.\n")
@@ -75,7 +92,7 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 }
 
 // SetupFromClonedRepo performs post-clone setup: detect managers, install, and apply
-func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool, noApply bool) error {
+func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool) error {
 	repoCfg := config.LoadWithDefaults(plonkDir)
 
 	// Detect required managers from lock file
@@ -108,8 +125,8 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool, n
 		output.Printf("No package managers detected from lock file.\n")
 	}
 
-	// Optionally run apply
-	if hasConfig && !noApply {
+	// Run apply if config exists
+	if hasConfig {
 		if len(missingManagers) > 0 {
 			output.Printf("Some package managers are missing; continuing with 'plonk apply' for everything else.\n")
 			output.Printf("After installing the missing managers, re-run 'plonk doctor' and 'plonk apply' to reconcile remaining packages.\n")

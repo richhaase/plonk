@@ -21,11 +21,7 @@ The command supports filtering by resource type and state, with multiple output 
 
 ## Options
 
-- `--packages` - Show only package status
-- `--dotfiles` - Show only dotfile status
-- `--unmanaged` - Show only unmanaged items
-- `--missing` - Show only missing resources (mutually exclusive with --unmanaged)
-- `-o, --output` - Output format (table/json/yaml)
+None. The status command displays table output only.
 
 ## Behavior
 
@@ -43,14 +39,6 @@ Without flags, status shows all managed and missing resources in two sections:
 - **PACKAGES**: Shows name, manager, and status
 - **DOTFILES**: Shows source (in $PLONK_DIR), target (in $HOME), and status
 
-### Filter Combinations
-
-Filters can be combined:
-- `--packages --unmanaged` - Show only unmanaged packages
-- `--dotfiles --unmanaged` - Show only unmanaged dotfiles
-- `--packages --missing` - Show only missing packages
-
-Using both `--packages` and `--dotfiles` together has the same effect as using neither.
 
 ### Table Format Display
 
@@ -64,19 +52,7 @@ Using both `--packages` and `--dotfiles` together has the same effect as using n
 - $PLONK_DIR: Path relative to plonk configuration directory
 - STATUS: Current state with icon
 
-**Dotfiles List** (unmanaged):
-- Simple list of unmanaged dotfile paths (no source/target/status columns)
-
-Summary counts are displayed at the end, except when using `--unmanaged` in table format.
-
-### Structured Output
-
-JSON and YAML output formats include:
-- Configuration file paths and validity
-- Detailed summary with counts by domain
-- Managed items in flat array with domain field
-
-Note: Structured output formats (JSON/YAML) do not support the `--unmanaged` flag and will always show managed items only. Use table format to view unmanaged items.
+Summary counts are displayed at the end.
 
 ### Error Handling
 
@@ -89,28 +65,11 @@ Note: Structured output formats (JSON/YAML) do not support the `--unmanaged` fla
 ```bash
 # Show all managed resources
 plonk status
+plonk st                    # Short alias
 
-# Show only packages
-plonk status --packages
-
-# Show only dotfiles
-plonk status --dotfiles
-
-# Show unmanaged items
-plonk status --unmanaged
-
-# Show missing resources
-plonk status --missing
-
-# Show missing packages only
-plonk status --packages --missing
-
-# Output as JSON
-plonk status -o json
-
-# Alternative: Use focused commands for specific resource types
-plonk packages --missing              # Show only missing packages
-plonk dotfiles --unmanaged            # Show only unmanaged dotfiles
+# Use focused commands for specific resource types
+plonk packages              # Show only package status (alias: p)
+plonk dotfiles              # Show only dotfile status (alias: d)
 ```
 
 ## Integration
@@ -126,4 +85,3 @@ plonk dotfiles --unmanaged            # Show only unmanaged dotfiles
 - Alias: `st` (short form)
 - Colors are applied to status words only, not full lines
 - Respects NO_COLOR environment variable for accessibility
-- Summary is hidden when using `--unmanaged` flag in table format

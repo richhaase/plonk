@@ -21,41 +21,19 @@ var packagesCmd = &cobra.Command{
 Shows:
 - All managed packages
 - Missing packages that need to be installed
-- Unmanaged packages (with --unmanaged flag)
 
 Examples:
-  plonk packages              # Show all managed packages
-  plonk packages --missing   # Show only missing packages
-  plonk packages --unmanaged # Show only unmanaged packages
-  plonk packages -o json     # Show as JSON
-  plonk packages -o yaml     # Show as YAML`,
+  plonk packages    # Show all managed packages
+  plonk p           # Short alias`,
 	RunE:         runPackages,
 	SilenceUsage: true,
 }
 
 func init() {
 	rootCmd.AddCommand(packagesCmd)
-	packagesCmd.Flags().Bool("unmanaged", false, "Show only unmanaged packages")
-	packagesCmd.Flags().Bool("missing", false, "Show only missing packages")
 }
 
 func runPackages(cmd *cobra.Command, args []string) error {
-	// Parse output format
-	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := output.ParseOutputFormat(outputFormat)
-	if err != nil {
-		return err
-	}
-
-	// Get filter flags
-	showUnmanaged, _ := cmd.Flags().GetBool("unmanaged")
-	showMissing, _ := cmd.Flags().GetBool("missing")
-
-	// Validate mutually exclusive flags
-	if err := validateStatusFlags(showUnmanaged, showMissing); err != nil {
-		return err
-	}
-
 	// Get directories
 	configDir := config.GetConfigDir()
 
@@ -79,12 +57,11 @@ func runPackages(cmd *cobra.Command, args []string) error {
 
 	// Prepare output
 	outputData := output.PackagesStatusOutput{
-		Result:        outputResult,
-		ShowMissing:   showMissing,
-		ShowUnmanaged: showUnmanaged,
+		Result: outputResult,
 	}
 
 	// Create formatter and render
 	formatter := output.NewPackagesStatusFormatter(outputData)
-	return output.RenderOutput(formatter, format)
+	output.RenderOutput(formatter)
+	return nil
 }

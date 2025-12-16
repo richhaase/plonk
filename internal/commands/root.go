@@ -41,11 +41,7 @@ and managing dotfiles across multiple package managers.`,
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringP("output", "o", "table", "Output format (table|json|yaml)")
 	rootCmd.Flags().BoolP("version", "v", false, "Show version information")
-
-	// Add output format completion (error can be safely ignored for static registration)
-	_ = rootCmd.RegisterFlagCompletionFunc("output", completeOutputFormats)
 }
 
 // ExecuteWithExitCode runs the root command and returns appropriate exit code
@@ -70,10 +66,4 @@ func formatVersion() string {
 	}
 	// Released version - show clean version
 	return versionInfo.Version
-}
-
-// completeOutputFormats provides completion for output format flag
-func completeOutputFormats(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	formats := []string{"table", "json", "yaml"}
-	return formats, cobra.ShellCompDirectiveNoFileComp
 }

@@ -16,7 +16,7 @@ The command runs checks across six categories and reports findings with status l
 
 ## Options
 
-- `-o, --output` - Output format (table/json/yaml)
+None. The doctor command displays table output only.
 
 ## Behavior
 
@@ -60,20 +60,6 @@ Doctor provides detailed PATH analysis:
 - Notes directories that don't exist yet (informational)
 - Provides shell configuration suggestions for missing paths
 
-### Output Formats
-
-**Table Format** (default):
-
-- Hierarchical display with categories and checks
-- Color-coded status text
-- Detailed messages, issues, and suggestions
-
-**JSON/YAML Format**:
-
-- Structured with overall status and checks array
-- Each check includes: name, category, status, message, details
-- Optional fields: issues, suggestions
-
 ### Error Handling
 
 All health checks run within a 30-second timeout. The command continues even if individual checks fail, providing a complete assessment.
@@ -83,12 +69,6 @@ All health checks run within a 30-second timeout. The command continues even if 
 ```bash
 # Run health checks
 plonk doctor
-
-# Output as JSON for scripting
-plonk doctor -o json
-
-# Output as YAML
-plonk doctor -o yaml
 ```
 
 ## Integration

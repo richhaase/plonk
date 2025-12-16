@@ -32,9 +32,7 @@ Doctor reports issues with suggestions on how to fix them.
 To automatically install missing package managers, use 'plonk clone'.
 
 Examples:
-  plonk doctor           # Run health checks
-  plonk doctor -o json   # Show as JSON
-  plonk doctor -o yaml   # Show as YAML`,
+  plonk doctor    # Run health checks`,
 	RunE:         runDoctor,
 	SilenceUsage: true,
 }
@@ -44,13 +42,6 @@ func init() {
 }
 
 func runDoctor(cmd *cobra.Command, args []string) error {
-	// Parse output format
-	outputFormat, _ := cmd.Flags().GetString("output")
-	format, err := output.ParseOutputFormat(outputFormat)
-	if err != nil {
-		return err
-	}
-
 	// Build a context with configured operation timeout
 	configDir := config.GetDefaultConfigDirectory()
 	cfg := config.LoadWithDefaults(configDir)
@@ -76,7 +67,8 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		Checks: convertHealthChecks(doctorOutput.Checks),
 	}
 	formatter := output.NewDoctorFormatter(formatterData)
-	return output.RenderOutput(formatter, format)
+	output.RenderOutput(formatter)
+	return nil
 }
 
 // convertHealthChecks converts from diagnostics types to output types
