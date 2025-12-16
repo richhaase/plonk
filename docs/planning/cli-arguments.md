@@ -2,7 +2,7 @@
 
 This document provides a comprehensive audit of all command-line arguments and options in the Plonk CLI tool.
 
-**Audit Date:** 2025-12-15 (Updated)
+**Audit Date:** 2025-12-16 (Updated)
 **Source Files:** `internal/commands/*.go`
 
 > **Note:** The CLI was recently simplified by removing redundant flags:
@@ -10,6 +10,8 @@ This document provides a comprehensive audit of all command-line arguments and o
 > - `--missing` removed from `status`, `packages`, and `dotfiles` commands (status already shows missing items inline)
 > - `--unmanaged` removed from `status`, `packages`, and `dotfiles` commands
 > - `--packages` and `--dotfiles` removed from `status` command (use `plonk packages` and `plonk dotfiles` subcommands instead)
+> - `--no-apply` and `--yes` removed from `clone` command (clone always runs apply, non-interactive by default)
+> - Added short aliases: `i` for install, `u` for uninstall
 
 ---
 
@@ -20,24 +22,24 @@ This document provides a comprehensive audit of all command-line arguments and o
    - [install](#install)
    - [uninstall](#uninstall)
    - [upgrade](#upgrade)
-4. [Dotfile Management Commands](#dotfile-management-commands)
+3. [Dotfile Management Commands](#dotfile-management-commands)
    - [add](#add)
    - [rm](#rm)
    - [clone](#clone)
-5. [Status & Visibility Commands](#status--visibility-commands)
+4. [Status & Visibility Commands](#status--visibility-commands)
    - [status](#status)
    - [packages](#packages)
    - [dotfiles](#dotfiles)
    - [diff](#diff)
-6. [Configuration Commands](#configuration-commands)
+5. [Configuration Commands](#configuration-commands)
    - [config](#config)
    - [config show](#config-show)
    - [config edit](#config-edit)
-7. [System Commands](#system-commands)
+6. [System Commands](#system-commands)
    - [apply](#apply)
    - [doctor](#doctor)
-8. [Consistency Analysis](#consistency-analysis)
-9. [Shell Completion](#shell-completion)
+7. [Consistency Analysis](#consistency-analysis)
+8. [Shell Completion](#shell-completion)
 
 ---
 
@@ -92,6 +94,10 @@ Install packages on your system and add them to your lock file for management.
 | ----------- | ----- | ---- | ------- | --------------------------------------------------- |
 | `--dry-run` | `-n`  | bool | `false` | Show what would be installed without making changes |
 
+### Aliases
+
+- `i`
+
 ### Package Specification Format
 
 - `package` - Uses default manager
@@ -126,6 +132,10 @@ Uninstall packages from your system and remove them from your lock file.
 | Flag        | Short | Type | Default | Description                                       |
 | ----------- | ----- | ---- | ------- | ------------------------------------------------- |
 | `--dry-run` | `-n`  | bool | `false` | Show what would be removed without making changes |
+
+### Aliases
+
+- `u`
 
 ---
 
@@ -630,10 +640,6 @@ While not CLI arguments, these environment variables affect behavior:
 | `EDITOR`    | Preferred editor (second choice)  | config edit         |
 
 ---
-
-## Recommendations
-
-1. **Consider adding aliases** to commonly used commands (e.g., `i` for install, `u` for upgrade)
 
 ## Design Notes
 
