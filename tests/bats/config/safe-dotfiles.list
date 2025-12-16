@@ -22,3 +22,5 @@
 .plonk-test-multi1
 .plonk-test-multi2
 .plonk-test-workflow
+.plonk-test-clone-rc
+.config/plonk-test-clone/config.yaml

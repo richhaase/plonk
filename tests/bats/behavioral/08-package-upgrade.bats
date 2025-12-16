@@ -317,3 +317,118 @@ setup() {
   assert_output --partial "[2/2]"
   assert_output --partial "Upgrading"
 }
+
+# Pnpm upgrade tests
+
+@test "upgrade single pnpm package" {
+  require_package_manager "pnpm"
+  require_safe_package "pnpm:prettier"
+
+  # Install package
+  run plonk install pnpm:prettier
+  assert_success
+  track_artifact "package" "pnpm:prettier"
+
+  # Upgrade the specific package
+  run plonk upgrade pnpm:prettier
+  assert_success
+  assert_output --partial "prettier"
+}
+
+@test "upgrade all pnpm packages" {
+  require_package_manager "pnpm"
+  require_safe_package "pnpm:prettier"
+
+  # Install package
+  run plonk install pnpm:prettier
+  assert_success
+  track_artifact "package" "pnpm:prettier"
+
+  # Upgrade all pnpm packages
+  run plonk upgrade pnpm
+  assert_success
+  assert_output --partial "prettier"
+}
+
+# Dry-run tests
+
+@test "upgrade --dry-run shows what would happen" {
+  require_safe_package "brew:cowsay"
+
+  # Install first
+  run plonk install brew:cowsay
+  assert_success
+  track_artifact "package" "brew:cowsay"
+
+  # Dry-run upgrade
+  run plonk upgrade --dry-run brew:cowsay
+  assert_success
+  assert_output --partial "would-upgrade"
+  assert_output --partial "cowsay"
+}
+
+@test "upgrade --dry-run does not modify packages" {
+  require_safe_package "brew:cowsay"
+
+  # Install first
+  run plonk install brew:cowsay
+  assert_success
+  track_artifact "package" "brew:cowsay"
+
+  # Get initial state
+  initial_version=$(brew list --versions cowsay)
+
+  # Dry-run upgrade
+  run plonk upgrade --dry-run brew:cowsay
+  assert_success
+
+  # Version should be unchanged
+  final_version=$(brew list --versions cowsay)
+  assert [ "$initial_version" = "$final_version" ]
+}
+
+@test "upgrade -n is alias for --dry-run" {
+  require_safe_package "brew:cowsay"
+
+  # Install first
+  run plonk install brew:cowsay
+  assert_success
+  track_artifact "package" "brew:cowsay"
+
+  run plonk upgrade -n brew:cowsay
+  assert_success
+  assert_output --partial "would-upgrade"
+}
+
+@test "upgrade --dry-run all packages" {
+  require_safe_package "brew:figlet"
+  require_safe_package "brew:sl"
+
+  # Install both packages
+  run plonk install brew:figlet brew:sl
+  assert_success
+  track_artifact "package" "brew:figlet"
+  track_artifact "package" "brew:sl"
+
+  # Dry-run upgrade all
+  run plonk upgrade --dry-run
+  assert_success
+  assert_output --partial "would-upgrade"
+  assert_output --partial "figlet"
+  assert_output --partial "sl"
+}
+
+@test "upgrade --dry-run by manager" {
+  require_safe_package "brew:cowsay"
+
+  # Install first
+  run plonk install brew:cowsay
+  assert_success
+  track_artifact "package" "brew:cowsay"
+
+  # Dry-run upgrade by manager
+  run plonk upgrade --dry-run brew
+  assert_success
+  assert_output --partial "would-upgrade"
+  assert_output --partial "cowsay"
+}
