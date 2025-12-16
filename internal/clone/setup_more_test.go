@@ -12,14 +12,14 @@ import (
 	packages "github.com/richhaase/plonk/internal/resources/packages"
 )
 
-func TestSetupFromClonedRepo_NoManagers_NoApply(t *testing.T) {
+func TestSetupFromClonedRepo_NoManagers(t *testing.T) {
 	dir := t.TempDir()
 	// Create minimal plonk.yaml so hasConfig=true
 	if err := createDefaultConfig(dir); err != nil {
 		t.Fatalf("failed to create default config: %v", err)
 	}
 	// No lock file => no detected managers
-	if err := SetupFromClonedRepo(context.Background(), dir, true, true); err != nil {
+	if err := SetupFromClonedRepo(context.Background(), dir, true); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -40,8 +40,8 @@ func TestSetupFromClonedRepo_InstallsDetectedManagers(t *testing.T) {
 	packages.SetDefaultExecutor(mock)
 	t.Cleanup(func() { packages.SetDefaultExecutor(&packages.RealCommandExecutor{}) })
 
-	// Run setup without apply - should report missing managers but not error
-	if err := SetupFromClonedRepo(context.Background(), dir, true, true); err != nil {
+	// Run setup - should report missing managers but not error
+	if err := SetupFromClonedRepo(context.Background(), dir, true); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 

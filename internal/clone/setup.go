@@ -21,7 +21,6 @@ import (
 type Config struct {
 	Interactive bool // Whether to prompt user for confirmations
 	Verbose     bool // Whether to show verbose output
-	NoApply     bool // Whether to skip running apply (for clone)
 	DryRun      bool // Whether to show what would happen without making changes
 }
 
@@ -50,9 +49,7 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 
 		output.Printf("Dry run: would create default plonk.yaml configuration\n")
 		output.Printf("Dry run: would detect required package managers from lock file\n")
-		if !cfg.NoApply {
-			output.Printf("Dry run: would run 'plonk apply' after setup\n")
-		}
+		output.Printf("Dry run: would run 'plonk apply' after setup\n")
 		output.Printf("Dry run: no changes made\n")
 		return nil
 	}
@@ -89,7 +86,7 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 		output.Printf("Created default plonk.yaml configuration\n")
 	}
 
-	if err := SetupFromClonedRepo(ctx, plonkDir, hasConfig, cfg.NoApply); err != nil {
+	if err := SetupFromClonedRepo(ctx, plonkDir, hasConfig); err != nil {
 		return err
 	}
 	output.Printf("Setup complete! Your dotfiles are now managed by plonk.\n")
@@ -97,7 +94,7 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 }
 
 // SetupFromClonedRepo performs post-clone setup: detect managers, install, and apply
-func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool, noApply bool) error {
+func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool) error {
 	repoCfg := config.LoadWithDefaults(plonkDir)
 
 	// Detect required managers from lock file
@@ -130,8 +127,8 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool, n
 		output.Printf("No package managers detected from lock file.\n")
 	}
 
-	// Optionally run apply
-	if hasConfig && !noApply {
+	// Run apply if config exists
+	if hasConfig {
 		if len(missingManagers) > 0 {
 			output.Printf("Some package managers are missing; continuing with 'plonk apply' for everything else.\n")
 			output.Printf("After installing the missing managers, re-run 'plonk doctor' and 'plonk apply' to reconcile remaining packages.\n")

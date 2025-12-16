@@ -254,11 +254,10 @@ Clone an existing dotfiles repository and intelligently set up plonk.
 
 ### Local Flags
 
-| Flag         | Short | Type | Default | Description                                        |
-| ------------ | ----- | ---- | ------- | -------------------------------------------------- |
-| `--yes`      |       | bool | `false` | Non-interactive mode - answer yes to all prompts   |
-| `--no-apply` |       | bool | `false` | Skip running 'plonk apply' after setup             |
-| `--dry-run`  | `-n`  | bool | `false` | Show what would be cloned without making changes   |
+| Flag        | Short | Type | Default | Description                                        |
+| ----------- | ----- | ---- | ------- | -------------------------------------------------- |
+| `--yes`     |       | bool | `false` | Non-interactive mode - answer yes to all prompts   |
+| `--dry-run` | `-n`  | bool | `false` | Show what would be cloned without making changes   |
 
 ### Git Repository Formats
 
@@ -269,7 +268,7 @@ Clone an existing dotfiles repository and intelligently set up plonk.
 
 ### Note
 
-Uses package-level variables `cloneYes` and `cloneNoApply` instead of flag parsing in RunE. These flags do not use short forms.
+Uses package-level variables for flag storage. The `--yes` flag does not use a short form.
 
 ---
 
@@ -611,7 +610,7 @@ No aliases for: upgrade, add, rm, clone, diff, doctor, apply, config
 | `upgrade`     | `[targets...]`  | `--dry-run`                                            | -       | Yes         |
 | `add`         | `[files...]`    | `--dry-run`, `--sync-drifted`                          | -       | Yes         |
 | `rm`          | `<files...>`    | `--dry-run`                                            | -       | Yes         |
-| `clone`       | `<git-repo>`    | `--yes`, `--no-apply`, `--dry-run`                     | -       | Yes         |
+| `clone`       | `<git-repo>`    | `--yes`, `--dry-run`                                   | -       | Yes         |
 | `status`      | -               | -                                                      | `st`    | -           |
 | `packages`    | -               | -                                                      | `p`     | -           |
 | `dotfiles`    | -               | -                                                      | `d`     | -           |

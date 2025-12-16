@@ -372,10 +372,8 @@ func TestConfigStruct(t *testing.T) {
 	cfg := Config{
 		Interactive: true,
 		Verbose:     true,
-		NoApply:     false,
 	}
 
 	assert.True(t, cfg.Interactive)
 	assert.True(t, cfg.Verbose)
-	assert.False(t, cfg.NoApply)
 }
