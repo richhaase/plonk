@@ -95,8 +95,8 @@ func TestDriftDetectionIntegration(t *testing.T) {
 		}
 
 		// Check drift metadata
-		if driftedItem.Meta == nil || driftedItem.Meta["drift_status"] != "modified" {
-			t.Errorf("Expected drift_status=modified in meta, got %v", driftedItem.Meta)
+		if driftedItem.Metadata == nil || driftedItem.Metadata["drift_status"] != "modified" {
+			t.Errorf("Expected drift_status=modified in metadata, got %v", driftedItem.Metadata)
 		}
 	})
 

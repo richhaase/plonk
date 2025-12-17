@@ -71,7 +71,7 @@ func (f DoctorFormatter) TableOutput() string {
 	}
 
 	// Display each category
-	categoryOrder := []string{"system", "environment", "permissions", "configuration", "package-managers", "installation"}
+	categoryOrder := []string{"system", "environment", "permissions", "configuration", "package-managers", "installation", "dotfiles"}
 	for _, category := range categoryOrder {
 		if checks, exists := categories[category]; exists {
 			output.WriteString(fmt.Sprintf("## %s\n", titleCase(strings.ReplaceAll(category, "-", " "))))

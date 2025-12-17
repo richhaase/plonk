@@ -58,10 +58,14 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 			if dest, ok := item.Metadata["destination"].(string); ok {
 				target = dest
 			}
-			// Check if this is actually a drifted file
+			// Check if this is actually a drifted file or has an error
 			status := "deployed"
 			if item.State == StateDegraded {
-				status = "drifted"
+				if driftStatus, ok := item.Metadata["drift_status"].(string); ok && driftStatus == "error" {
+					status = "error"
+				} else {
+					status = "drifted"
+				}
 			}
 			// Swap column order: target ($HOME), source ($PLONK_DIR), status
 			dotBuilder.AddRow(target, source, status)

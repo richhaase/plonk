@@ -16,23 +16,25 @@ import (
 
 // ConfigHandlerImpl implements ConfigHandler interface
 type ConfigHandlerImpl struct {
-	homeDir          string
-	configDir        string
-	pathResolver     PathResolver
-	directoryScanner DirectoryScanner
-	fileComparator   FileComparator
-	cfg              *config.Config
+	homeDir           string
+	configDir         string
+	pathResolver      PathResolver
+	directoryScanner  DirectoryScanner
+	fileComparator    FileComparator
+	cfg               *config.Config
+	templateProcessor TemplateProcessor
 }
 
 // NewConfigHandlerWithConfig creates a new config handler with injected config
 func NewConfigHandlerWithConfig(homeDir, configDir string, cfg *config.Config, resolver PathResolver, scanner DirectoryScanner, comparator FileComparator) *ConfigHandlerImpl {
 	return &ConfigHandlerImpl{
-		homeDir:          homeDir,
-		configDir:        configDir,
-		pathResolver:     resolver,
-		directoryScanner: scanner,
-		fileComparator:   comparator,
-		cfg:              cfg,
+		homeDir:           homeDir,
+		configDir:         configDir,
+		pathResolver:      resolver,
+		directoryScanner:  scanner,
+		fileComparator:    comparator,
+		cfg:               cfg,
+		templateProcessor: NewTemplateProcessor(configDir),
 	}
 }
 
@@ -52,17 +54,27 @@ func (ch *ConfigHandlerImpl) GetConfiguredDotfiles() ([]resources.Item, error) {
 		// Check if source is a directory
 		sourcePath := ch.pathResolver.GetSourcePath(source)
 		info, err := os.Stat(sourcePath)
+
+		// For templates, strip .tmpl from destination path
+		// e.g., gitconfig.tmpl -> ~/.gitconfig (not ~/.gitconfig.tmpl)
+		actualDestination := destination
+		isTemplate := ch.templateProcessor.IsTemplate(sourcePath)
+		if isTemplate {
+			actualDestination = ch.templateProcessor.GetTemplateName(destination)
+		}
+
 		if err != nil {
 			// Source doesn't exist yet, treat as single file
-			name := ch.destinationToName(destination)
+			name := ch.destinationToName(actualDestination)
 			items = append(items, resources.Item{
 				Name:   name,
 				Domain: "dotfile",
-				Path:   destination,
+				Path:   actualDestination,
 				Metadata: map[string]interface{}{
 					"source":      source,
-					"destination": destination,
-					"compare_fn":  ch.createCompareFunc(source, destination),
+					"destination": actualDestination,
+					"isTemplate":  isTemplate,
+					"compare_fn":  ch.createCompareFunc(source, actualDestination),
 				},
 			})
 			continue
@@ -70,29 +82,31 @@ func (ch *ConfigHandlerImpl) GetConfiguredDotfiles() ([]resources.Item, error) {
 
 		if info.IsDir() {
 			// For directories, just use the directory itself as one item
-			name := ch.destinationToName(destination)
+			name := ch.destinationToName(actualDestination)
 			items = append(items, resources.Item{
 				Name:   name,
 				Domain: "dotfile",
-				Path:   destination,
+				Path:   actualDestination,
 				Metadata: map[string]interface{}{
 					"source":      source,
-					"destination": destination,
+					"destination": actualDestination,
 					"isDirectory": true,
-					"compare_fn":  ch.createCompareFunc(source, destination),
+					"isTemplate":  isTemplate,
+					"compare_fn":  ch.createCompareFunc(source, actualDestination),
 				},
 			})
 		} else {
 			// Single file
-			name := ch.destinationToName(destination)
+			name := ch.destinationToName(actualDestination)
 			items = append(items, resources.Item{
 				Name:   name,
 				Domain: "dotfile",
-				Path:   destination,
+				Path:   actualDestination,
 				Metadata: map[string]interface{}{
 					"source":      source,
-					"destination": destination,
-					"compare_fn":  ch.createCompareFunc(source, destination),
+					"destination": actualDestination,
+					"isTemplate":  isTemplate,
+					"compare_fn":  ch.createCompareFunc(source, actualDestination),
 				},
 			})
 		}

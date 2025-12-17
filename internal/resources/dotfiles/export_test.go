@@ -16,16 +16,20 @@ func NewManager(homeDir, configDir string) *Manager {
 	fileComparator := NewFileComparator()
 	configHandler := newConfigHandler(homeDir, configDir, pathResolver, directoryScanner, fileComparator)
 	fileOperations := NewFileOperations(pathResolver)
+	templateProcessor := NewTemplateProcessor(configDir)
+	templateFileOps := NewTemplateFileOperations(pathResolver, templateProcessor)
 
 	return &Manager{
-		homeDir:          homeDir,
-		configDir:        configDir,
-		pathResolver:     pathResolver,
-		pathValidator:    pathValidator,
-		directoryScanner: directoryScanner,
-		configHandler:    configHandler,
-		fileComparator:   fileComparator,
-		fileOperations:   fileOperations,
+		homeDir:           homeDir,
+		configDir:         configDir,
+		pathResolver:      pathResolver,
+		pathValidator:     pathValidator,
+		directoryScanner:  directoryScanner,
+		configHandler:     configHandler,
+		fileComparator:    fileComparator,
+		fileOperations:    fileOperations,
+		templateProcessor: templateProcessor,
+		templateFileOps:   templateFileOps,
 	}
 }
 
@@ -33,12 +37,13 @@ func NewManager(homeDir, configDir string) *Manager {
 // This is a test helper - production code should use NewConfigHandlerWithConfig.
 func newConfigHandler(homeDir, configDir string, resolver PathResolver, scanner DirectoryScanner, comparator FileComparator) *ConfigHandlerImpl {
 	return &ConfigHandlerImpl{
-		homeDir:          homeDir,
-		configDir:        configDir,
-		pathResolver:     resolver,
-		directoryScanner: scanner,
-		fileComparator:   comparator,
-		cfg:              config.LoadWithDefaults(configDir),
+		homeDir:           homeDir,
+		configDir:         configDir,
+		pathResolver:      resolver,
+		directoryScanner:  scanner,
+		fileComparator:    comparator,
+		cfg:               config.LoadWithDefaults(configDir),
+		templateProcessor: NewTemplateProcessor(configDir),
 	}
 }
 

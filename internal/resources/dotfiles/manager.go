@@ -18,14 +18,16 @@ import (
 
 // Manager coordinates dotfile operations using focused components
 type Manager struct {
-	homeDir          string
-	configDir        string
-	pathResolver     PathResolver
-	pathValidator    PathValidator
-	directoryScanner DirectoryScanner
-	configHandler    ConfigHandler
-	fileComparator   FileComparator
-	fileOperations   *FileOperations
+	homeDir           string
+	configDir         string
+	pathResolver      PathResolver
+	pathValidator     PathValidator
+	directoryScanner  DirectoryScanner
+	configHandler     ConfigHandler
+	fileComparator    FileComparator
+	fileOperations    *FileOperations
+	templateProcessor TemplateProcessor
+	templateFileOps   *TemplateFileOperations
 }
 
 // NewManagerWithConfig creates a new dotfile manager with injected config
@@ -33,19 +35,32 @@ func NewManagerWithConfig(homeDir, configDir string, cfg *config.Config) *Manage
 	pathResolver := NewPathResolver(homeDir, configDir)
 	pathValidator := NewPathValidator(homeDir, configDir)
 	directoryScanner := NewDirectoryScanner(homeDir, configDir, pathValidator, pathResolver)
-	fileComparator := NewFileComparator()
-	configHandler := NewConfigHandlerWithConfig(homeDir, configDir, cfg, pathResolver, directoryScanner, fileComparator)
+
+	// Create template processor for handling .tmpl files
+	templateProcessor := NewTemplateProcessor(configDir)
+
+	// Create template-aware comparator that wraps the base comparator
+	baseComparator := NewFileComparator()
+	fileComparator := NewTemplateAwareComparator(baseComparator, templateProcessor)
+
+	// Create template-aware file operations
 	fileOperations := NewFileOperations(pathResolver)
+	templateFileOps := NewTemplateFileOperations(pathResolver, templateProcessor)
+
+	// Pass template-aware comparator to config handler
+	configHandler := NewConfigHandlerWithConfig(homeDir, configDir, cfg, pathResolver, directoryScanner, fileComparator)
 
 	return &Manager{
-		homeDir:          homeDir,
-		configDir:        configDir,
-		pathResolver:     pathResolver,
-		pathValidator:    pathValidator,
-		directoryScanner: directoryScanner,
-		configHandler:    configHandler,
-		fileComparator:   fileComparator,
-		fileOperations:   fileOperations,
+		homeDir:           homeDir,
+		configDir:         configDir,
+		pathResolver:      pathResolver,
+		pathValidator:     pathValidator,
+		directoryScanner:  directoryScanner,
+		configHandler:     configHandler,
+		fileComparator:    fileComparator,
+		fileOperations:    fileOperations,
+		templateProcessor: templateProcessor,
+		templateFileOps:   templateFileOps,
 	}
 }
 
@@ -126,6 +141,19 @@ func (m *Manager) GetActualDotfiles(ctx context.Context) ([]resources.Item, erro
 // Delegate file comparison
 func (m *Manager) CompareFiles(path1, path2 string) (bool, error) {
 	return m.fileComparator.CompareFiles(path1, path2)
+}
+
+// Template-related methods
+
+// GetTemplateProcessor returns the template processor
+func (m *Manager) GetTemplateProcessor() TemplateProcessor {
+	return m.templateProcessor
+}
+
+// IsTemplate checks if a source file is a template
+func (m *Manager) IsTemplate(source string) bool {
+	sourcePath := m.pathResolver.GetSourcePath(source)
+	return m.templateProcessor.IsTemplate(sourcePath)
 }
 
 // Utility methods that need to stay in manager
@@ -413,7 +441,15 @@ func (m *Manager) RemoveSingleDotfile(cfg *config.Config, dotfilePath string, dr
 
 func (m *Manager) ProcessDotfileForApply(ctx context.Context, source, destination string, opts ApplyOptions) (output.DotfileOperation, error) {
 	sourcePath := m.pathResolver.GetSourcePath(source)
-	destinationPath, err := m.pathResolver.ResolveDotfilePath(destination)
+
+	// For templates, the destination should not include the .tmpl extension
+	// The template processor handles this
+	actualDestination := destination
+	if m.templateProcessor.IsTemplate(sourcePath) {
+		actualDestination = m.templateProcessor.GetTemplateName(destination)
+	}
+
+	destinationPath, err := m.pathResolver.ResolveDotfilePath(actualDestination)
 	if err != nil {
 		return output.DotfileOperation{}, fmt.Errorf("failed to resolve destination path: %w", err)
 	}
@@ -422,7 +458,7 @@ func (m *Manager) ProcessDotfileForApply(ctx context.Context, source, destinatio
 	if !m.FileExists(sourcePath) {
 		return output.DotfileOperation{
 			Source:      source,
-			Destination: destination,
+			Destination: actualDestination,
 			Action:      "error",
 			Status:      "failed",
 			Error:       "source file does not exist",
@@ -434,10 +470,20 @@ func (m *Manager) ProcessDotfileForApply(ctx context.Context, source, destinatio
 
 	action := output.DotfileOperation{
 		Source:      source,
-		Destination: destination,
+		Destination: actualDestination,
 	}
 
 	if opts.DryRun {
+		// For templates, validate they can be rendered
+		if m.templateProcessor.IsTemplate(sourcePath) {
+			if err := m.templateProcessor.ValidateTemplate(sourcePath); err != nil {
+				action.Action = "error"
+				action.Status = "failed"
+				action.Error = err.Error()
+				return action, nil
+			}
+		}
+
 		if destExists {
 			action.Action = "would-update"
 			action.Status = "would-update"
@@ -452,8 +498,13 @@ func (m *Manager) ProcessDotfileForApply(ctx context.Context, source, destinatio
 	copyOptions := DefaultCopyOptions()
 	copyOptions.CreateBackup = opts.Backup
 
-	// Perform the copy
-	err = m.fileOperations.CopyFile(ctx, source, destination, copyOptions)
+	// Use template file operations for templates, regular for others
+	if m.templateProcessor.IsTemplate(sourcePath) {
+		err = m.templateFileOps.CopyFile(ctx, source, actualDestination, copyOptions)
+	} else {
+		err = m.fileOperations.CopyFile(ctx, source, actualDestination, copyOptions)
+	}
+
 	if err != nil {
 		action.Action = "error"
 		action.Status = "failed"
