@@ -24,3 +24,8 @@
 .plonk-test-workflow
 .plonk-test-clone-rc
 .config/plonk-test-clone/config.yaml
+
+# Template tests
+.plonk-test-template
+.plonk-test-template-drift
+.plonk-test-template-apply
