@@ -276,8 +276,34 @@ func TestGenericManager_TemplateExpansion(t *testing.T) {
 	assert.Equal(t, []string{"install", "my-tool"}, mock.Commands[0].Args)
 }
 
+func TestGenericManager_IsAvailable_Success(t *testing.T) {
+	cfg := config.ManagerConfig{
+		Binary: "mytool",
+		Available: config.CommandConfig{
+			Command: []string{"mytool", "version"},
+		},
+	}
+
+	mock := &MockCommandExecutor{
+		Responses: map[string]CommandResponse{
+			"mytool version": {Output: []byte("mytool v1.0.0")},
+		},
+	}
+
+	mgr := NewGenericManager(cfg, mock)
+	available, err := mgr.IsAvailable(context.Background())
+
+	assert.NoError(t, err)
+	assert.True(t, available)
+}
+
 func TestGenericManager_IsAvailable_LookPathError(t *testing.T) {
-	cfg := config.ManagerConfig{Binary: "nonexistent"}
+	cfg := config.ManagerConfig{
+		Binary: "nonexistent",
+		Available: config.CommandConfig{
+			Command: []string{"nonexistent", "--version"},
+		},
+	}
 
 	mock := &MockCommandExecutor{
 		DefaultResponse: CommandResponse{Error: &MockExitError{Code: 127}},
@@ -290,8 +316,13 @@ func TestGenericManager_IsAvailable_LookPathError(t *testing.T) {
 	assert.False(t, available)
 }
 
-func TestGenericManager_IsAvailable_VersionError(t *testing.T) {
-	cfg := config.ManagerConfig{Binary: "broken"}
+func TestGenericManager_IsAvailable_CommandError(t *testing.T) {
+	cfg := config.ManagerConfig{
+		Binary: "broken",
+		Available: config.CommandConfig{
+			Command: []string{"broken", "--version"},
+		},
+	}
 
 	mock := &MockCommandExecutor{
 		Responses: map[string]CommandResponse{
@@ -303,6 +334,24 @@ func TestGenericManager_IsAvailable_VersionError(t *testing.T) {
 	available, err := mgr.IsAvailable(context.Background())
 
 	assert.NoError(t, err)
+	assert.False(t, available)
+}
+
+func TestGenericManager_IsAvailable_MissingConfig(t *testing.T) {
+	cfg := config.ManagerConfig{Binary: "test"}
+
+	// Add a response so LookPath succeeds, but Available config is missing
+	mock := &MockCommandExecutor{
+		Responses: map[string]CommandResponse{
+			"test": {Output: []byte("exists")},
+		},
+	}
+
+	mgr := NewGenericManager(cfg, mock)
+	available, err := mgr.IsAvailable(context.Background())
+
+	assert.Error(t, err, "should error when available config is missing")
+	assert.Contains(t, err.Error(), "missing 'available' config")
 	assert.False(t, available)
 }
 

@@ -45,6 +45,9 @@ func TestInstallPackagesWith_CustomMetadataFromConfig(t *testing.T) {
 		Managers: map[string]config.ManagerConfig{
 			"custom": {
 				Binary: "custom",
+				Available: config.CommandConfig{
+					Command: []string{"custom", "--version"},
+				},
 				Install: config.CommandConfig{
 					Command: []string{"custom", "install", "{{.Package}}"},
 				},

@@ -32,3 +32,23 @@ setup() {
   assert_output --partial "Install packages"
   assert_output --partial "Examples:"
 }
+
+@test "unknown command shows error and suggestions" {
+  run plonk unknowncommand
+  assert_failure
+  assert_output --partial "unknown command"
+}
+
+@test "typo in command name shows helpful error" {
+  run plonk instal
+  assert_failure
+  # Should show unknown command error
+  assert_output --partial "unknown"
+}
+
+@test "plonk --version shows version information" {
+  run plonk --version
+  assert_success
+  # Should show version string
+  assert_output --partial "plonk"
+}

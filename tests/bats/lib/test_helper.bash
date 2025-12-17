@@ -214,6 +214,16 @@ require_package_manager() {
         skip "Pipx not available"
       fi
       ;;
+    pnpm)
+      if ! command -v pnpm >/dev/null 2>&1; then
+        skip "Pnpm not available"
+      fi
+      ;;
+    conda)
+      if ! command -v conda >/dev/null 2>&1; then
+        skip "Conda not available"
+      fi
+      ;;
     *)
       skip "Unknown package manager: $manager"
       ;;

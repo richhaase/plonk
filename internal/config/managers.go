@@ -6,6 +6,7 @@ package config
 // ManagerConfig defines a package manager configuration
 type ManagerConfig struct {
 	Binary             string                             `yaml:"binary,omitempty"`
+	Available          CommandConfig                      `yaml:"available,omitempty"`
 	List               ListConfig                         `yaml:"list,omitempty" validate:"listconfig"`
 	Install            CommandConfig                      `yaml:"install,omitempty"`
 	Upgrade            CommandConfig                      `yaml:"upgrade,omitempty"`
@@ -76,6 +77,7 @@ func MergeManagerConfig(base, override ManagerConfig) ManagerConfig {
 
 	result.List = mergeListConfig(base.List, override.List)
 
+	result.Available = mergeCommandConfig(base.Available, override.Available)
 	result.Install = mergeCommandConfig(base.Install, override.Install)
 	result.Upgrade = mergeCommandConfig(base.Upgrade, override.Upgrade)
 	result.UpgradeAll = mergeCommandConfig(base.UpgradeAll, override.UpgradeAll)
