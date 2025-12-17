@@ -15,6 +15,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
+	"github.com/richhaase/plonk/internal/resources/dotfiles"
 	"github.com/richhaase/plonk/internal/resources/packages"
 )
 
@@ -70,6 +71,9 @@ func RunHealthChecksWithContext(ctx context.Context) HealthReport {
 
 	// Executable path check
 	report.Checks = append(report.Checks, checkExecutablePath())
+
+	// Template health check
+	report.Checks = append(report.Checks, checkTemplates())
 
 	// Determine overall health
 	report.Overall = calculateOverallHealth(report.Checks)
@@ -435,6 +439,112 @@ func checkExecutablePath() HealthCheck {
 	}
 
 	return check
+}
+
+// checkTemplates validates template files and local variables configuration
+func checkTemplates() HealthCheck {
+	check := HealthCheck{
+		Name:     "Templates",
+		Category: "dotfiles",
+		Status:   "pass",
+		Message:  "Template configuration is valid",
+	}
+
+	configDir := config.GetConfigDir()
+	templateProcessor := dotfiles.NewTemplateProcessor(configDir)
+
+	// Check if any templates exist
+	templates, err := templateProcessor.ListTemplates()
+	if err != nil {
+		// Error listing templates is unusual but not critical
+		check.Status = "warn"
+		check.Issues = append(check.Issues, fmt.Sprintf("Could not scan for templates: %v", err))
+		check.Suggestions = append(check.Suggestions, "Check permissions on the plonk config directory")
+		check.Message = "Unable to scan for templates"
+		return check
+	}
+
+	// No templates found - that's fine, just informational
+	if len(templates) == 0 {
+		check.Status = "info"
+		check.Message = "No template files found"
+		check.Details = append(check.Details, "Create .tmpl files to use templating features")
+		return check
+	}
+
+	check.Details = append(check.Details, fmt.Sprintf("Template files found: %d", len(templates)))
+	for _, t := range templates {
+		check.Details = append(check.Details, fmt.Sprintf("  - %s", t))
+	}
+
+	localVarsPath := templateProcessor.GetLocalVarsPath()
+	hasLocalVars := templateProcessor.HasLocalVars()
+
+	if hasLocalVars {
+		check.Details = append(check.Details, fmt.Sprintf("Variables file: %s", localVarsPath))
+	}
+
+	// Validate each template to find missing variables
+	var validationErrors []string
+	missingVars := make(map[string]bool)
+	for _, tmpl := range templates {
+		tmplPath := filepath.Join(configDir, tmpl)
+		if err := templateProcessor.ValidateTemplate(tmplPath); err != nil {
+			validationErrors = append(validationErrors, err.Error())
+			// Extract variable name from error message
+			if varName := extractVarNameFromError(err.Error()); varName != "" {
+				missingVars[varName] = true
+			}
+		}
+	}
+
+	if len(validationErrors) > 0 {
+		check.Status = "warn"
+
+		if !hasLocalVars {
+			check.Message = "Template variables file missing"
+			check.Issues = append(check.Issues, fmt.Sprintf("%s does not exist", localVarsPath))
+		} else {
+			check.Message = fmt.Sprintf("%d template(s) have missing variables", len(validationErrors))
+		}
+
+		// Show which variables are missing
+		if len(missingVars) > 0 {
+			varList := make([]string, 0, len(missingVars))
+			for v := range missingVars {
+				varList = append(varList, v)
+			}
+			check.Issues = append(check.Issues, fmt.Sprintf("Missing variables: %s", strings.Join(varList, ", ")))
+
+			// Generate example local.yaml content
+			var example strings.Builder
+			example.WriteString(fmt.Sprintf("Create %s with:\n", localVarsPath))
+			for _, v := range varList {
+				example.WriteString(fmt.Sprintf("  %s: \"your-value-here\"\n", v))
+			}
+			check.Suggestions = append(check.Suggestions, example.String())
+		}
+	} else {
+		check.Details = append(check.Details, "All templates validated successfully")
+	}
+
+	return check
+}
+
+// extractVarNameFromError extracts the variable name from a template error message
+func extractVarNameFromError(errStr string) string {
+	// Pattern: "requires variable 'X' which is not defined"
+	const prefix = "requires variable '"
+	idx := strings.Index(errStr, prefix)
+	if idx == -1 {
+		return ""
+	}
+	start := idx + len(prefix)
+	end := strings.Index(errStr[start:], "'")
+	if end == -1 {
+		return ""
+	}
+	return errStr[start : start+end]
 }
 
 // calculateOverallHealth determines overall system health from individual checks

@@ -56,8 +56,8 @@ func TestReconcileWithDrift(t *testing.T) {
 		}
 
 		// Check drift metadata
-		if result[1].Meta == nil || result[1].Meta["drift_status"] != "modified" {
-			t.Errorf("file2: expected drift_status=modified in meta, got %v", result[1].Meta)
+		if result[1].Metadata == nil || result[1].Metadata["drift_status"] != "modified" {
+			t.Errorf("file2: expected drift_status=modified in metadata, got %v", result[1].Metadata)
 		}
 	})
 

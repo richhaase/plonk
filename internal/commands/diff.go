@@ -16,6 +16,7 @@ import (
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources"
+	"github.com/richhaase/plonk/internal/resources/dotfiles"
 	"github.com/spf13/cobra"
 )
 
@@ -71,6 +72,9 @@ func runDiff(cmd *cobra.Command, args []string) error {
 		diffTool = "git diff --no-index"
 	}
 
+	// Create template processor for rendering templates
+	templateProcessor := dotfiles.NewTemplateProcessor(configDir)
+
 	// Execute diff for each drifted file
 	for _, item := range driftedFiles {
 		// Get the source name (without leading dot)
@@ -92,7 +96,37 @@ func runDiff(cmd *cobra.Command, args []string) error {
 			destPath = expandHome("~/" + item.Name)
 		}
 
-		if err := executeDiffTool(diffTool, sourcePath, destPath); err != nil {
+		// Check if source is a template - if so, render to temp file for diff
+		isTemplate, _ := item.Metadata["isTemplate"].(bool)
+		effectiveSourcePath := sourcePath
+
+		if isTemplate {
+			// Render template to temporary file
+			rendered, err := templateProcessor.RenderToBytes(sourcePath)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error rendering template %s: %v\n", item.Name, err)
+				continue
+			}
+
+			// Create temp file with rendered content
+			tmpFile, err := os.CreateTemp("", "plonk-diff-*.rendered")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error creating temp file for %s: %v\n", item.Name, err)
+				continue
+			}
+			defer os.Remove(tmpFile.Name())
+
+			if _, err := tmpFile.Write(rendered); err != nil {
+				tmpFile.Close()
+				fmt.Fprintf(os.Stderr, "Error writing temp file for %s: %v\n", item.Name, err)
+				continue
+			}
+			tmpFile.Close()
+
+			effectiveSourcePath = tmpFile.Name()
+		}
+
+		if err := executeDiffTool(diffTool, effectiveSourcePath, destPath); err != nil {
 			// Report error but continue with other files
 			fmt.Fprintf(os.Stderr, "Error showing diff for %s: %v\n", item.Name, err)
 		}

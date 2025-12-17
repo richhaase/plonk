@@ -45,12 +45,21 @@ func ReconcileItemsWithKey(desired, actual []Item, keyFunc func(Item) string) []
 
 			// Check for drift using typed comparator
 			if comparator := GetDriftComparator(desiredItem); comparator != nil {
-				if identical, err := comparator.Compare(); err == nil && !identical {
-					item.State = StateDegraded // Drift detected
-					if item.Meta == nil {
-						item.Meta = make(map[string]string)
+				identical, err := comparator.Compare()
+				if err != nil {
+					// Comparison failed (e.g., template rendering error)
+					item.State = StateDegraded
+					if item.Metadata == nil {
+						item.Metadata = make(map[string]interface{})
 					}
-					item.Meta["drift_status"] = "modified"
+					item.Metadata["drift_status"] = "error"
+					item.Metadata["drift_error"] = err.Error()
+				} else if !identical {
+					item.State = StateDegraded // Drift detected
+					if item.Metadata == nil {
+						item.Metadata = make(map[string]interface{})
+					}
+					item.Metadata["drift_status"] = "modified"
 				}
 			}
 

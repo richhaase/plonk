@@ -224,7 +224,7 @@ func convertItemsToOutput(items []resources.Item) []output.Item {
 			Manager:  item.Manager,
 			Path:     item.Path,
 			State:    output.ItemState(item.State.String()),
-			Metadata: sanitizeMetadataForConversion(item.Metadata), // Sanitize metadata early
+			Metadata: sanitizeMetadataForConversion(item.Metadata),
 		}
 	}
 	return converted
