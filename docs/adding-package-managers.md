@@ -24,6 +24,9 @@ Behavior: invalid JSON or selector errors fail; if output is non-empty but no na
 managers:
   <name>:
     binary: <cli name>            # required
+    available:
+      command: [<cmd>, --version] # required: command to check if manager is installed
+                                  # Note: some tools differ (e.g., "go version" not "go --version")
     list:
       command: [<cmd>, ...]       # required
       parse_strategy: lines|json|json-map|jsonpath
@@ -53,6 +56,8 @@ Commands are arrays (one token per element). `idempotent_errors` make operations
 managers:
   pnpm:
     binary: pnpm
+    available:
+      command: [pnpm, --version]
     list:
       command: [pnpm, list, -g, --depth=0, --json]
       parse_strategy: jsonpath
@@ -72,6 +77,8 @@ managers:
 managers:
   npm:
     binary: npm
+    available:
+      command: [npm, --version]
     list:
       command: [npm, list, -g, --depth=0, --json]
       parse_strategy: jsonpath

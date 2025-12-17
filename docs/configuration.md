@@ -223,6 +223,10 @@ managers:
   manager-name:
     binary: "command"               # Required: executable binary name
 
+    available:                      # How to check if manager is available
+      command: ["cmd", "--version"] # Command that succeeds when manager is installed
+                                    # Note: Some tools use different syntax (e.g., "go version")
+
     list:                           # How to list installed packages
       command: ["cmd", "args"...]   # Required: full argv for the list command
       parse: "lines"                # One of: "lines", "json", "json-map"
@@ -257,6 +261,7 @@ managers:
 **Field Details (core pieces):**
 
 - `binary`: CLI executable name for the manager (e.g., `brew`, `npm`, `uv`).
+- `available.command`: argv used to check if the manager is available. This command should exit 0 when the manager is installed. Most tools use `["tool", "--version"]`, but some like Go use `["go", "version"]` (no double dash).
 - `list.command`: argv used to list installed packages.
 - `list.parse` / `list.parse_strategy`:
   - `"lines"`: each line is a package; the first token is treated as the name.
@@ -278,6 +283,8 @@ Add a `managers:` section to your `plonk.yaml`:
 managers:
   pixi:
     binary: "pixi"
+    available:
+      command: ["pixi", "--version"]
     list:
       command: ["pixi", "global", "list", "--json"]
       parse: "jsonpath"
@@ -309,6 +316,8 @@ You can also override built-in manager configurations if you need custom behavio
 managers:
   npm:
     binary: "npm"
+    available:
+      command: ["npm", "--version"]
     list:
       command: ["npm", "list", "-g", "--depth=0", "--json"]
       parse: "jsonpath"

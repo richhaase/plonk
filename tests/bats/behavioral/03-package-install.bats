@@ -271,3 +271,69 @@ setup() {
   assert_success
   assert_output --partial "jq"
 }
+
+# Dry-run tests
+
+@test "install --dry-run shows what would happen" {
+  require_safe_package "brew:lolcat"
+
+  run plonk install --dry-run brew:lolcat
+  assert_success
+  assert_output --partial "lolcat"
+  assert_output --partial "would-add"
+}
+
+@test "install --dry-run does not modify lock file" {
+  require_safe_package "brew:lolcat"
+
+  # Get initial lock file state
+  if [ -f "$PLONK_DIR/plonk.lock" ]; then
+    initial_content=$(cat "$PLONK_DIR/plonk.lock")
+  else
+    initial_content=""
+  fi
+
+  run plonk install --dry-run brew:lolcat
+  assert_success
+
+  # Lock file should not have changed
+  if [ -f "$PLONK_DIR/plonk.lock" ]; then
+    final_content=$(cat "$PLONK_DIR/plonk.lock")
+  else
+    final_content=""
+  fi
+
+  assert [ "$initial_content" = "$final_content" ]
+}
+
+@test "install --dry-run does not install package" {
+  require_safe_package "brew:fortune"
+
+  # Make sure package is not installed
+  run brew uninstall fortune 2>/dev/null || true
+
+  run plonk install --dry-run brew:fortune
+  assert_success
+
+  # Package should not be installed
+  run brew list fortune
+  assert_failure
+}
+
+@test "install -n is alias for --dry-run" {
+  require_safe_package "brew:lolcat"
+
+  run plonk install -n brew:lolcat
+  assert_success
+  assert_output --partial "would-add"
+}
+
+@test "install --dry-run with multiple packages shows all" {
+  require_safe_package "brew:figlet"
+  require_safe_package "brew:sl"
+
+  run plonk install --dry-run brew:figlet brew:sl
+  assert_success
+  assert_output --partial "figlet"
+  assert_output --partial "sl"
+}

@@ -10,7 +10,11 @@ import (
 
 func TestInstall_VersionErrorStillAdded(t *testing.T) {
 	cfg := &config.Config{DefaultManager: "brew", Managers: map[string]config.ManagerConfig{
-		"brew": {Binary: "brew", Install: config.CommandConfig{Command: []string{"brew", "install", "{{.Package}}"}}},
+		"brew": {
+			Binary:    "brew",
+			Available: config.CommandConfig{Command: []string{"brew", "--version"}},
+			Install:   config.CommandConfig{Command: []string{"brew", "install", "{{.Package}}"}},
+		},
 	}}
 	// Mock executor to allow install
 	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
