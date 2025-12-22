@@ -15,17 +15,17 @@ func TestInstallPackages_ContextTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 	defer cancel()
 
-	// Small delay to ensure context is cancelled
+	// Small delay to ensure context is canceled
 	time.Sleep(5 * time.Millisecond)
 
-	// Run install using brew manager - context should already be cancelled
+	// Run install using brew manager - context should already be canceled
 	results, err := InstallPackages(ctx, t.TempDir(), []string{"nonexistent-package-12345"}, InstallOptions{Manager: "brew", DryRun: false})
 	if err != nil {
 		t.Fatalf("InstallPackages returned unexpected error: %v", err)
 	}
-	// With cancelled context, we should get 0 results since the loop exits early
+	// With canceled context, we should get 0 results since the loop exits early
 	if len(results) != 0 {
-		t.Fatalf("expected 0 results with cancelled context, got %d", len(results))
+		t.Fatalf("expected 0 results with canceled context, got %d", len(results))
 	}
 }
 
@@ -34,14 +34,14 @@ func TestUninstallPackages_ContextTimeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Nanosecond)
 	defer cancel()
 
-	// Small delay to ensure context is cancelled
+	// Small delay to ensure context is canceled
 	time.Sleep(5 * time.Millisecond)
 
 	results, err := UninstallPackages(ctx, t.TempDir(), []string{"nonexistent-package-12345"}, UninstallOptions{Manager: "brew", DryRun: false})
 	if err != nil {
 		t.Fatalf("UninstallPackages returned unexpected error: %v", err)
 	}
-	// With cancelled context, we should get 0 results since the loop exits early
+	// With canceled context, we should get 0 results since the loop exits early
 	// or a failed result
 	_ = results
 }

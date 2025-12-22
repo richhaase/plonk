@@ -120,7 +120,7 @@ func (g *GemManager) SelfInstall(ctx context.Context) error {
 		return nil
 	}
 
-	return fmt.Errorf("Ruby is not installed and no supported installation method is available")
+	return fmt.Errorf("ruby is not installed and no supported installation method is available")
 }
 
 // parseGemList parses gem list output.
