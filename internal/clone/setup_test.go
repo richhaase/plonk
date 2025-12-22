@@ -15,14 +15,6 @@ import (
 )
 
 func TestGetManagerDescription(t *testing.T) {
-	customCfg := &config.Config{
-		Managers: map[string]config.ManagerConfig{
-			"custom": {
-				Description: "Custom Manager",
-			},
-		},
-	}
-
 	tests := []struct {
 		name     string
 		cfg      *config.Config
@@ -66,16 +58,10 @@ func TestGetManagerDescription(t *testing.T) {
 			expected: "gem (Ruby package manager)",
 		},
 		{
-			name:     "unknown",
+			name:     "unknown falls back to generic",
 			cfg:      nil,
 			manager:  "unknown-manager",
 			expected: "unknown-manager package manager",
-		},
-		{
-			name:     "custom description from config",
-			cfg:      customCfg,
-			manager:  "custom",
-			expected: "Custom Manager",
 		},
 	}
 
@@ -88,14 +74,6 @@ func TestGetManagerDescription(t *testing.T) {
 }
 
 func TestGetManualInstallInstructions(t *testing.T) {
-	customCfg := &config.Config{
-		Managers: map[string]config.ManagerConfig{
-			"custom": {
-				InstallHint: "Install custom via custom-installer",
-			},
-		},
-	}
-
 	tests := []struct {
 		name     string
 		cfg      *config.Config
@@ -139,16 +117,10 @@ func TestGetManualInstallInstructions(t *testing.T) {
 			expected: "Install Ruby from https://ruby-lang.org/ or use brew install ruby",
 		},
 		{
-			name:     "unknown",
+			name:     "unknown falls back to generic",
 			cfg:      nil,
 			manager:  "unknown-manager",
 			expected: "See official documentation for installation instructions",
-		},
-		{
-			name:     "custom hint from config",
-			cfg:      customCfg,
-			manager:  "custom",
-			expected: "Install custom via custom-installer",
 		},
 	}
 

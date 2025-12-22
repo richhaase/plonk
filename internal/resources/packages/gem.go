@@ -48,8 +48,9 @@ func (g *GemManager) ListInstalled(ctx context.Context) ([]string, error) {
 }
 
 // Install installs a package via gem (idempotent).
+// Uses --user-install to install to user's home directory (avoids permission issues on Linux).
 func (g *GemManager) Install(ctx context.Context, name string) error {
-	output, err := g.exec.CombinedOutput(ctx, "gem", "install", name)
+	output, err := g.exec.CombinedOutput(ctx, "gem", "install", "--user-install", name)
 	if err != nil {
 		if isIdempotent(string(output), "already installed") {
 			return nil

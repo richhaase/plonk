@@ -6,34 +6,25 @@ package commands
 import (
 	"fmt"
 	"reflect"
-	"sort"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/resources"
+	"github.com/richhaase/plonk/internal/resources/packages"
 	"github.com/spf13/cobra"
 )
 
 // buildInstallExamples generates CLI examples for the install command based on
-// the currently configured package managers.
+// the available package managers.
 func buildInstallExamples() string {
-	cfg := config.LoadWithDefaults(config.GetDefaultConfigDirectory())
 	var lines []string
 
 	// Always include a simple, manager-agnostic example.
 	lines = append(lines, "plonk install htop git neovim ripgrep")
 
-	if cfg == nil || cfg.Managers == nil {
-		return strings.Join(lines, "\n")
-	}
-
-	// Add a few manager-prefixed examples using configured manager names.
-	managerNames := make([]string, 0, len(cfg.Managers))
-	for name := range cfg.Managers {
-		managerNames = append(managerNames, name)
-	}
-	sort.Strings(managerNames)
+	// Add a few manager-prefixed examples using registry manager names.
+	managerNames := packages.GetRegistry().GetAllManagerNames()
 
 	const maxManagers = 4
 	for i, name := range managerNames {
@@ -47,22 +38,14 @@ func buildInstallExamples() string {
 }
 
 // buildUninstallExamples generates CLI examples for the uninstall command
-// based on the currently configured package managers.
+// based on the available package managers.
 func buildUninstallExamples() string {
-	cfg := config.LoadWithDefaults(config.GetDefaultConfigDirectory())
 	var lines []string
 
 	lines = append(lines, "plonk uninstall htop git")
 
-	if cfg == nil || cfg.Managers == nil {
-		return strings.Join(lines, "\n")
-	}
-
-	managerNames := make([]string, 0, len(cfg.Managers))
-	for name := range cfg.Managers {
-		managerNames = append(managerNames, name)
-	}
-	sort.Strings(managerNames)
+	// Add a few manager-prefixed examples using registry manager names.
+	managerNames := packages.GetRegistry().GetAllManagerNames()
 
 	const maxManagers = 2
 	for i, name := range managerNames {
@@ -76,24 +59,16 @@ func buildUninstallExamples() string {
 }
 
 // buildUpgradeExamples generates CLI examples for the upgrade command using
-// the configured managers.
+// the available managers.
 func buildUpgradeExamples() string {
-	cfg := config.LoadWithDefaults(config.GetDefaultConfigDirectory())
 	var lines []string
 
 	// Generic examples that do not depend on specific manager names.
 	lines = append(lines, "plonk upgrade")
 	lines = append(lines, "plonk upgrade ripgrep")
 
-	if cfg == nil || cfg.Managers == nil {
-		return strings.Join(lines, "\n")
-	}
-
-	managerNames := make([]string, 0, len(cfg.Managers))
-	for name := range cfg.Managers {
-		managerNames = append(managerNames, name)
-	}
-	sort.Strings(managerNames)
+	// Add manager-specific examples using registry manager names.
+	managerNames := packages.GetRegistry().GetAllManagerNames()
 
 	if len(managerNames) > 0 {
 		lines = append(lines, fmt.Sprintf("plonk upgrade %s", managerNames[0]))

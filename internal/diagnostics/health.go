@@ -608,14 +608,10 @@ func collectRequiredManagers(cfg *config.Config, configDir string) []string {
 }
 
 func lookupManagerMetadata(cfg *config.Config, name string) (description, installHint, helpURL string) {
-	if cfg != nil && cfg.Managers != nil {
-		if m, ok := cfg.Managers[name]; ok {
-			return m.Description, m.InstallHint, m.HelpURL
-		}
-	}
-
-	if defaults, ok := config.GetDefaultManagers()[name]; ok {
-		return defaults.Description, defaults.InstallHint, defaults.HelpURL
+	// Use registry metadata for built-in managers
+	registry := packages.GetRegistry()
+	if meta, ok := registry.GetManagerMetadata(name); ok {
+		return meta.Description, meta.InstallHint, meta.HelpURL
 	}
 
 	return "", "", ""

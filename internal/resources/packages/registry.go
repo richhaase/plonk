@@ -6,6 +6,8 @@ package packages
 import (
 	"fmt"
 	"sort"
+
+	"github.com/richhaase/plonk/internal/config"
 )
 
 // DefaultManager is the fallback manager when none is configured
@@ -13,6 +15,11 @@ const DefaultManager = "brew"
 
 // supportedManagers lists all available package managers
 var supportedManagers = []string{"brew", "cargo", "gem", "go", "npm", "pnpm", "bun", "uv"}
+
+func init() {
+	// Register supported managers with the config validator
+	config.SetValidManagers(supportedManagers)
+}
 
 // ManagerRegistry manages package manager creation
 type ManagerRegistry struct{}
@@ -81,4 +88,70 @@ type ManagerInfo struct {
 	Name      string
 	Available bool
 	Error     error
+}
+
+// ManagerMetadata holds descriptive information about a package manager
+type ManagerMetadata struct {
+	Description string
+	InstallHint string
+	HelpURL     string
+}
+
+// managerMetadata contains metadata for all built-in managers
+var managerMetadata = map[string]ManagerMetadata{
+	"brew": {
+		Description: "Homebrew (macOS/Linux package manager)",
+		InstallHint: "Visit https://brew.sh for installation instructions (prerequisite)",
+		HelpURL:     "https://brew.sh",
+	},
+	"cargo": {
+		Description: "Cargo (Rust package manager)",
+		InstallHint: "Install Rust from https://rustup.rs/",
+		HelpURL:     "https://www.rust-lang.org/tools/install",
+	},
+	"gem": {
+		Description: "gem (Ruby package manager)",
+		InstallHint: "Install Ruby from https://ruby-lang.org/ or use brew install ruby",
+		HelpURL:     "https://ruby-lang.org/",
+	},
+	"go": {
+		Description: "Go (Go package manager)",
+		InstallHint: "Install Go from https://go.dev/dl/ or use brew install go",
+		HelpURL:     "https://go.dev/",
+	},
+	"npm": {
+		Description: "npm (Node.js package manager)",
+		InstallHint: "Install Node.js from https://nodejs.org/ or use brew install node",
+		HelpURL:     "https://nodejs.org/",
+	},
+	"pnpm": {
+		Description: "pnpm (Node.js package manager)",
+		InstallHint: "Install pnpm from https://pnpm.io/ or use brew install pnpm",
+		HelpURL:     "https://pnpm.io/",
+	},
+	"bun": {
+		Description: "Bun (JavaScript runtime and package manager)",
+		InstallHint: "Install Bun from https://bun.sh/ or use brew install bun",
+		HelpURL:     "https://bun.sh/",
+	},
+	"uv": {
+		Description: "uv (Python package manager)",
+		InstallHint: "Install UV from https://docs.astral.sh/uv/ or use brew install uv",
+		HelpURL:     "https://docs.astral.sh/uv/",
+	},
+}
+
+// GetManagerMetadata returns metadata for a manager by name
+func (r *ManagerRegistry) GetManagerMetadata(name string) (ManagerMetadata, bool) {
+	meta, ok := managerMetadata[name]
+	return meta, ok
+}
+
+// GetAllManagerMetadata returns metadata for all managers
+func (r *ManagerRegistry) GetAllManagerMetadata() map[string]ManagerMetadata {
+	result := make(map[string]ManagerMetadata, len(managerMetadata))
+	for k, v := range managerMetadata {
+		result[k] = v
+	}
+	return result
 }

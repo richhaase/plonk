@@ -152,6 +152,8 @@ ignore_patterns:
 }
 
 func TestGetNonDefaultManagers(t *testing.T) {
+	// With hardcoded managers, GetNonDefaultManagers always returns empty map
+	// Config-driven managers are no longer supported
 	tempDir := t.TempDir()
 	checker := NewUserDefinedChecker(tempDir)
 
@@ -161,7 +163,9 @@ func TestGetNonDefaultManagers(t *testing.T) {
 		assert.Empty(t, nonDefaults)
 	})
 
-	t.Run("custom manager not in defaults is returned", func(t *testing.T) {
+	t.Run("config with managers still returns empty map", func(t *testing.T) {
+		// Even with managers defined in config, they're ignored since
+		// config-driven managers are no longer supported
 		cfg := &Config{
 			Managers: map[string]ManagerConfig{
 				"custom-manager": {
@@ -171,96 +175,13 @@ func TestGetNonDefaultManagers(t *testing.T) {
 		}
 
 		nonDefaults := checker.GetNonDefaultManagers(cfg)
-
-		if assert.Contains(t, nonDefaults, "custom-manager") {
-			assert.Equal(t, "custom-binary", nonDefaults["custom-manager"].Binary)
-		}
+		// Should be empty because config-driven managers are not supported
+		assert.Empty(t, nonDefaults)
 	})
 
-	t.Run("overridden built-in manager is returned", func(t *testing.T) {
-		defaults := GetDefaultManagers()
-		defaultNPM, ok := defaults["npm"]
-		if !ok {
-			t.Skip("npm default manager not defined; skipping overridden manager test")
-		}
-
-		// Create an overridden npm config
-		overridden := defaultNPM
-		overridden.Binary = "npm-custom"
-
-		cfg := &Config{
-			Managers: map[string]ManagerConfig{
-				"npm": overridden,
-			},
-		}
-
-		nonDefaults := checker.GetNonDefaultManagers(cfg)
-
-		if assert.Contains(t, nonDefaults, "npm") {
-			assert.Equal(t, "npm-custom", nonDefaults["npm"].Binary)
-		}
-	})
-
-	t.Run("default built-in manager is not returned", func(t *testing.T) {
-		defaults := GetDefaultManagers()
-		defaultBrew, ok := defaults["brew"]
-		if !ok {
-			t.Skip("brew default manager not defined; skipping default manager test")
-		}
-
-		cfg := &Config{
-			Managers: map[string]ManagerConfig{
-				"brew": defaultBrew,
-			},
-		}
-
-		nonDefaults := checker.GetNonDefaultManagers(cfg)
-		assert.NotContains(t, nonDefaults, "brew")
-	})
-
-	t.Run("overridden built-in manager only saves diffs", func(t *testing.T) {
-		defaults := GetDefaultManagers()
-		defaultNPM, ok := defaults["npm"]
-		if !ok {
-			t.Skip("npm default manager not defined; skipping diff test")
-		}
-
-		override := ManagerConfig{
-			Install: CommandConfig{
-				Command: []string{"npm", "install", "-g", "{{.Package}}", "--legacy-peer-deps"},
-			},
-		}
-		effective := ManagerConfig{
-			Binary:             defaultNPM.Binary,
-			List:               defaultNPM.List,
-			Install:            MergeManagerConfig(defaultNPM, override).Install,
-			Upgrade:            defaultNPM.Upgrade,
-			UpgradeAll:         defaultNPM.UpgradeAll,
-			Uninstall:          defaultNPM.Uninstall,
-			Description:        defaultNPM.Description,
-			InstallHint:        defaultNPM.InstallHint,
-			HelpURL:            defaultNPM.HelpURL,
-			MetadataExtractors: defaultNPM.MetadataExtractors,
-		}
-
-		cfg := &Config{
-			Managers: map[string]ManagerConfig{
-				"npm": effective,
-			},
-		}
-
-		nonDefaults := checker.GetNonDefaultManagers(cfg)
-		diff, ok := nonDefaults["npm"]
-		if !ok {
-			t.Fatalf("expected npm diff to be returned")
-		}
-
-		require.Equal(t, []string{"npm", "install", "-g", "{{.Package}}", "--legacy-peer-deps"}, diff.Install.Command)
-		assert.Empty(t, diff.List.Command)
-		assert.Empty(t, diff.Binary)
-
-		merged := MergeManagerConfig(defaultNPM, diff)
-		assert.Equal(t, effective.Install.Command, merged.Install.Command)
+	t.Run("nil config returns empty map", func(t *testing.T) {
+		nonDefaults := checker.GetNonDefaultManagers(nil)
+		assert.Empty(t, nonDefaults)
 	})
 }
 

@@ -91,7 +91,7 @@ packages:
 			},
 		},
 		{
-			name: "config with empty arrays",
+			name: "config with empty arrays gets defaults",
 			content: `default_manager: gem
 expand_directories: []
 ignore_patterns: []
@@ -100,11 +100,12 @@ ignore_patterns: []
 				if cfg.DefaultManager != "gem" {
 					t.Errorf("Expected default_manager gem, got %s", cfg.DefaultManager)
 				}
-				if len(cfg.ExpandDirectories) != 0 {
-					t.Errorf("Expected empty expand_directories, got %v", cfg.ExpandDirectories)
+				// Empty arrays in YAML get default values applied
+				if len(cfg.ExpandDirectories) == 0 {
+					t.Errorf("Expected expand_directories to have defaults, got empty")
 				}
-				if len(cfg.IgnorePatterns) != 0 {
-					t.Errorf("Expected empty ignore_patterns, got %v", cfg.IgnorePatterns)
+				if len(cfg.IgnorePatterns) == 0 {
+					t.Errorf("Expected ignore_patterns to have defaults, got empty")
 				}
 			},
 		},

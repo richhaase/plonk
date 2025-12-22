@@ -55,5 +55,5 @@ setup() {
   run cat "$PLONK_DIR/plonk.lock"
   assert_success
   assert_output --partial "npm:left-pad"
-  assert_output --partial "full_name: left-pad"
+  assert_output --partial "name: left-pad"
 }

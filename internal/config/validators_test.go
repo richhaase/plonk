@@ -69,7 +69,6 @@ func TestValidatePackageManager(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Reset to default state
 			validManagers = nil
-			validManagersDefined = false
 
 			// Simulate dynamic registration if requested
 			if tt.valid != nil {

@@ -3,34 +3,11 @@
 
 package config
 
-// GetDefaultManagers returns built-in package manager configurations
+// GetDefaultManagers returns built-in package manager configurations.
+// Note: This is used for metadata lookup (description, install hints) by the doctor command.
+// The actual package management is handled by hardcoded managers in packages.Registry.
 func GetDefaultManagers() map[string]ManagerConfig {
 	return map[string]ManagerConfig{
-		"pipx": {
-			Binary: "pipx",
-			Available: CommandConfig{
-				Command: []string{"pipx", "--version"},
-			},
-			List: ListConfig{
-				Command: []string{"pipx", "list", "--short"},
-				Parse:   "lines",
-			},
-			Install: CommandConfig{
-				Command:          []string{"pipx", "install", "{{.Package}}"},
-				IdempotentErrors: []string{"already installed"},
-			},
-			Upgrade: CommandConfig{
-				Command:          []string{"pipx", "upgrade", "{{.Package}}"},
-				IdempotentErrors: []string{"already up-to-date", "up to date"},
-			},
-			UpgradeAll: CommandConfig{
-				Command: []string{"pipx", "upgrade-all"},
-			},
-			Uninstall: CommandConfig{
-				Command:          []string{"pipx", "uninstall", "{{.Package}}"},
-				IdempotentErrors: []string{"not installed"},
-			},
-		},
 		"cargo": {
 			Binary:      "cargo",
 			Description: "Cargo (Rust package manager)",
@@ -183,33 +160,52 @@ func GetDefaultManagers() map[string]ManagerConfig {
 				Command: []string{"pnpm", "remove", "-g", "{{.Package}}"},
 			},
 		},
-		"conda": {
-			Binary:      "conda",
-			Description: "conda (Python/conda package manager)",
-			InstallHint: "Install conda via Anaconda or Miniconda distributions",
-			HelpURL:     "https://docs.conda.io/",
+		"go": {
+			Binary:      "go",
+			Description: "Go (Go package manager)",
+			InstallHint: "Install Go from https://go.dev/dl/ or use brew install go",
+			HelpURL:     "https://go.dev/",
 			Available: CommandConfig{
-				Command: []string{"conda", "--version"},
+				Command: []string{"go", "version"},
 			},
 			List: ListConfig{
-				Command:   []string{"conda", "list", "--json"},
-				Parse:     "json",
-				JSONField: "name",
+				Command: []string{"ls", "$GOBIN"},
+				Parse:   "lines",
 			},
 			Install: CommandConfig{
-				Command:          []string{"conda", "install", "-y", "{{.Package}}"},
+				Command:          []string{"go", "install", "{{.Package}}@latest"},
 				IdempotentErrors: []string{"already installed"},
 			},
 			Upgrade: CommandConfig{
-				Command:          []string{"conda", "update", "-y", "{{.Package}}"},
-				IdempotentErrors: []string{"already up-to-date", "up to date"},
-			},
-			UpgradeAll: CommandConfig{
-				Command:          []string{"conda", "update", "-y", "--all"},
-				IdempotentErrors: []string{"already up-to-date", "up to date"},
+				Command:          []string{"go", "install", "{{.Package}}@latest"},
+				IdempotentErrors: []string{"already up-to-date"},
 			},
 			Uninstall: CommandConfig{
-				Command: []string{"conda", "remove", "-y", "{{.Package}}"},
+				Command: []string{"rm", "-f", "$GOBIN/{{.Package}}"},
+			},
+		},
+		"bun": {
+			Binary:      "bun",
+			Description: "Bun (JavaScript runtime and package manager)",
+			InstallHint: "Install Bun from https://bun.sh/ or use brew install bun",
+			HelpURL:     "https://bun.sh/",
+			Available: CommandConfig{
+				Command: []string{"bun", "--version"},
+			},
+			List: ListConfig{
+				Command: []string{"bun", "pm", "ls", "-g"},
+				Parse:   "lines",
+			},
+			Install: CommandConfig{
+				Command:          []string{"bun", "add", "-g", "{{.Package}}"},
+				IdempotentErrors: []string{"already installed"},
+			},
+			Upgrade: CommandConfig{
+				Command:          []string{"bun", "update", "-g", "{{.Package}}"},
+				IdempotentErrors: []string{"already up-to-date"},
+			},
+			Uninstall: CommandConfig{
+				Command: []string{"bun", "remove", "-g", "{{.Package}}"},
 			},
 		},
 		"uv": {

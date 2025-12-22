@@ -197,26 +197,6 @@ setup() {
   assert_output --partial "black"
 }
 
-# Conda upgrade tests
-@test "upgrade single conda package" {
-  require_safe_package "conda:jq"
-
-  run which conda
-  if [[ $status -ne 0 ]]; then
-    skip "conda not available"
-  fi
-
-  # Install package
-  run plonk install conda:jq
-  assert_success
-  track_artifact "package" "conda:jq"
-
-  # Upgrade the specific package
-  run plonk upgrade conda:jq
-  assert_success
-  assert_output --partial "jq"
-}
-
 # Cross-manager upgrade tests
 @test "upgrade package across managers" {
   require_safe_package "brew:cowsay"

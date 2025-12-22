@@ -106,30 +106,11 @@ func (c *UserDefinedChecker) getDefaultFieldValue(fieldName string) interface{} 
 }
 
 // GetNonDefaultManagers returns a map of manager configurations that differ from
-// the built-in defaults. Managers that are not part of the defaults are treated
-// as custom and always included in the result.
+// the built-in defaults. With hardcoded managers, this always returns an empty map
+// as custom managers are no longer supported.
 func (c *UserDefinedChecker) GetNonDefaultManagers(cfg *Config) map[string]ManagerConfig {
-	result := make(map[string]ManagerConfig)
-	if cfg == nil || cfg.Managers == nil {
-		return result
-	}
-
-	defaults := GetDefaultManagers()
-
-	for name, mgrCfg := range cfg.Managers {
-		defaultMgr, ok := defaults[name]
-		if !ok {
-			// Custom manager not in defaults
-			result[name] = mgrCfg
-			continue
-		}
-
-		if diff, changed := diffManagerConfig(defaultMgr, mgrCfg); changed {
-			result[name] = diff
-		}
-	}
-
-	return result
+	// Hardcoded managers are now used - no user-defined managers supported
+	return make(map[string]ManagerConfig)
 }
 
 func diffManagerConfig(base, actual ManagerConfig) (ManagerConfig, bool) {

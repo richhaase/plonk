@@ -160,7 +160,7 @@ func TestGemManager_Install(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mock := &MockCommandExecutor{
 				Responses: map[string]CommandResponse{
-					"gem install " + tt.pkg: {Output: []byte(tt.output), Error: tt.err},
+					"gem install --user-install " + tt.pkg: {Output: []byte(tt.output), Error: tt.err},
 				},
 			}
 			mgr := NewGemManager(mock)

@@ -208,16 +208,10 @@ ignore_patterns:`
 
 // getManagerDescription returns a user-friendly description of the package manager
 func getManagerDescription(cfg *config.Config, manager string) string {
-	if cfg != nil && cfg.Managers != nil {
-		if m, ok := cfg.Managers[manager]; ok && m.Description != "" {
-			return m.Description
-		}
-	}
-
-	for name, defaultCfg := range config.GetDefaultManagers() {
-		if name == manager && defaultCfg.Description != "" {
-			return defaultCfg.Description
-		}
+	// Use registry metadata for built-in managers
+	registry := packages.GetRegistry()
+	if meta, ok := registry.GetManagerMetadata(manager); ok && meta.Description != "" {
+		return meta.Description
 	}
 
 	return fmt.Sprintf("%s package manager", manager)
@@ -225,16 +219,10 @@ func getManagerDescription(cfg *config.Config, manager string) string {
 
 // getManualInstallInstructions returns manual installation instructions
 func getManualInstallInstructions(cfg *config.Config, manager string) string {
-	if cfg != nil && cfg.Managers != nil {
-		if m, ok := cfg.Managers[manager]; ok && m.InstallHint != "" {
-			return m.InstallHint
-		}
-	}
-
-	for name, defaultCfg := range config.GetDefaultManagers() {
-		if name == manager && defaultCfg.InstallHint != "" {
-			return defaultCfg.InstallHint
-		}
+	// Use registry metadata for built-in managers
+	registry := packages.GetRegistry()
+	if meta, ok := registry.GetManagerMetadata(manager); ok && meta.InstallHint != "" {
+		return meta.InstallHint
 	}
 
 	return "See official documentation for installation instructions"
