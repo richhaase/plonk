@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/resources"
 )
@@ -108,9 +107,8 @@ func (m *MockLockService) SetFindResults(packageName string, results []lock.Reso
 	m.findResults[packageName] = results
 }
 
-// Test getManagerInstallSuggestion
-func TestGetManagerInstallSuggestion(t *testing.T) {
-	cfg := &config.Config{Managers: config.GetDefaultManagers()}
+// Test managerInstallHint
+func TestManagerInstallHint(t *testing.T) {
 	tests := []struct {
 		name     string
 		manager  string
@@ -119,17 +117,17 @@ func TestGetManagerInstallSuggestion(t *testing.T) {
 		{
 			name:     "brew manager",
 			manager:  "brew",
-			expected: "Visit https://brew.sh for installation instructions (prerequisite)",
+			expected: "Visit https://brew.sh for installation instructions",
 		},
 		{
 			name:     "npm manager",
 			manager:  "npm",
-			expected: "Install Node.js from https://nodejs.org/ or use brew install node",
+			expected: "Install Node.js from https://nodejs.org/",
 		},
 		{
 			name:     "uv manager",
 			manager:  "uv",
-			expected: "Install UV from https://docs.astral.sh/uv/ or use brew install uv",
+			expected: "Install uv from https://docs.astral.sh/uv/ or run: brew install uv",
 		},
 		{
 			name:     "cargo manager",
@@ -137,9 +135,9 @@ func TestGetManagerInstallSuggestion(t *testing.T) {
 			expected: "Install Rust from https://rustup.rs/",
 		},
 		{
-			name:     "gem manager",
-			manager:  "gem",
-			expected: "Install Ruby from https://ruby-lang.org/ or use brew install ruby",
+			name:     "go manager",
+			manager:  "go",
+			expected: "Install Go from https://go.dev/dl/",
 		},
 		{
 			name:     "unknown manager",
@@ -150,25 +148,11 @@ func TestGetManagerInstallSuggestion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := managerInstallHint(cfg, tt.manager)
+			got := managerInstallHint(tt.manager)
 			if got != tt.expected {
 				t.Errorf("managerInstallHint(%s) = %v, want %v", tt.manager, got, tt.expected)
 			}
 		})
-	}
-}
-
-func TestManagerInstallHint_UsesProvidedConfig(t *testing.T) {
-	cfg := &config.Config{
-		Managers: map[string]config.ManagerConfig{
-			"custom": {
-				InstallHint: "Install custom via custom-installer",
-			},
-		},
-	}
-	got := managerInstallHint(cfg, "custom")
-	if got != "Install custom via custom-installer" {
-		t.Fatalf("expected custom hint, got %q", got)
 	}
 }
 

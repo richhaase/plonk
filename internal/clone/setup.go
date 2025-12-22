@@ -294,11 +294,6 @@ func installDetectedManagers(ctx context.Context, cfgData *config.Config, manage
 	}
 
 	registry := packages.GetRegistry()
-	if cfgData == nil {
-		defaultCopy := *config.GetDefaults()
-		cfgData = &defaultCopy
-	}
-	registry.LoadV2Configs(cfgData)
 
 	output.StageUpdate(fmt.Sprintf("Checking package managers (%d total)...", len(managers)))
 

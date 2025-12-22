@@ -6,7 +6,6 @@ package packages
 import (
 	"context"
 	"fmt"
-	"regexp"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
@@ -36,11 +35,6 @@ func InstallPackages(ctx context.Context, configDir string, packages []string, o
 
 // InstallPackagesWith orchestrates installation with explicit dependencies
 func InstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lock.LockService, registry *ManagerRegistry, packages []string, opts InstallOptions) ([]resources.OperationResult, error) {
-	// Load manager configs from plonk.yaml before any operations
-	if registry != nil {
-		registry.LoadV2Configs(cfg)
-	}
-
 	// Get manager - use default if not specified
 	manager := opts.Manager
 	if manager == "" {
@@ -73,11 +67,6 @@ func UninstallPackages(ctx context.Context, configDir string, packages []string,
 
 // UninstallPackagesWith orchestrates uninstallation with explicit dependencies
 func UninstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lock.LockService, registry *ManagerRegistry, packages []string, opts UninstallOptions) ([]resources.OperationResult, error) {
-	// Load manager configs from plonk.yaml before any operations
-	if registry != nil {
-		registry.LoadV2Configs(cfg)
-	}
-
 	// Load config for default manager
 	defaultManager := DefaultManager
 	if cfg != nil && cfg.DefaultManager != "" {
@@ -148,7 +137,7 @@ func installSinglePackage(ctx context.Context, cfg *config.Config, lockService l
 	}
 	if !available {
 		result.Status = "failed"
-		result.Error = fmt.Errorf("install %s: %s manager not available (%s)", packageName, manager, managerInstallHint(cfg, manager))
+		result.Error = fmt.Errorf("install %s: %s manager not available (%s)", packageName, manager, managerInstallHint(manager))
 		return result
 	}
 
@@ -160,25 +149,17 @@ func installSinglePackage(ctx context.Context, cfg *config.Config, lockService l
 		return result
 	}
 
-	// Note: InstalledVersion() method has been removed from all managers
-	// Version tracking is no longer supported
-	version := ""
-
 	// Create metadata for the package
 	metadata := map[string]interface{}{
 		"manager": manager,
 		"name":    packageName,
-		"version": version,
 	}
 
-	// Apply any configured metadata extractors (e.g., npm scopes/full_name).
-	applyMetadataExtractors(cfg, metadata, manager, packageName)
-
 	// Add to lock file
-	err = lockService.AddPackage(manager, packageName, version, metadata)
+	err = lockService.AddPackage(manager, packageName, "", metadata)
 	if err != nil {
 		result.Status = "failed"
-		result.Error = fmt.Errorf("install %s: failed to add to lock file (manager: %s, version: %s): %w", packageName, manager, version, err)
+		result.Error = fmt.Errorf("install %s: failed to add to lock file (manager: %s): %w", packageName, manager, err)
 		return result
 	}
 
@@ -218,7 +199,7 @@ func uninstallSinglePackage(ctx context.Context, lockService lock.LockService, p
 	}
 	if !available {
 		result.Status = "failed"
-		result.Error = fmt.Errorf("uninstall %s: %s manager not available (%s)", packageName, manager, managerInstallHint(nil, manager))
+		result.Error = fmt.Errorf("uninstall %s: %s manager not available (%s)", packageName, manager, managerInstallHint(manager))
 		return result
 	}
 
@@ -268,52 +249,4 @@ func getPackageManager(registry *ManagerRegistry, manager string) (PackageManage
 		registry = GetRegistry()
 	}
 	return registry.GetManager(manager)
-}
-
-// applyMetadataExtractors applies configured metadata extractors for a given manager.
-// It currently only uses the package name as the source for extraction. JSON-based
-// extractors can be wired in later without changing the call site.
-func applyMetadataExtractors(cfg *config.Config, metadata map[string]interface{}, manager, packageName string) {
-	source := cfg
-	if source == nil {
-		source = config.LoadWithDefaults(config.GetConfigDir())
-	}
-	if source == nil || source.Managers == nil {
-		return
-	}
-	managerCfg, ok := source.Managers[manager]
-	if !ok || len(managerCfg.MetadataExtractors) == 0 {
-		return
-	}
-	for key, extractor := range managerCfg.MetadataExtractors {
-		switch extractor.Source {
-		case "name", "":
-			value := extractFromName(packageName, extractor)
-			if value != "" {
-				metadata[key] = value
-			}
-		}
-	}
-}
-
-// extractFromName applies a metadata extractor against the package name.
-func extractFromName(name string, extractor config.MetadataExtractorConfig) string {
-	if extractor.Pattern == "" {
-		// No pattern means store the raw name.
-		return name
-	}
-	re, err := regexp.Compile(extractor.Pattern)
-	if err != nil {
-		return ""
-	}
-	match := re.FindStringSubmatch(name)
-	if len(match) == 0 {
-		return ""
-	}
-	// Group 0 is the whole match. If Group is unset or out of range, default to whole match.
-	groupIdx := extractor.Group
-	if groupIdx <= 0 || groupIdx >= len(match) {
-		return match[0]
-	}
-	return match[groupIdx]
 }

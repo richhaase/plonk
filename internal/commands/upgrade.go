@@ -325,11 +325,6 @@ type upgradeSummary struct {
 
 // executeUpgrade performs the actual upgrade operations
 func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, lockService lock.LockService, registry *packages.ManagerRegistry, dryRun bool) (upgradeResults, error) {
-	// Load manager configs from plonk.yaml before any operations
-	if registry != nil {
-		registry.LoadV2Configs(cfg)
-	}
-
 	results := upgradeResults{
 		Results: []packageUpgradeResult{},
 		Summary: upgradeSummary{},

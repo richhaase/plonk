@@ -354,9 +354,6 @@ func checkLockFileValidity() HealthCheck {
 func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
 	cfg := config.LoadWithDefaults(config.GetConfigDir())
 	registry := packages.GetRegistry()
-	if cfg != nil {
-		registry.LoadV2Configs(cfg)
-	}
 
 	requiredManagers := collectRequiredManagers(cfg, config.GetConfigDir())
 

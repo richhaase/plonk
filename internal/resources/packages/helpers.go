@@ -3,20 +3,21 @@
 
 package packages
 
-import (
-	"github.com/richhaase/plonk/internal/config"
-)
+// managerInstallHints provides installation guidance for each supported manager
+var managerInstallHints = map[string]string{
+	"brew":  "Visit https://brew.sh for installation instructions",
+	"cargo": "Install Rust from https://rustup.rs/",
+	"go":    "Install Go from https://go.dev/dl/",
+	"npm":   "Install Node.js from https://nodejs.org/",
+	"pnpm":  "Install pnpm from https://pnpm.io/ or run: npm install -g pnpm",
+	"bun":   "Install bun from https://bun.sh/",
+	"uv":    "Install uv from https://docs.astral.sh/uv/ or run: brew install uv",
+}
 
-// managerInstallHint returns the install hint for a manager from config/defaults.
-func managerInstallHint(cfg *config.Config, manager string) string {
-	source := cfg
-	if source == nil {
-		source = config.LoadWithDefaults(config.GetConfigDir())
-	}
-	if source != nil && source.Managers != nil {
-		if m, ok := source.Managers[manager]; ok && m.InstallHint != "" {
-			return m.InstallHint
-		}
+// managerInstallHint returns the install hint for a manager.
+func managerInstallHint(manager string) string {
+	if hint, ok := managerInstallHints[manager]; ok {
+		return hint
 	}
 	return "check installation instructions for " + manager
 }
