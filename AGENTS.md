@@ -11,10 +11,9 @@
 - **Entry point**: `cmd/plonk/` - thin CLI wrapper
 - **Commands**: `internal/commands/` - CLI command implementations (install, add, clone, apply, status, etc.)
 - **Orchestrator**: `internal/orchestrator/` - coordinates package & dotfile reconciliation across resource types
-- **Packages**: `internal/resources/packages/` - 8 built-in package managers (brew, npm, pnpm, cargo, pipx, conda, gem, uv) + **GenericManager** for YAML-defined custom managers
-- **GenericManager**: Executes package managers defined in plonk.yaml; users can add custom managers via YAML config without code changes
+- **Packages**: `internal/resources/packages/` - 8 hardcoded package managers (brew, npm, pnpm, bun, cargo, gem, go, uv) with self-installation support
 - **Dotfiles**: `internal/resources/dotfiles/` - dotfile scanning, deployment, atomic operations
-- **Config**: `internal/config/` - user configuration (plonk.yaml) with sensible defaults; includes manager definitions
+- **Config**: `internal/config/` - user configuration (plonk.yaml) with sensible defaults
 - **Lock**: `internal/lock/` - package state tracking (plonk.lock in YAML)
 - **State reconciliation**: Compare desired (lock) vs actual (system) state, apply differences
 
