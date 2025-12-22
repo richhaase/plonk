@@ -43,14 +43,7 @@ func TestInstallPackagesWith_AlreadyManaged_Skips(t *testing.T) {
 func TestInstallPackagesWith_LockAddFailure_ReportsFailed(t *testing.T) {
 	cfg := &config.Config{DefaultManager: "brew"}
 	lockSvc := &failingAddLockService{NewMockLockService()}
-	// Config + mock exec for brew install
-	cfg.Managers = map[string]config.ManagerConfig{
-		"brew": {
-			Binary:    "brew",
-			Available: config.CommandConfig{Command: []string{"brew", "--version"}},
-			Install:   config.CommandConfig{Command: []string{"brew", "install", "{{.Package}}"}},
-		},
-	}
+	// Use mock executor for brew install (hardcoded managers are used)
 	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
 		"brew --version":  {Output: []byte("Homebrew 4.0"), Error: nil},
 		"brew install jq": {Output: []byte("installed"), Error: nil},
@@ -75,14 +68,7 @@ func TestInstallPackagesWith_LockAddFailure_ReportsFailed(t *testing.T) {
 func TestUninstallPackagesWith_PassThrough_WhenNotManaged(t *testing.T) {
 	cfg := &config.Config{DefaultManager: "brew"}
 	lockSvc := NewMockLockService() // empty, so package is not managed
-	// Config + mock exec for brew uninstall
-	cfg.Managers = map[string]config.ManagerConfig{
-		"brew": {
-			Binary:    "brew",
-			Available: config.CommandConfig{Command: []string{"brew", "--version"}},
-			Uninstall: config.CommandConfig{Command: []string{"brew", "uninstall", "{{.Package}}"}},
-		},
-	}
+	// Use mock executor for brew uninstall (hardcoded managers are used)
 	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
 		"brew --version":    {Output: []byte("Homebrew 4.0"), Error: nil},
 		"brew uninstall jq": {Output: []byte("uninstalled"), Error: nil},

@@ -21,7 +21,6 @@ type Config struct {
 	IgnorePatterns    []string                 `yaml:"ignore_patterns,omitempty"`
 	Dotfiles          Dotfiles                 `yaml:"dotfiles,omitempty"`
 	DiffTool          string                   `yaml:"diff_tool,omitempty"`
-	Managers          map[string]ManagerConfig `yaml:"managers,omitempty"`
 }
 
 // Dotfiles contains dotfile-specific configuration
@@ -38,7 +37,6 @@ var defaultConfig = Config{
 	ExpandDirectories: []string{
 		".config",
 	},
-	// NOTE: Managers is NOT set here - it's merged in applyDefaults
 	IgnorePatterns: []string{
 		// System files
 		".DS_Store",

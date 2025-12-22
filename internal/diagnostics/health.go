@@ -352,10 +352,9 @@ func checkLockFileValidity() HealthCheck {
 
 // checkPackageManagerHealth runs health checks for all package managers
 func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
-	cfg := config.LoadWithDefaults(config.GetConfigDir())
 	registry := packages.GetRegistry()
 
-	requiredManagers := collectRequiredManagers(cfg, config.GetConfigDir())
+	requiredManagers := collectRequiredManagers(config.GetConfigDir())
 
 	check := HealthCheck{
 		Name:     "Package Managers",
@@ -377,7 +376,7 @@ func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
 			}
 		}
 
-		desc, hint, helpURL := lookupManagerMetadata(cfg, managerName)
+		desc, hint, helpURL := lookupManagerMetadata(managerName)
 		label := managerName
 		if desc != "" {
 			label = desc
@@ -578,7 +577,7 @@ func calculateOverallHealth(checks []HealthCheck) HealthStatus {
 	}
 }
 
-func collectRequiredManagers(cfg *config.Config, configDir string) []string {
+func collectRequiredManagers(configDir string) []string {
 	seen := make(map[string]struct{})
 
 	lockService := lock.NewYAMLLockService(configDir)
@@ -593,12 +592,6 @@ func collectRequiredManagers(cfg *config.Config, configDir string) []string {
 		}
 	}
 
-	if len(seen) == 0 && cfg != nil && cfg.Managers != nil {
-		for name := range cfg.Managers {
-			seen[name] = struct{}{}
-		}
-	}
-
 	names := make([]string, 0, len(seen))
 	for name := range seen {
 		names = append(names, name)
@@ -607,7 +600,7 @@ func collectRequiredManagers(cfg *config.Config, configDir string) []string {
 	return names
 }
 
-func lookupManagerMetadata(cfg *config.Config, name string) (description, installHint, helpURL string) {
+func lookupManagerMetadata(name string) (description, installHint, helpURL string) {
 	// Use registry metadata for built-in managers
 	registry := packages.GetRegistry()
 	if meta, ok := registry.GetManagerMetadata(name); ok {

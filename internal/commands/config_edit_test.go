@@ -157,41 +157,11 @@ ignore_patterns:
 	assert.NotContains(t, string(data), "managers:")
 }
 
-func TestSaveNonDefaultValuesExcludesManagers(t *testing.T) {
-	configDir := testutil.NewTestConfig(t, "")
-
-	// Start from the effective defaults
-	cfg := config.LoadWithDefaults(configDir)
-
-	// Even if we set managers in config, they shouldn't be saved
-	// because config-driven managers are no longer supported
-	if cfg.Managers == nil {
-		cfg.Managers = make(map[string]config.ManagerConfig)
-	}
-	cfg.Managers["custom-manager"] = config.ManagerConfig{
-		Binary: "custom-binary",
-	}
-
-	// Save only non-default values.
-	err := saveNonDefaultValues(configDir, cfg)
-	require.NoError(t, err)
-
-	// plonk.yaml should NOT contain a managers section since config-driven
-	// managers are no longer supported (hardcoded managers are used)
-	data, err := os.ReadFile(filepath.Join(configDir, "plonk.yaml"))
-	require.NoError(t, err)
-	content := string(data)
-	assert.NotContains(t, content, "managers:")
-}
-
 func TestCreateTempConfigFileWritesFullConfig(t *testing.T) {
-	// Create a test config with some values, including a managers block.
+	// Create a test config with some values
 	configContent := `
 default_manager: npm
 operation_timeout: 450
-managers:
-  npm:
-    binary: "npm"
 `
 	configDir := testutil.NewTestConfig(t, configContent)
 

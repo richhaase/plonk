@@ -45,8 +45,6 @@ func TestLoad_MissingFile(t *testing.T) {
 		t.Error("Expected default unmanaged filters to be set")
 	}
 
-	// Note: cfg.Managers is no longer populated from defaults
-	// Package managers are now hardcoded in the registry
 }
 
 func TestLoad_ValidConfig(t *testing.T) {
@@ -160,15 +158,14 @@ default_manager: custom-manager
 	}
 }
 
-func TestLoad_ManagersInConfigIgnored(t *testing.T) {
-	// Managers defined in config are ignored since config-driven managers
-	// are no longer supported - only hardcoded managers are used
+func TestLoad_UnknownFieldsIgnored(t *testing.T) {
+	// Unknown fields in YAML (like legacy 'managers:') are silently ignored
 	configContent := `
 default_manager: npm
 managers:
   npm:
     install:
-      command: ["npm", "install", "-g", "{{.Package}}", "--legacy-peer-deps"]
+      command: ["npm", "install", "-g"]
 `
 	tempDir := testutil.NewTestConfig(t, configContent)
 
@@ -181,9 +178,6 @@ managers:
 	if cfg.DefaultManager != "npm" {
 		t.Errorf("Expected default_manager 'npm', got %s", cfg.DefaultManager)
 	}
-
-	// Note: cfg.Managers may be populated from YAML but it's ignored
-	// Package management uses hardcoded managers from the registry
 }
 
 func TestLoad_InvalidTimeout(t *testing.T) {

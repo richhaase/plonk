@@ -20,10 +20,7 @@ func SetValidManagers(managers []string) {
 
 // RegisterValidators registers custom validators for config validation.
 func RegisterValidators(v *validator.Validate) error {
-	if err := v.RegisterValidation("validmanager", validatePackageManager); err != nil {
-		return err
-	}
-	return v.RegisterValidation("listconfig", validateListConfig)
+	return v.RegisterValidation("validmanager", validatePackageManager)
 }
 
 // validatePackageManager validates that a package manager is registered.
@@ -49,51 +46,3 @@ func validatePackageManager(fl validator.FieldLevel) bool {
 	return false
 }
 
-// validateListConfig enforces consistency for ListConfig fields based on parse strategy.
-func validateListConfig(fl validator.FieldLevel) bool {
-	cfg, ok := fl.Field().Interface().(ListConfig)
-	if !ok {
-		return false
-	}
-
-	// Resolve strategy (parse or parse_strategy)
-	strategy := cfg.Parse
-	if strategy == "" {
-		strategy = cfg.ParseStrategy
-	}
-	if strategy == "" {
-		strategy = "lines"
-	}
-
-	switch strategy {
-	case "lines":
-		if cfg.JSONField != "" || cfg.KeysFrom != "" || cfg.ValuesFrom != "" {
-			return false
-		}
-	case "json":
-		if cfg.JSONField == "" {
-			return false
-		}
-		if cfg.KeysFrom != "" || cfg.ValuesFrom != "" {
-			return false
-		}
-	case "json-map":
-		if cfg.KeysFrom != "" || cfg.ValuesFrom != "" {
-			return false
-		}
-	case "jsonpath":
-		if cfg.KeysFrom == "" && cfg.ValuesFrom == "" {
-			return false
-		}
-	default:
-		return false
-	}
-
-	// Normalize must be empty, "none", or "lower"
-	switch cfg.Normalize {
-	case "", "none", "lower":
-		return true
-	default:
-		return false
-	}
-}

@@ -69,13 +69,12 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - `spec.go` - Package specification handling
 - `executor.go` - Command execution abstraction
 - `interfaces.go` - Package manager interfaces
-- `registry.go` - v2-only registry; creates GenericManager from config
-- `generic.go` - GenericManager executes YAML-defined managers
+- `registry.go` - Package manager registry with hardcoded implementations
 - `helpers.go` - Package utilities
 
-##### Package Manager Configuration (v2)
-- Built-in defaults: `internal/config/managers_defaults.go`
-- User overrides: `plonk.yaml` under `managers:` (no code changes required)
+##### Package Managers
+- Hardcoded implementations: brew, npm, pnpm, cargo, pipx, conda, gem, uv, bun, go
+- Each manager implements the `PackageManager` interface
 
 
 
@@ -180,7 +179,7 @@ Location: `internal/resources/resource.go`
 
 ### PackageManager Interface
 Location: `internal/resources/packages/interfaces.go`
-- Implemented by: 8 package managers (configured via YAML)
+- Implemented by: 10 package managers (hardcoded Go implementations)
 - Defines: Install, Uninstall, List operations
 
 ### Lock Interface

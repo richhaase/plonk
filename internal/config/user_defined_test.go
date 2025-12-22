@@ -151,40 +151,6 @@ ignore_patterns:
 
 }
 
-func TestGetNonDefaultManagers(t *testing.T) {
-	// With hardcoded managers, GetNonDefaultManagers always returns empty map
-	// Config-driven managers are no longer supported
-	tempDir := t.TempDir()
-	checker := NewUserDefinedChecker(tempDir)
-
-	t.Run("no managers returns empty map", func(t *testing.T) {
-		cfg := &Config{}
-		nonDefaults := checker.GetNonDefaultManagers(cfg)
-		assert.Empty(t, nonDefaults)
-	})
-
-	t.Run("config with managers still returns empty map", func(t *testing.T) {
-		// Even with managers defined in config, they're ignored since
-		// config-driven managers are no longer supported
-		cfg := &Config{
-			Managers: map[string]ManagerConfig{
-				"custom-manager": {
-					Binary: "custom-binary",
-				},
-			},
-		}
-
-		nonDefaults := checker.GetNonDefaultManagers(cfg)
-		// Should be empty because config-driven managers are not supported
-		assert.Empty(t, nonDefaults)
-	})
-
-	t.Run("nil config returns empty map", func(t *testing.T) {
-		nonDefaults := checker.GetNonDefaultManagers(nil)
-		assert.Empty(t, nonDefaults)
-	})
-}
-
 func TestGetDefaultFieldValue(t *testing.T) {
 	// Create a new temp directory for this test to avoid state pollution
 	tempDir := t.TempDir()

@@ -62,15 +62,15 @@ The orchestrator coordinates complex operations across multiple resource types:
 Resources are organized by type:
 
 #### Packages (`internal/resources/packages/`)
-- v2-only, configuration-driven managers (no per-manager Go implementations)
-- **ManagerRegistry** loads manager definitions from config and constructs a `GenericManager`
+- Hardcoded package manager implementations with consistent interfaces
+- **ManagerRegistry** provides access to all registered package managers
 - Reconciliation and apply logic for package state using `manager:name` as unique keys
 - Package specification parsing (`spec.go`)
 - Command execution abstraction (`executor.go`) with injected executors
 - Operations for install, uninstall, upgrade
 - Parallel manager operations using errgroup for performance
 
-Built-in defaults (in `internal/config/managers_defaults.go`): brew, npm, pnpm, cargo, pipx, conda, gem, uv. Users can extend/override in `plonk.yaml`.
+Built-in managers: brew, npm, pnpm, cargo, pipx, conda, gem, uv, bun, go.
 
 
 #### Dotfiles (`internal/resources/dotfiles/`)
@@ -133,12 +133,11 @@ Plonk works without any configuration files by using sensible defaults:
 - Default config location: `~/.config/plonk`
 - Automatic dotfile discovery with smart filtering
 
-### 2. Package Manager Configuration (v2)
+### 2. Package Manager Architecture
 
-Package managers are defined in configuration (not in code). This allows:
+Package managers are implemented as Go structs with consistent interfaces. This provides:
+- Type-safe, testable implementations
 - Consistent behavior across different tools
-- Easy addition of new package managers without code changes
-- Declarative configuration of manager capabilities (install, uninstall, list, upgrade, health)
 - Self-health checking and diagnostics
 - Package upgrade management
 
@@ -212,25 +211,14 @@ All commands support multiple output formats (table, JSON, YAML) to support:
 
 ### Adding a New Package Manager
 
-Add or customize managers in `plonk.yaml` under `managers:` (no code or rebuild needed):
+To add a new package manager, implement the `PackageManager` interface in Go:
 
-```yaml
-managers:
-  mynewmgr:
-    binary: mynewmgr
-    list:
-      command: [mynewmgr, list, --json]
-      parse: json
-      json_field: name
-    install:
-      command: [mynewmgr, install, {{.Package}}]
-    uninstall:
-      command: [mynewmgr, uninstall, {{.Package}}]
-    upgrade:
-      command: [mynewmgr, upgrade, {{.Package}}]
-```
+1. Create a new manager struct in `internal/resources/packages/`
+2. Implement required methods: `Install`, `Uninstall`, `ListInstalled`, `Upgrade`, `CheckHealth`
+3. Register the manager in the registry
+4. Add tests for all operations
 
-The registry loads these definitions at runtime. Provide install instructions in project docs if your team uses a new manager.
+See existing managers (e.g., `brew.go`, `npm.go`) for examples.
 
 ### Adding a New Resource Type
 

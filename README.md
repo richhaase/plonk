@@ -30,7 +30,6 @@ After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber
 - **Copy, don't symlink**: Cleaner, simpler, and more compatible
 - **State-based**: Track what should exist, not what commands were run
 - **Drift detection**: Know when deployed dotfiles have been modified (`plonk diff`)
-- **Extensible**: Add custom package managers via YAML config in plonk.yaml
 - **AI-friendly**: Built with and for AI coding assistants
 
 **For developers who:**
