@@ -6,7 +6,6 @@ package packages
 import (
 	"fmt"
 	"sort"
-	"sync"
 
 	"github.com/richhaase/plonk/internal/config"
 )
@@ -14,42 +13,23 @@ import (
 // DefaultManager is the fallback manager when none is configured
 const DefaultManager = "brew"
 
-// ManagerRegistry manages package manager creation and availability checking
-type ManagerRegistry struct {
-	mu         sync.RWMutex
-	v2Managers map[string]config.ManagerConfig
-	enableV2   bool
+// supportedManagers lists all available package managers
+var supportedManagers = []string{"brew", "cargo", "gem", "go", "npm", "pnpm", "bun", "uv"}
+
+func init() {
+	// Register supported managers with the config validator
+	config.SetValidManagers(supportedManagers)
 }
 
+// ManagerRegistry manages package manager creation
+type ManagerRegistry struct{}
+
 // defaultRegistry is the global registry instance
-var defaultRegistry = &ManagerRegistry{
-	v2Managers: make(map[string]config.ManagerConfig),
-	enableV2:   true, // Feature flag for v2
-}
+var defaultRegistry = &ManagerRegistry{}
 
 // GetRegistry returns the shared manager registry instance
 func GetRegistry() *ManagerRegistry {
 	return defaultRegistry
-}
-
-// LoadManagerConfigs loads manager configs from Config
-// It resets the registry and loads defaults first, then merges user configs
-func (r *ManagerRegistry) LoadV2Configs(cfg *config.Config) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	// Reset and load defaults first
-	r.v2Managers = make(map[string]config.ManagerConfig)
-	for name, managerCfg := range config.GetDefaultManagers() {
-		r.v2Managers[name] = managerCfg
-	}
-
-	// Then merge/override with user configs
-	if cfg != nil && cfg.Managers != nil {
-		for name, managerCfg := range cfg.Managers {
-			r.v2Managers[name] = managerCfg
-		}
-	}
 }
 
 // GetManager returns a package manager instance by name using the default executor
@@ -58,44 +38,49 @@ func (r *ManagerRegistry) GetManager(name string) (PackageManager, error) {
 }
 
 // GetManagerWithExecutor returns a package manager instance with an injected executor.
-// If exec is nil, uses the default executor. Checks config-defined managers first.
 func (r *ManagerRegistry) GetManagerWithExecutor(name string, exec CommandExecutor) (PackageManager, error) {
 	if exec == nil {
 		exec = defaultExecutor
 	}
 
-	// Only config-defined managers are supported
-	r.mu.RLock()
-	v2Config, hasV2 := r.v2Managers[name]
-	enableV2 := r.enableV2
-	r.mu.RUnlock()
-
-	if enableV2 && hasV2 {
-		return NewGenericManager(v2Config, exec), nil
+	switch name {
+	case "brew":
+		return NewBrewManager(exec), nil
+	case "cargo":
+		return NewCargoManager(exec), nil
+	case "gem":
+		return NewGemManager(exec), nil
+	case "go":
+		return NewGoManager(exec), nil
+	case "npm":
+		return NewNPMManager(ProviderNPM, exec), nil
+	case "pnpm":
+		return NewNPMManager(ProviderPNPM, exec), nil
+	case "bun":
+		return NewNPMManager(ProviderBun, exec), nil
+	case "uv":
+		return NewUVManager(exec), nil
+	default:
+		return nil, fmt.Errorf("unsupported package manager: %s", name)
 	}
-
-	return nil, fmt.Errorf("unsupported package manager: %s", name)
 }
 
 // GetAllManagerNames returns all registered manager names sorted alphabetically
 func (r *ManagerRegistry) GetAllManagerNames() []string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	names := make([]string, 0, len(r.v2Managers))
-	for name := range r.v2Managers {
-		names = append(names, name)
-	}
+	names := make([]string, len(supportedManagers))
+	copy(names, supportedManagers)
 	sort.Strings(names)
 	return names
 }
 
 // HasManager checks if a manager is supported by the registry
 func (r *ManagerRegistry) HasManager(name string) bool {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	_, exists := r.v2Managers[name]
-	return exists
+	for _, m := range supportedManagers {
+		if m == name {
+			return true
+		}
+	}
+	return false
 }
 
 // ManagerInfo holds information about a package manager
@@ -103,4 +88,70 @@ type ManagerInfo struct {
 	Name      string
 	Available bool
 	Error     error
+}
+
+// ManagerMetadata holds descriptive information about a package manager
+type ManagerMetadata struct {
+	Description string
+	InstallHint string
+	HelpURL     string
+}
+
+// managerMetadata contains metadata for all built-in managers
+var managerMetadata = map[string]ManagerMetadata{
+	"brew": {
+		Description: "Homebrew (macOS/Linux package manager)",
+		InstallHint: "Visit https://brew.sh for installation instructions (prerequisite)",
+		HelpURL:     "https://brew.sh",
+	},
+	"cargo": {
+		Description: "Cargo (Rust package manager)",
+		InstallHint: "Install Rust from https://rustup.rs/",
+		HelpURL:     "https://www.rust-lang.org/tools/install",
+	},
+	"gem": {
+		Description: "gem (Ruby package manager)",
+		InstallHint: "Install Ruby from https://ruby-lang.org/ or use brew install ruby",
+		HelpURL:     "https://ruby-lang.org/",
+	},
+	"go": {
+		Description: "Go (Go package manager)",
+		InstallHint: "Install Go from https://go.dev/dl/ or use brew install go",
+		HelpURL:     "https://go.dev/",
+	},
+	"npm": {
+		Description: "npm (Node.js package manager)",
+		InstallHint: "Install Node.js from https://nodejs.org/ or use brew install node",
+		HelpURL:     "https://nodejs.org/",
+	},
+	"pnpm": {
+		Description: "pnpm (Node.js package manager)",
+		InstallHint: "Install pnpm from https://pnpm.io/ or use brew install pnpm",
+		HelpURL:     "https://pnpm.io/",
+	},
+	"bun": {
+		Description: "Bun (JavaScript runtime and package manager)",
+		InstallHint: "Install Bun from https://bun.sh/ or use brew install bun",
+		HelpURL:     "https://bun.sh/",
+	},
+	"uv": {
+		Description: "uv (Python package manager)",
+		InstallHint: "Install UV from https://docs.astral.sh/uv/ or use brew install uv",
+		HelpURL:     "https://docs.astral.sh/uv/",
+	},
+}
+
+// GetManagerMetadata returns metadata for a manager by name
+func (r *ManagerRegistry) GetManagerMetadata(name string) (ManagerMetadata, bool) {
+	meta, ok := managerMetadata[name]
+	return meta, ok
+}
+
+// GetAllManagerMetadata returns metadata for all managers
+func (r *ManagerRegistry) GetAllManagerMetadata() map[string]ManagerMetadata {
+	result := make(map[string]ManagerMetadata, len(managerMetadata))
+	for k, v := range managerMetadata {
+		result[k] = v
+	}
+	return result
 }

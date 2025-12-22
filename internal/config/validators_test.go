@@ -69,7 +69,6 @@ func TestValidatePackageManager(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Reset to default state
 			validManagers = nil
-			validManagersDefined = false
 
 			// Simulate dynamic registration if requested
 			if tt.valid != nil {
@@ -96,76 +95,3 @@ func TestValidatePackageManager(t *testing.T) {
 	}
 }
 
-func TestValidateListConfig(t *testing.T) {
-	v := validator.New()
-	err := RegisterValidators(v)
-	assert.NoError(t, err)
-
-	type testStruct struct {
-		List ListConfig `validate:"listconfig"`
-	}
-
-	tests := []struct {
-		name       string
-		list       ListConfig
-		shouldPass bool
-	}{
-		{
-			name:       "lines ok",
-			list:       ListConfig{Parse: "lines"},
-			shouldPass: true,
-		},
-		{
-			name:       "lines rejects json fields",
-			list:       ListConfig{Parse: "lines", JSONField: "name"},
-			shouldPass: false,
-		},
-		{
-			name:       "json requires field",
-			list:       ListConfig{Parse: "json"},
-			shouldPass: false,
-		},
-		{
-			name:       "json ok",
-			list:       ListConfig{Parse: "json", JSONField: "name"},
-			shouldPass: true,
-		},
-		{
-			name:       "json-map blocks keys_from",
-			list:       ListConfig{Parse: "json-map", KeysFrom: "$.deps"},
-			shouldPass: false,
-		},
-		{
-			name:       "jsonpath requires selectors",
-			list:       ListConfig{Parse: "jsonpath"},
-			shouldPass: false,
-		},
-		{
-			name:       "jsonpath ok with keys_from",
-			list:       ListConfig{Parse: "jsonpath", KeysFrom: "$.deps"},
-			shouldPass: true,
-		},
-		{
-			name:       "jsonpath ok with values_from and lower normalize",
-			list:       ListConfig{Parse: "jsonpath", ValuesFrom: "$.pkgs[*].name", Normalize: "lower"},
-			shouldPass: true,
-		},
-		{
-			name:       "jsonpath invalid normalize",
-			list:       ListConfig{Parse: "jsonpath", KeysFrom: "$.deps", Normalize: "upper"},
-			shouldPass: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := testStruct{List: tt.list}
-			err := v.Struct(s)
-			if tt.shouldPass {
-				assert.NoError(t, err)
-			} else {
-				assert.Error(t, err)
-			}
-		})
-	}
-}

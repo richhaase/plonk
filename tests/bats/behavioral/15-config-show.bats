@@ -89,25 +89,6 @@ EOF
   assert_output --partial "ignore_patterns"
 }
 
-# Custom manager configuration tests
-
-@test "config show displays custom managers" {
-  # Create a config file with custom manager
-  cat > "$PLONK_DIR/plonk.yaml" << 'EOF'
-managers:
-  mymanager:
-    binary: mybin
-    description: "My custom manager"
-    install:
-      command: ["mybin", "install", "{{.Package}}"]
-EOF
-
-  run plonk config show
-  assert_success
-  assert_output --partial "managers"
-  assert_output --partial "mymanager"
-}
-
 # Annotation tests (user-defined vs default)
 
 @test "config show distinguishes user-defined values" {
@@ -182,24 +163,3 @@ EOF
   assert_output --partial "$PLONK_DIR"
 }
 
-@test "config show with multiple manager definitions" {
-  # Create a config file with multiple custom managers
-  cat > "$PLONK_DIR/plonk.yaml" << 'EOF'
-managers:
-  custom1:
-    binary: bin1
-    description: "Custom manager 1"
-    install:
-      command: ["bin1", "install", "{{.Package}}"]
-  custom2:
-    binary: bin2
-    description: "Custom manager 2"
-    install:
-      command: ["bin2", "add", "{{.Package}}"]
-EOF
-
-  run plonk config show
-  assert_success
-  assert_output --partial "custom1"
-  assert_output --partial "custom2"
-}

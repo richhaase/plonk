@@ -75,10 +75,6 @@ func (v *SimpleValidator) ValidateConfigFromYAML(content []byte) *ValidationResu
 	// Apply defaults
 	applyDefaults(&cfg)
 
-	// Ensure the valid manager set includes both shipped defaults and any
-	// managers defined in this YAML configuration.
-	updateValidManagersFromConfig(&cfg)
-
 	// Validate
 	err := v.validator.Struct(&cfg)
 

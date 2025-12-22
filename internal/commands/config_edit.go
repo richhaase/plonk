@@ -277,15 +277,6 @@ func saveNonDefaultValues(configDir string, cfg *config.Config) error {
 	// Get only non-default top-level values
 	nonDefaults := checker.GetNonDefaultFields(cfg)
 
-	// Include only non-default/custom managers
-	nonDefaultManagers := checker.GetNonDefaultManagers(cfg)
-	if len(nonDefaultManagers) > 0 {
-		if nonDefaults == nil {
-			nonDefaults = make(map[string]interface{})
-		}
-		nonDefaults["managers"] = nonDefaultManagers
-	}
-
 	// If everything is default, write empty file
 	configPath := filepath.Join(configDir, "plonk.yaml")
 	if len(nonDefaults) == 0 {

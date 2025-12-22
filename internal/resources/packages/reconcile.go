@@ -21,10 +21,8 @@ func ReconcileWithConfig(ctx context.Context, configDir string, cfg *config.Conf
 	}
 
 	// Create multi-package resource
-	var cfgUsed *config.Config
-	if cfg != nil && cfg.Managers != nil {
-		cfgUsed = cfg
-	} else {
+	cfgUsed := cfg
+	if cfgUsed == nil {
 		cfgUsed = config.LoadWithDefaults(configDir)
 	}
 	packageResource := NewMultiPackageResource(cfgUsed)

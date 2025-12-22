@@ -9,14 +9,8 @@ import (
 )
 
 func TestInstall_VersionErrorStillAdded(t *testing.T) {
-	cfg := &config.Config{DefaultManager: "brew", Managers: map[string]config.ManagerConfig{
-		"brew": {
-			Binary:    "brew",
-			Available: config.CommandConfig{Command: []string{"brew", "--version"}},
-			Install:   config.CommandConfig{Command: []string{"brew", "install", "{{.Package}}"}},
-		},
-	}}
-	// Mock executor to allow install
+	cfg := &config.Config{DefaultManager: "brew"}
+	// Mock executor to allow install (hardcoded managers are used)
 	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{
 		"brew --version":  {Output: []byte("Homebrew 4.0"), Error: nil},
 		"brew install jq": {Output: []byte("installed"), Error: nil},

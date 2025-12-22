@@ -26,12 +26,8 @@ func TestInstallPackagesWith_UnsupportedManager(t *testing.T) {
 }
 
 func TestInstallPackagesWith_ManagerUnavailable(t *testing.T) {
-	cfg := &config.Config{
-		Managers: map[string]config.ManagerConfig{
-			"off": {Binary: "off"},
-		},
-	}
-	// Mock executor with no responses for "off" so LookPath fails → unavailable
+	cfg := &config.Config{DefaultManager: "brew"}
+	// Mock executor with no responses so brew is unavailable
 	mock := &MockCommandExecutor{Responses: map[string]CommandResponse{}}
 	SetDefaultExecutor(mock)
 	t.Cleanup(func() { SetDefaultExecutor(&RealCommandExecutor{}) })
@@ -39,7 +35,7 @@ func TestInstallPackagesWith_ManagerUnavailable(t *testing.T) {
 	lockSvc := lock.NewYAMLLockService(t.TempDir())
 	reg := GetRegistry()
 
-	results, err := InstallPackagesWith(context.Background(), cfg, lockSvc, reg, []string{"x"}, InstallOptions{Manager: "off"})
+	results, err := InstallPackagesWith(context.Background(), cfg, lockSvc, reg, []string{"x"}, InstallOptions{Manager: "brew"})
 	if err != nil {
 		t.Fatalf("unexpected: %v", err)
 	}

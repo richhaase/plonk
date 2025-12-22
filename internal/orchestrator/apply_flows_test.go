@@ -15,44 +15,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// --- Test helpers for v2 GenericManager + mock executor ---
+// --- Test helpers for mock executor ---
 
-// setupFakeManagerConfig wires a YAML-defined manager named "fake" and a mock executor
-func setupFakeManagerConfig(t *testing.T, cfg *config.Config, failInstalls map[string]bool) {
+// setupBrewMockExecutor wires a mock executor for brew commands
+func setupBrewMockExecutor(t *testing.T, failInstalls map[string]bool) {
 	t.Helper()
-
-	// Add a manager definition for a synthetic binary "fake"
-	if cfg.Managers == nil {
-		cfg.Managers = map[string]config.ManagerConfig{}
-	}
-	cfg.Managers["fake"] = config.ManagerConfig{
-		Binary: "fake",
-		Available: config.CommandConfig{
-			Command: []string{"fake", "--version"},
-		},
-		List: config.ListConfig{
-			Command: []string{"fake", "list"},
-			Parse:   "lines",
-		},
-		Install: config.CommandConfig{
-			Command: []string{"fake", "install", "{{.Package}}"},
-		},
-		Uninstall: config.CommandConfig{
-			Command: []string{"fake", "uninstall", "{{.Package}}"},
-		},
-	}
 
 	// Configure a mock executor so no real commands run
 	mock := &pkgs.MockCommandExecutor{Responses: map[string]pkgs.CommandResponse{}}
 
 	// Make the binary discoverable and available
-	mock.Responses["fake --version"] = pkgs.CommandResponse{Output: []byte("fake 1.0.0"), Error: nil}
-	mock.Responses["fake list"] = pkgs.CommandResponse{Output: []byte(""), Error: nil}
+	mock.Responses["brew --version"] = pkgs.CommandResponse{Output: []byte("Homebrew 4.0.0"), Error: nil}
+	mock.Responses["brew list --formula -1"] = pkgs.CommandResponse{Output: []byte(""), Error: nil}
 
 	// Provide install responses; optionally fail select packages
-	// We match exact command strings as built by GenericManager
 	for _, name := range []string{"pkg1", "pkg2", "pkg-only", "a", "b"} {
-		key := "fake install " + name
+		key := "brew install " + name
 		if failInstalls != nil && failInstalls[name] {
 			mock.Responses[key] = pkgs.CommandResponse{Output: []byte("permission denied"), Error: &pkgs.MockExitError{Code: 1}}
 		} else {
@@ -92,15 +70,15 @@ func TestApply_Combined_Success(t *testing.T) {
 	configDir := t.TempDir()
 	homeDir := t.TempDir()
 
-	// Packages: two fake packages, both missing -> installed
-	writeLockPackage(t, configDir, "fake", "pkg1", "1.0.0")
-	writeLockPackage(t, configDir, "fake", "pkg2", "2.0.0")
+	// Packages: two brew packages, both missing -> installed
+	writeLockPackage(t, configDir, "brew", "pkg1", "1.0.0")
+	writeLockPackage(t, configDir, "brew", "pkg2", "2.0.0")
 
 	// Dotfiles: one source present in configDir, not in homeDir -> added
 	writeDotfileSource(t, configDir, "zshrc", "export TEST=1\n")
 
 	cfg := config.LoadWithDefaults(configDir)
-	setupFakeManagerConfig(t, cfg, nil)
+	setupBrewMockExecutor(t, nil)
 	orch := New(
 		WithConfig(cfg),
 		WithConfigDir(configDir),
@@ -125,10 +103,10 @@ func TestApply_PackagesOnly(t *testing.T) {
 	configDir := t.TempDir()
 	homeDir := t.TempDir()
 
-	writeLockPackage(t, configDir, "fake", "pkg-only", "1.0.0")
+	writeLockPackage(t, configDir, "brew", "pkg-only", "1.0.0")
 
 	cfg := config.LoadWithDefaults(configDir)
-	setupFakeManagerConfig(t, cfg, nil)
+	setupBrewMockExecutor(t, nil)
 	orch := New(
 		WithConfig(cfg),
 		WithConfigDir(configDir),
@@ -169,12 +147,12 @@ func TestApply_DryRun(t *testing.T) {
 	configDir := t.TempDir()
 	homeDir := t.TempDir()
 
-	writeLockPackage(t, configDir, "fake", "a", "0.1.0")
-	writeLockPackage(t, configDir, "fake", "b", "0.2.0")
+	writeLockPackage(t, configDir, "brew", "a", "0.1.0")
+	writeLockPackage(t, configDir, "brew", "b", "0.2.0")
 	writeDotfileSource(t, configDir, "bashrc", "export DRY=1\n")
 
 	cfg := config.LoadWithDefaults(configDir)
-	setupFakeManagerConfig(t, cfg, nil)
+	setupBrewMockExecutor(t, nil)
 	orch := New(
 		WithConfig(cfg),
 		WithConfigDir(configDir),

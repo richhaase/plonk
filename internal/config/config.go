@@ -21,7 +21,6 @@ type Config struct {
 	IgnorePatterns    []string                 `yaml:"ignore_patterns,omitempty"`
 	Dotfiles          Dotfiles                 `yaml:"dotfiles,omitempty"`
 	DiffTool          string                   `yaml:"diff_tool,omitempty"`
-	Managers          map[string]ManagerConfig `yaml:"managers,omitempty"`
 }
 
 // Dotfiles contains dotfile-specific configuration
@@ -38,7 +37,6 @@ var defaultConfig = Config{
 	ExpandDirectories: []string{
 		".config",
 	},
-	// NOTE: Managers is NOT set here - it's merged in applyDefaults
 	IgnorePatterns: []string{
 		// System files
 		".DS_Store",
@@ -162,8 +160,6 @@ func LoadFromPath(configPath string) (*Config, error) {
 	if err != nil {
 		if os.IsNotExist(err) {
 			// Zero-config: return defaults if file doesn't exist
-			cfg.Managers = GetDefaultManagers()
-			updateValidManagersFromConfig(&cfg)
 			return &cfg, nil
 		}
 		return nil, err
@@ -174,24 +170,8 @@ func LoadFromPath(configPath string) (*Config, error) {
 		return nil, err
 	}
 
-	// Merge default managers with user managers (user overrides defaults)
-	userManagers := cfg.Managers
-	cfg.Managers = make(map[string]ManagerConfig)
-
-	// Start with defaults
-	for name, defaultMgr := range GetDefaultManagers() {
-		cfg.Managers[name] = defaultMgr
-	}
-
-	// Override/add user managers using field-wise merge
-	for name, userMgr := range userManagers {
-		base := cfg.Managers[name]
-		cfg.Managers[name] = MergeManagerConfig(base, userMgr)
-	}
-
-	// Update the valid manager set for validation based on the effective
-	// configuration (defaults + any user-defined managers).
-	updateValidManagersFromConfig(&cfg)
+	// Apply defaults for any unset fields
+	applyDefaults(&cfg)
 
 	// Validate
 	validate := validator.New()
@@ -236,39 +216,6 @@ func applyDefaults(cfg *Config) {
 	if len(cfg.IgnorePatterns) == 0 {
 		cfg.IgnorePatterns = defaultConfig.IgnorePatterns
 	}
-}
-
-// updateValidManagersFromConfig updates the global valid manager list used by
-// the "validmanager" validator. It treats all managers present in the effective
-// configuration as first-class, regardless of whether they were shipped as
-// defaults or defined by the user.
-func updateValidManagersFromConfig(cfg *Config) {
-	if cfg == nil {
-		return
-	}
-
-	seen := make(map[string]struct{})
-
-	// Start with shipped defaults.
-	for name := range GetDefaultManagers() {
-		seen[name] = struct{}{}
-	}
-
-	// Merge in any managers defined in this config.
-	for name := range cfg.Managers {
-		seen[name] = struct{}{}
-	}
-
-	if len(seen) == 0 {
-		return
-	}
-
-	names := make([]string, 0, len(seen))
-	for name := range seen {
-		names = append(names, name)
-	}
-
-	SetValidManagers(names)
 }
 
 // Utility functions for directory management

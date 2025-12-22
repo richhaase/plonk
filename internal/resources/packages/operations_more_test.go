@@ -48,14 +48,15 @@ func TestInstall_NpmScoped_MetadataSaved(t *testing.T) {
 		t.Fatalf("expected added, got: %+v", res[0])
 	}
 
-	// Verify lock metadata includes scope and full_name
+	// Verify lock metadata includes manager and name
 	svc := lock.NewYAMLLockService(configDir)
 	lk, _ := svc.Read()
 	if len(lk.Resources) != 1 {
 		t.Fatalf("expected 1 resource, got %d", len(lk.Resources))
 	}
 	md := lk.Resources[0].Metadata
-	if md["scope"] != "@scope" || md["full_name"] != pkg {
+	// Scoped package name is preserved as-is in the name field
+	if md["manager"] != "npm" || md["name"] != pkg {
 		t.Fatalf("expected npm metadata saved, got: %#v", md)
 	}
 }

@@ -69,11 +69,10 @@ func (f ConfigShowFormatter) StructuredData() any {
 // highlighting for user-defined fields in table output, while leaving the
 // YAML structure unchanged.
 //
-//nolint:gocyclo // complexity justified: YAML line processor with per-block highlighting for managers, expand_directories, ignore_patterns
+//nolint:gocyclo // complexity justified: YAML line processor with per-block highlighting for expand_directories, ignore_patterns
 func formatConfigWithHighlights(cfg *config.Config, checker *config.UserDefinedChecker) (string, error) {
-	// Compute non-default fields and managers.
+	// Compute non-default fields.
 	nonDefaultFields := checker.GetNonDefaultFields(cfg)
-	nonDefaultManagers := checker.GetNonDefaultManagers(cfg)
 
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
@@ -85,11 +84,6 @@ func formatConfigWithHighlights(cfg *config.Config, checker *config.UserDefinedC
 	customKeys := make(map[string]struct{}, len(nonDefaultFields))
 	for k := range nonDefaultFields {
 		customKeys[k] = struct{}{}
-	}
-
-	customManagers := make(map[string]struct{}, len(nonDefaultManagers))
-	for k := range nonDefaultManagers {
-		customManagers[k] = struct{}{}
 	}
 
 	// Build sets of custom list items for selected fields where it's helpful
@@ -153,7 +147,6 @@ func formatConfigWithHighlights(cfg *config.Config, checker *config.UserDefinedC
 	}
 
 	var out strings.Builder
-	inManagers := false
 	inExpandDirs := false
 	inIgnorePatterns := false
 
@@ -185,16 +178,6 @@ func formatConfigWithHighlights(cfg *config.Config, checker *config.UserDefinedC
 				}
 			}
 
-			// Update managers context.
-			if strings.HasPrefix(trimmed, "managers:") {
-				inManagers = true
-				inExpandDirs = false
-				inIgnorePatterns = false
-				out.WriteString(line)
-				out.WriteString("\n")
-				continue
-			}
-			inManagers = false
 			inExpandDirs = false
 			inIgnorePatterns = false
 
@@ -219,23 +202,6 @@ func formatConfigWithHighlights(cfg *config.Config, checker *config.UserDefinedC
 			out.WriteString(line)
 			out.WriteString("\n")
 			continue
-		}
-
-		// Within managers block, highlight custom/overridden managers by name.
-		if inManagers {
-			// Expect lines like "  npm:" for manager names.
-			if strings.HasPrefix(line, "  ") && !strings.HasPrefix(strings.TrimSpace(line), "-") {
-				managerLine := strings.TrimSpace(line)
-				parts := strings.SplitN(managerLine, ":", 2)
-				if len(parts) > 0 {
-					managerName := parts[0]
-					if _, isCustomMgr := customManagers[managerName]; isCustomMgr {
-						out.WriteString(ColorInfo(line))
-						out.WriteString("\n")
-						continue
-					}
-				}
-			}
 		}
 
 		// Within expand_directories / ignore_patterns, highlight custom list items.

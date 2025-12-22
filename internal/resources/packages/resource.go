@@ -106,12 +106,9 @@ func NewMultiPackageResource(cfg *config.Config) *MultiPackageResource {
 	return m
 }
 
-// SetConfig stores config for install hints and loads registry managers.
+// SetConfig stores config for default manager resolution.
 func (m *MultiPackageResource) SetConfig(cfg *config.Config) {
 	m.cfg = cfg
-	if cfg != nil {
-		m.registry.LoadV2Configs(cfg)
-	}
 }
 
 // Desired returns all desired packages across all managers
@@ -224,7 +221,7 @@ func (m *MultiPackageResource) Apply(ctx context.Context, item resources.Item) e
 		return fmt.Errorf("checking %s availability: %w", item.Manager, err)
 	}
 	if !available {
-		return fmt.Errorf("%s manager not available (%s)", item.Manager, managerInstallHint(m.cfg, item.Manager))
+		return fmt.Errorf("%s manager not available (%s)", item.Manager, managerInstallHint(item.Manager))
 	}
 
 	resource := NewPackageResource(manager)

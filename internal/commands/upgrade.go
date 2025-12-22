@@ -171,17 +171,10 @@ func matchesPackage(info packageMatchInfo, packageName string) bool {
 func determineUpgradeTarget(info packageMatchInfo, requestedName string) string {
 	target := info.Name
 
-	// Allow per-manager override of upgrade targeting strategy via config.
-	cfg := config.LoadWithDefaults(config.GetDefaultConfigDirectory())
-	if cfg != nil && cfg.Managers != nil {
-		if mgrCfg, ok := cfg.Managers[info.Manager]; ok {
-			switch mgrCfg.UpgradeTarget {
-			case "full_name_preferred":
-				if info.FullName != "" {
-					return info.FullName
-				}
-			}
-		}
+	// npm packages with scopes need to use full_name for upgrade
+	// e.g., "@angular/cli" instead of just "cli"
+	if info.Manager == "npm" && info.FullName != "" {
+		return info.FullName
 	}
 
 	return target
@@ -325,11 +318,6 @@ type upgradeSummary struct {
 
 // executeUpgrade performs the actual upgrade operations
 func executeUpgrade(ctx context.Context, spec upgradeSpec, cfg *config.Config, lockService lock.LockService, registry *packages.ManagerRegistry, dryRun bool) (upgradeResults, error) {
-	// Load manager configs from plonk.yaml before any operations
-	if registry != nil {
-		registry.LoadV2Configs(cfg)
-	}
-
 	results := upgradeResults{
 		Results: []packageUpgradeResult{},
 		Summary: upgradeSummary{},
