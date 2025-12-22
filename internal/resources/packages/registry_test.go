@@ -20,6 +20,7 @@ func TestManagerRegistry_GetManager_ReturnsCorrectType(t *testing.T) {
 	}{
 		{"brew", "brew", &BrewManager{}},
 		{"cargo", "cargo", &CargoManager{}},
+		{"gem", "gem", &GemManager{}},
 		{"go", "go", &GoManager{}},
 		{"npm", "npm", &NPMManager{}},
 		{"pnpm", "pnpm", &NPMManager{}},
@@ -48,7 +49,7 @@ func TestManagerRegistry_GetAllManagerNames_Sorted(t *testing.T) {
 	names := registry.GetAllManagerNames()
 
 	// Should be sorted alphabetically
-	expected := []string{"brew", "bun", "cargo", "go", "npm", "pnpm", "uv"}
+	expected := []string{"brew", "bun", "cargo", "gem", "go", "npm", "pnpm", "uv"}
 	assert.Equal(t, expected, names)
 }
 
@@ -59,13 +60,14 @@ func TestManagerRegistry_HasManager(t *testing.T) {
 	assert.True(t, registry.HasManager("brew"))
 	assert.True(t, registry.HasManager("npm"))
 	assert.True(t, registry.HasManager("cargo"))
+	assert.True(t, registry.HasManager("gem"))
 	assert.True(t, registry.HasManager("go"))
 	assert.True(t, registry.HasManager("uv"))
 
 	// Unsupported managers
 	assert.False(t, registry.HasManager("unknown"))
 	assert.False(t, registry.HasManager("pip"))
-	assert.False(t, registry.HasManager("gem"))
+	assert.False(t, registry.HasManager("pipx"))
 }
 
 func TestManagerRegistry_GetManagerWithExecutor(t *testing.T) {

@@ -12,7 +12,7 @@ import (
 const DefaultManager = "brew"
 
 // supportedManagers lists all available package managers
-var supportedManagers = []string{"brew", "cargo", "go", "npm", "pnpm", "bun", "uv"}
+var supportedManagers = []string{"brew", "cargo", "gem", "go", "npm", "pnpm", "bun", "uv"}
 
 // ManagerRegistry manages package manager creation
 type ManagerRegistry struct{}
@@ -41,6 +41,8 @@ func (r *ManagerRegistry) GetManagerWithExecutor(name string, exec CommandExecut
 		return NewBrewManager(exec), nil
 	case "cargo":
 		return NewCargoManager(exec), nil
+	case "gem":
+		return NewGemManager(exec), nil
 	case "go":
 		return NewGoManager(exec), nil
 	case "npm":
