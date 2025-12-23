@@ -16,9 +16,14 @@ import (
 // Apply applies package configuration and returns the result
 func Apply(ctx context.Context, configDir string, cfg *config.Config, dryRun bool) (output.PackageResults, error) {
 	registry := GetRegistry()
-
-	// Load lock file to get desired packages
 	lockService := lock.NewYAMLLockService(configDir)
+	return ApplyWith(ctx, cfg, lockService, registry, true, dryRun)
+}
+
+// ApplyWith applies package configuration with explicit dependencies for testability.
+// Set showProgress to false to disable spinner output (useful for tests).
+func ApplyWith(ctx context.Context, cfg *config.Config, lockService lock.LockService, registry *ManagerRegistry, showProgress bool, dryRun bool) (output.PackageResults, error) {
+	// Load lock file to get desired packages
 	lockData, err := lockService.Read()
 	if err != nil {
 		return output.PackageResults{}, err
@@ -48,9 +53,9 @@ func Apply(ctx context.Context, configDir string, cfg *config.Config, dryRun boo
 	totalFailed := 0
 	totalWouldInstall := 0
 
-	// Create spinner manager for all package operations if we have missing packages
+	// Create spinner manager for progress display if enabled
 	var spinnerManager *output.SpinnerManager
-	if totalMissing > 0 {
+	if showProgress && totalMissing > 0 {
 		spinnerManager = output.NewSpinnerManager(totalMissing)
 	}
 
