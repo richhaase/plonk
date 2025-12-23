@@ -42,7 +42,7 @@ func init() {
 
 func runDiff(cmd *cobra.Command, args []string) error {
 	homeDir := config.GetHomeDir()
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 	cfg := config.LoadWithDefaults(configDir)
 
 	// Get drifted dotfiles from reconciliation

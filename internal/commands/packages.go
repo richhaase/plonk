@@ -35,7 +35,7 @@ func init() {
 
 func runPackages(cmd *cobra.Command, args []string) error {
 	// Get directories
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Load configuration
 	cfg := config.LoadWithDefaults(configDir)

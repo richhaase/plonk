@@ -31,7 +31,7 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 	}
 
 	// Get plonk directory
-	plonkDir := config.GetConfigDir()
+	plonkDir := config.GetDefaultConfigDirectory()
 
 	// Dry run mode: just show what would happen
 	if cfg.DryRun {

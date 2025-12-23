@@ -42,7 +42,7 @@ func init() {
 func runStatus(cmd *cobra.Command, args []string) error {
 	// Get directories
 	homeDir := config.GetHomeDir()
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Load configuration (may fail if config is invalid, but we handle this gracefully)
 	_, configLoadErr := config.Load(configDir)

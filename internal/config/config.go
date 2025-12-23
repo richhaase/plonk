@@ -225,8 +225,3 @@ func GetHomeDir() string {
 	homeDir, _ := os.UserHomeDir()
 	return homeDir
 }
-
-// GetConfigDir returns the plonk configuration directory
-func GetConfigDir() string {
-	return GetDefaultConfigDirectory()
-}

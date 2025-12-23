@@ -75,7 +75,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 	// Get directories
 	homeDir := config.GetHomeDir()
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Load config for ignore patterns with defaults
 	cfg := config.LoadWithDefaults(configDir)

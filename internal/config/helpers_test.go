@@ -33,28 +33,6 @@ func TestGetHomeDir(t *testing.T) {
 	})
 }
 
-func TestGetConfigDir(t *testing.T) {
-	// Save original PLONK_DIR
-	originalPlonkDir := os.Getenv("PLONK_DIR")
-	defer os.Setenv("PLONK_DIR", originalPlonkDir)
-
-	t.Run("uses default config directory", func(t *testing.T) {
-		os.Unsetenv("PLONK_DIR")
-
-		result := GetConfigDir()
-		expected := GetDefaultConfigDirectory()
-		assert.Equal(t, expected, result)
-	})
-
-	t.Run("respects PLONK_DIR environment variable", func(t *testing.T) {
-		testDir := "/custom/plonk/dir"
-		os.Setenv("PLONK_DIR", testDir)
-
-		result := GetConfigDir()
-		assert.Equal(t, testDir, result)
-	})
-}
-
 func TestGetDefaults(t *testing.T) {
 	defaults := GetDefaults()
 

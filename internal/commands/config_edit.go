@@ -44,7 +44,7 @@ func init() {
 }
 
 func runConfigEdit(cmd *cobra.Command, args []string) error {
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Create config directory if it doesn't exist
 	if err := os.MkdirAll(configDir, 0750); err != nil {

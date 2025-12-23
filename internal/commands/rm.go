@@ -74,7 +74,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 
 	// Get directories
 	homeDir := config.GetHomeDir()
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Load config using LoadWithDefaults for consistent zero-config behavior
 	cfg := config.LoadWithDefaults(configDir)

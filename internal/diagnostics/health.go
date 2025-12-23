@@ -130,7 +130,7 @@ func checkEnvironmentVariables() HealthCheck {
 
 	// Check important environment variables
 	homeDir := config.GetHomeDir()
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 
 	check.Details = append(check.Details,
 		fmt.Sprintf("HOME: %s", homeDir),
@@ -161,7 +161,7 @@ func checkPermissions() HealthCheck {
 		Message:  "File permissions are correct",
 	}
 
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Check if config directory exists and is writable
 	if err := os.MkdirAll(configDir, 0755); err != nil {
@@ -196,7 +196,7 @@ func checkConfigurationFile() HealthCheck {
 		Message:  "Configuration file exists",
 	}
 
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 	configPath := filepath.Join(configDir, "plonk.yaml")
 
 	// Check if config file exists
@@ -229,7 +229,7 @@ func checkConfigurationValidity() HealthCheck {
 		Message:  "Configuration is valid",
 	}
 
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Try to load the configuration
 	cfg, err := config.Load(configDir)
@@ -269,7 +269,7 @@ func checkLockFile() HealthCheck {
 		Message:  "Lock file exists",
 	}
 
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 	lockPath := filepath.Join(configDir, "plonk.lock")
 
 	// Check if lock file exists
@@ -309,7 +309,7 @@ func checkLockFileValidity() HealthCheck {
 		Message:  "Lock file is valid",
 	}
 
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 	lockService := lock.NewYAMLLockService(configDir)
 
 	// Try to load the lock file
@@ -354,7 +354,7 @@ func checkLockFileValidity() HealthCheck {
 func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
 	registry := packages.GetRegistry()
 
-	requiredManagers := collectRequiredManagers(config.GetConfigDir())
+	requiredManagers := collectRequiredManagers(config.GetDefaultConfigDirectory())
 
 	check := HealthCheck{
 		Name:     "Package Managers",
@@ -446,7 +446,7 @@ func checkTemplates() HealthCheck {
 		Message:  "Template configuration is valid",
 	}
 
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 	templateProcessor := dotfiles.NewTemplateProcessor(configDir)
 
 	// Check if any templates exist
