@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/richhaase/plonk/internal/resources"
+	"github.com/richhaase/plonk/internal/config"
 )
 
 func TestDriftDetectionIntegration(t *testing.T) {
@@ -27,6 +27,7 @@ func TestDriftDetectionIntegration(t *testing.T) {
 	defer os.RemoveAll(configDir)
 
 	ctx := context.Background()
+	cfg := config.LoadWithDefaults(configDir)
 
 	t.Run("full drift detection flow", func(t *testing.T) {
 		// Step 1: Create source file in config
@@ -43,13 +44,13 @@ func TestDriftDetectionIntegration(t *testing.T) {
 		}
 
 		// Step 3: Reconcile - should show as managed
-		result, err := Reconcile(ctx, homeDir, configDir)
+		result, err := ReconcileWithConfig(ctx, homeDir, configDir, cfg)
 		if err != nil {
 			t.Fatalf("First reconcile failed: %v", err)
 		}
 
 		// Find the vimrc item
-		var vimrcItem *resources.Item
+		var vimrcItem *DotfileItem
 		for i := range result.Managed {
 			if result.Managed[i].Name == ".vimrc" {
 				vimrcItem = &result.Managed[i]
@@ -61,7 +62,7 @@ func TestDriftDetectionIntegration(t *testing.T) {
 			t.Fatal("vimrc not found in managed items")
 		}
 
-		if vimrcItem.State != resources.StateManaged {
+		if vimrcItem.State != StateManaged {
 			t.Errorf("Expected vimrc to be StateManaged, got %v", vimrcItem.State)
 		}
 
@@ -72,13 +73,13 @@ func TestDriftDetectionIntegration(t *testing.T) {
 		}
 
 		// Step 5: Reconcile again - should show as drifted
-		result2, err := Reconcile(ctx, homeDir, configDir)
+		result2, err := ReconcileWithConfig(ctx, homeDir, configDir, cfg)
 		if err != nil {
 			t.Fatalf("Second reconcile failed: %v", err)
 		}
 
 		// Find the vimrc item again
-		var driftedItem *resources.Item
+		var driftedItem *DotfileItem
 		for i := range result2.Managed {
 			if result2.Managed[i].Name == ".vimrc" {
 				driftedItem = &result2.Managed[i]
@@ -90,7 +91,7 @@ func TestDriftDetectionIntegration(t *testing.T) {
 			t.Fatal("vimrc not found in managed items after drift")
 		}
 
-		if driftedItem.State != resources.StateDegraded {
+		if driftedItem.State != StateDegraded {
 			t.Errorf("Expected vimrc to be StateDegraded (drifted), got %v", driftedItem.State)
 		}
 
@@ -111,7 +112,7 @@ func TestDriftDetectionIntegration(t *testing.T) {
 		// Don't create destination file (missing)
 
 		// Reconcile
-		result, err := Reconcile(ctx, homeDir, configDir)
+		result, err := ReconcileWithConfig(ctx, homeDir, configDir, cfg)
 		if err != nil {
 			t.Fatalf("Reconcile failed: %v", err)
 		}

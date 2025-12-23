@@ -7,9 +7,9 @@ import (
 	"context"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/packages"
+	"github.com/richhaase/plonk/internal/resources"
 )
 
 // ReconcileAll reconciles all domains.
@@ -18,14 +18,14 @@ func ReconcileAll(ctx context.Context, homeDir, configDir string) (map[string]re
 	cfg := config.LoadWithDefaults(configDir)
 	results := make(map[string]resources.Result)
 
-	// Reconcile dotfiles using domain package
-	dotfileResult, err := dotfiles.Reconcile(ctx, homeDir, configDir)
+	// Reconcile dotfiles using domain package and convert at boundary
+	dotfileResult, err := dotfiles.ReconcileWithConfig(ctx, homeDir, configDir, cfg)
 	if err != nil {
 		return nil, err
 	}
-	results["dotfile"] = dotfileResult
+	results["dotfile"] = convertDotfileResultToResources(dotfileResult)
 
-	// Reconcile packages using domain package - convert result to resources.Result
+	// Reconcile packages using domain package and convert at boundary
 	packageResult, err := packages.ReconcileWithConfig(ctx, configDir, cfg)
 	if err != nil {
 		return nil, err
