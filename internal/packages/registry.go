@@ -17,8 +17,8 @@ const DefaultManager = "brew"
 var supportedManagers = []string{"brew", "cargo", "gem", "go", "npm", "pnpm", "bun", "uv"}
 
 func init() {
-	// Register supported managers with the config validator
-	config.SetValidManagers(supportedManagers)
+	// Register the manager checker with config for validation
+	config.ManagerChecker = defaultRegistry.HasManager
 }
 
 // ManagerRegistry manages package manager creation

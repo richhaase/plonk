@@ -14,7 +14,7 @@ func TestValidatePackageManager(t *testing.T) {
 	tests := []struct {
 		name       string
 		manager    string
-		valid      []string
+		checker    func(string) bool
 		shouldPass bool
 	}{
 		{
@@ -23,57 +23,41 @@ func TestValidatePackageManager(t *testing.T) {
 			shouldPass: true,
 		},
 		{
-			name:       "known manager (brew) is valid when registered",
-			manager:    "brew",
-			valid:      []string{"brew", "npm"},
+			name:    "known manager (brew) is valid when checker accepts it",
+			manager: "brew",
+			checker: func(name string) bool {
+				return name == "brew" || name == "npm"
+			},
 			shouldPass: true,
 		},
 		{
-			name:       "known manager (npm) is valid when registered",
-			manager:    "npm",
-			valid:      []string{"brew", "npm"},
+			name:    "known manager (npm) is valid when checker accepts it",
+			manager: "npm",
+			checker: func(name string) bool {
+				return name == "brew" || name == "npm"
+			},
 			shouldPass: true,
 		},
 		{
-			name:       "test-unavailable is valid when registered (for testing)",
-			manager:    "test-unavailable",
-			valid:      []string{"test-unavailable"},
-			shouldPass: true,
-		},
-		{
-			name:       "unknown manager is invalid",
-			manager:    "unknownmanager",
+			name:    "unknown manager is invalid",
+			manager: "unknownmanager",
+			checker: func(name string) bool {
+				return name == "brew" || name == "npm"
+			},
 			shouldPass: false,
 		},
 		{
-			name:       "apt is valid when registered (legacy support)",
-			manager:    "apt",
-			valid:      []string{"apt"},
-			shouldPass: true,
-		},
-		{
-			name:       "dynamically registered manager is valid",
-			manager:    "custom-manager",
-			valid:      []string{"brew", "npm", "custom-manager"},
-			shouldPass: true,
-		},
-		{
-			name:       "non-empty manager is invalid when registry is empty",
+			name:       "non-empty manager is invalid when checker is nil",
 			manager:    "brew",
-			valid:      []string{},
+			checker:    nil,
 			shouldPass: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Reset to default state
-			validManagers = nil
-
-			// Simulate dynamic registration if requested
-			if tt.valid != nil {
-				SetValidManagers(tt.valid)
-			}
+			// Set up the checker for this test
+			ManagerChecker = tt.checker
 
 			v := validator.New()
 			err := RegisterValidators(v)
@@ -94,4 +78,3 @@ func TestValidatePackageManager(t *testing.T) {
 		})
 	}
 }
-

@@ -4,7 +4,6 @@
 package config
 
 import (
-	"os"
 	"testing"
 
 	"github.com/richhaase/plonk/internal/testutil"
@@ -125,21 +124,3 @@ ignore_patterns: []
 	}
 }
 
-// TestConfig_RealWorldExample tests with a real config file if it exists
-func TestConfig_RealWorldExample(t *testing.T) {
-	// Try to load the test config if it exists
-	testConfigPath := "../../tmp-test/plonk.yaml"
-	if _, err := os.Stat(testConfigPath); os.IsNotExist(err) {
-		t.Skip("Test config not found, skipping real-world test")
-	}
-
-	cfg, err := LoadFromPath(testConfigPath)
-	if err != nil {
-		t.Fatalf("Failed to load real config: %v", err)
-	}
-
-	// The test config has "test-unavailable" as default manager
-	if cfg.DefaultManager != "test-unavailable" {
-		t.Errorf("Expected test-unavailable manager, got %s", cfg.DefaultManager)
-	}
-}

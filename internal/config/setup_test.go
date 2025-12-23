@@ -8,13 +8,22 @@ import (
 	"testing"
 )
 
+// supportedManagers mirrors the list from the packages registry for testing
+var supportedManagers = []string{"brew", "cargo", "gem", "go", "npm", "pnpm", "bun", "uv"}
+
 // TestMain sets up the test environment for all tests in this package.
-// It initializes the valid managers list that would normally be set by
+// It initializes the manager checker that would normally be set by
 // the packages registry during init().
 func TestMain(m *testing.M) {
-	// Set valid managers for config validation
-	// This mirrors the supported managers in the packages registry
-	SetValidManagers([]string{"brew", "cargo", "gem", "go", "npm", "pnpm", "bun", "uv"})
+	// Set up manager checker for config validation
+	ManagerChecker = func(name string) bool {
+		for _, m := range supportedManagers {
+			if name == m {
+				return true
+			}
+		}
+		return false
+	}
 
 	// Run all tests
 	code := m.Run()
