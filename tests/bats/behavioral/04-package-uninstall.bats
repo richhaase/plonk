@@ -78,6 +78,12 @@ setup() {
   assert_success
   assert_output_contains_all "cowsay" "figlet" "removed"
 
+  # Verify packages were actually uninstalled from system
+  run brew list cowsay
+  assert_failure
+  run brew list figlet
+  assert_failure
+
   # Verify both gone from status
   run plonk status
   refute_output --partial "cowsay"

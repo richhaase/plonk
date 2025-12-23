@@ -2,6 +2,7 @@
 
 load '../lib/test_helper'
 load '../lib/assertions'
+load '../lib/package_test_helper'
 
 setup() {
   setup_test_env
@@ -24,6 +25,10 @@ setup() {
   assert_success
   assert_output --partial "Uninstalling"
   assert_output --partial "removed"
+
+  # Verify package was actually uninstalled
+  run brew list sl
+  assert_failure
 }
 
 @test "uninstall shows completion message after spinner" {
@@ -38,6 +43,10 @@ setup() {
   run plonk uninstall brew:figlet
   assert_success
   assert_output --partial "Uninstalling: brew:figlet"
+
+  # Verify package was actually uninstalled
+  run brew list figlet
+  assert_failure
 }
 
 @test "uninstall shows error message when removal fails" {
@@ -82,6 +91,12 @@ setup() {
   assert_output --partial "[1/2]"
   assert_output --partial "[2/2]"
   assert_output --partial "Uninstalling"
+
+  # Verify packages were actually uninstalled
+  run brew list cowsay
+  assert_failure
+  run brew list figlet
+  assert_failure
 }
 
 # =============================================================================
@@ -103,6 +118,10 @@ setup() {
   assert_output --partial "✓"
   assert_output --partial "installed cowsay"
 
+  # Verify package was actually installed
+  run brew list cowsay
+  assert_success
+
   track_artifact "package" "brew:cowsay"
 }
 
@@ -122,6 +141,10 @@ setup() {
   assert_output --partial "Deploying"
   assert_output --partial "✓"
   assert_output --partial "deployed"
+
+  # Verify dotfile was actually deployed
+  run test -f "$HOME/$testfile"
+  assert_success
 
   track_artifact "dotfile" "$testfile"
 }
@@ -143,6 +166,12 @@ setup() {
   assert_output --partial "[1/2]"
   assert_output --partial "[2/2]"
   assert_output --partial "Installing"
+
+  # Verify packages were actually installed
+  run brew list cowsay
+  assert_success
+  run brew list figlet
+  assert_success
 
   track_artifact "package" "brew:cowsay"
   track_artifact "package" "brew:figlet"
@@ -186,6 +215,10 @@ setup() {
   run plonk upgrade brew:cowsay
   assert_success
   assert_output --partial "Upgrading"
+
+  # Verify package is still installed after upgrade
+  run brew list cowsay
+  assert_success
 }
 
 @test "upgrade shows progress indicators for multiple packages" {
@@ -204,4 +237,10 @@ setup() {
   assert_output --partial "[1/2]"
   assert_output --partial "[2/2]"
   assert_output --partial "Upgrading"
+
+  # Verify packages are still installed after upgrade
+  run brew list cowsay
+  assert_success
+  run brew list figlet
+  assert_success
 }
