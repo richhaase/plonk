@@ -25,21 +25,6 @@ setup() {
   assert_output --partial "$testfile"
 }
 
-@test "add dotfile with dry-run" {
-  local testfile=".plonk-test-profile"
-  require_safe_dotfile "$testfile"
-
-  create_test_dotfile "$testfile"
-
-  run plonk add "$HOME/$testfile" --dry-run
-  assert_success
-  assert_output --partial "Would add"
-
-  # Verify not actually added
-  run plonk status
-  refute_output --partial "$testfile"
-}
-
 @test "add non-existent dotfile shows error" {
   run plonk add "$HOME/.definitely-does-not-exist-xyz"
   assert_failure

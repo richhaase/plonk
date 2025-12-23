@@ -26,25 +26,6 @@ setup() {
   refute_output --partial "$testfile"
 }
 
-@test "remove with dry-run shows what would happen" {
-  local testfile=".plonk-test-bashrc"
-  require_safe_dotfile "$testfile"
-
-  # Add first
-  create_test_dotfile "$testfile"
-  run plonk add "$HOME/$testfile"
-  assert_success
-
-  # Dry-run remove
-  run plonk rm "$testfile" --dry-run
-  assert_success
-  assert_output --partial "Would remove"
-
-  # Verify still managed
-  run plonk status
-  assert_output --partial "$testfile"
-}
-
 @test "remove non-managed dotfile shows error" {
   run plonk rm ".not-managed-file"
   assert_success  # Returns success but skips

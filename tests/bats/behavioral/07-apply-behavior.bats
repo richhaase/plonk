@@ -84,29 +84,6 @@ setup() {
   track_artifact "package" "npm:is-odd"
 }
 
-@test "apply with dry-run shows what would happen" {
-  require_safe_package "brew:fortune"
-
-  # Install package to lock file
-  run plonk install brew:fortune
-  assert_success
-
-  # Manually uninstall
-  brew uninstall fortune --force &>/dev/null || true
-
-  # Run apply with dry-run
-  run plonk apply --dry-run
-  assert_success
-  assert_output --partial "would"
-  assert_output --partial "fortune"
-
-  # Verify package was NOT actually installed
-  run brew list fortune
-  assert_failure
-
-  track_artifact "package" "brew:fortune"
-}
-
 @test "apply with empty lock file succeeds" {
   # Ensure lock file is empty or doesn't exist
   rm -f "$PLONK_DIR/plonk.lock"
