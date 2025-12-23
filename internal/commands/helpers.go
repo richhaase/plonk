@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/packages"
 	"github.com/spf13/cobra"
@@ -105,17 +104,6 @@ func normalizeDisplayFlags(showPackages, showDotfiles bool) (packages, dotfiles 
 		return true, true
 	}
 	return showPackages, showDotfiles
-}
-
-// getMetadataString safely extracts string metadata from operation results
-func getMetadataString(result operations.Result, key string) string {
-	if result.Metadata == nil {
-		return ""
-	}
-	if value, ok := result.Metadata[key].(string); ok {
-		return value
-	}
-	return ""
 }
 
 // parseSimpleFlags parses basic flags for commands

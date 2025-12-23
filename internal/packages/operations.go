@@ -9,7 +9,6 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
-	"github.com/richhaase/plonk/internal/operations"
 )
 
 // InstallOptions configures package installation operations
@@ -25,7 +24,7 @@ type UninstallOptions struct {
 }
 
 // InstallPackages orchestrates the installation of multiple packages
-func InstallPackages(ctx context.Context, configDir string, packages []string, opts InstallOptions) ([]operations.Result, error) {
+func InstallPackages(ctx context.Context, configDir string, packages []string, opts InstallOptions) ([]InstallResult, error) {
 	// Thin wrapper: resolve defaults and delegate to InstallPackagesWith
 	cfg := config.LoadWithDefaults(configDir)
 	lockService := lock.NewYAMLLockService(configDir)
@@ -34,7 +33,7 @@ func InstallPackages(ctx context.Context, configDir string, packages []string, o
 }
 
 // InstallPackagesWith orchestrates installation with explicit dependencies
-func InstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lock.LockService, registry *ManagerRegistry, packages []string, opts InstallOptions) ([]operations.Result, error) {
+func InstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lock.LockService, registry *ManagerRegistry, packages []string, opts InstallOptions) ([]InstallResult, error) {
 	// Get manager - use default if not specified
 	manager := opts.Manager
 	if manager == "" {
@@ -45,7 +44,7 @@ func InstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lo
 		}
 	}
 
-	var results []operations.Result
+	var results []InstallResult
 	for _, packageName := range packages {
 		if ctx.Err() != nil {
 			break
@@ -57,7 +56,7 @@ func InstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lo
 }
 
 // UninstallPackages orchestrates the uninstallation of multiple packages
-func UninstallPackages(ctx context.Context, configDir string, packages []string, opts UninstallOptions) ([]operations.Result, error) {
+func UninstallPackages(ctx context.Context, configDir string, packages []string, opts UninstallOptions) ([]UninstallResult, error) {
 	// Thin wrapper: resolve defaults and delegate to UninstallPackagesWith
 	cfg := config.LoadWithDefaults(configDir)
 	lockService := lock.NewYAMLLockService(configDir)
@@ -66,14 +65,14 @@ func UninstallPackages(ctx context.Context, configDir string, packages []string,
 }
 
 // UninstallPackagesWith orchestrates uninstallation with explicit dependencies
-func UninstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lock.LockService, registry *ManagerRegistry, packages []string, opts UninstallOptions) ([]operations.Result, error) {
+func UninstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lock.LockService, registry *ManagerRegistry, packages []string, opts UninstallOptions) ([]UninstallResult, error) {
 	// Load config for default manager
 	defaultManager := DefaultManager
 	if cfg != nil && cfg.DefaultManager != "" {
 		defaultManager = cfg.DefaultManager
 	}
 
-	var results []operations.Result
+	var results []UninstallResult
 	for _, packageName := range packages {
 		if ctx.Err() != nil {
 			break
@@ -102,28 +101,28 @@ func UninstallPackagesWith(ctx context.Context, cfg *config.Config, lockService 
 }
 
 // installSinglePackage installs a single package
-func installSinglePackage(ctx context.Context, cfg *config.Config, lockService lock.LockService, packageName, manager string, dryRun bool, registry *ManagerRegistry) operations.Result {
-	result := operations.Result{
+func installSinglePackage(ctx context.Context, cfg *config.Config, lockService lock.LockService, packageName, manager string, dryRun bool, registry *ManagerRegistry) InstallResult {
+	result := InstallResult{
 		Name:    packageName,
 		Manager: manager,
 	}
 
 	// Check if already managed
 	if lockService.HasPackage(manager, packageName) {
-		result.Status = "skipped"
+		result.Status = InstallStatusSkipped
 		result.AlreadyManaged = true
 		return result
 	}
 
 	if dryRun {
-		result.Status = "would-add"
+		result.Status = InstallStatusWouldAdd
 		return result
 	}
 
 	// Get package manager instance
 	pkgManager, err := getPackageManager(registry, manager)
 	if err != nil {
-		result.Status = "failed"
+		result.Status = InstallStatusFailed
 		result.Error = fmt.Errorf("install %s: failed to get package manager: %w", packageName, err)
 		return result
 	}
@@ -131,12 +130,12 @@ func installSinglePackage(ctx context.Context, cfg *config.Config, lockService l
 	// Check if manager is available
 	available, err := pkgManager.IsAvailable(ctx)
 	if err != nil {
-		result.Status = "failed"
+		result.Status = InstallStatusFailed
 		result.Error = fmt.Errorf("install %s: failed to check %s availability: %w", packageName, manager, err)
 		return result
 	}
 	if !available {
-		result.Status = "failed"
+		result.Status = InstallStatusFailed
 		result.Error = fmt.Errorf("install %s: %s manager not available (%s)", packageName, manager, managerInstallHint(manager))
 		return result
 	}
@@ -144,7 +143,7 @@ func installSinglePackage(ctx context.Context, cfg *config.Config, lockService l
 	// Install the package (relies on manager's idempotency)
 	err = pkgManager.Install(ctx, packageName)
 	if err != nil {
-		result.Status = "failed"
+		result.Status = InstallStatusFailed
 		result.Error = fmt.Errorf("install %s via %s: %w", packageName, manager, err)
 		return result
 	}
@@ -158,18 +157,18 @@ func installSinglePackage(ctx context.Context, cfg *config.Config, lockService l
 	// Add to lock file
 	err = lockService.AddPackage(manager, packageName, "", metadata)
 	if err != nil {
-		result.Status = "failed"
+		result.Status = InstallStatusFailed
 		result.Error = fmt.Errorf("install %s: failed to add to lock file (manager: %s): %w", packageName, manager, err)
 		return result
 	}
 
-	result.Status = "added"
+	result.Status = InstallStatusAdded
 	return result
 }
 
 // uninstallSinglePackage uninstalls a single package
-func uninstallSinglePackage(ctx context.Context, lockService lock.LockService, packageName, manager string, dryRun bool, registry *ManagerRegistry) operations.Result {
-	result := operations.Result{
+func uninstallSinglePackage(ctx context.Context, lockService lock.LockService, packageName, manager string, dryRun bool, registry *ManagerRegistry) UninstallResult {
+	result := UninstallResult{
 		Name:    packageName,
 		Manager: manager,
 	}
@@ -178,14 +177,14 @@ func uninstallSinglePackage(ctx context.Context, lockService lock.LockService, p
 	isManaged := lockService.HasPackage(manager, packageName)
 
 	if dryRun {
-		result.Status = "would-remove"
+		result.Status = UninstallStatusWouldRemove
 		return result
 	}
 
 	// Get package manager instance
 	pkgManager, err := getPackageManager(registry, manager)
 	if err != nil {
-		result.Status = "failed"
+		result.Status = UninstallStatusFailed
 		result.Error = fmt.Errorf("uninstall %s: failed to get package manager: %w", packageName, err)
 		return result
 	}
@@ -193,12 +192,12 @@ func uninstallSinglePackage(ctx context.Context, lockService lock.LockService, p
 	// Check if manager is available
 	available, err := pkgManager.IsAvailable(ctx)
 	if err != nil {
-		result.Status = "failed"
+		result.Status = UninstallStatusFailed
 		result.Error = fmt.Errorf("uninstall %s: failed to check %s availability: %w", packageName, manager, err)
 		return result
 	}
 	if !available {
-		result.Status = "failed"
+		result.Status = UninstallStatusFailed
 		result.Error = fmt.Errorf("uninstall %s: %s manager not available (%s)", packageName, manager, managerInstallHint(manager))
 		return result
 	}
@@ -212,10 +211,10 @@ func uninstallSinglePackage(ctx context.Context, lockService lock.LockService, p
 		if lockErr != nil {
 			// If we removed from system but failed to update lock, still partial success
 			if uninstallErr == nil {
-				result.Status = "removed"
+				result.Status = UninstallStatusRemoved
 				result.Error = fmt.Errorf("package uninstalled but failed to update lock file: %w", lockErr)
 			} else {
-				result.Status = "failed"
+				result.Status = UninstallStatusFailed
 				result.Error = fmt.Errorf("uninstall failed and couldn't update lock: %w", uninstallErr)
 			}
 			return result
@@ -224,19 +223,19 @@ func uninstallSinglePackage(ctx context.Context, lockService lock.LockService, p
 		// Successfully removed from lock file
 		if uninstallErr != nil {
 			// Removed from lock but system uninstall failed - this is still success per spec
-			result.Status = "removed"
+			result.Status = UninstallStatusRemoved
 			result.Error = fmt.Errorf("removed from plonk management (system uninstall failed: %w)", uninstallErr)
 		} else {
 			// Both succeeded
-			result.Status = "removed"
+			result.Status = UninstallStatusRemoved
 		}
 	} else {
 		// Package not managed - pure pass-through
 		if uninstallErr != nil {
-			result.Status = "failed"
+			result.Status = UninstallStatusFailed
 			result.Error = fmt.Errorf("uninstall %s via %s: %w", packageName, manager, uninstallErr)
 		} else {
-			result.Status = "removed"
+			result.Status = UninstallStatusRemoved
 		}
 	}
 

@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/richhaase/plonk/internal/lock"
-	"github.com/richhaase/plonk/internal/operations"
 )
 
 // MockLockService implements the minimal lock.LockService interface for testing
@@ -168,7 +167,7 @@ func TestInstallPackages(t *testing.T) {
 		opts            InstallOptions
 		setupMock       func(*MockCommandExecutor)
 		expectedResults int
-		checkResults    func(t *testing.T, results []operations.Result)
+		checkResults    func(t *testing.T, results []InstallResult)
 	}{
 		{
 			name:     "dry run single package",
@@ -181,8 +180,8 @@ func TestInstallPackages(t *testing.T) {
 				// No commands should be executed in dry run
 			},
 			expectedResults: 1,
-			checkResults: func(t *testing.T, results []operations.Result) {
-				if results[0].Status != "would-add" {
+			checkResults: func(t *testing.T, results []InstallResult) {
+				if results[0].Status != InstallStatusWouldAdd {
 					t.Errorf("Expected status 'would-add', got %s", results[0].Status)
 				}
 				if results[0].Name != "vim" {
@@ -201,9 +200,9 @@ func TestInstallPackages(t *testing.T) {
 				// No commands should be executed in dry run
 			},
 			expectedResults: 3,
-			checkResults: func(t *testing.T, results []operations.Result) {
+			checkResults: func(t *testing.T, results []InstallResult) {
 				for i, pkg := range []string{"vim", "git", "curl"} {
-					if results[i].Status != "would-add" {
+					if results[i].Status != InstallStatusWouldAdd {
 						t.Errorf("Package %s: expected status 'would-add', got %s", pkg, results[i].Status)
 					}
 					if results[i].Name != pkg {
@@ -223,7 +222,7 @@ func TestInstallPackages(t *testing.T) {
 				// No commands should be executed
 			},
 			expectedResults: 0, // No packages processed due to immediate cancellation
-			checkResults: func(t *testing.T, results []operations.Result) {
+			checkResults: func(t *testing.T, results []InstallResult) {
 				// No specific checks needed
 			},
 		},
@@ -286,7 +285,7 @@ func TestUninstallPackages(t *testing.T) {
 		setupMock       func(*MockCommandExecutor)
 		setupLockFile   func(t *testing.T, configDir string)
 		expectedResults int
-		checkResults    func(t *testing.T, results []operations.Result)
+		checkResults    func(t *testing.T, results []UninstallResult)
 	}{
 		{
 			name:     "dry run single package",
@@ -302,8 +301,8 @@ func TestUninstallPackages(t *testing.T) {
 				// No lock file needed for dry run test
 			},
 			expectedResults: 1,
-			checkResults: func(t *testing.T, results []operations.Result) {
-				if results[0].Status != "would-remove" {
+			checkResults: func(t *testing.T, results []UninstallResult) {
+				if results[0].Status != UninstallStatusWouldRemove {
 					t.Errorf("Expected status 'would-remove', got %s", results[0].Status)
 				}
 				if results[0].Name != "vim" {
@@ -325,9 +324,9 @@ func TestUninstallPackages(t *testing.T) {
 				// No lock file needed for dry run test
 			},
 			expectedResults: 3,
-			checkResults: func(t *testing.T, results []operations.Result) {
+			checkResults: func(t *testing.T, results []UninstallResult) {
 				for i, pkg := range []string{"vim", "git", "curl"} {
-					if results[i].Status != "would-remove" {
+					if results[i].Status != UninstallStatusWouldRemove {
 						t.Errorf("Package %s: expected status 'would-remove', got %s", pkg, results[i].Status)
 					}
 					if results[i].Name != pkg {
@@ -350,7 +349,7 @@ func TestUninstallPackages(t *testing.T) {
 				// No lock file needed for dry run test
 			},
 			expectedResults: 0, // No packages processed due to immediate cancellation
-			checkResults: func(t *testing.T, results []operations.Result) {
+			checkResults: func(t *testing.T, results []UninstallResult) {
 				// No specific checks needed
 			},
 		},
@@ -378,11 +377,11 @@ func TestUninstallPackages(t *testing.T) {
 				}
 			},
 			expectedResults: 1,
-			checkResults: func(t *testing.T, results []operations.Result) {
+			checkResults: func(t *testing.T, results []UninstallResult) {
 				if results[0].Manager != "npm" {
 					t.Errorf("Expected manager 'npm' from lock file, got %s", results[0].Manager)
 				}
-				if results[0].Status != "would-remove" {
+				if results[0].Status != UninstallStatusWouldRemove {
 					t.Errorf("Expected status 'would-remove', got %s", results[0].Status)
 				}
 			},
