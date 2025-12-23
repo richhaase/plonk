@@ -56,17 +56,16 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 
 ### Resources (`internal/resources/`)
 
-#### Base Resource Infrastructure
-- `resource.go` - Resource interface and base types
-- `types.go` - Resource type definitions
-- `reconcile.go` - Resource reconciliation logic
+#### Shared Resource Infrastructure
+- `types.go` - Resource type definitions (Item, ItemState, Result)
+- `reconcile.go` - Generic reconciliation algorithm
+- `drift.go` - Drift detection interfaces
 
 #### Package Resources (`internal/resources/packages/`)
-- `resource.go` - Package resource implementation
-- `reconcile.go` - Package reconciliation logic
+- `spec.go` - Package specification and reconciliation logic
+- `reconcile.go` - Package reconciliation entry point
 - `apply.go` - Package apply operations
 - `operations.go` - Package operations (install, uninstall, etc.)
-- `spec.go` - Package specification handling
 - `executor.go` - Command execution abstraction
 - `interfaces.go` - Package manager interfaces
 - `registry.go` - Package manager registry with hardcoded implementations
@@ -79,7 +78,6 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 
 
 #### Dotfile Resources (`internal/resources/dotfiles/`)
-- `resource.go` - Dotfile resource implementation
 - `manager.go` - Dotfile management operations
 - `reconcile.go` - Dotfile reconciliation logic
 - `apply.go` - Dotfile apply operations
@@ -139,9 +137,8 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 
 ### status command
 - Entry: `internal/commands/status.go`
-- Resource reconciliation: `internal/resources/reconcile.go`
-- Package state: `internal/resources/packages/resource.go`
-- Dotfile state: `internal/resources/dotfiles/resource.go`
+- Package reconciliation: `internal/resources/packages/reconcile.go`
+- Dotfile reconciliation: `internal/resources/dotfiles/reconcile.go`
 
 ### doctor command
 - Entry: `internal/commands/doctor.go`
@@ -150,9 +147,8 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 
 ### diff command
 - Entry: `internal/commands/diff.go`
-- Resource reconciliation: `internal/resources/reconcile.go`
-- Package state: `internal/resources/packages/resource.go`
-- Dotfile state: `internal/resources/dotfiles/resource.go`
+- Package reconciliation: `internal/resources/packages/reconcile.go`
+- Dotfile reconciliation: `internal/resources/dotfiles/reconcile.go`
 
 ### config show/edit commands
 - Entry: `internal/commands/config_show.go`, `config_edit.go`
@@ -171,11 +167,6 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - Path filtering: `internal/resources/dotfiles/filter.go`
 
 ## Key Interfaces
-
-### Resource Interface
-Location: `internal/resources/resource.go`
-- Implemented by: Package and Dotfile resources
-- Used by: Reconciliation and orchestration
 
 ### PackageManager Interface
 Location: `internal/resources/packages/interfaces.go`

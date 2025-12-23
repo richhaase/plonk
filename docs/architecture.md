@@ -18,21 +18,14 @@ At its heart, Plonk is a state reconciliation engine. It operates on three key c
 
 This approach ensures idempotent operations - running `plonk apply` multiple times is safe and only changes what needs to be changed.
 
-### Resource Abstraction
+### Domain-Specific Implementations
 
-Plonk treats packages and dotfiles as "resources" with a common interface:
+Plonk implements packages and dotfiles as separate domains, each with their own reconciliation logic:
 
-```go
-// Simplified for documentation - see internal/resources/resource.go for exact signatures
-type Resource interface {
-    ID() string
-    Desired() []Item
-    Actual(ctx context.Context) []Item
-    Apply(ctx context.Context, item Item) error
-}
-```
+- **Packages**: Uses lock file as desired state, queries package managers for actual state
+- **Dotfiles**: Uses config directory as desired state, scans home directory for actual state
 
-This abstraction allows for future resource types (services, configurations, etc.) without major architectural changes.
+Both domains share common data types (`resources.Item`, `resources.Result`) and the reconciliation algorithm (`resources.ReconcileItems`), but implement their own domain-specific logic for fetching state and applying changes.
 
 ## Architecture Layers
 
@@ -222,10 +215,12 @@ See existing managers (e.g., `brew.go`, `npm.go`) for examples.
 
 ### Adding a New Resource Type
 
-1. Implement the `Resource` interface
-2. Add reconciliation logic
-3. Update orchestrator to handle the new type
-4. Add corresponding commands
+1. Create a new domain package in `internal/resources/`
+2. Implement functions to get desired and actual state
+3. Use `resources.ReconcileItems` for state comparison
+4. Implement apply logic for the domain
+5. Update orchestrator to call the new domain
+6. Add corresponding commands
 
 ### Adding a New Command
 
