@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/richhaase/plonk/internal/resources"
+	"github.com/richhaase/plonk/internal/dotfiles"
 )
 
 func TestNormalizePath(t *testing.T) {
@@ -82,85 +82,20 @@ func TestNormalizePath(t *testing.T) {
 	}
 }
 
-func TestGetSourceNameFromItem(t *testing.T) {
-	tests := []struct {
-		name     string
-		item     resources.Item
-		expected string
-	}{
-		{
-			name: "source in metadata",
-			item: resources.Item{
-				Name: ".zshrc",
-				Metadata: map[string]interface{}{
-					"source": "zshrc",
-				},
-			},
-			expected: "zshrc",
-		},
-		{
-			name: "no metadata, remove dot",
-			item: resources.Item{
-				Name: ".bashrc",
-			},
-			expected: "bashrc",
-		},
-		{
-			name: "no metadata, no dot",
-			item: resources.Item{
-				Name: "gitconfig",
-			},
-			expected: "gitconfig",
-		},
-		{
-			name: "nested path in metadata",
-			item: resources.Item{
-				Name: ".config/nvim/init.lua",
-				Metadata: map[string]interface{}{
-					"source": "config/nvim/init.lua",
-				},
-			},
-			expected: "config/nvim/init.lua",
-		},
-		{
-			name: "nested path no metadata",
-			item: resources.Item{
-				Name: ".config/helix/config.toml",
-			},
-			expected: "config/helix/config.toml",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := getSourceNameFromItem(tt.item)
-			if got != tt.expected {
-				t.Errorf("getSourceNameFromItem() = %v, want %v", got, tt.expected)
-			}
-		})
-	}
-}
-
 func TestFilterDriftedFile(t *testing.T) {
-	// Create test items
-	driftedFiles := []resources.Item{
+	// Create test items using DotfileItem
+	driftedFiles := []dotfiles.DotfileItem{
 		{
-			Name: ".zshrc",
-			Metadata: map[string]interface{}{
-				"destination": "~/.zshrc",
-			},
+			Name:        ".zshrc",
+			Destination: "~/.zshrc",
 		},
 		{
-			Name: ".bashrc",
-			Metadata: map[string]interface{}{
-				"destination": "~/.bashrc",
-			},
+			Name:        ".bashrc",
+			Destination: "~/.bashrc",
 		},
 		{
-			Name: ".config/nvim/init.lua",
-			Metadata: map[string]interface{}{
-				"destination": "~/.config/nvim/init.lua",
-			},
+			Name:        ".config/nvim/init.lua",
+			Destination: "~/.config/nvim/init.lua",
 		},
 	}
 
