@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/resources"
 )
 
 // ConfigHandlerImpl implements ConfigHandler interface
@@ -39,7 +38,7 @@ func NewConfigHandlerWithConfig(homeDir, configDir string, cfg *config.Config, r
 }
 
 // GetConfiguredDotfiles returns dotfiles defined in configuration
-func (ch *ConfigHandlerImpl) GetConfiguredDotfiles() ([]resources.Item, error) {
+func (ch *ConfigHandlerImpl) GetConfiguredDotfiles() ([]DotfileItem, error) {
 	// Use injected config for ignore patterns
 	cfg := ch.cfg
 
@@ -48,7 +47,7 @@ func (ch *ConfigHandlerImpl) GetConfiguredDotfiles() ([]resources.Item, error) {
 		return nil, fmt.Errorf("expanding config directory: %w", err)
 	}
 
-	items := make([]resources.Item, 0)
+	items := make([]DotfileItem, 0)
 
 	for source, destination := range targets {
 		// Check if source is a directory
@@ -66,16 +65,13 @@ func (ch *ConfigHandlerImpl) GetConfiguredDotfiles() ([]resources.Item, error) {
 		if err != nil {
 			// Source doesn't exist yet, treat as single file
 			name := ch.destinationToName(actualDestination)
-			items = append(items, resources.Item{
-				Name:   name,
-				Domain: "dotfile",
-				Path:   actualDestination,
-				Metadata: map[string]interface{}{
-					"source":      source,
-					"destination": actualDestination,
-					"isTemplate":  isTemplate,
-					"compare_fn":  ch.createCompareFunc(source, actualDestination),
-				},
+			items = append(items, DotfileItem{
+				Name:        name,
+				Source:      source,
+				Destination: actualDestination,
+				IsTemplate:  isTemplate,
+				IsDirectory: false,
+				CompareFunc: ch.createCompareFunc(source, actualDestination),
 			})
 			continue
 		}
@@ -83,31 +79,24 @@ func (ch *ConfigHandlerImpl) GetConfiguredDotfiles() ([]resources.Item, error) {
 		if info.IsDir() {
 			// For directories, just use the directory itself as one item
 			name := ch.destinationToName(actualDestination)
-			items = append(items, resources.Item{
-				Name:   name,
-				Domain: "dotfile",
-				Path:   actualDestination,
-				Metadata: map[string]interface{}{
-					"source":      source,
-					"destination": actualDestination,
-					"isDirectory": true,
-					"isTemplate":  isTemplate,
-					"compare_fn":  ch.createCompareFunc(source, actualDestination),
-				},
+			items = append(items, DotfileItem{
+				Name:        name,
+				Source:      source,
+				Destination: actualDestination,
+				IsTemplate:  isTemplate,
+				IsDirectory: true,
+				CompareFunc: ch.createCompareFunc(source, actualDestination),
 			})
 		} else {
 			// Single file
 			name := ch.destinationToName(actualDestination)
-			items = append(items, resources.Item{
-				Name:   name,
-				Domain: "dotfile",
-				Path:   actualDestination,
-				Metadata: map[string]interface{}{
-					"source":      source,
-					"destination": actualDestination,
-					"isTemplate":  isTemplate,
-					"compare_fn":  ch.createCompareFunc(source, actualDestination),
-				},
+			items = append(items, DotfileItem{
+				Name:        name,
+				Source:      source,
+				Destination: actualDestination,
+				IsTemplate:  isTemplate,
+				IsDirectory: false,
+				CompareFunc: ch.createCompareFunc(source, actualDestination),
 			})
 		}
 	}
@@ -116,7 +105,7 @@ func (ch *ConfigHandlerImpl) GetConfiguredDotfiles() ([]resources.Item, error) {
 }
 
 // GetActualDotfiles returns dotfiles currently present in the home directory
-func (ch *ConfigHandlerImpl) GetActualDotfiles(ctx context.Context) ([]resources.Item, error) {
+func (ch *ConfigHandlerImpl) GetActualDotfiles(ctx context.Context) ([]DotfileItem, error) {
 	// Use injected config to get ignore patterns and expand directories
 	cfg := ch.cfg
 
@@ -130,7 +119,7 @@ func (ch *ConfigHandlerImpl) GetActualDotfiles(ctx context.Context) ([]resources
 	// Create expander
 	expander := NewExpander(ch.homeDir, cfg.ExpandDirectories, scanner)
 
-	var items []resources.Item
+	var items []DotfileItem
 
 	// Scan home directory for dotfiles
 	scanResults, err := scanner.ScanDotfiles(ctx)
@@ -176,11 +165,10 @@ func (ch *ConfigHandlerImpl) GetActualDotfiles(ctx context.Context) ([]resources
 					return nil
 				}
 
-				items = append(items, resources.Item{
-					Name:   relPath,
-					State:  resources.StateUntracked,
-					Domain: "dotfile",
-					Path:   path,
+				items = append(items, DotfileItem{
+					Name:        relPath,
+					State:       StateUntracked,
+					Destination: path,
 					Metadata: map[string]interface{}{
 						"path": path,
 					},
@@ -195,12 +183,11 @@ func (ch *ConfigHandlerImpl) GetActualDotfiles(ctx context.Context) ([]resources
 		} else {
 			// Single file or unexpanded directory
 			expander.CheckDuplicate(result.Name)
-			items = append(items, resources.Item{
-				Name:     result.Name,
-				State:    resources.StateUntracked,
-				Domain:   "dotfile",
-				Path:     result.Path,
-				Metadata: result.Metadata,
+			items = append(items, DotfileItem{
+				Name:        result.Name,
+				State:       StateUntracked,
+				Destination: result.Path,
+				Metadata:    result.Metadata,
 			})
 		}
 	}
@@ -243,11 +230,10 @@ func (ch *ConfigHandlerImpl) GetActualDotfiles(ctx context.Context) ([]resources
 			}
 
 			// Add as an actual item so reconciliation can match it to desired
-			items = append(items, resources.Item{
-				Name:   relName,
-				State:  resources.StateUntracked,
-				Domain: "dotfile",
-				Path:   destPath,
+			items = append(items, DotfileItem{
+				Name:        relName,
+				State:       StateUntracked,
+				Destination: destPath,
 				Metadata: map[string]interface{}{
 					"path": destPath,
 				},

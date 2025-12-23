@@ -10,8 +10,8 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/packages"
+	"github.com/richhaase/plonk/internal/resources"
 	"github.com/spf13/cobra"
 )
 
@@ -190,7 +190,7 @@ func CompleteDotfilePaths(cmd *cobra.Command, args []string, toComplete string) 
 }
 
 // convertItemsToOutput converts resources.Item to output.Item
-// Note: This function is shared between packages and dotfiles commands
+// Note: This function is shared between dotfiles commands
 func convertItemsToOutput(items []resources.Item) []output.Item {
 	converted := make([]output.Item, len(items))
 	for i, item := range items {
@@ -200,6 +200,20 @@ func convertItemsToOutput(items []resources.Item) []output.Item {
 			Path:     item.Path,
 			State:    output.ItemState(item.State.String()),
 			Metadata: sanitizeMetadataForConversion(item.Metadata),
+		}
+	}
+	return converted
+}
+
+// convertPackageSpecsToOutput converts packages.PackageSpec to output.Item
+// This is used by the packages command to convert domain-specific types to output types
+func convertPackageSpecsToOutput(specs []packages.PackageSpec) []output.Item {
+	converted := make([]output.Item, len(specs))
+	for i, spec := range specs {
+		converted[i] = output.Item{
+			Name:    spec.Name,
+			Manager: spec.Manager,
+			State:   "", // State is set by the caller based on which list this came from
 		}
 	}
 	return converted

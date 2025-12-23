@@ -8,8 +8,64 @@ import (
 	"os"
 
 	"github.com/richhaase/plonk/internal/ignore"
-	"github.com/richhaase/plonk/internal/resources"
 )
+
+// ItemState represents the reconciliation state of a dotfile
+type ItemState int
+
+const (
+	StateManaged   ItemState = iota // In config AND present/installed
+	StateMissing                    // In config BUT not present/installed
+	StateUntracked                  // Present/installed BUT not in config
+	StateDegraded                   // In config AND present BUT content differs (drifted)
+)
+
+// String returns a human-readable representation of the item state
+func (s ItemState) String() string {
+	switch s {
+	case StateManaged:
+		return "managed"
+	case StateMissing:
+		return "missing"
+	case StateUntracked:
+		return "untracked"
+	case StateDegraded:
+		return "drifted"
+	default:
+		return "unknown"
+	}
+}
+
+// DotfileItem represents a dotfile with its state and metadata
+type DotfileItem struct {
+	// Name is the relative path from home directory (e.g., ".bashrc", ".config/nvim/init.vim")
+	Name string
+
+	// State is the reconciliation state of this dotfile
+	State ItemState
+
+	// Source is the path to the dotfile in the config directory (e.g., "dotfiles/bashrc")
+	Source string
+
+	// Destination is the target path where the dotfile should be deployed (e.g., "~/.bashrc")
+	Destination string
+
+	// IsTemplate indicates if this dotfile is a template that needs processing
+	IsTemplate bool
+
+	// IsDirectory indicates if this dotfile is a directory
+	IsDirectory bool
+
+	// CompareFunc is used for drift detection - compares source and destination
+	// Returns true if identical (no drift), false if different (drift detected)
+	CompareFunc func() (bool, error)
+
+	// Error contains any error message associated with this dotfile
+	Error string
+
+	// Metadata contains additional dotfile-specific information
+	Metadata map[string]interface{}
+}
 
 // PathResolver handles all path resolution and generation operations
 type PathResolver interface {
@@ -38,8 +94,8 @@ type DirectoryScanner interface {
 
 // ConfigHandler manages dotfile configuration operations
 type ConfigHandler interface {
-	GetConfiguredDotfiles() ([]resources.Item, error)
-	GetActualDotfiles(ctx context.Context) ([]resources.Item, error)
+	GetConfiguredDotfiles() ([]DotfileItem, error)
+	GetActualDotfiles(ctx context.Context) ([]DotfileItem, error)
 }
 
 // FileComparator handles file comparison operations

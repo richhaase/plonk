@@ -49,10 +49,10 @@ func runPackages(cmd *cobra.Command, args []string) error {
 
 	// Convert to output format
 	outputResult := output.Result{
-		Domain:    packageResult.Domain,
-		Managed:   convertItemsToOutput(packageResult.Managed),
-		Missing:   convertItemsToOutput(packageResult.Missing),
-		Untracked: convertItemsToOutput(packageResult.Untracked),
+		Domain:    "package",
+		Managed:   convertPackageSpecsToOutput(packageResult.Managed),
+		Missing:   convertPackageSpecsToOutput(packageResult.Missing),
+		Untracked: convertPackageSpecsToOutput(packageResult.Untracked),
 	}
 
 	// Prepare output

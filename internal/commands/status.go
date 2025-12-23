@@ -65,8 +65,8 @@ func runStatus(cmd *cobra.Command, args []string) error {
 
 	// Compose results into unified summary
 	results := map[string]resources.Result{
-		"package": packageResult,
-		"dotfile": dotfileResult,
+		"package": convertPackageResultToResources(packageResult),
+		"dotfile": convertDotfileResultToResources(dotfileResult),
 	}
 
 	summary := resources.ConvertResultsToSummary(results)
@@ -146,6 +146,105 @@ func convertItems(items []resources.Item) []output.Item {
 		}
 	}
 	return converted
+}
+
+// convertDotfileResultToResources converts dotfiles.Result to resources.Result
+func convertDotfileResultToResources(r dotfiles.Result) resources.Result {
+	return resources.Result{
+		Domain:    r.Domain,
+		Managed:   convertDotfileItemsToResources(r.Managed),
+		Missing:   convertDotfileItemsToResources(r.Missing),
+		Untracked: convertDotfileItemsToResources(r.Untracked),
+	}
+}
+
+// convertDotfileItemsToResources converts DotfileItem slice to resources.Item slice
+func convertDotfileItemsToResources(items []dotfiles.DotfileItem) []resources.Item {
+	result := make([]resources.Item, len(items))
+	for i, item := range items {
+		result[i] = convertDotfileItemToResource(item)
+	}
+	return result
+}
+
+// convertDotfileItemToResource converts a DotfileItem to resources.Item
+func convertDotfileItemToResource(item dotfiles.DotfileItem) resources.Item {
+	// Convert state
+	var state resources.ItemState
+	switch item.State {
+	case dotfiles.StateManaged:
+		state = resources.StateManaged
+	case dotfiles.StateMissing:
+		state = resources.StateMissing
+	case dotfiles.StateUntracked:
+		state = resources.StateUntracked
+	case dotfiles.StateDegraded:
+		state = resources.StateDegraded
+	}
+
+	// Build metadata
+	metadata := make(map[string]interface{})
+	if item.Metadata != nil {
+		for k, v := range item.Metadata {
+			metadata[k] = v
+		}
+	}
+	metadata["source"] = item.Source
+	metadata["destination"] = item.Destination
+	metadata["isTemplate"] = item.IsTemplate
+	metadata["isDirectory"] = item.IsDirectory
+	if item.CompareFunc != nil {
+		metadata["compare_fn"] = item.CompareFunc
+	}
+
+	return resources.Item{
+		Name:     item.Name,
+		State:    state,
+		Domain:   "dotfile",
+		Path:     item.Destination,
+		Error:    item.Error,
+		Metadata: metadata,
+	}
+}
+
+// convertPackageResultToResources converts packages.ReconcileResult to resources.Result
+func convertPackageResultToResources(r packages.ReconcileResult) resources.Result {
+	managed := make([]resources.Item, 0, len(r.Managed))
+	for _, pkg := range r.Managed {
+		managed = append(managed, resources.Item{
+			Name:    pkg.Name,
+			Manager: pkg.Manager,
+			Domain:  "package",
+			State:   resources.StateManaged,
+		})
+	}
+
+	missing := make([]resources.Item, 0, len(r.Missing))
+	for _, pkg := range r.Missing {
+		missing = append(missing, resources.Item{
+			Name:    pkg.Name,
+			Manager: pkg.Manager,
+			Domain:  "package",
+			State:   resources.StateMissing,
+		})
+	}
+
+	untracked := make([]resources.Item, 0, len(r.Untracked))
+	for _, pkg := range r.Untracked {
+		untracked = append(untracked, resources.Item{
+			Name:    pkg.Name,
+			Manager: pkg.Manager,
+			Domain:  "package",
+			State:   resources.StateUntracked,
+		})
+	}
+
+	return resources.Result{
+		Domain:    "package",
+		Managed:   managed,
+		Missing:   missing,
+		Untracked: untracked,
+	}
 }
 
 // Removed - using config.ConfigAdapter instead

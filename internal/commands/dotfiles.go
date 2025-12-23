@@ -52,9 +52,9 @@ func runDotfiles(cmd *cobra.Command, args []string) error {
 	// Convert to output format
 	outputResult := output.Result{
 		Domain:    dotfileResult.Domain,
-		Managed:   convertItemsToOutput(dotfileResult.Managed),
-		Missing:   convertItemsToOutput(dotfileResult.Missing),
-		Untracked: convertItemsToOutput(dotfileResult.Untracked),
+		Managed:   convertDotfileItemsToOutput(dotfileResult.Managed),
+		Missing:   convertDotfileItemsToOutput(dotfileResult.Missing),
+		Untracked: convertDotfileItemsToOutput(dotfileResult.Untracked),
 	}
 
 	// Prepare output
@@ -67,4 +67,44 @@ func runDotfiles(cmd *cobra.Command, args []string) error {
 	formatter := output.NewDotfilesStatusFormatter(outputData)
 	output.RenderOutput(formatter)
 	return nil
+}
+
+// convertDotfileItemsToOutput converts dotfiles.DotfileItem to output.Item
+// This is used by the dotfiles command to convert domain-specific types to output types
+func convertDotfileItemsToOutput(items []dotfiles.DotfileItem) []output.Item {
+	converted := make([]output.Item, len(items))
+	for i, item := range items {
+		// Convert state
+		var state output.ItemState
+		switch item.State {
+		case dotfiles.StateManaged:
+			state = output.ItemState("managed")
+		case dotfiles.StateMissing:
+			state = output.ItemState("missing")
+		case dotfiles.StateUntracked:
+			state = output.ItemState("untracked")
+		case dotfiles.StateDegraded:
+			state = output.ItemState("degraded")
+		}
+
+		// Build metadata
+		metadata := make(map[string]interface{})
+		if item.Metadata != nil {
+			for k, v := range item.Metadata {
+				metadata[k] = v
+			}
+		}
+		metadata["source"] = item.Source
+		metadata["destination"] = item.Destination
+		metadata["isTemplate"] = item.IsTemplate
+		metadata["isDirectory"] = item.IsDirectory
+
+		converted[i] = output.Item{
+			Name:     item.Name,
+			Path:     item.Destination,
+			State:    state,
+			Metadata: metadata,
+		}
+	}
+	return converted
 }

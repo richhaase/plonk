@@ -12,7 +12,6 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources"
 )
 
 // ApplyFilterOptions contains options for selective dotfile apply operations
@@ -51,7 +50,7 @@ func applyWithFilter(ctx context.Context, configDir, homeDir string, cfg *config
 	}
 
 	// Reconcile desired vs actual
-	reconciled := resources.ReconcileItems(desired, actual)
+	reconciled := ReconcileItems(desired, actual)
 
 	// If we have a filter, only keep items that match
 	if len(filter) > 0 {
@@ -64,7 +63,7 @@ func applyWithFilter(ctx context.Context, configDir, homeDir string, cfg *config
 	// Count missing and drifted dotfiles
 	applyCount := 0
 	for _, item := range reconciled {
-		if item.State == resources.StateMissing || item.State == resources.StateDegraded {
+		if item.State == StateMissing || item.State == StateDegraded {
 			applyCount++
 		}
 	}
@@ -84,7 +83,7 @@ func applyWithFilter(ctx context.Context, configDir, homeDir string, cfg *config
 	// Process missing and drifted dotfiles (need to be created/restored)
 	for _, item := range reconciled {
 		switch item.State {
-		case resources.StateMissing, resources.StateDegraded:
+		case StateMissing, StateDegraded:
 			// Start spinner for this dotfile
 			var spinner *output.Spinner
 			if spinnerManager != nil {
@@ -96,7 +95,7 @@ func applyWithFilter(ctx context.Context, configDir, homeDir string, cfg *config
 				err := applyDotfileItem(ctx, manager, item, opts)
 
 				action := output.DotfileOperation{
-					Source:      item.Path,
+					Source:      item.Destination,
 					Destination: item.Name,
 					Action:      "copy",
 					Status:      "added",
@@ -120,7 +119,7 @@ func applyWithFilter(ctx context.Context, configDir, homeDir string, cfg *config
 			} else {
 				// Dry run
 				actions = append(actions, output.DotfileOperation{
-					Source:      item.Path,
+					Source:      item.Destination,
 					Destination: item.Name,
 					Action:      "would-copy",
 					Status:      "would-add",
@@ -130,7 +129,7 @@ func applyWithFilter(ctx context.Context, configDir, homeDir string, cfg *config
 					spinner.Success(fmt.Sprintf("would-deploy %s", item.Name))
 				}
 			}
-		case resources.StateManaged:
+		case StateManaged:
 			// Already managed files are unchanged
 			summary.Unchanged++
 		}
@@ -151,17 +150,16 @@ func applyWithFilter(ctx context.Context, configDir, homeDir string, cfg *config
 }
 
 // applyDotfileItem applies a single dotfile item using the manager
-func applyDotfileItem(ctx context.Context, manager *Manager, item resources.Item, opts ApplyOptions) error {
-	// Get source from metadata
-	source, ok := item.Metadata["source"].(string)
-	if !ok || source == "" {
+func applyDotfileItem(ctx context.Context, manager *Manager, item DotfileItem, opts ApplyOptions) error {
+	// Get source and destination from item
+	source := item.Source
+	if source == "" {
 		return fmt.Errorf("missing source information for dotfile %s", item.Name)
 	}
 
-	// Get destination from metadata
-	destination, ok := item.Metadata["destination"].(string)
-	if !ok || destination == "" {
-		destination = item.Path // Fallback to Path if destination not in metadata
+	destination := item.Destination
+	if destination == "" {
+		return fmt.Errorf("missing destination information for dotfile %s", item.Name)
 	}
 
 	// Use the manager's ProcessDotfileForApply method
@@ -178,19 +176,15 @@ func applyDotfileItem(ctx context.Context, manager *Manager, item resources.Item
 }
 
 // filterItems filters reconciled items to only include those matching the filter set
-func filterItems(items []resources.Item, filter map[string]bool, homeDir string) []resources.Item {
+func filterItems(items []DotfileItem, filter map[string]bool, homeDir string) []DotfileItem {
 	if len(filter) == 0 {
 		return items
 	}
 
-	var filtered []resources.Item
+	var filtered []DotfileItem
 	for _, item := range items {
-		// Get the destination path from metadata
-		dest, ok := item.Metadata["destination"].(string)
-		if !ok {
-			// Try using item.Path as fallback
-			dest = item.Path
-		}
+		// Get the destination path from item
+		dest := item.Destination
 
 		// Normalize the destination path
 		normalizedDest := normalizeDestPath(dest, homeDir)

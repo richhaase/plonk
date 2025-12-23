@@ -35,13 +35,11 @@ func TestGetConfiguredDotfiles_RespectsIgnorePatterns(t *testing.T) {
 	}
 	foundKeep, foundIgnore := false, false
 	for _, it := range items {
-		if meta, ok := it.Metadata["source"].(string); ok {
-			if meta == "keepme" {
-				foundKeep = true
-			}
-			if meta == "ignoreme" {
-				foundIgnore = true
-			}
+		if it.Source == "keepme" {
+			foundKeep = true
+		}
+		if it.Source == "ignoreme" {
+			foundIgnore = true
 		}
 	}
 	if !foundKeep {

@@ -8,8 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/richhaase/plonk/internal/resources"
 )
 
 func TestApplyDriftedFiles(t *testing.T) {
@@ -58,12 +56,12 @@ func TestApplyDriftedFiles(t *testing.T) {
 		}
 
 		// Reconcile to detect drift
-		reconciled := resources.ReconcileItems(desired, actual)
+		reconciled := ReconcileItems(desired, actual)
 
 		// Find drifted item
-		var driftedItem *resources.Item
+		var driftedItem *DotfileItem
 		for i := range reconciled {
-			if reconciled[i].Name == ".bashrc" && reconciled[i].State == resources.StateDegraded {
+			if reconciled[i].Name == ".bashrc" && reconciled[i].State == StateDegraded {
 				driftedItem = &reconciled[i]
 				break
 			}

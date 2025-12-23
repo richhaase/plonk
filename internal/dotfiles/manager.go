@@ -130,11 +130,11 @@ func (m *Manager) ExpandDirectory(sourceDir, destDir string) ([]DotfileInfo, err
 }
 
 // Delegate config operations
-func (m *Manager) GetConfiguredDotfiles() ([]resources.Item, error) {
+func (m *Manager) GetConfiguredDotfiles() ([]DotfileItem, error) {
 	return m.configHandler.GetConfiguredDotfiles()
 }
 
-func (m *Manager) GetActualDotfiles(ctx context.Context) ([]resources.Item, error) {
+func (m *Manager) GetActualDotfiles(ctx context.Context) ([]DotfileItem, error) {
 	return m.configHandler.GetActualDotfiles(ctx)
 }
 
@@ -266,7 +266,7 @@ func (m *Manager) AddSingleFile(ctx context.Context, cfg *config.Config, filePat
 	configured, err := m.configHandler.GetConfiguredDotfiles()
 	if err == nil {
 		for _, item := range configured {
-			if meta, ok := item.Metadata["source"].(string); ok && meta == source {
+			if item.Source == source {
 				result.AlreadyManaged = true
 				break
 			}

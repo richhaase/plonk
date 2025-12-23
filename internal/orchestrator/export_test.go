@@ -25,12 +25,12 @@ func ReconcileAll(ctx context.Context, homeDir, configDir string) (map[string]re
 	}
 	results["dotfile"] = dotfileResult
 
-	// Reconcile packages using domain package
+	// Reconcile packages using domain package - convert result to resources.Result
 	packageResult, err := packages.ReconcileWithConfig(ctx, configDir, cfg)
 	if err != nil {
 		return nil, err
 	}
-	results["package"] = packageResult
+	results["package"] = convertPackageResultToResources(packageResult)
 
 	return results, nil
 }
