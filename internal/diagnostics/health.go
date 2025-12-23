@@ -51,6 +51,17 @@ const (
 	fileNotReadable
 )
 
+// NewHealthCheck creates a new HealthCheck with the given name, category, and message.
+// Status defaults to "pass".
+func NewHealthCheck(name, category, message string) HealthCheck {
+	return HealthCheck{
+		Name:     name,
+		Category: category,
+		Status:   "pass",
+		Message:  message,
+	}
+}
+
 // checkFileStatus checks if a file exists and is readable.
 // Returns the file content (if readable), status, and any error.
 func checkFileStatus(path string) ([]byte, fileStatus, error) {
@@ -107,12 +118,7 @@ func RunHealthChecksWithContext(ctx context.Context) HealthReport {
 
 // checkSystemRequirements checks basic system requirements
 func checkSystemRequirements() HealthCheck {
-	check := HealthCheck{
-		Name:     "System Requirements",
-		Category: "system",
-		Status:   "pass",
-		Message:  "System requirements met",
-	}
+	check := NewHealthCheck("System Requirements", "system", "System requirements met")
 
 	var issues []string
 	var suggestions []string
@@ -145,12 +151,7 @@ func checkSystemRequirements() HealthCheck {
 
 // checkEnvironmentVariables checks important environment variables
 func checkEnvironmentVariables() HealthCheck {
-	check := HealthCheck{
-		Name:     "Environment Variables",
-		Category: "environment",
-		Status:   "pass",
-		Message:  "Environment variables configured",
-	}
+	check := NewHealthCheck("Environment Variables", "environment", "Environment variables configured")
 
 	// Check important environment variables
 	homeDir := config.GetHomeDir()
@@ -178,12 +179,7 @@ func checkEnvironmentVariables() HealthCheck {
 
 // checkPermissions checks file and directory permissions
 func checkPermissions() HealthCheck {
-	check := HealthCheck{
-		Name:     "Permissions",
-		Category: "permissions",
-		Status:   "pass",
-		Message:  "File permissions are correct",
-	}
+	check := NewHealthCheck("Permissions", "permissions", "File permissions are correct")
 
 	configDir := config.GetDefaultConfigDirectory()
 
@@ -213,12 +209,7 @@ func checkPermissions() HealthCheck {
 
 // checkConfigurationFile checks for the existence and basic properties of the config file
 func checkConfigurationFile() HealthCheck {
-	check := HealthCheck{
-		Name:     "Configuration File",
-		Category: "configuration",
-		Status:   "pass",
-		Message:  "Configuration file exists",
-	}
+	check := NewHealthCheck("Configuration File", "configuration", "Configuration file exists")
 
 	configDir := config.GetDefaultConfigDirectory()
 	configPath := filepath.Join(configDir, "plonk.yaml")
@@ -244,12 +235,7 @@ func checkConfigurationFile() HealthCheck {
 
 // checkConfigurationValidity validates the configuration file format and content
 func checkConfigurationValidity() HealthCheck {
-	check := HealthCheck{
-		Name:     "Configuration Validity",
-		Category: "configuration",
-		Status:   "pass",
-		Message:  "Configuration is valid",
-	}
+	check := NewHealthCheck("Configuration Validity", "configuration", "Configuration is valid")
 
 	configDir := config.GetDefaultConfigDirectory()
 
@@ -284,12 +270,7 @@ func checkConfigurationValidity() HealthCheck {
 
 // checkLockFile checks for the existence and basic properties of the lock file
 func checkLockFile() HealthCheck {
-	check := HealthCheck{
-		Name:     "Lock File",
-		Category: "configuration",
-		Status:   "pass",
-		Message:  "Lock file exists",
-	}
+	check := NewHealthCheck("Lock File", "configuration", "Lock file exists")
 
 	configDir := config.GetDefaultConfigDirectory()
 	lockPath := filepath.Join(configDir, "plonk.lock")
@@ -323,12 +304,7 @@ func checkLockFile() HealthCheck {
 
 // checkLockFileValidity validates the lock file format and content
 func checkLockFileValidity() HealthCheck {
-	check := HealthCheck{
-		Name:     "Lock File Validity",
-		Category: "configuration",
-		Status:   "pass",
-		Message:  "Lock file is valid",
-	}
+	check := NewHealthCheck("Lock File Validity", "configuration", "Lock file is valid")
 
 	configDir := config.GetDefaultConfigDirectory()
 	lockService := lock.NewYAMLLockService(configDir)
@@ -377,12 +353,8 @@ func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
 
 	requiredManagers := collectRequiredManagers(config.GetDefaultConfigDirectory())
 
-	check := HealthCheck{
-		Name:     "Package Managers",
-		Category: "package-managers",
-		Status:   "info",
-		Message:  "No package managers configured",
-	}
+	check := NewHealthCheck("Package Managers", "package-managers", "No package managers configured")
+	check.Status = "info" // Override default "pass" status
 
 	if len(requiredManagers) == 0 {
 		return []HealthCheck{check}
@@ -437,12 +409,7 @@ func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
 
 // checkExecutablePath checks if plonk executable is accessible
 func checkExecutablePath() HealthCheck {
-	check := HealthCheck{
-		Name:     "Executable Path",
-		Category: "installation",
-		Status:   "pass",
-		Message:  "Executable is accessible",
-	}
+	check := NewHealthCheck("Executable Path", "installation", "Executable is accessible")
 
 	// Try to find plonk in PATH
 	plonkPath, err := exec.LookPath("plonk")
@@ -460,12 +427,7 @@ func checkExecutablePath() HealthCheck {
 
 // checkTemplates validates template files and local variables configuration
 func checkTemplates() HealthCheck {
-	check := HealthCheck{
-		Name:     "Templates",
-		Category: "dotfiles",
-		Status:   "pass",
-		Message:  "Template configuration is valid",
-	}
+	check := NewHealthCheck("Templates", "dotfiles", "Template configuration is valid")
 
 	configDir := config.GetDefaultConfigDirectory()
 	templateProcessor := dotfiles.NewTemplateProcessor(configDir)
