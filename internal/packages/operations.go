@@ -173,7 +173,6 @@ func uninstallSinglePackage(ctx context.Context, lockService lock.LockService, p
 		Manager: manager,
 	}
 
-	// Check if package is managed
 	isManaged := lockService.HasPackage(manager, packageName)
 
 	if dryRun {
@@ -181,7 +180,7 @@ func uninstallSinglePackage(ctx context.Context, lockService lock.LockService, p
 		return result
 	}
 
-	// Get package manager instance
+	// Get and validate package manager
 	pkgManager, err := getPackageManager(registry, manager)
 	if err != nil {
 		result.Status = UninstallStatusFailed
@@ -189,7 +188,6 @@ func uninstallSinglePackage(ctx context.Context, lockService lock.LockService, p
 		return result
 	}
 
-	// Check if manager is available
 	available, err := pkgManager.IsAvailable(ctx)
 	if err != nil {
 		result.Status = UninstallStatusFailed
@@ -202,44 +200,47 @@ func uninstallSinglePackage(ctx context.Context, lockService lock.LockService, p
 		return result
 	}
 
-	// Uninstall the package
+	// Perform uninstall and update lock file if managed
 	uninstallErr := pkgManager.Uninstall(ctx, packageName)
-
-	// If package is managed, remove from lock file
+	var lockErr error
 	if isManaged {
-		lockErr := lockService.RemovePackage(manager, packageName)
-		if lockErr != nil {
-			// If we removed from system but failed to update lock, still partial success
-			if uninstallErr == nil {
-				result.Status = UninstallStatusRemoved
-				result.Error = fmt.Errorf("package uninstalled but failed to update lock file: %w", lockErr)
-			} else {
-				result.Status = UninstallStatusFailed
-				result.Error = fmt.Errorf("uninstall failed and couldn't update lock: %w", uninstallErr)
-			}
-			return result
-		}
-
-		// Successfully removed from lock file
-		if uninstallErr != nil {
-			// Removed from lock but system uninstall failed - this is still success per spec
-			result.Status = UninstallStatusRemoved
-			result.Error = fmt.Errorf("removed from plonk management (system uninstall failed: %w)", uninstallErr)
-		} else {
-			// Both succeeded
-			result.Status = UninstallStatusRemoved
-		}
-	} else {
-		// Package not managed - pure pass-through
-		if uninstallErr != nil {
-			result.Status = UninstallStatusFailed
-			result.Error = fmt.Errorf("uninstall %s via %s: %w", packageName, manager, uninstallErr)
-		} else {
-			result.Status = UninstallStatusRemoved
-		}
+		lockErr = lockService.RemovePackage(manager, packageName)
 	}
 
+	// Resolve final outcome
+	result.Status, result.Error = resolveUninstallOutcome(packageName, manager, isManaged, uninstallErr, lockErr)
 	return result
+}
+
+// resolveUninstallOutcome determines the final status and error based on the combination
+// of isManaged, uninstallErr, and lockErr. This encapsulates the complex decision logic.
+func resolveUninstallOutcome(packageName, manager string, isManaged bool, uninstallErr, lockErr error) (UninstallStatus, error) {
+	// Unmanaged package - simple pass-through to system
+	if !isManaged {
+		if uninstallErr != nil {
+			return UninstallStatusFailed, fmt.Errorf("uninstall %s via %s: %w", packageName, manager, uninstallErr)
+		}
+		return UninstallStatusRemoved, nil
+	}
+
+	// Managed package - handle lock file update outcomes
+	if lockErr != nil {
+		if uninstallErr == nil {
+			// System uninstall succeeded but lock update failed - partial success
+			return UninstallStatusRemoved, fmt.Errorf("package uninstalled but failed to update lock file: %w", lockErr)
+		}
+		// Both failed
+		return UninstallStatusFailed, fmt.Errorf("uninstall failed and couldn't update lock: %w", uninstallErr)
+	}
+
+	// Lock file updated successfully
+	if uninstallErr != nil {
+		// Removed from plonk but system uninstall failed - still success per spec
+		return UninstallStatusRemoved, fmt.Errorf("removed from plonk management (system uninstall failed: %w)", uninstallErr)
+	}
+
+	// Both succeeded
+	return UninstallStatusRemoved, nil
 }
 
 // getPackageManager returns the appropriate package manager instance
