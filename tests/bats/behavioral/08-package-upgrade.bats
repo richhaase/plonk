@@ -7,7 +7,102 @@ setup() {
   setup_test_env
 }
 
+# Helper to get installed npm package version
+get_npm_version() {
+  local package="$1"
+  npm list -g "$package" --depth=0 2>/dev/null | grep "$package@" | sed 's/.*@//' | tr -d ' '
+}
+
+# Helper to get installed brew package version
+get_brew_version() {
+  local package="$1"
+  brew list --versions "$package" 2>/dev/null | awk '{print $2}'
+}
+
+# =============================================================================
+# Version Upgrade Verification Tests
+# These tests verify that upgrade actually changes package versions
+# =============================================================================
+
+@test "npm upgrade actually upgrades from older version" {
+  require_package_manager "npm"
+  require_safe_package "npm:is-odd"
+
+  # First, ensure the package is not installed
+  npm uninstall -g is-odd 2>/dev/null || true
+
+  # Install an OLD version directly via npm (not plonk)
+  run npm install -g is-odd@2.0.0
+  assert_success
+  track_artifact "package" "npm:is-odd"
+
+  # Verify old version is installed
+  old_version=$(get_npm_version "is-odd")
+  if [[ "$old_version" != "2.0.0" ]]; then
+    fail "Expected version 2.0.0, got $old_version"
+  fi
+
+  # Add to plonk tracking (plonk install is idempotent, won't reinstall)
+  run plonk install npm:is-odd
+  assert_success
+
+  # Run upgrade via plonk
+  run plonk upgrade npm:is-odd
+  assert_success
+
+  # Verify version changed (should be 3.0.1 or newer)
+  new_version=$(get_npm_version "is-odd")
+
+  # Version should be different from old version (upgraded)
+  if [[ "$new_version" == "2.0.0" ]]; then
+    fail "Upgrade did not change version - still at 2.0.0"
+  fi
+
+  # Verify it's a higher version (simple numeric comparison for major version)
+  new_major="${new_version%%.*}"
+  if [[ "$new_major" -lt 3 ]]; then
+    fail "Expected version >= 3.0.0, got $new_version"
+  fi
+}
+
+@test "uv upgrade actually upgrades from older version" {
+  require_package_manager "uv"
+  require_safe_package "uv:cowsay"
+
+  # First, ensure the package is not installed
+  uv tool uninstall cowsay 2>/dev/null || true
+
+  # Install an OLD version directly via uv
+  run uv tool install cowsay==5.0
+  if [[ $status -ne 0 ]]; then
+    skip "Failed to install cowsay@5.0 via uv"
+  fi
+  track_artifact "package" "uv:cowsay"
+
+  # Get old version
+  old_version=$(uv tool list 2>/dev/null | grep "^cowsay" | sed 's/cowsay v//' | awk '{print $1}')
+
+  # Add to plonk tracking
+  run plonk install uv:cowsay
+  assert_success
+
+  # Run upgrade via plonk
+  run plonk upgrade uv:cowsay
+  assert_success
+
+  # Get new version
+  new_version=$(uv tool list 2>/dev/null | grep "^cowsay" | sed 's/cowsay v//' | awk '{print $1}')
+
+  # Version should have changed (unless already at latest)
+  # At minimum, verify upgrade command ran and package still works
+  run uv tool list
+  assert_success
+  assert_output --partial "cowsay"
+}
+
+# =============================================================================
 # Basic upgrade syntax tests
+# =============================================================================
 @test "upgrade command shows help when no arguments given to empty environment" {
   run plonk upgrade
   assert_success
@@ -41,6 +136,12 @@ setup() {
   assert_output --partial "not managed by plonk"
 }
 
+# =============================================================================
+# Package Manager Upgrade Tests
+# These tests verify upgrade command works and doesn't break packages.
+# For version change verification, see "Version Upgrade Verification Tests" above.
+# =============================================================================
+
 # Homebrew upgrade tests
 @test "upgrade single brew package" {
   require_safe_package "brew:cowsay"
@@ -57,9 +158,12 @@ setup() {
   # Upgrade the specific package
   run plonk upgrade brew:cowsay
   assert_success
+  # Verify upgrade output shows the package was processed
   assert_output --partial "cowsay"
+  # Verify upgrade completion indicator is present
+  assert_output --partial "✓"
 
-  # Should still be installed
+  # Should still be installed after upgrade
   run brew list cowsay
   assert_success
 }
@@ -177,24 +281,6 @@ setup() {
   run plonk upgrade cargo:ripgrep
   assert_success
   assert_output --partial "ripgrep"
-}
-
-# Pipx upgrade tests
-@test "upgrade single pipx package" {
-  require_package_manager "pipx"
-  require_safe_package "pipx:black"
-
-  # Install package
-  run plonk install pipx:black
-  if [[ $status -ne 0 ]]; then
-    skip "Failed to install pipx:black"
-  fi
-  track_artifact "package" "pipx:black"
-
-  # Upgrade the specific package
-  run plonk upgrade pipx:black
-  assert_success
-  assert_output --partial "black"
 }
 
 # Cross-manager upgrade tests

@@ -204,24 +204,14 @@ require_package_manager() {
         skip "UV not available"
       fi
       ;;
-    pixi)
-      if ! command -v pixi >/dev/null 2>&1; then
-        skip "Pixi not available"
-      fi
-      ;;
-    pipx)
-      if ! command -v pipx >/dev/null 2>&1; then
-        skip "Pipx not available"
-      fi
-      ;;
     pnpm)
       if ! command -v pnpm >/dev/null 2>&1; then
         skip "Pnpm not available"
       fi
       ;;
-    conda)
-      if ! command -v conda >/dev/null 2>&1; then
-        skip "Conda not available"
+    bun)
+      if ! command -v bun >/dev/null 2>&1; then
+        skip "Bun not available"
       fi
       ;;
     *)
