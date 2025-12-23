@@ -5,7 +5,6 @@ package commands
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -189,22 +188,6 @@ func CompleteDotfilePaths(cmd *cobra.Command, args []string, toComplete string) 
 	return nil, cobra.ShellCompDirectiveDefault
 }
 
-// convertItemsToOutput converts resources.Item to output.Item
-// Note: This function is shared between dotfiles commands
-func convertItemsToOutput(items []resources.Item) []output.Item {
-	converted := make([]output.Item, len(items))
-	for i, item := range items {
-		converted[i] = output.Item{
-			Name:     item.Name,
-			Manager:  item.Manager,
-			Path:     item.Path,
-			State:    output.ItemState(item.State.String()),
-			Metadata: sanitizeMetadataForConversion(item.Metadata),
-		}
-	}
-	return converted
-}
-
 // convertPackageSpecsToOutput converts packages.PackageSpec to output.Item
 // This is used by the packages command to convert domain-specific types to output types
 func convertPackageSpecsToOutput(specs []packages.PackageSpec) []output.Item {
@@ -217,25 +200,4 @@ func convertPackageSpecsToOutput(specs []packages.PackageSpec) []output.Item {
 		}
 	}
 	return converted
-}
-
-// sanitizeMetadataForConversion sanitizes metadata by removing function-typed values
-// This is needed because metadata may contain functions (like compare_fn) that can't be serialized
-func sanitizeMetadataForConversion(meta map[string]interface{}) map[string]interface{} {
-	if meta == nil {
-		return nil
-	}
-	cleaned := make(map[string]interface{}, len(meta))
-	for k, v := range meta {
-		// Skip function types (they can't be serialized)
-		if v != nil {
-			// Use reflection to check if it's a function
-			val := reflect.ValueOf(v)
-			if val.Kind() == reflect.Func {
-				continue
-			}
-			cleaned[k] = v
-		}
-	}
-	return cleaned
 }
