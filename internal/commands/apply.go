@@ -152,16 +152,16 @@ func runSelectiveApply(ctx context.Context, paths []string, cfg *config.Config, 
 
 	// Build map of managed files (by deployed path)
 	for _, item := range dotfileResult.Managed {
-		if dest, ok := item.Metadata["destination"].(string); ok {
-			normalizedDest, err := normalizePathWithHome(dest, homeDir)
+		if item.Destination != "" {
+			normalizedDest, err := normalizePathWithHome(item.Destination, homeDir)
 			if err == nil {
 				managedDests[normalizedDest] = true
 			}
 		}
 	}
 	for _, item := range dotfileResult.Missing {
-		if dest, ok := item.Metadata["destination"].(string); ok {
-			normalizedDest, err := normalizePathWithHome(dest, homeDir)
+		if item.Destination != "" {
+			normalizedDest, err := normalizePathWithHome(item.Destination, homeDir)
 			if err == nil {
 				managedDests[normalizedDest] = true
 			}
