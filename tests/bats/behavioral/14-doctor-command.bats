@@ -70,11 +70,6 @@ setup() {
 # Package manager availability tests
 
 @test "doctor shows brew availability when installed" {
-  run which brew
-  if [[ $status -ne 0 ]]; then
-    skip "brew not available"
-  fi
-
   # Install a brew package to make brew appear in required managers
   require_safe_package "brew:cowsay"
   run plonk install brew:cowsay
@@ -88,11 +83,6 @@ setup() {
 }
 
 @test "doctor shows npm availability when installed" {
-  run which npm
-  if [[ $status -ne 0 ]]; then
-    skip "npm not available"
-  fi
-
   require_safe_package "npm:is-odd"
   run plonk install npm:is-odd
   assert_success

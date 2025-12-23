@@ -146,7 +146,6 @@ test_install_single() {
   local package="$2"
   local full_spec="${manager}:${package}"
 
-  require_package_manager "$manager"
   require_safe_package "$full_spec"
 
   run plonk install "$full_spec"
@@ -168,7 +167,6 @@ test_uninstall_managed() {
   local package="$2"
   local full_spec="${manager}:${package}"
 
-  require_package_manager "$manager"
   require_safe_package "$full_spec"
 
   # Install first
@@ -197,7 +195,6 @@ test_upgrade_single() {
   local package="$2"
   local full_spec="${manager}:${package}"
 
-  require_package_manager "$manager"
   require_safe_package "$full_spec"
 
   # Install first
@@ -222,8 +219,6 @@ test_upgrade_all_manager() {
   local manager="$1"
   shift
   local packages=("$@")
-
-  require_package_manager "$manager"
 
   # Install all packages
   local full_specs=()

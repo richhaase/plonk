@@ -48,12 +48,6 @@ setup() {
   require_safe_package "brew:figlet"
   require_safe_package "npm:is-odd"
 
-  # Check if npm is available
-  run which npm
-  if [[ $status -ne 0 ]]; then
-    skip "npm not available"
-  fi
-
   # Install packages to get them in lock file
   run plonk install brew:figlet
   assert_success
