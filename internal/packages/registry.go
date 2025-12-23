@@ -53,11 +53,11 @@ func (r *ManagerRegistry) GetManagerWithExecutor(name string, exec CommandExecut
 	case "go":
 		return NewGoManager(exec), nil
 	case "npm":
-		return NewNPMManager(ProviderNPM, exec), nil
+		return NewNPMManager(exec), nil
 	case "pnpm":
-		return NewNPMManager(ProviderPNPM, exec), nil
+		return NewPNPMManager(exec), nil
 	case "bun":
-		return NewNPMManager(ProviderBun, exec), nil
+		return NewBunManager(exec), nil
 	case "uv":
 		return NewUVManager(exec), nil
 	default:

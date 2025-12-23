@@ -11,23 +11,23 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNPMManager_IsAvailable(t *testing.T) {
+func TestPNPMManager_IsAvailable(t *testing.T) {
 	tests := []struct {
 		name      string
 		responses map[string]CommandResponse
 		expected  bool
 	}{
 		{
-			name: "npm available",
+			name: "pnpm available",
 			responses: map[string]CommandResponse{
-				"npm --version": {Output: []byte("10.2.0")},
+				"pnpm --version": {Output: []byte("8.10.0")},
 			},
 			expected: true,
 		},
 		{
-			name: "npm command fails",
+			name: "pnpm command fails",
 			responses: map[string]CommandResponse{
-				"npm --version": {Error: fmt.Errorf("command failed")},
+				"pnpm --version": {Error: fmt.Errorf("command failed")},
 			},
 			expected: false,
 		},
@@ -36,7 +36,7 @@ func TestNPMManager_IsAvailable(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mock := &MockCommandExecutor{Responses: tt.responses}
-			mgr := NewNPMManager(mock)
+			mgr := NewPNPMManager(mock)
 
 			result, err := mgr.IsAvailable(context.Background())
 
@@ -46,7 +46,7 @@ func TestNPMManager_IsAvailable(t *testing.T) {
 	}
 }
 
-func TestNPMManager_ListInstalled(t *testing.T) {
+func TestPNPMManager_ListInstalled(t *testing.T) {
 	tests := []struct {
 		name     string
 		output   string
@@ -54,27 +54,27 @@ func TestNPMManager_ListInstalled(t *testing.T) {
 	}{
 		{
 			name: "multiple packages",
-			output: `{
+			output: `[{
 				"dependencies": {
 					"typescript": {"version": "5.0.0"},
 					"prettier": {"version": "3.0.0"}
 				}
-			}`,
+			}]`,
 			expected: []string{"typescript", "prettier"},
 		},
 		{
-			name:     "empty dependencies",
-			output:   `{"dependencies": {}}`,
+			name:     "empty array",
+			output:   `[]`,
 			expected: []string{},
 		},
 		{
 			name: "scoped packages",
-			output: `{
+			output: `[{
 				"dependencies": {
 					"@types/node": {"version": "20.0.0"},
 					"typescript": {"version": "5.0.0"}
 				}
-			}`,
+			}]`,
 			expected: []string{"@types/node", "typescript"},
 		},
 	}
@@ -83,10 +83,10 @@ func TestNPMManager_ListInstalled(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mock := &MockCommandExecutor{
 				Responses: map[string]CommandResponse{
-					"npm list -g --depth=0 --json": {Output: []byte(tt.output)},
+					"pnpm list -g --depth=0 --json": {Output: []byte(tt.output)},
 				},
 			}
-			mgr := NewNPMManager(mock)
+			mgr := NewPNPMManager(mock)
 
 			result, err := mgr.ListInstalled(context.Background())
 
@@ -96,7 +96,7 @@ func TestNPMManager_ListInstalled(t *testing.T) {
 	}
 }
 
-func TestNPMManager_Install(t *testing.T) {
+func TestPNPMManager_Install(t *testing.T) {
 	tests := []struct {
 		name        string
 		pkg         string
@@ -108,14 +108,14 @@ func TestNPMManager_Install(t *testing.T) {
 		{
 			name:        "install success",
 			pkg:         "typescript",
-			cmdKey:      "npm install -g typescript",
+			cmdKey:      "pnpm add -g typescript",
 			output:      "added 1 package",
 			expectError: false,
 		},
 		{
 			name:        "already installed (idempotent)",
 			pkg:         "typescript",
-			cmdKey:      "npm install -g typescript",
+			cmdKey:      "pnpm add -g typescript",
 			output:      "package already installed",
 			err:         fmt.Errorf("exit status 1"),
 			expectError: false,
@@ -123,7 +123,7 @@ func TestNPMManager_Install(t *testing.T) {
 		{
 			name:        "install failure",
 			pkg:         "nonexistent",
-			cmdKey:      "npm install -g nonexistent",
+			cmdKey:      "pnpm add -g nonexistent",
 			output:      "404 Not Found",
 			err:         fmt.Errorf("exit status 1"),
 			expectError: true,
@@ -137,7 +137,7 @@ func TestNPMManager_Install(t *testing.T) {
 					tt.cmdKey: {Output: []byte(tt.output), Error: tt.err},
 				},
 			}
-			mgr := NewNPMManager(mock)
+			mgr := NewPNPMManager(mock)
 
 			err := mgr.Install(context.Background(), tt.pkg)
 
@@ -150,7 +150,7 @@ func TestNPMManager_Install(t *testing.T) {
 	}
 }
 
-func TestNPMManager_Uninstall(t *testing.T) {
+func TestPNPMManager_Uninstall(t *testing.T) {
 	tests := []struct {
 		name        string
 		pkg         string
@@ -162,14 +162,14 @@ func TestNPMManager_Uninstall(t *testing.T) {
 		{
 			name:        "uninstall success",
 			pkg:         "typescript",
-			cmdKey:      "npm uninstall -g typescript",
+			cmdKey:      "pnpm remove -g typescript",
 			output:      "removed 1 package",
 			expectError: false,
 		},
 		{
 			name:        "not installed (idempotent)",
 			pkg:         "typescript",
-			cmdKey:      "npm uninstall -g typescript",
+			cmdKey:      "pnpm remove -g typescript",
 			output:      "package not installed",
 			err:         fmt.Errorf("exit status 1"),
 			expectError: false,
@@ -183,7 +183,7 @@ func TestNPMManager_Uninstall(t *testing.T) {
 					tt.cmdKey: {Output: []byte(tt.output), Error: tt.err},
 				},
 			}
-			mgr := NewNPMManager(mock)
+			mgr := NewPNPMManager(mock)
 
 			err := mgr.Uninstall(context.Background(), tt.pkg)
 
@@ -196,7 +196,7 @@ func TestNPMManager_Uninstall(t *testing.T) {
 	}
 }
 
-func TestNPMManager_Upgrade(t *testing.T) {
+func TestPNPMManager_Upgrade(t *testing.T) {
 	tests := []struct {
 		name        string
 		packages    []string
@@ -207,7 +207,7 @@ func TestNPMManager_Upgrade(t *testing.T) {
 			name:     "upgrade single package",
 			packages: []string{"typescript"},
 			responses: map[string]CommandResponse{
-				"npm update -g typescript": {Output: []byte("updated")},
+				"pnpm update -g typescript": {Output: []byte("updated")},
 			},
 			expectError: false,
 		},
@@ -215,7 +215,7 @@ func TestNPMManager_Upgrade(t *testing.T) {
 			name:     "upgrade all packages",
 			packages: []string{},
 			responses: map[string]CommandResponse{
-				"npm update -g": {Output: []byte("updated all")},
+				"pnpm update -g": {Output: []byte("updated all")},
 			},
 			expectError: false,
 		},
@@ -223,8 +223,8 @@ func TestNPMManager_Upgrade(t *testing.T) {
 			name:     "upgrade multiple packages",
 			packages: []string{"typescript", "prettier"},
 			responses: map[string]CommandResponse{
-				"npm update -g typescript": {Output: []byte("updated")},
-				"npm update -g prettier":   {Output: []byte("updated")},
+				"pnpm update -g typescript": {Output: []byte("updated")},
+				"pnpm update -g prettier":   {Output: []byte("updated")},
 			},
 			expectError: false,
 		},
@@ -233,7 +233,7 @@ func TestNPMManager_Upgrade(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mock := &MockCommandExecutor{Responses: tt.responses}
-			mgr := NewNPMManager(mock)
+			mgr := NewPNPMManager(mock)
 
 			err := mgr.Upgrade(context.Background(), tt.packages)
 
@@ -246,14 +246,14 @@ func TestNPMManager_Upgrade(t *testing.T) {
 	}
 }
 
-func TestNPMManager_SelfInstall(t *testing.T) {
+func TestPNPMManager_SelfInstall(t *testing.T) {
 	t.Run("already installed", func(t *testing.T) {
 		mock := &MockCommandExecutor{
 			Responses: map[string]CommandResponse{
-				"npm --version": {Output: []byte("10.0.0")},
+				"pnpm --version": {Output: []byte("8.0.0")},
 			},
 		}
-		mgr := NewNPMManager(mock)
+		mgr := NewPNPMManager(mock)
 
 		err := mgr.SelfInstall(context.Background())
 
@@ -264,35 +264,51 @@ func TestNPMManager_SelfInstall(t *testing.T) {
 	t.Run("installs via brew", func(t *testing.T) {
 		mock := &MockCommandExecutor{
 			Responses: map[string]CommandResponse{
-				"npm --version":       {Error: fmt.Errorf("not found")},
-				"brew install node": {Output: []byte("installed")},
+				"pnpm --version":     {Error: fmt.Errorf("not found")},
+				"brew install pnpm": {Output: []byte("installed")},
 			},
 		}
-		mgr := NewNPMManager(mock)
+		mgr := NewPNPMManager(mock)
 
 		err := mgr.SelfInstall(context.Background())
 
 		assert.NoError(t, err)
 	})
 
-	t.Run("returns error when brew not available", func(t *testing.T) {
-		// Don't include any brew responses, so LookPath will fail
+	t.Run("installs via npm when brew fails", func(t *testing.T) {
 		mock := &MockCommandExecutor{
 			Responses: map[string]CommandResponse{
-				"npm --version": {Error: fmt.Errorf("not found")},
+				"pnpm --version":        {Error: fmt.Errorf("not found")},
+				"brew install pnpm":    {Error: fmt.Errorf("brew failed")},
+				"npm install -g pnpm": {Output: []byte("installed")},
 			},
 		}
-		mgr := NewNPMManager(mock)
+		mgr := NewPNPMManager(mock)
 
 		err := mgr.SelfInstall(context.Background())
 
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "nodejs.org")
+		assert.NoError(t, err)
+	})
+
+	t.Run("installs via curl when brew and npm fail", func(t *testing.T) {
+		mock := &MockCommandExecutor{
+			Responses: map[string]CommandResponse{
+				"pnpm --version":                                       {Error: fmt.Errorf("not found")},
+				"brew install pnpm":                                   {Error: fmt.Errorf("brew failed")},
+				"npm install -g pnpm":                                 {Error: fmt.Errorf("npm failed")},
+				"sh -c curl -fsSL https://get.pnpm.io/install.sh | sh -": {Output: []byte("installed")},
+			},
+		}
+		mgr := NewPNPMManager(mock)
+
+		err := mgr.SelfInstall(context.Background())
+
+		assert.NoError(t, err)
 	})
 }
 
-func TestNPMManager_ImplementsInterfaces(t *testing.T) {
-	mgr := NewNPMManager(nil)
+func TestPNPMManager_ImplementsInterfaces(t *testing.T) {
+	mgr := NewPNPMManager(nil)
 
 	// Verify PackageManager interface
 	var _ PackageManager = mgr

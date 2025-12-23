@@ -23,8 +23,8 @@ func TestManagerRegistry_GetManager_ReturnsCorrectType(t *testing.T) {
 		{"gem", "gem", &GemManager{}},
 		{"go", "go", &GoManager{}},
 		{"npm", "npm", &NPMManager{}},
-		{"pnpm", "pnpm", &NPMManager{}},
-		{"bun", "bun", &NPMManager{}},
+		{"pnpm", "pnpm", &PNPMManager{}},
+		{"bun", "bun", &BunManager{}},
 		{"uv", "uv", &UVManager{}},
 	}
 
