@@ -43,22 +43,22 @@ func TestApplyDriftedFiles(t *testing.T) {
 			t.Fatalf("Failed to create dest file: %v", err)
 		}
 
-		// Create manager and resource
+		// Create manager
 		manager := NewManager(homeDir, configDir)
-		resource := NewDotfileResource(manager, false)
 
-		// Get configured dotfiles
-		configured, err := manager.GetConfiguredDotfiles()
+		// Get desired and actual states
+		desired, err := manager.GetConfiguredDotfiles()
 		if err != nil {
 			t.Fatalf("Failed to get configured dotfiles: %v", err)
 		}
-		resource.SetDesired(configured)
+
+		actual, err := manager.GetActualDotfiles(ctx)
+		if err != nil {
+			t.Fatalf("Failed to get actual dotfiles: %v", err)
+		}
 
 		// Reconcile to detect drift
-		reconciled, err := resources.ReconcileResource(ctx, resource)
-		if err != nil {
-			t.Fatalf("Reconcile failed: %v", err)
-		}
+		reconciled := resources.ReconcileItems(desired, actual)
 
 		// Find drifted item
 		var driftedItem *resources.Item
@@ -73,8 +73,12 @@ func TestApplyDriftedFiles(t *testing.T) {
 			t.Fatal("Drifted bashrc not found")
 		}
 
-		// Apply the drifted item
-		err = resource.Apply(ctx, *driftedItem)
+		// Apply the drifted item using the helper function
+		opts := ApplyOptions{
+			DryRun: false,
+			Backup: true,
+		}
+		err = applyDotfileItem(ctx, manager, *driftedItem, opts)
 		if err != nil {
 			t.Fatalf("Apply failed: %v", err)
 		}

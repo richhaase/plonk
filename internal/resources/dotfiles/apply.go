@@ -36,22 +36,22 @@ func Apply(ctx context.Context, configDir, homeDir string, cfg *config.Config, d
 
 // applyWithFilter is the internal implementation that supports optional filtering
 func applyWithFilter(ctx context.Context, configDir, homeDir string, cfg *config.Config, dryRun bool, filter map[string]bool) (output.DotfileResults, error) {
-	// Create dotfile resource
 	manager := NewManagerWithConfig(homeDir, configDir, cfg)
-	dotfileResource := NewDotfileResource(manager, dryRun)
 
-	// Get configured dotfiles and set as desired
-	configuredItems, err := manager.GetConfiguredDotfiles()
+	// Get desired state from config
+	desired, err := manager.GetConfiguredDotfiles()
 	if err != nil {
 		return output.DotfileResults{}, err
 	}
-	dotfileResource.SetDesired(configuredItems)
 
-	// Reconcile to find what needs to be done
-	reconciled, err := resources.ReconcileResource(ctx, dotfileResource)
+	// Get actual state from filesystem
+	actual, err := manager.GetActualDotfiles(ctx)
 	if err != nil {
 		return output.DotfileResults{}, err
 	}
+
+	// Reconcile desired vs actual
+	reconciled := resources.ReconcileItems(desired, actual)
 
 	// If we have a filter, only keep items that match
 	if len(filter) > 0 {
@@ -75,6 +75,12 @@ func applyWithFilter(ctx context.Context, configDir, homeDir string, cfg *config
 		spinnerManager = output.NewSpinnerManager(applyCount)
 	}
 
+	// Apply options for file operations
+	opts := ApplyOptions{
+		DryRun: dryRun,
+		Backup: true,
+	}
+
 	// Process missing and drifted dotfiles (need to be created/restored)
 	for _, item := range reconciled {
 		switch item.State {
@@ -86,8 +92,8 @@ func applyWithFilter(ctx context.Context, configDir, homeDir string, cfg *config
 			}
 
 			if !dryRun {
-				// Apply the change using the resource interface
-				err := dotfileResource.Apply(ctx, item)
+				// Apply the change directly using the manager
+				err := applyDotfileItem(ctx, manager, item, opts)
 
 				action := output.DotfileOperation{
 					Source:      item.Path,
@@ -131,7 +137,7 @@ func applyWithFilter(ctx context.Context, configDir, homeDir string, cfg *config
 	}
 
 	// For selective apply, TotalFiles reflects filtered count
-	totalFiles := len(configuredItems)
+	totalFiles := len(desired)
 	if len(filter) > 0 {
 		totalFiles = len(reconciled)
 	}
@@ -142,6 +148,33 @@ func applyWithFilter(ctx context.Context, configDir, homeDir string, cfg *config
 		Actions:    actions,
 		Summary:    summary,
 	}, nil
+}
+
+// applyDotfileItem applies a single dotfile item using the manager
+func applyDotfileItem(ctx context.Context, manager *Manager, item resources.Item, opts ApplyOptions) error {
+	// Get source from metadata
+	source, ok := item.Metadata["source"].(string)
+	if !ok || source == "" {
+		return fmt.Errorf("missing source information for dotfile %s", item.Name)
+	}
+
+	// Get destination from metadata
+	destination, ok := item.Metadata["destination"].(string)
+	if !ok || destination == "" {
+		destination = item.Path // Fallback to Path if destination not in metadata
+	}
+
+	// Use the manager's ProcessDotfileForApply method
+	result, err := manager.ProcessDotfileForApply(ctx, source, destination, opts)
+	if err != nil {
+		return fmt.Errorf("applying dotfile %s: %w", item.Name, err)
+	}
+
+	if result.Status != "added" && result.Status != "updated" {
+		return fmt.Errorf("unexpected status %s when applying dotfile %s", result.Status, item.Name)
+	}
+
+	return nil
 }
 
 // filterItems filters reconciled items to only include those matching the filter set

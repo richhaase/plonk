@@ -18,28 +18,26 @@ func Reconcile(ctx context.Context, homeDir, configDir string) (resources.Result
 
 // ReconcileWithConfig reconciles dotfiles using injected config
 func ReconcileWithConfig(ctx context.Context, homeDir, configDir string, cfg *config.Config) (resources.Result, error) {
-	// Create dotfile resource
 	manager := NewManagerWithConfig(homeDir, configDir, cfg)
-	dotfileResource := NewDotfileResource(manager, false)
 
-	// Get configured dotfiles and set as desired
-	configured, err := manager.GetConfiguredDotfiles()
-	if err != nil {
-		return resources.Result{}, err
-	}
-	dotfileResource.SetDesired(configured)
-
-	// Reconcile using the resource interface
-	reconciled, err := resources.ReconcileResource(ctx, dotfileResource)
+	// Get desired state from config
+	desired, err := manager.GetConfiguredDotfiles()
 	if err != nil {
 		return resources.Result{}, err
 	}
 
-	// Convert to Result format
+	// Get actual state from filesystem
+	actual, err := manager.GetActualDotfiles(ctx)
+	if err != nil {
+		return resources.Result{}, err
+	}
+
+	// Reconcile desired vs actual using the generic reconciliation algorithm
+	reconciled := resources.ReconcileItems(desired, actual)
+
+	// Group by state for the result
 	managed, missing, untracked := resources.GroupItemsByState(reconciled)
 
-	// GroupItemsByState already includes StateDegraded items in the managed list
-	// No need to append them again
 	return resources.Result{
 		Domain:    "dotfile",
 		Managed:   managed,

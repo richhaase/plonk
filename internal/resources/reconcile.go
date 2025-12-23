@@ -3,10 +3,6 @@
 
 package resources
 
-import (
-	"context"
-)
-
 // ReconcileItems compares desired vs actual state and categorizes items.
 // This is a convenience wrapper around ReconcileItemsWithKey using Item.Name as the key.
 func ReconcileItems(desired, actual []Item) []Item {
@@ -116,14 +112,4 @@ func GroupItemsByState(items []Item) (managed, missing, untracked []Item) {
 	}
 
 	return managed, missing, untracked
-}
-
-// ReconcileResource performs reconciliation for a Resource interface
-func ReconcileResource(ctx context.Context, resource Resource) ([]Item, error) {
-	desired := resource.Desired()
-	actual := resource.Actual(ctx)
-
-	// Use the reconciliation helper from resources package
-	reconciled := ReconcileItems(desired, actual)
-	return reconciled, nil
 }
