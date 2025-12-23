@@ -5,6 +5,7 @@ package diagnostics
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -14,8 +15,8 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/dotfiles"
+	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/packages"
 )
 
@@ -470,9 +471,10 @@ func checkTemplates() HealthCheck {
 		tmplPath := filepath.Join(configDir, tmpl)
 		if err := templateProcessor.ValidateTemplate(tmplPath); err != nil {
 			validationErrors = append(validationErrors, err.Error())
-			// Extract variable name from error message
-			if varName := extractVarNameFromError(err.Error()); varName != "" {
-				missingVars[varName] = true
+			// Extract variable name from structured error
+			var validationErr *dotfiles.TemplateValidationError
+			if errors.As(err, &validationErr) && validationErr.VarName != "" {
+				missingVars[validationErr.VarName] = true
 			}
 		}
 	}
@@ -508,22 +510,6 @@ func checkTemplates() HealthCheck {
 	}
 
 	return check
-}
-
-// extractVarNameFromError extracts the variable name from a template error message
-func extractVarNameFromError(errStr string) string {
-	// Pattern: "requires variable 'X' which is not defined"
-	const prefix = "requires variable '"
-	idx := strings.Index(errStr, prefix)
-	if idx == -1 {
-		return ""
-	}
-	start := idx + len(prefix)
-	end := strings.Index(errStr[start:], "'")
-	if end == -1 {
-		return ""
-	}
-	return errStr[start : start+end]
 }
 
 // calculateOverallHealth determines overall system health from individual checks

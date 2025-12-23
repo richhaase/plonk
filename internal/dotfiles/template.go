@@ -25,6 +25,17 @@ const (
 	LocalVarsFile = "local.yaml"
 )
 
+// TemplateValidationError represents a template validation failure with structured data.
+type TemplateValidationError struct {
+	TemplateName string // Name of the template file
+	VarName      string // Name of the missing variable (if applicable)
+	Message      string // Human-readable error message
+}
+
+func (e *TemplateValidationError) Error() string {
+	return e.Message
+}
+
 // TemplateProcessor handles template detection, variable loading, and rendering
 type TemplateProcessor interface {
 	// IsTemplate checks if a file should be treated as a template
@@ -237,19 +248,26 @@ func (tp *TemplateProcessorImpl) formatTemplateError(templatePath string, err er
 		// Extract the key name from the error
 		varName := extractMissingVarName(errStr)
 		if varName != "" {
-			return fmt.Errorf(
-				"template '%s' requires variable '%s' which is not defined in %s",
-				templateName,
-				varName,
-				filepath.Join(LocalVarsDir, LocalVarsFile),
-			)
+			return &TemplateValidationError{
+				TemplateName: templateName,
+				VarName:      varName,
+				Message: fmt.Sprintf(
+					"template '%s' requires variable '%s' which is not defined in %s",
+					templateName,
+					varName,
+					filepath.Join(LocalVarsDir, LocalVarsFile),
+				),
+			}
 		}
-		return fmt.Errorf(
-			"template '%s' requires a variable that is not defined in %s: %w",
-			templateName,
-			filepath.Join(LocalVarsDir, LocalVarsFile),
-			err,
-		)
+		return &TemplateValidationError{
+			TemplateName: templateName,
+			Message: fmt.Sprintf(
+				"template '%s' requires a variable that is not defined in %s: %v",
+				templateName,
+				filepath.Join(LocalVarsDir, LocalVarsFile),
+				err,
+			),
+		}
 	}
 
 	return fmt.Errorf("template execution failed for '%s': %w", templateName, err)
