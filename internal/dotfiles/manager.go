@@ -12,8 +12,8 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/ignore"
+	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources"
 )
 
 // Manager coordinates dotfile operations using focused components
@@ -194,8 +194,8 @@ func (m *Manager) CreateDotfileInfo(source, destination string) DotfileInfo {
 }
 
 // High-level operations that coordinate components
-func (m *Manager) AddFiles(ctx context.Context, cfg *config.Config, dotfilePaths []string, opts AddOptions) ([]resources.OperationResult, error) {
-	var allResults []resources.OperationResult
+func (m *Manager) AddFiles(ctx context.Context, cfg *config.Config, dotfilePaths []string, opts AddOptions) ([]operations.Result, error) {
+	var allResults []operations.Result
 
 	for _, dotfilePath := range dotfilePaths {
 		results := m.AddSingleDotfile(ctx, cfg, dotfilePath, opts.DryRun)
@@ -205,11 +205,11 @@ func (m *Manager) AddFiles(ctx context.Context, cfg *config.Config, dotfilePaths
 	return allResults, nil
 }
 
-func (m *Manager) AddSingleDotfile(ctx context.Context, cfg *config.Config, dotfilePath string, dryRun bool) []resources.OperationResult {
+func (m *Manager) AddSingleDotfile(ctx context.Context, cfg *config.Config, dotfilePath string, dryRun bool) []operations.Result {
 	// Resolve and validate dotfile path
 	resolvedPath, err := m.pathResolver.ResolveDotfilePath(dotfilePath)
 	if err != nil {
-		return []resources.OperationResult{{
+		return []operations.Result{{
 			Name:   dotfilePath,
 			Status: "failed",
 			Error:  fmt.Errorf("failed to resolve dotfile path %s: %w", dotfilePath, err),
@@ -219,14 +219,14 @@ func (m *Manager) AddSingleDotfile(ctx context.Context, cfg *config.Config, dotf
 	// Check if dotfile exists
 	info, err := os.Stat(resolvedPath)
 	if os.IsNotExist(err) {
-		return []resources.OperationResult{{
+		return []operations.Result{{
 			Name:   dotfilePath,
 			Status: "failed",
 			Error:  fmt.Errorf("dotfile does not exist: %s", resolvedPath),
 		}}
 	}
 	if err != nil {
-		return []resources.OperationResult{{
+		return []operations.Result{{
 			Name:   dotfilePath,
 			Status: "failed",
 			Error:  fmt.Errorf("failed to check dotfile: %w", err),
@@ -240,11 +240,11 @@ func (m *Manager) AddSingleDotfile(ctx context.Context, cfg *config.Config, dotf
 
 	// Handle single file
 	result := m.AddSingleFile(ctx, cfg, resolvedPath, dryRun)
-	return []resources.OperationResult{result}
+	return []operations.Result{result}
 }
 
-func (m *Manager) AddSingleFile(ctx context.Context, cfg *config.Config, filePath string, dryRun bool) resources.OperationResult {
-	result := resources.OperationResult{
+func (m *Manager) AddSingleFile(ctx context.Context, cfg *config.Config, filePath string, dryRun bool) operations.Result {
+	result := operations.Result{
 		Name: filePath,
 	}
 
@@ -311,14 +311,14 @@ func (m *Manager) AddSingleFile(ctx context.Context, cfg *config.Config, filePat
 	return result
 }
 
-func (m *Manager) AddDirectoryFiles(ctx context.Context, cfg *config.Config, dirPath string, dryRun bool) []resources.OperationResult {
-	var results []resources.OperationResult
+func (m *Manager) AddDirectoryFiles(ctx context.Context, cfg *config.Config, dirPath string, dryRun bool) []operations.Result {
+	var results []operations.Result
 	ignorePatterns := cfg.IgnorePatterns
 	patternMatcher := ignore.NewMatcher(ignorePatterns)
 
 	entries, err := m.directoryScanner.ExpandDirectoryPaths(dirPath)
 	if err != nil {
-		return []resources.OperationResult{{
+		return []operations.Result{{
 			Name:   dirPath,
 			Status: "failed",
 			Error:  err,
@@ -335,7 +335,7 @@ func (m *Manager) AddDirectoryFiles(ctx context.Context, cfg *config.Config, dir
 		// Get file info for skip checking
 		info, err := os.Stat(entry.FullPath)
 		if err != nil {
-			results = append(results, resources.OperationResult{
+			results = append(results, operations.Result{
 				Name:   entry.FullPath,
 				Status: "failed",
 				Error:  fmt.Errorf("failed to get file info: %w", err),
@@ -356,8 +356,8 @@ func (m *Manager) AddDirectoryFiles(ctx context.Context, cfg *config.Config, dir
 	return results
 }
 
-func (m *Manager) RemoveFiles(cfg *config.Config, dotfilePaths []string, opts RemoveOptions) ([]resources.OperationResult, error) {
-	var allResults []resources.OperationResult
+func (m *Manager) RemoveFiles(cfg *config.Config, dotfilePaths []string, opts RemoveOptions) ([]operations.Result, error) {
+	var allResults []operations.Result
 
 	for _, dotfilePath := range dotfilePaths {
 		result := m.RemoveSingleDotfile(cfg, dotfilePath, opts.DryRun)
@@ -367,8 +367,8 @@ func (m *Manager) RemoveFiles(cfg *config.Config, dotfilePaths []string, opts Re
 	return allResults, nil
 }
 
-func (m *Manager) RemoveSingleDotfile(cfg *config.Config, dotfilePath string, dryRun bool) resources.OperationResult {
-	result := resources.OperationResult{
+func (m *Manager) RemoveSingleDotfile(cfg *config.Config, dotfilePath string, dryRun bool) operations.Result {
+	result := operations.Result{
 		Name: dotfilePath,
 	}
 

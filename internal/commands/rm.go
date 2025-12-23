@@ -5,9 +5,9 @@ package commands
 
 import (
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/dotfiles"
+	"github.com/richhaase/plonk/internal/operations"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -94,34 +94,22 @@ func runRm(cmd *cobra.Command, args []string) error {
 
 	// Create output data
 	summary := calculateRemovalSummary(results)
-	outputData := DotfileRemovalOutput{
-		TotalFiles: len(results),
-		Results:    results,
-		Summary:    summary,
-	}
 
-	// Convert to output package type and create formatter
+	// Convert results to serializable format
 	formatterData := output.DotfileRemovalOutput{
-		TotalFiles: outputData.TotalFiles,
-		Results:    outputData.Results,
+		TotalFiles: len(results),
+		Results:    convertToSerializableRemovalResults(results),
 		Summary: output.DotfileRemovalSummary{
-			Removed: outputData.Summary.Removed,
-			Skipped: outputData.Summary.Skipped,
-			Failed:  outputData.Summary.Failed,
+			Removed: summary.Removed,
+			Skipped: summary.Skipped,
+			Failed:  summary.Failed,
 		},
 	}
 	formatter := output.NewDotfileRemovalFormatter(formatterData)
 	output.RenderOutput(formatter)
 
 	// Check if all operations failed and return appropriate error
-	return resources.ValidateOperationResults(results, "remove dotfiles")
-}
-
-// DotfileRemovalOutput represents the output for dotfile removal
-type DotfileRemovalOutput struct {
-	TotalFiles int                         `json:"total_files" yaml:"total_files"`
-	Results    []resources.OperationResult `json:"results" yaml:"results"`
-	Summary    DotfileRemovalSummary       `json:"summary" yaml:"summary"`
+	return operations.ValidateResults(results, "remove dotfiles")
 }
 
 // DotfileRemovalSummary provides summary for dotfile removal
@@ -131,12 +119,30 @@ type DotfileRemovalSummary struct {
 	Failed  int `json:"failed" yaml:"failed"`
 }
 
-// calculateRemovalSummary calculates summary from results using generic operations summary
-func calculateRemovalSummary(results []resources.OperationResult) DotfileRemovalSummary {
-	genericSummary := resources.CalculateSummary(results)
+// calculateRemovalSummary calculates summary from results
+func calculateRemovalSummary(results []operations.Result) DotfileRemovalSummary {
+	genericSummary := operations.CalculateSummary(results)
 	return DotfileRemovalSummary{
 		Removed: genericSummary.Added, // In removal context, "added" means "removed"
 		Skipped: genericSummary.Skipped,
 		Failed:  genericSummary.Failed,
 	}
+}
+
+// convertToSerializableRemovalResults converts operations.Result to SerializableRemovalResult
+func convertToSerializableRemovalResults(results []operations.Result) []output.SerializableRemovalResult {
+	converted := make([]output.SerializableRemovalResult, len(results))
+	for i, result := range results {
+		errorStr := ""
+		if result.Error != nil {
+			errorStr = result.Error.Error()
+		}
+		converted[i] = output.SerializableRemovalResult{
+			Name:     result.Name,
+			Status:   result.Status,
+			Error:    errorStr,
+			Metadata: result.Metadata,
+		}
+	}
+	return converted
 }

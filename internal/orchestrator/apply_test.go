@@ -6,7 +6,7 @@ package orchestrator
 import (
 	"testing"
 
-	"github.com/richhaase/plonk/internal/resources"
+	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -178,22 +178,22 @@ func TestDotfileApplyResult_Summary(t *testing.T) {
 func TestApplyResults_StateMapping(t *testing.T) {
 	t.Run("resource state to action mapping", func(t *testing.T) {
 		tests := []struct {
-			state          resources.ItemState
+			state          dotfiles.ItemState
 			expectedAction string
 			expectedStatus string
 		}{
 			{
-				state:          resources.StateMissing,
+				state:          dotfiles.StateMissing,
 				expectedAction: "copy",
 				expectedStatus: "added",
 			},
 			{
-				state:          resources.StateDegraded,
+				state:          dotfiles.StateDegraded,
 				expectedAction: "copy",
 				expectedStatus: "added",
 			},
 			{
-				state:          resources.StateManaged,
+				state:          dotfiles.StateManaged,
 				expectedAction: "",
 				expectedStatus: "unchanged",
 			},
@@ -202,18 +202,17 @@ func TestApplyResults_StateMapping(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.state.String(), func(t *testing.T) {
 				// Test items with different states
-				item := resources.Item{
+				item := dotfiles.DotfileItem{
 					Name:  ".testfile",
 					State: tt.state,
-					Path:  "dotfiles/.testfile",
 				}
 
 				// Simulate the logic from ApplyDotfiles
 				var action, status string
-				if item.State == resources.StateMissing || item.State == resources.StateDegraded {
+				if item.State == dotfiles.StateMissing || item.State == dotfiles.StateDegraded {
 					action = "copy"
 					status = "added"
-				} else if item.State == resources.StateManaged {
+				} else if item.State == dotfiles.StateManaged {
 					action = ""
 					status = "unchanged"
 				}
@@ -227,16 +226,22 @@ func TestApplyResults_StateMapping(t *testing.T) {
 	})
 }
 
+// packageItem is a test-only type for simulating package items
+type packageItem struct {
+	Name    string
+	Manager string
+}
+
 func TestApplyPackages_ProgressReporting(t *testing.T) {
 	// Test that progress is properly tracked
-	missingItems := []resources.Item{
+	missingItems := []packageItem{
 		{Name: "ripgrep", Manager: "brew"},
 		{Name: "fd", Manager: "brew"},
 		{Name: "prettier", Manager: "npm"},
 	}
 
 	// Group by manager like ApplyPackages does
-	missingByManager := make(map[string][]resources.Item)
+	missingByManager := make(map[string][]packageItem)
 	for _, item := range missingItems {
 		if item.Manager != "" {
 			missingByManager[item.Manager] = append(missingByManager[item.Manager], item)
@@ -264,17 +269,17 @@ func TestApplyPackages_ProgressReporting(t *testing.T) {
 
 func TestApplyDotfiles_ProgressReporting(t *testing.T) {
 	// Test that progress is properly tracked for dotfiles
-	reconciled := []resources.Item{
-		{Name: "~/.bashrc", State: resources.StateMissing},
-		{Name: "~/.vimrc", State: resources.StateDegraded},
-		{Name: "~/.gitconfig", State: resources.StateManaged},
-		{Name: "~/.zshrc", State: resources.StateMissing},
+	reconciled := []dotfiles.DotfileItem{
+		{Name: "~/.bashrc", State: dotfiles.StateMissing},
+		{Name: "~/.vimrc", State: dotfiles.StateDegraded},
+		{Name: "~/.gitconfig", State: dotfiles.StateManaged},
+		{Name: "~/.zshrc", State: dotfiles.StateMissing},
 	}
 
 	// Count items that need to be applied
 	applyCount := 0
 	for _, item := range reconciled {
-		if item.State == resources.StateMissing || item.State == resources.StateDegraded {
+		if item.State == dotfiles.StateMissing || item.State == dotfiles.StateDegraded {
 			applyCount++
 		}
 	}
@@ -284,7 +289,7 @@ func TestApplyDotfiles_ProgressReporting(t *testing.T) {
 	// Simulate progress tracking
 	dotfileIndex := 0
 	for _, item := range reconciled {
-		if item.State == resources.StateMissing || item.State == resources.StateDegraded {
+		if item.State == dotfiles.StateMissing || item.State == dotfiles.StateDegraded {
 			dotfileIndex++
 			assert.LessOrEqual(t, dotfileIndex, applyCount)
 		}

@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/richhaase/plonk/internal/lock"
-	"github.com/richhaase/plonk/internal/resources"
+	"github.com/richhaase/plonk/internal/operations"
 )
 
 // MockLockService implements the minimal lock.LockService interface for testing
@@ -168,7 +168,7 @@ func TestInstallPackages(t *testing.T) {
 		opts            InstallOptions
 		setupMock       func(*MockCommandExecutor)
 		expectedResults int
-		checkResults    func(t *testing.T, results []resources.OperationResult)
+		checkResults    func(t *testing.T, results []operations.Result)
 	}{
 		{
 			name:     "dry run single package",
@@ -181,7 +181,7 @@ func TestInstallPackages(t *testing.T) {
 				// No commands should be executed in dry run
 			},
 			expectedResults: 1,
-			checkResults: func(t *testing.T, results []resources.OperationResult) {
+			checkResults: func(t *testing.T, results []operations.Result) {
 				if results[0].Status != "would-add" {
 					t.Errorf("Expected status 'would-add', got %s", results[0].Status)
 				}
@@ -201,7 +201,7 @@ func TestInstallPackages(t *testing.T) {
 				// No commands should be executed in dry run
 			},
 			expectedResults: 3,
-			checkResults: func(t *testing.T, results []resources.OperationResult) {
+			checkResults: func(t *testing.T, results []operations.Result) {
 				for i, pkg := range []string{"vim", "git", "curl"} {
 					if results[i].Status != "would-add" {
 						t.Errorf("Package %s: expected status 'would-add', got %s", pkg, results[i].Status)
@@ -223,7 +223,7 @@ func TestInstallPackages(t *testing.T) {
 				// No commands should be executed
 			},
 			expectedResults: 0, // No packages processed due to immediate cancellation
-			checkResults: func(t *testing.T, results []resources.OperationResult) {
+			checkResults: func(t *testing.T, results []operations.Result) {
 				// No specific checks needed
 			},
 		},
@@ -286,7 +286,7 @@ func TestUninstallPackages(t *testing.T) {
 		setupMock       func(*MockCommandExecutor)
 		setupLockFile   func(t *testing.T, configDir string)
 		expectedResults int
-		checkResults    func(t *testing.T, results []resources.OperationResult)
+		checkResults    func(t *testing.T, results []operations.Result)
 	}{
 		{
 			name:     "dry run single package",
@@ -302,7 +302,7 @@ func TestUninstallPackages(t *testing.T) {
 				// No lock file needed for dry run test
 			},
 			expectedResults: 1,
-			checkResults: func(t *testing.T, results []resources.OperationResult) {
+			checkResults: func(t *testing.T, results []operations.Result) {
 				if results[0].Status != "would-remove" {
 					t.Errorf("Expected status 'would-remove', got %s", results[0].Status)
 				}
@@ -325,7 +325,7 @@ func TestUninstallPackages(t *testing.T) {
 				// No lock file needed for dry run test
 			},
 			expectedResults: 3,
-			checkResults: func(t *testing.T, results []resources.OperationResult) {
+			checkResults: func(t *testing.T, results []operations.Result) {
 				for i, pkg := range []string{"vim", "git", "curl"} {
 					if results[i].Status != "would-remove" {
 						t.Errorf("Package %s: expected status 'would-remove', got %s", pkg, results[i].Status)
@@ -350,7 +350,7 @@ func TestUninstallPackages(t *testing.T) {
 				// No lock file needed for dry run test
 			},
 			expectedResults: 0, // No packages processed due to immediate cancellation
-			checkResults: func(t *testing.T, results []resources.OperationResult) {
+			checkResults: func(t *testing.T, results []operations.Result) {
 				// No specific checks needed
 			},
 		},
@@ -378,7 +378,7 @@ func TestUninstallPackages(t *testing.T) {
 				}
 			},
 			expectedResults: 1,
-			checkResults: func(t *testing.T, results []resources.OperationResult) {
+			checkResults: func(t *testing.T, results []operations.Result) {
 				if results[0].Manager != "npm" {
 					t.Errorf("Expected manager 'npm' from lock file, got %s", results[0].Manager)
 				}

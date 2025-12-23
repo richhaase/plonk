@@ -9,7 +9,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
-	"github.com/richhaase/plonk/internal/resources"
+	"github.com/richhaase/plonk/internal/operations"
 )
 
 // InstallOptions configures package installation operations
@@ -25,7 +25,7 @@ type UninstallOptions struct {
 }
 
 // InstallPackages orchestrates the installation of multiple packages
-func InstallPackages(ctx context.Context, configDir string, packages []string, opts InstallOptions) ([]resources.OperationResult, error) {
+func InstallPackages(ctx context.Context, configDir string, packages []string, opts InstallOptions) ([]operations.Result, error) {
 	// Thin wrapper: resolve defaults and delegate to InstallPackagesWith
 	cfg := config.LoadWithDefaults(configDir)
 	lockService := lock.NewYAMLLockService(configDir)
@@ -34,7 +34,7 @@ func InstallPackages(ctx context.Context, configDir string, packages []string, o
 }
 
 // InstallPackagesWith orchestrates installation with explicit dependencies
-func InstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lock.LockService, registry *ManagerRegistry, packages []string, opts InstallOptions) ([]resources.OperationResult, error) {
+func InstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lock.LockService, registry *ManagerRegistry, packages []string, opts InstallOptions) ([]operations.Result, error) {
 	// Get manager - use default if not specified
 	manager := opts.Manager
 	if manager == "" {
@@ -45,7 +45,7 @@ func InstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lo
 		}
 	}
 
-	var results []resources.OperationResult
+	var results []operations.Result
 	for _, packageName := range packages {
 		if ctx.Err() != nil {
 			break
@@ -57,7 +57,7 @@ func InstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lo
 }
 
 // UninstallPackages orchestrates the uninstallation of multiple packages
-func UninstallPackages(ctx context.Context, configDir string, packages []string, opts UninstallOptions) ([]resources.OperationResult, error) {
+func UninstallPackages(ctx context.Context, configDir string, packages []string, opts UninstallOptions) ([]operations.Result, error) {
 	// Thin wrapper: resolve defaults and delegate to UninstallPackagesWith
 	cfg := config.LoadWithDefaults(configDir)
 	lockService := lock.NewYAMLLockService(configDir)
@@ -66,14 +66,14 @@ func UninstallPackages(ctx context.Context, configDir string, packages []string,
 }
 
 // UninstallPackagesWith orchestrates uninstallation with explicit dependencies
-func UninstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lock.LockService, registry *ManagerRegistry, packages []string, opts UninstallOptions) ([]resources.OperationResult, error) {
+func UninstallPackagesWith(ctx context.Context, cfg *config.Config, lockService lock.LockService, registry *ManagerRegistry, packages []string, opts UninstallOptions) ([]operations.Result, error) {
 	// Load config for default manager
 	defaultManager := DefaultManager
 	if cfg != nil && cfg.DefaultManager != "" {
 		defaultManager = cfg.DefaultManager
 	}
 
-	var results []resources.OperationResult
+	var results []operations.Result
 	for _, packageName := range packages {
 		if ctx.Err() != nil {
 			break
@@ -102,8 +102,8 @@ func UninstallPackagesWith(ctx context.Context, cfg *config.Config, lockService 
 }
 
 // installSinglePackage installs a single package
-func installSinglePackage(ctx context.Context, cfg *config.Config, lockService lock.LockService, packageName, manager string, dryRun bool, registry *ManagerRegistry) resources.OperationResult {
-	result := resources.OperationResult{
+func installSinglePackage(ctx context.Context, cfg *config.Config, lockService lock.LockService, packageName, manager string, dryRun bool, registry *ManagerRegistry) operations.Result {
+	result := operations.Result{
 		Name:    packageName,
 		Manager: manager,
 	}
@@ -168,8 +168,8 @@ func installSinglePackage(ctx context.Context, cfg *config.Config, lockService l
 }
 
 // uninstallSinglePackage uninstalls a single package
-func uninstallSinglePackage(ctx context.Context, lockService lock.LockService, packageName, manager string, dryRun bool, registry *ManagerRegistry) resources.OperationResult {
-	result := resources.OperationResult{
+func uninstallSinglePackage(ctx context.Context, lockService lock.LockService, packageName, manager string, dryRun bool, registry *ManagerRegistry) operations.Result {
+	result := operations.Result{
 		Name:    packageName,
 		Manager: manager,
 	}

@@ -25,7 +25,7 @@ Plonk implements packages and dotfiles as separate domains, each with their own 
 - **Packages**: Uses lock file as desired state, queries package managers for actual state
 - **Dotfiles**: Uses config directory as desired state, scans home directory for actual state
 
-Both domains share common data types (`resources.Item`, `resources.Result`) and the reconciliation algorithm (`resources.ReconcileItems`), but implement their own domain-specific logic for fetching state and applying changes.
+Each domain has its own domain-specific types and implements its own reconciliation logic, ensuring type safety and domain isolation.
 
 ## Architecture Layers
 
@@ -50,9 +50,7 @@ The orchestrator coordinates complex operations across multiple resource types:
 - Manages orchestrator options and types
 - Ensures proper error handling
 
-### 3. Resource Layer (`internal/resources/`)
-
-Resources are organized by type:
+### 3. Domain Packages
 
 #### Packages (`internal/packages/`)
 - Hardcoded package manager implementations with consistent interfaces
@@ -215,12 +213,13 @@ See existing managers (e.g., `brew.go`, `npm.go`) for examples.
 
 ### Adding a New Resource Type
 
-1. Create a new domain package in `internal/resources/`
-2. Implement functions to get desired and actual state
-3. Use `resources.ReconcileItems` for state comparison
-4. Implement apply logic for the domain
-5. Update orchestrator to call the new domain
-6. Add corresponding commands
+1. Create a new domain package in `internal/`
+2. Define domain-specific types for items and reconciliation results
+3. Implement functions to get desired and actual state
+4. Implement reconciliation logic for state comparison
+5. Implement apply logic for the domain
+6. Update orchestrator to call the new domain
+7. Add corresponding commands
 
 ### Adding a New Command
 

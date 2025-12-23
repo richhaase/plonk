@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/packages"
 	"github.com/spf13/cobra"
 )
@@ -51,10 +51,10 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	// Parse and validate all package specifications
 	validationResult := packages.ValidateSpecs(args, packages.ValidationModeUninstall, "")
 
-	// Convert validation errors to OperationResults
-	var validationErrors []resources.OperationResult
+	// Convert validation errors to Results
+	var validationErrors []operations.Result
 	for _, invalid := range validationResult.Invalid {
-		validationErrors = append(validationErrors, resources.OperationResult{
+		validationErrors = append(validationErrors, operations.Result{
 			Name:    invalid.OriginalSpec,
 			Manager: "",
 			Status:  "failed",
@@ -63,7 +63,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	}
 
 	// Process each package with prefix parsing
-	var allResults []resources.OperationResult
+	var allResults []operations.Result
 
 	// Add validation errors to results
 	allResults = append(allResults, validationErrors...)
@@ -90,7 +90,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 		cancel()
 
 		if err != nil {
-			result := resources.OperationResult{
+			result := operations.Result{
 				Name:    spec.String(),
 				Manager: spec.Manager,
 				Status:  "failed",
@@ -140,5 +140,5 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	output.RenderOutput(formatter)
 
 	// Check if all operations failed and return appropriate error
-	return resources.ValidateOperationResults(allResults, "uninstall packages")
+	return operations.ValidateResults(allResults, "uninstall packages")
 }

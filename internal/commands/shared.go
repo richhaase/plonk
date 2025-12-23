@@ -4,8 +4,8 @@
 package commands
 
 import (
+	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources"
 )
 
 // Type aliases for UI types (these have been moved to internal/output/types.go)
@@ -30,8 +30,8 @@ type DotfileBatchAddOutput = output.DotfileBatchAddOutput
 
 // TableOutput and StructuredData methods moved to internal/output/formatters.go
 
-// convertOperationResults converts resources.OperationResult to output.SerializableOperationResult
-func convertOperationResults(results []resources.OperationResult) []output.SerializableOperationResult {
+// convertOperationResults converts operations.Result to output.SerializableOperationResult
+func convertOperationResults(results []operations.Result) []output.SerializableOperationResult {
 	converted := make([]output.SerializableOperationResult, len(results))
 	for i, result := range results {
 		converted[i] = output.SerializableOperationResult{
@@ -46,7 +46,7 @@ func convertOperationResults(results []resources.OperationResult) []output.Seria
 }
 
 // calculatePackageOperationSummary calculates summary from operation results
-func calculatePackageOperationSummary(results []resources.OperationResult) output.PackageOperationSummary {
+func calculatePackageOperationSummary(results []operations.Result) output.PackageOperationSummary {
 	summary := output.PackageOperationSummary{}
 	for _, result := range results {
 		switch result.Status {

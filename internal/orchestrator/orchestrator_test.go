@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/resources"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -427,8 +426,8 @@ func TestApply_ErrorHandling(t *testing.T) {
 	}
 }
 
-// Test the ReconcileAll function
-func TestReconcileAll(t *testing.T) {
+// Test the ReconcileAllWithConfig function
+func TestReconcileAllWithConfig(t *testing.T) {
 	// This test would require mocking the dotfiles.Reconcile and packages.Reconcile
 	// functions, which are package-level functions. In a real implementation,
 	// we might want to refactor to use interfaces for better testability.
@@ -458,12 +457,15 @@ func TestReconcileAll(t *testing.T) {
 		err = os.WriteFile(lockFile, []byte("version: 2\nresources: []\n"), 0644)
 		assert.NoError(t, err)
 
+		// Load config for test
+		cfg := config.LoadWithDefaults(tempConfig)
+
 		// Just verify the function can be called
-		results, err := ReconcileAll(ctx, tempHome, tempConfig)
+		results, err := ReconcileAllWithConfig(ctx, tempHome, tempConfig, cfg)
 		// Either way, we're just testing that the function exists and returns the right types
 		if err == nil {
 			assert.NotNil(t, results)
-			assert.IsType(t, map[string]resources.Result{}, results)
+			assert.IsType(t, ReconcileAllResult{}, results)
 		}
 	})
 }

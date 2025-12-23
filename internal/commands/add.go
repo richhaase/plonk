@@ -8,9 +8,9 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/dotfiles"
+	"github.com/richhaase/plonk/internal/operations"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -126,8 +126,8 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		// Batch output
 		outputData = &output.DotfileBatchAddOutput{
 			TotalFiles: len(results),
-			AddedFiles: output.ConvertToDotfileAddOutput(results),
-			Errors:     output.ExtractErrorMessages(results),
+			AddedFiles: convertToDotfileAddOutput(results),
+			Errors:     extractErrorMessages(results),
 		}
 	}
 
@@ -135,7 +135,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	output.RenderOutput(outputData)
 
 	// Check if all operations failed and return appropriate error
-	return resources.ValidateOperationResults(results, "add dotfiles")
+	return operations.ValidateResults(results, "add dotfiles")
 }
 
 // runSyncDrifted syncs all drifted files from $HOME back to $PLONKDIR
@@ -154,8 +154,8 @@ func runSyncDrifted(ctx context.Context, cmd *cobra.Command, cfg *config.Config,
 	// Build list of paths to sync (use deployed paths from $HOME)
 	var paths []string
 	for _, item := range driftedFiles {
-		if dest, ok := item.Metadata["destination"].(string); ok {
-			paths = append(paths, dest)
+		if item.Destination != "" {
+			paths = append(paths, item.Destination)
 		}
 	}
 
@@ -197,8 +197,8 @@ func runSyncDrifted(ctx context.Context, cmd *cobra.Command, cfg *config.Config,
 		// Batch output
 		outputData = &output.DotfileBatchAddOutput{
 			TotalFiles: len(results),
-			AddedFiles: output.ConvertToDotfileAddOutput(results),
-			Errors:     output.ExtractErrorMessages(results),
+			AddedFiles: convertToDotfileAddOutput(results),
+			Errors:     extractErrorMessages(results),
 		}
 	}
 
@@ -206,5 +206,34 @@ func runSyncDrifted(ctx context.Context, cmd *cobra.Command, cfg *config.Config,
 	output.RenderOutput(outputData)
 
 	// Check if all operations failed and return appropriate error
-	return resources.ValidateOperationResults(results, "sync drifted dotfiles")
+	return operations.ValidateResults(results, "sync drifted dotfiles")
+}
+
+// extractErrorMessages extracts error messages from failed results
+func extractErrorMessages(results []operations.Result) []string {
+	var errors []string
+	for _, result := range results {
+		if result.Status == "failed" && result.Error != nil {
+			errors = append(errors, fmt.Sprintf("failed to add %s: %v", result.Name, result.Error))
+		}
+	}
+	return errors
+}
+
+// convertToDotfileAddOutput converts operations.Result to DotfileAddOutput for structured output
+func convertToDotfileAddOutput(results []operations.Result) []output.DotfileAddOutput {
+	outputs := make([]output.DotfileAddOutput, 0, len(results))
+	for _, result := range results {
+		if result.Status == "failed" {
+			continue // Skip failed results, they're handled in errors
+		}
+
+		outputs = append(outputs, output.DotfileAddOutput{
+			Source:      getMetadataString(result, "source"),
+			Destination: getMetadataString(result, "destination"),
+			Action:      output.MapStatusToAction(result.Status),
+			Path:        result.Name,
+		})
+	}
+	return outputs
 }

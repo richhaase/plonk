@@ -1,17 +1,14 @@
 package output
 
 import (
-	"errors"
 	"testing"
-
-	"github.com/richhaase/plonk/internal/resources"
 )
 
 func TestDotfileRemovalFormatter_TableOutput_SingleAndBatch(t *testing.T) {
 	// Single file removed
 	d1 := DotfileRemovalOutput{
 		TotalFiles: 1,
-		Results: []resources.OperationResult{{
+		Results: []SerializableRemovalResult{{
 			Name:     "~/.vimrc",
 			Status:   "removed",
 			Metadata: map[string]interface{}{"source": "vimrc"},
@@ -26,7 +23,7 @@ func TestDotfileRemovalFormatter_TableOutput_SingleAndBatch(t *testing.T) {
 	// Batch dry-run
 	d2 := DotfileRemovalOutput{
 		TotalFiles: 2,
-		Results:    []resources.OperationResult{{Name: "~/.zshrc", Status: "would-remove"}, {Name: "~/.vimrc", Status: "would-remove"}},
+		Results:    []SerializableRemovalResult{{Name: "~/.zshrc", Status: "would-remove"}, {Name: "~/.vimrc", Status: "would-remove"}},
 		Summary:    DotfileRemovalSummary{},
 	}
 	out2 := NewDotfileRemovalFormatter(d2).TableOutput()
@@ -37,10 +34,10 @@ func TestDotfileRemovalFormatter_TableOutput_SingleAndBatch(t *testing.T) {
 	// Batch with mixed statuses
 	d3 := DotfileRemovalOutput{
 		TotalFiles: 3,
-		Results: []resources.OperationResult{
+		Results: []SerializableRemovalResult{
 			{Name: "a", Status: "removed"},
-			{Name: "b", Status: "skipped", Error: errors.New("not managed")},
-			{Name: "c", Status: "failed", Error: errors.New("oops")},
+			{Name: "b", Status: "skipped", Error: "not managed"},
+			{Name: "c", Status: "failed", Error: "oops"},
 		},
 		Summary: DotfileRemovalSummary{Removed: 1, Skipped: 1, Failed: 1},
 	}

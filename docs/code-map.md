@@ -54,14 +54,9 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - `options.go` - Orchestrator options
 - `types.go` - Orchestrator type definitions
 
-### Resources (`internal/resources/`)
+### Domain Packages
 
-#### Shared Resource Infrastructure
-- `types.go` - Resource type definitions (Item, ItemState, Result)
-- `reconcile.go` - Generic reconciliation algorithm
-- `drift.go` - Drift detection interfaces
-
-#### Package Resources (`internal/packages/`)
+#### Packages (`internal/packages/`)
 - `spec.go` - Package specification and reconciliation logic
 - `reconcile.go` - Package reconciliation entry point
 - `apply.go` - Package apply operations
@@ -234,6 +229,6 @@ Location: `internal/lock/interfaces.go`
 
 ### File Organization
 - Commands in internal/commands/
-- Business logic in internal/resources/, internal/orchestrator/
+- Business logic in internal/packages/, internal/dotfiles/, internal/orchestrator/
 - Shared utilities in internal/ subdirectories
 - Public API (if any) would be in pkg/

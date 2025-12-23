@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/packages"
 	"github.com/spf13/cobra"
 )
@@ -55,7 +55,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 	// Check for package manager self-installation requests before normal processing
 	registry := packages.GetRegistry()
-	var managerSelfInstallResults []resources.OperationResult
+	var managerSelfInstallResults []operations.Result
 	var remainingArgs []string
 
 	// Create spinner manager for all operations
@@ -94,10 +94,10 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		validationResult = packages.ValidateSpecs(remainingArgs, packages.ValidationModeInstall, defaultManager)
 	}
 
-	// Convert validation errors to OperationResults
-	var validationErrors []resources.OperationResult
+	// Convert validation errors to Results
+	var validationErrors []operations.Result
 	for _, invalid := range validationResult.Invalid {
-		validationErrors = append(validationErrors, resources.OperationResult{
+		validationErrors = append(validationErrors, operations.Result{
 			Name:    invalid.OriginalSpec,
 			Manager: "",
 			Status:  "failed",
@@ -106,7 +106,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	// Combine all results
-	var allResults []resources.OperationResult
+	var allResults []operations.Result
 
 	// Add manager self-install results first
 	allResults = append(allResults, managerSelfInstallResults...)
@@ -132,7 +132,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		cancel()
 
 		if err != nil {
-			result := resources.OperationResult{
+			result := operations.Result{
 				Name:    spec.String(),
 				Manager: spec.Manager,
 				Status:  "failed",
@@ -182,12 +182,12 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	output.RenderOutput(formatter)
 
 	// Check if all operations failed and return appropriate error
-	return resources.ValidateOperationResults(allResults, "install packages")
+	return operations.ValidateResults(allResults, "install packages")
 }
 
 // handleManagerSelfInstall reports that self-installation is no longer supported
-func handleManagerSelfInstall(ctx context.Context, managerName string, dryRun bool, cfg *config.Config) resources.OperationResult {
-	result := resources.OperationResult{
+func handleManagerSelfInstall(ctx context.Context, managerName string, dryRun bool, cfg *config.Config) operations.Result {
+	result := operations.Result{
 		Name:    managerName,
 		Manager: "self-install",
 		Status:  "failed",

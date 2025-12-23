@@ -5,20 +5,7 @@ package output
 
 import (
 	"fmt"
-
-	"github.com/richhaase/plonk/internal/resources"
 )
-
-// getMetadataStringValue safely extracts a string value from metadata
-func getMetadataStringValue(metadata map[string]interface{}, key string) string {
-	if metadata == nil {
-		return ""
-	}
-	if value, ok := metadata[key].(string); ok {
-		return value
-	}
-	return ""
-}
 
 // ManagerApplyResult represents the result for a specific manager
 
@@ -192,17 +179,6 @@ func (d DotfileBatchAddOutput) StructuredData() any {
 	return d
 }
 
-// ExtractErrorMessages extracts error messages from failed results
-func ExtractErrorMessages(results []resources.OperationResult) []string {
-	var errors []string
-	for _, result := range results {
-		if result.Status == "failed" && result.Error != nil {
-			errors = append(errors, fmt.Sprintf("failed to add %s: %v", result.Name, result.Error))
-		}
-	}
-	return errors
-}
-
 // MapStatusToAction converts operation status to an action string
 func MapStatusToAction(status string) string {
 	switch status {
@@ -211,22 +187,4 @@ func MapStatusToAction(status string) string {
 	default:
 		return "failed"
 	}
-}
-
-// ConvertToDotfileAddOutput converts OperationResult to DotfileAddOutput for structured output
-func ConvertToDotfileAddOutput(results []resources.OperationResult) []DotfileAddOutput {
-	outputs := make([]DotfileAddOutput, 0, len(results))
-	for _, result := range results {
-		if result.Status == "failed" {
-			continue // Skip failed results, they're handled in errors
-		}
-
-		outputs = append(outputs, DotfileAddOutput{
-			Source:      getMetadataStringValue(result.Metadata, "source"),
-			Destination: getMetadataStringValue(result.Metadata, "destination"),
-			Action:      MapStatusToAction(result.Status),
-			Path:        result.Name,
-		})
-	}
-	return outputs
 }

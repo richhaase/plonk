@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/packages"
-	"github.com/richhaase/plonk/internal/resources"
 	"github.com/spf13/cobra"
 )
 
@@ -108,7 +108,7 @@ func normalizeDisplayFlags(showPackages, showDotfiles bool) (packages, dotfiles 
 }
 
 // getMetadataString safely extracts string metadata from operation results
-func getMetadataString(result resources.OperationResult, key string) string {
+func getMetadataString(result operations.Result, key string) string {
 	if result.Metadata == nil {
 		return ""
 	}
