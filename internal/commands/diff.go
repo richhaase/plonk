@@ -85,6 +85,9 @@ func runDiff(cmd *cobra.Command, args []string) error {
 				sourceName = sourceName[1:]
 			}
 			sourcePath = filepath.Join(configDir, sourceName)
+		} else if !filepath.IsAbs(sourcePath) {
+			// Source is a relative path, prepend configDir
+			sourcePath = filepath.Join(configDir, sourcePath)
 		}
 
 		// Get destination path directly from the item

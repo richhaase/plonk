@@ -84,7 +84,7 @@ func convertDotfileItemsToOutput(items []dotfiles.DotfileItem) []output.Item {
 		case dotfiles.StateUntracked:
 			state = output.ItemState("untracked")
 		case dotfiles.StateDegraded:
-			state = output.ItemState("degraded")
+			state = output.StateDegraded
 		}
 
 		// Build metadata
