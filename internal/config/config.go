@@ -171,7 +171,7 @@ func LoadFromPath(configPath string) (*Config, error) {
 	}
 
 	// Apply defaults for any unset fields
-	applyDefaults(&cfg)
+	ApplyDefaults(&cfg)
 
 	// Validate
 	validate := validator.New()
@@ -196,8 +196,9 @@ func LoadWithDefaults(configDir string) *Config {
 	return cfg
 }
 
-// applyDefaults applies default values to a config
-func applyDefaults(cfg *Config) {
+// ApplyDefaults applies default values to a config for any unset fields.
+// This is the single source of truth for default application.
+func ApplyDefaults(cfg *Config) {
 	if cfg.DefaultManager == "" {
 		cfg.DefaultManager = defaultConfig.DefaultManager
 	}

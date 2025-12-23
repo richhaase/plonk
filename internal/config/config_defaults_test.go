@@ -80,7 +80,7 @@ func TestApplyDefaults(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			applyDefaults(tt.input)
+			ApplyDefaults(tt.input)
 			assert.Equal(t, tt.expected, tt.input)
 		})
 	}

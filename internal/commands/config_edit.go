@@ -247,24 +247,7 @@ func parseAndValidateConfig(filename string) (*config.Config, error) {
 	}
 
 	// Apply defaults to ensure we have complete config
-	if cfg.DefaultManager == "" {
-		cfg.DefaultManager = config.GetDefaults().DefaultManager
-	}
-	if cfg.OperationTimeout == 0 {
-		cfg.OperationTimeout = config.GetDefaults().OperationTimeout
-	}
-	if cfg.PackageTimeout == 0 {
-		cfg.PackageTimeout = config.GetDefaults().PackageTimeout
-	}
-	if cfg.DotfileTimeout == 0 {
-		cfg.DotfileTimeout = config.GetDefaults().DotfileTimeout
-	}
-	if len(cfg.ExpandDirectories) == 0 {
-		cfg.ExpandDirectories = config.GetDefaults().ExpandDirectories
-	}
-	if len(cfg.IgnorePatterns) == 0 {
-		cfg.IgnorePatterns = config.GetDefaults().IgnorePatterns
-	}
+	config.ApplyDefaults(&cfg)
 
 	return &cfg, nil
 }

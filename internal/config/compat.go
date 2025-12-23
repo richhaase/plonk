@@ -69,7 +69,7 @@ func (v *SimpleValidator) ValidateConfigFromYAML(content []byte) *ValidationResu
 	}
 
 	// Apply defaults
-	applyDefaults(&cfg)
+	ApplyDefaults(&cfg)
 
 	// Validate
 	err := v.validator.Struct(&cfg)
