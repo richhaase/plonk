@@ -77,7 +77,7 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 
 
 
-#### Dotfile Resources (`internal/resources/dotfiles/`)
+#### Dotfile Resources (`internal/dotfiles/`)
 - `manager.go` - Dotfile management operations
 - `reconcile.go` - Dotfile reconciliation logic
 - `apply.go` - Dotfile apply operations
@@ -133,12 +133,12 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - Entry: `internal/commands/apply.go`
 - Orchestration: `internal/orchestrator/coordinator.go`, `reconcile.go`
 - Package reconciliation: `internal/packages/reconcile.go`, `apply.go`
-- Dotfile reconciliation: `internal/resources/dotfiles/reconcile.go`, `apply.go`
+- Dotfile reconciliation: `internal/dotfiles/reconcile.go`, `apply.go`
 
 ### status command
 - Entry: `internal/commands/status.go`
 - Package reconciliation: `internal/packages/reconcile.go`
-- Dotfile reconciliation: `internal/resources/dotfiles/reconcile.go`
+- Dotfile reconciliation: `internal/dotfiles/reconcile.go`
 
 ### doctor command
 - Entry: `internal/commands/doctor.go`
@@ -148,7 +148,7 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 ### diff command
 - Entry: `internal/commands/diff.go`
 - Package reconciliation: `internal/packages/reconcile.go`
-- Dotfile reconciliation: `internal/resources/dotfiles/reconcile.go`
+- Dotfile reconciliation: `internal/dotfiles/reconcile.go`
 
 ### config show/edit commands
 - Entry: `internal/commands/config_show.go`, `config_edit.go`
@@ -162,9 +162,9 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 
 ### Dotfile management commands (add/rm)
 - Entries: `internal/commands/add.go`, `rm.go`
-- Operations: `internal/resources/dotfiles/manager.go`
-- File operations: `internal/resources/dotfiles/fileops.go`
-- Path filtering: `internal/resources/dotfiles/filter.go`
+- Operations: `internal/dotfiles/manager.go`
+- File operations: `internal/dotfiles/fileops.go`
+- Path filtering: `internal/dotfiles/filter.go`
 
 ## Key Interfaces
 

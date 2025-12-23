@@ -66,7 +66,7 @@ Resources are organized by type:
 Built-in managers: brew, npm, pnpm, cargo, pipx, conda, gem, uv, bun, go.
 
 
-#### Dotfiles (`internal/resources/dotfiles/`)
+#### Dotfiles (`internal/dotfiles/`)
 - Dotfile scanning and discovery
 - Directory scanning utilities
 - File copying and deployment operations
