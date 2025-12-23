@@ -22,39 +22,24 @@ const (
 // NPMManager implements PackageManager for Node.js package managers.
 // It supports npm, pnpm, and bun as providers.
 type NPMManager struct {
-	exec     CommandExecutor
+	BaseManager
 	provider NPMProvider
 }
 
 // NewNPMManager creates a new npm-family manager with the specified provider.
 func NewNPMManager(provider NPMProvider, exec CommandExecutor) *NPMManager {
-	if exec == nil {
-		exec = defaultExecutor
-	}
 	if provider == "" {
 		provider = ProviderNPM
 	}
-	return &NPMManager{exec: exec, provider: provider}
+	return &NPMManager{
+		BaseManager: NewBaseManager(exec, string(provider), "--version"),
+		provider:    provider,
+	}
 }
 
 // Provider returns the current provider.
 func (n *NPMManager) Provider() NPMProvider {
 	return n.provider
-}
-
-// IsAvailable checks if the provider is available on the system.
-func (n *NPMManager) IsAvailable(ctx context.Context) (bool, error) {
-	binary := string(n.provider)
-	if _, err := n.exec.LookPath(binary); err != nil {
-		return false, nil
-	}
-
-	_, err := n.exec.Execute(ctx, binary, "--version")
-	if err != nil {
-		return false, nil
-	}
-
-	return true, nil
 }
 
 // ListInstalled lists all globally installed packages.
@@ -63,7 +48,7 @@ func (n *NPMManager) ListInstalled(ctx context.Context) ([]string, error) {
 
 	switch n.provider {
 	case ProviderNPM:
-		output, err := n.exec.Execute(ctx, binary, "list", "-g", "--depth=0", "--json")
+		output, err := n.Exec().Execute(ctx, binary, "list", "-g", "--depth=0", "--json")
 		if err != nil {
 			// npm list returns exit code 1 when there are peer dep warnings
 			// but still outputs valid JSON, so we try to parse anyway
@@ -74,7 +59,7 @@ func (n *NPMManager) ListInstalled(ctx context.Context) ([]string, error) {
 		return parseNPMJSON(output)
 
 	case ProviderPNPM:
-		output, err := n.exec.Execute(ctx, binary, "list", "-g", "--depth=0", "--json")
+		output, err := n.Exec().Execute(ctx, binary, "list", "-g", "--depth=0", "--json")
 		if err != nil {
 			return nil, fmt.Errorf("failed to list packages: %w", err)
 		}
@@ -82,7 +67,7 @@ func (n *NPMManager) ListInstalled(ctx context.Context) ([]string, error) {
 
 	case ProviderBun:
 		// bun pm ls -g outputs simple lines
-		output, err := n.exec.Execute(ctx, binary, "pm", "ls", "-g")
+		output, err := n.Exec().Execute(ctx, binary, "pm", "ls", "-g")
 		if err != nil {
 			return nil, fmt.Errorf("failed to list packages: %w", err)
 		}
@@ -100,23 +85,20 @@ func (n *NPMManager) Install(ctx context.Context, name string) error {
 
 	switch n.provider {
 	case ProviderNPM:
-		args = []string{"install", "-g", name}
+		args = []string{binary, "install", "-g", name}
 	case ProviderPNPM:
-		args = []string{"add", "-g", name}
+		args = []string{binary, "add", "-g", name}
 	case ProviderBun:
-		args = []string{"add", "-g", name}
+		args = []string{binary, "add", "-g", name}
 	default:
 		return fmt.Errorf("unknown provider: %s", n.provider)
 	}
 
-	output, err := n.exec.CombinedOutput(ctx, binary, args...)
-	if err != nil {
-		if isIdempotent(string(output), "already installed") {
-			return nil
-		}
-		return fmt.Errorf("failed to install %s: %w", name, err)
-	}
-	return nil
+	return n.RunIdempotent(ctx,
+		[]string{"already installed"},
+		fmt.Sprintf("failed to install %s", name),
+		args...,
+	)
 }
 
 // Uninstall removes a package globally (idempotent).
@@ -126,23 +108,20 @@ func (n *NPMManager) Uninstall(ctx context.Context, name string) error {
 
 	switch n.provider {
 	case ProviderNPM:
-		args = []string{"uninstall", "-g", name}
+		args = []string{binary, "uninstall", "-g", name}
 	case ProviderPNPM:
-		args = []string{"remove", "-g", name}
+		args = []string{binary, "remove", "-g", name}
 	case ProviderBun:
-		args = []string{"remove", "-g", name}
+		args = []string{binary, "remove", "-g", name}
 	default:
 		return fmt.Errorf("unknown provider: %s", n.provider)
 	}
 
-	output, err := n.exec.CombinedOutput(ctx, binary, args...)
-	if err != nil {
-		if isIdempotent(string(output), "not installed", "not found") {
-			return nil
-		}
-		return fmt.Errorf("failed to uninstall %s: %w", name, err)
-	}
-	return nil
+	return n.RunIdempotent(ctx,
+		[]string{"not installed", "not found"},
+		fmt.Sprintf("failed to uninstall %s", name),
+		args...,
+	)
 }
 
 // Upgrade upgrades packages to their latest versions.
@@ -153,57 +132,40 @@ func (n *NPMManager) Upgrade(ctx context.Context, packages []string) error {
 	}
 
 	binary := string(n.provider)
+	patterns := []string{"already up-to-date", "up to date"}
 
-	for _, pkg := range packages {
-		var args []string
-
-		switch n.provider {
-		case ProviderNPM:
-			args = []string{"update", "-g", pkg}
-		case ProviderPNPM:
-			args = []string{"update", "-g", pkg}
-		case ProviderBun:
-			// bun doesn't have update, reinstall with latest
-			args = []string{"add", "-g", pkg + "@latest"}
-		default:
-			return fmt.Errorf("unknown provider: %s", n.provider)
-		}
-
-		output, err := n.exec.CombinedOutput(ctx, binary, args...)
-		if err != nil {
-			if isIdempotent(string(output), "already up-to-date", "up to date") {
-				continue
+	return n.UpgradeEach(ctx, packages, true,
+		func(pkg string) []string {
+			switch n.provider {
+			case ProviderNPM:
+				return []string{binary, "update", "-g", pkg}
+			case ProviderPNPM:
+				return []string{binary, "update", "-g", pkg}
+			case ProviderBun:
+				// bun doesn't have update, reinstall with latest
+				return []string{binary, "add", "-g", pkg + "@latest"}
+			default:
+				return []string{binary, "update", "-g", pkg}
 			}
-			return fmt.Errorf("failed to upgrade %s: %w", pkg, err)
-		}
-	}
-	return nil
+		},
+		patterns,
+	)
 }
 
 func (n *NPMManager) upgradeAll(ctx context.Context) error {
 	binary := string(n.provider)
-	var args []string
 
 	switch n.provider {
 	case ProviderNPM:
-		args = []string{"update", "-g"}
+		return n.UpgradeAll(ctx, []string{"already up-to-date", "up to date"}, binary, "update", "-g")
 	case ProviderPNPM:
-		args = []string{"update", "-g"}
+		return n.UpgradeAll(ctx, []string{"already up-to-date", "up to date"}, binary, "update", "-g")
 	case ProviderBun:
 		// bun doesn't have upgrade-all, would need to list and upgrade each
 		return fmt.Errorf("bun does not support upgrading all packages at once")
 	default:
 		return fmt.Errorf("unknown provider: %s", n.provider)
 	}
-
-	output, err := n.exec.CombinedOutput(ctx, binary, args...)
-	if err != nil {
-		if isIdempotent(string(output), "already up-to-date", "up to date") {
-			return nil
-		}
-		return fmt.Errorf("failed to upgrade all packages: %w", err)
-	}
-	return nil
 }
 
 // SelfInstall installs the provider.
@@ -228,8 +190,8 @@ func (n *NPMManager) SelfInstall(ctx context.Context) error {
 
 func (n *NPMManager) installNPM(ctx context.Context) error {
 	// npm comes with Node.js, try brew first
-	if _, err := n.exec.LookPath("brew"); err == nil {
-		_, err := n.exec.CombinedOutput(ctx, "brew", "install", "node")
+	if _, err := n.Exec().LookPath("brew"); err == nil {
+		_, err := n.Exec().CombinedOutput(ctx, "brew", "install", "node")
 		if err == nil {
 			return nil
 		}
@@ -239,16 +201,16 @@ func (n *NPMManager) installNPM(ctx context.Context) error {
 
 func (n *NPMManager) installPNPM(ctx context.Context) error {
 	// Try brew first
-	if _, err := n.exec.LookPath("brew"); err == nil {
-		_, err := n.exec.CombinedOutput(ctx, "brew", "install", "pnpm")
+	if _, err := n.Exec().LookPath("brew"); err == nil {
+		_, err := n.Exec().CombinedOutput(ctx, "brew", "install", "pnpm")
 		if err == nil {
 			return nil
 		}
 	}
 
 	// Try npm if available
-	if _, err := n.exec.LookPath("npm"); err == nil {
-		_, err := n.exec.CombinedOutput(ctx, "npm", "install", "-g", "pnpm")
+	if _, err := n.Exec().LookPath("npm"); err == nil {
+		_, err := n.Exec().CombinedOutput(ctx, "npm", "install", "-g", "pnpm")
 		if err == nil {
 			return nil
 		}
@@ -256,7 +218,7 @@ func (n *NPMManager) installPNPM(ctx context.Context) error {
 
 	// Fall back to official installer
 	script := `curl -fsSL https://get.pnpm.io/install.sh | sh -`
-	_, err := n.exec.CombinedOutput(ctx, "sh", "-c", script)
+	_, err := n.Exec().CombinedOutput(ctx, "sh", "-c", script)
 	if err != nil {
 		return fmt.Errorf("failed to install pnpm: %w", err)
 	}
@@ -265,8 +227,8 @@ func (n *NPMManager) installPNPM(ctx context.Context) error {
 
 func (n *NPMManager) installBun(ctx context.Context) error {
 	// Try brew first
-	if _, err := n.exec.LookPath("brew"); err == nil {
-		_, err := n.exec.CombinedOutput(ctx, "brew", "install", "bun")
+	if _, err := n.Exec().LookPath("brew"); err == nil {
+		_, err := n.Exec().CombinedOutput(ctx, "brew", "install", "bun")
 		if err == nil {
 			return nil
 		}
@@ -274,7 +236,7 @@ func (n *NPMManager) installBun(ctx context.Context) error {
 
 	// Fall back to official installer
 	script := `curl -fsSL https://bun.sh/install | bash`
-	_, err := n.exec.CombinedOutput(ctx, "sh", "-c", script)
+	_, err := n.Exec().CombinedOutput(ctx, "sh", "-c", script)
 	if err != nil {
 		return fmt.Errorf("failed to install bun: %w", err)
 	}

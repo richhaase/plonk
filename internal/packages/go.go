@@ -13,35 +13,20 @@ import (
 
 // GoManager implements PackageManager for Go's 'go install' command.
 type GoManager struct {
-	exec CommandExecutor
+	BaseManager
 }
 
 // NewGoManager creates a new Go manager.
 func NewGoManager(exec CommandExecutor) *GoManager {
-	if exec == nil {
-		exec = defaultExecutor
+	return &GoManager{
+		BaseManager: NewBaseManager(exec, "go", "version"),
 	}
-	return &GoManager{exec: exec}
-}
-
-// IsAvailable checks if go is available on the system.
-func (g *GoManager) IsAvailable(ctx context.Context) (bool, error) {
-	if _, err := g.exec.LookPath("go"); err != nil {
-		return false, nil
-	}
-
-	_, err := g.exec.Execute(ctx, "go", "version")
-	if err != nil {
-		return false, nil
-	}
-
-	return true, nil
 }
 
 // ListInstalled lists all binaries in GOBIN.
 // Go doesn't have a native list command, so we scan the bin directory.
 func (g *GoManager) ListInstalled(ctx context.Context) ([]string, error) {
-	binDir := g.goBinDir(ctx)
+	binDir := g.goBinDir()
 	if binDir == "" {
 		return []string{}, nil
 	}
@@ -78,7 +63,7 @@ func (g *GoManager) Install(ctx context.Context, name string) error {
 		pkg = name + "@latest"
 	}
 
-	output, err := g.exec.CombinedOutput(ctx, "go", "install", pkg)
+	output, err := g.Exec().CombinedOutput(ctx, "go", "install", pkg)
 	if err != nil {
 		return fmt.Errorf("failed to install %s: %w\n%s", name, err, string(output))
 	}
@@ -88,7 +73,7 @@ func (g *GoManager) Install(ctx context.Context, name string) error {
 // Uninstall removes a Go binary from GOBIN.
 // Go doesn't have an uninstall command, so we just delete the binary.
 func (g *GoManager) Uninstall(ctx context.Context, name string) error {
-	binDir := g.goBinDir(ctx)
+	binDir := g.goBinDir()
 	if binDir == "" {
 		return fmt.Errorf("could not determine GOBIN directory")
 	}
@@ -130,7 +115,7 @@ func (g *GoManager) Upgrade(ctx context.Context, packages []string) error {
 		}
 		target = target + "@latest"
 
-		output, err := g.exec.CombinedOutput(ctx, "go", "install", target)
+		output, err := g.Exec().CombinedOutput(ctx, "go", "install", target)
 		if err != nil {
 			return fmt.Errorf("failed to upgrade %s: %w\n%s", pkg, err, string(output))
 		}
@@ -140,27 +125,13 @@ func (g *GoManager) Upgrade(ctx context.Context, packages []string) error {
 
 // SelfInstall installs Go using the official installer or brew.
 func (g *GoManager) SelfInstall(ctx context.Context) error {
-	// Check if already installed
-	available, _ := g.IsAvailable(ctx)
-	if available {
-		return nil
-	}
-
-	// Try brew first (works on macOS and Linux with Homebrew)
-	if _, err := g.exec.LookPath("brew"); err == nil {
-		_, err := g.exec.CombinedOutput(ctx, "brew", "install", "go")
-		if err == nil {
-			return nil
-		}
-	}
-
-	// Fall back to official installer script
-	// Note: This requires user interaction for PATH setup
-	return fmt.Errorf("automatic Go installation not supported; visit https://go.dev/dl/ to install")
+	return g.SelfInstallWithBrewFallback(ctx, g.IsAvailable, "go", "",
+		"automatic Go installation not supported; visit https://go.dev/dl/ to install",
+	)
 }
 
 // goBinDir returns the directory where go install puts binaries.
-func (g *GoManager) goBinDir(ctx context.Context) string {
+func (g *GoManager) goBinDir() string {
 	// Check GOBIN first
 	if gobin := os.Getenv("GOBIN"); gobin != "" {
 		return gobin

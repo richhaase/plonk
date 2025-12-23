@@ -366,7 +366,7 @@ func TestGoManager_goBinDir(t *testing.T) {
 		t.Setenv("GOPATH", "/should/not/use")
 
 		mgr := NewGoManager(nil)
-		dir := mgr.goBinDir(context.Background())
+		dir := mgr.goBinDir()
 
 		assert.Equal(t, "/custom/gobin", dir)
 	})
@@ -376,7 +376,7 @@ func TestGoManager_goBinDir(t *testing.T) {
 		t.Setenv("GOPATH", "/custom/gopath")
 
 		mgr := NewGoManager(nil)
-		dir := mgr.goBinDir(context.Background())
+		dir := mgr.goBinDir()
 
 		assert.Equal(t, "/custom/gopath/bin", dir)
 	})
@@ -386,7 +386,7 @@ func TestGoManager_goBinDir(t *testing.T) {
 		t.Setenv("GOPATH", "")
 
 		mgr := NewGoManager(nil)
-		dir := mgr.goBinDir(context.Background())
+		dir := mgr.goBinDir()
 
 		home, _ := os.UserHomeDir()
 		assert.Equal(t, filepath.Join(home, "go", "bin"), dir)
