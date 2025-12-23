@@ -42,6 +42,30 @@ type HealthReport struct {
 	Checks  []HealthCheck `json:"checks" yaml:"checks"`
 }
 
+// fileStatus represents the state of a file for health checks
+type fileStatus int
+
+const (
+	fileExists fileStatus = iota
+	fileNotExists
+	fileNotReadable
+)
+
+// checkFileStatus checks if a file exists and is readable.
+// Returns the file content (if readable), status, and any error.
+func checkFileStatus(path string) ([]byte, fileStatus, error) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return nil, fileNotExists, nil
+	}
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fileNotReadable, err
+	}
+
+	return content, fileExists, nil
+}
+
 // RunHealthChecksWithContext performs system health checks using the provided context
 func RunHealthChecksWithContext(ctx context.Context) HealthReport {
 	report := HealthReport{
@@ -199,24 +223,22 @@ func checkConfigurationFile() HealthCheck {
 	configDir := config.GetDefaultConfigDirectory()
 	configPath := filepath.Join(configDir, "plonk.yaml")
 
-	// Check if config file exists
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+	content, status, err := checkFileStatus(configPath)
+	switch status {
+	case fileNotExists:
 		check.Status = "info"
 		check.Message = "Configuration file does not exist (using defaults)"
 		check.Details = append(check.Details, "Will use default configuration")
 		return check
-	}
-
-	// Check if file is readable
-	if content, err := os.ReadFile(configPath); err != nil {
+	case fileNotReadable:
 		check.Status = "fail"
 		check.Issues = append(check.Issues, fmt.Sprintf("Cannot read config file: %v", err))
 		check.Suggestions = append(check.Suggestions, "Check file permissions and directory access")
 		check.Message = "Configuration file is not readable"
-	} else {
-		check.Details = append(check.Details, fmt.Sprintf("Config file size: %d bytes", len(content)))
+		return check
 	}
 
+	check.Details = append(check.Details, fmt.Sprintf("Config file size: %d bytes", len(content)))
 	return check
 }
 
@@ -272,29 +294,28 @@ func checkLockFile() HealthCheck {
 	configDir := config.GetDefaultConfigDirectory()
 	lockPath := filepath.Join(configDir, "plonk.lock")
 
-	// Check if lock file exists
-	if _, err := os.Stat(lockPath); os.IsNotExist(err) {
+	content, status, err := checkFileStatus(lockPath)
+	switch status {
+	case fileNotExists:
 		check.Status = "info"
 		check.Message = "Lock file does not exist (will be created when packages are added)"
 		check.Details = append(check.Details, "Lock file will be automatically created when you add packages")
 		return check
-	}
-
-	// Check if file is readable
-	if content, err := os.ReadFile(lockPath); err != nil {
+	case fileNotReadable:
 		check.Status = "fail"
 		check.Issues = append(check.Issues, fmt.Sprintf("Cannot read lock file: %v", err))
 		check.Suggestions = append(check.Suggestions, "Check file permissions and directory access")
 		check.Message = "Lock file is not readable"
-	} else {
-		check.Details = append(check.Details, fmt.Sprintf("Lock file size: %d bytes", len(content)))
+		return check
+	}
 
-		// Basic file integrity check
-		if len(content) == 0 {
-			check.Status = "warn"
-			check.Message = "Lock file is empty"
-			check.Details = append(check.Details, "No packages currently managed")
-		}
+	check.Details = append(check.Details, fmt.Sprintf("Lock file size: %d bytes", len(content)))
+
+	// Basic file integrity check
+	if len(content) == 0 {
+		check.Status = "warn"
+		check.Message = "Lock file is empty"
+		check.Details = append(check.Details, "No packages currently managed")
 	}
 
 	return check
