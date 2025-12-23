@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(bd create:*)",
-      "Bash(bd dep add:*)",
-      "Bash(bd show:*)"
-    ]
-  }
-}
