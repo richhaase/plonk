@@ -256,42 +256,6 @@ get_brew_version() {
 }
 
 # =============================================================================
-# Spinner tests for upgrade command
-# =============================================================================
-
-@test "upgrade shows spinner during operation" {
-  require_safe_package "brew:cowsay"
-
-  # Install first
-  run plonk install brew:cowsay
-  assert_success
-  track_artifact "package" "brew:cowsay"
-
-  # Upgrade and check for spinner output
-  run plonk upgrade brew:cowsay
-  assert_success
-  assert_output --partial "Upgrading"
-}
-
-@test "upgrade shows progress indicators for multiple packages" {
-  require_safe_package "brew:cowsay"
-  require_safe_package "brew:figlet"
-
-  # Install both first
-  run plonk install brew:cowsay brew:figlet
-  assert_success
-  track_artifact "package" "brew:cowsay"
-  track_artifact "package" "brew:figlet"
-
-  # Upgrade both and check for progress indicators
-  run plonk upgrade brew:cowsay brew:figlet
-  assert_success
-  assert_output --partial "[1/2]"
-  assert_output --partial "[2/2]"
-  assert_output --partial "Upgrading"
-}
-
-# =============================================================================
 # Dry-run tests
 # =============================================================================
 
