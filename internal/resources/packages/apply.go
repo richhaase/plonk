@@ -9,27 +9,37 @@ import (
 	"sort"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources"
 )
 
 // Apply applies package configuration and returns the result
 func Apply(ctx context.Context, configDir string, cfg *config.Config, dryRun bool) (output.PackageResults, error) {
-	// Load manager configs from plonk.yaml before any operations
-	multi := NewMultiPackageResource(cfg)
+	registry := GetRegistry()
 
-	// Reconcile package domain to find missing packages
-	result, err := ReconcileWithConfig(ctx, configDir, cfg)
+	// Load lock file to get desired packages
+	lockService := lock.NewYAMLLockService(configDir)
+	lockData, err := lockService.Read()
 	if err != nil {
 		return output.PackageResults{}, err
 	}
 
+	// Convert lock.ResourceEntry to LockResource for reconciliation
+	var lockResources []LockResource
+	for _, r := range lockData.Resources {
+		lockResources = append(lockResources, LockResource{
+			Type:     r.Type,
+			Metadata: r.Metadata,
+		})
+	}
+
+	// Simple reconciliation: compare lock file vs installed packages
+	result := ReconcileFromLock(ctx, lockResources, registry)
+
 	// Group missing packages by manager
-	missingByManager := make(map[string][]resources.Item)
-	for _, item := range result.Missing {
-		if item.Manager != "" {
-			missingByManager[item.Manager] = append(missingByManager[item.Manager], item)
-		}
+	missingByManager := make(map[string][]PackageSpec)
+	for _, pkg := range result.Missing {
+		missingByManager[pkg.Manager] = append(missingByManager[pkg.Manager], pkg)
 	}
 
 	var managerResults []output.ManagerResults
@@ -53,51 +63,73 @@ func Apply(ctx context.Context, configDir string, cfg *config.Config, dryRun boo
 
 	// Process each manager's missing packages
 	for _, managerName := range managerNames {
-		missingItems := missingByManager[managerName]
+		missingPkgs := missingByManager[managerName]
 		var packageResults []output.PackageOperation
 		installedCount := 0
 		failedCount := 0
 		wouldInstallCount := 0
 
-		// Sort items by name for deterministic output
-		sort.Slice(missingItems, func(i, j int) bool { return missingItems[i].Name < missingItems[j].Name })
-		for _, item := range missingItems {
+		// Get the manager instance
+		manager, err := registry.GetManager(managerName)
+		if err != nil {
+			// Manager not available - mark all as failed
+			for _, pkg := range missingPkgs {
+				packageResults = append(packageResults, output.PackageOperation{
+					Name:   pkg.Name,
+					Status: "failed",
+					Error:  fmt.Sprintf("manager %s not available: %v", managerName, err),
+				})
+				failedCount++
+			}
+			managerResults = append(managerResults, output.ManagerResults{
+				Name:         managerName,
+				MissingCount: len(missingPkgs),
+				Packages:     packageResults,
+			})
+			totalFailed += failedCount
+			continue
+		}
+
+		// Sort packages by name for deterministic output
+		sort.Slice(missingPkgs, func(i, j int) bool { return missingPkgs[i].Name < missingPkgs[j].Name })
+
+		for _, pkg := range missingPkgs {
 			// Start spinner for this package
 			var spinner *output.Spinner
 			if spinnerManager != nil {
-				spinner = spinnerManager.StartSpinner("Installing", fmt.Sprintf("%s (%s)", item.Name, managerName))
+				spinner = spinnerManager.StartSpinner("Installing", fmt.Sprintf("%s (%s)", pkg.Name, managerName))
 			}
 
 			if dryRun {
 				packageResults = append(packageResults, output.PackageOperation{
-					Name:   item.Name,
+					Name:   pkg.Name,
 					Status: "would-install",
 				})
 				wouldInstallCount++
 				if spinner != nil {
-					spinner.Success(fmt.Sprintf("would-install %s", item.Name))
+					spinner.Success(fmt.Sprintf("would-install %s", pkg.Name))
 				}
 			} else {
-				// Use resource Apply method
-				err := multi.Apply(ctx, item)
+				// Install directly via manager
+				err := manager.Install(ctx, pkg.Name)
 				if err != nil {
 					packageResults = append(packageResults, output.PackageOperation{
-						Name:   item.Name,
+						Name:   pkg.Name,
 						Status: "failed",
 						Error:  err.Error(),
 					})
 					failedCount++
 					if spinner != nil {
-						spinner.Error(fmt.Sprintf("Failed to install %s: %s", item.Name, err.Error()))
+						spinner.Error(fmt.Sprintf("Failed to install %s: %s", pkg.Name, err.Error()))
 					}
 				} else {
 					packageResults = append(packageResults, output.PackageOperation{
-						Name:   item.Name,
+						Name:   pkg.Name,
 						Status: "installed",
 					})
 					installedCount++
 					if spinner != nil {
-						spinner.Success(fmt.Sprintf("installed %s", item.Name))
+						spinner.Success(fmt.Sprintf("installed %s", pkg.Name))
 					}
 				}
 			}
@@ -105,7 +137,7 @@ func Apply(ctx context.Context, configDir string, cfg *config.Config, dryRun boo
 
 		managerResults = append(managerResults, output.ManagerResults{
 			Name:         managerName,
-			MissingCount: len(missingItems),
+			MissingCount: len(missingPkgs),
 			Packages:     packageResults,
 		})
 
