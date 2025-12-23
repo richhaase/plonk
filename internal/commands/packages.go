@@ -8,7 +8,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources/packages"
+	"github.com/richhaase/plonk/internal/packages"
 	"github.com/spf13/cobra"
 )
 

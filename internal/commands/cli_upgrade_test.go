@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	packages "github.com/richhaase/plonk/internal/resources/packages"
+	packages "github.com/richhaase/plonk/internal/packages"
 )
 
 func TestCLI_Upgrade_Table_Basic(t *testing.T) {

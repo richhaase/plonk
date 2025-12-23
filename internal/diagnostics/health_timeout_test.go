@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	packages "github.com/richhaase/plonk/internal/resources/packages"
+	packages "github.com/richhaase/plonk/internal/packages"
 )
 
 func TestRunHealthChecksWithContext_Timeout(t *testing.T) {

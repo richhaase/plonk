@@ -10,7 +10,7 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/resources/dotfiles"
-	"github.com/richhaase/plonk/internal/resources/packages"
+	"github.com/richhaase/plonk/internal/packages"
 )
 
 // Orchestrator manages resources and their lock file state

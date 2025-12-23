@@ -7,7 +7,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
-	packages "github.com/richhaase/plonk/internal/resources/packages"
+	packages "github.com/richhaase/plonk/internal/packages"
 )
 
 // fakeMgrPartialFailure simulates a manager where some packages upgrade successfully and others fail

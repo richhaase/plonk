@@ -61,7 +61,7 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - `reconcile.go` - Generic reconciliation algorithm
 - `drift.go` - Drift detection interfaces
 
-#### Package Resources (`internal/resources/packages/`)
+#### Package Resources (`internal/packages/`)
 - `spec.go` - Package specification and reconciliation logic
 - `reconcile.go` - Package reconciliation entry point
 - `apply.go` - Package apply operations
@@ -132,12 +132,12 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 ### apply command
 - Entry: `internal/commands/apply.go`
 - Orchestration: `internal/orchestrator/coordinator.go`, `reconcile.go`
-- Package reconciliation: `internal/resources/packages/reconcile.go`, `apply.go`
+- Package reconciliation: `internal/packages/reconcile.go`, `apply.go`
 - Dotfile reconciliation: `internal/resources/dotfiles/reconcile.go`, `apply.go`
 
 ### status command
 - Entry: `internal/commands/status.go`
-- Package reconciliation: `internal/resources/packages/reconcile.go`
+- Package reconciliation: `internal/packages/reconcile.go`
 - Dotfile reconciliation: `internal/resources/dotfiles/reconcile.go`
 
 ### doctor command
@@ -147,7 +147,7 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 
 ### diff command
 - Entry: `internal/commands/diff.go`
-- Package reconciliation: `internal/resources/packages/reconcile.go`
+- Package reconciliation: `internal/packages/reconcile.go`
 - Dotfile reconciliation: `internal/resources/dotfiles/reconcile.go`
 
 ### config show/edit commands
@@ -156,8 +156,8 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 
 ### Package management commands (install/uninstall)
 - Entries: `internal/commands/install.go`, `uninstall.go`
-- Operations: `internal/resources/packages/operations.go`
-- Manager registry: `internal/resources/packages/registry.go`
+- Operations: `internal/packages/operations.go`
+- Manager registry: `internal/packages/registry.go`
 - Lock file updates: `internal/lock/yaml_lock.go`
 
 ### Dotfile management commands (add/rm)
@@ -169,7 +169,7 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 ## Key Interfaces
 
 ### PackageManager Interface
-Location: `internal/resources/packages/interfaces.go`
+Location: `internal/packages/interfaces.go`
 - Implemented by: 10 package managers (hardcoded Go implementations)
 - Defines: Install, Uninstall, List operations
 

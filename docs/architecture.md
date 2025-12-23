@@ -54,7 +54,7 @@ The orchestrator coordinates complex operations across multiple resource types:
 
 Resources are organized by type:
 
-#### Packages (`internal/resources/packages/`)
+#### Packages (`internal/packages/`)
 - Hardcoded package manager implementations with consistent interfaces
 - **ManagerRegistry** provides access to all registered package managers
 - Reconciliation and apply logic for package state using `manager:name` as unique keys
@@ -206,7 +206,7 @@ All commands support multiple output formats (table, JSON, YAML) to support:
 
 To add a new package manager, implement the `PackageManager` interface in Go:
 
-1. Create a new manager struct in `internal/resources/packages/`
+1. Create a new manager struct in `internal/packages/`
 2. Implement required methods: `Install`, `Uninstall`, `ListInstalled`, `Upgrade`, `CheckHealth`
 3. Register the manager in the registry
 4. Add tests for all operations

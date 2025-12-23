@@ -14,7 +14,7 @@ import (
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources/packages"
+	"github.com/richhaase/plonk/internal/packages"
 )
 
 // Config represents setup configuration options

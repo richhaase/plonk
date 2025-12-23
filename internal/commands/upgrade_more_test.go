@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/richhaase/plonk/internal/lock"
-	packages "github.com/richhaase/plonk/internal/resources/packages"
+	packages "github.com/richhaase/plonk/internal/packages"
 )
 
 // Fake manager that reports available and simulates version change on Upgrade.

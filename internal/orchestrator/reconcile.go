@@ -9,7 +9,7 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/resources"
 	"github.com/richhaase/plonk/internal/resources/dotfiles"
-	"github.com/richhaase/plonk/internal/resources/packages"
+	"github.com/richhaase/plonk/internal/packages"
 )
 
 // ReconcileAllWithConfig reconciles all domains using injected config
