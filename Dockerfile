@@ -5,10 +5,10 @@
 #   - brew (Homebrew)
 #   - npm (Node.js)
 #   - pnpm (Fast npm alternative)
+#   - bun (Fast JavaScript runtime)
 #   - cargo (Rust)
-#   - pipx (Python applications)
-#   - conda (Scientific computing)
 #   - gem (Ruby)
+#   - go (Go modules)
 #   - uv (Fast Python tool manager)
 #
 # Build: docker build -t plonk-test .
@@ -109,26 +109,12 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
 # Ensure uv is in PATH
 ENV PATH="${HOME}/.local/bin:${PATH}"
 
-# Install pipx
-RUN python3 -m pip install --user --break-system-packages pipx && \
-    python3 -m pipx ensurepath && \
-    ~/.local/bin/pipx --version
+# Install bun (fast JavaScript runtime and package manager)
+RUN curl -fsSL https://bun.sh/install | bash && \
+    ~/.bun/bin/bun --version
 
-# Install Miniconda for conda support (architecture-aware)
-ARG TARGETARCH
-RUN ARCH=$([ "$TARGETARCH" = "arm64" ] && echo "aarch64" || echo "x86_64") && \
-    curl -fsSL "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-${ARCH}.sh" -o miniconda.sh && \
-    bash miniconda.sh -b -p "${HOME}/miniconda3" && \
-    rm miniconda.sh && \
-    ~/miniconda3/bin/conda init bash && \
-    ~/miniconda3/bin/conda --version
-
-# Add conda to PATH
-ENV PATH="${HOME}/miniconda3/bin:${PATH}"
-
-# Accept conda Terms of Service for default channels (required for non-interactive use)
-RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
-    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
+# Add bun to PATH
+ENV PATH="${HOME}/.bun/bin:${PATH}"
 
 # Install BATS support libraries via Homebrew
 RUN brew install bats-core && \
