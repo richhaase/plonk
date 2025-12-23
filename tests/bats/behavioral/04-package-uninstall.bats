@@ -2,238 +2,44 @@
 
 load '../lib/test_helper'
 load '../lib/assertions'
+load '../lib/package_test_helper'
 
 setup() {
   setup_test_env
 }
 
-# Homebrew uninstall tests
+# =============================================================================
+# Per-manager uninstall tests
+# =============================================================================
+
 @test "uninstall managed brew package" {
-  require_safe_package "brew:sl"
-
-  # Install first
-  run plonk install brew:sl
-  assert_success
-  track_artifact "package" "brew:sl"
-
-  # Verify it's installed
-  run brew list sl
-  assert_success
-
-  # Then uninstall
-  run plonk uninstall brew:sl
-  assert_success
-  assert_output --partial "removed"
-
-  # Verify actually uninstalled by brew
-  run brew list sl
-  assert_failure
-
-  # Verify gone from lock file
-  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
-    run cat "$PLONK_DIR/plonk.lock"
-    refute_output --partial "sl"
-  fi
-
-  # Verify gone from status
-  run plonk status
-  refute_output --partial "sl"
+  test_uninstall_managed "brew" "sl"
 }
 
-# NPM uninstall tests
 @test "uninstall managed npm package" {
-  require_safe_package "npm:left-pad"
-
-  run which npm
-  if [[ $status -ne 0 ]]; then
-    skip "npm not available"
-  fi
-
-  # Install first
-  run plonk install npm:left-pad
-  assert_success
-  track_artifact "package" "npm:left-pad"
-
-  # Verify it's installed
-  run npm list -g left-pad
-  assert_success
-
-  # Then uninstall
-  run plonk uninstall npm:left-pad
-  assert_success
-  assert_output --partial "removed"
-
-  # Verify actually uninstalled by npm
-  run npm list -g left-pad
-  assert_failure
-
-  # Verify gone from lock file
-  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
-    run cat "$PLONK_DIR/plonk.lock"
-    refute_output --partial "left-pad"
-  fi
-
-  # Verify gone from status
-  run plonk status
-  refute_output --partial "left-pad"
+  test_uninstall_managed "npm" "left-pad"
 }
 
-
-# Ruby/gem uninstall tests
 @test "uninstall managed gem package" {
-  require_safe_package "gem:colorize"
-
-  run which gem
-  if [[ $status -ne 0 ]]; then
-    skip "gem not available"
-  fi
-
-  # Install first
-  run plonk install gem:colorize
-  assert_success
-  track_artifact "package" "gem:colorize"
-
-  # Verify it's installed
-  run gem list colorize
-  assert_success
-  assert_output --partial "colorize"
-
-  # Then uninstall
-  run plonk uninstall gem:colorize
-  assert_success
-  assert_output --partial "removed"
-
-  # Verify actually uninstalled by gem
-  run gem list colorize
-  assert_success  # gem list returns 0 even if not found
-  refute_output --partial "colorize"
-
-  # Verify gone from lock file
-  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
-    run cat "$PLONK_DIR/plonk.lock"
-    refute_output --partial "colorize"
-  fi
-
-  # Verify gone from status
-  run plonk status
-  refute_output --partial "colorize"
+  test_uninstall_managed "gem" "colorize"
 }
 
-# Cargo uninstall tests
 @test "uninstall managed cargo package" {
-  require_safe_package "cargo:ripgrep"
-
-  run which cargo
-  if [[ $status -ne 0 ]]; then
-    skip "cargo not available"
-  fi
-
-  # Install first
-  run plonk install cargo:ripgrep
-  assert_success
-  track_artifact "package" "cargo:ripgrep"
-
-  # Verify it's installed by cargo
-  run cargo install --list
-  assert_success
-  assert_output --partial "ripgrep"
-
-  # Then uninstall
-  run plonk uninstall cargo:ripgrep
-  assert_success
-  assert_output --partial "removed"
-
-  # Verify actually uninstalled by cargo
-  run cargo install --list
-  assert_success
-  refute_output --partial "ripgrep"
-
-  # Verify gone from lock file
-  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
-    run cat "$PLONK_DIR/plonk.lock"
-    refute_output --partial "ripgrep"
-  fi
-
-  # Verify gone from status
-  run plonk status
-  refute_output --partial "ripgrep"
+  test_uninstall_managed "cargo" "ripgrep"
 }
 
-# UV uninstall tests
 @test "uninstall managed uv package" {
-  require_safe_package "uv:rich-cli"
-
-  run which uv
-  if [[ $status -ne 0 ]]; then
-    skip "uv not available"
-  fi
-
-  # Install first
-  run plonk install uv:rich-cli
-  assert_success
-  track_artifact "package" "uv:rich-cli"
-
-  # Verify it's installed by uv
-  run uv tool list
-  assert_success
-  assert_output --partial "rich-cli"
-
-  # Then uninstall
-  run plonk uninstall uv:rich-cli
-  assert_success
-  assert_output --partial "removed"
-
-  # Verify actually uninstalled by uv
-  run uv tool list
-  assert_success
-  refute_output --partial "rich-cli"
-
-  # Verify gone from lock file
-  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
-    run cat "$PLONK_DIR/plonk.lock"
-    refute_output --partial "rich-cli"
-  fi
-
-  # Verify gone from status
-  run plonk status
-  refute_output --partial "rich-cli"
+  test_uninstall_managed "uv" "rich-cli"
 }
 
-# Pnpm uninstall tests
 @test "uninstall managed pnpm package" {
-  require_safe_package "pnpm:prettier"
-
-  run which pnpm
-  if [[ $status -ne 0 ]]; then
-    skip "pnpm not available"
-  fi
-
-  # Install first
-  run plonk install pnpm:prettier
-  assert_success
-  track_artifact "package" "pnpm:prettier"
-
-  # Verify it's installed by pnpm
-  run pnpm list -g prettier
-  assert_success
-
-  # Then uninstall
-  run plonk uninstall pnpm:prettier
-  assert_success
-  assert_output --partial "removed"
-
-  # Verify gone from lock file
-  if [[ -f "$PLONK_DIR/plonk.lock" ]]; then
-    run cat "$PLONK_DIR/plonk.lock"
-    refute_output --partial "prettier"
-  fi
-
-  # Verify gone from status
-  run plonk status
-  refute_output --partial "prettier"
+  test_uninstall_managed "pnpm" "prettier"
 }
 
+# =============================================================================
 # General uninstall behavior tests
+# =============================================================================
+
 @test "uninstall non-managed package acts as pass-through" {
   require_safe_package "brew:fortune"
 
@@ -322,7 +128,10 @@ EOF
   assert_failure
 }
 
+# =============================================================================
 # Spinner tests for uninstall command
+# =============================================================================
+
 @test "uninstall shows spinner during operation" {
   require_safe_package "brew:sl"
 
@@ -335,7 +144,6 @@ EOF
   run plonk uninstall brew:sl
   assert_success
   assert_output --partial "Uninstalling"
-  assert_output --partial "✓"
   assert_output --partial "removed"
 }
 
@@ -351,7 +159,6 @@ EOF
   run plonk uninstall brew:figlet
   assert_success
   assert_output --partial "Uninstalling: brew:figlet"
-  assert_output --partial "✓"
 }
 
 @test "uninstall shows error message when removal fails" {

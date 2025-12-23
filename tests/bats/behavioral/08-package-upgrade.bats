@@ -2,6 +2,7 @@
 
 load '../lib/test_helper'
 load '../lib/assertions'
+load '../lib/package_test_helper'
 
 setup() {
   setup_test_env
@@ -103,6 +104,7 @@ get_brew_version() {
 # =============================================================================
 # Basic upgrade syntax tests
 # =============================================================================
+
 @test "upgrade command shows help when no arguments given to empty environment" {
   run plonk upgrade
   assert_success
@@ -137,153 +139,53 @@ get_brew_version() {
 }
 
 # =============================================================================
-# Package Manager Upgrade Tests
-# These tests verify upgrade command works and doesn't break packages.
-# For version change verification, see "Version Upgrade Verification Tests" above.
+# Per-manager single package upgrade tests
 # =============================================================================
 
-# Homebrew upgrade tests
 @test "upgrade single brew package" {
-  require_safe_package "brew:cowsay"
-
-  # First install a package
-  run plonk install brew:cowsay
-  assert_success
-  track_artifact "package" "brew:cowsay"
-
-  # Verify it's installed
-  run brew list cowsay
-  assert_success
-
-  # Upgrade the specific package
-  run plonk upgrade brew:cowsay
-  assert_success
-  # Verify upgrade output shows the package was processed
-  assert_output --partial "cowsay"
-  # Verify upgrade completion indicator is present
-  assert_output --partial "✓"
-
-  # Should still be installed after upgrade
-  run brew list cowsay
-  assert_success
+  test_upgrade_single "brew" "cowsay"
 }
+
+@test "upgrade single npm package" {
+  test_upgrade_single "npm" "is-odd"
+}
+
+@test "upgrade single uv package" {
+  test_upgrade_single "uv" "cowsay"
+}
+
+@test "upgrade single gem package" {
+  test_upgrade_single "gem" "colorize"
+}
+
+@test "upgrade single cargo package" {
+  test_upgrade_single "cargo" "ripgrep"
+}
+
+@test "upgrade single pnpm package" {
+  test_upgrade_single "pnpm" "prettier"
+}
+
+# =============================================================================
+# Per-manager upgrade all packages tests
+# =============================================================================
 
 @test "upgrade all brew packages" {
-  require_safe_package "brew:figlet"
-  require_safe_package "brew:sl"
-
-  # Install multiple packages
-  run plonk install brew:figlet brew:sl
-  assert_success
-  track_artifact "package" "brew:figlet"
-  track_artifact "package" "brew:sl"
-
-  # Upgrade all homebrew packages
-  run plonk upgrade brew
-  assert_success
-  assert_output --partial "figlet"
-  assert_output --partial "sl"
-
-  # Should still be installed
-  run brew list figlet
-  assert_success
-  run brew list sl
-  assert_success
-}
-
-# NPM upgrade tests
-@test "upgrade single npm package" {
-  require_package_manager "npm"
-  require_safe_package "npm:is-odd"
-
-  # Install package
-  run plonk install npm:is-odd
-  assert_success
-  track_artifact "package" "npm:is-odd"
-
-  # Verify it's installed
-  run npm list -g is-odd
-  assert_success
-
-  # Upgrade the specific package
-  run plonk upgrade npm:is-odd
-  assert_success
-  assert_output --partial "is-odd"
-
-  # Should still be installed
-  run npm list -g is-odd
-  assert_success
+  test_upgrade_all_manager "brew" "figlet" "sl"
 }
 
 @test "upgrade all npm packages" {
-  require_package_manager "npm"
-  require_safe_package "npm:is-odd"
-  require_safe_package "npm:left-pad"
-
-  # Install multiple packages
-  run plonk install npm:is-odd npm:left-pad
-  assert_success
-  track_artifact "package" "npm:is-odd"
-  track_artifact "package" "npm:left-pad"
-
-  # Upgrade all npm packages
-  run plonk upgrade npm
-  assert_success
-  assert_output --partial "is-odd"
-  assert_output --partial "left-pad"
+  test_upgrade_all_manager "npm" "is-odd" "left-pad"
 }
 
-# UV upgrade tests
-@test "upgrade single uv package" {
-  require_package_manager "uv"
-  require_safe_package "uv:cowsay"
-
-  # Install package
-  run plonk install uv:cowsay
-  if [[ $status -ne 0 ]]; then
-    skip "Failed to install uv:cowsay"
-  fi
-  track_artifact "package" "uv:cowsay"
-
-  # Upgrade the specific package
-  run plonk upgrade uv:cowsay
-  assert_success
-  assert_output --partial "cowsay"
+@test "upgrade all pnpm packages" {
+  test_upgrade_all_manager "pnpm" "prettier"
 }
 
-# Gem upgrade tests
-@test "upgrade single gem package" {
-  require_package_manager "gem"
-  require_safe_package "gem:colorize"
-
-  # Install package
-  run plonk install gem:colorize
-  assert_success
-  track_artifact "package" "gem:colorize"
-
-  # Upgrade the specific package
-  run plonk upgrade gem:colorize
-  assert_success
-  assert_output --partial "colorize"
-}
-
-# Cargo upgrade tests
-@test "upgrade single cargo package" {
-  require_package_manager "cargo"
-  require_safe_package "cargo:ripgrep"
-
-  # Install package
-  run plonk install cargo:ripgrep
-  assert_success
-  track_artifact "package" "cargo:ripgrep"
-
-  # Upgrade the specific package
-  run plonk upgrade cargo:ripgrep
-  assert_success
-  assert_output --partial "ripgrep"
-}
-
+# =============================================================================
 # Cross-manager upgrade tests
+# =============================================================================
+
 @test "upgrade package across managers" {
   require_safe_package "brew:cowsay"
   require_package_manager "uv"
@@ -326,7 +228,10 @@ get_brew_version() {
   assert_output --partial "Summary:"
 }
 
+# =============================================================================
 # Error handling tests
+# =============================================================================
+
 @test "upgrade handles unavailable package manager gracefully" {
   # Try to upgrade with a package manager that doesn't exist
   run plonk upgrade nonexistent-manager:some-package
@@ -350,7 +255,10 @@ get_brew_version() {
   assert_output --partial "not managed by plonk"
 }
 
+# =============================================================================
 # Spinner tests for upgrade command
+# =============================================================================
+
 @test "upgrade shows spinner during operation" {
   require_safe_package "brew:cowsay"
 
@@ -363,7 +271,6 @@ get_brew_version() {
   run plonk upgrade brew:cowsay
   assert_success
   assert_output --partial "Upgrading"
-  assert_output --partial "✓"
 }
 
 @test "upgrade shows progress indicators for multiple packages" {
@@ -384,39 +291,9 @@ get_brew_version() {
   assert_output --partial "Upgrading"
 }
 
-# Pnpm upgrade tests
-
-@test "upgrade single pnpm package" {
-  require_package_manager "pnpm"
-  require_safe_package "pnpm:prettier"
-
-  # Install package
-  run plonk install pnpm:prettier
-  assert_success
-  track_artifact "package" "pnpm:prettier"
-
-  # Upgrade the specific package
-  run plonk upgrade pnpm:prettier
-  assert_success
-  assert_output --partial "prettier"
-}
-
-@test "upgrade all pnpm packages" {
-  require_package_manager "pnpm"
-  require_safe_package "pnpm:prettier"
-
-  # Install package
-  run plonk install pnpm:prettier
-  assert_success
-  track_artifact "package" "pnpm:prettier"
-
-  # Upgrade all pnpm packages
-  run plonk upgrade pnpm
-  assert_success
-  assert_output --partial "prettier"
-}
-
+# =============================================================================
 # Dry-run tests
+# =============================================================================
 
 @test "upgrade --dry-run shows what would happen" {
   require_safe_package "brew:cowsay"

@@ -2,35 +2,43 @@
 
 load '../lib/test_helper'
 load '../lib/assertions'
+load '../lib/package_test_helper'
 
 setup() {
   setup_test_env
 }
 
-# Homebrew tests
+# =============================================================================
+# Single package install tests (per manager)
+# =============================================================================
+
 @test "install single brew package" {
-  require_safe_package "brew:cowsay"
-
-  run plonk install brew:cowsay
-  assert_success
-  assert_output --partial "cowsay"
-  assert_output --partial "added"
-
-  track_artifact "package" "brew:cowsay"
-
-  # Verify it's actually installed by brew
-  run brew list cowsay
-  assert_success
-
-  # Verify it's in plonk lock file
-  run cat "$PLONK_DIR/plonk.lock"
-  assert_success
-  assert_output --partial "cowsay"
-
-  # Verify it's in status
-  run plonk status
-  assert_output --partial "cowsay"
+  test_install_single "brew" "cowsay"
 }
+
+@test "install npm package" {
+  test_install_single "npm" "is-odd"
+}
+
+@test "install gem package" {
+  test_install_single "gem" "colorize"
+}
+
+@test "install cargo package" {
+  test_install_single "cargo" "ripgrep"
+}
+
+@test "install uv package" {
+  test_install_single "uv" "cowsay"
+}
+
+@test "install pnpm package" {
+  test_install_single "pnpm" "prettier"
+}
+
+# =============================================================================
+# Multiple package installation
+# =============================================================================
 
 # Test multiple package installation - only testing with brew since
 # the logic is the same for all managers (just loops over single installs)
@@ -61,165 +69,9 @@ setup() {
   assert_output_contains_all "figlet" "sl"
 }
 
-# NPM tests
-@test "install npm package" {
-  require_safe_package "npm:is-odd"
-
-  # Check if npm is available first
-  run which npm
-  if [[ $status -ne 0 ]]; then
-    skip "npm not available"
-  fi
-
-  run plonk install npm:is-odd
-  assert_success
-  assert_output --partial "is-odd"
-  assert_output --partial "added"
-
-  track_artifact "package" "npm:is-odd"
-
-  # Verify it's actually installed by npm
-  run npm list -g is-odd
-  assert_success
-
-  # Verify it's in lock file
-  run cat "$PLONK_DIR/plonk.lock"
-  assert_success
-  assert_output --partial "is-odd"
-
-  # Verify in status
-  run plonk status
-  assert_output --partial "is-odd"
-}
-
-# Ruby/gem tests
-@test "install gem package" {
-  require_safe_package "gem:colorize"
-
-  # Check if gem is available
-  run which gem
-  if [[ $status -ne 0 ]]; then
-    skip "gem not available"
-  fi
-
-  run plonk install gem:colorize
-  assert_success
-  assert_output --partial "colorize"
-  assert_output --partial "added"
-
-  track_artifact "package" "gem:colorize"
-
-  # Verify it's actually installed by gem
-  run gem list colorize
-  assert_success
-  assert_output --partial "colorize"
-
-  # Verify it's in lock file
-  run cat "$PLONK_DIR/plonk.lock"
-  assert_success
-  assert_output --partial "colorize"
-
-  # Verify in status
-  run plonk status
-  assert_output --partial "colorize"
-}
-
-# Cargo tests
-@test "install cargo package" {
-  require_safe_package "cargo:ripgrep"
-
-  # Check if cargo is available
-  run which cargo
-  if [[ $status -ne 0 ]]; then
-    skip "cargo not available"
-  fi
-
-  run plonk install cargo:ripgrep
-  assert_success
-  assert_output --partial "ripgrep"
-  assert_output --partial "added"
-
-  track_artifact "package" "cargo:ripgrep"
-
-  # Verify it's actually installed by cargo
-  run cargo install --list
-  assert_success
-  assert_output --partial "ripgrep"
-
-  # Verify it's in lock file
-  run cat "$PLONK_DIR/plonk.lock"
-  assert_success
-  assert_output --partial "ripgrep"
-
-  # Verify in status
-  run plonk status
-  assert_output --partial "ripgrep"
-}
-
-# UV tests
-@test "install uv package" {
-  require_safe_package "uv:cowsay"
-
-  # Check if uv is available
-  run which uv
-  if [[ $status -ne 0 ]]; then
-    skip "uv not available"
-  fi
-
-  run plonk install uv:cowsay
-  assert_success
-  assert_output --partial "cowsay"
-  assert_output --partial "added"
-
-  track_artifact "package" "uv:cowsay"
-
-  # Verify it's actually installed by uv
-  run uv tool list
-  assert_success
-  assert_output --partial "cowsay"
-
-  # Verify it's in lock file
-  run cat "$PLONK_DIR/plonk.lock"
-  assert_success
-  assert_output --partial "cowsay"
-
-  # Verify in status
-  run plonk status
-  assert_output --partial "cowsay"
-}
-
-# Pnpm tests
-@test "install pnpm package" {
-  require_safe_package "pnpm:prettier"
-
-  # Check if pnpm is available
-  run which pnpm
-  if [[ $status -ne 0 ]]; then
-    skip "pnpm not available"
-  fi
-
-  run plonk install pnpm:prettier
-  assert_success
-  assert_output --partial "prettier"
-  assert_output --partial "added"
-
-  track_artifact "package" "pnpm:prettier"
-
-  # Verify it's actually installed by pnpm
-  run pnpm list -g prettier
-  assert_success
-
-  # Verify it's in lock file
-  run cat "$PLONK_DIR/plonk.lock"
-  assert_success
-  assert_output --partial "prettier"
-
-  # Verify in status
-  run plonk status
-  assert_output --partial "prettier"
-}
-
+# =============================================================================
 # Dry-run tests
+# =============================================================================
 
 @test "install --dry-run shows what would happen" {
   require_safe_package "brew:lolcat"
