@@ -259,13 +259,16 @@ func TestPNPMManager_SelfInstall(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Len(t, mock.Commands, 1)
+		assert.Equal(t, "pnpm", mock.Commands[0].Name)
 	})
 
-	t.Run("installs via brew", func(t *testing.T) {
+	t.Run("installs via brew when available", func(t *testing.T) {
 		mock := &MockCommandExecutor{
 			Responses: map[string]CommandResponse{
-				"pnpm --version":     {Error: fmt.Errorf("not found")},
-				"brew install pnpm": {Output: []byte("installed")},
+				// pnpm --version fails (not installed)
+				"pnpm --version":     {Error: fmt.Errorf("command not found")},
+				// brew install pnpm succeeds (LookPath checks for "brew" prefix)
+				"brew install pnpm": {Output: []byte("Installing pnpm...")},
 			},
 		}
 		mgr := NewPNPMManager(mock)
@@ -273,30 +276,18 @@ func TestPNPMManager_SelfInstall(t *testing.T) {
 		err := mgr.SelfInstall(context.Background())
 
 		assert.NoError(t, err)
+		// Should have called pnpm --version, brew install pnpm
+		assert.Len(t, mock.Commands, 2)
 	})
 
-	t.Run("installs via npm when brew fails", func(t *testing.T) {
+	t.Run("installs via curl when brew not available", func(t *testing.T) {
+		// Don't include any brew responses so LookPath fails, fall back to curl
 		mock := &MockCommandExecutor{
 			Responses: map[string]CommandResponse{
-				"pnpm --version":        {Error: fmt.Errorf("not found")},
-				"brew install pnpm":    {Error: fmt.Errorf("brew failed")},
-				"npm install -g pnpm": {Output: []byte("installed")},
-			},
-		}
-		mgr := NewPNPMManager(mock)
-
-		err := mgr.SelfInstall(context.Background())
-
-		assert.NoError(t, err)
-	})
-
-	t.Run("installs via curl when brew and npm fail", func(t *testing.T) {
-		mock := &MockCommandExecutor{
-			Responses: map[string]CommandResponse{
-				"pnpm --version":                                       {Error: fmt.Errorf("not found")},
-				"brew install pnpm":                                   {Error: fmt.Errorf("brew failed")},
-				"npm install -g pnpm":                                 {Error: fmt.Errorf("npm failed")},
-				"sh -c curl -fsSL https://get.pnpm.io/install.sh | sh -": {Output: []byte("installed")},
+				// pnpm --version fails (not installed)
+				"pnpm --version": {Error: fmt.Errorf("command not found")},
+				// curl fallback succeeds
+				"sh -c curl -fsSL https://get.pnpm.io/install.sh | sh -": {Output: []byte("Installing pnpm...")},
 			},
 		}
 		mgr := NewPNPMManager(mock)

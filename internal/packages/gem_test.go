@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestGemManager_IsAvailable(t *testing.T) {
@@ -321,9 +320,8 @@ func TestGemManager_SelfInstall(t *testing.T) {
 			Responses: map[string]CommandResponse{
 				// gem --version fails (not installed)
 				"gem --version": {Error: fmt.Errorf("command not found")},
-				// brew is available
-				"brew --version":      {Output: []byte("Homebrew 4.2.0")},
-				"brew install ruby":   {Output: []byte("Installing ruby...")},
+				// brew install ruby succeeds (LookPath checks for "brew" prefix)
+				"brew install ruby": {Output: []byte("Installing ruby...")},
 			},
 		}
 		mgr := NewGemManager(mock)
@@ -331,17 +329,16 @@ func TestGemManager_SelfInstall(t *testing.T) {
 		err := mgr.SelfInstall(context.Background())
 
 		assert.NoError(t, err)
-		// Should have called gem --version, brew --version, brew install ruby
-		require.GreaterOrEqual(t, len(mock.Commands), 3)
+		// Should have called gem --version, brew install ruby
+		assert.Len(t, mock.Commands, 2)
 	})
 
 	t.Run("returns error when no install method available", func(t *testing.T) {
+		// Don't include any brew responses so LookPath fails
 		mock := &MockCommandExecutor{
 			Responses: map[string]CommandResponse{
 				// gem --version fails (not installed)
 				"gem --version": {Error: fmt.Errorf("command not found")},
-				// brew not available
-				"brew --version": {Error: fmt.Errorf("command not found")},
 			},
 		}
 		mgr := NewGemManager(mock)

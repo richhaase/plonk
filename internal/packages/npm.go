@@ -66,19 +66,7 @@ func (n *NPMManager) Upgrade(ctx context.Context, packages []string) error {
 
 // SelfInstall installs npm by installing Node.js.
 func (n *NPMManager) SelfInstall(ctx context.Context) error {
-	// Check if already installed
-	available, _ := n.IsAvailable(ctx)
-	if available {
-		return nil
-	}
-
-	// npm comes with Node.js, try brew first
-	if _, err := n.Exec().LookPath("brew"); err == nil {
-		_, err := n.Exec().CombinedOutput(ctx, "brew", "install", "node")
-		if err == nil {
-			return nil
-		}
-	}
-
-	return fmt.Errorf("install Node.js from https://nodejs.org/ to get npm")
+	return n.SelfInstallWithBrewFallback(ctx, n.IsAvailable, "node", "",
+		"install Node.js from https://nodejs.org/ to get npm",
+	)
 }

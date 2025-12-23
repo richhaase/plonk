@@ -61,35 +61,10 @@ func (p *PNPMManager) Upgrade(ctx context.Context, packages []string) error {
 	)
 }
 
-// SelfInstall installs pnpm using brew, npm, or the official installer.
+// SelfInstall installs pnpm via Homebrew or the official installer.
 func (p *PNPMManager) SelfInstall(ctx context.Context) error {
-	// Check if already installed
-	available, _ := p.IsAvailable(ctx)
-	if available {
-		return nil
-	}
-
-	// Try brew first
-	if _, err := p.Exec().LookPath("brew"); err == nil {
-		_, err := p.Exec().CombinedOutput(ctx, "brew", "install", "pnpm")
-		if err == nil {
-			return nil
-		}
-	}
-
-	// Try npm if available
-	if _, err := p.Exec().LookPath("npm"); err == nil {
-		_, err := p.Exec().CombinedOutput(ctx, "npm", "install", "-g", "pnpm")
-		if err == nil {
-			return nil
-		}
-	}
-
-	// Fall back to official installer
-	script := `curl -fsSL https://get.pnpm.io/install.sh | sh -`
-	_, err := p.Exec().CombinedOutput(ctx, "sh", "-c", script)
-	if err != nil {
-		return fmt.Errorf("failed to install pnpm: %w", err)
-	}
-	return nil
+	return p.SelfInstallWithBrewFallback(ctx, p.IsAvailable, "pnpm",
+		`curl -fsSL https://get.pnpm.io/install.sh | sh -`,
+		"failed to install pnpm",
+	)
 }

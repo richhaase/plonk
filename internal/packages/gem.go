@@ -66,21 +66,8 @@ func (g *GemManager) Upgrade(ctx context.Context, packages []string) error {
 
 // SelfInstall installs Ruby via Homebrew (macOS) or provides guidance.
 func (g *GemManager) SelfInstall(ctx context.Context) error {
-	// Check if already installed
-	available, _ := g.IsAvailable(ctx)
-	if available {
-		return nil
-	}
-
-	// Try to install via Homebrew first
-	brew := NewBrewManager(g.Exec())
-	if brewAvailable, _ := brew.IsAvailable(ctx); brewAvailable {
-		if err := brew.Install(ctx, "ruby"); err != nil {
-			return fmt.Errorf("failed to install Ruby via Homebrew: %w", err)
-		}
-		return nil
-	}
-
-	return fmt.Errorf("ruby is not installed and no supported installation method is available")
+	return g.SelfInstallWithBrewFallback(ctx, g.IsAvailable, "ruby", "",
+		"ruby is not installed and no supported installation method is available",
+	)
 }
 
