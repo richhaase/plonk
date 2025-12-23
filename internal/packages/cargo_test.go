@@ -396,7 +396,7 @@ fd-find v9.0.0:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := parseCargoList([]byte(tt.input))
+			result := parseOutput([]byte(tt.input), ParseConfig{SkipIndented: true, TakeFirstToken: true})
 			assert.Equal(t, tt.expected, result)
 		})
 	}

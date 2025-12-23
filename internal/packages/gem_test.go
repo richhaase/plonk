@@ -402,7 +402,7 @@ rake
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := parseGemList([]byte(tt.input))
+			result := parseOutput([]byte(tt.input), ParseConfig{})
 			assert.Equal(t, tt.expected, result)
 		})
 	}

@@ -5,9 +5,7 @@ package packages
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"strings"
 )
 
 // NPMProvider represents the Node.js package manager provider.
@@ -56,14 +54,14 @@ func (n *NPMManager) ListInstalled(ctx context.Context) ([]string, error) {
 				return nil, fmt.Errorf("failed to list packages: %w", err)
 			}
 		}
-		return parseNPMJSON(output)
+		return parseJSONDependencies(output, false)
 
 	case ProviderPNPM:
 		output, err := n.Exec().Execute(ctx, binary, "list", "-g", "--depth=0", "--json")
 		if err != nil {
 			return nil, fmt.Errorf("failed to list packages: %w", err)
 		}
-		return parsePNPMJSON(output)
+		return parseJSONDependencies(output, true)
 
 	case ProviderBun:
 		// bun pm ls -g outputs simple lines
@@ -71,7 +69,7 @@ func (n *NPMManager) ListInstalled(ctx context.Context) ([]string, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to list packages: %w", err)
 		}
-		return parseBunList(output), nil
+		return parseOutput(output, ParseConfig{TakeFirstToken: true, SkipPrefixes: []string{"/", "dependencies:"}}), nil
 
 	default:
 		return nil, fmt.Errorf("unknown provider: %s", n.provider)
@@ -243,68 +241,3 @@ func (n *NPMManager) installBun(ctx context.Context) error {
 	return nil
 }
 
-// parseNPMJSON parses npm list -g --json output.
-// Format: {"dependencies": {"pkg1": {...}, "pkg2": {...}}}
-func parseNPMJSON(data []byte) ([]string, error) {
-	var result struct {
-		Dependencies map[string]interface{} `json:"dependencies"`
-	}
-
-	if err := json.Unmarshal(data, &result); err != nil {
-		return nil, fmt.Errorf("failed to parse npm JSON: %w", err)
-	}
-
-	packages := make([]string, 0, len(result.Dependencies))
-	for name := range result.Dependencies {
-		packages = append(packages, name)
-	}
-	return packages, nil
-}
-
-// parsePNPMJSON parses pnpm list -g --json output.
-// Format: [{"dependencies": {"pkg1": {...}, "pkg2": {...}}}]
-func parsePNPMJSON(data []byte) ([]string, error) {
-	var result []struct {
-		Dependencies map[string]interface{} `json:"dependencies"`
-	}
-
-	if err := json.Unmarshal(data, &result); err != nil {
-		return nil, fmt.Errorf("failed to parse pnpm JSON: %w", err)
-	}
-
-	var packages []string
-	for _, item := range result {
-		for name := range item.Dependencies {
-			packages = append(packages, name)
-		}
-	}
-	return packages, nil
-}
-
-// parseBunList parses bun pm ls -g output (simple lines).
-func parseBunList(data []byte) []string {
-	result := strings.TrimSpace(string(data))
-	if result == "" {
-		return []string{}
-	}
-
-	lines := strings.Split(result, "\n")
-	var packages []string
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		// Take the first token (package name)
-		parts := strings.Fields(line)
-		if len(parts) > 0 {
-			// Skip header lines or non-package lines
-			name := parts[0]
-			if strings.HasPrefix(name, "/") || name == "dependencies:" {
-				continue
-			}
-			packages = append(packages, name)
-		}
-	}
-	return packages
-}

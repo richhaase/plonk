@@ -27,7 +27,7 @@ func (b *BrewManager) ListInstalled(ctx context.Context) ([]string, error) {
 		return nil, fmt.Errorf("failed to list packages: %w", err)
 	}
 
-	return parseLines(output), nil
+	return parseOutput(output, ParseConfig{TakeFirstToken: true}), nil
 }
 
 // Install installs a package via Homebrew (idempotent).

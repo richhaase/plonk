@@ -6,7 +6,6 @@ package packages
 import (
 	"context"
 	"fmt"
-	"strings"
 )
 
 // CargoManager implements PackageManager for Rust's Cargo.
@@ -29,7 +28,7 @@ func (c *CargoManager) ListInstalled(ctx context.Context) ([]string, error) {
 		return nil, fmt.Errorf("failed to list packages: %w", err)
 	}
 
-	return parseCargoList(output), nil
+	return parseOutput(output, ParseConfig{SkipIndented: true, TakeFirstToken: true}), nil
 }
 
 // Install installs a package via Cargo (idempotent).
@@ -68,32 +67,3 @@ func (c *CargoManager) SelfInstall(ctx context.Context) error {
 	)
 }
 
-// parseCargoList parses cargo install --list output.
-// Format: "package_name v1.2.3:\n    binary1\n    binary2\n"
-// We only want the package names (lines ending with ":").
-func parseCargoList(data []byte) []string {
-	result := strings.TrimSpace(string(data))
-	if result == "" {
-		return []string{}
-	}
-
-	lines := strings.Split(result, "\n")
-	var packages []string
-	for _, line := range lines {
-		// Check for indentation BEFORE trimming
-		// Package lines start at column 0, binary lines are indented
-		if strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t") {
-			continue
-		}
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		// Take just the package name (first token before version)
-		parts := strings.Fields(line)
-		if len(parts) > 0 {
-			packages = append(packages, parts[0])
-		}
-	}
-	return packages
-}

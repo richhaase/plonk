@@ -6,7 +6,6 @@ package packages
 import (
 	"context"
 	"fmt"
-	"strings"
 )
 
 // GemManager implements PackageManager for Ruby gems.
@@ -29,7 +28,7 @@ func (g *GemManager) ListInstalled(ctx context.Context) ([]string, error) {
 		return nil, fmt.Errorf("failed to list packages: %w", err)
 	}
 
-	return parseGemList(output), nil
+	return parseOutput(output, ParseConfig{}), nil
 }
 
 // Install installs a package via gem (idempotent).
@@ -85,23 +84,3 @@ func (g *GemManager) SelfInstall(ctx context.Context) error {
 	return fmt.Errorf("ruby is not installed and no supported installation method is available")
 }
 
-// parseGemList parses gem list output.
-// With --no-versions, format is just "package_name" per line.
-func parseGemList(data []byte) []string {
-	result := strings.TrimSpace(string(data))
-	if result == "" {
-		return []string{}
-	}
-
-	lines := strings.Split(result, "\n")
-	var packages []string
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		// With --no-versions, each line is just the package name
-		packages = append(packages, line)
-	}
-	return packages
-}

@@ -5,6 +5,7 @@ package packages
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -125,8 +126,15 @@ func (b *BaseManager) SelfInstallWithBrewFallback(ctx context.Context, isAvailab
 	return fmt.Errorf("%s", errMsg)
 }
 
-// parseLines splits output by newlines and returns non-empty lines.
-func parseLines(data []byte) []string {
+// ParseConfig configures how to parse command output into package names.
+type ParseConfig struct {
+	SkipIndented   bool     // Skip lines starting with whitespace
+	SkipPrefixes   []string // Skip lines starting with these prefixes
+	TakeFirstToken bool     // Take first whitespace-delimited token (vs entire line)
+}
+
+// parseOutput parses command output into package names using the given config.
+func parseOutput(data []byte, cfg ParseConfig) []string {
 	result := strings.TrimSpace(string(data))
 	if result == "" {
 		return []string{}
@@ -135,17 +143,72 @@ func parseLines(data []byte) []string {
 	lines := strings.Split(result, "\n")
 	var packages []string
 	for _, line := range lines {
+		// Check for indentation BEFORE trimming
+		if cfg.SkipIndented && (strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t")) {
+			continue
+		}
+
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
-		// Take the first whitespace-delimited token
-		parts := strings.Fields(line)
-		if len(parts) > 0 {
-			packages = append(packages, parts[0])
+
+		// Check skip prefixes
+		skip := false
+		for _, prefix := range cfg.SkipPrefixes {
+			if strings.HasPrefix(line, prefix) {
+				skip = true
+				break
+			}
+		}
+		if skip {
+			continue
+		}
+
+		// Extract package name
+		if cfg.TakeFirstToken {
+			parts := strings.Fields(line)
+			if len(parts) > 0 {
+				packages = append(packages, parts[0])
+			}
+		} else {
+			packages = append(packages, line)
 		}
 	}
 	return packages
+}
+
+// parseJSONDependencies parses JSON output containing a dependencies map.
+// If isArray is true, expects [{"dependencies": {...}}] format (pnpm).
+// Otherwise expects {"dependencies": {...}} format (npm).
+func parseJSONDependencies(data []byte, isArray bool) ([]string, error) {
+	if isArray {
+		var result []struct {
+			Dependencies map[string]any `json:"dependencies"`
+		}
+		if err := json.Unmarshal(data, &result); err != nil {
+			return nil, fmt.Errorf("failed to parse JSON: %w", err)
+		}
+		var packages []string
+		for _, item := range result {
+			for name := range item.Dependencies {
+				packages = append(packages, name)
+			}
+		}
+		return packages, nil
+	}
+
+	var result struct {
+		Dependencies map[string]any `json:"dependencies"`
+	}
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON: %w", err)
+	}
+	packages := make([]string, 0, len(result.Dependencies))
+	for name := range result.Dependencies {
+		packages = append(packages, name)
+	}
+	return packages, nil
 }
 
 // isIdempotent checks if output contains any of the given patterns (case-insensitive).

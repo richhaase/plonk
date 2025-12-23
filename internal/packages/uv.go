@@ -6,7 +6,6 @@ package packages
 import (
 	"context"
 	"fmt"
-	"strings"
 )
 
 // UVManager implements PackageManager for uv (Python package manager).
@@ -28,7 +27,7 @@ func (u *UVManager) ListInstalled(ctx context.Context) ([]string, error) {
 		return nil, fmt.Errorf("failed to list tools: %w", err)
 	}
 
-	return parseUVList(output), nil
+	return parseOutput(output, ParseConfig{TakeFirstToken: true}), nil
 }
 
 // Install installs a tool via uv (idempotent).
@@ -70,26 +69,3 @@ func (u *UVManager) SelfInstall(ctx context.Context) error {
 	)
 }
 
-// parseUVList parses uv tool list output.
-// Format: "tool_name v1.2.3\n" or "tool_name v1.2.3 (extras)\n"
-func parseUVList(data []byte) []string {
-	result := strings.TrimSpace(string(data))
-	if result == "" {
-		return []string{}
-	}
-
-	lines := strings.Split(result, "\n")
-	var packages []string
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		// Take just the package name (first token)
-		parts := strings.Fields(line)
-		if len(parts) > 0 {
-			packages = append(packages, parts[0])
-		}
-	}
-	return packages
-}

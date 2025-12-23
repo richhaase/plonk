@@ -505,7 +505,7 @@ func TestParseNPMJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := parseNPMJSON([]byte(tt.input))
+			result, err := parseJSONDependencies([]byte(tt.input), false)
 
 			if tt.expectError {
 				assert.Error(t, err)
@@ -543,7 +543,7 @@ func TestParsePNPMJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := parsePNPMJSON([]byte(tt.input))
+			result, err := parseJSONDependencies([]byte(tt.input), true)
 
 			if tt.expectError {
 				assert.Error(t, err)
@@ -580,7 +580,7 @@ func TestParseBunList(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := parseBunList([]byte(tt.input))
+			result := parseOutput([]byte(tt.input), ParseConfig{TakeFirstToken: true, SkipPrefixes: []string{"/", "dependencies:"}})
 			assert.Equal(t, tt.expected, result)
 		})
 	}

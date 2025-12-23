@@ -375,7 +375,7 @@ func TestParseLines(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := parseLines([]byte(tt.input))
+			result := parseOutput([]byte(tt.input), ParseConfig{TakeFirstToken: true})
 			assert.Equal(t, tt.expected, result)
 		})
 	}
