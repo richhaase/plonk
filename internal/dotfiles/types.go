@@ -118,3 +118,78 @@ type FileComparator interface {
 
 // ApplyOptions configures dotfile apply operations (already exists in manager.go)
 // Keep existing definition to avoid breaking changes
+
+// Operation result types for dotfiles domain
+
+// AddStatus represents the status of a dotfile add operation
+type AddStatus string
+
+const (
+	AddStatusAdded       AddStatus = "added"
+	AddStatusUpdated     AddStatus = "updated"
+	AddStatusWouldAdd    AddStatus = "would-add"
+	AddStatusWouldUpdate AddStatus = "would-update"
+	AddStatusFailed      AddStatus = "failed"
+)
+
+// String returns the string representation of AddStatus
+func (s AddStatus) String() string {
+	return string(s)
+}
+
+// AddResult represents the result of adding a dotfile to plonk management
+type AddResult struct {
+	// Path is the original path provided by the user
+	Path string
+
+	// Source is the path in the config directory (e.g., "zshrc")
+	Source string
+
+	// Destination is the target path in home (e.g., "~/.zshrc")
+	Destination string
+
+	// Status is the result of the add operation
+	Status AddStatus
+
+	// AlreadyManaged indicates whether the file was already managed by plonk
+	AlreadyManaged bool
+
+	// FilesProcessed is the count of files processed (for directory operations)
+	FilesProcessed int
+
+	// Error contains any error that occurred during the operation
+	Error error
+}
+
+// RemoveStatus represents the status of a dotfile remove operation
+type RemoveStatus string
+
+const (
+	RemoveStatusRemoved     RemoveStatus = "removed"
+	RemoveStatusWouldRemove RemoveStatus = "would-remove"
+	RemoveStatusSkipped     RemoveStatus = "skipped"
+	RemoveStatusFailed      RemoveStatus = "failed"
+)
+
+// String returns the string representation of RemoveStatus
+func (s RemoveStatus) String() string {
+	return string(s)
+}
+
+// RemoveResult represents the result of removing a dotfile from plonk management
+type RemoveResult struct {
+	// Path is the original path provided by the user
+	Path string
+
+	// Source is the path in the config directory (e.g., "zshrc")
+	Source string
+
+	// Destination is the target path in home (e.g., "~/.zshrc")
+	Destination string
+
+	// Status is the result of the remove operation
+	Status RemoveStatus
+
+	// Error contains any error that occurred during the operation
+	Error error
+}

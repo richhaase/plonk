@@ -36,8 +36,8 @@ func TestAddFiles_DirectoryExpansion_DryRun(t *testing.T) {
 	}
 	// All should be would-add on first pass
 	for _, r := range results {
-		if r.Status != "would-add" && r.Status != "would-update" { // tolerate update if scanning recognizes pre-existing
-			t.Fatalf("unexpected status: %s for %s", r.Status, r.Name)
+		if r.Status != AddStatusWouldAdd && r.Status != AddStatusWouldUpdate { // tolerate update if scanning recognizes pre-existing
+			t.Fatalf("unexpected status: %s for %s", r.Status, r.Path)
 		}
 	}
 }

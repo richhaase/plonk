@@ -12,7 +12,6 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/ignore"
-	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/output"
 )
 
@@ -194,8 +193,8 @@ func (m *Manager) CreateDotfileInfo(source, destination string) DotfileInfo {
 }
 
 // High-level operations that coordinate components
-func (m *Manager) AddFiles(ctx context.Context, cfg *config.Config, dotfilePaths []string, opts AddOptions) ([]operations.Result, error) {
-	var allResults []operations.Result
+func (m *Manager) AddFiles(ctx context.Context, cfg *config.Config, dotfilePaths []string, opts AddOptions) ([]AddResult, error) {
+	var allResults []AddResult
 
 	for _, dotfilePath := range dotfilePaths {
 		results := m.AddSingleDotfile(ctx, cfg, dotfilePath, opts.DryRun)
@@ -205,13 +204,13 @@ func (m *Manager) AddFiles(ctx context.Context, cfg *config.Config, dotfilePaths
 	return allResults, nil
 }
 
-func (m *Manager) AddSingleDotfile(ctx context.Context, cfg *config.Config, dotfilePath string, dryRun bool) []operations.Result {
+func (m *Manager) AddSingleDotfile(ctx context.Context, cfg *config.Config, dotfilePath string, dryRun bool) []AddResult {
 	// Resolve and validate dotfile path
 	resolvedPath, err := m.pathResolver.ResolveDotfilePath(dotfilePath)
 	if err != nil {
-		return []operations.Result{{
-			Name:   dotfilePath,
-			Status: "failed",
+		return []AddResult{{
+			Path:   dotfilePath,
+			Status: AddStatusFailed,
 			Error:  fmt.Errorf("failed to resolve dotfile path %s: %w", dotfilePath, err),
 		}}
 	}
@@ -219,16 +218,16 @@ func (m *Manager) AddSingleDotfile(ctx context.Context, cfg *config.Config, dotf
 	// Check if dotfile exists
 	info, err := os.Stat(resolvedPath)
 	if os.IsNotExist(err) {
-		return []operations.Result{{
-			Name:   dotfilePath,
-			Status: "failed",
+		return []AddResult{{
+			Path:   dotfilePath,
+			Status: AddStatusFailed,
 			Error:  fmt.Errorf("dotfile does not exist: %s", resolvedPath),
 		}}
 	}
 	if err != nil {
-		return []operations.Result{{
-			Name:   dotfilePath,
-			Status: "failed",
+		return []AddResult{{
+			Path:   dotfilePath,
+			Status: AddStatusFailed,
 			Error:  fmt.Errorf("failed to check dotfile: %w", err),
 		}}
 	}
@@ -240,27 +239,25 @@ func (m *Manager) AddSingleDotfile(ctx context.Context, cfg *config.Config, dotf
 
 	// Handle single file
 	result := m.AddSingleFile(ctx, cfg, resolvedPath, dryRun)
-	return []operations.Result{result}
+	return []AddResult{result}
 }
 
-func (m *Manager) AddSingleFile(ctx context.Context, cfg *config.Config, filePath string, dryRun bool) operations.Result {
-	result := operations.Result{
-		Name: filePath,
+func (m *Manager) AddSingleFile(ctx context.Context, cfg *config.Config, filePath string, dryRun bool) AddResult {
+	result := AddResult{
+		Path:           filePath,
+		FilesProcessed: 1,
 	}
 
 	// Generate source and destination paths
 	source, destination, err := m.pathResolver.GeneratePaths(filePath)
 	if err != nil {
-		result.Status = "failed"
+		result.Status = AddStatusFailed
 		result.Error = fmt.Errorf("failed to generate paths: %w", err)
 		return result
 	}
 
-	result.Metadata = map[string]interface{}{
-		"source":      source,
-		"destination": destination,
-	}
-	result.FilesProcessed = 1
+	result.Source = source
+	result.Destination = destination
 
 	// Check if already managed by checking if source file exists in config dir
 	configured, err := m.configHandler.GetConfiguredDotfiles()
@@ -274,15 +271,15 @@ func (m *Manager) AddSingleFile(ctx context.Context, cfg *config.Config, filePat
 	}
 	if result.AlreadyManaged {
 		if dryRun {
-			result.Status = "would-update"
+			result.Status = AddStatusWouldUpdate
 		} else {
-			result.Status = "updated"
+			result.Status = AddStatusUpdated
 		}
 	} else {
 		if dryRun {
-			result.Status = "would-add"
+			result.Status = AddStatusWouldAdd
 		} else {
-			result.Status = "added"
+			result.Status = AddStatusAdded
 		}
 	}
 
@@ -296,14 +293,14 @@ func (m *Manager) AddSingleFile(ctx context.Context, cfg *config.Config, filePat
 
 	// Create parent directories
 	if err := os.MkdirAll(filepath.Dir(sourcePath), 0750); err != nil {
-		result.Status = "failed"
+		result.Status = AddStatusFailed
 		result.Error = fmt.Errorf("failed to create parent directories: %w", err)
 		return result
 	}
 
 	// Copy file with attribute preservation
 	if err := CopyFileWithAttributes(filePath, sourcePath); err != nil {
-		result.Status = "failed"
+		result.Status = AddStatusFailed
 		result.Error = fmt.Errorf("failed to copy dotfile %s: %w", source, err)
 		return result
 	}
@@ -311,16 +308,16 @@ func (m *Manager) AddSingleFile(ctx context.Context, cfg *config.Config, filePat
 	return result
 }
 
-func (m *Manager) AddDirectoryFiles(ctx context.Context, cfg *config.Config, dirPath string, dryRun bool) []operations.Result {
-	var results []operations.Result
+func (m *Manager) AddDirectoryFiles(ctx context.Context, cfg *config.Config, dirPath string, dryRun bool) []AddResult {
+	var results []AddResult
 	ignorePatterns := cfg.IgnorePatterns
 	patternMatcher := ignore.NewMatcher(ignorePatterns)
 
 	entries, err := m.directoryScanner.ExpandDirectoryPaths(dirPath)
 	if err != nil {
-		return []operations.Result{{
-			Name:   dirPath,
-			Status: "failed",
+		return []AddResult{{
+			Path:   dirPath,
+			Status: AddStatusFailed,
 			Error:  err,
 		}}
 	}
@@ -335,9 +332,9 @@ func (m *Manager) AddDirectoryFiles(ctx context.Context, cfg *config.Config, dir
 		// Get file info for skip checking
 		info, err := os.Stat(entry.FullPath)
 		if err != nil {
-			results = append(results, operations.Result{
-				Name:   entry.FullPath,
-				Status: "failed",
+			results = append(results, AddResult{
+				Path:   entry.FullPath,
+				Status: AddStatusFailed,
 				Error:  fmt.Errorf("failed to get file info: %w", err),
 			})
 			continue
@@ -356,8 +353,8 @@ func (m *Manager) AddDirectoryFiles(ctx context.Context, cfg *config.Config, dir
 	return results
 }
 
-func (m *Manager) RemoveFiles(cfg *config.Config, dotfilePaths []string, opts RemoveOptions) ([]operations.Result, error) {
-	var allResults []operations.Result
+func (m *Manager) RemoveFiles(cfg *config.Config, dotfilePaths []string, opts RemoveOptions) ([]RemoveResult, error) {
+	var allResults []RemoveResult
 
 	for _, dotfilePath := range dotfilePaths {
 		result := m.RemoveSingleDotfile(cfg, dotfilePath, opts.DryRun)
@@ -367,15 +364,15 @@ func (m *Manager) RemoveFiles(cfg *config.Config, dotfilePaths []string, opts Re
 	return allResults, nil
 }
 
-func (m *Manager) RemoveSingleDotfile(cfg *config.Config, dotfilePath string, dryRun bool) operations.Result {
-	result := operations.Result{
-		Name: dotfilePath,
+func (m *Manager) RemoveSingleDotfile(cfg *config.Config, dotfilePath string, dryRun bool) RemoveResult {
+	result := RemoveResult{
+		Path: dotfilePath,
 	}
 
 	// Resolve dotfile path
 	resolvedPath, err := m.pathResolver.ResolveDotfilePath(dotfilePath)
 	if err != nil {
-		result.Status = "failed"
+		result.Status = RemoveStatusFailed
 		result.Error = fmt.Errorf("failed to resolve dotfile path %s: %w", dotfilePath, err)
 		return result
 	}
@@ -383,27 +380,25 @@ func (m *Manager) RemoveSingleDotfile(cfg *config.Config, dotfilePath string, dr
 	// Get the source file path in config directory
 	_, destination, err := m.pathResolver.GeneratePaths(resolvedPath)
 	if err != nil {
-		result.Status = "failed"
+		result.Status = RemoveStatusFailed
 		result.Error = fmt.Errorf("failed to generate paths for %s: %w", dotfilePath, err)
 		return result
 	}
 	source := TargetToSource(destination)
 	sourcePath := m.pathResolver.GetSourcePath(source)
 
+	result.Source = source
+	result.Destination = destination
+
 	// Check if file is managed (has corresponding file in config directory)
 	if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
-		result.Status = "skipped"
+		result.Status = RemoveStatusSkipped
 		result.Error = fmt.Errorf("dotfile '%s' is not managed by plonk", dotfilePath)
 		return result
 	}
 
 	if dryRun {
-		result.Status = "would-remove"
-		result.Metadata = map[string]interface{}{
-			"source":      source,
-			"destination": destination,
-			"path":        resolvedPath,
-		}
+		result.Status = RemoveStatusWouldRemove
 		return result
 	}
 
@@ -416,26 +411,21 @@ func (m *Manager) RemoveSingleDotfile(cfg *config.Config, dotfilePath string, dr
 			err = os.Remove(sourcePath)
 		}
 		if err != nil {
-			result.Status = "failed"
+			result.Status = RemoveStatusFailed
 			result.Error = fmt.Errorf("failed to remove source file %s from config: %w", source, err)
 			return result
 		}
 	} else if os.IsNotExist(err) {
-		result.Status = "skipped"
+		result.Status = RemoveStatusSkipped
 		result.Error = fmt.Errorf("dotfile '%s' is not managed by plonk", dotfilePath)
 		return result
 	} else {
-		result.Status = "failed"
+		result.Status = RemoveStatusFailed
 		result.Error = fmt.Errorf("failed to check source file %s: %w", source, err)
 		return result
 	}
 
-	result.Status = "removed"
-	result.Metadata = map[string]interface{}{
-		"source":      source,
-		"destination": destination,
-		"path":        resolvedPath,
-	}
+	result.Status = RemoveStatusRemoved
 	return result
 }
 

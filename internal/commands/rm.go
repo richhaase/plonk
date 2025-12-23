@@ -4,9 +4,10 @@
 package commands
 
 import (
+	"fmt"
+
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/dotfiles"
-	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -98,7 +99,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 	// Convert results to serializable format
 	formatterData := output.DotfileRemovalOutput{
 		TotalFiles: len(results),
-		Results:    convertToSerializableRemovalResults(results),
+		Results:    convertRemoveResultsToOutput(results),
 		Summary: output.DotfileRemovalSummary{
 			Removed: summary.Removed,
 			Skipped: summary.Skipped,
@@ -109,7 +110,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 	output.RenderOutput(formatter)
 
 	// Check if all operations failed and return appropriate error
-	return operations.ValidateResults(results, "remove dotfiles")
+	return validateRemoveResults(results)
 }
 
 // DotfileRemovalSummary provides summary for dotfile removal
@@ -119,18 +120,24 @@ type DotfileRemovalSummary struct {
 	Failed  int `json:"failed" yaml:"failed"`
 }
 
-// calculateRemovalSummary calculates summary from results
-func calculateRemovalSummary(results []operations.Result) DotfileRemovalSummary {
-	genericSummary := operations.CalculateSummary(results)
-	return DotfileRemovalSummary{
-		Removed: genericSummary.Added, // In removal context, "added" means "removed"
-		Skipped: genericSummary.Skipped,
-		Failed:  genericSummary.Failed,
+// calculateRemovalSummary calculates summary from remove results
+func calculateRemovalSummary(results []dotfiles.RemoveResult) DotfileRemovalSummary {
+	summary := DotfileRemovalSummary{}
+	for _, result := range results {
+		switch result.Status {
+		case dotfiles.RemoveStatusRemoved, dotfiles.RemoveStatusWouldRemove:
+			summary.Removed++
+		case dotfiles.RemoveStatusSkipped:
+			summary.Skipped++
+		case dotfiles.RemoveStatusFailed:
+			summary.Failed++
+		}
 	}
+	return summary
 }
 
-// convertToSerializableRemovalResults converts operations.Result to SerializableRemovalResult
-func convertToSerializableRemovalResults(results []operations.Result) []output.SerializableRemovalResult {
+// convertRemoveResultsToOutput converts dotfiles.RemoveResult to SerializableRemovalResult
+func convertRemoveResultsToOutput(results []dotfiles.RemoveResult) []output.SerializableRemovalResult {
 	converted := make([]output.SerializableRemovalResult, len(results))
 	for i, result := range results {
 		errorStr := ""
@@ -138,11 +145,35 @@ func convertToSerializableRemovalResults(results []operations.Result) []output.S
 			errorStr = result.Error.Error()
 		}
 		converted[i] = output.SerializableRemovalResult{
-			Name:     result.Name,
-			Status:   result.Status,
-			Error:    errorStr,
-			Metadata: result.Metadata,
+			Name:   result.Path,
+			Status: result.Status.String(),
+			Error:  errorStr,
+			Metadata: map[string]interface{}{
+				"source":      result.Source,
+				"destination": result.Destination,
+			},
 		}
 	}
 	return converted
+}
+
+// validateRemoveResults checks if all remove operations failed and returns appropriate error
+func validateRemoveResults(results []dotfiles.RemoveResult) error {
+	if len(results) == 0 {
+		return nil
+	}
+
+	allFailed := true
+	for _, result := range results {
+		if result.Status != dotfiles.RemoveStatusFailed {
+			allFailed = false
+			break
+		}
+	}
+
+	if allFailed {
+		return fmt.Errorf("remove dotfiles operation failed: all %d item(s) failed to process", len(results))
+	}
+
+	return nil
 }

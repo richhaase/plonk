@@ -9,7 +9,6 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/dotfiles"
-	"github.com/richhaase/plonk/internal/operations"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -113,10 +112,10 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		// Single file output
 		result := results[0]
 		dotfileOutput := &output.DotfileAddOutput{
-			Source:      getMetadataString(result, "source"),
-			Destination: getMetadataString(result, "destination"),
-			Action:      output.MapStatusToAction(result.Status),
-			Path:        result.Name,
+			Source:      result.Source,
+			Destination: result.Destination,
+			Action:      output.MapStatusToAction(result.Status.String()),
+			Path:        result.Path,
 		}
 		if result.Error != nil {
 			dotfileOutput.Error = result.Error.Error()
@@ -126,8 +125,8 @@ func runAdd(cmd *cobra.Command, args []string) error {
 		// Batch output
 		outputData = &output.DotfileBatchAddOutput{
 			TotalFiles: len(results),
-			AddedFiles: convertToDotfileAddOutput(results),
-			Errors:     extractErrorMessages(results),
+			AddedFiles: convertAddResultsToOutput(results),
+			Errors:     extractAddErrorMessages(results),
 		}
 	}
 
@@ -135,7 +134,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	output.RenderOutput(outputData)
 
 	// Check if all operations failed and return appropriate error
-	return operations.ValidateResults(results, "add dotfiles")
+	return validateAddResults(results)
 }
 
 // runSyncDrifted syncs all drifted files from $HOME back to $PLONKDIR
@@ -184,10 +183,10 @@ func runSyncDrifted(ctx context.Context, cmd *cobra.Command, cfg *config.Config,
 		// Single file output
 		result := results[0]
 		dotfileOutput := &output.DotfileAddOutput{
-			Source:      getMetadataString(result, "source"),
-			Destination: getMetadataString(result, "destination"),
-			Action:      output.MapStatusToAction(result.Status),
-			Path:        result.Name,
+			Source:      result.Source,
+			Destination: result.Destination,
+			Action:      output.MapStatusToAction(result.Status.String()),
+			Path:        result.Path,
 		}
 		if result.Error != nil {
 			dotfileOutput.Error = result.Error.Error()
@@ -197,8 +196,8 @@ func runSyncDrifted(ctx context.Context, cmd *cobra.Command, cfg *config.Config,
 		// Batch output
 		outputData = &output.DotfileBatchAddOutput{
 			TotalFiles: len(results),
-			AddedFiles: convertToDotfileAddOutput(results),
-			Errors:     extractErrorMessages(results),
+			AddedFiles: convertAddResultsToOutput(results),
+			Errors:     extractAddErrorMessages(results),
 		}
 	}
 
@@ -206,34 +205,55 @@ func runSyncDrifted(ctx context.Context, cmd *cobra.Command, cfg *config.Config,
 	output.RenderOutput(outputData)
 
 	// Check if all operations failed and return appropriate error
-	return operations.ValidateResults(results, "sync drifted dotfiles")
+	return validateAddResults(results)
 }
 
-// extractErrorMessages extracts error messages from failed results
-func extractErrorMessages(results []operations.Result) []string {
+// extractAddErrorMessages extracts error messages from failed add results
+func extractAddErrorMessages(results []dotfiles.AddResult) []string {
 	var errors []string
 	for _, result := range results {
-		if result.Status == "failed" && result.Error != nil {
-			errors = append(errors, fmt.Sprintf("failed to add %s: %v", result.Name, result.Error))
+		if result.Status == dotfiles.AddStatusFailed && result.Error != nil {
+			errors = append(errors, fmt.Sprintf("failed to add %s: %v", result.Path, result.Error))
 		}
 	}
 	return errors
 }
 
-// convertToDotfileAddOutput converts operations.Result to DotfileAddOutput for structured output
-func convertToDotfileAddOutput(results []operations.Result) []output.DotfileAddOutput {
+// convertAddResultsToOutput converts dotfiles.AddResult to DotfileAddOutput for structured output
+func convertAddResultsToOutput(results []dotfiles.AddResult) []output.DotfileAddOutput {
 	outputs := make([]output.DotfileAddOutput, 0, len(results))
 	for _, result := range results {
-		if result.Status == "failed" {
+		if result.Status == dotfiles.AddStatusFailed {
 			continue // Skip failed results, they're handled in errors
 		}
 
 		outputs = append(outputs, output.DotfileAddOutput{
-			Source:      getMetadataString(result, "source"),
-			Destination: getMetadataString(result, "destination"),
-			Action:      output.MapStatusToAction(result.Status),
-			Path:        result.Name,
+			Source:      result.Source,
+			Destination: result.Destination,
+			Action:      output.MapStatusToAction(result.Status.String()),
+			Path:        result.Path,
 		})
 	}
 	return outputs
+}
+
+// validateAddResults checks if all add operations failed and returns appropriate error
+func validateAddResults(results []dotfiles.AddResult) error {
+	if len(results) == 0 {
+		return nil
+	}
+
+	allFailed := true
+	for _, result := range results {
+		if result.Status != dotfiles.AddStatusFailed {
+			allFailed = false
+			break
+		}
+	}
+
+	if allFailed {
+		return fmt.Errorf("add dotfiles operation failed: all %d item(s) failed to process", len(results))
+	}
+
+	return nil
 }
