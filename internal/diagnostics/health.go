@@ -370,7 +370,10 @@ func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
 			}
 		}
 
-		desc, hint, helpURL := lookupManagerMetadata(managerName)
+		var desc, hint, helpURL string
+		if meta, ok := registry.GetManagerMetadata(managerName); ok {
+			desc, hint, helpURL = meta.Description, meta.InstallHint, meta.HelpURL
+		}
 		label := managerName
 		if desc != "" {
 			label = desc
@@ -569,12 +572,3 @@ func collectRequiredManagers(configDir string) []string {
 	return names
 }
 
-func lookupManagerMetadata(name string) (description, installHint, helpURL string) {
-	// Use registry metadata for built-in managers
-	registry := packages.GetRegistry()
-	if meta, ok := registry.GetManagerMetadata(name); ok {
-		return meta.Description, meta.InstallHint, meta.HelpURL
-	}
-
-	return "", "", ""
-}
