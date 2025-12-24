@@ -74,8 +74,10 @@ func (pv *PathValidatorImpl) ShouldSkipPath(relPath string, info os.FileInfo, ma
 		return true
 	}
 
-	// Always skip .plonk/ directory (reserved for future plonk metadata)
-	if relPath == ".plonk" || strings.HasPrefix(relPath, ".plonk/") {
+	// Always skip top-level dot-prefixed paths (internal/tool files like .git, .beads, .plonk)
+	// These would map to "~/..<name>" which is invalid - plonk stores dotfiles without leading dots
+	// Note: relPath "." is the root directory itself from filepath.Walk, don't skip that
+	if relPath != "." && strings.HasPrefix(relPath, ".") {
 		return true
 	}
 
