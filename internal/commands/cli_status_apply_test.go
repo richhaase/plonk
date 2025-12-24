@@ -49,14 +49,14 @@ func TestCLI_Status_Table_GoldenSnippet(t *testing.T) {
 		t.Fatalf("status table failed: %v\n%s", err, out)
 	}
 
-	// Golden snippet: ensure sections and key rows appear
+	// Golden snippet: ensure table headers and key rows appear
 	wants := []string{
 		"Plonk Status\n============",
-		"PACKAGES\n--------",
+		"PACKAGE",
 		"jq",
 		"brew",
 		"missing",
-		"DOTFILES\n--------",
+		"DOTFILE",
 	}
 	for _, w := range wants {
 		if !strings.Contains(out, w) {

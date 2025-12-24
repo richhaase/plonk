@@ -121,9 +121,28 @@ func (t *StandardTableBuilder) Build() string {
 		var tableOutput strings.Builder
 		writer := tabwriter.NewWriter(&tableOutput, 0, 2, 2, ' ', 0)
 
-		// Headers
+		// Compute column widths (max of header and all row values)
+		colWidths := make([]int, len(t.headers))
+		for i, h := range t.headers {
+			colWidths[i] = len(h)
+		}
+		for _, row := range t.rows {
+			for i, val := range row {
+				if i < len(colWidths) && len(val) > colWidths[i] {
+					colWidths[i] = len(val)
+				}
+			}
+		}
+
+		// Headers with separator
 		if len(t.headers) > 0 {
 			fmt.Fprintln(writer, strings.Join(t.headers, "\t"))
+			// Add dashed separator under headers (matching column widths)
+			separators := make([]string, len(t.headers))
+			for i := range t.headers {
+				separators[i] = strings.Repeat("-", colWidths[i])
+			}
+			fmt.Fprintln(writer, strings.Join(separators, "\t"))
 		}
 
 		// Rows

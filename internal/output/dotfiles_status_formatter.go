@@ -12,6 +12,7 @@ import (
 type DotfilesStatusOutput struct {
 	Result    Result `json:"result" yaml:"result"`
 	ConfigDir string `json:"-" yaml:"-"` // Not included in JSON/YAML output
+	HomeDir   string `json:"-" yaml:"-"` // Not included in JSON/YAML output
 }
 
 // DotfilesStatusFormatter formats dotfiles status output
@@ -40,8 +41,8 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 		// Create a table for dotfiles
 		dotBuilder := NewStandardTableBuilder("")
 
-		// For managed/missing, use the three-column format
-		dotBuilder.SetHeaders("$HOME", "$PLONK_DIR", "STATUS")
+		// Simple two-column format: target path and status
+		dotBuilder.SetHeaders("DOTFILE", "STATUS")
 
 		// Sort managed and missing dotfiles
 		sortItems(result.Managed)
@@ -49,14 +50,10 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 
 		// Show managed dotfiles
 		for _, item := range result.Managed {
-			// Use source from metadata if available, otherwise fall back to Name
-			source := item.Name
-			if src, ok := item.Metadata["source"].(string); ok {
-				source = src
-			}
-			target := ""
+			// Use destination (target) from metadata - this is where the dotfile is deployed
+			target := item.Name
 			if dest, ok := item.Metadata["destination"].(string); ok {
-				target = dest
+				target = tildeShorthand(dest, f.Data.HomeDir)
 			}
 			// Check if this is actually a drifted file or has an error
 			status := "deployed"
@@ -67,23 +64,17 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 					status = "drifted"
 				}
 			}
-			// Swap column order: target ($HOME), source ($PLONK_DIR), status
-			dotBuilder.AddRow(target, source, status)
+			dotBuilder.AddRow(target, status)
 		}
 
 		// Show missing dotfiles
 		for _, item := range result.Missing {
-			// Use source from metadata if available, otherwise fall back to Name
-			source := item.Name
-			if src, ok := item.Metadata["source"].(string); ok {
-				source = src
-			}
-			target := ""
+			// Use destination (target) from metadata
+			target := item.Name
 			if dest, ok := item.Metadata["destination"].(string); ok {
-				target = dest
+				target = tildeShorthand(dest, f.Data.HomeDir)
 			}
-			// Swap column order: target ($HOME), source ($PLONK_DIR), status
-			dotBuilder.AddRow(target, source, "missing")
+			dotBuilder.AddRow(target, "missing")
 		}
 
 		output.WriteString(dotBuilder.Build())

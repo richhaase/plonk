@@ -86,6 +86,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		LockExists:   lockExists,
 		StateSummary: summary,
 		ConfigDir:    configDir,
+		HomeDir:      homeDir,
 	}
 	formatter := output.NewStatusFormatter(formatterData)
 	output.RenderOutput(formatter)
