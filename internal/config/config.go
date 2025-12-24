@@ -6,9 +6,16 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/go-playground/validator/v10"
 	"gopkg.in/yaml.v3"
+)
+
+var (
+	validatorOnce     sync.Once
+	cachedValidator   *validator.Validate
+	validatorInitErr  error
 )
 
 // Config represents the plonk configuration
@@ -144,6 +151,15 @@ var defaultConfig = Config{
 	},
 }
 
+// getValidator returns the cached validator instance, initializing it on first use.
+func getValidator() (*validator.Validate, error) {
+	validatorOnce.Do(func() {
+		cachedValidator = validator.New()
+		validatorInitErr = RegisterValidators(cachedValidator)
+	})
+	return cachedValidator, validatorInitErr
+}
+
 // Load reads and validates configuration from the standard location
 func Load(configDir string) (*Config, error) {
 	configPath := filepath.Join(configDir, "plonk.yaml")
@@ -174,8 +190,8 @@ func LoadFromPath(configPath string) (*Config, error) {
 	ApplyDefaults(&cfg)
 
 	// Validate
-	validate := validator.New()
-	if err := RegisterValidators(validate); err != nil {
+	validate, err := getValidator()
+	if err != nil {
 		return nil, err
 	}
 	if err := validate.Struct(&cfg); err != nil {
