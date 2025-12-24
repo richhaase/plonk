@@ -37,8 +37,8 @@ setup() {
   fi
 }
 
-# Test that status displays clear column headers
-@test "status shows \$HOME and \$PLONK_DIR column headers" {
+# Test that status displays clear column headers with tilde paths
+@test "status shows DOTFILE and STATUS headers with tilde paths" {
   local testfile=".plonk-test-headers"
   require_safe_dotfile "$testfile"
 
@@ -52,9 +52,11 @@ setup() {
   run plonk dotfiles
   assert_success
 
-  # Check for new column headers
-  assert_output --partial "\$HOME"
-  assert_output --partial "\$PLONK_DIR"
+  # Check for column headers
+  assert_output --partial "DOTFILE"
+  assert_output --partial "STATUS"
+  # Check for tilde shorthand in paths
+  assert_output --partial "~/"
 
   # Should NOT have old headers
   refute_output --partial "SOURCE"
@@ -249,12 +251,12 @@ setup() {
   # 2. Modify to create drift
   echo "version 2 - edited in home" > "$HOME/$testfile"
 
-  # 3. Check status - should show drifted with new column headers
+  # 3. Check status - should show drifted with column headers and tilde paths
   run plonk dotfiles
   assert_success
   assert_output --partial "drifted"
-  assert_output --partial "\$HOME"
-  assert_output --partial "\$PLONK_DIR"
+  assert_output --partial "DOTFILE"
+  assert_output --partial "~/"
 
   # 4. Use add -y to sync changes back
   run plonk add -y

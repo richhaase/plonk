@@ -26,11 +26,11 @@ func TestStatusFormatter_Table_Variants(t *testing.T) {
 	// default (show both packages and dotfiles)
 	s := StatusOutput{StateSummary: summary}
 	out := NewStatusFormatter(s).TableOutput()
-	if !contains(out, "PACKAGES\n--------") {
-		t.Fatalf("expected packages section: %s", out)
+	if !contains(out, "PACKAGE") {
+		t.Fatalf("expected packages table header: %s", out)
 	}
-	if !contains(out, "DOTFILES\n--------") {
-		t.Fatalf("expected dotfiles section: %s", out)
+	if !contains(out, "DOTFILE") {
+		t.Fatalf("expected dotfiles table header: %s", out)
 	}
 	// should show missing entries in output
 	if !contains(out, "missing") {

@@ -16,11 +16,11 @@ func TestCLI_Status_DefaultShowsBothDomains(t *testing.T) {
 		t.Fatalf("status failed: %v\n%s", err, out)
 	}
 
-	// Should have both package and dotfile sections in table output
-	if !strings.Contains(out, "PACKAGES") {
-		t.Errorf("expected PACKAGES section in default output, got:\n%s", out)
+	// Should have both package and dotfile table headers in output
+	if !strings.Contains(out, "PACKAGE") {
+		t.Errorf("expected PACKAGE table header in default output, got:\n%s", out)
 	}
-	if !strings.Contains(out, "DOTFILES") {
-		t.Errorf("expected DOTFILES section in default output, got:\n%s", out)
+	if !strings.Contains(out, "DOTFILE") {
+		t.Errorf("expected DOTFILE table header in default output, got:\n%s", out)
 	}
 }

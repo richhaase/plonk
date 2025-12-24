@@ -61,6 +61,7 @@ func runDotfiles(cmd *cobra.Command, args []string) error {
 	outputData := output.DotfilesStatusOutput{
 		Result:    outputResult,
 		ConfigDir: configDir,
+		HomeDir:   homeDir,
 	}
 
 	// Create formatter and render

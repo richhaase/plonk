@@ -48,12 +48,13 @@ func (f PackagesStatusFormatter) TableOutput() string {
 	if len(packagesByManager) > 0 || len(missingPackages) > 0 {
 		// Create a table for packages
 		pkgBuilder := NewStandardTableBuilder("")
-		pkgBuilder.SetHeaders("NAME", "MANAGER", "STATUS")
+		pkgBuilder.SetHeaders("PACKAGE", "MANAGER", "STATUS")
 
-		// Show managed packages by manager
+		// Show managed packages by manager (sorted alphabetically)
 		sortedManagers := sortItemsByManager(packagesByManager)
 		for _, manager := range sortedManagers {
 			packages := packagesByManager[manager]
+			sortItems(packages) // Sort packages alphabetically within each manager
 			for _, pkg := range packages {
 				pkgBuilder.AddRow(pkg.Name, manager, "managed")
 			}

@@ -56,6 +56,7 @@ type StatusOutput struct {
 	LockExists   bool    `json:"lock_exists" yaml:"lock_exists"`
 	StateSummary Summary `json:"state_summary" yaml:"state_summary"`
 	ConfigDir    string  `json:"-" yaml:"-"` // Not included in JSON/YAML output
+	HomeDir      string  `json:"-" yaml:"-"` // Not included in JSON/YAML output
 }
 
 // StatusOutputSummary represents a summary-focused version for JSON/YAML output
@@ -118,6 +119,17 @@ func sortItemsByManager(itemsByManager map[string][]Item) []string {
 	return managers
 }
 
+// tildeShorthand replaces the home directory prefix with ~ for display
+func tildeShorthand(path, homeDir string) string {
+	if homeDir == "" {
+		return path
+	}
+	if strings.HasPrefix(path, homeDir) {
+		return "~" + strings.TrimPrefix(path, homeDir)
+	}
+	return path
+}
+
 // TableOutput generates human-friendly table output for status
 func (f StatusFormatter) TableOutput() string {
 	s := f.Data
@@ -155,17 +167,15 @@ func (f StatusFormatter) TableOutput() string {
 
 		// Build packages table
 		if len(packagesByManager) > 0 || len(missingPackages) > 0 {
-			output.WriteString("PACKAGES\n")
-			output.WriteString("--------\n")
-
 			// Create a table for packages
 			pkgBuilder := NewStandardTableBuilder("")
-			pkgBuilder.SetHeaders("NAME", "MANAGER", "STATUS")
+			pkgBuilder.SetHeaders("PACKAGE", "MANAGER", "STATUS")
 
-			// Show managed packages by manager
+			// Show managed packages by manager (sorted alphabetically)
 			sortedManagers := sortItemsByManager(packagesByManager)
 			for _, manager := range sortedManagers {
 				packages := packagesByManager[manager]
+				sortItems(packages) // Sort packages alphabetically within each manager
 				for _, pkg := range packages {
 					pkgBuilder.AddRow(pkg.Name, manager, "managed")
 				}
@@ -188,14 +198,11 @@ func (f StatusFormatter) TableOutput() string {
 		itemsToShow := append(dotfileResult.Managed, dotfileResult.Missing...)
 
 		if len(itemsToShow) > 0 {
-			output.WriteString("DOTFILES\n")
-			output.WriteString("--------\n")
-
 			// Create a table for dotfiles
 			dotBuilder := NewStandardTableBuilder("")
 
-			// For managed/missing, use the three-column format
-			dotBuilder.SetHeaders("$HOME", "$PLONK_DIR", "STATUS")
+			// Simple two-column format: target path and status
+			dotBuilder.SetHeaders("DOTFILE", "STATUS")
 
 			// Sort managed and missing dotfiles
 			sortItems(dotfileResult.Managed)
@@ -203,37 +210,27 @@ func (f StatusFormatter) TableOutput() string {
 
 			// Show managed dotfiles
 			for _, item := range dotfileResult.Managed {
-				// Use source from metadata if available, otherwise fall back to Name
-				source := item.Name
-				if src, ok := item.Metadata["source"].(string); ok {
-					source = src
-				}
-				target := ""
+				// Use destination (target) from metadata - this is where the dotfile is deployed
+				target := item.Name
 				if dest, ok := item.Metadata["destination"].(string); ok {
-					target = dest
+					target = tildeShorthand(dest, s.HomeDir)
 				}
 				// Check if this is actually a drifted file
 				status := "deployed"
 				if item.State == StateDegraded {
 					status = "drifted"
 				}
-				// Swap column order: target ($HOME), source ($PLONK_DIR), status
-				dotBuilder.AddRow(target, source, status)
+				dotBuilder.AddRow(target, status)
 			}
 
 			// Show missing dotfiles
 			for _, item := range dotfileResult.Missing {
-				// Use source from metadata if available, otherwise fall back to Name
-				source := item.Name
-				if src, ok := item.Metadata["source"].(string); ok {
-					source = src
-				}
-				target := ""
+				// Use destination (target) from metadata
+				target := item.Name
 				if dest, ok := item.Metadata["destination"].(string); ok {
-					target = dest
+					target = tildeShorthand(dest, s.HomeDir)
 				}
-				// Swap column order: target ($HOME), source ($PLONK_DIR), status
-				dotBuilder.AddRow(target, source, "missing")
+				dotBuilder.AddRow(target, "missing")
 			}
 
 			output.WriteString(dotBuilder.Build())
