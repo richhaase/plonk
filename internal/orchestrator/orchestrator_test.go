@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -222,8 +223,8 @@ func TestApply_SelectiveApplication(t *testing.T) {
 func TestApplyResult_Success(t *testing.T) {
 	tests := []struct {
 		name          string
-		packageResult *PackageApplyResult
-		dotfileResult *DotfileApplyResult
+		packageResult *output.PackageResults
+		dotfileResult *output.DotfileResults
 		dryRun        bool
 		hasErrors     bool
 		expectSuccess bool
@@ -231,7 +232,7 @@ func TestApplyResult_Success(t *testing.T) {
 	}{
 		{
 			name: "packages installed in normal mode",
-			packageResult: &PackageApplyResult{
+			packageResult: &output.PackageResults{
 				DryRun:         false,
 				TotalInstalled: 3,
 			},
@@ -242,7 +243,7 @@ func TestApplyResult_Success(t *testing.T) {
 		},
 		{
 			name: "packages would install in dry run",
-			packageResult: &PackageApplyResult{
+			packageResult: &output.PackageResults{
 				DryRun:            true,
 				TotalWouldInstall: 3,
 			},
@@ -253,9 +254,9 @@ func TestApplyResult_Success(t *testing.T) {
 		},
 		{
 			name: "dotfiles added in normal mode",
-			dotfileResult: &DotfileApplyResult{
+			dotfileResult: &output.DotfileResults{
 				DryRun: false,
-				Summary: DotfileSummaryApplyResult{
+				Summary: output.DotfileSummary{
 					Added: 5,
 				},
 			},
@@ -266,9 +267,9 @@ func TestApplyResult_Success(t *testing.T) {
 		},
 		{
 			name: "dotfiles would add in dry run",
-			dotfileResult: &DotfileApplyResult{
+			dotfileResult: &output.DotfileResults{
 				DryRun: true,
-				Summary: DotfileSummaryApplyResult{
+				Summary: output.DotfileSummary{
 					Added: 5,
 				},
 			},
@@ -279,13 +280,13 @@ func TestApplyResult_Success(t *testing.T) {
 		},
 		{
 			name: "no changes in normal mode - idempotent success",
-			packageResult: &PackageApplyResult{
+			packageResult: &output.PackageResults{
 				DryRun:         false,
 				TotalInstalled: 0,
 			},
-			dotfileResult: &DotfileApplyResult{
+			dotfileResult: &output.DotfileResults{
 				DryRun: false,
-				Summary: DotfileSummaryApplyResult{
+				Summary: output.DotfileSummary{
 					Added: 0,
 				},
 			},
@@ -296,13 +297,13 @@ func TestApplyResult_Success(t *testing.T) {
 		},
 		{
 			name: "mixed success - packages changed, dotfiles unchanged",
-			packageResult: &PackageApplyResult{
+			packageResult: &output.PackageResults{
 				DryRun:         false,
 				TotalInstalled: 2,
 			},
-			dotfileResult: &DotfileApplyResult{
+			dotfileResult: &output.DotfileResults{
 				DryRun: false,
-				Summary: DotfileSummaryApplyResult{
+				Summary: output.DotfileSummary{
 					Added: 0,
 				},
 			},
@@ -313,7 +314,7 @@ func TestApplyResult_Success(t *testing.T) {
 		},
 		{
 			name: "errors present - success is false even with changes",
-			packageResult: &PackageApplyResult{
+			packageResult: &output.PackageResults{
 				DryRun:         false,
 				TotalInstalled: 2,
 				TotalFailed:    1,
@@ -327,7 +328,7 @@ func TestApplyResult_Success(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ApplyResult{
+			result := output.ApplyResult{
 				DryRun:   tt.dryRun,
 				Packages: tt.packageResult,
 				Dotfiles: tt.dotfileResult,
@@ -404,7 +405,7 @@ func TestApply_ErrorHandling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ApplyResult{
+			result := output.ApplyResult{
 				PackageErrors: tt.packageErrors,
 				DotfileErrors: tt.dotfileErrors,
 			}
@@ -472,18 +473,18 @@ func TestReconcileAllWithConfig(t *testing.T) {
 
 // Test apply result structs marshaling
 func TestApplyResultStructs(t *testing.T) {
-	t.Run("PackageApplyResult fields", func(t *testing.T) {
-		result := PackageApplyResult{
+	t.Run("PackageResults fields", func(t *testing.T) {
+		result := output.PackageResults{
 			DryRun:            true,
 			TotalMissing:      5,
 			TotalInstalled:    3,
 			TotalFailed:       1,
 			TotalWouldInstall: 2,
-			Managers: []ManagerApplyResult{
+			Managers: []output.ManagerResults{
 				{
 					Name:         "brew",
 					MissingCount: 3,
-					Packages: []PackageOperationApplyResult{
+					Packages: []output.PackageOperation{
 						{
 							Name:   "ripgrep",
 							Status: "installed",
@@ -508,11 +509,11 @@ func TestApplyResultStructs(t *testing.T) {
 		assert.Len(t, result.Managers[0].Packages, 2)
 	})
 
-	t.Run("DotfileApplyResult fields", func(t *testing.T) {
-		result := DotfileApplyResult{
+	t.Run("DotfileResults fields", func(t *testing.T) {
+		result := output.DotfileResults{
 			DryRun:     false,
 			TotalFiles: 10,
-			Actions: []DotfileActionApplyResult{
+			Actions: []output.DotfileOperation{
 				{
 					Source:      "dotfiles/.bashrc",
 					Destination: "~/.bashrc",
@@ -527,7 +528,7 @@ func TestApplyResultStructs(t *testing.T) {
 					Error:       "permission denied",
 				},
 			},
-			Summary: DotfileSummaryApplyResult{
+			Summary: output.DotfileSummary{
 				Added:     5,
 				Updated:   2,
 				Unchanged: 2,

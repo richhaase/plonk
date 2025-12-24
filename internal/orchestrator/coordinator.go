@@ -8,8 +8,9 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/dotfiles"
+	"github.com/richhaase/plonk/internal/lock"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/packages"
 )
 
@@ -41,8 +42,8 @@ func New(opts ...Option) *Orchestrator {
 }
 
 // Apply orchestrates the application of all resources
-func (o *Orchestrator) Apply(ctx context.Context) (ApplyResult, error) {
-	result := ApplyResult{
+func (o *Orchestrator) Apply(ctx context.Context) (output.ApplyResult, error) {
+	result := output.ApplyResult{
 		DryRun:  o.dryRun,
 		Success: false,
 	}

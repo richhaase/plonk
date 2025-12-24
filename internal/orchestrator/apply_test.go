@@ -7,13 +7,14 @@ import (
 	"testing"
 
 	"github.com/richhaase/plonk/internal/dotfiles"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPackageApplyResult_Aggregation(t *testing.T) {
+func TestPackageResults_Aggregation(t *testing.T) {
 	tests := []struct {
 		name              string
-		managers          []ManagerApplyResult
+		managers          []output.ManagerResults
 		expectedMissing   int
 		expectedInstalled int
 		expectedFailed    int
@@ -21,11 +22,11 @@ func TestPackageApplyResult_Aggregation(t *testing.T) {
 	}{
 		{
 			name: "single manager with mixed results",
-			managers: []ManagerApplyResult{
+			managers: []output.ManagerResults{
 				{
 					Name:         "brew",
 					MissingCount: 3,
-					Packages: []PackageOperationApplyResult{
+					Packages: []output.PackageOperation{
 						{Name: "ripgrep", Status: "installed"},
 						{Name: "fd", Status: "installed"},
 						{Name: "bat", Status: "failed", Error: "network error"},
@@ -39,11 +40,11 @@ func TestPackageApplyResult_Aggregation(t *testing.T) {
 		},
 		{
 			name: "multiple managers",
-			managers: []ManagerApplyResult{
+			managers: []output.ManagerResults{
 				{
 					Name:         "brew",
 					MissingCount: 2,
-					Packages: []PackageOperationApplyResult{
+					Packages: []output.PackageOperation{
 						{Name: "ripgrep", Status: "installed"},
 						{Name: "fd", Status: "installed"},
 					},
@@ -51,7 +52,7 @@ func TestPackageApplyResult_Aggregation(t *testing.T) {
 				{
 					Name:         "npm",
 					MissingCount: 3,
-					Packages: []PackageOperationApplyResult{
+					Packages: []output.PackageOperation{
 						{Name: "prettier", Status: "installed"},
 						{Name: "eslint", Status: "failed", Error: "permission denied"},
 						{Name: "typescript", Status: "would-install"},
@@ -65,11 +66,11 @@ func TestPackageApplyResult_Aggregation(t *testing.T) {
 		},
 		{
 			name: "dry run results",
-			managers: []ManagerApplyResult{
+			managers: []output.ManagerResults{
 				{
 					Name:         "brew",
 					MissingCount: 4,
-					Packages: []PackageOperationApplyResult{
+					Packages: []output.PackageOperation{
 						{Name: "ripgrep", Status: "would-install"},
 						{Name: "fd", Status: "would-install"},
 						{Name: "bat", Status: "would-install"},
@@ -114,10 +115,10 @@ func TestPackageApplyResult_Aggregation(t *testing.T) {
 	}
 }
 
-func TestDotfileApplyResult_Summary(t *testing.T) {
+func TestDotfileResults_Summary(t *testing.T) {
 	tests := []struct {
 		name              string
-		actions           []DotfileActionApplyResult
+		actions           []output.DotfileOperation
 		expectedAdded     int
 		expectedUpdated   int
 		expectedUnchanged int
@@ -125,7 +126,7 @@ func TestDotfileApplyResult_Summary(t *testing.T) {
 	}{
 		{
 			name: "mixed results",
-			actions: []DotfileActionApplyResult{
+			actions: []output.DotfileOperation{
 				{Source: ".bashrc", Destination: "~/.bashrc", Action: "copy", Status: "added"},
 				{Source: ".vimrc", Destination: "~/.vimrc", Action: "copy", Status: "added"},
 				{Source: ".gitconfig", Destination: "~/.gitconfig", Action: "error", Status: "failed", Error: "permission denied"},
@@ -137,7 +138,7 @@ func TestDotfileApplyResult_Summary(t *testing.T) {
 		},
 		{
 			name: "dry run results",
-			actions: []DotfileActionApplyResult{
+			actions: []output.DotfileOperation{
 				{Source: ".bashrc", Destination: "~/.bashrc", Action: "would-copy", Status: "would-add"},
 				{Source: ".vimrc", Destination: "~/.vimrc", Action: "would-copy", Status: "would-add"},
 				{Source: ".gitconfig", Destination: "~/.gitconfig", Action: "would-copy", Status: "would-add"},
@@ -152,7 +153,7 @@ func TestDotfileApplyResult_Summary(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Simulate the counting logic from ApplyDotfiles
-			summary := DotfileSummaryApplyResult{}
+			summary := output.DotfileSummary{}
 
 			for _, action := range tt.actions {
 				switch action.Status {
@@ -298,12 +299,12 @@ func TestApplyDotfiles_ProgressReporting(t *testing.T) {
 	assert.Equal(t, applyCount, dotfileIndex)
 }
 
-func TestManagerApplyResult_Structure(t *testing.T) {
+func TestManagerResults_Structure(t *testing.T) {
 	// Test the structure of manager results
-	result := ManagerApplyResult{
+	result := output.ManagerResults{
 		Name:         "brew",
 		MissingCount: 3,
-		Packages: []PackageOperationApplyResult{
+		Packages: []output.PackageOperation{
 			{
 				Name:   "ripgrep",
 				Status: "installed",
@@ -338,9 +339,9 @@ func TestManagerApplyResult_Structure(t *testing.T) {
 	assert.Empty(t, result.Packages[2].Error)
 }
 
-func TestDotfileActionApplyResult_Structure(t *testing.T) {
+func TestDotfileOperation_Structure(t *testing.T) {
 	// Test the structure of dotfile action results
-	actions := []DotfileActionApplyResult{
+	actions := []output.DotfileOperation{
 		{
 			Source:      "dotfiles/.bashrc",
 			Destination: "~/.bashrc",
