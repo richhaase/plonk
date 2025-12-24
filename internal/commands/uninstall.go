@@ -9,8 +9,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources"
-	"github.com/richhaase/plonk/internal/resources/packages"
+	"github.com/richhaase/plonk/internal/packages"
 	"github.com/spf13/cobra"
 )
 
@@ -51,19 +50,19 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	// Parse and validate all package specifications
 	validationResult := packages.ValidateSpecs(args, packages.ValidationModeUninstall, "")
 
-	// Convert validation errors to OperationResults
-	var validationErrors []resources.OperationResult
+	// Convert validation errors to UninstallResults
+	var validationErrors []packages.UninstallResult
 	for _, invalid := range validationResult.Invalid {
-		validationErrors = append(validationErrors, resources.OperationResult{
+		validationErrors = append(validationErrors, packages.UninstallResult{
 			Name:    invalid.OriginalSpec,
 			Manager: "",
-			Status:  "failed",
+			Status:  packages.UninstallStatusFailed,
 			Error:   invalid.Error,
 		})
 	}
 
 	// Process each package with prefix parsing
-	var allResults []resources.OperationResult
+	var allResults []packages.UninstallResult
 
 	// Add validation errors to results
 	allResults = append(allResults, validationErrors...)
@@ -90,10 +89,10 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 		cancel()
 
 		if err != nil {
-			result := resources.OperationResult{
+			result := packages.UninstallResult{
 				Name:    spec.String(),
 				Manager: spec.Manager,
-				Status:  "failed",
+				Status:  packages.UninstallStatusFailed,
 				Error:   err,
 			}
 			allResults = append(allResults, result)
@@ -105,7 +104,7 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 
 		// Show results for uninstalled packages
 		for _, result := range results {
-			if result.Status == "failed" && result.Error != nil {
+			if result.Status == packages.UninstallStatusFailed && result.Error != nil {
 				spinner.Error(fmt.Sprintf("Failed to uninstall %s: %s", result.Name, result.Error.Error()))
 			} else {
 				spinner.Success(fmt.Sprintf("%s %s", result.Status, result.Name))
@@ -117,20 +116,20 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	// Note: Results are now shown immediately after each operation via spinners
 	// This section is kept for any validation errors that weren't processed above
 	for _, result := range validationErrors {
-		icon := output.GetStatusIcon(result.Status)
+		icon := output.GetStatusIcon(result.Status.String())
 		output.Printf("%s %s %s\n", icon, result.Status, result.Name)
 		// Show error details for failed operations
-		if result.Status == "failed" && result.Error != nil {
+		if result.Status == packages.UninstallStatusFailed && result.Error != nil {
 			output.Printf("   Error: %s\n", result.Error.Error())
 		}
 	}
 
 	// Create output data using standardized format
-	summary := calculatePackageOperationSummary(allResults)
+	summary := calculateUninstallSummary(allResults)
 	outputData := output.PackageOperationOutput{
 		Command:    "uninstall",
 		TotalItems: len(allResults),
-		Results:    convertOperationResults(allResults),
+		Results:    convertUninstallResultsToOutput(allResults),
 		Summary:    summary,
 		DryRun:     dryRun,
 	}
@@ -140,5 +139,40 @@ func runUninstall(cmd *cobra.Command, args []string) error {
 	output.RenderOutput(formatter)
 
 	// Check if all operations failed and return appropriate error
-	return resources.ValidateOperationResults(allResults, "uninstall packages")
+	return validateUninstallResults(allResults)
+}
+
+// calculateUninstallSummary calculates summary from uninstall results
+func calculateUninstallSummary(results []packages.UninstallResult) output.PackageOperationSummary {
+	summary := output.PackageOperationSummary{}
+	for _, result := range results {
+		switch result.Status {
+		case packages.UninstallStatusRemoved:
+			summary.Succeeded++
+		case packages.UninstallStatusFailed:
+			summary.Failed++
+		}
+	}
+	return summary
+}
+
+// convertUninstallResultsToOutput converts packages.UninstallResult to output.SerializableOperationResult
+func convertUninstallResultsToOutput(results []packages.UninstallResult) []output.SerializableOperationResult {
+	converted := make([]output.SerializableOperationResult, len(results))
+	for i, result := range results {
+		converted[i] = output.SerializableOperationResult{
+			Name:    result.Name,
+			Manager: result.Manager,
+			Status:  result.Status.String(),
+			Error:   result.Error,
+		}
+	}
+	return converted
+}
+
+// validateUninstallResults checks if all uninstall operations failed and returns appropriate error
+func validateUninstallResults(results []packages.UninstallResult) error {
+	return ValidateBatchResults(len(results), "uninstall packages", func(i int) bool {
+		return results[i].Status == packages.UninstallStatusFailed
+	})
 }

@@ -5,6 +5,7 @@ package diagnostics
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -14,9 +15,9 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/lock"
-	"github.com/richhaase/plonk/internal/resources/dotfiles"
-	"github.com/richhaase/plonk/internal/resources/packages"
+	"github.com/richhaase/plonk/internal/packages"
 )
 
 // HealthStatus represents overall system health
@@ -40,6 +41,83 @@ type HealthCheck struct {
 type HealthReport struct {
 	Overall HealthStatus  `json:"overall" yaml:"overall"`
 	Checks  []HealthCheck `json:"checks" yaml:"checks"`
+}
+
+// fileStatus represents the state of a file for health checks
+type fileStatus int
+
+const (
+	fileExists fileStatus = iota
+	fileNotExists
+	fileNotReadable
+)
+
+// NewHealthCheck creates a new HealthCheck with the given name, category, and message.
+// Status defaults to "pass".
+func NewHealthCheck(name, category, message string) HealthCheck {
+	return HealthCheck{
+		Name:     name,
+		Category: category,
+		Status:   "pass",
+		Message:  message,
+	}
+}
+
+// checkFileStatus checks if a file exists and is readable.
+// Returns the file content (if readable), status, and any error.
+func checkFileStatus(path string) ([]byte, fileStatus, error) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return nil, fileNotExists, nil
+	}
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fileNotReadable, err
+	}
+
+	return content, fileExists, nil
+}
+
+// lockFileSummary contains parsed lock file data for health checks.
+type lockFileSummary struct {
+	managerCounts map[string]int
+	totalPackages int
+	managers      []string // sorted list of unique manager names
+	version       int
+	err           error
+}
+
+// parseLockFileSummary reads and parses lock file data once for use by multiple checks.
+func parseLockFileSummary(configDir string) lockFileSummary {
+	lockService := lock.NewYAMLLockService(configDir)
+	lockFile, err := lockService.Read()
+	if err != nil {
+		return lockFileSummary{err: err}
+	}
+
+	managerCounts := make(map[string]int)
+	for _, resource := range lockFile.Resources {
+		if resource.Type == "package" {
+			if manager, ok := resource.Metadata["manager"].(string); ok && manager != "" {
+				managerCounts[manager]++
+			}
+		}
+	}
+
+	totalPackages := 0
+	managers := make([]string, 0, len(managerCounts))
+	for name, count := range managerCounts {
+		managers = append(managers, name)
+		totalPackages += count
+	}
+	sort.Strings(managers)
+
+	return lockFileSummary{
+		managerCounts: managerCounts,
+		totalPackages: totalPackages,
+		managers:      managers,
+		version:       lockFile.Version,
+	}
 }
 
 // RunHealthChecksWithContext performs system health checks using the provided context
@@ -83,12 +161,7 @@ func RunHealthChecksWithContext(ctx context.Context) HealthReport {
 
 // checkSystemRequirements checks basic system requirements
 func checkSystemRequirements() HealthCheck {
-	check := HealthCheck{
-		Name:     "System Requirements",
-		Category: "system",
-		Status:   "pass",
-		Message:  "System requirements met",
-	}
+	check := NewHealthCheck("System Requirements", "system", "System requirements met")
 
 	var issues []string
 	var suggestions []string
@@ -121,16 +194,11 @@ func checkSystemRequirements() HealthCheck {
 
 // checkEnvironmentVariables checks important environment variables
 func checkEnvironmentVariables() HealthCheck {
-	check := HealthCheck{
-		Name:     "Environment Variables",
-		Category: "environment",
-		Status:   "pass",
-		Message:  "Environment variables configured",
-	}
+	check := NewHealthCheck("Environment Variables", "environment", "Environment variables configured")
 
 	// Check important environment variables
 	homeDir := config.GetHomeDir()
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 
 	check.Details = append(check.Details,
 		fmt.Sprintf("HOME: %s", homeDir),
@@ -154,14 +222,9 @@ func checkEnvironmentVariables() HealthCheck {
 
 // checkPermissions checks file and directory permissions
 func checkPermissions() HealthCheck {
-	check := HealthCheck{
-		Name:     "Permissions",
-		Category: "permissions",
-		Status:   "pass",
-		Message:  "File permissions are correct",
-	}
+	check := NewHealthCheck("Permissions", "permissions", "File permissions are correct")
 
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Check if config directory exists and is writable
 	if err := os.MkdirAll(configDir, 0755); err != nil {
@@ -189,47 +252,35 @@ func checkPermissions() HealthCheck {
 
 // checkConfigurationFile checks for the existence and basic properties of the config file
 func checkConfigurationFile() HealthCheck {
-	check := HealthCheck{
-		Name:     "Configuration File",
-		Category: "configuration",
-		Status:   "pass",
-		Message:  "Configuration file exists",
-	}
+	check := NewHealthCheck("Configuration File", "configuration", "Configuration file exists")
 
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 	configPath := filepath.Join(configDir, "plonk.yaml")
 
-	// Check if config file exists
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+	content, status, err := checkFileStatus(configPath)
+	switch status {
+	case fileNotExists:
 		check.Status = "info"
 		check.Message = "Configuration file does not exist (using defaults)"
 		check.Details = append(check.Details, "Will use default configuration")
 		return check
-	}
-
-	// Check if file is readable
-	if content, err := os.ReadFile(configPath); err != nil {
+	case fileNotReadable:
 		check.Status = "fail"
 		check.Issues = append(check.Issues, fmt.Sprintf("Cannot read config file: %v", err))
 		check.Suggestions = append(check.Suggestions, "Check file permissions and directory access")
 		check.Message = "Configuration file is not readable"
-	} else {
-		check.Details = append(check.Details, fmt.Sprintf("Config file size: %d bytes", len(content)))
+		return check
 	}
 
+	check.Details = append(check.Details, fmt.Sprintf("Config file size: %d bytes", len(content)))
 	return check
 }
 
 // checkConfigurationValidity validates the configuration file format and content
 func checkConfigurationValidity() HealthCheck {
-	check := HealthCheck{
-		Name:     "Configuration Validity",
-		Category: "configuration",
-		Status:   "pass",
-		Message:  "Configuration is valid",
-	}
+	check := NewHealthCheck("Configuration Validity", "configuration", "Configuration is valid")
 
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Try to load the configuration
 	cfg, err := config.Load(configDir)
@@ -262,39 +313,33 @@ func checkConfigurationValidity() HealthCheck {
 
 // checkLockFile checks for the existence and basic properties of the lock file
 func checkLockFile() HealthCheck {
-	check := HealthCheck{
-		Name:     "Lock File",
-		Category: "configuration",
-		Status:   "pass",
-		Message:  "Lock file exists",
-	}
+	check := NewHealthCheck("Lock File", "configuration", "Lock file exists")
 
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 	lockPath := filepath.Join(configDir, "plonk.lock")
 
-	// Check if lock file exists
-	if _, err := os.Stat(lockPath); os.IsNotExist(err) {
+	content, status, err := checkFileStatus(lockPath)
+	switch status {
+	case fileNotExists:
 		check.Status = "info"
 		check.Message = "Lock file does not exist (will be created when packages are added)"
 		check.Details = append(check.Details, "Lock file will be automatically created when you add packages")
 		return check
-	}
-
-	// Check if file is readable
-	if content, err := os.ReadFile(lockPath); err != nil {
+	case fileNotReadable:
 		check.Status = "fail"
 		check.Issues = append(check.Issues, fmt.Sprintf("Cannot read lock file: %v", err))
 		check.Suggestions = append(check.Suggestions, "Check file permissions and directory access")
 		check.Message = "Lock file is not readable"
-	} else {
-		check.Details = append(check.Details, fmt.Sprintf("Lock file size: %d bytes", len(content)))
+		return check
+	}
 
-		// Basic file integrity check
-		if len(content) == 0 {
-			check.Status = "warn"
-			check.Message = "Lock file is empty"
-			check.Details = append(check.Details, "No packages currently managed")
-		}
+	check.Details = append(check.Details, fmt.Sprintf("Lock file size: %d bytes", len(content)))
+
+	// Basic file integrity check
+	if len(content) == 0 {
+		check.Status = "warn"
+		check.Message = "Lock file is empty"
+		check.Details = append(check.Details, "No packages currently managed")
 	}
 
 	return check
@@ -302,47 +347,26 @@ func checkLockFile() HealthCheck {
 
 // checkLockFileValidity validates the lock file format and content
 func checkLockFileValidity() HealthCheck {
-	check := HealthCheck{
-		Name:     "Lock File Validity",
-		Category: "configuration",
-		Status:   "pass",
-		Message:  "Lock file is valid",
-	}
+	check := NewHealthCheck("Lock File Validity", "configuration", "Lock file is valid")
 
-	configDir := config.GetConfigDir()
-	lockService := lock.NewYAMLLockService(configDir)
-
-	// Try to load the lock file
-	lockFile, err := lockService.Read()
-	if err != nil {
+	summary := parseLockFileSummary(config.GetDefaultConfigDirectory())
+	if summary.err != nil {
 		check.Status = "fail"
-		check.Issues = append(check.Issues, fmt.Sprintf("Lock file is invalid: %v", err))
+		check.Issues = append(check.Issues, fmt.Sprintf("Lock file is invalid: %v", summary.err))
 		check.Suggestions = append(check.Suggestions, "Validate lock file format or regenerate by running 'plonk pkg add' commands")
 		check.Message = "Lock file has format errors"
 		return check
 	}
 
-	// Count packages by manager
-	totalPackages := 0
-	managerCounts := make(map[string]int)
-	for _, resource := range lockFile.Resources {
-		if resource.Type == "package" {
-			if manager, ok := resource.Metadata["manager"].(string); ok {
-				managerCounts[manager]++
-				totalPackages++
-			}
-		}
-	}
-
 	// Add manager counts to details
-	for manager, count := range managerCounts {
+	for manager, count := range summary.managerCounts {
 		check.Details = append(check.Details, fmt.Sprintf("%s packages: %d", manager, count))
 	}
 
-	check.Details = append(check.Details, fmt.Sprintf("Total managed packages: %d", totalPackages))
-	check.Details = append(check.Details, fmt.Sprintf("Lock file version: %d", lockFile.Version))
+	check.Details = append(check.Details, fmt.Sprintf("Total managed packages: %d", summary.totalPackages))
+	check.Details = append(check.Details, fmt.Sprintf("Lock file version: %d", summary.version))
 
-	if totalPackages == 0 {
+	if summary.totalPackages == 0 {
 		check.Status = "info"
 		check.Message = "Lock file is valid but contains no packages"
 	}
@@ -354,14 +378,10 @@ func checkLockFileValidity() HealthCheck {
 func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
 	registry := packages.GetRegistry()
 
-	requiredManagers := collectRequiredManagers(config.GetConfigDir())
+	requiredManagers := collectRequiredManagers(config.GetDefaultConfigDirectory())
 
-	check := HealthCheck{
-		Name:     "Package Managers",
-		Category: "package-managers",
-		Status:   "info",
-		Message:  "No package managers configured",
-	}
+	check := NewHealthCheck("Package Managers", "package-managers", "No package managers configured")
+	check.Status = "info" // Override default "pass" status
 
 	if len(requiredManagers) == 0 {
 		return []HealthCheck{check}
@@ -376,7 +396,10 @@ func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
 			}
 		}
 
-		desc, hint, helpURL := lookupManagerMetadata(managerName)
+		var desc, hint, helpURL string
+		if meta, ok := registry.GetManagerMetadata(managerName); ok {
+			desc, hint, helpURL = meta.Description, meta.InstallHint, meta.HelpURL
+		}
 		label := managerName
 		if desc != "" {
 			label = desc
@@ -416,12 +439,7 @@ func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
 
 // checkExecutablePath checks if plonk executable is accessible
 func checkExecutablePath() HealthCheck {
-	check := HealthCheck{
-		Name:     "Executable Path",
-		Category: "installation",
-		Status:   "pass",
-		Message:  "Executable is accessible",
-	}
+	check := NewHealthCheck("Executable Path", "installation", "Executable is accessible")
 
 	// Try to find plonk in PATH
 	plonkPath, err := exec.LookPath("plonk")
@@ -439,14 +457,9 @@ func checkExecutablePath() HealthCheck {
 
 // checkTemplates validates template files and local variables configuration
 func checkTemplates() HealthCheck {
-	check := HealthCheck{
-		Name:     "Templates",
-		Category: "dotfiles",
-		Status:   "pass",
-		Message:  "Template configuration is valid",
-	}
+	check := NewHealthCheck("Templates", "dotfiles", "Template configuration is valid")
 
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 	templateProcessor := dotfiles.NewTemplateProcessor(configDir)
 
 	// Check if any templates exist
@@ -487,9 +500,10 @@ func checkTemplates() HealthCheck {
 		tmplPath := filepath.Join(configDir, tmpl)
 		if err := templateProcessor.ValidateTemplate(tmplPath); err != nil {
 			validationErrors = append(validationErrors, err.Error())
-			// Extract variable name from error message
-			if varName := extractVarNameFromError(err.Error()); varName != "" {
-				missingVars[varName] = true
+			// Extract variable name from structured error
+			var validationErr *dotfiles.TemplateValidationError
+			if errors.As(err, &validationErr) && validationErr.VarName != "" {
+				missingVars[validationErr.VarName] = true
 			}
 		}
 	}
@@ -527,22 +541,6 @@ func checkTemplates() HealthCheck {
 	return check
 }
 
-// extractVarNameFromError extracts the variable name from a template error message
-func extractVarNameFromError(errStr string) string {
-	// Pattern: "requires variable 'X' which is not defined"
-	const prefix = "requires variable '"
-	idx := strings.Index(errStr, prefix)
-	if idx == -1 {
-		return ""
-	}
-	start := idx + len(prefix)
-	end := strings.Index(errStr[start:], "'")
-	if end == -1 {
-		return ""
-	}
-	return errStr[start : start+end]
-}
-
 // calculateOverallHealth determines overall system health from individual checks
 func calculateOverallHealth(checks []HealthCheck) HealthStatus {
 	hasFailure := false
@@ -578,34 +576,6 @@ func calculateOverallHealth(checks []HealthCheck) HealthStatus {
 }
 
 func collectRequiredManagers(configDir string) []string {
-	seen := make(map[string]struct{})
-
-	lockService := lock.NewYAMLLockService(configDir)
-	if lockFile, err := lockService.Read(); err == nil {
-		for _, resource := range lockFile.Resources {
-			if resource.Type != "package" {
-				continue
-			}
-			if manager, ok := resource.Metadata["manager"].(string); ok && manager != "" {
-				seen[manager] = struct{}{}
-			}
-		}
-	}
-
-	names := make([]string, 0, len(seen))
-	for name := range seen {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+	return parseLockFileSummary(configDir).managers
 }
 
-func lookupManagerMetadata(name string) (description, installHint, helpURL string) {
-	// Use registry metadata for built-in managers
-	registry := packages.GetRegistry()
-	if meta, ok := registry.GetManagerMetadata(name); ok {
-		return meta.Description, meta.InstallHint, meta.HelpURL
-	}
-
-	return "", "", ""
-}

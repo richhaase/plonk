@@ -54,19 +54,13 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - `options.go` - Orchestrator options
 - `types.go` - Orchestrator type definitions
 
-### Resources (`internal/resources/`)
+### Domain Packages
 
-#### Base Resource Infrastructure
-- `resource.go` - Resource interface and base types
-- `types.go` - Resource type definitions
-- `reconcile.go` - Resource reconciliation logic
-
-#### Package Resources (`internal/resources/packages/`)
-- `resource.go` - Package resource implementation
-- `reconcile.go` - Package reconciliation logic
+#### Packages (`internal/packages/`)
+- `spec.go` - Package specification and reconciliation logic
+- `reconcile.go` - Package reconciliation entry point
 - `apply.go` - Package apply operations
 - `operations.go` - Package operations (install, uninstall, etc.)
-- `spec.go` - Package specification handling
 - `executor.go` - Command execution abstraction
 - `interfaces.go` - Package manager interfaces
 - `registry.go` - Package manager registry with hardcoded implementations
@@ -78,8 +72,7 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 
 
 
-#### Dotfile Resources (`internal/resources/dotfiles/`)
-- `resource.go` - Dotfile resource implementation
+#### Dotfile Resources (`internal/dotfiles/`)
 - `manager.go` - Dotfile management operations
 - `reconcile.go` - Dotfile reconciliation logic
 - `apply.go` - Dotfile apply operations
@@ -134,14 +127,13 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 ### apply command
 - Entry: `internal/commands/apply.go`
 - Orchestration: `internal/orchestrator/coordinator.go`, `reconcile.go`
-- Package reconciliation: `internal/resources/packages/reconcile.go`, `apply.go`
-- Dotfile reconciliation: `internal/resources/dotfiles/reconcile.go`, `apply.go`
+- Package reconciliation: `internal/packages/reconcile.go`, `apply.go`
+- Dotfile reconciliation: `internal/dotfiles/reconcile.go`, `apply.go`
 
 ### status command
 - Entry: `internal/commands/status.go`
-- Resource reconciliation: `internal/resources/reconcile.go`
-- Package state: `internal/resources/packages/resource.go`
-- Dotfile state: `internal/resources/dotfiles/resource.go`
+- Package reconciliation: `internal/packages/reconcile.go`
+- Dotfile reconciliation: `internal/dotfiles/reconcile.go`
 
 ### doctor command
 - Entry: `internal/commands/doctor.go`
@@ -150,9 +142,8 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 
 ### diff command
 - Entry: `internal/commands/diff.go`
-- Resource reconciliation: `internal/resources/reconcile.go`
-- Package state: `internal/resources/packages/resource.go`
-- Dotfile state: `internal/resources/dotfiles/resource.go`
+- Package reconciliation: `internal/packages/reconcile.go`
+- Dotfile reconciliation: `internal/dotfiles/reconcile.go`
 
 ### config show/edit commands
 - Entry: `internal/commands/config_show.go`, `config_edit.go`
@@ -160,25 +151,20 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 
 ### Package management commands (install/uninstall)
 - Entries: `internal/commands/install.go`, `uninstall.go`
-- Operations: `internal/resources/packages/operations.go`
-- Manager registry: `internal/resources/packages/registry.go`
+- Operations: `internal/packages/operations.go`
+- Manager registry: `internal/packages/registry.go`
 - Lock file updates: `internal/lock/yaml_lock.go`
 
 ### Dotfile management commands (add/rm)
 - Entries: `internal/commands/add.go`, `rm.go`
-- Operations: `internal/resources/dotfiles/manager.go`
-- File operations: `internal/resources/dotfiles/fileops.go`
-- Path filtering: `internal/resources/dotfiles/filter.go`
+- Operations: `internal/dotfiles/manager.go`
+- File operations: `internal/dotfiles/fileops.go`
+- Path filtering: `internal/dotfiles/filter.go`
 
 ## Key Interfaces
 
-### Resource Interface
-Location: `internal/resources/resource.go`
-- Implemented by: Package and Dotfile resources
-- Used by: Reconciliation and orchestration
-
 ### PackageManager Interface
-Location: `internal/resources/packages/interfaces.go`
+Location: `internal/packages/interfaces.go`
 - Implemented by: 10 package managers (hardcoded Go implementations)
 - Defines: Install, Uninstall, List operations
 
@@ -243,6 +229,6 @@ Location: `internal/lock/interfaces.go`
 
 ### File Organization
 - Commands in internal/commands/
-- Business logic in internal/resources/, internal/orchestrator/
+- Business logic in internal/packages/, internal/dotfiles/, internal/orchestrator/
 - Shared utilities in internal/ subdirectories
 - Public API (if any) would be in pkg/

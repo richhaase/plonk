@@ -8,7 +8,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources/packages"
+	"github.com/richhaase/plonk/internal/packages"
 	"github.com/spf13/cobra"
 )
 
@@ -35,7 +35,7 @@ func init() {
 
 func runPackages(cmd *cobra.Command, args []string) error {
 	// Get directories
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Load configuration
 	cfg := config.LoadWithDefaults(configDir)
@@ -49,10 +49,10 @@ func runPackages(cmd *cobra.Command, args []string) error {
 
 	// Convert to output format
 	outputResult := output.Result{
-		Domain:    packageResult.Domain,
-		Managed:   convertItemsToOutput(packageResult.Managed),
-		Missing:   convertItemsToOutput(packageResult.Missing),
-		Untracked: convertItemsToOutput(packageResult.Untracked),
+		Domain:    "package",
+		Managed:   convertPackageSpecsToOutput(packageResult.Managed),
+		Missing:   convertPackageSpecsToOutput(packageResult.Missing),
+		Untracked: convertPackageSpecsToOutput(packageResult.Untracked),
 	}
 
 	// Prepare output

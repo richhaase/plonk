@@ -7,24 +7,16 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// validManagers holds the list of valid package managers.
-// This is populated at runtime by the packages module via ManagerRegistry
-// or explicitly in tests.
-var validManagers []string
-
-// SetValidManagers sets the list of valid package managers for validation.
-// In production this is called from the packages module; tests may call it directly.
-func SetValidManagers(managers []string) {
-	validManagers = managers
-}
+// ManagerChecker is a function that checks if a manager name is valid.
+// This is set by the packages module during initialization.
+var ManagerChecker func(string) bool
 
 // RegisterValidators registers custom validators for config validation.
 func RegisterValidators(v *validator.Validate) error {
 	return v.RegisterValidation("validmanager", validatePackageManager)
 }
 
-// validatePackageManager validates that a package manager is registered.
-// Valid managers are set by the packages registry during initialization.
+// validatePackageManager validates that a package manager is supported.
 func validatePackageManager(fl validator.FieldLevel) bool {
 	managerName := fl.Field().String()
 	if managerName == "" {
@@ -32,17 +24,10 @@ func validatePackageManager(fl validator.FieldLevel) bool {
 		return true
 	}
 
-	// If no managers have been registered, treat any explicit manager as invalid.
-	if len(validManagers) == 0 {
+	if ManagerChecker == nil {
 		return false
 	}
 
-	for _, valid := range validManagers {
-		if managerName == valid {
-			return true
-		}
-	}
-
-	return false
+	return ManagerChecker(managerName)
 }
 

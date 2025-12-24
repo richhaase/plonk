@@ -27,9 +27,14 @@ test:
     go test ./...
     @echo "Unit tests passed!"
 
-# Run BATS behavioral tests
+# Run BATS behavioral tests locally
+# ⚠️  WARNING: Prefer 'just docker-test' - local execution modifies your system!
+# These tests install real packages and create real files. Only use this if you
+# understand the risks. See tests/bats/README.md for details.
 test-bats:
-    @echo "Running BATS behavioral tests..."
+    @echo "⚠️  WARNING: Running BATS tests LOCALLY - this will modify your system!"
+    @echo "   Prefer 'just docker-test' for isolated execution."
+    @echo ""
     @if ! command -v bats &> /dev/null; then \
         echo "BATS not found. Install with: brew install bats-core"; \
         exit 1; \

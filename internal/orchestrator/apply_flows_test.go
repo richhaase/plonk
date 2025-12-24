@@ -11,7 +11,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
-	pkgs "github.com/richhaase/plonk/internal/resources/packages"
+	pkgs "github.com/richhaase/plonk/internal/packages"
 	"github.com/stretchr/testify/assert"
 )
 

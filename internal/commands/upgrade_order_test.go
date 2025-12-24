@@ -6,7 +6,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
-	packages "github.com/richhaase/plonk/internal/resources/packages"
+	packages "github.com/richhaase/plonk/internal/packages"
 )
 
 // stubLockService is a minimal LockService for upgrade tests

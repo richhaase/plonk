@@ -52,3 +52,10 @@ setup() {
   # Should show version string
   assert_output --partial "plonk"
 }
+
+@test "status supports table format (default)" {
+  run plonk status
+  assert_success
+  # Look for table-like formatting
+  assert_output --partial "Plonk Status"
+}

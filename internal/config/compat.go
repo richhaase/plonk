@@ -33,12 +33,8 @@ func GetDefaultConfigDirectory() string {
 	return filepath.Join(os.Getenv("HOME"), ".config", "plonk")
 }
 
-// ResolvedConfig is an alias to Config for backward compatibility
-// In the new system, Config is already resolved
-type ResolvedConfig = Config
-
 // GetDefaults returns the default configuration
-func GetDefaults() *ResolvedConfig {
+func GetDefaults() *Config {
 	return &defaultConfig
 }
 
@@ -73,7 +69,7 @@ func (v *SimpleValidator) ValidateConfigFromYAML(content []byte) *ValidationResu
 	}
 
 	// Apply defaults
-	applyDefaults(&cfg)
+	ApplyDefaults(&cfg)
 
 	// Validate
 	err := v.validator.Struct(&cfg)

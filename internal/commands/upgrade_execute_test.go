@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/richhaase/plonk/internal/lock"
-	packages "github.com/richhaase/plonk/internal/resources/packages"
+	packages "github.com/richhaase/plonk/internal/packages"
 )
 
 // fake managers for upgrade execution tests

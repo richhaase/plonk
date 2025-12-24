@@ -10,8 +10,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources"
-	"github.com/richhaase/plonk/internal/resources/packages"
+	"github.com/richhaase/plonk/internal/packages"
 	"github.com/spf13/cobra"
 )
 
@@ -55,7 +54,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 	// Check for package manager self-installation requests before normal processing
 	registry := packages.GetRegistry()
-	var managerSelfInstallResults []resources.OperationResult
+	var managerSelfInstallResults []packages.InstallResult
 	var remainingArgs []string
 
 	// Create spinner manager for all operations
@@ -72,7 +71,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 			managerSelfInstallResults = append(managerSelfInstallResults, result)
 
 			// Stop spinner and show result
-			if result.Status == "failed" && result.Error != nil {
+			if result.Status == packages.InstallStatusFailed && result.Error != nil {
 				spinner.Error(fmt.Sprintf("Failed to install %s: %s", arg, result.Error.Error()))
 			} else {
 				spinner.Success(fmt.Sprintf("%s %s", result.Status, result.Name))
@@ -94,19 +93,19 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		validationResult = packages.ValidateSpecs(remainingArgs, packages.ValidationModeInstall, defaultManager)
 	}
 
-	// Convert validation errors to OperationResults
-	var validationErrors []resources.OperationResult
+	// Convert validation errors to InstallResults
+	var validationErrors []packages.InstallResult
 	for _, invalid := range validationResult.Invalid {
-		validationErrors = append(validationErrors, resources.OperationResult{
+		validationErrors = append(validationErrors, packages.InstallResult{
 			Name:    invalid.OriginalSpec,
 			Manager: "",
-			Status:  "failed",
+			Status:  packages.InstallStatusFailed,
 			Error:   invalid.Error,
 		})
 	}
 
 	// Combine all results
-	var allResults []resources.OperationResult
+	var allResults []packages.InstallResult
 
 	// Add manager self-install results first
 	allResults = append(allResults, managerSelfInstallResults...)
@@ -132,10 +131,10 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		cancel()
 
 		if err != nil {
-			result := resources.OperationResult{
+			result := packages.InstallResult{
 				Name:    spec.String(),
 				Manager: spec.Manager,
-				Status:  "failed",
+				Status:  packages.InstallStatusFailed,
 				Error:   err,
 			}
 			allResults = append(allResults, result)
@@ -147,7 +146,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 		// Show results for installed packages
 		for _, result := range results {
-			if result.Status == "failed" && result.Error != nil {
+			if result.Status == packages.InstallStatusFailed && result.Error != nil {
 				spinner.Error(fmt.Sprintf("Failed to install %s: %s", result.Name, result.Error.Error()))
 			} else {
 				spinner.Success(fmt.Sprintf("%s %s", result.Status, result.Name))
@@ -159,20 +158,20 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	// Note: Results are now shown immediately after each operation via spinners
 	// This section is kept for any validation errors that weren't processed above
 	for _, result := range validationErrors {
-		icon := output.GetStatusIcon(result.Status)
+		icon := output.GetStatusIcon(result.Status.String())
 		output.Printf("%s %s %s\n", icon, result.Status, result.Name)
 		// Show error details for failed operations
-		if result.Status == "failed" && result.Error != nil {
+		if result.Status == packages.InstallStatusFailed && result.Error != nil {
 			output.Printf("   Error: %s\n", result.Error.Error())
 		}
 	}
 
 	// Create output data using standardized format
-	summary := calculatePackageOperationSummary(allResults)
+	summary := calculateInstallSummary(allResults)
 	outputData := output.PackageOperationOutput{
 		Command:    "install",
 		TotalItems: len(allResults),
-		Results:    convertOperationResults(allResults),
+		Results:    convertInstallResultsToOutput(allResults),
 		Summary:    summary,
 		DryRun:     dryRun,
 	}
@@ -182,15 +181,15 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	output.RenderOutput(formatter)
 
 	// Check if all operations failed and return appropriate error
-	return resources.ValidateOperationResults(allResults, "install packages")
+	return validateInstallResults(allResults)
 }
 
 // handleManagerSelfInstall reports that self-installation is no longer supported
-func handleManagerSelfInstall(ctx context.Context, managerName string, dryRun bool, cfg *config.Config) resources.OperationResult {
-	result := resources.OperationResult{
+func handleManagerSelfInstall(ctx context.Context, managerName string, dryRun bool, cfg *config.Config) packages.InstallResult {
+	return packages.InstallResult{
 		Name:    managerName,
 		Manager: "self-install",
-		Status:  "failed",
+		Status:  packages.InstallStatusFailed,
 		Error: fmt.Errorf(
 			"automatic installation of package managers is not supported for security reasons\n"+
 				"Please install %s manually or via another package manager\n"+
@@ -198,6 +197,41 @@ func handleManagerSelfInstall(ctx context.Context, managerName string, dryRun bo
 			managerName,
 		),
 	}
+}
 
-	return result
+// calculateInstallSummary calculates summary from install results
+func calculateInstallSummary(results []packages.InstallResult) output.PackageOperationSummary {
+	summary := output.PackageOperationSummary{}
+	for _, result := range results {
+		switch result.Status {
+		case packages.InstallStatusAdded:
+			summary.Succeeded++
+		case packages.InstallStatusSkipped:
+			summary.Skipped++
+		case packages.InstallStatusFailed:
+			summary.Failed++
+		}
+	}
+	return summary
+}
+
+// convertInstallResultsToOutput converts packages.InstallResult to output.SerializableOperationResult
+func convertInstallResultsToOutput(results []packages.InstallResult) []output.SerializableOperationResult {
+	converted := make([]output.SerializableOperationResult, len(results))
+	for i, result := range results {
+		converted[i] = output.SerializableOperationResult{
+			Name:    result.Name,
+			Manager: result.Manager,
+			Status:  result.Status.String(),
+			Error:   result.Error,
+		}
+	}
+	return converted
+}
+
+// validateInstallResults checks if all install operations failed and returns appropriate error
+func validateInstallResults(results []packages.InstallResult) error {
+	return ValidateBatchResults(len(results), "install packages", func(i int) bool {
+		return results[i].Status == packages.InstallStatusFailed
+	})
 }

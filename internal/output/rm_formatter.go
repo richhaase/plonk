@@ -3,14 +3,18 @@
 
 package output
 
-import (
-	"github.com/richhaase/plonk/internal/resources"
-)
+// SerializableRemovalResult represents a removal result for serialization
+type SerializableRemovalResult struct {
+	Name     string                 `json:"name" yaml:"name"`
+	Status   string                 `json:"status" yaml:"status"`
+	Error    string                 `json:"error,omitempty" yaml:"error,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+}
 
 // DotfileRemovalOutput represents the output for dotfile removal
 type DotfileRemovalOutput struct {
 	TotalFiles int                         `json:"total_files" yaml:"total_files"`
-	Results    []resources.OperationResult `json:"results" yaml:"results"`
+	Results    []SerializableRemovalResult `json:"results" yaml:"results"`
 	Summary    DotfileRemovalSummary       `json:"summary" yaml:"summary"`
 }
 
@@ -54,13 +58,13 @@ func (f DotfileRemovalFormatter) TableOutput() string {
 			}
 		case "skipped":
 			tb.AddLine("Skipped: %s", result.Name)
-			if result.Error != nil {
-				tb.AddLine("   Reason: %s", result.Error.Error())
+			if result.Error != "" {
+				tb.AddLine("   Reason: %s", result.Error)
 			}
 		case "failed":
 			tb.AddLine("Failed: %s", result.Name)
-			if result.Error != nil {
-				tb.AddLine("   Error: %s", result.Error.Error())
+			if result.Error != "" {
+				tb.AddLine("   Error: %s", result.Error)
 			}
 		}
 		return tb.Build()

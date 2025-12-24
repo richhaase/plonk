@@ -1,54 +1,62 @@
-# ⚠️ BATS Tests for Plonk - SYSTEM MODIFICATION WARNING ⚠️
+# BATS Tests for Plonk
 
-## 🚨 THESE TESTS MODIFY YOUR REAL SYSTEM 🚨
+## Running Tests (Docker - Recommended)
 
-### What These Tests Do
-- **INSTALL REAL PACKAGES** using your package managers (brew, npm, uv, etc.)
-- **CREATE REAL DOTFILES** in your home directory
-- **MODIFY PLONK STATE** (using isolated config in temp directory)
-
-### Before Running Tests
-1. **BACKUP YOUR PLONK CONFIG**: `cp -r ~/.config/plonk ~/.config/plonk.backup`
-2. **REVIEW THE SAFE LISTS**: Check `config/safe-packages.list` and `config/safe-dotfiles.list`
-3. **UNDERSTAND THE RISKS**: These tests will install software on your system
-
-### Running Tests Safely
+**Always use Docker** to run BATS tests. This isolates test effects from your local system:
 
 ```bash
-# Basic run (cleans up after tests)
+# Build Docker image and run all tests
+just docker-test-all
+
+# Run all tests (if image already built)
+just docker-test
+
+# Run smoke tests only (fast verification)
+just docker-test-smoke
+
+# Run specific test file
+just docker-test-file tests/bats/behavioral/02-package-install.bats
+
+# Interactive shell for debugging
+just docker-shell
+```
+
+---
+
+## ⚠️ Local Execution Warning ⚠️
+
+> **Only run tests locally if you:**
+> - Are certain you understand the risks
+> - Accept that tests WILL modify your system
+> - Have backed up your plonk configuration
+
+### What Local Tests Do
+- **INSTALL REAL PACKAGES** via brew, npm, cargo, uv, etc.
+- **CREATE REAL DOTFILES** in your home directory
+- **MODIFY SYSTEM STATE** that persists after tests complete
+
+### Local Execution (Not Recommended)
+
+If you must run locally:
+
+```bash
+# 1. BACKUP FIRST
+cp -r ~/.config/plonk ~/.config/plonk.backup
+
+# 2. Review what will be installed
+cat tests/bats/config/safe-packages.list
+cat tests/bats/config/safe-dotfiles.list
+
+# 3. Run tests
 bats tests/bats/behavioral/
 
-# Run without cleanup (keep test packages/dotfiles)
-PLONK_TEST_CLEANUP_PACKAGES=0 PLONK_TEST_CLEANUP_DOTFILES=0 bats tests/bats/
-
-# Run with custom safe lists
-export PLONK_TEST_SAFE_PACKAGES="brew:jq"
-export PLONK_TEST_SAFE_DOTFILES=".plonk-test-rc"
-bats tests/bats/
-
-# Run only specific test files
-bats tests/bats/behavioral/01-basic-commands.bats
-```
-
-### After Running Tests
-
-The tests may leave artifacts on your system:
-- Installed packages (jq, tree, etc.)
-- Test dotfiles (.plonk-test-rc, etc.)
-
-To restore your intended system state:
-```bash
-# Option 1: Run cleanup test
+# 4. Cleanup if needed
 bats tests/bats/cleanup/99-cleanup-all.bats
-
-# Option 2: Manually restore your configuration
-plonk apply
-
-# Option 3: Uninstall test packages manually
-plonk uninstall brew:jq brew:tree npm:is-odd uv:cowsay
 ```
 
-### Environment Variables
+---
+
+## Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|

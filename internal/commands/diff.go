@@ -13,10 +13,9 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources"
-	"github.com/richhaase/plonk/internal/resources/dotfiles"
 	"github.com/spf13/cobra"
 )
 
@@ -43,7 +42,7 @@ func init() {
 
 func runDiff(cmd *cobra.Command, args []string) error {
 	homeDir := config.GetHomeDir()
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 	cfg := config.LoadWithDefaults(configDir)
 
 	// Get drifted dotfiles from reconciliation
@@ -63,7 +62,7 @@ func runDiff(cmd *cobra.Command, args []string) error {
 		if filtered == nil {
 			return fmt.Errorf("dotfile not found or not drifted: %s", args[0])
 		}
-		driftedFiles = []resources.Item{*filtered}
+		driftedFiles = []dotfiles.DotfileItem{*filtered}
 	}
 
 	// Get diff tool from config or use default
@@ -77,30 +76,35 @@ func runDiff(cmd *cobra.Command, args []string) error {
 
 	// Execute diff for each drifted file
 	for _, item := range driftedFiles {
-		// Get the source name (without leading dot)
-		sourceName := getSourceNameFromItem(item)
-		sourcePath := filepath.Join(configDir, sourceName)
+		// Get the source path directly from the item
+		sourcePath := item.Source
+		if sourcePath == "" {
+			// Fallback: construct from config dir and name
+			sourceName := strings.TrimPrefix(item.Name, ".")
+			sourcePath = filepath.Join(configDir, sourceName)
+		} else if !filepath.IsAbs(sourcePath) {
+			// Source is a relative path, prepend configDir
+			sourcePath = filepath.Join(configDir, sourcePath)
+		}
 
-		// Get destination path from metadata
-		destPath := ""
-		if dest, ok := item.Metadata["destination"].(string); ok {
-			normalizedDest, err := normalizePath(dest)
-			if err != nil {
-				// Fall back to simple expansion if normalization fails
-				destPath = expandHome(dest)
-			} else {
-				destPath = normalizedDest
-			}
-		} else {
-			// This shouldn't happen, but provide a fallback
+		// Get destination path directly from the item
+		destPath := item.Destination
+		if destPath == "" {
+			// Fallback
 			destPath = expandHome("~/" + item.Name)
+		} else {
+			normalizedDest, err := normalizePath(destPath)
+			if err == nil {
+				destPath = normalizedDest
+			} else {
+				destPath = expandHome(destPath)
+			}
 		}
 
 		// Check if source is a template - if so, render to temp file for diff
-		isTemplate, _ := item.Metadata["isTemplate"].(bool)
 		effectiveSourcePath := sourcePath
 
-		if isTemplate {
+		if item.IsTemplate {
 			// Render template to temporary file
 			rendered, err := templateProcessor.RenderToBytes(sourcePath)
 			if err != nil {
@@ -136,26 +140,18 @@ func runDiff(cmd *cobra.Command, args []string) error {
 }
 
 // getDriftedDotfiles reconciles dotfiles and returns only drifted ones
-func getDriftedDotfiles(ctx context.Context, cfg *config.Config, configDir, homeDir string) ([]resources.Item, error) {
+func getDriftedDotfiles(ctx context.Context, cfg *config.Config, configDir, homeDir string) ([]dotfiles.DotfileItem, error) {
 	// Reconcile all domains
-	results, err := orchestrator.ReconcileAllWithConfig(ctx, homeDir, configDir, cfg)
+	result, err := orchestrator.ReconcileAllWithConfig(ctx, homeDir, configDir, cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	// Convert results to summary to get all items
-	summary := resources.ConvertResultsToSummary(results)
-
-	var drifted []resources.Item
-	// Find dotfile results
-	for _, result := range summary.Results {
-		if result.Domain == "dotfile" {
-			// Check all managed items for drift
-			for _, item := range result.Managed {
-				if item.State == resources.StateDegraded {
-					drifted = append(drifted, item)
-				}
-			}
+	var drifted []dotfiles.DotfileItem
+	// Check all managed dotfiles for drift
+	for _, item := range result.Dotfiles.Managed {
+		if item.State == dotfiles.StateDegraded {
+			drifted = append(drifted, item)
 		}
 	}
 
@@ -163,7 +159,7 @@ func getDriftedDotfiles(ctx context.Context, cfg *config.Config, configDir, home
 }
 
 // filterDriftedFile finds a specific drifted file from the list
-func filterDriftedFile(arg string, driftedFiles []resources.Item) *resources.Item {
+func filterDriftedFile(arg string, driftedFiles []dotfiles.DotfileItem) *dotfiles.DotfileItem {
 	// Normalize the argument path
 	argPath, err := normalizePath(arg)
 	if err != nil {
@@ -171,35 +167,20 @@ func filterDriftedFile(arg string, driftedFiles []resources.Item) *resources.Ite
 		return nil
 	}
 
-	for _, item := range driftedFiles {
-		// Get the deployed path from metadata
-		if dest, ok := item.Metadata["destination"].(string); ok {
-			deployedPath, err := normalizePath(dest)
+	for i := range driftedFiles {
+		item := &driftedFiles[i]
+		// Get the deployed path directly from the item
+		if item.Destination != "" {
+			deployedPath, err := normalizePath(item.Destination)
 			if err != nil {
 				continue
 			}
 			if deployedPath == argPath {
-				return &item
+				return item
 			}
 		}
 	}
 	return nil
-}
-
-// getSourceNameFromItem extracts the proper source name from a dotfile item
-// item.Name is the dotfile name with leading dot (e.g., ".zshrc")
-// The source file in PLONK_DIR has no leading dot (e.g., "zshrc")
-func getSourceNameFromItem(item resources.Item) string {
-	// Check metadata first
-	if source, ok := item.Metadata["source"].(string); ok {
-		return source
-	}
-
-	// Fallback: remove leading dot from item.Name
-	if strings.HasPrefix(item.Name, ".") {
-		return item.Name[1:]
-	}
-	return item.Name
 }
 
 // executeDiffTool runs the configured diff tool

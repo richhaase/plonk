@@ -5,9 +5,8 @@ package commands
 
 import (
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources"
-	"github.com/richhaase/plonk/internal/resources/dotfiles"
 	"github.com/spf13/cobra"
 )
 
@@ -73,7 +72,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 
 	// Get directories
 	homeDir := config.GetHomeDir()
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Load config using LoadWithDefaults for consistent zero-config behavior
 	cfg := config.LoadWithDefaults(configDir)
@@ -94,34 +93,22 @@ func runRm(cmd *cobra.Command, args []string) error {
 
 	// Create output data
 	summary := calculateRemovalSummary(results)
-	outputData := DotfileRemovalOutput{
-		TotalFiles: len(results),
-		Results:    results,
-		Summary:    summary,
-	}
 
-	// Convert to output package type and create formatter
+	// Convert results to serializable format
 	formatterData := output.DotfileRemovalOutput{
-		TotalFiles: outputData.TotalFiles,
-		Results:    outputData.Results,
+		TotalFiles: len(results),
+		Results:    convertRemoveResultsToOutput(results),
 		Summary: output.DotfileRemovalSummary{
-			Removed: outputData.Summary.Removed,
-			Skipped: outputData.Summary.Skipped,
-			Failed:  outputData.Summary.Failed,
+			Removed: summary.Removed,
+			Skipped: summary.Skipped,
+			Failed:  summary.Failed,
 		},
 	}
 	formatter := output.NewDotfileRemovalFormatter(formatterData)
 	output.RenderOutput(formatter)
 
 	// Check if all operations failed and return appropriate error
-	return resources.ValidateOperationResults(results, "remove dotfiles")
-}
-
-// DotfileRemovalOutput represents the output for dotfile removal
-type DotfileRemovalOutput struct {
-	TotalFiles int                         `json:"total_files" yaml:"total_files"`
-	Results    []resources.OperationResult `json:"results" yaml:"results"`
-	Summary    DotfileRemovalSummary       `json:"summary" yaml:"summary"`
+	return validateRemoveResults(results)
 }
 
 // DotfileRemovalSummary provides summary for dotfile removal
@@ -131,12 +118,46 @@ type DotfileRemovalSummary struct {
 	Failed  int `json:"failed" yaml:"failed"`
 }
 
-// calculateRemovalSummary calculates summary from results using generic operations summary
-func calculateRemovalSummary(results []resources.OperationResult) DotfileRemovalSummary {
-	genericSummary := resources.CalculateSummary(results)
-	return DotfileRemovalSummary{
-		Removed: genericSummary.Added, // In removal context, "added" means "removed"
-		Skipped: genericSummary.Skipped,
-		Failed:  genericSummary.Failed,
+// calculateRemovalSummary calculates summary from remove results
+func calculateRemovalSummary(results []dotfiles.RemoveResult) DotfileRemovalSummary {
+	summary := DotfileRemovalSummary{}
+	for _, result := range results {
+		switch result.Status {
+		case dotfiles.RemoveStatusRemoved, dotfiles.RemoveStatusWouldRemove:
+			summary.Removed++
+		case dotfiles.RemoveStatusSkipped:
+			summary.Skipped++
+		case dotfiles.RemoveStatusFailed:
+			summary.Failed++
+		}
 	}
+	return summary
+}
+
+// convertRemoveResultsToOutput converts dotfiles.RemoveResult to SerializableRemovalResult
+func convertRemoveResultsToOutput(results []dotfiles.RemoveResult) []output.SerializableRemovalResult {
+	converted := make([]output.SerializableRemovalResult, len(results))
+	for i, result := range results {
+		errorStr := ""
+		if result.Error != nil {
+			errorStr = result.Error.Error()
+		}
+		converted[i] = output.SerializableRemovalResult{
+			Name:   result.Path,
+			Status: result.Status.String(),
+			Error:  errorStr,
+			Metadata: map[string]interface{}{
+				"source":      result.Source,
+				"destination": result.Destination,
+			},
+		}
+	}
+	return converted
+}
+
+// validateRemoveResults checks if all remove operations failed and returns appropriate error
+func validateRemoveResults(results []dotfiles.RemoveResult) error {
+	return ValidateBatchResults(len(results), "remove dotfiles", func(i int) bool {
+		return results[i].Status == dotfiles.RemoveStatusFailed
+	})
 }

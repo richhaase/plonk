@@ -13,7 +13,7 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources/dotfiles"
+	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/spf13/cobra"
 )
 
@@ -64,7 +64,7 @@ func runApply(cmd *cobra.Command, args []string) error {
 
 	// Get directories
 	homeDir := config.GetHomeDir()
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Load configuration
 	cfg := config.LoadWithDefaults(configDir)
@@ -152,16 +152,16 @@ func runSelectiveApply(ctx context.Context, paths []string, cfg *config.Config, 
 
 	// Build map of managed files (by deployed path)
 	for _, item := range dotfileResult.Managed {
-		if dest, ok := item.Metadata["destination"].(string); ok {
-			normalizedDest, err := normalizePathWithHome(dest, homeDir)
+		if item.Destination != "" {
+			normalizedDest, err := normalizePathWithHome(item.Destination, homeDir)
 			if err == nil {
 				managedDests[normalizedDest] = true
 			}
 		}
 	}
 	for _, item := range dotfileResult.Missing {
-		if dest, ok := item.Metadata["destination"].(string); ok {
-			normalizedDest, err := normalizePathWithHome(dest, homeDir)
+		if item.Destination != "" {
+			normalizedDest, err := normalizePathWithHome(item.Destination, homeDir)
 			if err == nil {
 				managedDests[normalizedDest] = true
 			}

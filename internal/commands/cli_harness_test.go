@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/richhaase/plonk/internal/output"
-	packages "github.com/richhaase/plonk/internal/resources/packages"
+	packages "github.com/richhaase/plonk/internal/packages"
 	"github.com/richhaase/plonk/internal/testutil"
 )
 

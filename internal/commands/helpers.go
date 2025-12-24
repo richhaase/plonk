@@ -5,13 +5,11 @@ package commands
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources"
-	"github.com/richhaase/plonk/internal/resources/packages"
+	"github.com/richhaase/plonk/internal/packages"
 	"github.com/spf13/cobra"
 )
 
@@ -108,17 +106,6 @@ func normalizeDisplayFlags(showPackages, showDotfiles bool) (packages, dotfiles 
 	return showPackages, showDotfiles
 }
 
-// getMetadataString safely extracts string metadata from operation results
-func getMetadataString(result resources.OperationResult, key string) string {
-	if result.Metadata == nil {
-		return ""
-	}
-	if value, ok := result.Metadata[key].(string); ok {
-		return value
-	}
-	return ""
-}
-
 // parseSimpleFlags parses basic flags for commands
 func parseSimpleFlags(cmd *cobra.Command) (*SimpleFlags, error) {
 	return ParseSimpleFlags(cmd)
@@ -189,39 +176,16 @@ func CompleteDotfilePaths(cmd *cobra.Command, args []string, toComplete string) 
 	return nil, cobra.ShellCompDirectiveDefault
 }
 
-// convertItemsToOutput converts resources.Item to output.Item
-// Note: This function is shared between packages and dotfiles commands
-func convertItemsToOutput(items []resources.Item) []output.Item {
-	converted := make([]output.Item, len(items))
-	for i, item := range items {
+// convertPackageSpecsToOutput converts packages.PackageSpec to output.Item
+// This is used by the packages command to convert domain-specific types to output types
+func convertPackageSpecsToOutput(specs []packages.PackageSpec) []output.Item {
+	converted := make([]output.Item, len(specs))
+	for i, spec := range specs {
 		converted[i] = output.Item{
-			Name:     item.Name,
-			Manager:  item.Manager,
-			Path:     item.Path,
-			State:    output.ItemState(item.State.String()),
-			Metadata: sanitizeMetadataForConversion(item.Metadata),
+			Name:    spec.Name,
+			Manager: spec.Manager,
+			State:   "", // State is set by the caller based on which list this came from
 		}
 	}
 	return converted
-}
-
-// sanitizeMetadataForConversion sanitizes metadata by removing function-typed values
-// This is needed because metadata may contain functions (like compare_fn) that can't be serialized
-func sanitizeMetadataForConversion(meta map[string]interface{}) map[string]interface{} {
-	if meta == nil {
-		return nil
-	}
-	cleaned := make(map[string]interface{}, len(meta))
-	for k, v := range meta {
-		// Skip function types (they can't be serialized)
-		if v != nil {
-			// Use reflection to check if it's a function
-			val := reflect.ValueOf(v)
-			if val.Kind() == reflect.Func {
-				continue
-			}
-			cleaned[k] = v
-		}
-	}
-	return cleaned
 }

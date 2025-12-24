@@ -147,8 +147,18 @@ export -f is_safe_dotfile
 
 
 # Require a safe package or skip
+# Also auto-checks that the package manager is available
 require_safe_package() {
   local package="$1"
+
+  # Extract manager from package spec (e.g., "brew" from "brew:cowsay")
+  local manager="${package%%:*}"
+
+  # Auto-check manager availability if package has manager prefix
+  if [[ "$package" == *":"* ]]; then
+    require_package_manager "$manager"
+  fi
+
   if ! is_safe_package "$package"; then
     skip "Package $package not in safe list"
   fi
@@ -204,24 +214,14 @@ require_package_manager() {
         skip "UV not available"
       fi
       ;;
-    pixi)
-      if ! command -v pixi >/dev/null 2>&1; then
-        skip "Pixi not available"
-      fi
-      ;;
-    pipx)
-      if ! command -v pipx >/dev/null 2>&1; then
-        skip "Pipx not available"
-      fi
-      ;;
     pnpm)
       if ! command -v pnpm >/dev/null 2>&1; then
         skip "Pnpm not available"
       fi
       ;;
-    conda)
-      if ! command -v conda >/dev/null 2>&1; then
-        skip "Conda not available"
+    bun)
+      if ! command -v bun >/dev/null 2>&1; then
+        skip "Bun not available"
       fi
       ;;
     *)

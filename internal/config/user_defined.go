@@ -5,6 +5,7 @@ package config
 
 import (
 	"reflect"
+	"strings"
 )
 
 // UserDefinedChecker helps identify which configuration values are user-defined
@@ -43,39 +44,20 @@ func (c *UserDefinedChecker) IsFieldUserDefined(fieldName string, currentValue i
 func (c *UserDefinedChecker) GetNonDefaultFields(cfg *Config) map[string]interface{} {
 	nonDefaults := make(map[string]interface{})
 
-	// Compare each field
-	if cfg.DefaultManager != c.defaults.DefaultManager {
-		nonDefaults["default_manager"] = cfg.DefaultManager
-	}
+	cfgVal := reflect.ValueOf(cfg).Elem()
+	defaultVal := reflect.ValueOf(c.defaults).Elem()
+	t := cfgVal.Type()
 
-	if cfg.OperationTimeout != c.defaults.OperationTimeout {
-		nonDefaults["operation_timeout"] = cfg.OperationTimeout
-	}
-
-	if cfg.PackageTimeout != c.defaults.PackageTimeout {
-		nonDefaults["package_timeout"] = cfg.PackageTimeout
-	}
-
-	if cfg.DotfileTimeout != c.defaults.DotfileTimeout {
-		nonDefaults["dotfile_timeout"] = cfg.DotfileTimeout
-	}
-
-	if cfg.DiffTool != c.defaults.DiffTool && cfg.DiffTool != "" {
-		nonDefaults["diff_tool"] = cfg.DiffTool
-	}
-
-	// For lists, save entire list if ANY element differs
-	if !reflect.DeepEqual(cfg.ExpandDirectories, c.defaults.ExpandDirectories) {
-		nonDefaults["expand_directories"] = cfg.ExpandDirectories
-	}
-
-	if !reflect.DeepEqual(cfg.IgnorePatterns, c.defaults.IgnorePatterns) {
-		nonDefaults["ignore_patterns"] = cfg.IgnorePatterns
-	}
-
-	// Handle nested structures
-	if !reflect.DeepEqual(cfg.Dotfiles, c.defaults.Dotfiles) {
-		nonDefaults["dotfiles"] = cfg.Dotfiles
+	for i := 0; i < t.NumField(); i++ {
+		tag := strings.Split(t.Field(i).Tag.Get("yaml"), ",")[0]
+		if tag == "" {
+			continue
+		}
+		currentField := cfgVal.Field(i).Interface()
+		defaultField := defaultVal.Field(i).Interface()
+		if !reflect.DeepEqual(currentField, defaultField) {
+			nonDefaults[tag] = currentField
+		}
 	}
 
 	return nonDefaults
@@ -83,26 +65,15 @@ func (c *UserDefinedChecker) GetNonDefaultFields(cfg *Config) map[string]interfa
 
 // getDefaultFieldValue returns the default value for a specific field
 func (c *UserDefinedChecker) getDefaultFieldValue(fieldName string) interface{} {
-	switch fieldName {
-	case "default_manager":
-		return c.defaults.DefaultManager
-	case "operation_timeout":
-		return c.defaults.OperationTimeout
-	case "package_timeout":
-		return c.defaults.PackageTimeout
-	case "dotfile_timeout":
-		return c.defaults.DotfileTimeout
-	case "expand_directories":
-		return c.defaults.ExpandDirectories
-	case "ignore_patterns":
-		return c.defaults.IgnorePatterns
-	case "dotfiles":
-		return c.defaults.Dotfiles
-	case "diff_tool":
-		return c.defaults.DiffTool
-	default:
-		return nil
+	v := reflect.ValueOf(c.defaults).Elem()
+	t := v.Type()
+	for i := 0; i < t.NumField(); i++ {
+		tag := strings.Split(t.Field(i).Tag.Get("yaml"), ",")[0]
+		if tag == fieldName {
+			return v.Field(i).Interface()
+		}
 	}
+	return nil
 }
 
 

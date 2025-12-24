@@ -3,7 +3,7 @@ package diagnostics
 import (
 	"testing"
 
-	packages "github.com/richhaase/plonk/internal/resources/packages"
+	packages "github.com/richhaase/plonk/internal/packages"
 )
 
 func TestPackageManagerEcosystem_Check(t *testing.T) {

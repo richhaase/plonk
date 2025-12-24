@@ -36,9 +36,8 @@ check_command() {
             brew) version=$(brew --version | head -1) ;;
             npm) version=$(npm --version) ;;
             pnpm) version=$(pnpm --version) ;;
+            bun) version=$(bun --version) ;;
             cargo) version=$(cargo --version) ;;
-            pipx) version=$(pipx --version 2>&1) ;;
-            conda) version=$(conda --version) ;;
             gem) version=$(gem --version) ;;
             uv) version=$(uv --version) ;;
             go) version=$(go version | awk '{print $3}') ;;
@@ -71,9 +70,8 @@ verify_package_managers() {
     check_command brew "Homebrew" || ((failed++))
     check_command npm "npm" || ((failed++))
     check_command pnpm "pnpm" || ((failed++))
+    check_command bun "Bun" || ((failed++))
     check_command cargo "Cargo" || ((failed++))
-    check_command pipx "pipx" || ((failed++))
-    check_command conda "Conda" || ((failed++))
     check_command gem "Gem" || ((failed++))
     check_command uv "uv" || ((failed++))
     echo ""

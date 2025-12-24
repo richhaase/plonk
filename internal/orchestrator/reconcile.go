@@ -7,28 +7,33 @@ import (
 	"context"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/resources"
-	"github.com/richhaase/plonk/internal/resources/dotfiles"
-	"github.com/richhaase/plonk/internal/resources/packages"
+	"github.com/richhaase/plonk/internal/dotfiles"
+	"github.com/richhaase/plonk/internal/packages"
 )
 
+// ReconcileAllResult contains domain-specific reconciliation results
+type ReconcileAllResult struct {
+	Dotfiles dotfiles.Result
+	Packages packages.ReconcileResult
+}
+
 // ReconcileAllWithConfig reconciles all domains using injected config
-func ReconcileAllWithConfig(ctx context.Context, homeDir, configDir string, cfg *config.Config) (map[string]resources.Result, error) {
-	results := make(map[string]resources.Result)
+func ReconcileAllWithConfig(ctx context.Context, homeDir, configDir string, cfg *config.Config) (ReconcileAllResult, error) {
+	var result ReconcileAllResult
 
 	// Dotfiles with injected config
 	dotfileResult, err := dotfiles.ReconcileWithConfig(ctx, homeDir, configDir, cfg)
 	if err != nil {
-		return nil, err
+		return ReconcileAllResult{}, err
 	}
-	results["dotfile"] = dotfileResult
+	result.Dotfiles = dotfileResult
 
-	// Packages unchanged (no config needed for Reconcile)
+	// Packages
 	packageResult, err := packages.ReconcileWithConfig(ctx, configDir, cfg)
 	if err != nil {
-		return nil, err
+		return ReconcileAllResult{}, err
 	}
-	results["package"] = packageResult
+	result.Packages = packageResult
 
-	return results, nil
+	return result, nil
 }

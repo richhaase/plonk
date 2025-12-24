@@ -153,10 +153,10 @@ To add a new command:
 
 ## Testing
 
-### Running Tests
+### Running Unit Tests
 
 ```bash
-# Run all tests
+# Run all unit tests
 go test ./...
 
 # Run tests with verbose output
@@ -166,13 +166,33 @@ go test -v ./...
 go test ./internal/resources/packages
 
 # Run with coverage
-go test -cover ./...
+just test-coverage
 ```
+
+### Running BATS Integration Tests
+
+BATS tests exercise the full CLI and **must be run in Docker** to avoid modifying your local system:
+
+```bash
+# Build and run all BATS tests (recommended)
+just docker-test-all
+
+# Run specific test file
+just docker-test-file tests/bats/behavioral/02-package-install.bats
+
+# Run smoke tests only (fast)
+just docker-test-smoke
+
+# Debug in interactive shell
+just docker-shell
+```
+
+> ⚠️ **Never run BATS tests locally** unless you fully understand the risks. These tests install real packages and create real files on your system. See `tests/bats/README.md` for details.
 
 ### Test Structure
 
 - **Unit tests**: Alongside implementation files (`*_test.go`)
-- **Integration tests**: In `tests/` directory
+- **BATS integration tests**: In `tests/bats/` (run via Docker)
 - **Test helpers**: In `internal/testutil/`
 
 ### Writing Tests

@@ -18,21 +18,14 @@ At its heart, Plonk is a state reconciliation engine. It operates on three key c
 
 This approach ensures idempotent operations - running `plonk apply` multiple times is safe and only changes what needs to be changed.
 
-### Resource Abstraction
+### Domain-Specific Implementations
 
-Plonk treats packages and dotfiles as "resources" with a common interface:
+Plonk implements packages and dotfiles as separate domains, each with their own reconciliation logic:
 
-```go
-// Simplified for documentation - see internal/resources/resource.go for exact signatures
-type Resource interface {
-    ID() string
-    Desired() []Item
-    Actual(ctx context.Context) []Item
-    Apply(ctx context.Context, item Item) error
-}
-```
+- **Packages**: Uses lock file as desired state, queries package managers for actual state
+- **Dotfiles**: Uses config directory as desired state, scans home directory for actual state
 
-This abstraction allows for future resource types (services, configurations, etc.) without major architectural changes.
+Each domain has its own domain-specific types and implements its own reconciliation logic, ensuring type safety and domain isolation.
 
 ## Architecture Layers
 
@@ -57,11 +50,9 @@ The orchestrator coordinates complex operations across multiple resource types:
 - Manages orchestrator options and types
 - Ensures proper error handling
 
-### 3. Resource Layer (`internal/resources/`)
+### 3. Domain Packages
 
-Resources are organized by type:
-
-#### Packages (`internal/resources/packages/`)
+#### Packages (`internal/packages/`)
 - Hardcoded package manager implementations with consistent interfaces
 - **ManagerRegistry** provides access to all registered package managers
 - Reconciliation and apply logic for package state using `manager:name` as unique keys
@@ -73,7 +64,7 @@ Resources are organized by type:
 Built-in managers: brew, npm, pnpm, cargo, pipx, conda, gem, uv, bun, go.
 
 
-#### Dotfiles (`internal/resources/dotfiles/`)
+#### Dotfiles (`internal/dotfiles/`)
 - Dotfile scanning and discovery
 - Directory scanning utilities
 - File copying and deployment operations
@@ -213,7 +204,7 @@ All commands support multiple output formats (table, JSON, YAML) to support:
 
 To add a new package manager, implement the `PackageManager` interface in Go:
 
-1. Create a new manager struct in `internal/resources/packages/`
+1. Create a new manager struct in `internal/packages/`
 2. Implement required methods: `Install`, `Uninstall`, `ListInstalled`, `Upgrade`, `CheckHealth`
 3. Register the manager in the registry
 4. Add tests for all operations
@@ -222,10 +213,13 @@ See existing managers (e.g., `brew.go`, `npm.go`) for examples.
 
 ### Adding a New Resource Type
 
-1. Implement the `Resource` interface
-2. Add reconciliation logic
-3. Update orchestrator to handle the new type
-4. Add corresponding commands
+1. Create a new domain package in `internal/`
+2. Define domain-specific types for items and reconciliation results
+3. Implement functions to get desired and actual state
+4. Implement reconciliation logic for state comparison
+5. Implement apply logic for the domain
+6. Update orchestrator to call the new domain
+7. Add corresponding commands
 
 ### Adding a New Command
 

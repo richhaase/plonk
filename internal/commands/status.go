@@ -9,10 +9,9 @@ import (
 	"path/filepath"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/resources"
-	"github.com/richhaase/plonk/internal/resources/dotfiles"
-	"github.com/richhaase/plonk/internal/resources/packages"
+	"github.com/richhaase/plonk/internal/packages"
 	"github.com/spf13/cobra"
 )
 
@@ -43,7 +42,7 @@ func init() {
 func runStatus(cmd *cobra.Command, args []string) error {
 	// Get directories
 	homeDir := config.GetHomeDir()
-	configDir := config.GetConfigDir()
+	configDir := config.GetDefaultConfigDirectory()
 
 	// Load configuration (may fail if config is invalid, but we handle this gracefully)
 	_, configLoadErr := config.Load(configDir)
@@ -52,24 +51,14 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	cfg := config.LoadWithDefaults(configDir)
 	ctx := context.Background()
 
-	// Reconcile packages and dotfiles
-	packageResult, err := packages.ReconcileWithConfig(ctx, configDir, cfg)
+	// Reconcile all domains using orchestrator
+	result, err := orchestrator.ReconcileAllWithConfig(ctx, homeDir, configDir, cfg)
 	if err != nil {
 		return err
 	}
 
-	dotfileResult, err := dotfiles.ReconcileWithConfig(ctx, homeDir, configDir, cfg)
-	if err != nil {
-		return err
-	}
-
-	// Compose results into unified summary
-	results := map[string]resources.Result{
-		"package": packageResult,
-		"dotfile": dotfileResult,
-	}
-
-	summary := resources.ConvertResultsToSummary(results)
+	// Convert domain results directly to output summary
+	summary := convertReconcileResultToSummary(result)
 
 	// Check file existence and validity
 	configPath := filepath.Join(configDir, "plonk.yaml")
@@ -88,8 +77,8 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		lockExists = true
 	}
 
-	// Prepare output
-	outputData := StatusOutput{
+	// Create formatter data directly
+	formatterData := output.StatusOutput{
 		ConfigPath:   configPath,
 		LockPath:     lockPath,
 		ConfigExists: configExists,
@@ -98,91 +87,51 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		StateSummary: summary,
 		ConfigDir:    configDir,
 	}
-
-	// Convert to output package type and create formatter
-	formatterData := output.StatusOutput{
-		ConfigPath:   outputData.ConfigPath,
-		LockPath:     outputData.LockPath,
-		ConfigExists: outputData.ConfigExists,
-		ConfigValid:  outputData.ConfigValid,
-		LockExists:   outputData.LockExists,
-		StateSummary: convertSummary(outputData.StateSummary),
-		ConfigDir:    outputData.ConfigDir,
-	}
 	formatter := output.NewStatusFormatter(formatterData)
 	output.RenderOutput(formatter)
 	return nil
 }
 
-// convertSummary converts from resources.Summary to output.Summary
-func convertSummary(summary resources.Summary) output.Summary {
-	converted := output.Summary{
-		TotalManaged:   summary.TotalManaged,
-		TotalMissing:   summary.TotalMissing,
-		TotalUntracked: summary.TotalUntracked,
-		Results:        make([]output.Result, len(summary.Results)),
+// convertReconcileResultToSummary converts orchestrator.ReconcileAllResult to output.Summary
+func convertReconcileResultToSummary(result orchestrator.ReconcileAllResult) output.Summary {
+	// Convert dotfiles result to output.Result
+	dotfileResult := output.Result{
+		Domain:    "dotfile",
+		Managed:   convertDotfileItemsToOutput(result.Dotfiles.Managed),
+		Missing:   convertDotfileItemsToOutput(result.Dotfiles.Missing),
+		Untracked: convertDotfileItemsToOutput(result.Dotfiles.Untracked),
 	}
-	for i, result := range summary.Results {
-		converted.Results[i] = output.Result{
-			Domain:    result.Domain,
-			Managed:   convertItems(result.Managed),
-			Missing:   convertItems(result.Missing),
-			Untracked: convertItems(result.Untracked),
-		}
+
+	// Convert packages result to output.Result
+	packageResult := output.Result{
+		Domain:    "package",
+		Managed:   convertPackageSpecsToOutputWithState(result.Packages.Managed, "managed"),
+		Missing:   convertPackageSpecsToOutputWithState(result.Packages.Missing, "missing"),
+		Untracked: convertPackageSpecsToOutputWithState(result.Packages.Untracked, "untracked"),
 	}
-	return converted
+
+	// Calculate totals
+	totalManaged := len(result.Dotfiles.Managed) + len(result.Packages.Managed)
+	totalMissing := len(result.Dotfiles.Missing) + len(result.Packages.Missing)
+	totalUntracked := len(result.Dotfiles.Untracked) + len(result.Packages.Untracked)
+
+	return output.Summary{
+		TotalManaged:   totalManaged,
+		TotalMissing:   totalMissing,
+		TotalUntracked: totalUntracked,
+		Results:        []output.Result{dotfileResult, packageResult},
+	}
 }
 
-// convertItems converts from resources.Item to output.Item
-func convertItems(items []resources.Item) []output.Item {
-	converted := make([]output.Item, len(items))
-	for i, item := range items {
+// convertPackageSpecsToOutputWithState converts packages.PackageSpec slice to output.Item slice with state
+func convertPackageSpecsToOutputWithState(specs []packages.PackageSpec, state string) []output.Item {
+	converted := make([]output.Item, len(specs))
+	for i, spec := range specs {
 		converted[i] = output.Item{
-			Name:     item.Name,
-			Manager:  item.Manager,
-			Path:     item.Path,
-			State:    output.ItemState(item.State.String()),
-			Metadata: item.Metadata,
+			Name:    spec.Name,
+			Manager: spec.Manager,
+			State:   output.ItemState(state),
 		}
 	}
 	return converted
-}
-
-// Removed - using config.ConfigAdapter instead
-
-// StatusOutput represents the output structure for status command
-type StatusOutput struct {
-	ConfigPath   string            `json:"config_path" yaml:"config_path"`
-	LockPath     string            `json:"lock_path" yaml:"lock_path"`
-	ConfigExists bool              `json:"config_exists" yaml:"config_exists"`
-	ConfigValid  bool              `json:"config_valid" yaml:"config_valid"`
-	LockExists   bool              `json:"lock_exists" yaml:"lock_exists"`
-	StateSummary resources.Summary `json:"state_summary" yaml:"state_summary"`
-	ConfigDir    string            `json:"-" yaml:"-"` // Not included in JSON/YAML output
-}
-
-// StatusOutputSummary represents a summary-focused version for JSON/YAML output
-type StatusOutputSummary struct {
-	ConfigPath   string            `json:"config_path" yaml:"config_path"`
-	LockPath     string            `json:"lock_path" yaml:"lock_path"`
-	ConfigExists bool              `json:"config_exists" yaml:"config_exists"`
-	ConfigValid  bool              `json:"config_valid" yaml:"config_valid"`
-	LockExists   bool              `json:"lock_exists" yaml:"lock_exists"`
-	Summary      StatusSummaryData `json:"summary" yaml:"summary"`
-	ManagedItems []ManagedItem     `json:"managed_items" yaml:"managed_items"`
-}
-
-// StatusSummaryData represents aggregate counts and domain summaries
-type StatusSummaryData struct {
-	TotalManaged   int                       `json:"total_managed" yaml:"total_managed"`
-	TotalMissing   int                       `json:"total_missing" yaml:"total_missing"`
-	TotalUntracked int                       `json:"total_untracked" yaml:"total_untracked"`
-	Domains        []resources.DomainSummary `json:"domains" yaml:"domains"`
-}
-
-// ManagedItem represents a currently managed item
-type ManagedItem struct {
-	Name    string `json:"name" yaml:"name"`
-	Domain  string `json:"domain" yaml:"domain"`
-	Manager string `json:"manager,omitempty" yaml:"manager,omitempty"`
 }

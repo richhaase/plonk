@@ -6,9 +6,16 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/go-playground/validator/v10"
 	"gopkg.in/yaml.v3"
+)
+
+var (
+	validatorOnce     sync.Once
+	cachedValidator   *validator.Validate
+	validatorInitErr  error
 )
 
 // Config represents the plonk configuration
@@ -144,6 +151,15 @@ var defaultConfig = Config{
 	},
 }
 
+// getValidator returns the cached validator instance, initializing it on first use.
+func getValidator() (*validator.Validate, error) {
+	validatorOnce.Do(func() {
+		cachedValidator = validator.New()
+		validatorInitErr = RegisterValidators(cachedValidator)
+	})
+	return cachedValidator, validatorInitErr
+}
+
 // Load reads and validates configuration from the standard location
 func Load(configDir string) (*Config, error) {
 	configPath := filepath.Join(configDir, "plonk.yaml")
@@ -171,11 +187,11 @@ func LoadFromPath(configPath string) (*Config, error) {
 	}
 
 	// Apply defaults for any unset fields
-	applyDefaults(&cfg)
+	ApplyDefaults(&cfg)
 
 	// Validate
-	validate := validator.New()
-	if err := RegisterValidators(validate); err != nil {
+	validate, err := getValidator()
+	if err != nil {
 		return nil, err
 	}
 	if err := validate.Struct(&cfg); err != nil {
@@ -196,8 +212,9 @@ func LoadWithDefaults(configDir string) *Config {
 	return cfg
 }
 
-// applyDefaults applies default values to a config
-func applyDefaults(cfg *Config) {
+// ApplyDefaults applies default values to a config for any unset fields.
+// This is the single source of truth for default application.
+func ApplyDefaults(cfg *Config) {
 	if cfg.DefaultManager == "" {
 		cfg.DefaultManager = defaultConfig.DefaultManager
 	}
@@ -224,9 +241,4 @@ func applyDefaults(cfg *Config) {
 func GetHomeDir() string {
 	homeDir, _ := os.UserHomeDir()
 	return homeDir
-}
-
-// GetConfigDir returns the plonk configuration directory
-func GetConfigDir() string {
-	return GetDefaultConfigDirectory()
 }
