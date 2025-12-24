@@ -239,21 +239,7 @@ func convertAddResultsToOutput(results []dotfiles.AddResult) []output.DotfileAdd
 
 // validateAddResults checks if all add operations failed and returns appropriate error
 func validateAddResults(results []dotfiles.AddResult) error {
-	if len(results) == 0 {
-		return nil
-	}
-
-	allFailed := true
-	for _, result := range results {
-		if result.Status != dotfiles.AddStatusFailed {
-			allFailed = false
-			break
-		}
-	}
-
-	if allFailed {
-		return fmt.Errorf("add dotfiles operation failed: all %d item(s) failed to process", len(results))
-	}
-
-	return nil
+	return ValidateBatchResults(len(results), "add dotfiles", func(i int) bool {
+		return results[i].Status == dotfiles.AddStatusFailed
+	})
 }

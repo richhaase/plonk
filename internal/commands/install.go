@@ -231,21 +231,7 @@ func convertInstallResultsToOutput(results []packages.InstallResult) []output.Se
 
 // validateInstallResults checks if all install operations failed and returns appropriate error
 func validateInstallResults(results []packages.InstallResult) error {
-	if len(results) == 0 {
-		return nil
-	}
-
-	allFailed := true
-	for _, result := range results {
-		if result.Status != packages.InstallStatusFailed {
-			allFailed = false
-			break
-		}
-	}
-
-	if allFailed {
-		return fmt.Errorf("install packages operation failed: all %d item(s) failed to process", len(results))
-	}
-
-	return nil
+	return ValidateBatchResults(len(results), "install packages", func(i int) bool {
+		return results[i].Status == packages.InstallStatusFailed
+	})
 }

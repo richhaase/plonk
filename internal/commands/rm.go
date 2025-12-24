@@ -4,8 +4,6 @@
 package commands
 
 import (
-	"fmt"
-
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/output"
@@ -159,21 +157,7 @@ func convertRemoveResultsToOutput(results []dotfiles.RemoveResult) []output.Seri
 
 // validateRemoveResults checks if all remove operations failed and returns appropriate error
 func validateRemoveResults(results []dotfiles.RemoveResult) error {
-	if len(results) == 0 {
-		return nil
-	}
-
-	allFailed := true
-	for _, result := range results {
-		if result.Status != dotfiles.RemoveStatusFailed {
-			allFailed = false
-			break
-		}
-	}
-
-	if allFailed {
-		return fmt.Errorf("remove dotfiles operation failed: all %d item(s) failed to process", len(results))
-	}
-
-	return nil
+	return ValidateBatchResults(len(results), "remove dotfiles", func(i int) bool {
+		return results[i].Status == dotfiles.RemoveStatusFailed
+	})
 }

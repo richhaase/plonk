@@ -172,21 +172,7 @@ func convertUninstallResultsToOutput(results []packages.UninstallResult) []outpu
 
 // validateUninstallResults checks if all uninstall operations failed and returns appropriate error
 func validateUninstallResults(results []packages.UninstallResult) error {
-	if len(results) == 0 {
-		return nil
-	}
-
-	allFailed := true
-	for _, result := range results {
-		if result.Status != packages.UninstallStatusFailed {
-			allFailed = false
-			break
-		}
-	}
-
-	if allFailed {
-		return fmt.Errorf("uninstall packages operation failed: all %d item(s) failed to process", len(results))
-	}
-
-	return nil
+	return ValidateBatchResults(len(results), "uninstall packages", func(i int) bool {
+		return results[i].Status == packages.UninstallStatusFailed
+	})
 }
