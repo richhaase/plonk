@@ -78,6 +78,48 @@ func checkFileStatus(path string) ([]byte, fileStatus, error) {
 	return content, fileExists, nil
 }
 
+// lockFileSummary contains parsed lock file data for health checks.
+type lockFileSummary struct {
+	managerCounts map[string]int
+	totalPackages int
+	managers      []string // sorted list of unique manager names
+	version       int
+	err           error
+}
+
+// parseLockFileSummary reads and parses lock file data once for use by multiple checks.
+func parseLockFileSummary(configDir string) lockFileSummary {
+	lockService := lock.NewYAMLLockService(configDir)
+	lockFile, err := lockService.Read()
+	if err != nil {
+		return lockFileSummary{err: err}
+	}
+
+	managerCounts := make(map[string]int)
+	for _, resource := range lockFile.Resources {
+		if resource.Type == "package" {
+			if manager, ok := resource.Metadata["manager"].(string); ok && manager != "" {
+				managerCounts[manager]++
+			}
+		}
+	}
+
+	totalPackages := 0
+	managers := make([]string, 0, len(managerCounts))
+	for name, count := range managerCounts {
+		managers = append(managers, name)
+		totalPackages += count
+	}
+	sort.Strings(managers)
+
+	return lockFileSummary{
+		managerCounts: managerCounts,
+		totalPackages: totalPackages,
+		managers:      managers,
+		version:       lockFile.Version,
+	}
+}
+
 // RunHealthChecksWithContext performs system health checks using the provided context
 func RunHealthChecksWithContext(ctx context.Context) HealthReport {
 	report := HealthReport{
@@ -307,40 +349,24 @@ func checkLockFile() HealthCheck {
 func checkLockFileValidity() HealthCheck {
 	check := NewHealthCheck("Lock File Validity", "configuration", "Lock file is valid")
 
-	configDir := config.GetDefaultConfigDirectory()
-	lockService := lock.NewYAMLLockService(configDir)
-
-	// Try to load the lock file
-	lockFile, err := lockService.Read()
-	if err != nil {
+	summary := parseLockFileSummary(config.GetDefaultConfigDirectory())
+	if summary.err != nil {
 		check.Status = "fail"
-		check.Issues = append(check.Issues, fmt.Sprintf("Lock file is invalid: %v", err))
+		check.Issues = append(check.Issues, fmt.Sprintf("Lock file is invalid: %v", summary.err))
 		check.Suggestions = append(check.Suggestions, "Validate lock file format or regenerate by running 'plonk pkg add' commands")
 		check.Message = "Lock file has format errors"
 		return check
 	}
 
-	// Count packages by manager
-	totalPackages := 0
-	managerCounts := make(map[string]int)
-	for _, resource := range lockFile.Resources {
-		if resource.Type == "package" {
-			if manager, ok := resource.Metadata["manager"].(string); ok {
-				managerCounts[manager]++
-				totalPackages++
-			}
-		}
-	}
-
 	// Add manager counts to details
-	for manager, count := range managerCounts {
+	for manager, count := range summary.managerCounts {
 		check.Details = append(check.Details, fmt.Sprintf("%s packages: %d", manager, count))
 	}
 
-	check.Details = append(check.Details, fmt.Sprintf("Total managed packages: %d", totalPackages))
-	check.Details = append(check.Details, fmt.Sprintf("Lock file version: %d", lockFile.Version))
+	check.Details = append(check.Details, fmt.Sprintf("Total managed packages: %d", summary.totalPackages))
+	check.Details = append(check.Details, fmt.Sprintf("Lock file version: %d", summary.version))
 
-	if totalPackages == 0 {
+	if summary.totalPackages == 0 {
 		check.Status = "info"
 		check.Message = "Lock file is valid but contains no packages"
 	}
@@ -550,25 +576,6 @@ func calculateOverallHealth(checks []HealthCheck) HealthStatus {
 }
 
 func collectRequiredManagers(configDir string) []string {
-	seen := make(map[string]struct{})
-
-	lockService := lock.NewYAMLLockService(configDir)
-	if lockFile, err := lockService.Read(); err == nil {
-		for _, resource := range lockFile.Resources {
-			if resource.Type != "package" {
-				continue
-			}
-			if manager, ok := resource.Metadata["manager"].(string); ok && manager != "" {
-				seen[manager] = struct{}{}
-			}
-		}
-	}
-
-	names := make([]string, 0, len(seen))
-	for name := range seen {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+	return parseLockFileSummary(configDir).managers
 }
 
