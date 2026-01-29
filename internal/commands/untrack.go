@@ -8,6 +8,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
+	"github.com/richhaase/plonk/internal/packages"
 	"github.com/spf13/cobra"
 )
 
@@ -44,7 +45,7 @@ func runUntrack(cmd *cobra.Command, args []string) error {
 	var untracked, skipped, failed int
 
 	for _, arg := range args {
-		manager, pkg, err := parsePackageSpec(arg)
+		manager, pkg, err := packages.ParsePackageSpec(arg)
 		if err != nil {
 			fmt.Printf("Error: %s: %v\n", arg, err)
 			failed++

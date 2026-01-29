@@ -6,7 +6,6 @@ package commands
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
@@ -51,7 +50,7 @@ func runTrack(cmd *cobra.Command, args []string) error {
 	var tracked, skipped, failed int
 
 	for _, arg := range args {
-		manager, pkg, err := parsePackageSpec(arg)
+		manager, pkg, err := packages.ParsePackageSpec(arg)
 		if err != nil {
 			fmt.Printf("Error: %s: %v\n", arg, err)
 			failed++
@@ -105,25 +104,4 @@ func runTrack(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-// parsePackageSpec parses "manager:package" format
-func parsePackageSpec(spec string) (manager, pkg string, err error) {
-	parts := strings.SplitN(spec, ":", 2)
-	if len(parts) != 2 {
-		return "", "", fmt.Errorf("invalid format, expected manager:package")
-	}
-
-	manager = parts[0]
-	pkg = parts[1]
-
-	if !packages.IsSupportedManager(manager) {
-		return "", "", fmt.Errorf("unsupported manager: %s (supported: %v)", manager, packages.SupportedManagers)
-	}
-
-	if pkg == "" {
-		return "", "", fmt.Errorf("package name cannot be empty")
-	}
-
-	return manager, pkg, nil
 }
