@@ -4,8 +4,13 @@
 package lock
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 	"sort"
+
+	"gopkg.in/yaml.v3"
 )
 
 // LockV3 represents the simplified v3 lock format
@@ -77,4 +82,111 @@ func (l *LockV3) GetAllPackages() []string {
 	}
 	sort.Strings(result)
 	return result
+}
+
+// LockV3Service handles v3 lock file operations
+type LockV3Service struct {
+	lockPath string
+}
+
+// NewLockV3Service creates a new v3 lock service
+func NewLockV3Service(configDir string) *LockV3Service {
+	return &LockV3Service{
+		lockPath: filepath.Join(configDir, LockFileName),
+	}
+}
+
+// Read reads the lock file, auto-migrating v2 if needed
+func (s *LockV3Service) Read() (*LockV3, error) {
+	// If lock file doesn't exist, return empty lock
+	if _, err := os.Stat(s.lockPath); os.IsNotExist(err) {
+		return NewLockV3(), nil
+	}
+
+	data, err := os.ReadFile(s.lockPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read lock file: %w", err)
+	}
+
+	// Try to detect version
+	var versionCheck struct {
+		Version int `yaml:"version"`
+	}
+	if err := yaml.Unmarshal(data, &versionCheck); err != nil {
+		return nil, fmt.Errorf("failed to parse lock file: %w", err)
+	}
+
+	// Handle v2 migration
+	if versionCheck.Version == 2 {
+		return s.migrateV2(data)
+	}
+
+	// Parse v3
+	var lock LockV3
+	if err := yaml.Unmarshal(data, &lock); err != nil {
+		return nil, fmt.Errorf("failed to parse lock file: %w", err)
+	}
+
+	if lock.Version != 3 {
+		return nil, fmt.Errorf("unsupported lock version %d", lock.Version)
+	}
+
+	return &lock, nil
+}
+
+// Write writes the lock to disk
+func (s *LockV3Service) Write(lock *LockV3) error {
+	if lock == nil {
+		return fmt.Errorf("cannot write nil lock")
+	}
+
+	lock.Version = 3
+
+	data, err := yaml.Marshal(lock)
+	if err != nil {
+		return fmt.Errorf("failed to marshal lock: %w", err)
+	}
+
+	// Ensure directory exists
+	dir := filepath.Dir(s.lockPath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create lock directory: %w", err)
+	}
+
+	if err := os.WriteFile(s.lockPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write lock file: %w", err)
+	}
+
+	return nil
+}
+
+// migrateV2 converts a v2 lock to v3 format
+func (s *LockV3Service) migrateV2(data []byte) (*LockV3, error) {
+	var v2 Lock
+	if err := yaml.Unmarshal(data, &v2); err != nil {
+		return nil, fmt.Errorf("failed to parse v2 lock: %w", err)
+	}
+
+	v3 := NewLockV3()
+
+	for _, resource := range v2.Resources {
+		if resource.Type != "package" {
+			continue
+		}
+
+		// Extract manager and name from metadata
+		manager, _ := resource.Metadata["manager"].(string)
+		name, _ := resource.Metadata["name"].(string)
+
+		if manager != "" && name != "" {
+			v3.AddPackage(manager, name)
+		}
+	}
+
+	return v3, nil
+}
+
+// GetLockPath returns the path to the lock file
+func (s *LockV3Service) GetLockPath() string {
+	return s.lockPath
 }
