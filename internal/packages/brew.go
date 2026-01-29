@@ -5,6 +5,7 @@ package packages
 
 import (
 	"context"
+	"errors"
 	"os/exec"
 	"strings"
 )
@@ -23,7 +24,8 @@ func (b *BrewSimple) IsInstalled(ctx context.Context, name string) (bool, error)
 	err := cmd.Run()
 	if err != nil {
 		// Exit code 1 means not installed, not an error
-		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
 			return false, nil
 		}
 		return false, err

@@ -4,78 +4,11 @@
 package commands
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/packages"
 	"github.com/spf13/cobra"
 )
-
-// buildInstallExamples generates CLI examples for the install command based on
-// the available package managers.
-func buildInstallExamples() string {
-	var lines []string
-
-	// Always include a simple, manager-agnostic example.
-	lines = append(lines, "plonk install htop git neovim ripgrep")
-
-	// Add a few manager-prefixed examples using supported managers.
-	managerNames := packages.SupportedManagers
-
-	const maxManagers = 4
-	for i, name := range managerNames {
-		if i >= maxManagers {
-			break
-		}
-		lines = append(lines, fmt.Sprintf("plonk install %s:PACKAGE", name))
-	}
-
-	return strings.Join(lines, "\n")
-}
-
-// buildUninstallExamples generates CLI examples for the uninstall command
-// based on the available package managers.
-func buildUninstallExamples() string {
-	var lines []string
-
-	lines = append(lines, "plonk uninstall htop git")
-
-	// Add a few manager-prefixed examples using supported managers.
-	managerNames := packages.SupportedManagers
-
-	const maxManagers = 2
-	for i, name := range managerNames {
-		if i >= maxManagers {
-			break
-		}
-		lines = append(lines, fmt.Sprintf("plonk uninstall %s:PACKAGE", name))
-	}
-
-	return strings.Join(lines, "\n")
-}
-
-// buildUpgradeExamples generates CLI examples for the upgrade command using
-// the available managers.
-func buildUpgradeExamples() string {
-	var lines []string
-
-	// Generic examples that do not depend on specific manager names.
-	lines = append(lines, "plonk upgrade")
-	lines = append(lines, "plonk upgrade ripgrep")
-
-	// Add manager-specific examples using supported managers.
-	managerNames := packages.SupportedManagers
-
-	if len(managerNames) > 0 {
-		lines = append(lines, fmt.Sprintf("plonk upgrade %s", managerNames[0]))
-	}
-	if len(managerNames) > 1 {
-		lines = append(lines, fmt.Sprintf("plonk upgrade %s %s", managerNames[0], managerNames[1]))
-	}
-
-	return strings.Join(lines, "\n")
-}
 
 // SimpleFlags represents basic command flags
 type SimpleFlags struct {
