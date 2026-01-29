@@ -101,6 +101,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 type packageStatus struct {
 	Managed []output.Item
 	Missing []output.Item
+	Errors  []output.Item
 }
 
 // getPackageStatus reads the lock file and checks which packages are installed
@@ -130,7 +131,17 @@ func getPackageStatus(ctx context.Context, configDir string) packageStatus {
 		}
 
 		for _, pkg := range pkgs {
-			installed, _ := mgr.IsInstalled(ctx, pkg)
+			installed, err := mgr.IsInstalled(ctx, pkg)
+			if err != nil {
+				// Check failed - mark as error, not missing
+				result.Errors = append(result.Errors, output.Item{
+					Name:    pkg,
+					Manager: manager,
+					State:   output.StateError,
+					Error:   err.Error(),
+				})
+				continue
+			}
 			if installed {
 				result.Managed = append(result.Managed, output.Item{
 					Name:    pkg,
@@ -165,16 +176,19 @@ func convertToSummary(dotResult dotfiles.Result, pkgResult packageStatus) output
 		Domain:  "package",
 		Managed: pkgResult.Managed,
 		Missing: pkgResult.Missing,
+		Errors:  pkgResult.Errors,
 	}
 
 	totalManaged := len(dotResult.Managed) + len(pkgResult.Managed)
 	totalMissing := len(dotResult.Missing) + len(pkgResult.Missing)
 	totalUntracked := len(dotResult.Untracked)
+	totalErrors := len(pkgResult.Errors)
 
 	return output.Summary{
 		TotalManaged:   totalManaged,
 		TotalMissing:   totalMissing,
 		TotalUntracked: totalUntracked,
+		TotalErrors:    totalErrors,
 		Results:        []output.Result{packageOutput, dotfileOutput},
 	}
 }

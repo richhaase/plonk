@@ -64,23 +64,15 @@ Every feature in plonk has to earn its place. Complex workflows and edge cases a
 
 ## The Package Manager Manager
 
-Plonk's vision for package management is to be the "package manager manager" - one interface for all the package management operations developers need across the 8 package managers we typically juggle:
+Plonk's vision for package management is to be the "package manager manager" - one interface for all the package management operations developers need across the 5 package managers we typically juggle:
 
-- **Homebrew** for system tools
-- **npm** for JavaScript
-- **pnpm** for fast Node.js packages
-- **cargo** for Rust
-- **pipx** for Python applications
-- **conda** for data science and scientific computing
-- **gem** for Ruby
-- **uv** for Python tool management
+- **Homebrew** (brew) - macOS/Linux system packages and tools
+- **Cargo** (cargo) - Rust packages
+- **Go** (go) - Go binaries
+- **PNPM** (pnpm) - Fast Node.js packages
+- **UV** (uv) - Python tool management
 
-Today, plonk provides a unified interface for common operations. Tomorrow, it could enable:
-- Transitioning tools between package managers (e.g., moving from npm to cargo-based tools)
-- Cross-platform package lists (same tools on macOS and Linux via Homebrew)
-- Smart package manager selection based on availability and performance
-
-But first, we need to get the core abstraction just right.
+Plonk follows a simple track/apply model: you install packages with your preferred manager, then use `plonk track` to record them. On a new machine, `plonk apply` installs everything that's missing.
 
 ## Why I Built Plonk
 

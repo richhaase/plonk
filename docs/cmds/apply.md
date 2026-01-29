@@ -87,7 +87,7 @@ plonk apply --dotfiles
 
 - Use `plonk status` to see what resources need to be applied
 - Run after `plonk clone` to set up a new system
-- Run after adding packages with `plonk install` or dotfiles with `plonk add`
+- Run after tracking packages with `plonk track` or adding dotfiles with `plonk add`
 
 ## Notes
 

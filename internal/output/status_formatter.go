@@ -20,6 +20,7 @@ const (
 	// Align with resources.StateDegraded.String() which returns "drifted"
 	StateDegraded  ItemState = "drifted"
 	StateUntracked ItemState = "untracked"
+	StateError     ItemState = "error"
 )
 
 // Item represents a resource item
@@ -28,6 +29,7 @@ type Item struct {
 	Manager  string                 `json:"manager,omitempty"`
 	Path     string                 `json:"path,omitempty"`
 	State    ItemState              `json:"state"`
+	Error    string                 `json:"error,omitempty"`
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 
@@ -37,6 +39,7 @@ type Result struct {
 	Managed   []Item `json:"managed"`
 	Missing   []Item `json:"missing"`
 	Untracked []Item `json:"untracked"`
+	Errors    []Item `json:"errors,omitempty"`
 }
 
 // Summary represents resource summary
@@ -44,6 +47,7 @@ type Summary struct {
 	TotalManaged   int      `json:"total_managed"`
 	TotalMissing   int      `json:"total_missing"`
 	TotalUntracked int      `json:"total_untracked"`
+	TotalErrors    int      `json:"total_errors,omitempty"`
 	Results        []Result `json:"results"`
 }
 

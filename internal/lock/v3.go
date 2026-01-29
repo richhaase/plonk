@@ -160,7 +160,7 @@ func (s *LockV3Service) Write(lock *LockV3) error {
 	return nil
 }
 
-// migrateV2 converts a v2 lock to v3 format
+// migrateV2 converts a v2 lock to v3 format and persists it
 func (s *LockV3Service) migrateV2(data []byte) (*LockV3, error) {
 	var v2 Lock
 	if err := yaml.Unmarshal(data, &v2); err != nil {
@@ -181,6 +181,11 @@ func (s *LockV3Service) migrateV2(data []byte) (*LockV3, error) {
 		if manager != "" && name != "" {
 			v3.AddPackage(manager, name)
 		}
+	}
+
+	// Persist the migrated v3 format to disk
+	if err := s.Write(v3); err != nil {
+		return nil, fmt.Errorf("failed to persist v2 migration: %w", err)
 	}
 
 	return v3, nil

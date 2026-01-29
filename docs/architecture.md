@@ -38,9 +38,9 @@ The command layer handles:
 
 Key components:
 - `root.go` - Main command setup and global flags
-- Individual command files (`install.go`, `add.go`, `clone.go`, `diff.go`, etc.)
+- Individual command files (`track.go`, `untrack.go`, `apply.go`, `add.go`, `clone.go`, `diff.go`, `status.go`, etc.)
 - `shared.go` - Shared command logic
- - `helpers.go` - Command utilities
+- `helpers.go` - Command utilities
 
 ### 2. Orchestration Layer (`internal/orchestrator/`)
 
@@ -53,15 +53,12 @@ The orchestrator coordinates complex operations across multiple resource types:
 ### 3. Domain Packages
 
 #### Packages (`internal/packages/`)
-- Hardcoded package manager implementations with consistent interfaces
-- **ManagerRegistry** provides access to all registered package managers
-- Reconciliation and apply logic for package state using `manager:name` as unique keys
-- Package specification parsing (`spec.go`)
-- Command execution abstraction (`executor.go`) with injected executors
-- Operations for install, uninstall, upgrade
-- Parallel manager operations using errgroup for performance
+- Simplified package manager implementations with a minimal `Manager` interface
+- Registry provides access to all registered package managers
+- Apply logic for installing missing packages
+- Each manager implements `IsInstalled` and `Install` methods
 
-Built-in managers: brew, npm, pnpm, cargo, pipx, conda, gem, uv, bun, go.
+Built-in managers: brew, cargo, go, pnpm, uv.
 
 
 #### Dotfiles (`internal/dotfiles/`)
@@ -146,25 +143,22 @@ Instead of tracking operations (install X, remove Y), Plonk tracks desired state
 Plonk uses two distinct storage mechanisms:
 
 **Package State** (`plonk.lock`):
-- YAML file containing package information
-- Updated atomically with each install/uninstall operation
-- Tracks manager, name, and installation timestamp (no per-package version tracking)
-- Example structure (v2 schema):
+- YAML file containing tracked packages
+- Updated atomically with each track/untrack operation
+- Tracks manager and package name (no timestamps or versions)
+- Example structure (v3 schema):
   ```yaml
-  version: 2
-  resources:
-    - type: package
-      id: brew:ripgrep
-      metadata:
-        manager: brew
-        name: ripgrep
-      installed_at: "2025-07-27T11:01:03-06:00"
-    - type: package
-      id: npm:@google/gemini-cli
-      metadata:
-        manager: npm
-        name: "@google/gemini-cli"
-      installed_at: "2025-07-28T15:11:08-06:00"
+  version: 3
+  packages:
+    brew:
+      - fd
+      - jq
+      - ripgrep
+    cargo:
+      - bat
+      - eza
+    go:
+      - golang.org/x/tools/gopls@latest
   ```
 
 **Dotfile State** (filesystem-based):
@@ -202,14 +196,15 @@ All commands support multiple output formats (table, JSON, YAML) to support:
 
 ### Adding a New Package Manager
 
-To add a new package manager, implement the `PackageManager` interface in Go:
+To add a new package manager, implement the `Manager` interface in Go:
 
 1. Create a new manager struct in `internal/packages/`
-2. Implement required methods: `Install`, `Uninstall`, `ListInstalled`, `Upgrade`, `CheckHealth`
-3. Register the manager in the registry
-4. Add tests for all operations
+2. Implement required methods: `IsInstalled`, `Install`
+3. Register the manager in the registry (`registry.go`)
+4. Add the manager name to `SupportedManagers` in `manager.go`
+5. Add tests for all operations
 
-See existing managers (e.g., `brew.go`, `npm.go`) for examples.
+See existing managers (e.g., `brew.go`, `cargo.go`) for examples.
 
 ### Adding a New Resource Type
 
