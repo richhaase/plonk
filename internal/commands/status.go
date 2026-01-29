@@ -9,9 +9,8 @@ import (
 	"path/filepath"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/orchestrator"
+	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/packages"
 	"github.com/spf13/cobra"
 )
 
@@ -47,18 +46,18 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	// Load configuration (may fail if config is invalid, but we handle this gracefully)
 	_, configLoadErr := config.Load(configDir)
 
-	// Reconcile all domains with injected config
+	// Reconcile dotfiles with injected config
 	cfg := config.LoadWithDefaults(configDir)
 	ctx := context.Background()
 
-	// Reconcile all domains using orchestrator
-	result, err := orchestrator.ReconcileAllWithConfig(ctx, homeDir, configDir, cfg)
+	// Reconcile dotfiles only (packages no longer have reconcile concept)
+	dotfileResult, err := dotfiles.ReconcileWithConfig(ctx, homeDir, configDir, cfg)
 	if err != nil {
 		return err
 	}
 
-	// Convert domain results directly to output summary
-	summary := convertReconcileResultToSummary(result)
+	// Convert dotfiles result to output summary
+	summary := convertDotfileResultToSummary(dotfileResult)
 
 	// Check file existence and validity
 	configPath := filepath.Join(configDir, "plonk.yaml")
@@ -93,46 +92,20 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// convertReconcileResultToSummary converts orchestrator.ReconcileAllResult to output.Summary
-func convertReconcileResultToSummary(result orchestrator.ReconcileAllResult) output.Summary {
+// convertDotfileResultToSummary converts dotfiles.Result to output.Summary
+func convertDotfileResultToSummary(result dotfiles.Result) output.Summary {
 	// Convert dotfiles result to output.Result
 	dotfileResult := output.Result{
 		Domain:    "dotfile",
-		Managed:   convertDotfileItemsToOutput(result.Dotfiles.Managed),
-		Missing:   convertDotfileItemsToOutput(result.Dotfiles.Missing),
-		Untracked: convertDotfileItemsToOutput(result.Dotfiles.Untracked),
+		Managed:   convertDotfileItemsToOutput(result.Managed),
+		Missing:   convertDotfileItemsToOutput(result.Missing),
+		Untracked: convertDotfileItemsToOutput(result.Untracked),
 	}
-
-	// Convert packages result to output.Result
-	packageResult := output.Result{
-		Domain:    "package",
-		Managed:   convertPackageSpecsToOutputWithState(result.Packages.Managed, "managed"),
-		Missing:   convertPackageSpecsToOutputWithState(result.Packages.Missing, "missing"),
-		Untracked: convertPackageSpecsToOutputWithState(result.Packages.Untracked, "untracked"),
-	}
-
-	// Calculate totals
-	totalManaged := len(result.Dotfiles.Managed) + len(result.Packages.Managed)
-	totalMissing := len(result.Dotfiles.Missing) + len(result.Packages.Missing)
-	totalUntracked := len(result.Dotfiles.Untracked) + len(result.Packages.Untracked)
 
 	return output.Summary{
-		TotalManaged:   totalManaged,
-		TotalMissing:   totalMissing,
-		TotalUntracked: totalUntracked,
-		Results:        []output.Result{dotfileResult, packageResult},
+		TotalManaged:   len(result.Managed),
+		TotalMissing:   len(result.Missing),
+		TotalUntracked: len(result.Untracked),
+		Results:        []output.Result{dotfileResult},
 	}
-}
-
-// convertPackageSpecsToOutputWithState converts packages.PackageSpec slice to output.Item slice with state
-func convertPackageSpecsToOutputWithState(specs []packages.PackageSpec, state string) []output.Item {
-	converted := make([]output.Item, len(specs))
-	for i, spec := range specs {
-		converted[i] = output.Item{
-			Name:    spec.Name,
-			Manager: spec.Manager,
-			State:   output.ItemState(state),
-		}
-	}
-	return converted
 }

@@ -57,9 +57,12 @@ func (o *Orchestrator) Apply(ctx context.Context) (output.ApplyResult, error) {
 	// Apply packages (unless dotfiles-only)
 	if !o.dotfilesOnly {
 		pctx, pcancel := context.WithTimeout(ctx, t.Package)
-		packageResult, err := packages.Apply(pctx, o.configDir, o.config, o.dryRun)
+		simpleResult, err := packages.SimpleApply(pctx, o.configDir, o.dryRun)
 		pcancel()
-		result.Packages = &packageResult
+		if simpleResult != nil {
+			packageResult := convertSimpleApplyResult(simpleResult, o.dryRun)
+			result.Packages = &packageResult
+		}
 		if err != nil {
 			result.AddPackageError(fmt.Errorf("package apply failed: %w", err))
 		}
@@ -105,4 +108,60 @@ func (o *Orchestrator) Apply(ctx context.Context) (output.ApplyResult, error) {
 	}
 
 	return result, nil
+}
+
+// convertSimpleApplyResult converts packages.SimpleApplyResult to output.PackageResults
+func convertSimpleApplyResult(r *packages.SimpleApplyResult, dryRun bool) output.PackageResults {
+	result := output.PackageResults{
+		DryRun: dryRun,
+	}
+
+	// Group by manager
+	managerPackages := make(map[string][]output.PackageOperation)
+
+	for _, spec := range r.Installed {
+		manager, pkg := splitSpec(spec)
+		status := "installed"
+		if dryRun {
+			status = "would-install"
+		}
+		managerPackages[manager] = append(managerPackages[manager], output.PackageOperation{
+			Name:   pkg,
+			Status: status,
+		})
+		if dryRun {
+			result.TotalWouldInstall++
+		} else {
+			result.TotalInstalled++
+		}
+	}
+
+	for _, spec := range r.Failed {
+		manager, pkg := splitSpec(spec)
+		managerPackages[manager] = append(managerPackages[manager], output.PackageOperation{
+			Name:   pkg,
+			Status: "failed",
+		})
+		result.TotalFailed++
+	}
+
+	// Build manager results
+	for manager, pkgs := range managerPackages {
+		result.Managers = append(result.Managers, output.ManagerResults{
+			Name:     manager,
+			Packages: pkgs,
+		})
+	}
+
+	return result
+}
+
+// splitSpec splits "manager:package" into manager and package
+func splitSpec(spec string) (string, string) {
+	for i, c := range spec {
+		if c == ':' {
+			return spec[:i], spec[i+1:]
+		}
+	}
+	return "", spec
 }

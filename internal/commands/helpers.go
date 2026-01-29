@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/packages"
 	"github.com/spf13/cobra"
 )
@@ -21,8 +20,8 @@ func buildInstallExamples() string {
 	// Always include a simple, manager-agnostic example.
 	lines = append(lines, "plonk install htop git neovim ripgrep")
 
-	// Add a few manager-prefixed examples using registry manager names.
-	managerNames := packages.GetRegistry().GetAllManagerNames()
+	// Add a few manager-prefixed examples using supported managers.
+	managerNames := packages.SupportedManagers
 
 	const maxManagers = 4
 	for i, name := range managerNames {
@@ -42,8 +41,8 @@ func buildUninstallExamples() string {
 
 	lines = append(lines, "plonk uninstall htop git")
 
-	// Add a few manager-prefixed examples using registry manager names.
-	managerNames := packages.GetRegistry().GetAllManagerNames()
+	// Add a few manager-prefixed examples using supported managers.
+	managerNames := packages.SupportedManagers
 
 	const maxManagers = 2
 	for i, name := range managerNames {
@@ -65,8 +64,8 @@ func buildUpgradeExamples() string {
 	lines = append(lines, "plonk upgrade")
 	lines = append(lines, "plonk upgrade ripgrep")
 
-	// Add manager-specific examples using registry manager names.
-	managerNames := packages.GetRegistry().GetAllManagerNames()
+	// Add manager-specific examples using supported managers.
+	managerNames := packages.SupportedManagers
 
 	if len(managerNames) > 0 {
 		lines = append(lines, fmt.Sprintf("plonk upgrade %s", managerNames[0]))
@@ -176,16 +175,3 @@ func CompleteDotfilePaths(cmd *cobra.Command, args []string, toComplete string) 
 	return nil, cobra.ShellCompDirectiveDefault
 }
 
-// convertPackageSpecsToOutput converts packages.PackageSpec to output.Item
-// This is used by the packages command to convert domain-specific types to output types
-func convertPackageSpecsToOutput(specs []packages.PackageSpec) []output.Item {
-	converted := make([]output.Item, len(specs))
-	for i, spec := range specs {
-		converted[i] = output.Item{
-			Name:    spec.Name,
-			Manager: spec.Manager,
-			State:   "", // State is set by the caller based on which list this came from
-		}
-	}
-	return converted
-}

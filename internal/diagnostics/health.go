@@ -17,7 +17,6 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/lock"
-	"github.com/richhaase/plonk/internal/packages"
 )
 
 // HealthStatus represents overall system health
@@ -375,9 +374,7 @@ func checkLockFileValidity() HealthCheck {
 }
 
 // checkPackageManagerHealth runs health checks for all package managers
-func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
-	registry := packages.GetRegistry()
-
+func checkPackageManagerHealth(_ context.Context) []HealthCheck {
 	requiredManagers := collectRequiredManagers(config.GetDefaultConfigDirectory())
 
 	check := NewHealthCheck("Package Managers", "package-managers", "No package managers configured")
@@ -387,37 +384,31 @@ func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
 		return []HealthCheck{check}
 	}
 
+	// Manager binary names (for checking availability)
+	managerBinaries := map[string]string{
+		"brew":  "brew",
+		"cargo": "cargo",
+		"go":    "go",
+		"pnpm":  "pnpm",
+		"uv":    "uv",
+	}
+
 	missing := make([]string, 0)
 	for _, managerName := range requiredManagers {
-		available := false
-		if mgr, err := registry.GetManager(managerName); err == nil {
-			if ok, err := mgr.IsAvailable(ctx); err == nil && ok {
-				available = true
-			}
+		binary := managerBinaries[managerName]
+		if binary == "" {
+			binary = managerName
 		}
 
-		var desc, hint, helpURL string
-		if meta, ok := registry.GetManagerMetadata(managerName); ok {
-			desc, hint, helpURL = meta.Description, meta.InstallHint, meta.HelpURL
-		}
-		label := managerName
-		if desc != "" {
-			label = desc
-		}
+		_, err := exec.LookPath(binary)
+		available := err == nil
 
 		if available {
-			check.Details = append(check.Details, fmt.Sprintf("%s: available", label))
+			check.Details = append(check.Details, fmt.Sprintf("%s: available", managerName))
 		} else {
-			check.Details = append(check.Details, fmt.Sprintf("%s: missing", label))
-			check.Issues = append(check.Issues, fmt.Sprintf("%s is not installed", label))
-			suggestion := hint
-			if suggestion == "" {
-				suggestion = fmt.Sprintf("Install %s using the appropriate instructions", label)
-			}
-			if helpURL != "" {
-				suggestion = fmt.Sprintf("%s – %s", suggestion, helpURL)
-			}
-			check.Suggestions = append(check.Suggestions, suggestion)
+			check.Details = append(check.Details, fmt.Sprintf("%s: missing", managerName))
+			check.Issues = append(check.Issues, fmt.Sprintf("%s is not installed", managerName))
+			check.Suggestions = append(check.Suggestions, fmt.Sprintf("Install %s using the appropriate instructions", managerName))
 			missing = append(missing, managerName)
 		}
 	}

@@ -14,7 +14,6 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/dotfiles"
-	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -141,15 +140,15 @@ func runDiff(cmd *cobra.Command, args []string) error {
 
 // getDriftedDotfiles reconciles dotfiles and returns only drifted ones
 func getDriftedDotfiles(ctx context.Context, cfg *config.Config, configDir, homeDir string) ([]dotfiles.DotfileItem, error) {
-	// Reconcile all domains
-	result, err := orchestrator.ReconcileAllWithConfig(ctx, homeDir, configDir, cfg)
+	// Reconcile dotfiles only
+	result, err := dotfiles.ReconcileWithConfig(ctx, homeDir, configDir, cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	var drifted []dotfiles.DotfileItem
 	// Check all managed dotfiles for drift
-	for _, item := range result.Dotfiles.Managed {
+	for _, item := range result.Managed {
 		if item.State == dotfiles.StateDegraded {
 			drifted = append(drifted, item)
 		}

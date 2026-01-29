@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/packages"
 )
 
 // Config represents setup configuration options
@@ -207,24 +207,12 @@ ignore_patterns:`
 // Package manager installation is only done by clone command when needed.
 
 // getManagerDescription returns a user-friendly description of the package manager
-func getManagerDescription(cfg *config.Config, manager string) string {
-	// Use registry metadata for built-in managers
-	registry := packages.GetRegistry()
-	if meta, ok := registry.GetManagerMetadata(manager); ok && meta.Description != "" {
-		return meta.Description
-	}
-
+func getManagerDescription(_ *config.Config, manager string) string {
 	return fmt.Sprintf("%s package manager", manager)
 }
 
 // getManualInstallInstructions returns manual installation instructions
-func getManualInstallInstructions(cfg *config.Config, manager string) string {
-	// Use registry metadata for built-in managers
-	registry := packages.GetRegistry()
-	if meta, ok := registry.GetManagerMetadata(manager); ok && meta.InstallHint != "" {
-		return meta.InstallHint
-	}
-
+func getManualInstallInstructions(_ *config.Config, _ string) string {
 	return "See official documentation for installation instructions"
 }
 
@@ -281,28 +269,27 @@ func installDetectedManagers(ctx context.Context, cfgData *config.Config, manage
 		return nil, nil
 	}
 
-	registry := packages.GetRegistry()
-
 	output.StageUpdate(fmt.Sprintf("Checking package managers (%d total)...", len(managers)))
+
+	// Manager binary names
+	managerBinaries := map[string]string{
+		"brew":  "brew",
+		"cargo": "cargo",
+		"go":    "go",
+		"pnpm":  "pnpm",
+		"uv":    "uv",
+	}
 
 	// Find which managers are missing
 	var missingManagers []string
 	for _, mgr := range managers {
-		packageManager, err := registry.GetManager(mgr)
-		if err != nil {
-			output.Printf("Warning: Unknown package manager '%s', skipping\n", mgr)
-			missingManagers = append(missingManagers, mgr)
-			continue
+		binary := managerBinaries[mgr]
+		if binary == "" {
+			binary = mgr
 		}
 
-		available, err := packageManager.IsAvailable(ctx)
+		_, err := exec.LookPath(binary)
 		if err != nil {
-			output.Printf("Warning: Could not check availability of %s: %v\n", mgr, err)
-			missingManagers = append(missingManagers, mgr)
-			continue
-		}
-
-		if !available {
 			missingManagers = append(missingManagers, mgr)
 		}
 	}
