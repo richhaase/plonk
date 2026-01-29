@@ -21,7 +21,14 @@ func NewBrewSimple() *BrewSimple {
 func (b *BrewSimple) IsInstalled(ctx context.Context, name string) (bool, error) {
 	cmd := exec.CommandContext(ctx, "brew", "list", "--formula", name)
 	err := cmd.Run()
-	return err == nil, nil
+	if err != nil {
+		// Exit code 1 means not installed, not an error
+		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 // Install installs a package via brew

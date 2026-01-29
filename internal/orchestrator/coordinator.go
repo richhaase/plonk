@@ -119,29 +119,45 @@ func convertSimpleApplyResult(r *packages.SimpleApplyResult, dryRun bool) output
 	// Group by manager
 	managerPackages := make(map[string][]output.PackageOperation)
 
+	// Handle actually installed packages
 	for _, spec := range r.Installed {
 		manager, pkg := splitSpec(spec)
-		status := "installed"
-		if dryRun {
-			status = "would-install"
-		}
 		managerPackages[manager] = append(managerPackages[manager], output.PackageOperation{
 			Name:   pkg,
-			Status: status,
+			Status: "installed",
 		})
-		if dryRun {
-			result.TotalWouldInstall++
-		} else {
-			result.TotalInstalled++
+		result.TotalInstalled++
+	}
+
+	// Handle would-install packages (dry-run)
+	for _, spec := range r.WouldInstall {
+		manager, pkg := splitSpec(spec)
+		managerPackages[manager] = append(managerPackages[manager], output.PackageOperation{
+			Name:   pkg,
+			Status: "would-install",
+		})
+		result.TotalWouldInstall++
+	}
+
+	// Build error map for failed packages
+	errorMap := make(map[string]string)
+	for i, spec := range r.Failed {
+		if i < len(r.Errors) && r.Errors[i] != nil {
+			errorMap[spec] = r.Errors[i].Error()
 		}
 	}
 
+	// Handle failed packages with error details
 	for _, spec := range r.Failed {
 		manager, pkg := splitSpec(spec)
-		managerPackages[manager] = append(managerPackages[manager], output.PackageOperation{
+		op := output.PackageOperation{
 			Name:   pkg,
 			Status: "failed",
-		})
+		}
+		if errMsg, ok := errorMap[spec]; ok {
+			op.Error = errMsg
+		}
+		managerPackages[manager] = append(managerPackages[manager], op)
 		result.TotalFailed++
 	}
 

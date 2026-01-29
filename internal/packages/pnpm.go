@@ -6,6 +6,7 @@ package packages
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os/exec"
 	"strings"
 )
@@ -23,7 +24,7 @@ func (p *PNPMSimple) IsInstalled(ctx context.Context, name string) (bool, error)
 	cmd := exec.CommandContext(ctx, "pnpm", "list", "-g", "--depth=0", "--json")
 	output, err := cmd.Output()
 	if err != nil {
-		return false, nil
+		return false, fmt.Errorf("failed to list pnpm packages: %w", err)
 	}
 
 	// pnpm outputs JSON array: [{"dependencies": {...}}]
@@ -31,7 +32,7 @@ func (p *PNPMSimple) IsInstalled(ctx context.Context, name string) (bool, error)
 		Dependencies map[string]any `json:"dependencies"`
 	}
 	if err := json.Unmarshal(output, &result); err != nil {
-		return false, nil
+		return false, fmt.Errorf("failed to parse pnpm output: %w", err)
 	}
 
 	for _, item := range result {

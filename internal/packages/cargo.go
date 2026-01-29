@@ -5,6 +5,7 @@ package packages
 
 import (
 	"context"
+	"fmt"
 	"os/exec"
 	"strings"
 )
@@ -22,7 +23,7 @@ func (c *CargoSimple) IsInstalled(ctx context.Context, name string) (bool, error
 	cmd := exec.CommandContext(ctx, "cargo", "install", "--list")
 	output, err := cmd.Output()
 	if err != nil {
-		return false, nil
+		return false, fmt.Errorf("failed to list cargo packages: %w", err)
 	}
 
 	// Parse output: each installed package starts at column 0

@@ -12,10 +12,11 @@ import (
 
 // SimpleApplyResult holds the result of applying packages
 type SimpleApplyResult struct {
-	Installed []string
-	Skipped   []string
-	Failed    []string
-	Errors    []error
+	Installed    []string // Packages that were actually installed
+	WouldInstall []string // Packages that would be installed (dry-run only)
+	Skipped      []string // Packages already installed
+	Failed       []string // Packages that failed to install
+	Errors       []error  // Errors for failed packages
 }
 
 // SimpleApply installs all tracked packages that are missing
@@ -53,14 +54,12 @@ func SimpleApply(ctx context.Context, configDir string, dryRun bool) (*SimpleApp
 				continue
 			}
 
-			// Install
+			// Install (or mark as would-install for dry-run)
 			if dryRun {
-				fmt.Printf("Would install %s\n", spec)
-				result.Installed = append(result.Installed, spec)
+				result.WouldInstall = append(result.WouldInstall, spec)
 				continue
 			}
 
-			fmt.Printf("Installing %s...\n", spec)
 			if err := mgr.Install(ctx, pkg); err != nil {
 				result.Failed = append(result.Failed, spec)
 				result.Errors = append(result.Errors, fmt.Errorf("%s: %w", spec, err))
@@ -69,6 +68,11 @@ func SimpleApply(ctx context.Context, configDir string, dryRun bool) (*SimpleApp
 
 			result.Installed = append(result.Installed, spec)
 		}
+	}
+
+	// Return error if any packages failed
+	if len(result.Failed) > 0 {
+		return result, fmt.Errorf("%d package(s) failed to install", len(result.Failed))
 	}
 
 	return result, nil

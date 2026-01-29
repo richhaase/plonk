@@ -5,6 +5,7 @@ package packages
 
 import (
 	"context"
+	"fmt"
 	"os/exec"
 	"strings"
 )
@@ -22,7 +23,7 @@ func (u *UVSimple) IsInstalled(ctx context.Context, name string) (bool, error) {
 	cmd := exec.CommandContext(ctx, "uv", "tool", "list")
 	output, err := cmd.Output()
 	if err != nil {
-		return false, nil
+		return false, fmt.Errorf("failed to list uv tools: %w", err)
 	}
 
 	// Parse output: tool names are first token on each line

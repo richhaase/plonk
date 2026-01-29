@@ -5,6 +5,7 @@ package packages
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -52,7 +53,11 @@ func (g *GoSimple) Install(ctx context.Context, name string) error {
 	}
 
 	cmd := exec.CommandContext(ctx, "go", "install", pkg)
-	return cmd.Run()
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("go install failed: %s: %w", strings.TrimSpace(string(output)), err)
+	}
+	return nil
 }
 
 // goBinDir returns the directory where go install puts binaries
