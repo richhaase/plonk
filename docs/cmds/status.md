@@ -15,8 +15,7 @@ The `status` command provides a comprehensive view of all plonk-managed resource
 
 The command supports filtering by resource type and state, with multiple output formats for different use cases. It's the primary tool for understanding your current plonk configuration state.
 
-**Note**: For focused views of specific resource types, use the dedicated commands:
-- `plonk packages` (or `plonk p`) - Show only package status
+**Note**: For a focused view of dotfiles only, use:
 - `plonk dotfiles` (or `plonk d`) - Show only dotfile status
 
 ## Options
@@ -44,7 +43,7 @@ Without flags, status shows all managed and missing resources in two sections:
 
 **Packages Table**:
 - NAME: Package name
-- MANAGER: Package manager (brew, npm, pnpm, cargo, gem, conda, uv, pipx)
+- MANAGER: Package manager (brew, cargo, go, pnpm, uv)
 - STATUS: Current state with icon
 
 **Dotfiles Table** (managed/missing):
@@ -67,8 +66,7 @@ Summary counts are displayed at the end.
 plonk status
 plonk st                    # Short alias
 
-# Use focused commands for specific resource types
-plonk packages              # Show only package status (alias: p)
+# Use focused command for dotfiles only
 plonk dotfiles              # Show only dotfile status (alias: d)
 ```
 
@@ -77,8 +75,8 @@ plonk dotfiles              # Show only dotfile status (alias: d)
 - Use before `plonk apply` to see what will be changed
 - Missing items can be resolved with `plonk apply`
 - Drifted dotfiles can be restored with `plonk apply` or synced back with `plonk add -y`
-- Unmanaged items can be added with `plonk install` or `plonk add`
-- For focused views, use `plonk packages` or `plonk dotfiles` instead
+- Unmanaged dotfiles can be added with `plonk add`
+- For a focused view, use `plonk dotfiles` for dotfiles only
 
 ## Notes
 
