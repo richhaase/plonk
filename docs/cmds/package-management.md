@@ -1,146 +1,140 @@
 # Package Management Commands
 
-Commands for managing packages: `install` and `uninstall`.
+Commands for managing packages: `track` and `untrack`.
 
 ## Description
 
-The package management commands handle system package operations across multiple package managers. All commands support package manager prefixes (e.g., `brew:htop`) to target specific managers, defaulting to the configured `default_manager` when no prefix is specified.
+Package management in plonk follows a "tracking" model similar to dotfiles. Instead of installing and uninstalling packages, plonk tracks packages that are already installed on your system. This approach is simpler and more predictable:
+
+- **track** - Record an installed package in the lock file
+- **untrack** - Remove a package from tracking (does NOT uninstall)
+- **apply** - Install any tracked packages that are missing
 
 Package state is tracked in `plonk.lock`, which is updated atomically with each operation.
 
-## Package Manager Prefixes
+## Supported Package Managers
+
+Plonk supports 5 package managers:
 
 - `brew:` - Homebrew (macOS and Linux)
-- `npm:` - NPM (global packages)
-- `pnpm:` - PNPM (fast, disk-efficient Node.js packages)
 - `cargo:` - Cargo (Rust)
-- `pipx:` - Pipx (Python applications in isolated environments)
-- `conda:` - Conda (scientific computing and data science packages)
-- `gem:` - RubyGems
+- `go:` - Go (Go binaries)
+- `pnpm:` - PNPM (fast, disk-efficient Node.js packages)
 - `uv:` - UV (Python tool manager)
 
-
-Without prefix, uses `default_manager` from configuration (default: brew).
+The `manager:package` format is always required - there is no default manager for package operations.
 
 ---
 
-## Install Command
+## Track Command
 
-Installs packages and adds them to plonk management.
+Records an installed package in the lock file for management.
 
 ### Synopsis
 
 ```bash
-plonk install [options] <package>...
-plonk i [options] <package>...        # Short alias
+plonk track <manager:package>...
 ```
-
-### Options
-
-- `--dry-run, -n` - Preview changes without installing
-
-### Alias
-
-- `i`
 
 ### Behavior
 
-**Package Installation:**
-- Package managers must be available before installing packages
-- Use `plonk doctor` to check for missing package managers and view installation instructions
-- **Not installed** → installs package, adds to plonk.lock
-- **Already installed** → adds to plonk.lock (success)
-- **Already managed** → skips (no reinstall)
-- Updates plonk.lock atomically with each success
-- Processes multiple packages independently
-- Failures don't block other installations
+- Verifies the package is actually installed before tracking
+- Adds package to `plonk.lock` if installed
+- Fails if package is not installed (install it first using the native package manager)
+- Fails if manager is not supported
 
 ### Examples
 
 ```bash
-# Install packages with default manager
-plonk install ripgrep fd bat
+# Track packages (must already be installed)
+plonk track brew:ripgrep
+plonk track cargo:bat go:gopls
+plonk track pnpm:typescript uv:ruff
 
-# Install packages with specific managers
-plonk install brew:wget npm:prettier pnpm:typescript cargo:exa pipx:black conda:numpy uv:ruff
+# Track multiple packages at once
+plonk track brew:wget brew:jq cargo:fd
+```
 
-# Preview installation
-plonk install --dry-run ripgrep
+### Error Cases
+
+```bash
+# Package not installed - fails
+plonk track brew:nonexistent-package
+# Error: package 'nonexistent-package' is not installed
+
+# Missing manager prefix - fails
+plonk track ripgrep
+# Error: invalid format 'ripgrep', expected manager:package
+
+# Unsupported manager - fails
+plonk track npm:typescript
+# Error: unsupported manager 'npm'
 ```
 
 ---
 
-## Uninstall Command
+## Untrack Command
 
-Removes packages from system and plonk management.
+Removes a package from tracking. Does NOT uninstall the package.
 
 ### Synopsis
 
 ```bash
-plonk uninstall [options] <package>...
-plonk u [options] <package>...        # Short alias
+plonk untrack <manager:package>...
 ```
-
-### Options
-
-- `--dry-run, -n` - Preview changes without uninstalling
-
-### Alias
-
-- `u`
 
 ### Behavior
 
-- Removes package from system and plonk.lock entry
-- Only removes packages currently managed by plonk
-- Dependency handling delegated to package manager
-- Processes multiple packages independently
-- Lock file updated atomically per operation
+- Removes package from `plonk.lock`
+- Does NOT uninstall the package from the system
+- Silently succeeds if package was not being tracked
 
 ### Examples
 
 ```bash
-# Uninstall packages
-plonk uninstall ripgrep fd
+# Stop tracking packages (leaves them installed)
+plonk untrack brew:ripgrep
+plonk untrack cargo:bat go:gopls
 
-# Uninstall with specific manager
-plonk uninstall brew:wget npm:prettier pnpm:typescript pipx:black conda:numpy uv:ruff
-
-# Preview removal
-plonk uninstall --dry-run ripgrep
+# Untrack multiple packages
+plonk untrack brew:wget brew:jq
 ```
 
 ---
 
+## Workflow
 
-## Common Behaviors
+The typical workflow for package management:
 
-### State Management
+1. **Install packages using native tools:**
+   ```bash
+   brew install ripgrep fd bat
+   cargo install tokei
+   go install golang.org/x/tools/gopls@latest
+   ```
 
-**Install/Uninstall:**
-- Modifies `plonk.lock` atomically
-- Updates system packages via manager
+2. **Track the installed packages:**
+   ```bash
+   plonk track brew:ripgrep brew:fd brew:bat
+   plonk track cargo:tokei
+   plonk track go:gopls
+   ```
 
-### Error Handling
-
-- Individual package failures don't stop batch operations
-- Summary shows succeeded/skipped/failed counts
-- Package conflicts during install are considered successful
-- Manager unavailability results in operation failure
-
-### Timeout Configuration
-
-Operations have configurable timeouts via `plonk.yaml`:
-- `package_timeout` - Install/uninstall operations (default: 180s)
+3. **On a new machine, apply to install missing packages:**
+   ```bash
+   plonk apply
+   ```
 
 ## Integration
 
-- Use `plonk status` to see managed packages
-- Use `plonk apply` to install all packages from lock file
-- Lock file can be version controlled for team sharing
+- Use `plonk status` to see tracked packages
+- Use `plonk apply` to install missing tracked packages
+- Lock file can be version controlled for syncing across machines
 - See [Configuration Guide](../configuration.md) for timeout settings
 
 ## Notes
 
-- Empty package names are rejected with validation errors
-- Invalid managers show helpful error messages
+- The `manager:package` format is always required
+- Track only works with packages that are already installed
+- Untrack does not uninstall - use the native package manager to remove packages
+- To upgrade packages, use the native package manager directly (e.g., `brew upgrade`)

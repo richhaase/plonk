@@ -32,59 +32,30 @@ plonk clone --dry-run user/dotfiles   # Preview what would happen
 Options:
 - `--dry-run, -n` - Show what would be cloned without making changes
 
+### plonk track
 
-### plonk install
-
-Install packages and add them to management.
-
-```bash
-# Install packages with default manager
-plonk install ripgrep fd bat
-plonk i ripgrep fd bat                # Short alias
-
-# Install packages with specific managers
-plonk install brew:wget npm:prettier pnpm:typescript conda:numpy uv:ruff
-
-# Preview changes
-plonk install --dry-run ripgrep
-```
-
-Options:
-- `--dry-run, -n` - Show what would be installed without making changes
-
-Alias: `i`
-
-**Note**: Package managers must be available before installing packages. Use `plonk doctor` to check for missing managers.
-
-### plonk uninstall
-
-Uninstall packages and remove from management.
+Track packages that are already installed on your system. Adds them to the lock file for management.
 
 ```bash
-plonk uninstall ripgrep
-plonk u ripgrep                       # Short alias
-plonk uninstall brew:wget npm:prettier pnpm:typescript conda:numpy uv:ruff
-plonk uninstall --dry-run ripgrep
+plonk track brew:ripgrep              # Track a single package
+plonk track brew:fd cargo:bat         # Track multiple packages
+plonk track go:gopls pnpm:typescript  # Track packages from different managers
 ```
 
-Options:
-- `--dry-run, -n` - Show what would be removed without making changes
+**Note**: The `manager:package` format is always required. Packages must already be installed.
 
-Alias: `u`
+**📖 [Complete Package Management Documentation →](cmds/package-management.md)**
 
-### plonk upgrade
+### plonk untrack
 
-Upgrade packages to their latest versions.
+Stop tracking packages. Does NOT uninstall the package from your system.
 
 ```bash
-plonk upgrade                         # Upgrade all packages
-plonk upgrade brew                    # Upgrade all Homebrew packages
-plonk upgrade ripgrep                 # Upgrade ripgrep across all managers
-plonk upgrade brew:neovim             # Upgrade specific package
-plonk upgrade htop neovim             # Upgrade multiple packages
+plonk untrack brew:ripgrep            # Stop tracking a package
+plonk untrack cargo:bat go:gopls      # Stop tracking multiple packages
 ```
 
-**📖 [Complete Upgrade Documentation →](cmds/upgrade.md)**
+**📖 [Complete Package Management Documentation →](cmds/package-management.md)**
 
 ### plonk add
 
@@ -120,22 +91,8 @@ plonk st                              # Short alias
 
 Alias: `st`
 
-**Note**: For focused views of specific resource types, use:
-- `plonk packages` (or `plonk p`) - Show only package status
+**Note**: For a focused view of dotfiles only, use:
 - `plonk dotfiles` (or `plonk d`) - Show only dotfile status
-
-### plonk packages
-
-Show package status (focused view).
-
-```bash
-plonk packages                        # Show all managed packages
-plonk p                               # Short alias
-```
-
-**📖 [Complete Packages Documentation →](cmds/packages.md)**
-
-Alias: `p`
 
 ### plonk diff
 
@@ -149,7 +106,7 @@ plonk diff $HOME/.bashrc              # Supports environment variables
 
 ### plonk apply
 
-Install missing packages and deploy missing dotfiles.
+Install missing tracked packages and deploy missing dotfiles.
 
 ```bash
 plonk apply                           # Apply all changes
@@ -204,29 +161,21 @@ plonk completion powershell           # PowerShell completion
 
 ## Package Manager Prefixes
 
-Use prefixes to specify package managers:
+Use prefixes to specify package managers when tracking:
 
 - `brew:` - Homebrew (macOS and Linux)
-- `npm:` - NPM (global packages)
-- `pnpm:` - PNPM (fast, disk efficient JavaScript packages)
 - `cargo:` - Cargo (Rust)
-- `pipx:` - Pipx (Python applications in isolated environments)
-- `conda:` - Conda (scientific computing and data science packages)
-- `gem:` - RubyGems
+- `go:` - Go (Go binaries)
+- `pnpm:` - PNPM (fast, disk efficient Node.js packages)
 - `uv:` - UV (Python tool manager)
-
 
 Examples:
 ```bash
-plonk install brew:wget
-plonk install npm:typescript
-plonk install pnpm:prettier
-plonk install cargo:ripgrep
-plonk install pipx:black
-plonk install conda:numpy
-plonk install gem:bundler
-plonk install uv:ruff
-
+plonk track brew:wget
+plonk track cargo:ripgrep
+plonk track go:gopls
+plonk track pnpm:typescript
+plonk track uv:ruff
 ```
 
 ## Output and Colors

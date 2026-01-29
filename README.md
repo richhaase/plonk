@@ -25,7 +25,7 @@ After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber
 - Just works
 
 **Key innovations:**
-- **Package Manager Manager™**: One interface for 8 package managers (brew, npm, pnpm, cargo, pipx, conda, gem, uv)
+- **Track, don't install**: Record what's already installed rather than managing installations
 - **Filesystem as truth**: Your dotfiles directory IS the state - no sync issues
 - **Copy, don't symlink**: Cleaner, simpler, and more compatible
 - **State-based**: Track what should exist, not what commands were run
@@ -70,9 +70,10 @@ After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber
 ```bash
 # Track your existing setup
 plonk add ~/.zshrc ~/.vimrc ~/.config/nvim/    # Add dotfiles
-plonk install ripgrep fd bat                   # Install & track packages
-# Ensure language/package managers (pnpm, cargo, etc.) are installed first
-# Use `plonk doctor` for detection and install guidance
+
+# Install packages with native tools, then track them
+brew install ripgrep fd bat
+plonk track brew:ripgrep brew:fd brew:bat      # Track installed packages
 
 # See what plonk manages
 plonk status                                   # Show all resources
@@ -117,12 +118,10 @@ The `clone` command:
 ## Key Commands
 
 ```bash
-# Package management
-plonk install ripgrep fd              # Install and track packages
-plonk install pnpm cargo              # Install package managers (must be available via another manager)
-plonk uninstall ripgrep               # Uninstall and stop tracking
-plonk upgrade                         # Upgrade all packages to latest versions
-plonk upgrade brew:ripgrep            # Upgrade specific package
+# Package tracking (packages must be installed first)
+brew install ripgrep fd              # Install with native tool
+plonk track brew:ripgrep brew:fd     # Track installed packages
+plonk untrack brew:ripgrep           # Stop tracking (doesn't uninstall)
 
 # Dotfile management
 plonk add ~/.vimrc ~/.zshrc           # Start tracking dotfiles
@@ -132,7 +131,6 @@ plonk dotfiles                        # List dotfiles with state info
 
 # System state
 plonk status                          # Show all managed items (including drift)
-plonk packages                        # Show only package status (alias: p)
 plonk dotfiles                        # Show only dotfile status (alias: d)
 plonk apply                           # Sync system to desired state
 plonk apply ~/.vimrc ~/.zshrc         # Apply only specific dotfiles
@@ -146,35 +144,29 @@ plonk config edit                     # Edit configuration
 
 ## Supported Package Managers
 
-Plonk supports 8 package managers across multiple language ecosystems:
+Plonk supports 5 package managers:
 
-### Package Managers
 - **Homebrew** (brew) - macOS/Linux packages and system tools
-- **NPM** (npm) - Node.js packages (global)
-- **PNPM** (pnpm) - Fast, disk-efficient Node.js packages (global)
 - **Cargo** (cargo) - Rust packages
-- **Pipx** (pipx) - Python applications in isolated environments
-- **Conda** (conda) - Scientific computing and data science packages
-- **Gem** (gem) - Ruby packages
+- **Go** (go) - Go binaries
+- **PNPM** (pnpm) - Fast, disk-efficient Node.js packages (global)
 - **UV** (uv) - Fast Python tool manager with isolated environments
 
-Package manager prefixes:
+Package tracking requires the `manager:package` format:
 ```bash
-# Install packages via specific managers
-plonk install brew:wget npm:prettier pnpm:typescript cargo:ripgrep
-plonk install pipx:black conda:numpy gem:rubocop
-plonk install uv:ruff
+# Track packages (must be installed first)
+plonk track brew:wget cargo:ripgrep pnpm:typescript go:gopls uv:ruff
 ```
 
 ## Configuration
 
 Plonk stores its data in `~/.config/plonk/`:
-- **`plonk.lock`** - Automatically maintained list of packages
+- **`plonk.lock`** - Automatically maintained list of tracked packages
 - **`plonk.yaml`** - Optional configuration (only create if needed)
 - **Dotfiles** - Stored directly in the config directory (e.g., `zshrc`, `vimrc`)
 
 The lock file is automatically updated when you:
-- Install/uninstall packages via plonk
+- Track/untrack packages via plonk
 
 Dotfiles are managed by the filesystem itself - files in `$PLONK_DIR` are your tracked dotfiles
 
@@ -227,10 +219,8 @@ just install
 - **[Clone](docs/cmds/clone.md)** - Clone and set up existing dotfiles
 - **[Apply](docs/cmds/apply.md)** - Sync your system to desired state
 - **[Status](docs/cmds/status.md)** - View managed packages and dotfiles (combined view)
-- **[Packages](docs/cmds/packages.md)** - View package status (focused view)
 - **[Dotfiles](docs/cmds/dotfiles.md)** - View dotfile status (focused view)
-- **[Package Management](docs/cmds/package-management.md)** - install, uninstall, upgrade
-- **[Upgrade](docs/cmds/upgrade.md)** - Upgrade packages to latest versions
+- **[Package Management](docs/cmds/package-management.md)** - track, untrack
 - **[Dotfile Management](docs/cmds/dotfile-management.md)** - add, rm
 - **[Config](docs/cmds/config.md)** - Manage plonk configuration
 - **[Doctor](docs/cmds/doctor.md)** - Check system health
