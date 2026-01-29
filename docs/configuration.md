@@ -151,7 +151,7 @@ Control how long operations wait before timing out:
 
 ```yaml
 # All timeouts in seconds
-package_timeout: 180 # Package install/uninstall (3 minutes default)
+package_timeout: 180 # Package installation (3 minutes default)
 operation_timeout: 300 # General operations (5 minutes default)
 dotfile_timeout: 60 # Dotfile operations (1 minute default)
 

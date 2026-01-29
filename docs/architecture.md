@@ -127,7 +127,6 @@ Package managers are implemented as Go structs with consistent interfaces. This 
 - Type-safe, testable implementations
 - Consistent behavior across different tools
 - Self-health checking and diagnostics
-- Package upgrade management
 
 Note: Package managers must be installed manually or via other supported managers before use. The `plonk doctor` command provides installation instructions for missing managers.
 

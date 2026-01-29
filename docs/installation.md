@@ -20,15 +20,12 @@ This guide covers installing plonk and setting up your development environment.
 
 ### Optional Language Package Managers
 
-Plonk can manage packages from these language-specific package managers once **you** install them via their official installers. Plonk no longer self-installs package managers; use `plonk doctor` for install hints if a manager is missing.
+Plonk can track packages from these language-specific package managers once **you** install them via their official installers. Plonk no longer self-installs package managers; use `plonk doctor` for install hints if a manager is missing.
 
 - **Cargo** (Rust) - For Rust-based CLI tools
-- **npm** (Node.js) - For global JavaScript packages
-- **pnpm** (Node.js) - For fast, disk-efficient JavaScript packages
-- **pipx** (Python) - For Python applications in isolated environments
-- **conda** (Python) - For scientific computing and data science packages
-- **gem** (Ruby) - For Ruby gems
-- **uv** (Python) - For Python tools management
+- **Go** (Go) - For Go binaries
+- **PNPM** (Node.js) - For fast, disk-efficient JavaScript packages
+- **UV** (Python) - For Python tools management
 
 ## Installation Methods
 
@@ -235,8 +232,8 @@ plonk add ~/.zshrc ~/.vimrc ~/.gitconfig
 # Ensure package managers you need are installed (pnpm, cargo, uv)
 # Use `plonk doctor` to check and get install instructions
 
-# Add packages you want to track
-plonk install ripgrep fd bat exa
+# Track packages you have installed
+plonk track brew:ripgrep brew:fd brew:bat brew:exa
 
 # Check status
 plonk status

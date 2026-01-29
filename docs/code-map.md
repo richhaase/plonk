@@ -18,8 +18,8 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - `doctor.go` - System health checks and fixes
 
 #### Package Management Commands
-- `install.go` - Install and track packages
-- `uninstall.go` - Remove packages from system and tracking
+- `track.go` - Track installed packages in the lock file
+- `untrack.go` - Remove packages from tracking (does not uninstall)
 
 #### Dotfile Management Commands
 - `add.go` - Add dotfiles to plonk management
@@ -57,18 +57,14 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 ### Domain Packages
 
 #### Packages (`internal/packages/`)
-- `spec.go` - Package specification and reconciliation logic
-- `reconcile.go` - Package reconciliation entry point
+- `manager.go` - Simplified Manager interface (IsInstalled, Install)
+- `registry.go` - Package manager registry
 - `apply.go` - Package apply operations
-- `operations.go` - Package operations (install, uninstall, etc.)
-- `executor.go` - Command execution abstraction
-- `interfaces.go` - Package manager interfaces
-- `registry.go` - Package manager registry with hardcoded implementations
-- `helpers.go` - Package utilities
+- Individual manager implementations: `brew.go`, `cargo.go`, `go.go`, `pnpm.go`, `uv.go`
 
 ##### Package Managers
-- Hardcoded implementations: brew, npm, pnpm, cargo, pipx, conda, gem, uv, bun, go
-- Each manager implements the `PackageManager` interface
+- Hardcoded implementations: brew, cargo, go, pnpm, uv
+- Each manager implements the `Manager` interface with just two methods
 
 
 
@@ -149,11 +145,10 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 - Entry: `internal/commands/config_show.go`, `config_edit.go`
 - Config management: `internal/config/config.go`
 
-### Package management commands (install/uninstall)
-- Entries: `internal/commands/install.go`, `uninstall.go`
-- Operations: `internal/packages/operations.go`
+### Package management commands (track/untrack)
+- Entries: `internal/commands/track.go`, `untrack.go`
 - Manager registry: `internal/packages/registry.go`
-- Lock file updates: `internal/lock/yaml_lock.go`
+- Lock file updates: `internal/lock/v3.go`
 
 ### Dotfile management commands (add/rm)
 - Entries: `internal/commands/add.go`, `rm.go`
@@ -163,10 +158,10 @@ This document provides a comprehensive map of the plonk codebase to aid in imple
 
 ## Key Interfaces
 
-### PackageManager Interface
-Location: `internal/packages/interfaces.go`
-- Implemented by: 10 package managers (hardcoded Go implementations)
-- Defines: Install, Uninstall, List operations
+### Manager Interface
+Location: `internal/packages/manager.go`
+- Implemented by: 5 package managers (brew, cargo, go, pnpm, uv)
+- Defines: IsInstalled, Install operations
 
 ### Lock Interface
 Location: `internal/lock/interfaces.go`
