@@ -161,6 +161,15 @@ func convertSimpleApplyResult(r *packages.SimpleApplyResult, dryRun bool) output
 		result.TotalFailed++
 	}
 
+	// TotalMissing = packages that were not installed at reconciliation time
+	// In dry-run: WouldInstall (packages that need installation)
+	// In real run: Installed + Failed (packages that were missing - some fixed, some still missing)
+	if dryRun {
+		result.TotalMissing = result.TotalWouldInstall
+	} else {
+		result.TotalMissing = result.TotalInstalled + result.TotalFailed
+	}
+
 	// Build manager results
 	for manager, pkgs := range managerPackages {
 		result.Managers = append(result.Managers, output.ManagerResults{

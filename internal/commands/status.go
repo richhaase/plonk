@@ -108,10 +108,22 @@ type packageStatus struct {
 func getPackageStatus(ctx context.Context, configDir string) packageStatus {
 	result := packageStatus{}
 
+	// Check if lock file exists first
+	lockPath := filepath.Join(configDir, "plonk.lock")
+	if _, err := os.Stat(lockPath); os.IsNotExist(err) {
+		// No lock file yet - this is fine, just no packages tracked
+		return result
+	}
+
 	lockSvc := lock.NewLockV3Service(configDir)
 	lockFile, err := lockSvc.Read()
 	if err != nil {
-		// No lock file or read error - return empty
+		// Lock file exists but couldn't be read - this is an error
+		result.Errors = append(result.Errors, output.Item{
+			Name:  "plonk.lock",
+			State: output.StateError,
+			Error: err.Error(),
+		})
 		return result
 	}
 

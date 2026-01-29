@@ -33,8 +33,12 @@ func SimpleApply(ctx context.Context, configDir string, dryRun bool) (*SimpleApp
 	for manager, pkgs := range lockFile.Packages {
 		mgr, err := GetManager(manager)
 		if err != nil {
-			result.Failed = append(result.Failed, manager+":*")
-			result.Errors = append(result.Errors, fmt.Errorf("manager %s: %w", manager, err))
+			// Record failure for each package individually
+			for _, pkg := range pkgs {
+				spec := manager + ":" + pkg
+				result.Failed = append(result.Failed, spec)
+				result.Errors = append(result.Errors, fmt.Errorf("%s: manager not available: %w", spec, err))
+			}
 			continue
 		}
 

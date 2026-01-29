@@ -88,26 +88,23 @@ type lockFileSummary struct {
 
 // parseLockFileSummary reads and parses lock file data once for use by multiple checks.
 func parseLockFileSummary(configDir string) lockFileSummary {
-	lockService := lock.NewYAMLLockService(configDir)
+	lockService := lock.NewLockV3Service(configDir)
 	lockFile, err := lockService.Read()
 	if err != nil {
 		return lockFileSummary{err: err}
 	}
 
+	// v3 format: packages are grouped by manager
 	managerCounts := make(map[string]int)
-	for _, resource := range lockFile.Resources {
-		if resource.Type == "package" {
-			if manager, ok := resource.Metadata["manager"].(string); ok && manager != "" {
-				managerCounts[manager]++
-			}
-		}
+	totalPackages := 0
+	for manager, pkgs := range lockFile.Packages {
+		managerCounts[manager] = len(pkgs)
+		totalPackages += len(pkgs)
 	}
 
-	totalPackages := 0
 	managers := make([]string, 0, len(managerCounts))
-	for name, count := range managerCounts {
+	for name := range managerCounts {
 		managers = append(managers, name)
-		totalPackages += count
 	}
 	sort.Strings(managers)
 

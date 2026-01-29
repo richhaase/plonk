@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
@@ -218,46 +217,16 @@ func getManualInstallInstructions(_ *config.Config, _ string) string {
 
 // DetectRequiredManagers reads a lock file and returns unique package managers
 func DetectRequiredManagers(lockPath string) ([]string, error) {
-	lockService := lock.NewYAMLLockService(filepath.Dir(lockPath))
+	lockService := lock.NewLockV3Service(filepath.Dir(lockPath))
 	lockFile, err := lockService.Read()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read lock file: %w", err)
 	}
 
-	// Use a map to track unique managers
-	managersMap := make(map[string]bool)
-
-	for _, resource := range lockFile.Resources {
-		// Only process package resources
-		if resource.Type != "package" {
-			continue
-		}
-
-		// Extract manager from metadata or ID prefix
-		var manager string
-
-		// Try to get manager from metadata first (v2 format)
-		if managerVal, ok := resource.Metadata["manager"]; ok {
-			if managerStr, ok := managerVal.(string); ok {
-				manager = managerStr
-			}
-		}
-
-		// If not in metadata, extract from ID prefix (fallback)
-		if manager == "" && strings.Contains(resource.ID, ":") {
-			parts := strings.SplitN(resource.ID, ":", 2)
-			manager = parts[0]
-		}
-
-		if manager != "" {
-			managersMap[manager] = true
-		}
-	}
-
-	// Convert map to sorted slice
+	// Extract unique managers from v3 format (packages grouped by manager)
 	var managers []string
-	for mgr := range managersMap {
-		managers = append(managers, mgr)
+	for manager := range lockFile.Packages {
+		managers = append(managers, manager)
 	}
 
 	return managers, nil
