@@ -9,16 +9,14 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/dotfiles"
-	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/packages"
 )
 
-// Orchestrator manages resources and their lock file state
+// Orchestrator manages resources and coordinates apply operations
 type Orchestrator struct {
 	ctx          context.Context
 	config       *config.Config
-	lock         lock.LockService
 	configDir    string
 	homeDir      string
 	dryRun       bool
@@ -32,10 +30,6 @@ func New(opts ...Option) *Orchestrator {
 
 	for _, opt := range opts {
 		opt(o)
-	}
-
-	if o.configDir != "" {
-		o.lock = lock.NewYAMLLockService(o.configDir)
 	}
 
 	return o

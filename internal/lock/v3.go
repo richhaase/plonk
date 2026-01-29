@@ -13,6 +13,17 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// v2 types - kept only for migration support
+type lockV2 struct {
+	Version   int              `yaml:"version"`
+	Resources []resourceEntry `yaml:"resources"`
+}
+
+type resourceEntry struct {
+	Type     string                 `yaml:"type"`
+	Metadata map[string]interface{} `yaml:"metadata"`
+}
+
 // LockV3 represents the simplified v3 lock format
 type LockV3 struct {
 	Version  int                 `yaml:"version"`
@@ -162,14 +173,14 @@ func (s *LockV3Service) Write(lock *LockV3) error {
 
 // migrateV2 converts a v2 lock to v3 format and persists it
 func (s *LockV3Service) migrateV2(data []byte) (*LockV3, error) {
-	var v2 Lock
-	if err := yaml.Unmarshal(data, &v2); err != nil {
+	var old lockV2
+	if err := yaml.Unmarshal(data, &old); err != nil {
 		return nil, fmt.Errorf("failed to parse v2 lock: %w", err)
 	}
 
 	v3 := NewLockV3()
 
-	for _, resource := range v2.Resources {
+	for _, resource := range old.Resources {
 		if resource.Type != "package" {
 			continue
 		}
