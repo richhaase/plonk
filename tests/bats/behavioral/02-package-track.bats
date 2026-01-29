@@ -2,7 +2,7 @@
 
 # Package tracking tests for the simplified track/untrack commands
 
-load '../test_helper'
+load '../lib/test_helper'
 
 @test "track requires manager:package format" {
   run plonk track ripgrep

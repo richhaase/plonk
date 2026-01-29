@@ -27,9 +27,9 @@ setup() {
 }
 
 @test "help for specific command works" {
-  run plonk help install
+  run plonk help track
   assert_success
-  assert_output --partial "Install packages"
+  assert_output --partial "Track packages"
   assert_output --partial "Examples:"
 }
 

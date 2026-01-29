@@ -23,14 +23,14 @@ func TestNewUserDefinedChecker(t *testing.T) {
 	})
 
 	t.Run("with user config", func(t *testing.T) {
-		// Create a config file
-		tempDir := testutil.NewTestConfig(t, "default_manager: npm")
+		// Create a config file with a non-default manager
+		tempDir := testutil.NewTestConfig(t, "default_manager: cargo")
 
 		checker := NewUserDefinedChecker(tempDir)
 		assert.NotNil(t, checker)
 		assert.NotNil(t, checker.defaults)
 		assert.NotNil(t, checker.userConfig)
-		assert.Equal(t, "npm", checker.userConfig.DefaultManager)
+		assert.Equal(t, "cargo", checker.userConfig.DefaultManager)
 	})
 }
 
@@ -43,7 +43,7 @@ func TestIsFieldUserDefined(t *testing.T) {
 		// When no config file exists, Load() returns defaults
 		// So userConfig is not nil but has all default values
 		// Any value different from default is considered user-defined
-		assert.True(t, checker.IsFieldUserDefined("default_manager", "npm"))
+		assert.True(t, checker.IsFieldUserDefined("default_manager", "cargo"))
 		assert.True(t, checker.IsFieldUserDefined("operation_timeout", 600))
 		// Same as default, so not user-defined
 		assert.False(t, checker.IsFieldUserDefined("package_timeout", 180))
@@ -52,15 +52,15 @@ func TestIsFieldUserDefined(t *testing.T) {
 	t.Run("with user config", func(t *testing.T) {
 		// Create a config file with custom values
 		configContent := `
-default_manager: npm
+default_manager: cargo
 operation_timeout: 600
 `
 		tempDir := testutil.NewTestConfig(t, configContent)
 
 		checker := NewUserDefinedChecker(tempDir)
 
-		// npm is different from default (brew)
-		assert.True(t, checker.IsFieldUserDefined("default_manager", "npm"))
+		// cargo is different from default (brew)
+		assert.True(t, checker.IsFieldUserDefined("default_manager", "cargo"))
 
 		// 600 is different from default (300)
 		assert.True(t, checker.IsFieldUserDefined("operation_timeout", 600))
@@ -87,7 +87,7 @@ func TestGetNonDefaultFields(t *testing.T) {
 	t.Run("some custom values", func(t *testing.T) {
 		// Create a config file with some custom values
 		configContent := `
-default_manager: npm
+default_manager: cargo
 operation_timeout: 600
 diff_tool: delta
 ignore_patterns:
@@ -103,7 +103,7 @@ ignore_patterns:
 
 		// Should contain the changed fields
 		assert.Contains(t, nonDefaults, "default_manager")
-		assert.Equal(t, "npm", nonDefaults["default_manager"])
+		assert.Equal(t, "cargo", nonDefaults["default_manager"])
 
 		assert.Contains(t, nonDefaults, "operation_timeout")
 		assert.Equal(t, 600, nonDefaults["operation_timeout"])

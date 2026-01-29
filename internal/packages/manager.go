@@ -6,7 +6,14 @@ package packages
 import (
 	"context"
 	"slices"
+
+	"github.com/richhaase/plonk/internal/config"
 )
+
+func init() {
+	// Register manager checker with config validation
+	config.ManagerChecker = IsSupportedManager
+}
 
 // Manager defines the simplified package manager interface.
 // Only two operations: check if installed, install if missing.

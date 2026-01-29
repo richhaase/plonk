@@ -9,10 +9,17 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/packages"
 	"github.com/richhaase/plonk/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	// Set up ManagerChecker for config validation during tests
+	config.ManagerChecker = packages.IsSupportedManager
+}
 
 func TestCheckSystemRequirements(t *testing.T) {
 	check := checkSystemRequirements()

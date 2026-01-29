@@ -4,6 +4,7 @@
 package config
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -87,6 +88,15 @@ func TestApplyDefaults(t *testing.T) {
 }
 
 func TestGetDefaultConfigDirectory(t *testing.T) {
+	// Save and clear PLONK_DIR for this test
+	origPlonkDir := os.Getenv("PLONK_DIR")
+	os.Unsetenv("PLONK_DIR")
+	defer func() {
+		if origPlonkDir != "" {
+			os.Setenv("PLONK_DIR", origPlonkDir)
+		}
+	}()
+
 	// This test verifies the function exists and returns a non-empty path
 	result := GetDefaultConfigDirectory()
 	assert.NotEmpty(t, result)
