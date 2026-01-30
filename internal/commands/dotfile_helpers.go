@@ -12,38 +12,32 @@ import (
 	"github.com/richhaase/plonk/internal/output"
 )
 
-// convertDotfileStatusToOutput converts []dotfiles.DotfileStatus to []output.Item
-// This function bridges the dotfiles domain types to output types for rendering.
-func convertDotfileStatusToOutput(statuses []dotfiles.DotfileStatus) []output.Item {
-	items := make([]output.Item, len(statuses))
-	for i, s := range statuses {
-		// Convert state
-		var state output.ItemState
+// convertDotfileStatusToOutput converts []dotfiles.DotfileStatus to separate managed and missing slices.
+// Drifted items are included in managed with StateDegraded state.
+func convertDotfileStatusToOutput(statuses []dotfiles.DotfileStatus) (managed, missing []output.Item) {
+	for _, s := range statuses {
+		item := output.Item{
+			Name: "." + s.Name,
+			Path: s.Target,
+			Metadata: map[string]interface{}{
+				"source":      s.Source,
+				"destination": s.Target,
+			},
+		}
+
 		switch s.State {
 		case dotfiles.SyncStateManaged:
-			state = output.StateManaged
+			item.State = output.StateManaged
+			managed = append(managed, item)
 		case dotfiles.SyncStateMissing:
-			state = output.StateMissing
+			item.State = output.StateMissing
+			missing = append(missing, item)
 		case dotfiles.SyncStateDrifted:
-			state = output.StateDegraded
-		default:
-			state = output.StateManaged
-		}
-
-		// Build metadata
-		metadata := map[string]interface{}{
-			"source":      s.Source,
-			"destination": s.Target,
-		}
-
-		items[i] = output.Item{
-			Name:     "." + s.Name, // Add dot prefix for display
-			Path:     s.Target,
-			State:    state,
-			Metadata: metadata,
+			item.State = output.StateDegraded
+			managed = append(managed, item)
 		}
 	}
-	return items
+	return managed, missing
 }
 
 // resolveDotfilePath resolves a path to an absolute path in home directory

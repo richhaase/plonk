@@ -176,33 +176,9 @@ func getPackageStatus(ctx context.Context, configDir string) packageStatus {
 
 // convertStatusToSummary combines dotfile statuses and package results into a unified summary
 func convertStatusToSummary(statuses []dotfiles.DotfileStatus, pkgResult packageStatus) output.Summary {
-	// Separate dotfiles by state
-	var managedItems, missingItems []output.Item
-	for _, s := range statuses {
-		item := output.Item{
-			Name: "." + s.Name,
-			Path: s.Target,
-			Metadata: map[string]interface{}{
-				"source":      s.Source,
-				"destination": s.Target,
-			},
-		}
+	// Convert dotfiles to output format
+	managedItems, missingItems := convertDotfileStatusToOutput(statuses)
 
-		switch s.State {
-		case dotfiles.SyncStateManaged:
-			item.State = output.StateManaged
-			managedItems = append(managedItems, item)
-		case dotfiles.SyncStateMissing:
-			item.State = output.StateMissing
-			missingItems = append(missingItems, item)
-		case dotfiles.SyncStateDrifted:
-			// Drifted items go to Managed with StateDegraded state - the formatter expects this
-			item.State = output.StateDegraded
-			managedItems = append(managedItems, item)
-		}
-	}
-
-	// Convert dotfiles to output.Result
 	dotfileOutput := output.Result{
 		Domain:  "dotfile",
 		Managed: managedItems,

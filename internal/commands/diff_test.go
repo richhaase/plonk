@@ -156,7 +156,7 @@ func TestFilterDriftedStatus(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := filterDriftedStatus(tt.arg, driftedFiles, testHome)
+			got := filterDriftedStatus(tt.arg, driftedFiles)
 			if tt.wantFound {
 				if got == nil {
 					t.Errorf("filterDriftedStatus() = nil, want item with name %v", tt.wantName)

@@ -56,7 +56,7 @@ func runDiff(cmd *cobra.Command, args []string) error {
 
 	// Filter by argument if provided
 	if len(args) > 0 {
-		filtered := filterDriftedStatus(args[0], driftedFiles, homeDir)
+		filtered := filterDriftedStatus(args[0], driftedFiles)
 		if filtered == nil {
 			return fmt.Errorf("dotfile not found or not drifted: %s", args[0])
 		}
@@ -102,7 +102,7 @@ func getDriftedDotfileStatuses(cfg *config.Config, configDir, homeDir string) ([
 }
 
 // filterDriftedStatus finds a specific drifted file from the list
-func filterDriftedStatus(arg string, driftedFiles []dotfiles.DotfileStatus, homeDir string) *dotfiles.DotfileStatus {
+func filterDriftedStatus(arg string, driftedFiles []dotfiles.DotfileStatus) *dotfiles.DotfileStatus {
 	// Normalize the argument path
 	argPath, err := normalizePath(arg)
 	if err != nil {

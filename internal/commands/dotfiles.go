@@ -47,36 +47,13 @@ func runDotfiles(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Separate by state for output.Result
-	var managedItems, missingItems []output.Item
-	for _, s := range statuses {
-		item := output.Item{
-			Name: "." + s.Name,
-			Path: s.Target,
-			Metadata: map[string]interface{}{
-				"source":      s.Source,
-				"destination": s.Target,
-			},
-		}
+	// Separate by state and convert to output format
+	managed, missing := convertDotfileStatusToOutput(statuses)
 
-		switch s.State {
-		case dotfiles.SyncStateManaged:
-			item.State = output.StateManaged
-			managedItems = append(managedItems, item)
-		case dotfiles.SyncStateMissing:
-			item.State = output.StateMissing
-			missingItems = append(missingItems, item)
-		case dotfiles.SyncStateDrifted:
-			item.State = output.StateDegraded
-			managedItems = append(managedItems, item)
-		}
-	}
-
-	// Convert to output format
 	outputResult := output.Result{
 		Domain:  "dotfile",
-		Managed: managedItems,
-		Missing: missingItems,
+		Managed: managed,
+		Missing: missing,
 	}
 
 	// Prepare output
