@@ -6,6 +6,7 @@ package output
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 )
 
@@ -96,30 +97,18 @@ func NewStatusFormatter(data StatusOutput) StatusFormatter {
 
 // sortItems sorts items by name in-place
 func sortItems(items []Item) {
-	// Simple bubble sort for stability
-	for i := 0; i < len(items); i++ {
-		for j := i + 1; j < len(items); j++ {
-			if items[i].Name > items[j].Name {
-				items[i], items[j] = items[j], items[i]
-			}
-		}
-	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].Name < items[j].Name
+	})
 }
 
 // sortItemsByManager returns sorted manager names from the map
 func sortItemsByManager(itemsByManager map[string][]Item) []string {
-	var managers []string
+	managers := make([]string, 0, len(itemsByManager))
 	for manager := range itemsByManager {
 		managers = append(managers, manager)
 	}
-	// Simple sort
-	for i := 0; i < len(managers); i++ {
-		for j := i + 1; j < len(managers); j++ {
-			if managers[i] > managers[j] {
-				managers[i], managers[j] = managers[j], managers[i]
-			}
-		}
-	}
+	sort.Strings(managers)
 	return managers
 }
 
