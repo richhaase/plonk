@@ -5,10 +5,6 @@ package dotfiles
 
 import (
 	"context"
-	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
@@ -24,191 +20,105 @@ type ApplyFilterOptions struct {
 
 // ApplySelective applies only the dotfiles whose destination paths are in the filter set.
 // The filter should contain normalized absolute paths (use filepath.Abs and filepath.Clean).
-func ApplySelective(ctx context.Context, configDir, homeDir string, cfg *config.Config, opts ApplyFilterOptions) (output.DotfileResults, error) {
-	return applyWithFilter(ctx, configDir, homeDir, cfg, opts.DryRun, opts.Filter)
+func ApplySelective(_ context.Context, configDir, homeDir string, cfg *config.Config, opts ApplyFilterOptions) (output.DotfileResults, error) {
+	manager := NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
+
+	// Get all statuses
+	statuses, err := manager.Reconcile()
+	if err != nil {
+		return output.DotfileResults{DryRun: opts.DryRun}, err
+	}
+
+	// Filter if needed
+	if len(opts.Filter) > 0 {
+		var filtered []DotfileStatus
+		for _, s := range statuses {
+			if opts.Filter[s.Target] {
+				filtered = append(filtered, s)
+			}
+		}
+		statuses = filtered
+	}
+
+	return applyStatuses(manager, statuses, opts.DryRun)
 }
 
 // Apply applies dotfile configuration and returns the result
-func Apply(ctx context.Context, configDir, homeDir string, cfg *config.Config, dryRun bool) (output.DotfileResults, error) {
-	return applyWithFilter(ctx, configDir, homeDir, cfg, dryRun, nil)
+func Apply(_ context.Context, configDir, homeDir string, cfg *config.Config, dryRun bool) (output.DotfileResults, error) {
+	manager := NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
+
+	statuses, err := manager.Reconcile()
+	if err != nil {
+		return output.DotfileResults{DryRun: dryRun}, err
+	}
+
+	return applyStatuses(manager, statuses, dryRun)
 }
 
-// applyWithFilter is the internal implementation that supports optional filtering
-func applyWithFilter(ctx context.Context, configDir, homeDir string, cfg *config.Config, dryRun bool, filter map[string]bool) (output.DotfileResults, error) {
-	manager := NewManagerWithConfig(homeDir, configDir, cfg)
-
-	// Get desired state from config
-	desired, err := manager.GetConfiguredDotfiles()
-	if err != nil {
-		return output.DotfileResults{}, err
+// applyStatuses applies the given dotfile statuses and returns results
+func applyStatuses(manager *DotfileManager, statuses []DotfileStatus, dryRun bool) (output.DotfileResults, error) {
+	result := output.DotfileResults{
+		DryRun:     dryRun,
+		TotalFiles: len(statuses),
 	}
 
-	// Get actual state from filesystem
-	actual, err := manager.GetActualDotfiles(ctx)
-	if err != nil {
-		return output.DotfileResults{}, err
-	}
-
-	// Reconcile desired vs actual
-	reconciled := ReconcileItems(desired, actual)
-
-	// If we have a filter, only keep items that match
-	if len(filter) > 0 {
-		reconciled = filterItems(reconciled, filter, homeDir)
-	}
-
-	var actions []output.DotfileOperation
-	summary := output.DotfileSummary{}
-
-	// Count missing and drifted dotfiles
-	applyCount := 0
-	for _, item := range reconciled {
-		if item.State == StateMissing || item.State == StateDegraded {
-			applyCount++
+	spinnerCount := 0
+	for _, s := range statuses {
+		if s.State == SyncStateMissing || s.State == SyncStateDrifted {
+			spinnerCount++
 		}
 	}
 
-	// Create spinner manager for all dotfile operations if we have files to apply
 	var spinnerManager *output.SpinnerManager
-	if applyCount > 0 {
-		spinnerManager = output.NewSpinnerManager(applyCount)
+	if spinnerCount > 0 {
+		spinnerManager = output.NewSpinnerManager(spinnerCount)
 	}
 
-	// Apply options for file operations
-	opts := ApplyOptions{
-		DryRun: dryRun,
-		Backup: true,
-	}
+	for _, s := range statuses {
+		switch s.State {
+		case SyncStateManaged:
+			result.Summary.Unchanged++
 
-	// Process missing and drifted dotfiles (need to be created/restored)
-	for _, item := range reconciled {
-		switch item.State {
-		case StateMissing, StateDegraded:
-			// Start spinner for this dotfile
+		case SyncStateMissing, SyncStateDrifted:
 			var spinner *output.Spinner
 			if spinnerManager != nil {
-				spinner = spinnerManager.StartSpinner("Deploying", item.Name)
+				spinner = spinnerManager.StartSpinner("Deploying", s.Name)
 			}
 
-			if !dryRun {
-				// Apply the change directly using the manager
-				err := applyDotfileItem(ctx, manager, item, opts)
+			action := output.DotfileOperation{
+				Source:      s.Source,
+				Destination: s.Target,
+			}
 
-				action := output.DotfileOperation{
-					Source:      item.Destination,
-					Destination: item.Name,
-					Action:      "copy",
-					Status:      "added",
+			if dryRun {
+				action.Action = "would-copy"
+				action.Status = "would-add"
+				result.Summary.Added++
+				if spinner != nil {
+					spinner.Success("would-deploy " + s.Name)
 				}
-
+			} else {
+				err := manager.Deploy(s.Name)
 				if err != nil {
 					action.Action = "error"
 					action.Status = "failed"
 					action.Error = err.Error()
-					summary.Failed++
+					result.Summary.Failed++
 					if spinner != nil {
-						spinner.Error(fmt.Sprintf("Failed to deploy %s: %s", item.Name, err.Error()))
+						spinner.Error("Failed to deploy " + s.Name + ": " + err.Error())
 					}
 				} else {
-					summary.Added++
+					action.Action = "copy"
+					action.Status = "added"
+					result.Summary.Added++
 					if spinner != nil {
-						spinner.Success(fmt.Sprintf("deployed %s", item.Name))
+						spinner.Success("deployed " + s.Name)
 					}
 				}
-				actions = append(actions, action)
-			} else {
-				// Dry run
-				actions = append(actions, output.DotfileOperation{
-					Source:      item.Destination,
-					Destination: item.Name,
-					Action:      "would-copy",
-					Status:      "would-add",
-				})
-				summary.Added++
-				if spinner != nil {
-					spinner.Success(fmt.Sprintf("would-deploy %s", item.Name))
-				}
 			}
-		case StateManaged:
-			// Already managed files are unchanged
-			summary.Unchanged++
+			result.Actions = append(result.Actions, action)
 		}
 	}
 
-	// For selective apply, TotalFiles reflects filtered count
-	totalFiles := len(desired)
-	if len(filter) > 0 {
-		totalFiles = len(reconciled)
-	}
-
-	return output.DotfileResults{
-		DryRun:     dryRun,
-		TotalFiles: totalFiles,
-		Actions:    actions,
-		Summary:    summary,
-	}, nil
-}
-
-// applyDotfileItem applies a single dotfile item using the manager
-func applyDotfileItem(ctx context.Context, manager *Manager, item DotfileItem, opts ApplyOptions) error {
-	// Get source and destination from item
-	source := item.Source
-	if source == "" {
-		return fmt.Errorf("missing source information for dotfile %s", item.Name)
-	}
-
-	destination := item.Destination
-	if destination == "" {
-		return fmt.Errorf("missing destination information for dotfile %s", item.Name)
-	}
-
-	// Use the manager's ProcessDotfileForApply method
-	result, err := manager.ProcessDotfileForApply(ctx, source, destination, opts)
-	if err != nil {
-		return fmt.Errorf("applying dotfile %s: %w", item.Name, err)
-	}
-
-	if result.Status != "added" && result.Status != "updated" {
-		return fmt.Errorf("unexpected status %s when applying dotfile %s", result.Status, item.Name)
-	}
-
-	return nil
-}
-
-// filterItems filters reconciled items to only include those matching the filter set
-func filterItems(items []DotfileItem, filter map[string]bool, homeDir string) []DotfileItem {
-	if len(filter) == 0 {
-		return items
-	}
-
-	var filtered []DotfileItem
-	for _, item := range items {
-		// Get the destination path from item
-		dest := item.Destination
-
-		// Normalize the destination path
-		normalizedDest := normalizeDestPath(dest, homeDir)
-
-		// Check if this item is in the filter set
-		if filter[normalizedDest] {
-			filtered = append(filtered, item)
-		}
-	}
-	return filtered
-}
-
-// normalizeDestPath normalizes a destination path for comparison
-func normalizeDestPath(path, homeDir string) string {
-	path = os.ExpandEnv(path)
-
-	if strings.HasPrefix(path, "~/") {
-		path = filepath.Join(homeDir, path[2:])
-	}
-
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return path
-	}
-
-	return filepath.Clean(absPath)
+	return result, nil
 }

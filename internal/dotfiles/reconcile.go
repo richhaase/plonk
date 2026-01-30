@@ -4,45 +4,82 @@
 package dotfiles
 
 import (
-	"context"
-
-	"github.com/richhaase/plonk/internal/config"
+	"os"
 )
 
-// Result contains the results of dotfile reconciliation
-type Result struct {
-	Domain    string
-	Managed   []DotfileItem
-	Missing   []DotfileItem
-	Untracked []DotfileItem
+// Reconcile returns the sync status of all managed dotfiles
+func (m *DotfileManager) Reconcile() ([]DotfileStatus, error) {
+	dotfiles, err := m.List()
+	if err != nil {
+		return nil, err
+	}
+
+	var statuses []DotfileStatus
+	for _, d := range dotfiles {
+		state, err := m.getState(d)
+		if err != nil {
+			return nil, err
+		}
+		statuses = append(statuses, DotfileStatus{
+			Dotfile: d,
+			State:   state,
+		})
+	}
+
+	return statuses, nil
 }
 
-// ReconcileWithConfig reconciles dotfiles using injected config
-func ReconcileWithConfig(ctx context.Context, homeDir, configDir string, cfg *config.Config) (Result, error) {
-	manager := NewManagerWithConfig(homeDir, configDir, cfg)
-
-	// Get desired state from config
-	desired, err := manager.GetConfiguredDotfiles()
+// getState determines the sync state of a single dotfile
+func (m *DotfileManager) getState(d Dotfile) (SyncState, error) {
+	// Check if target exists
+	_, err := m.fs.Stat(d.Target)
 	if err != nil {
-		return Result{}, err
+		if os.IsNotExist(err) {
+			return SyncStateMissing, nil
+		}
+		return "", err
 	}
 
-	// Get actual state from filesystem
-	actual, err := manager.GetActualDotfiles(ctx)
+	// Target exists, check if drifted
+	drifted, err := m.IsDrifted(d)
 	if err != nil {
-		return Result{}, err
+		return "", err
 	}
 
-	// Reconcile desired vs actual using dotfile-specific reconciliation
-	reconciled := ReconcileItems(desired, actual)
+	if drifted {
+		return SyncStateDrifted, nil
+	}
 
-	// Group by state for the result
-	managed, missing, untracked := GroupItemsByState(reconciled)
+	return SyncStateManaged, nil
+}
 
-	return Result{
-		Domain:    "dotfile",
-		Managed:   managed,
-		Missing:   missing,
-		Untracked: untracked,
-	}, nil
+// ApplyAll deploys all missing or drifted dotfiles
+func (m *DotfileManager) ApplyAll(dryRun bool) (DeployResult, error) {
+	statuses, err := m.Reconcile()
+	if err != nil {
+		return DeployResult{DryRun: dryRun}, err
+	}
+
+	result := DeployResult{DryRun: dryRun}
+
+	for _, status := range statuses {
+		switch status.State {
+		case SyncStateManaged:
+			result.Skipped = append(result.Skipped, status.Dotfile)
+
+		case SyncStateMissing, SyncStateDrifted:
+			if dryRun {
+				result.Deployed = append(result.Deployed, status.Dotfile)
+			} else {
+				if err := m.Deploy(status.Name); err != nil {
+					result.Failed = append(result.Failed, status.Dotfile)
+					result.Errors = append(result.Errors, err)
+				} else {
+					result.Deployed = append(result.Deployed, status.Dotfile)
+				}
+			}
+		}
+	}
+
+	return result, nil
 }
