@@ -1,7 +1,6 @@
 package dotfiles
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -9,7 +8,7 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 )
 
-func TestReconcileWithConfig_RealFS(t *testing.T) {
+func TestReconcile_RealFS(t *testing.T) {
 	// Create temp directories
 	configDir, err := os.MkdirTemp("", "plonk-config-*")
 	if err != nil {
@@ -31,34 +30,32 @@ func TestReconcileWithConfig_RealFS(t *testing.T) {
 		t.Fatalf("Failed to create vimrc: %v", err)
 	}
 
-	// Create config with nil patterns
-	cfg := &config.Config{
-		IgnorePatterns: nil,
-	}
-
-	ctx := context.Background()
-	result, err := ReconcileWithConfig(ctx, homeDir, configDir, cfg)
+	// Create manager with nil patterns
+	dm := NewDotfileManager(configDir, homeDir, nil)
+	statuses, err := dm.Reconcile()
 	if err != nil {
-		t.Fatalf("ReconcileWithConfig() error: %v", err)
+		t.Fatalf("Reconcile() error: %v", err)
 	}
 
 	t.Logf("configDir: %s", configDir)
 	t.Logf("homeDir: %s", homeDir)
-	t.Logf("Domain: %s", result.Domain)
-	t.Logf("Managed: %d", len(result.Managed))
-	t.Logf("Missing: %d", len(result.Missing))
-	t.Logf("Drifted: %d", len(result.Drifted))
-	for _, item := range result.Missing {
-		t.Logf("  - Missing: %s (source: %s, dest: %s)", item.Name, item.Source, item.Destination)
+	t.Logf("Statuses count: %d", len(statuses))
+
+	missingCount := 0
+	for _, s := range statuses {
+		if s.State == SyncStateMissing {
+			missingCount++
+			t.Logf("  - Missing: %s (source: %s, target: %s)", s.Name, s.Source, s.Target)
+		}
 	}
 
 	// Should find 2 missing files (not deployed yet)
-	if len(result.Missing) != 2 {
-		t.Errorf("Expected 2 missing files, got %d", len(result.Missing))
+	if missingCount != 2 {
+		t.Errorf("Expected 2 missing files, got %d", missingCount)
 	}
 }
 
-func TestReconcileWithConfig_WithDefaultConfig(t *testing.T) {
+func TestReconcile_WithDefaultConfig(t *testing.T) {
 	// Create temp directories
 	configDir, err := os.MkdirTemp("", "plonk-config-*")
 	if err != nil {
@@ -83,30 +80,32 @@ func TestReconcileWithConfig_WithDefaultConfig(t *testing.T) {
 	// Use LoadWithDefaults like the command does
 	cfg := config.LoadWithDefaults(configDir)
 
-	ctx := context.Background()
-	result, err := ReconcileWithConfig(ctx, homeDir, configDir, cfg)
+	dm := NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
+	statuses, err := dm.Reconcile()
 	if err != nil {
-		t.Fatalf("ReconcileWithConfig() error: %v", err)
+		t.Fatalf("Reconcile() error: %v", err)
 	}
 
 	t.Logf("configDir: %s", configDir)
 	t.Logf("homeDir: %s", homeDir)
 	t.Logf("IgnorePatterns: %v", cfg.IgnorePatterns)
-	t.Logf("Domain: %s", result.Domain)
-	t.Logf("Managed: %d", len(result.Managed))
-	t.Logf("Missing: %d", len(result.Missing))
-	t.Logf("Drifted: %d", len(result.Drifted))
-	for _, item := range result.Missing {
-		t.Logf("  - Missing: %s (source: %s, dest: %s)", item.Name, item.Source, item.Destination)
+	t.Logf("Statuses count: %d", len(statuses))
+
+	missingCount := 0
+	for _, s := range statuses {
+		if s.State == SyncStateMissing {
+			missingCount++
+			t.Logf("  - Missing: %s (source: %s, target: %s)", s.Name, s.Source, s.Target)
+		}
 	}
 
 	// Should find 2 missing files (not deployed yet)
-	if len(result.Missing) != 2 {
-		t.Errorf("Expected 2 missing files, got %d", len(result.Missing))
+	if missingCount != 2 {
+		t.Errorf("Expected 2 missing files, got %d", missingCount)
 	}
 }
 
-func TestReconcileWithConfig_WithRealUserHome(t *testing.T) {
+func TestReconcile_WithRealUserHome(t *testing.T) {
 	// Create temp config directory
 	configDir, err := os.MkdirTemp("", "plonk-config-*")
 	if err != nil {
@@ -125,24 +124,26 @@ func TestReconcileWithConfig_WithRealUserHome(t *testing.T) {
 	// Use LoadWithDefaults like the command does
 	cfg := config.LoadWithDefaults(configDir)
 
-	ctx := context.Background()
-	result, err := ReconcileWithConfig(ctx, homeDir, configDir, cfg)
+	dm := NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
+	statuses, err := dm.Reconcile()
 	if err != nil {
-		t.Fatalf("ReconcileWithConfig() error: %v", err)
+		t.Fatalf("Reconcile() error: %v", err)
 	}
 
 	t.Logf("configDir: %s", configDir)
 	t.Logf("homeDir: %s", homeDir)
-	t.Logf("Domain: %s", result.Domain)
-	t.Logf("Managed: %d", len(result.Managed))
-	t.Logf("Missing: %d", len(result.Missing))
-	t.Logf("Drifted: %d", len(result.Drifted))
-	for _, item := range result.Missing {
-		t.Logf("  - Missing: %s (source: %s, dest: %s)", item.Name, item.Source, item.Destination)
+	t.Logf("Statuses count: %d", len(statuses))
+
+	missingCount := 0
+	for _, s := range statuses {
+		if s.State == SyncStateMissing {
+			missingCount++
+			t.Logf("  - Missing: %s (source: %s, target: %s)", s.Name, s.Source, s.Target)
+		}
 	}
 
 	// Should find 1 missing file
-	if len(result.Missing) != 1 {
-		t.Errorf("Expected 1 missing file, got %d", len(result.Missing))
+	if missingCount != 1 {
+		t.Errorf("Expected 1 missing file, got %d", missingCount)
 	}
 }

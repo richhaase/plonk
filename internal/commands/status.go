@@ -50,19 +50,20 @@ func runStatus(cmd *cobra.Command, args []string) error {
 
 	// Reconcile dotfiles with injected config
 	cfg := config.LoadWithDefaults(configDir)
-	ctx := context.Background()
 
-	// Reconcile dotfiles
-	dotfileResult, err := dotfiles.ReconcileWithConfig(ctx, homeDir, configDir, cfg)
+	// Create DotfileManager and reconcile directly
+	dm := dotfiles.NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
+	statuses, err := dm.Reconcile()
 	if err != nil {
 		return err
 	}
 
 	// Get package status from lock file
+	ctx := context.Background()
 	packageResult := getPackageStatus(ctx, configDir)
 
 	// Convert to output summary
-	summary := convertToSummary(dotfileResult, packageResult)
+	summary := convertStatusToSummary(statuses, packageResult)
 
 	// Check file existence and validity
 	configPath := filepath.Join(configDir, "plonk.yaml")
@@ -173,14 +174,39 @@ func getPackageStatus(ctx context.Context, configDir string) packageStatus {
 	return result
 }
 
-// convertToSummary combines dotfile and package results into a unified summary
-func convertToSummary(dotResult dotfiles.Result, pkgResult packageStatus) output.Summary {
-	// Convert dotfiles result to output.Result
+// convertStatusToSummary combines dotfile statuses and package results into a unified summary
+func convertStatusToSummary(statuses []dotfiles.DotfileStatus, pkgResult packageStatus) output.Summary {
+	// Separate dotfiles by state
+	var managedItems, missingItems []output.Item
+	for _, s := range statuses {
+		item := output.Item{
+			Name: "." + s.Name,
+			Path: s.Target,
+			Metadata: map[string]interface{}{
+				"source":      s.Source,
+				"destination": s.Target,
+			},
+		}
+
+		switch s.State {
+		case dotfiles.SyncStateManaged:
+			item.State = output.StateManaged
+			managedItems = append(managedItems, item)
+		case dotfiles.SyncStateMissing:
+			item.State = output.StateMissing
+			missingItems = append(missingItems, item)
+		case dotfiles.SyncStateDrifted:
+			// Drifted items go to Managed with StateDegraded state - the formatter expects this
+			item.State = output.StateDegraded
+			managedItems = append(managedItems, item)
+		}
+	}
+
+	// Convert dotfiles to output.Result
 	dotfileOutput := output.Result{
-		Domain:    "dotfile",
-		Managed:   convertDotfileItemsToOutput(dotResult.Managed),
-		Missing:   convertDotfileItemsToOutput(dotResult.Missing),
-		Untracked: convertDotfileItemsToOutput(dotResult.Untracked),
+		Domain:  "dotfile",
+		Managed: managedItems,
+		Missing: missingItems,
 	}
 
 	// Create package result
@@ -191,15 +217,14 @@ func convertToSummary(dotResult dotfiles.Result, pkgResult packageStatus) output
 		Errors:  pkgResult.Errors,
 	}
 
-	totalManaged := len(dotResult.Managed) + len(pkgResult.Managed)
-	totalMissing := len(dotResult.Missing) + len(pkgResult.Missing)
-	totalUntracked := len(dotResult.Untracked)
+	totalManaged := len(managedItems) + len(pkgResult.Managed)
+	totalMissing := len(missingItems) + len(pkgResult.Missing)
 	totalErrors := len(pkgResult.Errors)
 
 	return output.Summary{
 		TotalManaged:   totalManaged,
 		TotalMissing:   totalMissing,
-		TotalUntracked: totalUntracked,
+		TotalUntracked: 0,
 		TotalErrors:    totalErrors,
 		Results:        []output.Result{packageOutput, dotfileOutput},
 	}

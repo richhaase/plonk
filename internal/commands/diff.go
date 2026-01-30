@@ -4,7 +4,6 @@
 package commands
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -45,7 +44,7 @@ func runDiff(cmd *cobra.Command, args []string) error {
 	cfg := config.LoadWithDefaults(configDir)
 
 	// Get drifted dotfiles from reconciliation
-	driftedFiles, err := getDriftedDotfiles(cmd.Context(), cfg, configDir, homeDir)
+	driftedFiles, err := getDriftedDotfileStatuses(cfg, configDir, homeDir)
 	if err != nil {
 		return fmt.Errorf("failed to get drifted files: %w", err)
 	}
@@ -57,11 +56,11 @@ func runDiff(cmd *cobra.Command, args []string) error {
 
 	// Filter by argument if provided
 	if len(args) > 0 {
-		filtered := filterDriftedFile(args[0], driftedFiles)
+		filtered := filterDriftedStatus(args[0], driftedFiles, homeDir)
 		if filtered == nil {
 			return fmt.Errorf("dotfile not found or not drifted: %s", args[0])
 		}
-		driftedFiles = []dotfiles.DotfileItem{*filtered}
+		driftedFiles = []dotfiles.DotfileStatus{*filtered}
 	}
 
 	// Get diff tool from config or use default
@@ -70,95 +69,40 @@ func runDiff(cmd *cobra.Command, args []string) error {
 		diffTool = "git diff --no-index"
 	}
 
-	// Create template processor for rendering templates
-	templateProcessor := dotfiles.NewTemplateProcessor(configDir)
-
 	// Execute diff for each drifted file
-	for _, item := range driftedFiles {
-		// Get the source path directly from the item
-		sourcePath := item.Source
-		if sourcePath == "" {
-			// Fallback: construct from config dir and name
-			sourceName := strings.TrimPrefix(item.Name, ".")
-			sourcePath = filepath.Join(configDir, sourceName)
-		} else if !filepath.IsAbs(sourcePath) {
-			// Source is a relative path, prepend configDir
-			sourcePath = filepath.Join(configDir, sourcePath)
-		}
+	for _, status := range driftedFiles {
+		sourcePath := status.Source
+		destPath := status.Target
 
-		// Get destination path directly from the item
-		destPath := item.Destination
-		if destPath == "" {
-			// Fallback
-			destPath = expandHome("~/" + item.Name)
-		} else {
-			normalizedDest, err := normalizePath(destPath)
-			if err == nil {
-				destPath = normalizedDest
-			} else {
-				destPath = expandHome(destPath)
-			}
-		}
-
-		// Check if source is a template - if so, render to temp file for diff
-		effectiveSourcePath := sourcePath
-
-		if item.IsTemplate {
-			// Render template to temporary file
-			rendered, err := templateProcessor.RenderToBytes(sourcePath)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error rendering template %s: %v\n", item.Name, err)
-				continue
-			}
-
-			// Create temp file with rendered content
-			tmpFile, err := os.CreateTemp("", "plonk-diff-*.rendered")
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error creating temp file for %s: %v\n", item.Name, err)
-				continue
-			}
-			defer os.Remove(tmpFile.Name())
-
-			if _, err := tmpFile.Write(rendered); err != nil {
-				tmpFile.Close()
-				fmt.Fprintf(os.Stderr, "Error writing temp file for %s: %v\n", item.Name, err)
-				continue
-			}
-			tmpFile.Close()
-
-			effectiveSourcePath = tmpFile.Name()
-		}
-
-		if err := executeDiffTool(diffTool, effectiveSourcePath, destPath); err != nil {
+		if err := executeDiffTool(diffTool, sourcePath, destPath); err != nil {
 			// Report error but continue with other files
-			fmt.Fprintf(os.Stderr, "Error showing diff for %s: %v\n", item.Name, err)
+			fmt.Fprintf(os.Stderr, "Error showing diff for %s: %v\n", status.Name, err)
 		}
 	}
 
 	return nil
 }
 
-// getDriftedDotfiles reconciles dotfiles and returns only drifted ones
-func getDriftedDotfiles(ctx context.Context, cfg *config.Config, configDir, homeDir string) ([]dotfiles.DotfileItem, error) {
-	// Reconcile dotfiles only
-	result, err := dotfiles.ReconcileWithConfig(ctx, homeDir, configDir, cfg)
+// getDriftedDotfileStatuses reconciles dotfiles and returns only drifted ones
+func getDriftedDotfileStatuses(cfg *config.Config, configDir, homeDir string) ([]dotfiles.DotfileStatus, error) {
+	dm := dotfiles.NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
+	statuses, err := dm.Reconcile()
 	if err != nil {
 		return nil, err
 	}
 
-	var drifted []dotfiles.DotfileItem
-	// Check all managed dotfiles for drift
-	for _, item := range result.Managed {
-		if item.State == dotfiles.StateDegraded {
-			drifted = append(drifted, item)
+	var drifted []dotfiles.DotfileStatus
+	for _, s := range statuses {
+		if s.State == dotfiles.SyncStateDrifted {
+			drifted = append(drifted, s)
 		}
 	}
 
 	return drifted, nil
 }
 
-// filterDriftedFile finds a specific drifted file from the list
-func filterDriftedFile(arg string, driftedFiles []dotfiles.DotfileItem) *dotfiles.DotfileItem {
+// filterDriftedStatus finds a specific drifted file from the list
+func filterDriftedStatus(arg string, driftedFiles []dotfiles.DotfileStatus, homeDir string) *dotfiles.DotfileStatus {
 	// Normalize the argument path
 	argPath, err := normalizePath(arg)
 	if err != nil {
@@ -167,15 +111,15 @@ func filterDriftedFile(arg string, driftedFiles []dotfiles.DotfileItem) *dotfile
 	}
 
 	for i := range driftedFiles {
-		item := &driftedFiles[i]
-		// Get the deployed path directly from the item
-		if item.Destination != "" {
-			deployedPath, err := normalizePath(item.Destination)
+		status := &driftedFiles[i]
+		// Compare against the target path
+		if status.Target != "" {
+			targetPath, err := normalizePath(status.Target)
 			if err != nil {
 				continue
 			}
-			if deployedPath == argPath {
-				return item
+			if targetPath == argPath {
+				return status
 			}
 		}
 	}

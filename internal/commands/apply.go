@@ -11,9 +11,9 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/spf13/cobra"
 )
 
@@ -142,8 +142,8 @@ func normalizePathWithHome(path, homeDir string) (string, error) {
 // runSelectiveApply applies only specific dotfiles
 func runSelectiveApply(ctx context.Context, paths []string, cfg *config.Config, configDir, homeDir string, dryRun bool) error {
 	// First, get all managed dotfiles to validate the requested files
-	// Only reconcile dotfiles, not packages, to avoid failures in environments without package support
-	dotfileResult, err := dotfiles.ReconcileWithConfig(ctx, homeDir, configDir, cfg)
+	dm := dotfiles.NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
+	statuses, err := dm.Reconcile()
 	if err != nil {
 		return fmt.Errorf("failed to get dotfile status: %w", err)
 	}
@@ -151,17 +151,9 @@ func runSelectiveApply(ctx context.Context, paths []string, cfg *config.Config, 
 	managedDests := make(map[string]bool) // normalized dest path -> exists
 
 	// Build map of managed files (by deployed path)
-	for _, item := range dotfileResult.Managed {
-		if item.Destination != "" {
-			normalizedDest, err := normalizePathWithHome(item.Destination, homeDir)
-			if err == nil {
-				managedDests[normalizedDest] = true
-			}
-		}
-	}
-	for _, item := range dotfileResult.Missing {
-		if item.Destination != "" {
-			normalizedDest, err := normalizePathWithHome(item.Destination, homeDir)
+	for _, s := range statuses {
+		if s.Target != "" {
+			normalizedDest, err := normalizePathWithHome(s.Target, homeDir)
 			if err == nil {
 				managedDests[normalizedDest] = true
 			}

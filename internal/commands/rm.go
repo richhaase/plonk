@@ -77,19 +77,16 @@ func runRm(cmd *cobra.Command, args []string) error {
 	// Load config using LoadWithDefaults for consistent zero-config behavior
 	cfg := config.LoadWithDefaults(configDir)
 
-	// Create dotfile manager with injected config
-	manager := dotfiles.NewManagerWithConfig(homeDir, configDir, cfg)
+	// Create DotfileManager directly
+	dm := dotfiles.NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
 
 	// Configure options
-	opts := dotfiles.RemoveOptions{
+	opts := RemoveOptions{
 		DryRun: flags.DryRun,
 	}
 
-	// Process dotfiles using domain package
-	results, err := manager.RemoveFiles(cfg, args, opts)
-	if err != nil {
-		return err
-	}
+	// Process dotfiles using helper function
+	results := removeDotfiles(dm, configDir, homeDir, args, opts)
 
 	// Create output data
 	summary := calculateRemovalSummary(results)
@@ -97,7 +94,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 	// Convert results to serializable format
 	formatterData := output.DotfileRemovalOutput{
 		TotalFiles: len(results),
-		Results:    convertRemoveResultsToOutput(results),
+		Results:    convertRemoveResultsToSerializable(results),
 		Summary: output.DotfileRemovalSummary{
 			Removed: summary.Removed,
 			Skipped: summary.Skipped,
@@ -108,7 +105,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 	output.RenderOutput(formatter)
 
 	// Check if all operations failed and return appropriate error
-	return validateRemoveResults(results)
+	return validateRemoveResultsErr(results)
 }
 
 // DotfileRemovalSummary provides summary for dotfile removal
@@ -119,23 +116,23 @@ type DotfileRemovalSummary struct {
 }
 
 // calculateRemovalSummary calculates summary from remove results
-func calculateRemovalSummary(results []dotfiles.RemoveResult) DotfileRemovalSummary {
+func calculateRemovalSummary(results []RemoveResult) DotfileRemovalSummary {
 	summary := DotfileRemovalSummary{}
 	for _, result := range results {
 		switch result.Status {
-		case dotfiles.RemoveStatusRemoved, dotfiles.RemoveStatusWouldRemove:
+		case RemoveStatusRemoved, RemoveStatusWouldRemove:
 			summary.Removed++
-		case dotfiles.RemoveStatusSkipped:
+		case RemoveStatusSkipped:
 			summary.Skipped++
-		case dotfiles.RemoveStatusFailed:
+		case RemoveStatusFailed:
 			summary.Failed++
 		}
 	}
 	return summary
 }
 
-// convertRemoveResultsToOutput converts dotfiles.RemoveResult to SerializableRemovalResult
-func convertRemoveResultsToOutput(results []dotfiles.RemoveResult) []output.SerializableRemovalResult {
+// convertRemoveResultsToSerializable converts RemoveResult to SerializableRemovalResult
+func convertRemoveResultsToSerializable(results []RemoveResult) []output.SerializableRemovalResult {
 	converted := make([]output.SerializableRemovalResult, len(results))
 	for i, result := range results {
 		errorStr := ""
@@ -155,9 +152,9 @@ func convertRemoveResultsToOutput(results []dotfiles.RemoveResult) []output.Seri
 	return converted
 }
 
-// validateRemoveResults checks if all remove operations failed and returns appropriate error
-func validateRemoveResults(results []dotfiles.RemoveResult) error {
+// validateRemoveResultsErr checks if all remove operations failed and returns appropriate error
+func validateRemoveResultsErr(results []RemoveResult) error {
 	return ValidateBatchResults(len(results), "remove dotfiles", func(i int) bool {
-		return results[i].Status == dotfiles.RemoveStatusFailed
+		return results[i].Status == RemoveStatusFailed
 	})
 }
