@@ -5,6 +5,7 @@ package lock
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"slices"
@@ -191,6 +192,9 @@ func (s *LockV3Service) migrateV2(data []byte) (*LockV3, error) {
 
 		if manager != "" && name != "" {
 			v3.AddPackage(manager, name)
+		} else {
+			// Log warning for packages that can't be migrated
+			log.Printf("Warning: skipping v2 package during migration (missing manager=%q or name=%q)", manager, name)
 		}
 	}
 

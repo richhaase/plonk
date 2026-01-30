@@ -31,7 +31,9 @@ func (g *GoSimple) IsInstalled(ctx context.Context, name string) (bool, error) {
 
 	// Load installed list on first call
 	if g.installed == nil {
-		g.loadInstalled()
+		if err := g.loadInstalled(); err != nil {
+			return false, err
+		}
 	}
 
 	// Extract binary name from package path
@@ -50,17 +52,21 @@ func (g *GoSimple) IsInstalled(ctx context.Context, name string) (bool, error) {
 }
 
 // loadInstalled scans the Go bin directory for installed binaries
-func (g *GoSimple) loadInstalled() {
+func (g *GoSimple) loadInstalled() error {
 	g.installed = make(map[string]bool)
 
 	binDir := goBinDir()
 	if binDir == "" {
-		return
+		return fmt.Errorf("failed to determine go bin directory: GOBIN not set and home directory unavailable")
 	}
 
 	entries, err := os.ReadDir(binDir)
 	if err != nil {
-		return
+		if os.IsNotExist(err) {
+			// Go bin directory doesn't exist yet - this is normal for fresh installs
+			return nil
+		}
+		return fmt.Errorf("failed to read go bin directory %s: %w", binDir, err)
 	}
 
 	for _, entry := range entries {
@@ -68,6 +74,7 @@ func (g *GoSimple) loadInstalled() {
 			g.installed[entry.Name()] = true
 		}
 	}
+	return nil
 }
 
 // Install installs a go package

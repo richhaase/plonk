@@ -6,6 +6,7 @@ package dotfiles
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -168,7 +169,9 @@ func (m *DotfileManager) Deploy(name string) error {
 
 	if err := m.fs.Rename(tmpPath, targetPath); err != nil {
 		// Clean up temp file on failure
-		_ = m.fs.Remove(tmpPath)
+		if cleanupErr := m.fs.Remove(tmpPath); cleanupErr != nil {
+			log.Printf("Warning: failed to clean up temp file %s: %v", tmpPath, cleanupErr)
+		}
 		return fmt.Errorf("failed to rename: %w", err)
 	}
 
@@ -266,7 +269,9 @@ func (m *DotfileManager) toSource(absTarget string) string {
 	// Remove home prefix
 	relPath, err := filepath.Rel(m.homeDir, absTarget)
 	if err != nil {
-		return absTarget // fallback
+		// This should only happen if paths are on different drives (Windows) or malformed
+		log.Printf("Warning: failed to compute relative path from %s to %s: %v", m.homeDir, absTarget, err)
+		return absTarget // fallback - may cause issues
 	}
 
 	// Remove dot prefix from the first component

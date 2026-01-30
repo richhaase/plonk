@@ -74,7 +74,7 @@ func (p *PNPMSimple) Install(ctx context.Context, name string) error {
 		if strings.Contains(strings.ToLower(string(output)), "already installed") {
 			return nil
 		}
-		return err
+		return fmt.Errorf("pnpm add -g %s: %s: %w", name, strings.TrimSpace(string(output)), err)
 	}
 	return nil
 }

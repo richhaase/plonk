@@ -73,7 +73,7 @@ func (c *CargoSimple) Install(ctx context.Context, name string) error {
 		if strings.Contains(outStr, "already exists") || strings.Contains(outStr, "already installed") {
 			return nil
 		}
-		return err
+		return fmt.Errorf("cargo install %s: %s: %w", name, strings.TrimSpace(string(output)), err)
 	}
 	return nil
 }

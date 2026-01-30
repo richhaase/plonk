@@ -162,7 +162,7 @@ func (m *MemoryFS) Remove(path string) error {
 }
 
 func (m *MemoryFS) RemoveAll(path string) error {
-	// Remove all files and directories under path
+	// Remove all files and directories under path (including path itself)
 	prefix := path + "/"
 	for filePath := range m.Files {
 		if filePath == path || (len(filePath) > len(prefix) && filePath[:len(prefix)] == prefix) {
@@ -174,8 +174,6 @@ func (m *MemoryFS) RemoveAll(path string) error {
 			delete(m.Dirs, dirPath)
 		}
 	}
-	delete(m.Files, path)
-	delete(m.Dirs, path)
 	return nil
 }
 

@@ -70,6 +70,7 @@ func runDiff(cmd *cobra.Command, args []string) error {
 	}
 
 	// Execute diff for each drifted file
+	var diffErrors []string
 	for _, status := range driftedFiles {
 		sourcePath := status.Source
 		destPath := status.Target
@@ -77,9 +78,13 @@ func runDiff(cmd *cobra.Command, args []string) error {
 		if err := executeDiffTool(diffTool, sourcePath, destPath); err != nil {
 			// Report error but continue with other files
 			fmt.Fprintf(os.Stderr, "Error showing diff for %s: %v\n", status.Name, err)
+			diffErrors = append(diffErrors, status.Name)
 		}
 	}
 
+	if len(diffErrors) > 0 {
+		return fmt.Errorf("failed to show diff for %d file(s): %v", len(diffErrors), diffErrors)
+	}
 	return nil
 }
 

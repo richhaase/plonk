@@ -13,6 +13,13 @@ var (
 	managerMu    sync.Mutex
 )
 
+// ResetManagerCache clears the manager cache. Intended for testing purposes.
+func ResetManagerCache() {
+	managerMu.Lock()
+	defer managerMu.Unlock()
+	managerCache = make(map[string]Manager)
+}
+
 // GetManager returns a Manager by name, caching instances for reuse
 func GetManager(name string) (Manager, error) {
 	managerMu.Lock()

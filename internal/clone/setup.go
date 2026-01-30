@@ -55,9 +55,7 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 
 	// Check if PLONK_DIR already exists
 	if _, err := os.Stat(plonkDir); err == nil {
-		output.Printf("Plonk directory already exists at: %s\n", plonkDir)
-		output.Printf("If you want to clone a repository, manually delete the directory and run setup again.\n")
-		return nil
+		return fmt.Errorf("plonk directory already exists at %s; delete it manually and re-run clone if you want to replace it", plonkDir)
 	}
 
 	// Clone repository

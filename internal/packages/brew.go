@@ -5,6 +5,7 @@ package packages
 
 import (
 	"context"
+	"fmt"
 	"os/exec"
 	"strings"
 	"sync"
@@ -43,22 +44,24 @@ func (b *BrewSimple) loadInstalled(ctx context.Context) error {
 	// Get formulas
 	cmd := exec.CommandContext(ctx, "brew", "list", "--formula", "-1")
 	output, err := cmd.Output()
-	if err == nil {
-		for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
-			if line != "" {
-				b.installed[line] = true
-			}
+	if err != nil {
+		return fmt.Errorf("failed to list brew formulas: %w", err)
+	}
+	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+		if line != "" {
+			b.installed[line] = true
 		}
 	}
 
 	// Get casks
 	cmd = exec.CommandContext(ctx, "brew", "list", "--cask", "-1")
 	output, err = cmd.Output()
-	if err == nil {
-		for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
-			if line != "" {
-				b.installed[line] = true
-			}
+	if err != nil {
+		return fmt.Errorf("failed to list brew casks: %w", err)
+	}
+	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+		if line != "" {
+			b.installed[line] = true
 		}
 	}
 
@@ -74,7 +77,7 @@ func (b *BrewSimple) Install(ctx context.Context, name string) error {
 		if strings.Contains(strings.ToLower(string(output)), "already installed") {
 			return nil
 		}
-		return err
+		return fmt.Errorf("brew install %s: %s: %w", name, strings.TrimSpace(string(output)), err)
 	}
 	return nil
 }

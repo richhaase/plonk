@@ -4,6 +4,7 @@
 package config
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -205,6 +206,8 @@ func LoadFromPath(configPath string) (*Config, error) {
 func LoadWithDefaults(configDir string) *Config {
 	cfg, err := Load(configDir)
 	if err != nil {
+		// Log warning so users know their config was ignored
+		log.Printf("Warning: failed to load config from %s, using defaults: %v", configDir, err)
 		// Return copy of defaults on any error
 		defaultCopy := defaultConfig
 		return &defaultCopy
