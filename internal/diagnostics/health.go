@@ -144,9 +144,6 @@ func RunHealthChecksWithContext(ctx context.Context) HealthReport {
 	// Executable path check
 	report.Checks = append(report.Checks, checkExecutablePath())
 
-	// Template health check
-	report.Checks = append(report.Checks, checkTemplates())
-
 	// Determine overall health
 	report.Overall = calculateOverallHealth(report.Checks)
 
@@ -438,14 +435,6 @@ func checkExecutablePath() HealthCheck {
 		check.Details = append(check.Details, fmt.Sprintf("plonk found at: %s", plonkPath))
 	}
 
-	return check
-}
-
-// checkTemplates is a no-op since template support was removed
-func checkTemplates() HealthCheck {
-	check := NewHealthCheck("Templates", "dotfiles", "Template support removed")
-	check.Status = "info"
-	check.Message = "Template expansion is no longer supported"
 	return check
 }
 
