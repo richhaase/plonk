@@ -4,7 +4,6 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -80,11 +79,9 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	// Load config for ignore patterns with defaults
 	cfg := config.LoadWithDefaults(configDir)
 
-	ctx := context.Background()
-
 	// Handle sync-drifted flag
 	if syncDrifted {
-		return runSyncDrifted(ctx, cmd, cfg, configDir, homeDir, dryRun)
+		return runSyncDrifted(cfg, configDir, homeDir, dryRun)
 	}
 
 	// Require at least one file argument if not syncing drifted
@@ -135,7 +132,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 }
 
 // runSyncDrifted syncs all drifted files from $HOME back to $PLONKDIR
-func runSyncDrifted(ctx context.Context, cmd *cobra.Command, cfg *config.Config, configDir, homeDir string, dryRun bool) error {
+func runSyncDrifted(cfg *config.Config, configDir, homeDir string, dryRun bool) error {
 	// Get drifted dotfiles from reconciliation
 	driftedFiles, err := getDriftedDotfileStatuses(cfg, configDir, homeDir)
 	if err != nil {
