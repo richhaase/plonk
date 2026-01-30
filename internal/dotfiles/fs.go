@@ -19,6 +19,7 @@ type FileSystem interface {
 	Remove(path string) error
 	RemoveAll(path string) error
 	Rename(old, new string) error
+	Chmod(path string, mode os.FileMode) error
 }
 
 // OSFileSystem implements FileSystem using the os package
@@ -54,6 +55,10 @@ func (OSFileSystem) RemoveAll(path string) error {
 
 func (OSFileSystem) Rename(old, new string) error {
 	return os.Rename(old, new)
+}
+
+func (OSFileSystem) Chmod(path string, mode os.FileMode) error {
+	return os.Chmod(path, mode)
 }
 
 // MemoryFS implements FileSystem for testing
@@ -184,6 +189,11 @@ func (m *MemoryFS) Rename(old, new string) error {
 		return nil
 	}
 	return os.ErrNotExist
+}
+
+func (m *MemoryFS) Chmod(_ string, _ os.FileMode) error {
+	// MemoryFS doesn't track permissions, so this is a no-op
+	return nil
 }
 
 // memFileInfo implements os.FileInfo for MemoryFS

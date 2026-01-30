@@ -74,6 +74,11 @@ func (m *DotfileManager) Add(targetPath string) error {
 		absTarget = filepath.Join(m.homeDir, targetPath)
 	}
 
+	// Security: validate path is under $HOME to prevent path traversal attacks
+	if err := m.validatePathUnderHome(absTarget); err != nil {
+		return err
+	}
+
 	// Verify source exists
 	info, err := m.fs.Stat(absTarget)
 	if err != nil {
@@ -92,6 +97,13 @@ func (m *DotfileManager) addFile(absTarget string) error {
 	relPath := m.toSource(absTarget)
 	destPath := filepath.Join(m.configDir, relPath)
 
+	// Get source file info to preserve permissions
+	info, err := m.fs.Stat(absTarget)
+	if err != nil {
+		return fmt.Errorf("failed to stat %s: %w", absTarget, err)
+	}
+	mode := info.Mode().Perm()
+
 	// Read source
 	content, err := m.fs.ReadFile(absTarget)
 	if err != nil {
@@ -103,8 +115,8 @@ func (m *DotfileManager) addFile(absTarget string) error {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	// Write to config dir
-	if err := m.fs.WriteFile(destPath, content, 0644); err != nil {
+	// Write to config dir, preserving original permissions
+	if err := m.fs.WriteFile(destPath, content, mode); err != nil {
 		return fmt.Errorf("failed to write %s: %w", destPath, err)
 	}
 
@@ -150,6 +162,13 @@ func (m *DotfileManager) Deploy(name string) error {
 	sourcePath := filepath.Join(m.configDir, name)
 	targetPath := m.toTarget(name)
 
+	// Get source file info to preserve permissions
+	info, err := m.fs.Stat(sourcePath)
+	if err != nil {
+		return fmt.Errorf("failed to stat source: %w", err)
+	}
+	mode := info.Mode().Perm()
+
 	// Read source
 	content, err := m.fs.ReadFile(sourcePath)
 	if err != nil {
@@ -162,8 +181,9 @@ func (m *DotfileManager) Deploy(name string) error {
 	}
 
 	// Atomic write: write to temp file, then rename
+	// Use restrictive permissions for temp file, final permissions set after rename
 	tmpPath := targetPath + ".plonk.tmp"
-	if err := m.fs.WriteFile(tmpPath, content, 0644); err != nil {
+	if err := m.fs.WriteFile(tmpPath, content, 0600); err != nil {
 		return fmt.Errorf("failed to write temp file: %w", err)
 	}
 
@@ -173,6 +193,11 @@ func (m *DotfileManager) Deploy(name string) error {
 			log.Printf("Warning: failed to clean up temp file %s: %v", tmpPath, cleanupErr)
 		}
 		return fmt.Errorf("failed to rename: %w", err)
+	}
+
+	// Set final permissions after rename (rename preserves temp file permissions)
+	if err := m.fs.Chmod(targetPath, mode); err != nil {
+		return fmt.Errorf("failed to set permissions: %w", err)
 	}
 
 	return nil
@@ -280,6 +305,26 @@ func (m *DotfileManager) toSource(absTarget string) string {
 		parts[0] = parts[0][1:]
 	}
 	return strings.Join(parts, string(os.PathSeparator))
+}
+
+// validatePathUnderHome ensures the path is under $HOME to prevent path traversal attacks
+func (m *DotfileManager) validatePathUnderHome(absPath string) error {
+	// Clean the path to resolve any .. components
+	cleanPath := filepath.Clean(absPath)
+	cleanHome := filepath.Clean(m.homeDir)
+
+	// Check if the path is under home directory
+	rel, err := filepath.Rel(cleanHome, cleanPath)
+	if err != nil {
+		return fmt.Errorf("path %s is not accessible from home directory: %w", absPath, err)
+	}
+
+	// If the relative path starts with "..", it escapes the home directory
+	if strings.HasPrefix(rel, "..") {
+		return fmt.Errorf("path %s is outside home directory %s", absPath, m.homeDir)
+	}
+
+	return nil
 }
 
 // shouldIgnore returns true if the path should be ignored
