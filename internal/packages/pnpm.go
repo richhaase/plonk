@@ -9,10 +9,14 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"sync"
 )
 
 // PNPMSimple implements Manager for pnpm
-type PNPMSimple struct{}
+type PNPMSimple struct {
+	mu        sync.Mutex
+	installed map[string]bool
+}
 
 // NewPNPMSimple creates a new pnpm manager
 func NewPNPMSimple() *PNPMSimple {
@@ -21,10 +25,27 @@ func NewPNPMSimple() *PNPMSimple {
 
 // IsInstalled checks if a package is globally installed via pnpm
 func (p *PNPMSimple) IsInstalled(ctx context.Context, name string) (bool, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	// Load installed list on first call
+	if p.installed == nil {
+		if err := p.loadInstalled(ctx); err != nil {
+			return false, err
+		}
+	}
+
+	return p.installed[name], nil
+}
+
+// loadInstalled fetches all globally installed pnpm packages
+func (p *PNPMSimple) loadInstalled(ctx context.Context) error {
+	p.installed = make(map[string]bool)
+
 	cmd := exec.CommandContext(ctx, "pnpm", "list", "-g", "--depth=0", "--json")
 	output, err := cmd.Output()
 	if err != nil {
-		return false, fmt.Errorf("failed to list pnpm packages: %w", err)
+		return fmt.Errorf("failed to list pnpm packages: %w", err)
 	}
 
 	// pnpm outputs JSON array: [{"dependencies": {...}}]
@@ -32,15 +53,16 @@ func (p *PNPMSimple) IsInstalled(ctx context.Context, name string) (bool, error)
 		Dependencies map[string]any `json:"dependencies"`
 	}
 	if err := json.Unmarshal(output, &result); err != nil {
-		return false, fmt.Errorf("failed to parse pnpm output: %w", err)
+		return fmt.Errorf("failed to parse pnpm output: %w", err)
 	}
 
 	for _, item := range result {
-		if _, ok := item.Dependencies[name]; ok {
-			return true, nil
+		for name := range item.Dependencies {
+			p.installed[name] = true
 		}
 	}
-	return false, nil
+
+	return nil
 }
 
 // Install installs a package globally via pnpm

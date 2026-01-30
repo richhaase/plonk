@@ -10,10 +10,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 // GoSimple implements Manager for Go packages
-type GoSimple struct{}
+type GoSimple struct {
+	mu        sync.Mutex
+	installed map[string]bool
+}
 
 // NewGoSimple creates a new Go manager
 func NewGoSimple() *GoSimple {
@@ -22,9 +26,12 @@ func NewGoSimple() *GoSimple {
 
 // IsInstalled checks if a go package is installed by looking for its binary
 func (g *GoSimple) IsInstalled(ctx context.Context, name string) (bool, error) {
-	binDir := goBinDir()
-	if binDir == "" {
-		return false, nil
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	// Load installed list on first call
+	if g.installed == nil {
+		g.loadInstalled()
 	}
 
 	// Extract binary name from package path
@@ -39,9 +46,28 @@ func (g *GoSimple) IsInstalled(ctx context.Context, name string) (bool, error) {
 		binaryName = binaryName[:idx]
 	}
 
-	binPath := filepath.Join(binDir, binaryName)
-	_, err := os.Stat(binPath)
-	return err == nil, nil
+	return g.installed[binaryName], nil
+}
+
+// loadInstalled scans the Go bin directory for installed binaries
+func (g *GoSimple) loadInstalled() {
+	g.installed = make(map[string]bool)
+
+	binDir := goBinDir()
+	if binDir == "" {
+		return
+	}
+
+	entries, err := os.ReadDir(binDir)
+	if err != nil {
+		return
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			g.installed[entry.Name()] = true
+		}
+	}
 }
 
 // Install installs a go package

@@ -3,22 +3,44 @@
 
 package packages
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
 
-// GetManager returns a Manager by name
+var (
+	managerCache = make(map[string]Manager)
+	managerMu    sync.Mutex
+)
+
+// GetManager returns a Manager by name, caching instances for reuse
 func GetManager(name string) (Manager, error) {
+	managerMu.Lock()
+	defer managerMu.Unlock()
+
+	// Return cached manager if available
+	if mgr, ok := managerCache[name]; ok {
+		return mgr, nil
+	}
+
+	// Create new manager
+	var mgr Manager
 	switch name {
 	case "brew":
-		return NewBrewSimple(), nil
+		mgr = NewBrewSimple()
 	case "cargo":
-		return NewCargoSimple(), nil
+		mgr = NewCargoSimple()
 	case "go":
-		return NewGoSimple(), nil
+		mgr = NewGoSimple()
 	case "pnpm":
-		return NewPNPMSimple(), nil
+		mgr = NewPNPMSimple()
 	case "uv":
-		return NewUVSimple(), nil
+		mgr = NewUVSimple()
 	default:
 		return nil, fmt.Errorf("unsupported package manager: %s (supported: %v)", name, SupportedManagers)
 	}
+
+	// Cache and return
+	managerCache[name] = mgr
+	return mgr, nil
 }

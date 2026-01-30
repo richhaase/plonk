@@ -5,13 +5,16 @@ package packages
 
 import (
 	"context"
-	"errors"
 	"os/exec"
 	"strings"
+	"sync"
 )
 
 // BrewSimple implements Manager for Homebrew
-type BrewSimple struct{}
+type BrewSimple struct {
+	mu        sync.Mutex
+	installed map[string]bool
+}
 
 // NewBrewSimple creates a new Homebrew manager
 func NewBrewSimple() *BrewSimple {
@@ -20,17 +23,46 @@ func NewBrewSimple() *BrewSimple {
 
 // IsInstalled checks if a package is installed via brew
 func (b *BrewSimple) IsInstalled(ctx context.Context, name string) (bool, error) {
-	cmd := exec.CommandContext(ctx, "brew", "list", "--formula", name)
-	err := cmd.Run()
-	if err != nil {
-		// Exit code 1 means not installed, not an error
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
-			return false, nil
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	// Load installed list on first call
+	if b.installed == nil {
+		if err := b.loadInstalled(ctx); err != nil {
+			return false, err
 		}
-		return false, err
 	}
-	return true, nil
+
+	return b.installed[name], nil
+}
+
+// loadInstalled fetches all installed formulas and casks
+func (b *BrewSimple) loadInstalled(ctx context.Context) error {
+	b.installed = make(map[string]bool)
+
+	// Get formulas
+	cmd := exec.CommandContext(ctx, "brew", "list", "--formula", "-1")
+	output, err := cmd.Output()
+	if err == nil {
+		for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+			if line != "" {
+				b.installed[line] = true
+			}
+		}
+	}
+
+	// Get casks
+	cmd = exec.CommandContext(ctx, "brew", "list", "--cask", "-1")
+	output, err = cmd.Output()
+	if err == nil {
+		for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+			if line != "" {
+				b.installed[line] = true
+			}
+		}
+	}
+
+	return nil
 }
 
 // Install installs a package via brew

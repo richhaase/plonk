@@ -8,10 +8,14 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"sync"
 )
 
 // CargoSimple implements Manager for Rust's Cargo
-type CargoSimple struct{}
+type CargoSimple struct {
+	mu        sync.Mutex
+	installed map[string]bool
+}
 
 // NewCargoSimple creates a new Cargo manager
 func NewCargoSimple() *CargoSimple {
@@ -20,10 +24,27 @@ func NewCargoSimple() *CargoSimple {
 
 // IsInstalled checks if a package is installed via cargo
 func (c *CargoSimple) IsInstalled(ctx context.Context, name string) (bool, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Load installed list on first call
+	if c.installed == nil {
+		if err := c.loadInstalled(ctx); err != nil {
+			return false, err
+		}
+	}
+
+	return c.installed[name], nil
+}
+
+// loadInstalled fetches all installed cargo packages
+func (c *CargoSimple) loadInstalled(ctx context.Context) error {
+	c.installed = make(map[string]bool)
+
 	cmd := exec.CommandContext(ctx, "cargo", "install", "--list")
 	output, err := cmd.Output()
 	if err != nil {
-		return false, fmt.Errorf("failed to list cargo packages: %w", err)
+		return fmt.Errorf("failed to list cargo packages: %w", err)
 	}
 
 	// Parse output: each installed package starts at column 0
@@ -34,11 +55,12 @@ func (c *CargoSimple) IsInstalled(ctx context.Context, name string) (bool, error
 			continue
 		}
 		fields := strings.Fields(line)
-		if len(fields) > 0 && fields[0] == name {
-			return true, nil
+		if len(fields) > 0 {
+			c.installed[fields[0]] = true
 		}
 	}
-	return false, nil
+
+	return nil
 }
 
 // Install installs a package via cargo
