@@ -79,6 +79,11 @@ func (m *DotfileManager) Add(targetPath string) error {
 		return err
 	}
 
+	// Security: reject paths under configDir to prevent self-referential adds
+	if err := m.rejectPathUnderConfigDir(absTarget); err != nil {
+		return err
+	}
+
 	// Verify source exists
 	info, err := m.fs.Stat(absTarget)
 	if err != nil {
@@ -352,6 +357,23 @@ func (m *DotfileManager) validatePathUnderConfigDir(absPath string) error {
 
 	if strings.HasPrefix(rel, "..") {
 		return fmt.Errorf("path %s is outside config directory %s", absPath, m.configDir)
+	}
+
+	return nil
+}
+
+// rejectPathUnderConfigDir returns an error if the path is under $PLONK_DIR
+func (m *DotfileManager) rejectPathUnderConfigDir(absPath string) error {
+	cleanPath := filepath.Clean(absPath)
+	cleanConfig := filepath.Clean(m.configDir)
+
+	rel, err := filepath.Rel(cleanConfig, cleanPath)
+	if err != nil {
+		return nil // Different drives, not under configDir
+	}
+
+	if !strings.HasPrefix(rel, "..") {
+		return fmt.Errorf("cannot add files from config directory %s", m.configDir)
 	}
 
 	return nil
