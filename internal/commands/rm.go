@@ -28,8 +28,12 @@ Plonk accepts paths in multiple formats and intelligently resolves them:
 
 - Absolute paths: /home/user/.vimrc → Used as-is
 - Tilde paths: ~/.vimrc → Expands to /home/user/.vimrc
-- Relative paths: .vimrc → Resolved as /home/user/.vimrc
-- Plain names: vimrc → Resolved as /home/user/.vimrc
+- Relative paths: .vimrc → Tries:
+  1. Current directory: /current/dir/.vimrc
+  2. Home directory: /home/user/.vimrc
+- Plain names: vimrc → Tries:
+  1. Current directory: /current/dir/vimrc
+  2. Home directory: /home/user/vimrc
 
 Special Cases:
 - Only removes from $PLONK_DIR, never touches files in $HOME

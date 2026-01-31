@@ -40,13 +40,14 @@ func convertDotfileStatusToOutput(statuses []dotfiles.DotfileStatus) (managed, m
 	return managed, missing
 }
 
-// resolveDotfilePath resolves a path to an absolute path in home directory
+// resolveDotfilePath resolves a path to an absolute path, trying cwd first then home
 func resolveDotfilePath(path, homeDir string) string {
+	// Absolute paths used as-is
 	if filepath.IsAbs(path) {
 		return path
 	}
 
-	// Handle tilde
+	// Handle tilde expansion
 	if len(path) > 0 && path[0] == '~' {
 		if len(path) == 1 {
 			return homeDir
@@ -56,7 +57,24 @@ func resolveDotfilePath(path, homeDir string) string {
 		}
 	}
 
-	// Try as relative to home with dot prefix
+	// Relative path - try current directory first, then home directory
+	absPath, err := filepath.Abs(path)
+	if err == nil {
+		if _, statErr := os.Stat(absPath); statErr == nil {
+			return absPath // File exists in cwd
+		}
+	}
+
+	// Try home directory
+	homePath := filepath.Join(homeDir, path)
+	if _, statErr := os.Stat(homePath); statErr == nil {
+		return homePath // File exists in home
+	}
+
+	// Fall back to cwd-resolved path (will likely error later, but preserves original behavior)
+	if absPath != "" {
+		return absPath
+	}
 	return filepath.Join(homeDir, path)
 }
 
