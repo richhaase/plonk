@@ -17,7 +17,6 @@ const (
 	SyncStateManaged   SyncState = "managed"   // source and target match
 	SyncStateMissing   SyncState = "missing"   // source exists, target doesn't
 	SyncStateDrifted   SyncState = "drifted"   // source and target differ
-	SyncStateUnmanaged SyncState = "unmanaged" // target exists, source doesn't
 )
 
 // DotfileStatus combines a dotfile with its current state
