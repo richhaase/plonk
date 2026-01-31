@@ -4,6 +4,7 @@
 package dotfiles
 
 import (
+	"fmt"
 	"os"
 )
 
@@ -53,7 +54,9 @@ func (m *DotfileManager) getState(d Dotfile) (SyncState, error) {
 	return SyncStateManaged, nil
 }
 
-// ApplyAll deploys all missing or drifted dotfiles
+// ApplyAll deploys all missing or drifted dotfiles.
+// Returns an error if any files fail to deploy. On partial failure,
+// check result.Failed and result.Errors for details about which files failed.
 func (m *DotfileManager) ApplyAll(dryRun bool) (DeployResult, error) {
 	statuses, err := m.Reconcile()
 	if err != nil {
@@ -81,5 +84,8 @@ func (m *DotfileManager) ApplyAll(dryRun bool) (DeployResult, error) {
 		}
 	}
 
+	if len(result.Failed) > 0 {
+		return result, fmt.Errorf("failed to deploy %d of %d file(s)", len(result.Failed), len(result.Failed)+len(result.Deployed))
+	}
 	return result, nil
 }
