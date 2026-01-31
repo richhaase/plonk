@@ -34,19 +34,19 @@ plonk/
 │   │   ├── pnpm.go             # PNPM
 │   │   └── uv.go               # UV
 │   ├── dotfiles/               # Dotfile management
-│   │   ├── manager.go          # Dotfile operations
+│   │   ├── dotfiles.go         # Manager + operations
 │   │   ├── reconcile.go        # State reconciliation
-│   │   ├── apply.go            # Dotfile deployment
-│   │   ├── scanner.go          # File discovery
-│   │   └── fileops.go          # File operations
+│   │   ├── apply.go            # Selective apply
+│   │   ├── types.go            # Dotfile/Status types
+│   │   └── fs.go               # FileSystem abstraction
 │   ├── orchestrator/           # Coordination
 │   │   ├── coordinator.go      # Apply coordination
 │   │   └── reconcile.go        # Cross-domain reconciliation
 │   ├── config/                 # Configuration
 │   │   └── config.go           # Config loading/defaults
 │   ├── lock/                   # Lock file
-│   │   ├── v3.go               # V3 format implementation
-│   │   └── interfaces.go       # Lock interfaces
+│   │   ├── v3.go               # V3 format + migration
+│   │   └── types.go            # Lock types
 │   ├── clone/                  # Clone operations
 │   │   ├── setup.go            # Clone + apply
 │   │   └── git.go              # Git operations
