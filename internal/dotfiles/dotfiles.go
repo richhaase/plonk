@@ -294,9 +294,10 @@ func (m *DotfileManager) toSource(absTarget string) string {
 	// Remove home prefix
 	relPath, err := filepath.Rel(m.homeDir, absTarget)
 	if err != nil {
-		// This should only happen if paths are on different drives (Windows) or malformed
+		// This error is unreachable in normal operation since absTarget comes from
+		// walking m.homeDir. Log for debugging but continue with fallback.
 		log.Printf("Warning: failed to compute relative path from %s to %s: %v", m.homeDir, absTarget, err)
-		return absTarget // fallback - may cause issues
+		return absTarget
 	}
 
 	// Remove dot prefix from the first component
