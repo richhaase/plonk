@@ -146,12 +146,13 @@ func (s *LockV3Service) Read() (*LockV3, error) {
 	return &lock, nil
 }
 
-// Write writes the lock to disk
+// Write saves the lock file atomically using temp file + rename
 func (s *LockV3Service) Write(lock *LockV3) error {
 	if lock == nil {
 		return fmt.Errorf("cannot write nil lock")
 	}
 
+	// Force version 3
 	lock.Version = 3
 
 	data, err := yaml.Marshal(lock)
@@ -165,8 +166,16 @@ func (s *LockV3Service) Write(lock *LockV3) error {
 		return fmt.Errorf("failed to create lock directory: %w", err)
 	}
 
-	if err := os.WriteFile(s.lockPath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write lock file: %w", err)
+	// Atomic write: write to temp file, then rename
+	tmpPath := s.lockPath + ".tmp"
+	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write temp lock file: %w", err)
+	}
+
+	if err := os.Rename(tmpPath, s.lockPath); err != nil {
+		// Clean up temp file on failure
+		os.Remove(tmpPath)
+		return fmt.Errorf("failed to rename lock file: %w", err)
 	}
 
 	return nil
