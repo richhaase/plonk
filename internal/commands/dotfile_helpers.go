@@ -95,6 +95,43 @@ func resolveDotfileName(path, homeDir string) string {
 	return rel
 }
 
+// resolveDotfileNameForRemoval resolves a path to the dotfile name for removal.
+// Unlike resolveDotfilePath, this doesn't check file existence because
+// the target in $HOME may not exist (not deployed yet) while the source
+// in $PLONK_DIR does exist.
+func resolveDotfileNameForRemoval(path, homeDir string) string {
+	var absPath string
+
+	if filepath.IsAbs(path) {
+		absPath = path
+	} else if len(path) > 0 && path[0] == '~' {
+		if len(path) == 1 {
+			absPath = homeDir
+		} else if path[1] == '/' {
+			absPath = filepath.Join(homeDir, path[2:])
+		} else {
+			absPath = filepath.Join(homeDir, path)
+		}
+	} else {
+		// For removal, always resolve relative to home (not cwd)
+		// because we're finding which managed dotfile to remove
+		absPath = filepath.Join(homeDir, path)
+	}
+
+	// Get relative to home
+	rel, err := filepath.Rel(homeDir, absPath)
+	if err != nil {
+		return path
+	}
+
+	// Remove leading dot if present
+	if len(rel) > 0 && rel[0] == '.' {
+		rel = rel[1:]
+	}
+
+	return rel
+}
+
 // AddStatus represents the status of an add operation
 type AddStatus string
 
@@ -221,7 +258,7 @@ func removeDotfiles(dm *dotfiles.DotfileManager, configDir, homeDir string, path
 		}
 
 		// Resolve path to get the name in config dir
-		name := resolveDotfileName(path, homeDir)
+		name := resolveDotfileNameForRemoval(path, homeDir)
 
 		// Check if it exists first
 		sourcePath := filepath.Join(configDir, name)
