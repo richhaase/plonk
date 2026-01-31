@@ -129,6 +129,13 @@ func (m *DotfileManager) addDirectory(absTarget string) error {
 		if isDir {
 			return nil
 		}
+
+		// Check ignore patterns using the relative path that would be used in configDir
+		relPath := m.toSource(path)
+		if m.shouldIgnore(relPath) {
+			return nil
+		}
+
 		return m.addFile(path)
 	})
 }
