@@ -425,3 +425,29 @@ func (m *DotfileManager) walkDir(root string, fn func(path string, isDir bool) e
 
 	return nil
 }
+
+// ValidateAdd checks if a path can be added without actually adding it
+func (m *DotfileManager) ValidateAdd(targetPath string) error {
+	// Resolve to absolute path
+	absTarget := targetPath
+	if !filepath.IsAbs(targetPath) {
+		absTarget = filepath.Join(m.homeDir, targetPath)
+	}
+
+	// Security: validate path is under $HOME
+	if err := m.validatePathUnderHome(absTarget); err != nil {
+		return err
+	}
+
+	// Security: reject paths under configDir
+	if err := m.rejectPathUnderConfigDir(absTarget); err != nil {
+		return err
+	}
+
+	// Verify target exists
+	if _, err := m.fs.Stat(absTarget); err != nil {
+		return fmt.Errorf("%s does not exist", absTarget)
+	}
+
+	return nil
+}

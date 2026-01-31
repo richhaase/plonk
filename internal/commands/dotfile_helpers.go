@@ -4,7 +4,6 @@
 package commands
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -147,10 +146,10 @@ func addDotfiles(dm *dotfiles.DotfileManager, configDir, homeDir string, paths [
 		_, existsErr := os.Stat(sourcePath)
 		alreadyManaged := existsErr == nil
 
-		// Check if source file exists in home dir
-		if _, err := os.Stat(absPath); err != nil {
+		// Validate the path (security checks + existence)
+		if err := dm.ValidateAdd(absPath); err != nil {
 			result.Status = AddStatusFailed
-			result.Error = fmt.Errorf("%s does not exist", absPath)
+			result.Error = err
 			results = append(results, result)
 			continue
 		}
