@@ -137,6 +137,11 @@ func (m *DotfileManager) addDirectory(absTarget string) error {
 func (m *DotfileManager) Remove(name string) error {
 	sourcePath := filepath.Join(m.configDir, name)
 
+	// Security: validate path is under configDir to prevent path traversal attacks
+	if err := m.validatePathUnderConfigDir(sourcePath); err != nil {
+		return err
+	}
+
 	// Verify it exists
 	info, err := m.fs.Stat(sourcePath)
 	if err != nil {
@@ -323,6 +328,23 @@ func (m *DotfileManager) validatePathUnderHome(absPath string) error {
 	// If the relative path starts with "..", it escapes the home directory
 	if strings.HasPrefix(rel, "..") {
 		return fmt.Errorf("path %s is outside home directory %s", absPath, m.homeDir)
+	}
+
+	return nil
+}
+
+// validatePathUnderConfigDir ensures the path is under $PLONK_DIR to prevent path traversal
+func (m *DotfileManager) validatePathUnderConfigDir(absPath string) error {
+	cleanPath := filepath.Clean(absPath)
+	cleanConfig := filepath.Clean(m.configDir)
+
+	rel, err := filepath.Rel(cleanConfig, cleanPath)
+	if err != nil {
+		return fmt.Errorf("path %s is not accessible from config directory: %w", absPath, err)
+	}
+
+	if strings.HasPrefix(rel, "..") {
+		return fmt.Errorf("path %s is outside config directory %s", absPath, m.configDir)
 	}
 
 	return nil
