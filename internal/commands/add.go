@@ -37,6 +37,10 @@ Plonk accepts paths in multiple formats and intelligently resolves them:
   1. Current directory: /current/dir/vimrc
   2. Home directory: /home/user/vimrc
 
+Security:
+- All paths must resolve to locations under your home directory ($HOME)
+- Paths outside $HOME are rejected to prevent unintended file operations
+
 Special Cases:
 - Directories: Recursively processes all files (add only)
 - Symlinks: Follows links and copies target file
