@@ -67,6 +67,11 @@ func (m *DotfileManager) List() ([]Dotfile, error) {
 		return nil
 	})
 
+	// Treat missing config directory as empty dotfile set (first-run scenario)
+	if err != nil && os.IsNotExist(err) {
+		return nil, nil
+	}
+
 	return dotfiles, err
 }
 
