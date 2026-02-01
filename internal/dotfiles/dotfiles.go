@@ -5,6 +5,7 @@ package dotfiles
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -13,6 +14,9 @@ import (
 
 	"github.com/richhaase/plonk/internal/ignore"
 )
+
+// errSkipDir is returned by walkDir callbacks to skip a directory
+var errSkipDir = errors.New("skip directory")
 
 // DotfileManager manages dotfiles in a single config directory
 type DotfileManager struct {
@@ -135,9 +139,15 @@ func (m *DotfileManager) addDirectory(absTarget string) error {
 			return nil
 		}
 
-		// Check ignore patterns using the relative path that would be used in configDir
-		relPath := m.toSource(path)
-		if m.shouldIgnore(relPath) {
+		// Get path relative to the target directory being added (preserves dots)
+		relToTarget, err := filepath.Rel(absTarget, path)
+		if err != nil {
+			return err
+		}
+
+		// Check ignore patterns using the original path (with dots)
+		// This ensures .git, .cache, etc. are properly ignored
+		if m.shouldIgnoreWithDot(relToTarget) {
 			return nil
 		}
 
@@ -393,6 +403,25 @@ func (m *DotfileManager) shouldIgnore(relPath string) bool {
 	base := filepath.Base(relPath)
 	if base == "plonk.yaml" || base == "plonk.lock" {
 		return true
+	}
+
+	// Check custom ignore patterns
+	if m.matcher == nil {
+		return false
+	}
+	return m.matcher.ShouldIgnore(relPath, false)
+}
+
+// shouldIgnoreWithDot checks if a path should be ignored, including dot-prefixed paths.
+// Unlike shouldIgnore which works on configDir paths (dots stripped), this works on
+// original paths from $HOME where dots are preserved.
+func (m *DotfileManager) shouldIgnoreWithDot(relPath string) bool {
+	// Check each component for dot prefix
+	parts := strings.Split(relPath, string(os.PathSeparator))
+	for _, part := range parts {
+		if len(part) > 0 && part[0] == '.' {
+			return true
+		}
 	}
 
 	// Check custom ignore patterns
