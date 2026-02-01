@@ -164,11 +164,21 @@ func convertSimpleApplyResult(r *packages.SimpleApplyResult, dryRun bool) output
 		result.TotalMissing = result.TotalInstalled + result.TotalFailed
 	}
 
-	// Build manager results
+	// Build manager results with per-manager missing counts
 	for manager, pkgs := range managerPackages {
+		// Count missing packages for this manager
+		// Missing = packages that needed action (install/fail in real run, would-install in dry run)
+		missingCount := 0
+		for _, pkg := range pkgs {
+			switch pkg.Status {
+			case "installed", "failed", "would-install":
+				missingCount++
+			}
+		}
 		result.Managers = append(result.Managers, output.ManagerResults{
-			Name:     manager,
-			Packages: pkgs,
+			Name:         manager,
+			MissingCount: missingCount,
+			Packages:     pkgs,
 		})
 	}
 
