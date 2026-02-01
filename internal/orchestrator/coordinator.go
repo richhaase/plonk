@@ -88,9 +88,9 @@ func (o *Orchestrator) Apply(ctx context.Context) (output.ApplyResult, error) {
 		}
 	}
 	if result.Dotfiles != nil {
-		if !o.dryRun && result.Dotfiles.Summary.Added > 0 {
+		if !o.dryRun && (result.Dotfiles.Summary.Added > 0 || result.Dotfiles.Summary.Updated > 0) {
 			changed = true
-		} else if o.dryRun && result.Dotfiles.Summary.Added > 0 {
+		} else if o.dryRun && (result.Dotfiles.Summary.Added > 0 || result.Dotfiles.Summary.Updated > 0) {
 			changed = true
 		}
 	}

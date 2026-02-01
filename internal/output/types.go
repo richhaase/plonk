@@ -113,7 +113,11 @@ func (r ApplyResult) TableOutput() string {
 			switch action.Status {
 			case "added":
 				output += fmt.Sprintf("  ✓ %s\n", action.Destination)
+			case "updated":
+				output += fmt.Sprintf("  ✓ %s\n", action.Destination)
 			case "would-add":
+				output += fmt.Sprintf("  → %s (would deploy)\n", action.Destination)
+			case "would-update":
 				output += fmt.Sprintf("  → %s (would deploy)\n", action.Destination)
 			case "failed":
 				output += fmt.Sprintf("  ✗ %s: %s\n", action.Destination, action.Error)
