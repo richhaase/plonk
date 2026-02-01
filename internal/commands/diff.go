@@ -127,6 +127,10 @@ func filterDriftedStatus(arg string, driftedFiles []dotfiles.DotfileStatus) *dot
 				return status
 			}
 		}
+		// Also check against the Name for shorthand matching (e.g., "vimrc" for ~/.vimrc)
+		if status.Name == arg {
+			return status
+		}
 	}
 	return nil
 }

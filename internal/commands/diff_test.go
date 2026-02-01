@@ -147,6 +147,18 @@ func TestFilterDriftedStatus(t *testing.T) {
 			wantName:  "config/nvim/init.lua",
 		},
 		{
+			name:      "find by shorthand name",
+			arg:       "zshrc",
+			wantFound: true,
+			wantName:  "zshrc",
+		},
+		{
+			name:      "find nested by shorthand name",
+			arg:       "config/nvim/init.lua",
+			wantFound: true,
+			wantName:  "config/nvim/init.lua",
+		},
+		{
 			name:      "not found",
 			arg:       "~/.vimrc",
 			wantFound: false,
