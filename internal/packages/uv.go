@@ -68,9 +68,22 @@ func (u *UVSimple) Install(ctx context.Context, name string) error {
 	if err != nil {
 		// Check if already installed
 		if strings.Contains(strings.ToLower(string(output)), "already installed") {
+			u.markInstalled(name)
 			return nil
 		}
 		return fmt.Errorf("uv tool install %s: %s: %w", name, strings.TrimSpace(string(output)), err)
 	}
+
+	// Update cache after successful install
+	u.markInstalled(name)
 	return nil
+}
+
+// markInstalled updates the cache to mark a package as installed
+func (u *UVSimple) markInstalled(name string) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	if u.installed != nil {
+		u.installed[name] = true
+	}
 }

@@ -74,9 +74,22 @@ func (p *PNPMSimple) Install(ctx context.Context, name string) error {
 	if err != nil {
 		// Check if already installed
 		if strings.Contains(strings.ToLower(string(output)), "already installed") {
+			p.markInstalled(name)
 			return nil
 		}
 		return fmt.Errorf("pnpm add -g %s: %s: %w", name, strings.TrimSpace(string(output)), err)
 	}
+
+	// Update cache after successful install
+	p.markInstalled(name)
 	return nil
+}
+
+// markInstalled updates the cache to mark a package as installed
+func (p *PNPMSimple) markInstalled(name string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.installed != nil {
+		p.installed[name] = true
+	}
 }

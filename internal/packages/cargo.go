@@ -73,9 +73,22 @@ func (c *CargoSimple) Install(ctx context.Context, name string) error {
 		// Check if already installed (idempotent)
 		outStr := strings.ToLower(string(output))
 		if strings.Contains(outStr, "already exists") || strings.Contains(outStr, "already installed") {
+			c.markInstalled(name)
 			return nil
 		}
 		return fmt.Errorf("cargo install %s: %s: %w", name, strings.TrimSpace(string(output)), err)
 	}
+
+	// Update cache after successful install
+	c.markInstalled(name)
 	return nil
+}
+
+// markInstalled updates the cache to mark a package as installed
+func (c *CargoSimple) markInstalled(name string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.installed != nil {
+		c.installed[name] = true
+	}
 }

@@ -77,9 +77,22 @@ func (b *BrewSimple) Install(ctx context.Context, name string) error {
 	if err != nil {
 		// Check if already installed (idempotent)
 		if strings.Contains(strings.ToLower(string(output)), "already installed") {
+			b.markInstalled(name)
 			return nil
 		}
 		return fmt.Errorf("brew install %s: %s: %w", name, strings.TrimSpace(string(output)), err)
 	}
+
+	// Update cache after successful install
+	b.markInstalled(name)
 	return nil
+}
+
+// markInstalled updates the cache to mark a package as installed
+func (b *BrewSimple) markInstalled(name string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.installed != nil {
+		b.installed[name] = true
+	}
 }

@@ -95,7 +95,19 @@ func (g *GoSimple) Install(ctx context.Context, name string) error {
 	if err != nil {
 		return fmt.Errorf("go install failed: %s: %w", strings.TrimSpace(string(output)), err)
 	}
+
+	// Update cache after successful install
+	g.markInstalled(name)
 	return nil
+}
+
+// markInstalled updates the cache to mark a package as installed
+func (g *GoSimple) markInstalled(name string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if g.installed != nil {
+		g.installed[name] = true
+	}
 }
 
 // goBinDir returns the directory where go install puts binaries
