@@ -103,10 +103,21 @@ func (g *GoSimple) Install(ctx context.Context, name string) error {
 
 // markInstalled updates the cache to mark a package as installed
 func (g *GoSimple) markInstalled(name string) {
+	// Extract binary name to match IsInstalled cache key format
+	binaryName := name
+	if strings.Contains(name, "/") {
+		parts := strings.Split(name, "/")
+		binaryName = parts[len(parts)-1]
+	}
+	// Remove @version suffix if present
+	if idx := strings.Index(binaryName, "@"); idx != -1 {
+		binaryName = binaryName[:idx]
+	}
+
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	if g.installed != nil {
-		g.installed[name] = true
+		g.installed[binaryName] = true
 	}
 }
 
