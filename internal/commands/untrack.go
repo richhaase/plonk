@@ -5,10 +5,10 @@ package commands
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
-	"github.com/richhaase/plonk/internal/packages"
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +45,8 @@ func runUntrack(cmd *cobra.Command, args []string) error {
 	var untracked, skipped, failed int
 
 	for _, arg := range args {
-		manager, pkg, err := packages.ParsePackageSpec(arg)
+		// Parse without validating manager - allows untracking legacy managers
+		manager, pkg, err := parsePackageSpecNoValidate(arg)
 		if err != nil {
 			fmt.Printf("Error: %s: %v\n", arg, err)
 			failed++
@@ -78,4 +79,26 @@ func runUntrack(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// parsePackageSpecNoValidate parses "manager:package" without validating the manager.
+// This allows untracking legacy managers (e.g., npm, gem) that are no longer supported
+// but may still exist in old lock files.
+func parsePackageSpecNoValidate(spec string) (manager, pkg string, err error) {
+	idx := strings.Index(spec, ":")
+	if idx == -1 {
+		return "", "", fmt.Errorf("invalid format, expected manager:package")
+	}
+
+	manager = spec[:idx]
+	pkg = spec[idx+1:]
+
+	if manager == "" {
+		return "", "", fmt.Errorf("manager name cannot be empty")
+	}
+	if pkg == "" {
+		return "", "", fmt.Errorf("package name cannot be empty")
+	}
+
+	return manager, pkg, nil
 }
