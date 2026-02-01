@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/output"
@@ -65,10 +66,19 @@ func resolveDotfilePath(path, homeDir string) string {
 		}
 	}
 
-	// Try home directory
+	// Try home directory (non-dotted path)
 	homePath := filepath.Join(homeDir, path)
 	if _, statErr := os.Stat(homePath); statErr == nil {
 		return homePath // File exists in home
+	}
+
+	// Try home directory with dot prefix (e.g., "vimrc" -> "~/.vimrc")
+	// This handles plain-name arguments like `plonk add vimrc`
+	if !strings.HasPrefix(path, ".") && !strings.Contains(path, string(os.PathSeparator)) {
+		dottedPath := filepath.Join(homeDir, "."+path)
+		if _, statErr := os.Stat(dottedPath); statErr == nil {
+			return dottedPath // Dotted file exists in home
+		}
 	}
 
 	// Fall back to cwd-resolved path (will likely error later, but preserves original behavior)
