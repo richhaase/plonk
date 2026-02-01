@@ -414,23 +414,38 @@ func (m *DotfileManager) shouldIgnore(relPath string) bool {
 	return m.matcher.ShouldIgnore(relPath, false)
 }
 
-// shouldIgnoreWithDot checks if a path should be ignored, including dot-prefixed paths.
-// Unlike shouldIgnore which works on configDir paths (dots stripped), this works on
-// original paths from $HOME where dots are preserved.
+// shouldIgnoreWithDot checks if a path should be ignored when adding from $HOME.
+// Unlike shouldIgnore (for configDir paths), this preserves dots and only ignores
+// specific VCS/system files, not all dotfiles.
 func (m *DotfileManager) shouldIgnoreWithDot(relPath string) bool {
-	// Check each component for dot prefix
+	// List of always-ignored file/directory names (VCS and system files)
+	alwaysIgnore := map[string]bool{
+		".git":           true,
+		".gitignore":     true,
+		".gitattributes": true,
+		".gitmodules":    true,
+		".svn":           true,
+		".hg":            true,
+		".DS_Store":      true,
+		".Trash":         true,
+		".cache":         true,
+		".localized":     true,
+	}
+
+	// Check each path component against the always-ignore list
 	parts := strings.Split(relPath, string(os.PathSeparator))
 	for _, part := range parts {
-		if len(part) > 0 && part[0] == '.' {
+		if alwaysIgnore[part] {
 			return true
 		}
 	}
 
-	// Check custom ignore patterns
-	if m.matcher == nil {
-		return false
+	// Check custom ignore patterns from matcher
+	if m.matcher != nil && m.matcher.ShouldIgnore(relPath, false) {
+		return true
 	}
-	return m.matcher.ShouldIgnore(relPath, false)
+
+	return false
 }
 
 // walkDir recursively walks a directory
