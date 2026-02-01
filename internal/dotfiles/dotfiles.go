@@ -46,17 +46,21 @@ func (m *DotfileManager) List() ([]Dotfile, error) {
 	var dotfiles []Dotfile
 
 	err := m.walkDir(m.configDir, func(sourcePath string, isDir bool) error {
-		if isDir {
-			return nil // skip directories, only return files
-		}
-
 		relPath, err := filepath.Rel(m.configDir, sourcePath)
 		if err != nil {
 			return err
 		}
 
+		// Check ignore patterns for both files and directories
 		if m.shouldIgnore(relPath) {
-			return nil
+			if isDir {
+				return errSkipDir // Skip entire ignored directory
+			}
+			return nil // Skip ignored file
+		}
+
+		if isDir {
+			return nil // Continue into non-ignored directory
 		}
 
 		dotfiles = append(dotfiles, Dotfile{
