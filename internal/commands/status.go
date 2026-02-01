@@ -5,6 +5,7 @@ package commands
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -132,12 +133,13 @@ func getPackageStatus(ctx context.Context, configDir string) packageStatus {
 	for manager, pkgs := range lockFile.Packages {
 		mgr, err := packages.GetManager(manager)
 		if err != nil {
-			// Unknown manager - mark all as missing
+			// Unknown/unsupported manager - mark all as errors (not missing)
 			for _, pkg := range pkgs {
-				result.Missing = append(result.Missing, output.Item{
+				result.Errors = append(result.Errors, output.Item{
 					Name:    pkg,
 					Manager: manager,
-					State:   output.StateMissing,
+					State:   output.StateError,
+					Error:   fmt.Sprintf("unsupported manager: %s", manager),
 				})
 			}
 			continue
