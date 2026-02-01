@@ -79,7 +79,7 @@ func applyStatuses(manager *DotfileManager, statuses []DotfileStatus, dryRun boo
 		case SyncStateManaged:
 			result.Summary.Unchanged++
 
-		case SyncStateMissing, SyncStateDrifted:
+		case SyncStateMissing:
 			var spinner *output.Spinner
 			if spinnerManager != nil {
 				spinner = spinnerManager.StartSpinner("Deploying", s.Name)
@@ -113,6 +113,45 @@ func applyStatuses(manager *DotfileManager, statuses []DotfileStatus, dryRun boo
 					result.Summary.Added++
 					if spinner != nil {
 						spinner.Success("deployed " + s.Name)
+					}
+				}
+			}
+			result.Actions = append(result.Actions, action)
+
+		case SyncStateDrifted:
+			var spinner *output.Spinner
+			if spinnerManager != nil {
+				spinner = spinnerManager.StartSpinner("Updating", s.Name)
+			}
+
+			action := output.DotfileOperation{
+				Source:      s.Source,
+				Destination: s.Target,
+			}
+
+			if dryRun {
+				action.Action = "would-copy"
+				action.Status = "would-update"
+				result.Summary.Updated++
+				if spinner != nil {
+					spinner.Success("would-update " + s.Name)
+				}
+			} else {
+				err := manager.Deploy(s.Name)
+				if err != nil {
+					action.Action = "error"
+					action.Status = "failed"
+					action.Error = err.Error()
+					result.Summary.Failed++
+					if spinner != nil {
+						spinner.Error("Failed to update " + s.Name + ": " + err.Error())
+					}
+				} else {
+					action.Action = "copy"
+					action.Status = "updated"
+					result.Summary.Updated++
+					if spinner != nil {
+						spinner.Success("updated " + s.Name)
 					}
 				}
 			}
