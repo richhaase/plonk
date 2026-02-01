@@ -257,7 +257,24 @@ func (f StatusFormatter) TableOutput() string {
 	if driftedCount > 0 {
 		output.WriteString(fmt.Sprintf(", %d drifted", driftedCount))
 	}
+	if summary.TotalErrors > 0 {
+		output.WriteString(fmt.Sprintf(", %d errors", summary.TotalErrors))
+	}
 	output.WriteString("\n")
+
+	// Show errors if any
+	for _, result := range s.StateSummary.Results {
+		if len(result.Errors) > 0 {
+			output.WriteString(fmt.Sprintf("\n%s errors:\n", result.Domain))
+			for _, item := range result.Errors {
+				if item.Error != "" {
+					output.WriteString(fmt.Sprintf("  ✗ %s: %s\n", item.Name, item.Error))
+				} else {
+					output.WriteString(fmt.Sprintf("  ✗ %s\n", item.Name))
+				}
+			}
+		}
+	}
 
 	// If no output was generated (except for title), show helpful message
 	outputStr := output.String()
@@ -305,6 +322,7 @@ func sanitizeSummary(sum Summary) Summary {
 		TotalManaged:   sum.TotalManaged,
 		TotalMissing:   sum.TotalMissing,
 		TotalUntracked: sum.TotalUntracked,
+		TotalErrors:    sum.TotalErrors,
 		Results:        make([]Result, len(sum.Results)),
 	}
 	for i, r := range sum.Results {
@@ -328,6 +346,13 @@ func sanitizeSummary(sum Summary) Summary {
 			for j, it := range r.Untracked {
 				it.Metadata = sanitizeMetadata(it.Metadata)
 				cr.Untracked[j] = it
+			}
+		}
+		if len(r.Errors) > 0 {
+			cr.Errors = make([]Item, len(r.Errors))
+			for j, it := range r.Errors {
+				it.Metadata = sanitizeMetadata(it.Metadata)
+				cr.Errors[j] = it
 			}
 		}
 		cleaned.Results[i] = cr
