@@ -150,12 +150,13 @@ func (r ApplyResult) TableOutput() string {
 
 	// Dotfile summary
 	if r.Dotfiles != nil {
+		deployed := r.Dotfiles.Summary.Added + r.Dotfiles.Summary.Updated
 		if r.DryRun {
-			output += fmt.Sprintf("Dotfiles: %d would be deployed\n", r.Dotfiles.Summary.Added)
+			output += fmt.Sprintf("Dotfiles: %d would be deployed\n", deployed)
 		} else {
-			if r.Dotfiles.Summary.Added > 0 || r.Dotfiles.Summary.Failed > 0 {
-				output += fmt.Sprintf("Dotfiles: %d deployed, %d failed\n", r.Dotfiles.Summary.Added, r.Dotfiles.Summary.Failed)
-				totalSucceeded += r.Dotfiles.Summary.Added
+			if deployed > 0 || r.Dotfiles.Summary.Failed > 0 {
+				output += fmt.Sprintf("Dotfiles: %d deployed, %d failed\n", deployed, r.Dotfiles.Summary.Failed)
+				totalSucceeded += deployed
 				totalFailed += r.Dotfiles.Summary.Failed
 			} else if r.Dotfiles.TotalFiles == 0 {
 				output += "Dotfiles: None configured\n"
