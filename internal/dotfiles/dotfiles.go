@@ -135,20 +135,22 @@ func (m *DotfileManager) addFile(absTarget string) error {
 // addDirectory recursively adds all files in a directory
 func (m *DotfileManager) addDirectory(absTarget string) error {
 	return m.walkDir(absTarget, func(path string, isDir bool) error {
-		if isDir {
-			return nil
-		}
-
 		// Get path relative to the target directory being added (preserves dots)
 		relToTarget, err := filepath.Rel(absTarget, path)
 		if err != nil {
 			return err
 		}
 
-		// Check ignore patterns using the original path (with dots)
-		// This ensures .git, .cache, etc. are properly ignored
+		// Check ignore patterns (with dots preserved)
 		if m.shouldIgnoreWithDot(relToTarget) {
-			return nil
+			if isDir {
+				return errSkipDir // Skip entire directory
+			}
+			return nil // Skip file
+		}
+
+		if isDir {
+			return nil // Continue into non-ignored directory
 		}
 
 		return m.addFile(path)
@@ -442,6 +444,9 @@ func (m *DotfileManager) walkDir(root string, fn func(path string, isDir bool) e
 		path := filepath.Join(root, entry.Name())
 
 		if err := fn(path, entry.IsDir()); err != nil {
+			if err == errSkipDir {
+				continue // Skip this directory, don't recurse
+			}
 			return err
 		}
 
