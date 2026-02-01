@@ -39,7 +39,7 @@ func (b *BrewSimple) IsInstalled(ctx context.Context, name string) (bool, error)
 
 // loadInstalled fetches all installed formulas and casks
 func (b *BrewSimple) loadInstalled(ctx context.Context) error {
-	b.installed = make(map[string]bool)
+	installed := make(map[string]bool)
 
 	// Get formulas
 	cmd := exec.CommandContext(ctx, "brew", "list", "--formula", "-1")
@@ -49,7 +49,7 @@ func (b *BrewSimple) loadInstalled(ctx context.Context) error {
 	}
 	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
 		if line != "" {
-			b.installed[line] = true
+			installed[line] = true
 		}
 	}
 
@@ -61,10 +61,12 @@ func (b *BrewSimple) loadInstalled(ctx context.Context) error {
 	}
 	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
 		if line != "" {
-			b.installed[line] = true
+			installed[line] = true
 		}
 	}
 
+	// Only set the cache after successful loading
+	b.installed = installed
 	return nil
 }
 

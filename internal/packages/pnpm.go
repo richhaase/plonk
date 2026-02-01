@@ -40,7 +40,7 @@ func (p *PNPMSimple) IsInstalled(ctx context.Context, name string) (bool, error)
 
 // loadInstalled fetches all globally installed pnpm packages
 func (p *PNPMSimple) loadInstalled(ctx context.Context) error {
-	p.installed = make(map[string]bool)
+	installed := make(map[string]bool)
 
 	cmd := exec.CommandContext(ctx, "pnpm", "list", "-g", "--depth=0", "--json")
 	output, err := cmd.Output()
@@ -58,10 +58,12 @@ func (p *PNPMSimple) loadInstalled(ctx context.Context) error {
 
 	for _, item := range result {
 		for name := range item.Dependencies {
-			p.installed[name] = true
+			installed[name] = true
 		}
 	}
 
+	// Only set the cache after successful loading
+	p.installed = installed
 	return nil
 }
 

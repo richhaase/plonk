@@ -53,7 +53,7 @@ func (g *GoSimple) IsInstalled(ctx context.Context, name string) (bool, error) {
 
 // loadInstalled scans the Go bin directory for installed binaries
 func (g *GoSimple) loadInstalled() error {
-	g.installed = make(map[string]bool)
+	installed := make(map[string]bool)
 
 	binDir := goBinDir()
 	if binDir == "" {
@@ -64,6 +64,8 @@ func (g *GoSimple) loadInstalled() error {
 	if err != nil {
 		if os.IsNotExist(err) {
 			// Go bin directory doesn't exist yet - this is normal for fresh installs
+			// Only set the cache after successful loading
+			g.installed = installed
 			return nil
 		}
 		return fmt.Errorf("failed to read go bin directory %s: %w", binDir, err)
@@ -71,9 +73,12 @@ func (g *GoSimple) loadInstalled() error {
 
 	for _, entry := range entries {
 		if !entry.IsDir() {
-			g.installed[entry.Name()] = true
+			installed[entry.Name()] = true
 		}
 	}
+
+	// Only set the cache after successful loading
+	g.installed = installed
 	return nil
 }
 

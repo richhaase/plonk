@@ -39,7 +39,7 @@ func (u *UVSimple) IsInstalled(ctx context.Context, name string) (bool, error) {
 
 // loadInstalled fetches all installed uv tools
 func (u *UVSimple) loadInstalled(ctx context.Context) error {
-	u.installed = make(map[string]bool)
+	installed := make(map[string]bool)
 
 	cmd := exec.CommandContext(ctx, "uv", "tool", "list")
 	output, err := cmd.Output()
@@ -52,10 +52,12 @@ func (u *UVSimple) loadInstalled(ctx context.Context) error {
 	for _, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) > 0 {
-			u.installed[fields[0]] = true
+			installed[fields[0]] = true
 		}
 	}
 
+	// Only set the cache after successful loading
+	u.installed = installed
 	return nil
 }
 
