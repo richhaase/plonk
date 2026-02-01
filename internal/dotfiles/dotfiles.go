@@ -52,7 +52,7 @@ func (m *DotfileManager) List() ([]Dotfile, error) {
 		}
 
 		// Check ignore patterns for both files and directories
-		if m.shouldIgnore(relPath) {
+		if m.shouldIgnoreWithDir(relPath, isDir) {
 			if isDir {
 				return errSkipDir // Skip entire ignored directory
 			}
@@ -400,8 +400,13 @@ func (m *DotfileManager) rejectPathUnderConfigDir(absPath string) error {
 	return nil
 }
 
-// shouldIgnore returns true if the path should be ignored
+// shouldIgnore returns true if the path should be ignored (assumes it's a file)
 func (m *DotfileManager) shouldIgnore(relPath string) bool {
+	return m.shouldIgnoreWithDir(relPath, false)
+}
+
+// shouldIgnoreWithDir returns true if the path should be ignored, with explicit isDir flag
+func (m *DotfileManager) shouldIgnoreWithDir(relPath string, isDir bool) bool {
 	// Ignore files/dirs that start with a dot in the config directory
 	// These are internal files like .git, .gitignore, .beads, etc.
 	// In $PLONK_DIR, only files WITHOUT a dot prefix are managed dotfiles
@@ -420,7 +425,7 @@ func (m *DotfileManager) shouldIgnore(relPath string) bool {
 	if m.matcher == nil {
 		return false
 	}
-	return m.matcher.ShouldIgnore(relPath, false)
+	return m.matcher.ShouldIgnore(relPath, isDir)
 }
 
 // shouldIgnoreWithDot checks if a path should be ignored when adding from $HOME.
