@@ -151,7 +151,7 @@ func (m *DotfileManager) addDirectory(absTarget string) error {
 		}
 
 		// Check ignore patterns (with dots preserved)
-		if m.shouldIgnoreWithDot(relToTarget) {
+		if m.shouldIgnoreWithDot(relToTarget, isDir) {
 			if isDir {
 				return errSkipDir // Skip entire directory
 			}
@@ -415,9 +415,9 @@ func (m *DotfileManager) shouldIgnoreWithDir(relPath string, isDir bool) bool {
 		return true
 	}
 
-	// Ignore plonk.yaml and plonk.lock
-	base := filepath.Base(relPath)
-	if base == "plonk.yaml" || base == "plonk.lock" {
+	// Ignore root-level plonk.yaml and plonk.lock (plonk's own config files)
+	// Don't ignore nested files like config/plonk.yaml that users may want to manage
+	if relPath == "plonk.yaml" || relPath == "plonk.lock" {
 		return true
 	}
 
@@ -431,7 +431,7 @@ func (m *DotfileManager) shouldIgnoreWithDir(relPath string, isDir bool) bool {
 // shouldIgnoreWithDot checks if a path should be ignored when adding from $HOME.
 // Unlike shouldIgnore (for configDir paths), this preserves dots and only ignores
 // specific VCS/system files, not all dotfiles.
-func (m *DotfileManager) shouldIgnoreWithDot(relPath string) bool {
+func (m *DotfileManager) shouldIgnoreWithDot(relPath string, isDir bool) bool {
 	// List of always-ignored file/directory names (VCS and system files)
 	alwaysIgnore := map[string]bool{
 		".git":           true,
@@ -455,7 +455,7 @@ func (m *DotfileManager) shouldIgnoreWithDot(relPath string) bool {
 	}
 
 	// Check custom ignore patterns from matcher
-	if m.matcher != nil && m.matcher.ShouldIgnore(relPath, false) {
+	if m.matcher != nil && m.matcher.ShouldIgnore(relPath, isDir) {
 		return true
 	}
 
