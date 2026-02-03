@@ -66,19 +66,20 @@ func resolveDotfilePath(path, homeDir string) string {
 		}
 	}
 
-	// Try home directory (non-dotted path)
-	homePath := filepath.Join(homeDir, path)
-	if _, statErr := os.Stat(homePath); statErr == nil {
-		return homePath // File exists in home
-	}
-
-	// Try home directory with dot prefix (e.g., "vimrc" -> "~/.vimrc")
+	// Try home directory with dot prefix first (e.g., "vimrc" -> "~/.vimrc")
 	// This handles plain-name arguments like `plonk add vimrc`
+	// Prefer dotted path since toTarget() always adds a dot prefix
 	if !strings.HasPrefix(path, ".") && !strings.Contains(path, string(os.PathSeparator)) {
 		dottedPath := filepath.Join(homeDir, "."+path)
 		if _, statErr := os.Stat(dottedPath); statErr == nil {
 			return dottedPath // Dotted file exists in home
 		}
+	}
+
+	// Try home directory (non-dotted path) as fallback
+	homePath := filepath.Join(homeDir, path)
+	if _, statErr := os.Stat(homePath); statErr == nil {
+		return homePath // File exists in home
 	}
 
 	// Fall back to cwd-resolved path (will likely error later, but preserves original behavior)
