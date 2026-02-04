@@ -45,8 +45,8 @@ func parseSimpleFlags(cmd *cobra.Command) (*SimpleFlags, error) {
 
 // CompleteDotfilePaths provides file path completion for dotfiles
 func CompleteDotfilePaths(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	// Get home directory (no error handling needed)
-	_ = config.GetHomeDir()
+	// Get home directory - ignore errors for shell completion (best effort)
+	_, _ = config.GetHomeDir()
 
 	// Define common dotfile suggestions
 	commonDotfiles := []string{

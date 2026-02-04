@@ -114,7 +114,10 @@ func TestReconcile_WithRealUserHome(t *testing.T) {
 	defer os.RemoveAll(configDir)
 
 	// Use real user's home directory like the command does
-	homeDir := config.GetHomeDir()
+	homeDir, err := config.GetHomeDir()
+	if err != nil {
+		t.Fatalf("Failed to get home directory: %v", err)
+	}
 
 	// Create some test files
 	if err := os.WriteFile(filepath.Join(configDir, "test-plonk-file"), []byte("# test"), 0644); err != nil {

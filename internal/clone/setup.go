@@ -131,7 +131,10 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool) e
 		}
 
 		output.StageUpdate("Running plonk apply...")
-		homeDir := config.GetHomeDir()
+		homeDir, err := config.GetHomeDir()
+		if err != nil {
+			return fmt.Errorf("cannot determine home directory: %w", err)
+		}
 		cfg := repoCfg
 		if cfg == nil {
 			cfg = config.LoadWithDefaults(plonkDir)

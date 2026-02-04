@@ -43,7 +43,10 @@ func init() {
 
 func runStatus(cmd *cobra.Command, args []string) error {
 	// Get directories
-	homeDir := config.GetHomeDir()
+	homeDir, err := config.GetHomeDir()
+	if err != nil {
+		return fmt.Errorf("cannot determine home directory: %w", err)
+	}
 	configDir := config.GetDefaultConfigDirectory()
 
 	// Load configuration (may fail if config is invalid, but we handle this gracefully)

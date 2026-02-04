@@ -77,7 +77,10 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	syncDrifted, _ := cmd.Flags().GetBool("sync-drifted")
 
 	// Get directories
-	homeDir := config.GetHomeDir()
+	homeDir, err := config.GetHomeDir()
+	if err != nil {
+		return fmt.Errorf("cannot determine home directory: %w", err)
+	}
 	configDir := config.GetDefaultConfigDirectory()
 
 	// Load config for ignore patterns with defaults

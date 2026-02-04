@@ -63,7 +63,10 @@ func runApply(cmd *cobra.Command, args []string) error {
 	dotfilesOnly, _ := cmd.Flags().GetBool("dotfiles")
 
 	// Get directories
-	homeDir := config.GetHomeDir()
+	homeDir, err := config.GetHomeDir()
+	if err != nil {
+		return fmt.Errorf("cannot determine home directory: %w", err)
+	}
 	configDir := config.GetDefaultConfigDirectory()
 
 	// Load configuration

@@ -39,7 +39,10 @@ func init() {
 }
 
 func runDiff(cmd *cobra.Command, args []string) error {
-	homeDir := config.GetHomeDir()
+	homeDir, err := config.GetHomeDir()
+	if err != nil {
+		return fmt.Errorf("cannot determine home directory: %w", err)
+	}
 	configDir := config.GetDefaultConfigDirectory()
 	cfg := config.LoadWithDefaults(configDir)
 

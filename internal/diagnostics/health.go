@@ -188,7 +188,13 @@ func checkEnvironmentVariables() HealthCheck {
 	check := NewHealthCheck("Environment Variables", "environment", "Environment variables configured")
 
 	// Check important environment variables
-	homeDir := config.GetHomeDir()
+	homeDir, err := config.GetHomeDir()
+	if err != nil {
+		check.Status = "fail"
+		check.Issues = append(check.Issues, fmt.Sprintf("Cannot determine home directory: %v", err))
+		check.Suggestions = append(check.Suggestions, "Ensure HOME environment variable is set correctly")
+		homeDir = "(unknown)"
+	}
 	configDir := config.GetDefaultConfigDirectory()
 
 	check.Details = append(check.Details,

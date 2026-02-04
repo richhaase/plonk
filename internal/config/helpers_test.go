@@ -19,14 +19,16 @@ func TestGetHomeDir(t *testing.T) {
 	t.Run("returns home directory", func(t *testing.T) {
 		// GetHomeDir uses os.UserHomeDir() which doesn't depend on HOME env var
 		// It returns the actual user's home directory
-		result := GetHomeDir()
+		result, err := GetHomeDir()
+		assert.NoError(t, err)
 		assert.NotEmpty(t, result)
 		assert.True(t, filepath.IsAbs(result))
 	})
 
 	t.Run("returns current user home", func(t *testing.T) {
 		// GetHomeDir uses os.UserHomeDir() which doesn't depend on HOME env var
-		result := GetHomeDir()
+		result, err := GetHomeDir()
+		assert.NoError(t, err)
 		// Should return a valid home directory path
 		assert.NotEmpty(t, result)
 		assert.True(t, filepath.IsAbs(result))

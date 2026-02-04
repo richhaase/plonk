@@ -4,6 +4,8 @@
 package commands
 
 import (
+	"fmt"
+
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/output"
@@ -34,7 +36,10 @@ func init() {
 
 func runDotfiles(cmd *cobra.Command, args []string) error {
 	// Get directories
-	homeDir := config.GetHomeDir()
+	homeDir, err := config.GetHomeDir()
+	if err != nil {
+		return fmt.Errorf("cannot determine home directory: %w", err)
+	}
 	configDir := config.GetDefaultConfigDirectory()
 
 	// Load configuration
