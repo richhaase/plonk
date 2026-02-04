@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
@@ -226,6 +227,9 @@ func DetectRequiredManagers(lockPath string) ([]string, error) {
 	for manager := range lockFile.Packages {
 		managers = append(managers, manager)
 	}
+
+	// Sort for deterministic output
+	sort.Strings(managers)
 
 	return managers, nil
 }
