@@ -168,12 +168,11 @@ func (m *DotfileManager) addDirectory(absTarget string) error {
 
 // Remove deletes a file or directory from $PLONK_DIR
 func (m *DotfileManager) Remove(name string) error {
-	sourcePath := filepath.Join(m.configDir, name)
-
-	// Security: validate path is under configDir to prevent path traversal attacks
-	if err := m.validatePathUnderConfigDir(sourcePath); err != nil {
+	if err := m.ValidateRemove(name); err != nil {
 		return err
 	}
+
+	sourcePath := filepath.Join(m.configDir, name)
 
 	// Verify it exists
 	info, err := m.fs.Stat(sourcePath)
@@ -190,6 +189,28 @@ func (m *DotfileManager) Remove(name string) error {
 		if err := m.fs.Remove(sourcePath); err != nil {
 			return fmt.Errorf("failed to remove %s: %w", name, err)
 		}
+	}
+
+	return nil
+}
+
+// ValidateRemove checks if a name can be removed without actually removing it
+func (m *DotfileManager) ValidateRemove(name string) error {
+	sourcePath := filepath.Join(m.configDir, name)
+
+	// Security: validate path is under configDir to prevent path traversal attacks
+	if err := m.validatePathUnderConfigDir(sourcePath); err != nil {
+		return err
+	}
+
+	// Reject internal config files
+	if name == "plonk.lock" || name == "plonk.yaml" {
+		return fmt.Errorf("cannot remove internal file: %s", name)
+	}
+
+	// Verify it exists
+	if _, err := m.fs.Stat(sourcePath); err != nil {
+		return fmt.Errorf("dotfile not found: %s", name)
 	}
 
 	return nil

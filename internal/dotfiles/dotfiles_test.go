@@ -219,6 +219,64 @@ func TestDotfileManager_Remove(t *testing.T) {
 	}
 }
 
+func TestDotfileManager_Remove_RejectsInternalFiles(t *testing.T) {
+	fs := NewMemoryFS()
+	fs.Dirs["/config"] = true
+	fs.Files["/config/plonk.lock"] = []byte("lock content")
+	fs.Files["/config/plonk.yaml"] = []byte("yaml content")
+
+	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
+
+	// plonk.lock must not be removable
+	err := m.Remove("plonk.lock")
+	if err == nil {
+		t.Fatal("Remove(plonk.lock) should return error, got nil")
+	}
+	// File must still exist
+	if _, ok := fs.Files["/config/plonk.lock"]; !ok {
+		t.Error("Remove(plonk.lock) deleted the lock file")
+	}
+
+	// plonk.yaml must not be removable
+	err = m.Remove("plonk.yaml")
+	if err == nil {
+		t.Fatal("Remove(plonk.yaml) should return error, got nil")
+	}
+	// File must still exist
+	if _, ok := fs.Files["/config/plonk.yaml"]; !ok {
+		t.Error("Remove(plonk.yaml) deleted the config file")
+	}
+}
+
+func TestDotfileManager_ValidateRemove(t *testing.T) {
+	fs := NewMemoryFS()
+	fs.Dirs["/config"] = true
+	fs.Files["/config/zshrc"] = []byte("content")
+	fs.Files["/config/plonk.lock"] = []byte("lock")
+
+	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
+
+	// Valid dotfile should pass
+	if err := m.ValidateRemove("zshrc"); err != nil {
+		t.Errorf("ValidateRemove(zshrc) unexpected error: %v", err)
+	}
+
+	// Path traversal should fail
+	if err := m.ValidateRemove("../etc/passwd"); err == nil {
+		t.Error("ValidateRemove(../etc/passwd) should return error, got nil")
+	}
+
+	// Internal files should fail
+	if err := m.ValidateRemove("plonk.lock"); err == nil {
+		t.Error("ValidateRemove(plonk.lock) should return error, got nil")
+	}
+
+	// Nonexistent dotfile should fail
+	if err := m.ValidateRemove("nonexistent"); err == nil {
+		t.Error("ValidateRemove(nonexistent) should return error, got nil")
+	}
+}
+
 func TestDotfileManager_Deploy(t *testing.T) {
 	fs := NewMemoryFS()
 	fs.Dirs["/config"] = true

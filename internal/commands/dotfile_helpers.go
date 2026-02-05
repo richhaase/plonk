@@ -4,7 +4,6 @@
 package commands
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -272,20 +271,17 @@ func removeDotfiles(dm *dotfiles.DotfileManager, configDir, homeDir string, path
 		// Resolve path to get the name in config dir
 		name := resolveDotfileNameForRemoval(path, homeDir)
 
-		// Check if it exists first
-		sourcePath := filepath.Join(configDir, name)
-		if _, err := os.Stat(sourcePath); err != nil {
-			if os.IsNotExist(err) {
-				// File doesn't exist - skip it
+		// Validate the removal target (security checks + existence)
+		if err := dm.ValidateRemove(name); err != nil {
+			if os.IsNotExist(err) || strings.Contains(err.Error(), "not found") {
 				result.Status = RemoveStatusSkipped
 				result.Source = name
 				result.Destination = toTargetPath(name, homeDir)
 				results = append(results, result)
 				continue
 			}
-			// Other errors (permission denied, etc.) - report as failure
 			result.Status = RemoveStatusFailed
-			result.Error = fmt.Errorf("cannot access %s: %w", sourcePath, err)
+			result.Error = err
 			results = append(results, result)
 			continue
 		}

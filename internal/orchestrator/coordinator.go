@@ -156,10 +156,10 @@ func convertSimpleApplyResult(r *packages.SimpleApplyResult, dryRun bool) output
 	}
 
 	// TotalMissing = packages that were not installed at reconciliation time
-	// In dry-run: WouldInstall (packages that need installation)
+	// In dry-run: WouldInstall + Failed (packages that need installation or couldn't be evaluated)
 	// In real run: Installed + Failed (packages that were missing - some fixed, some still missing)
 	if dryRun {
-		result.TotalMissing = result.TotalWouldInstall
+		result.TotalMissing = result.TotalWouldInstall + result.TotalFailed
 	} else {
 		result.TotalMissing = result.TotalInstalled + result.TotalFailed
 	}
