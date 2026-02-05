@@ -201,6 +201,65 @@ func TestDotfileManager_Add(t *testing.T) {
 	}
 }
 
+func TestDotfileManager_Add_RejectsNonDotPaths(t *testing.T) {
+	fs := NewMemoryFS()
+	fs.Dirs["/config"] = true
+	fs.Dirs["/home/user"] = true
+	fs.Files["/home/user/vimrc"] = []byte("vim content")
+	fs.Files["/home/user/bin/tool"] = []byte("tool content")
+	fs.Dirs["/home/user/bin"] = true
+
+	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
+
+	// Non-dot file in $HOME should be rejected
+	err := m.Add("/home/user/vimrc")
+	if err == nil {
+		t.Fatal("Add(~/vimrc) should return error for non-dot path, got nil")
+	}
+
+	// Non-dot directory in $HOME should be rejected
+	err = m.Add("/home/user/bin/tool")
+	if err == nil {
+		t.Fatal("Add(~/bin/tool) should return error for non-dot path, got nil")
+	}
+
+	// Dot-prefixed paths should still work
+	fs.Files["/home/user/.vimrc"] = []byte("vim content")
+	err = m.Add("/home/user/.vimrc")
+	if err != nil {
+		t.Fatalf("Add(~/.vimrc) unexpected error: %v", err)
+	}
+
+	// Nested dot-prefixed paths should still work
+	fs.Files["/home/user/.config/nvim/init.lua"] = []byte("nvim content")
+	fs.Dirs["/home/user/.config"] = true
+	fs.Dirs["/home/user/.config/nvim"] = true
+	err = m.Add("/home/user/.config/nvim/init.lua")
+	if err != nil {
+		t.Fatalf("Add(~/.config/nvim/init.lua) unexpected error: %v", err)
+	}
+}
+
+func TestDotfileManager_ValidateAdd_RejectsNonDotPaths(t *testing.T) {
+	fs := NewMemoryFS()
+	fs.Dirs["/config"] = true
+	fs.Dirs["/home/user"] = true
+	fs.Files["/home/user/vimrc"] = []byte("content")
+	fs.Files["/home/user/.vimrc"] = []byte("content")
+
+	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
+
+	// Non-dot path should fail validation
+	if err := m.ValidateAdd("/home/user/vimrc"); err == nil {
+		t.Error("ValidateAdd(~/vimrc) should return error, got nil")
+	}
+
+	// Dot path should pass validation
+	if err := m.ValidateAdd("/home/user/.vimrc"); err != nil {
+		t.Errorf("ValidateAdd(~/.vimrc) unexpected error: %v", err)
+	}
+}
+
 func TestDotfileManager_Remove(t *testing.T) {
 	fs := NewMemoryFS()
 	fs.Dirs["/config"] = true

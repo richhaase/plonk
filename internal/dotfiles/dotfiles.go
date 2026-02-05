@@ -92,6 +92,11 @@ func (m *DotfileManager) Add(targetPath string) error {
 		return err
 	}
 
+	// Require dot-prefixed path (dotfile manager only manages dotfiles)
+	if err := m.requireDotPrefix(absTarget); err != nil {
+		return err
+	}
+
 	// Security: reject paths under configDir to prevent self-referential adds
 	if err := m.rejectPathUnderConfigDir(absTarget); err != nil {
 		return err
@@ -421,6 +426,23 @@ func (m *DotfileManager) rejectPathUnderConfigDir(absPath string) error {
 	return nil
 }
 
+// requireDotPrefix ensures the first path component under $HOME starts with a dot.
+// Plonk manages dotfiles; non-dot paths would be deployed to the wrong location
+// because toTarget always adds a dot prefix.
+func (m *DotfileManager) requireDotPrefix(absPath string) error {
+	rel, err := filepath.Rel(m.homeDir, absPath)
+	if err != nil {
+		return fmt.Errorf("cannot compute relative path: %w", err)
+	}
+
+	parts := strings.SplitN(rel, string(os.PathSeparator), 2)
+	if len(parts[0]) == 0 || parts[0][0] != '.' {
+		return fmt.Errorf("path %s is not a dotfile (first component must start with '.')", absPath)
+	}
+
+	return nil
+}
+
 // shouldIgnore returns true if the path should be ignored (assumes it's a file)
 func (m *DotfileManager) shouldIgnore(relPath string) bool {
 	return m.shouldIgnoreWithDir(relPath, false)
@@ -520,6 +542,11 @@ func (m *DotfileManager) ValidateAdd(targetPath string) error {
 
 	// Security: validate path is under $HOME
 	if err := m.validatePathUnderHome(absTarget); err != nil {
+		return err
+	}
+
+	// Require dot-prefixed path (dotfile manager only manages dotfiles)
+	if err := m.requireDotPrefix(absTarget); err != nil {
 		return err
 	}
 

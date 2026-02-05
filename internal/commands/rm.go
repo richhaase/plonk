@@ -26,16 +26,12 @@ affected by 'plonk apply' operations. Use 'plonk status' to see which files
 are currently managed.
 
 Path Resolution:
-Plonk accepts paths in multiple formats and intelligently resolves them:
+Plonk resolves paths relative to your home directory for removal:
 
 - Absolute paths: /home/user/.vimrc → Used as-is
 - Tilde paths: ~/.vimrc → Expands to /home/user/.vimrc
-- Relative paths: .vimrc → Tries:
-  1. Current directory: /current/dir/.vimrc
-  2. Home directory: /home/user/.vimrc
-- Plain names: vimrc → Tries:
-  1. Current directory: /current/dir/vimrc
-  2. Home directory: /home/user/vimrc
+- Relative paths: .vimrc → Resolves to /home/user/.vimrc
+- Plain names: vimrc → Resolves to /home/user/vimrc
 
 Security:
 - All paths must resolve to locations under your home directory ($HOME)

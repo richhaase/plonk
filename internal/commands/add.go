@@ -33,11 +33,10 @@ Plonk accepts paths in multiple formats and intelligently resolves them:
 - Relative paths: .vimrc → Tries:
   1. Current directory: /current/dir/.vimrc
   2. Home directory: /home/user/.vimrc
-- Plain names: vimrc → Tries:
-  1. Current directory: /current/dir/vimrc
-  2. Home directory: /home/user/vimrc
+- Plain names: vimrc → Resolves to ~/.vimrc (dot prefix added automatically)
 
 Security:
+- All paths must resolve to dotfiles (first path component starts with '.')
 - All paths must resolve to locations under your home directory ($HOME)
 - Paths outside $HOME are rejected to prevent unintended file operations
 
