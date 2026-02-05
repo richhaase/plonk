@@ -201,6 +201,27 @@ func TestDotfileManager_Add(t *testing.T) {
 	}
 }
 
+func TestDotfileManager_Add_RejectsHomeDirectory(t *testing.T) {
+	fs := NewMemoryFS()
+	fs.Dirs["/config"] = true
+	fs.Dirs["/home/user"] = true
+	fs.Files["/home/user/.zshrc"] = []byte("content")
+
+	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
+
+	// Adding $HOME itself must be rejected
+	err := m.Add("/home/user")
+	if err == nil {
+		t.Fatal("Add($HOME) should return error, got nil")
+	}
+
+	// ValidateAdd should also reject it
+	err = m.ValidateAdd("/home/user")
+	if err == nil {
+		t.Fatal("ValidateAdd($HOME) should return error, got nil")
+	}
+}
+
 func TestDotfileManager_Add_RejectsNonDotPaths(t *testing.T) {
 	fs := NewMemoryFS()
 	fs.Dirs["/config"] = true

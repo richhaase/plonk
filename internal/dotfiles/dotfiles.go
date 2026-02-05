@@ -435,6 +435,11 @@ func (m *DotfileManager) requireDotPrefix(absPath string) error {
 		return fmt.Errorf("cannot compute relative path: %w", err)
 	}
 
+	// Reject home directory itself ("." means the path equals homeDir)
+	if rel == "." {
+		return fmt.Errorf("path %s is the home directory, not a dotfile", absPath)
+	}
+
 	parts := strings.SplitN(rel, string(os.PathSeparator), 2)
 	if len(parts[0]) == 0 || parts[0][0] != '.' {
 		return fmt.Errorf("path %s is not a dotfile (first component must start with '.')", absPath)
