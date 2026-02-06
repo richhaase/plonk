@@ -52,6 +52,10 @@ func ParsePackageSpec(spec string) (manager, pkg string, err error) {
 		return "", "", fmt.Errorf("package name cannot be empty")
 	}
 
+	if pkg[0] == '-' {
+		return "", "", fmt.Errorf("invalid package name %q: must not start with '-'", pkg)
+	}
+
 	return manager, pkg, nil
 }
 

@@ -16,8 +16,10 @@ import (
 // Drifted items are included in managed with StateDegraded state.
 func convertDotfileStatusToOutput(statuses []dotfiles.DotfileStatus) (managed, missing []output.Item) {
 	for _, s := range statuses {
+		// Use the target filename for display (strips .tmpl and adds dot prefix)
+		displayName := "." + strings.TrimSuffix(s.Name, ".tmpl")
 		item := output.Item{
-			Name: "." + s.Name,
+			Name: displayName,
 			Path: s.Target,
 			Metadata: map[string]interface{}{
 				"source":      s.Source,
@@ -98,8 +100,9 @@ func resolveDotfileName(path, homeDir string) string {
 		return path
 	}
 
-	// Remove leading dot if present
-	if len(rel) > 0 && rel[0] == '.' {
+	// Strip leading dot from first path component (e.g., ".zshrc" -> "zshrc")
+	// but NOT path traversal sequences like ".." or the current dir "."
+	if len(rel) > 1 && rel[0] == '.' && rel[1] != '.' && rel[1] != os.PathSeparator {
 		rel = rel[1:]
 	}
 
@@ -135,8 +138,9 @@ func resolveDotfileNameForRemoval(path, homeDir string) string {
 		return path
 	}
 
-	// Remove leading dot if present
-	if len(rel) > 0 && rel[0] == '.' {
+	// Strip leading dot from first path component (e.g., ".zshrc" -> "zshrc")
+	// but NOT path traversal sequences like ".." or the current dir "."
+	if len(rel) > 1 && rel[0] == '.' && rel[1] != '.' && rel[1] != os.PathSeparator {
 		rel = rel[1:]
 	}
 

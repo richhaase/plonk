@@ -138,6 +138,20 @@ func (f PackagesStatusFormatter) StructuredData() any {
 		})
 	}
 
+	// Add error items
+	for _, item := range result.Errors {
+		mi := ManagedItem{
+			Name:    item.Name,
+			Domain:  "package",
+			State:   string(item.State),
+			Manager: item.Manager,
+		}
+		if item.Error != "" {
+			mi.Metadata = map[string]interface{}{"error": item.Error}
+		}
+		items = append(items, mi)
+	}
+
 	summary := Summary{
 		TotalManaged:   len(result.Managed),
 		TotalMissing:   len(result.Missing),

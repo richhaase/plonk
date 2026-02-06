@@ -6,6 +6,7 @@ package packages
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/richhaase/plonk/internal/lock"
 )
@@ -29,8 +30,18 @@ func SimpleApply(ctx context.Context, configDir string, dryRun bool) (*SimpleApp
 
 	result := &SimpleApplyResult{}
 
-	// Process each manager
-	for manager, pkgs := range lockFile.Packages {
+	// Sort managers for deterministic order — ensures managers that provide
+	// tools (e.g., brew:go) are processed before managers that depend on them
+	// (e.g., go:gopls)
+	managers := make([]string, 0, len(lockFile.Packages))
+	for manager := range lockFile.Packages {
+		managers = append(managers, manager)
+	}
+	sort.Strings(managers)
+
+	// Process each manager in sorted order
+	for _, manager := range managers {
+		pkgs := lockFile.Packages[manager]
 		mgr, err := GetManager(manager)
 		if err != nil {
 			// Record failure for each package individually

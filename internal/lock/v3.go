@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -21,6 +22,7 @@ type lockV2 struct {
 }
 
 type resourceEntry struct {
+	ID       string                 `yaml:"id"`
 	Type     string                 `yaml:"type"`
 	Metadata map[string]interface{} `yaml:"metadata"`
 }
@@ -199,10 +201,17 @@ func (s *LockV3Service) migrateV2(data []byte) (*LockV3, error) {
 		manager, _ := resource.Metadata["manager"].(string)
 		name, _ := resource.Metadata["name"].(string)
 
+		// Fall back to parsing the legacy id field (format: "manager:package")
+		if (manager == "" || name == "") && resource.ID != "" {
+			if idx := strings.IndexByte(resource.ID, ':'); idx > 0 && idx < len(resource.ID)-1 {
+				manager = resource.ID[:idx]
+				name = resource.ID[idx+1:]
+			}
+		}
+
 		if manager != "" && name != "" {
 			v3.AddPackage(manager, name)
 		} else {
-			// Log warning for packages that can't be migrated
 			log.Printf("Warning: skipping v2 package during migration (missing manager=%q or name=%q)", manager, name)
 		}
 	}

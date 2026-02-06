@@ -256,6 +256,11 @@ func (m *DotfileManager) Remove(name string) error {
 
 // ValidateRemove checks if a name can be removed without actually removing it
 func (m *DotfileManager) ValidateRemove(name string) error {
+	// Reject empty names (would resolve to configDir itself)
+	if name == "" || name == "." {
+		return fmt.Errorf("invalid dotfile name: %q", name)
+	}
+
 	sourcePath := filepath.Join(m.configDir, name)
 
 	// Security: validate path is under configDir to prevent path traversal attacks
@@ -468,8 +473,8 @@ func (m *DotfileManager) validatePathUnderHome(absPath string) error {
 		return fmt.Errorf("path %s is not accessible from home directory: %w", absPath, err)
 	}
 
-	// If the relative path starts with "..", it escapes the home directory
-	if strings.HasPrefix(rel, "..") {
+	// If the relative path escapes via "..", the path is outside the home directory
+	if relEscapes(rel) {
 		return fmt.Errorf("path %s is outside home directory %s", absPath, m.homeDir)
 	}
 
@@ -486,7 +491,7 @@ func (m *DotfileManager) validatePathUnderConfigDir(absPath string) error {
 		return fmt.Errorf("path %s is not accessible from config directory: %w", absPath, err)
 	}
 
-	if strings.HasPrefix(rel, "..") {
+	if relEscapes(rel) {
 		return fmt.Errorf("path %s is outside config directory %s", absPath, m.configDir)
 	}
 
@@ -503,7 +508,7 @@ func (m *DotfileManager) rejectPathUnderConfigDir(absPath string) error {
 		return nil // Different drives, not under configDir
 	}
 
-	if !strings.HasPrefix(rel, "..") {
+	if !relEscapes(rel) {
 		return fmt.Errorf("cannot add files from config directory %s", m.configDir)
 	}
 
@@ -530,6 +535,13 @@ func (m *DotfileManager) requireDotPrefix(absPath string) error {
 	}
 
 	return nil
+}
+
+// relEscapes returns true if a filepath.Rel result represents path traversal
+// (i.e., ".." or "../something"), but NOT files that merely start with ".."
+// (e.g., "..env" is a valid filename, not traversal).
+func relEscapes(rel string) bool {
+	return rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator))
 }
 
 // shouldIgnore returns true if the path should be ignored (assumes it's a file)
@@ -619,6 +631,25 @@ func (m *DotfileManager) walkDir(root string, fn func(path string, isDir bool) e
 	}
 
 	return nil
+}
+
+// RenderSource reads a source file and renders it if it's a template.
+// Returns the rendered content suitable for diffing against the deployed target.
+func (m *DotfileManager) RenderSource(name string) ([]byte, error) {
+	sourcePath := filepath.Join(m.configDir, name)
+	content, err := m.fs.ReadFile(sourcePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read source: %w", err)
+	}
+
+	if isTemplate(name) {
+		content, err = renderTemplate(content, m.lookupEnv)
+		if err != nil {
+			return nil, fmt.Errorf("failed to render template %s: %w", name, err)
+		}
+	}
+
+	return content, nil
 }
 
 // ValidateAdd checks if a path can be added without actually adding it

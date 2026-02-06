@@ -72,11 +72,36 @@ func runDiff(cmd *cobra.Command, args []string) error {
 		diffTool = "git diff --no-index"
 	}
 
+	// Create DotfileManager for rendering templates
+	dm := dotfiles.NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
+
 	// Execute diff for each drifted file
 	var diffErrors []string
 	for _, status := range driftedFiles {
 		sourcePath := status.Source
 		destPath := status.Target
+
+		// For template files, render to a temp file so the external diff tool
+		// sees rendered content instead of raw {{VAR}} placeholders
+		if strings.HasSuffix(status.Name, ".tmpl") {
+			rendered, err := dm.RenderSource(status.Name)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error rendering template %s: %v\n", status.Name, err)
+				diffErrors = append(diffErrors, status.Name)
+				continue
+			}
+			tmpFile, err := os.CreateTemp("", "plonk-diff-*.rendered")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error creating temp file for %s: %v\n", status.Name, err)
+				diffErrors = append(diffErrors, status.Name)
+				continue
+			}
+			tmpPath := tmpFile.Name()
+			tmpFile.Write(rendered)
+			tmpFile.Close()
+			defer os.Remove(tmpPath)
+			sourcePath = tmpPath
+		}
 
 		if err := executeDiffTool(diffTool, sourcePath, destPath); err != nil {
 			// Report error but continue with other files
