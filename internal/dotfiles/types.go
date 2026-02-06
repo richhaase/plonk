@@ -17,12 +17,14 @@ const (
 	SyncStateManaged   SyncState = "managed"   // source and target match
 	SyncStateMissing   SyncState = "missing"   // source exists, target doesn't
 	SyncStateDrifted   SyncState = "drifted"   // source and target differ
+	SyncStateError     SyncState = "error"     // could not determine state
 )
 
 // DotfileStatus combines a dotfile with its current state
 type DotfileStatus struct {
 	Dotfile
 	State SyncState
+	Error error // non-nil when State is SyncStateError
 }
 
 // DeployResult summarizes what Apply() did

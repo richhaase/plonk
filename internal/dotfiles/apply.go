@@ -21,7 +21,7 @@ type ApplyFilterOptions struct {
 
 // ApplySelective applies only the dotfiles whose destination paths are in the filter set.
 // The filter should contain normalized absolute paths (use filepath.Abs and filepath.Clean).
-func ApplySelective(_ context.Context, configDir, homeDir string, cfg *config.Config, opts ApplyFilterOptions) (output.DotfileResults, error) {
+func ApplySelective(ctx context.Context, configDir, homeDir string, cfg *config.Config, opts ApplyFilterOptions) (output.DotfileResults, error) {
 	manager := NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
 
 	// Get all statuses
@@ -41,11 +41,11 @@ func ApplySelective(_ context.Context, configDir, homeDir string, cfg *config.Co
 		statuses = filtered
 	}
 
-	return applyStatuses(manager, statuses, opts.DryRun)
+	return applyStatuses(ctx, manager, statuses, opts.DryRun)
 }
 
 // Apply applies dotfile configuration and returns the result
-func Apply(_ context.Context, configDir, homeDir string, cfg *config.Config, dryRun bool) (output.DotfileResults, error) {
+func Apply(ctx context.Context, configDir, homeDir string, cfg *config.Config, dryRun bool) (output.DotfileResults, error) {
 	manager := NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
 
 	statuses, err := manager.Reconcile()
@@ -53,11 +53,11 @@ func Apply(_ context.Context, configDir, homeDir string, cfg *config.Config, dry
 		return output.DotfileResults{DryRun: dryRun}, err
 	}
 
-	return applyStatuses(manager, statuses, dryRun)
+	return applyStatuses(ctx, manager, statuses, dryRun)
 }
 
 // applyStatuses applies the given dotfile statuses and returns results
-func applyStatuses(manager *DotfileManager, statuses []DotfileStatus, dryRun bool) (output.DotfileResults, error) {
+func applyStatuses(ctx context.Context, manager *DotfileManager, statuses []DotfileStatus, dryRun bool) (output.DotfileResults, error) {
 	result := output.DotfileResults{
 		DryRun:     dryRun,
 		TotalFiles: len(statuses),
@@ -76,9 +76,27 @@ func applyStatuses(manager *DotfileManager, statuses []DotfileStatus, dryRun boo
 	}
 
 	for _, s := range statuses {
+		// Check for context cancellation/timeout between files
+		if err := ctx.Err(); err != nil {
+			return result, fmt.Errorf("apply cancelled: %w", err)
+		}
+
 		switch s.State {
 		case SyncStateManaged:
 			result.Summary.Unchanged++
+
+		case SyncStateError:
+			action := output.DotfileOperation{
+				Source:      s.Source,
+				Destination: s.Target,
+				Action:      "error",
+				Status:      "failed",
+			}
+			if s.Error != nil {
+				action.Error = s.Error.Error()
+			}
+			result.Actions = append(result.Actions, action)
+			result.Summary.Failed++
 
 		case SyncStateMissing:
 			var spinner *output.Spinner

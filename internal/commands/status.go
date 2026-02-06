@@ -189,12 +189,13 @@ func getPackageStatus(ctx context.Context, configDir string) packageStatus {
 // convertStatusToSummary combines dotfile statuses and package results into a unified summary
 func convertStatusToSummary(statuses []dotfiles.DotfileStatus, pkgResult packageStatus) output.Summary {
 	// Convert dotfiles to output format
-	managedItems, missingItems := convertDotfileStatusToOutput(statuses)
+	managedItems, missingItems, errorItems := convertDotfileStatusToOutput(statuses)
 
 	dotfileOutput := output.Result{
 		Domain:  "dotfile",
 		Managed: managedItems,
 		Missing: missingItems,
+		Errors:  errorItems,
 	}
 
 	// Create package result
@@ -207,7 +208,7 @@ func convertStatusToSummary(statuses []dotfiles.DotfileStatus, pkgResult package
 
 	totalManaged := len(managedItems) + len(pkgResult.Managed)
 	totalMissing := len(missingItems) + len(pkgResult.Missing)
-	totalErrors := len(pkgResult.Errors)
+	totalErrors := len(errorItems) + len(pkgResult.Errors)
 
 	return output.Summary{
 		TotalManaged:   totalManaged,

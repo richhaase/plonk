@@ -53,12 +53,13 @@ func runDotfiles(cmd *cobra.Command, args []string) error {
 	}
 
 	// Separate by state and convert to output format
-	managed, missing := convertDotfileStatusToOutput(statuses)
+	managed, missing, errors := convertDotfileStatusToOutput(statuses)
 
 	outputResult := output.Result{
 		Domain:  "dotfile",
 		Managed: managed,
 		Missing: missing,
+		Errors:  errors,
 	}
 
 	// Prepare output

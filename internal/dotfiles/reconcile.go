@@ -19,7 +19,14 @@ func (m *DotfileManager) Reconcile() ([]DotfileStatus, error) {
 	for _, d := range dotfiles {
 		state, err := m.getState(d)
 		if err != nil {
-			return nil, err
+			// Collect per-file errors instead of aborting; one broken file
+			// should not prevent status/diff/apply from reporting on others.
+			statuses = append(statuses, DotfileStatus{
+				Dotfile: d,
+				State:   SyncStateError,
+				Error:   err,
+			})
+			continue
 		}
 		statuses = append(statuses, DotfileStatus{
 			Dotfile: d,
@@ -69,6 +76,10 @@ func (m *DotfileManager) ApplyAll(dryRun bool) (DeployResult, error) {
 		switch status.State {
 		case SyncStateManaged:
 			result.Skipped = append(result.Skipped, status.Dotfile)
+
+		case SyncStateError:
+			result.Failed = append(result.Failed, status.Dotfile)
+			result.Errors = append(result.Errors, status.Error)
 
 		case SyncStateMissing, SyncStateDrifted:
 			if dryRun {

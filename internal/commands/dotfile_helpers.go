@@ -4,6 +4,7 @@
 package commands
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,9 +13,9 @@ import (
 	"github.com/richhaase/plonk/internal/output"
 )
 
-// convertDotfileStatusToOutput converts []dotfiles.DotfileStatus to separate managed and missing slices.
+// convertDotfileStatusToOutput converts []dotfiles.DotfileStatus to separate managed, missing, and error slices.
 // Drifted items are included in managed with StateDegraded state.
-func convertDotfileStatusToOutput(statuses []dotfiles.DotfileStatus) (managed, missing []output.Item) {
+func convertDotfileStatusToOutput(statuses []dotfiles.DotfileStatus) (managed, missing, errors []output.Item) {
 	for _, s := range statuses {
 		// Use the target filename for display (strips .tmpl and adds dot prefix)
 		displayName := "." + strings.TrimSuffix(s.Name, ".tmpl")
@@ -37,9 +38,15 @@ func convertDotfileStatusToOutput(statuses []dotfiles.DotfileStatus) (managed, m
 		case dotfiles.SyncStateDrifted:
 			item.State = output.StateDegraded
 			managed = append(managed, item)
+		case dotfiles.SyncStateError:
+			item.State = output.StateError
+			if s.Error != nil {
+				item.Error = s.Error.Error()
+			}
+			errors = append(errors, item)
 		}
 	}
-	return managed, missing
+	return managed, missing, errors
 }
 
 // resolveDotfilePath resolves a path to an absolute path, trying cwd first then home
@@ -59,21 +66,21 @@ func resolveDotfilePath(path, homeDir string) string {
 		}
 	}
 
-	// Relative path - try current directory first, then home directory
+	// For plain names (no path separator, no dot prefix), prefer home dotfile
+	// over CWD to avoid CWD-dependent behavior. e.g., "vimrc" -> "~/.vimrc"
+	isPlainName := !strings.HasPrefix(path, ".") && !strings.Contains(path, string(os.PathSeparator))
+	if isPlainName {
+		dottedPath := filepath.Join(homeDir, "."+path)
+		if _, statErr := os.Stat(dottedPath); statErr == nil {
+			return dottedPath // Dotted file exists in home
+		}
+	}
+
+	// Relative path - try current directory, then home directory
 	absPath, err := filepath.Abs(path)
 	if err == nil {
 		if _, statErr := os.Stat(absPath); statErr == nil {
 			return absPath // File exists in cwd
-		}
-	}
-
-	// Try home directory with dot prefix first (e.g., "vimrc" -> "~/.vimrc")
-	// This handles plain-name arguments like `plonk add vimrc`
-	// Prefer dotted path since toTarget() always adds a dot prefix
-	if !strings.HasPrefix(path, ".") && !strings.Contains(path, string(os.PathSeparator)) {
-		dottedPath := filepath.Join(homeDir, "."+path)
-		if _, statErr := os.Stat(dottedPath); statErr == nil {
-			return dottedPath // Dotted file exists in home
 		}
 	}
 
@@ -194,9 +201,24 @@ func addDotfiles(dm *dotfiles.DotfileManager, configDir, homeDir string, paths [
 		relPath := resolveDotfileName(absPath, homeDir)
 		sourcePath := filepath.Join(configDir, relPath)
 
-		// Check if already managed
+		// Check if already managed (plain or template counterpart)
 		_, existsErr := os.Stat(sourcePath)
 		alreadyManaged := existsErr == nil
+		if !alreadyManaged {
+			// Check for template counterpart (e.g., "gitconfig.tmpl" for "gitconfig")
+			tmplPath := sourcePath + ".tmpl"
+			if _, tmplErr := os.Stat(tmplPath); tmplErr == nil {
+				// Template source exists — don't create a conflicting plain source.
+				// Report as already managed so callers know no action is needed.
+				result.Source = relPath + ".tmpl"
+				result.Destination = absPath
+				result.AlreadyManaged = true
+				result.Status = AddStatusFailed
+				result.Error = fmt.Errorf("%s is managed as a template (%s.tmpl); edit the template instead", relPath, relPath)
+				results = append(results, result)
+				continue
+			}
+		}
 
 		// Validate the path (security checks + existence)
 		if err := dm.ValidateAdd(absPath); err != nil {
