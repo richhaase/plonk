@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/ignore"
@@ -17,6 +18,46 @@ import (
 
 // errSkipDir is returned by walkDir callbacks to skip a directory
 var errSkipDir = errors.New("skip directory")
+
+const templateExtension = ".tmpl"
+
+var templateVarPattern = regexp.MustCompile(`\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}`)
+
+func isTemplate(name string) bool {
+	return strings.HasSuffix(name, templateExtension)
+}
+
+func renderTemplate(content []byte, lookupEnv func(string) (string, bool)) ([]byte, error) {
+	matches := templateVarPattern.FindAllSubmatch(content, -1)
+	if len(matches) == 0 {
+		return content, nil
+	}
+
+	var missing []string
+	seen := make(map[string]bool)
+	for _, match := range matches {
+		varName := string(match[1])
+		if seen[varName] {
+			continue
+		}
+		seen[varName] = true
+		if _, ok := lookupEnv(varName); !ok {
+			missing = append(missing, varName)
+		}
+	}
+
+	if len(missing) > 0 {
+		return nil, fmt.Errorf("missing environment variables: %s", strings.Join(missing, ", "))
+	}
+
+	result := templateVarPattern.ReplaceAllFunc(content, func(match []byte) []byte {
+		varName := string(templateVarPattern.FindSubmatch(match)[1])
+		val, _ := lookupEnv(varName)
+		return []byte(val)
+	})
+
+	return result, nil
+}
 
 // DotfileManager manages dotfiles in a single config directory
 type DotfileManager struct {

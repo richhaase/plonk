@@ -533,3 +533,89 @@ func TestDotfileManager_AddDirectory_IgnoresPatterns(t *testing.T) {
 		t.Error("Add(~/.config) copied .git directory contents")
 	}
 }
+
+func TestRenderTemplate(t *testing.T) {
+	lookup := func(key string) (string, bool) {
+		vars := map[string]string{
+			"EMAIL":         "user@example.com",
+			"GIT_USER_NAME": "Test User",
+		}
+		v, ok := vars[key]
+		return v, ok
+	}
+
+	tests := []struct {
+		name    string
+		input   string
+		want    string
+		wantErr bool
+	}{
+		{
+			name:  "single variable",
+			input: "email = {{EMAIL}}",
+			want:  "email = user@example.com",
+		},
+		{
+			name:  "multiple variables",
+			input: "email = {{EMAIL}}\nname = {{GIT_USER_NAME}}",
+			want:  "email = user@example.com\nname = Test User",
+		},
+		{
+			name:  "no placeholders",
+			input: "just plain text",
+			want:  "just plain text",
+		},
+		{
+			name:    "missing variable",
+			input:   "email = {{MISSING_VAR}}",
+			wantErr: true,
+		},
+		{
+			name:    "multiple missing variables",
+			input:   "{{MISSING_ONE}} and {{MISSING_TWO}}",
+			wantErr: true,
+		},
+		{
+			name:  "same variable used twice",
+			input: "{{EMAIL}} and {{EMAIL}}",
+			want:  "user@example.com and user@example.com",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := renderTemplate([]byte(tt.input), lookup)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("renderTemplate() expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("renderTemplate() error = %v", err)
+			}
+			if string(got) != tt.want {
+				t.Errorf("renderTemplate() = %q, want %q", string(got), tt.want)
+			}
+		})
+	}
+}
+
+func TestIsTemplate(t *testing.T) {
+	tests := []struct {
+		name string
+		want bool
+	}{
+		{"gitconfig.tmpl", true},
+		{"config/git/config.tmpl", true},
+		{"zshrc", false},
+		{"tmpl", false},
+		{"file.tmpl.bak", false},
+	}
+
+	for _, tt := range tests {
+		if got := isTemplate(tt.name); got != tt.want {
+			t.Errorf("isTemplate(%q) = %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}
