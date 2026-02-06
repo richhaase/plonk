@@ -67,7 +67,7 @@ func (c *CargoSimple) loadInstalled(ctx context.Context) error {
 
 // Install installs a package via cargo
 func (c *CargoSimple) Install(ctx context.Context, name string) error {
-	cmd := exec.CommandContext(ctx, "cargo", "install", name)
+	cmd := exec.CommandContext(ctx, "cargo", "install", "--", name)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		// Check if already installed (idempotent)

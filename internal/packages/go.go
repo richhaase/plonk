@@ -136,5 +136,8 @@ func goBinDir() string {
 		gopath = filepath.Join(home, "go")
 	}
 
-	return filepath.Join(gopath, "bin")
+	// GOPATH can contain multiple paths separated by os.PathListSeparator.
+	// Go install places binaries in the first entry's bin directory.
+	paths := filepath.SplitList(gopath)
+	return filepath.Join(paths[0], "bin")
 }

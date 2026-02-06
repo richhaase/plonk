@@ -63,7 +63,7 @@ func (u *UVSimple) loadInstalled(ctx context.Context) error {
 
 // Install installs a tool via uv
 func (u *UVSimple) Install(ctx context.Context, name string) error {
-	cmd := exec.CommandContext(ctx, "uv", "tool", "install", name)
+	cmd := exec.CommandContext(ctx, "uv", "tool", "install", "--", name)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		// Check if already installed

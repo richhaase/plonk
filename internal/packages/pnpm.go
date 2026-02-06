@@ -69,7 +69,7 @@ func (p *PNPMSimple) loadInstalled(ctx context.Context) error {
 
 // Install installs a package globally via pnpm
 func (p *PNPMSimple) Install(ctx context.Context, name string) error {
-	cmd := exec.CommandContext(ctx, "pnpm", "add", "-g", name)
+	cmd := exec.CommandContext(ctx, "pnpm", "add", "-g", "--", name)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		// Check if already installed

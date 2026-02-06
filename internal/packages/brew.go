@@ -53,26 +53,25 @@ func (b *BrewSimple) loadInstalled(ctx context.Context) error {
 		}
 	}
 
-	// Get casks
+	// Get casks — failure is non-fatal (cask support may be unavailable, e.g., on Linux)
 	cmd = exec.CommandContext(ctx, "brew", "list", "--cask", "-1")
 	output, err = cmd.Output()
-	if err != nil {
-		return fmt.Errorf("failed to list brew casks: %w", err)
-	}
-	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
-		if line != "" {
-			installed[line] = true
+	if err == nil {
+		for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+			if line != "" {
+				installed[line] = true
+			}
 		}
 	}
 
-	// Only set the cache after successful loading
+	// Set cache with whatever we loaded (formulas always, casks if available)
 	b.installed = installed
 	return nil
 }
 
 // Install installs a package via brew
 func (b *BrewSimple) Install(ctx context.Context, name string) error {
-	cmd := exec.CommandContext(ctx, "brew", "install", name)
+	cmd := exec.CommandContext(ctx, "brew", "install", "--", name)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		// Check if already installed (idempotent)

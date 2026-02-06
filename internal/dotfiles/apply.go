@@ -5,6 +5,7 @@ package dotfiles
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
@@ -157,6 +158,10 @@ func applyStatuses(manager *DotfileManager, statuses []DotfileStatus, dryRun boo
 			}
 			result.Actions = append(result.Actions, action)
 		}
+	}
+
+	if result.Summary.Failed > 0 {
+		return result, fmt.Errorf("failed to deploy %d file(s)", result.Summary.Failed)
 	}
 
 	return result, nil
