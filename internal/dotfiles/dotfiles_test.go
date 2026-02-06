@@ -727,6 +727,23 @@ func TestDotfileManager_Diff_Template(t *testing.T) {
 	}
 }
 
+func TestDotfileManager_List_TemplateConflict(t *testing.T) {
+	fs := NewMemoryFS()
+	fs.Dirs["/config"] = true
+	fs.Files["/config/gitconfig"] = []byte("plain content")
+	fs.Files["/config/gitconfig.tmpl"] = []byte("template content")
+
+	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
+
+	_, err := m.List()
+	if err == nil {
+		t.Fatal("List() expected error for conflicting plain/template files, got nil")
+	}
+	if !strings.Contains(err.Error(), "conflict") {
+		t.Errorf("List() error = %q, want error containing 'conflict'", err.Error())
+	}
+}
+
 func TestIsTemplate(t *testing.T) {
 	tests := []struct {
 		name string

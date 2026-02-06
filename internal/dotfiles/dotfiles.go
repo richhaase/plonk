@@ -118,8 +118,20 @@ func (m *DotfileManager) List() ([]Dotfile, error) {
 	if err != nil && os.IsNotExist(err) {
 		return nil, nil
 	}
+	if err != nil {
+		return nil, err
+	}
 
-	return dotfiles, err
+	// Check for template/plain file conflicts (same target path)
+	targets := make(map[string]string) // target -> source name
+	for _, d := range dotfiles {
+		if existing, ok := targets[d.Target]; ok {
+			return nil, fmt.Errorf("conflict: %s and %s both target %s", existing, d.Name, d.Target)
+		}
+		targets[d.Target] = d.Name
+	}
+
+	return dotfiles, nil
 }
 
 // Add copies a file from $HOME to $PLONK_DIR
