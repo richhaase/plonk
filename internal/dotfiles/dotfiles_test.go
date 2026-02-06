@@ -650,6 +650,47 @@ func TestDotfileManager_Deploy_Template_MissingVar(t *testing.T) {
 	}
 }
 
+func TestDotfileManager_IsDrifted_Template(t *testing.T) {
+	fs := NewMemoryFS()
+	fs.Dirs["/config"] = true
+	fs.Dirs["/home/user"] = true
+	fs.Files["/config/gitconfig.tmpl"] = []byte("email = {{EMAIL}}")
+	fs.Files["/home/user/.gitconfig"] = []byte("email = user@example.com")
+
+	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
+	m.lookupEnv = func(key string) (string, bool) {
+		if key == "EMAIL" {
+			return "user@example.com", true
+		}
+		return "", false
+	}
+
+	d := Dotfile{
+		Name:   "gitconfig.tmpl",
+		Source: "/config/gitconfig.tmpl",
+		Target: "/home/user/.gitconfig",
+	}
+
+	// Rendered content matches target — not drifted
+	drifted, err := m.IsDrifted(d)
+	if err != nil {
+		t.Fatalf("IsDrifted() error = %v", err)
+	}
+	if drifted {
+		t.Error("IsDrifted() = true, want false (rendered content matches)")
+	}
+
+	// Change the target — should be drifted
+	fs.Files["/home/user/.gitconfig"] = []byte("email = different@example.com")
+	drifted, err = m.IsDrifted(d)
+	if err != nil {
+		t.Fatalf("IsDrifted() error = %v", err)
+	}
+	if !drifted {
+		t.Error("IsDrifted() = false, want true (rendered content differs)")
+	}
+}
+
 func TestIsTemplate(t *testing.T) {
 	tests := []struct {
 		name string

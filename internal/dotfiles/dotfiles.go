@@ -325,6 +325,14 @@ func (m *DotfileManager) IsDrifted(d Dotfile) (bool, error) {
 		return false, fmt.Errorf("failed to read source: %w", err)
 	}
 
+	// Render template if needed
+	if isTemplate(d.Name) {
+		sourceContent, err = renderTemplate(sourceContent, m.lookupEnv)
+		if err != nil {
+			return false, fmt.Errorf("failed to render template %s: %w", d.Name, err)
+		}
+	}
+
 	targetContent, err := m.fs.ReadFile(d.Target)
 	if err != nil {
 		if os.IsNotExist(err) {
