@@ -276,18 +276,25 @@ func removeDotfiles(dm *dotfiles.DotfileManager, configDir, homeDir string, path
 		name := resolveDotfileNameForRemoval(path, homeDir)
 
 		// Validate the removal target (security checks + existence)
+		// If plain name not found, try template counterpart (e.g., "zshrc" -> "zshrc.tmpl")
 		if err := dm.ValidateRemove(name); err != nil {
 			if os.IsNotExist(err) || strings.Contains(err.Error(), "not found") {
-				result.Status = RemoveStatusSkipped
-				result.Source = name
-				result.Destination = toTargetPath(name, homeDir)
+				tmplName := name + ".tmpl"
+				if tmplErr := dm.ValidateRemove(tmplName); tmplErr == nil {
+					name = tmplName
+				} else {
+					result.Status = RemoveStatusSkipped
+					result.Source = name
+					result.Destination = toTargetPath(name, homeDir)
+					results = append(results, result)
+					continue
+				}
+			} else {
+				result.Status = RemoveStatusFailed
+				result.Error = err
 				results = append(results, result)
 				continue
 			}
-			result.Status = RemoveStatusFailed
-			result.Error = err
-			results = append(results, result)
-			continue
 		}
 
 		if opts.DryRun {
@@ -314,6 +321,7 @@ func removeDotfiles(dm *dotfiles.DotfileManager, configDir, homeDir string, path
 
 // toTargetPath converts a source name to its target path in home
 // e.g., "zshrc" -> "/home/user/.zshrc"
+// e.g., "zshrc.tmpl" -> "/home/user/.zshrc"
 func toTargetPath(name, homeDir string) string {
-	return filepath.Join(homeDir, "."+name)
+	return filepath.Join(homeDir, "."+strings.TrimSuffix(name, ".tmpl"))
 }

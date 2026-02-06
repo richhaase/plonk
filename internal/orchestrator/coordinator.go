@@ -6,6 +6,7 @@ package orchestrator
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/dotfiles"
@@ -164,8 +165,14 @@ func convertSimpleApplyResult(r *packages.SimpleApplyResult, dryRun bool) output
 		result.TotalMissing = result.TotalInstalled + result.TotalFailed
 	}
 
-	// Build manager results with per-manager missing counts
-	for manager, pkgs := range managerPackages {
+	// Build manager results with per-manager missing counts (sorted for deterministic output)
+	sortedManagers := make([]string, 0, len(managerPackages))
+	for manager := range managerPackages {
+		sortedManagers = append(sortedManagers, manager)
+	}
+	sort.Strings(sortedManagers)
+	for _, manager := range sortedManagers {
+		pkgs := managerPackages[manager]
 		// Count missing packages for this manager
 		// Missing = packages that needed action (install/fail in real run, would-install in dry run)
 		missingCount := 0

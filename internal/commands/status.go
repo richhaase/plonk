@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/dotfiles"
@@ -132,8 +133,14 @@ func getPackageStatus(ctx context.Context, configDir string) packageStatus {
 		return result
 	}
 
-	// Check each package
-	for manager, pkgs := range lockFile.Packages {
+	// Check each package (sorted for deterministic output)
+	managers := make([]string, 0, len(lockFile.Packages))
+	for manager := range lockFile.Packages {
+		managers = append(managers, manager)
+	}
+	sort.Strings(managers)
+	for _, manager := range managers {
+		pkgs := lockFile.Packages[manager]
 		mgr, err := packages.GetManager(manager)
 		if err != nil {
 			// Unknown/unsupported manager - mark all as errors (not missing)

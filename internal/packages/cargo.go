@@ -49,13 +49,15 @@ func (c *CargoSimple) loadInstalled(ctx context.Context) error {
 
 	// Parse output: each installed package starts at column 0
 	// Format: "package_name v1.2.3:\n    binary1\n"
+	// Skip indented lines (binary names) and non-package lines (e.g., "warning:")
 	lines := strings.Split(string(output), "\n")
 	for _, line := range lines {
 		if strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t") {
 			continue
 		}
 		fields := strings.Fields(line)
-		if len(fields) > 0 {
+		// Package lines have at least 2 fields: name and version (e.g., "ripgrep v14.1.1:")
+		if len(fields) >= 2 && strings.HasPrefix(fields[1], "v") {
 			installed[fields[0]] = true
 		}
 	}

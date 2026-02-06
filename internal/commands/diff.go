@@ -97,9 +97,19 @@ func runDiff(cmd *cobra.Command, args []string) error {
 				continue
 			}
 			tmpPath := tmpFile.Name()
-			tmpFile.Write(rendered)
-			tmpFile.Close()
-			defer os.Remove(tmpPath)
+			if _, err := tmpFile.Write(rendered); err != nil {
+				tmpFile.Close()
+				os.Remove(tmpPath)
+				fmt.Fprintf(os.Stderr, "Error writing temp file for %s: %v\n", status.Name, err)
+				diffErrors = append(diffErrors, status.Name)
+				continue
+			}
+			if err := tmpFile.Close(); err != nil {
+				os.Remove(tmpPath)
+				fmt.Fprintf(os.Stderr, "Error closing temp file for %s: %v\n", status.Name, err)
+				diffErrors = append(diffErrors, status.Name)
+				continue
+			}
 			sourcePath = tmpPath
 		}
 
@@ -107,6 +117,11 @@ func runDiff(cmd *cobra.Command, args []string) error {
 			// Report error but continue with other files
 			fmt.Fprintf(os.Stderr, "Error showing diff for %s: %v\n", status.Name, err)
 			diffErrors = append(diffErrors, status.Name)
+		}
+
+		// Clean up temp file immediately after use (not deferred in loop)
+		if sourcePath != status.Source {
+			os.Remove(sourcePath)
 		}
 	}
 
