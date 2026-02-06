@@ -131,7 +131,9 @@ func runDiff(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// getDriftedDotfileStatuses reconciles dotfiles and returns only drifted ones
+// getDriftedDotfileStatuses reconciles dotfiles and returns only drifted ones.
+// Files that failed reconciliation are reported to stderr so users know
+// why certain files are absent from the diff output.
 func getDriftedDotfileStatuses(cfg *config.Config, configDir, homeDir string) ([]dotfiles.DotfileStatus, error) {
 	dm := dotfiles.NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
 	statuses, err := dm.Reconcile()
@@ -140,10 +142,19 @@ func getDriftedDotfileStatuses(cfg *config.Config, configDir, homeDir string) ([
 	}
 
 	var drifted []dotfiles.DotfileStatus
+	var errorCount int
 	for _, s := range statuses {
-		if s.State == dotfiles.SyncStateDrifted {
+		switch s.State {
+		case dotfiles.SyncStateDrifted:
 			drifted = append(drifted, s)
+		case dotfiles.SyncStateError:
+			fmt.Fprintf(os.Stderr, "Warning: could not check %s: %v\n", s.Name, s.Error)
+			errorCount++
 		}
+	}
+
+	if errorCount > 0 && len(drifted) == 0 {
+		return nil, fmt.Errorf("%d file(s) could not be checked for drift", errorCount)
 	}
 
 	return drifted, nil
