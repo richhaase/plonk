@@ -282,6 +282,14 @@ func (m *DotfileManager) Deploy(name string) error {
 		return fmt.Errorf("failed to read source: %w", err)
 	}
 
+	// Render template if needed
+	if isTemplate(name) {
+		content, err = renderTemplate(content, m.lookupEnv)
+		if err != nil {
+			return fmt.Errorf("failed to render template %s: %w", name, err)
+		}
+	}
+
 	// Create parent directories
 	if err := m.fs.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)

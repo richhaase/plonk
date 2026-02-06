@@ -603,6 +603,53 @@ func TestRenderTemplate(t *testing.T) {
 	}
 }
 
+func TestDotfileManager_Deploy_Template(t *testing.T) {
+	fs := NewMemoryFS()
+	fs.Dirs["/config"] = true
+	fs.Dirs["/home/user"] = true
+	fs.Files["/config/gitconfig.tmpl"] = []byte("[user]\n    email = {{EMAIL}}")
+
+	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
+	m.lookupEnv = func(key string) (string, bool) {
+		if key == "EMAIL" {
+			return "user@example.com", true
+		}
+		return "", false
+	}
+
+	err := m.Deploy("gitconfig.tmpl")
+	if err != nil {
+		t.Fatalf("Deploy() error = %v", err)
+	}
+
+	// Verify rendered content was deployed (not raw template)
+	content, ok := fs.Files["/home/user/.gitconfig"]
+	if !ok {
+		t.Fatal("Deploy() did not create /home/user/.gitconfig")
+	}
+	want := "[user]\n    email = user@example.com"
+	if string(content) != want {
+		t.Errorf("Deploy() content = %q, want %q", string(content), want)
+	}
+}
+
+func TestDotfileManager_Deploy_Template_MissingVar(t *testing.T) {
+	fs := NewMemoryFS()
+	fs.Dirs["/config"] = true
+	fs.Dirs["/home/user"] = true
+	fs.Files["/config/gitconfig.tmpl"] = []byte("email = {{MISSING_VAR}}")
+
+	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
+	m.lookupEnv = func(key string) (string, bool) {
+		return "", false
+	}
+
+	err := m.Deploy("gitconfig.tmpl")
+	if err == nil {
+		t.Fatal("Deploy() expected error for missing variable, got nil")
+	}
+}
+
 func TestIsTemplate(t *testing.T) {
 	tests := []struct {
 		name string
