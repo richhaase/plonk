@@ -201,6 +201,44 @@ func TestDotfileManager_Add(t *testing.T) {
 	}
 }
 
+func TestDotfileManager_Add_RelativePath(t *testing.T) {
+	fs := NewMemoryFS()
+	fs.Dirs["/config"] = true
+	fs.Dirs["/home/user"] = true
+	fs.Files["/home/user/.zshrc"] = []byte("zsh content")
+
+	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
+
+	// Relative path should resolve to $HOME
+	err := m.Add(".zshrc")
+	if err != nil {
+		t.Fatalf("Add(.zshrc) error = %v", err)
+	}
+
+	if _, ok := fs.Files["/config/zshrc"]; !ok {
+		t.Fatal("Add(.zshrc) did not create /config/zshrc")
+	}
+}
+
+func TestDotfileManager_Add_RejectsConfigDir(t *testing.T) {
+	fs := NewMemoryFS()
+	fs.Dirs["/config"] = true
+	fs.Dirs["/home/user"] = true
+	fs.Files["/config/zshrc"] = []byte("content")
+
+	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
+
+	err := m.Add("/config/zshrc")
+	if err == nil {
+		t.Fatal("Add(/config/zshrc) should return error, got nil")
+	}
+
+	err = m.ValidateAdd("/config/zshrc")
+	if err == nil {
+		t.Fatal("ValidateAdd(/config/zshrc) should return error, got nil")
+	}
+}
+
 func TestDotfileManager_Add_RejectsHomeDirectory(t *testing.T) {
 	fs := NewMemoryFS()
 	fs.Dirs["/config"] = true
@@ -296,6 +334,27 @@ func TestDotfileManager_Remove(t *testing.T) {
 	// Verify file was removed
 	if _, ok := fs.Files["/config/zshrc"]; ok {
 		t.Error("Remove() did not delete /config/zshrc")
+	}
+}
+
+func TestDotfileManager_Remove_Directory(t *testing.T) {
+	fs := NewMemoryFS()
+	fs.Dirs["/config"] = true
+	fs.Dirs["/config/dir"] = true
+	fs.Files["/config/dir/file"] = []byte("content")
+
+	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
+
+	err := m.Remove("dir")
+	if err != nil {
+		t.Fatalf("Remove(dir) error = %v", err)
+	}
+
+	if _, ok := fs.Dirs["/config/dir"]; ok {
+		t.Error("Remove(dir) did not delete /config/dir")
+	}
+	if _, ok := fs.Files["/config/dir/file"]; ok {
+		t.Error("Remove(dir) did not delete /config/dir/file")
 	}
 }
 
@@ -443,5 +502,34 @@ func TestDotfileManager_ApplyAll_DryRun(t *testing.T) {
 	// Verify file was NOT actually deployed
 	if _, ok := fs.Files["/home/user/.missing"]; ok {
 		t.Error("ApplyAll(dryRun=true) actually deployed file")
+	}
+}
+
+func TestDotfileManager_AddDirectory_IgnoresPatterns(t *testing.T) {
+	fs := NewMemoryFS()
+	fs.Dirs["/config"] = true
+	fs.Dirs["/home/user"] = true
+	fs.Dirs["/home/user/.config"] = true
+	fs.Dirs["/home/user/.config/nvim"] = true
+	fs.Dirs["/home/user/.config/.git"] = true
+	fs.Files["/home/user/.config/nvim/init.lua"] = []byte("nvim content")
+	fs.Files["/home/user/.config/nvim/init.lua.bak"] = []byte("backup")
+	fs.Files["/home/user/.config/.git/ignored"] = []byte("git content")
+
+	m := NewDotfileManagerWithFS("/config", "/home/user", []string{"*.bak"}, fs)
+
+	err := m.Add("/home/user/.config")
+	if err != nil {
+		t.Fatalf("Add(~/.config) error = %v", err)
+	}
+
+	if _, ok := fs.Files["/config/config/nvim/init.lua"]; !ok {
+		t.Error("Add(~/.config) did not copy init.lua")
+	}
+	if _, ok := fs.Files["/config/config/nvim/init.lua.bak"]; ok {
+		t.Error("Add(~/.config) copied ignored .bak file")
+	}
+	if _, ok := fs.Files["/config/config/.git/ignored"]; ok {
+		t.Error("Add(~/.config) copied .git directory contents")
 	}
 }

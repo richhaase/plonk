@@ -259,6 +259,40 @@ EOF
 }
 
 # =============================================================================
+# Package Status Error Tests
+# =============================================================================
+
+@test "packages: unsupported manager shows error" {
+  mkdir -p "$PLONK_DIR"
+  cat > "$PLONK_DIR/plonk.lock" << 'EOF'
+version: 3
+packages:
+  bogomgr:
+    - somepkg
+EOF
+
+  run plonk packages
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Errors:"* ]]
+  [[ "$output" == *"unsupported manager"* ]]
+}
+
+@test "status: unsupported manager shows package errors" {
+  mkdir -p "$PLONK_DIR"
+  cat > "$PLONK_DIR/plonk.lock" << 'EOF'
+version: 3
+packages:
+  bogomgr:
+    - somepkg
+EOF
+
+  run plonk status
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"package errors:"* ]]
+  [[ "$output" == *"unsupported manager"* ]]
+}
+
+# =============================================================================
 # Registry Tests
 # =============================================================================
 
