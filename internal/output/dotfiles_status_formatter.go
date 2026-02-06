@@ -33,9 +33,10 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 	output.WriteString("Dotfiles Status\n")
 	output.WriteString("===============\n\n")
 
-	// Include managed and missing items
+	// Include managed, missing, and error items
 	// Drifted files are already in Managed with State==StateDegraded
 	itemsToShow := append(result.Managed, result.Missing...)
+	itemsToShow = append(itemsToShow, result.Errors...)
 
 	if len(itemsToShow) > 0 {
 		// Create a table for dotfiles
@@ -77,6 +78,15 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 			dotBuilder.AddRow(target, "missing")
 		}
 
+		// Show error dotfiles
+		for _, item := range result.Errors {
+			target := item.Name
+			if dest, ok := item.Metadata["destination"].(string); ok {
+				target = tildeShorthand(dest, f.Data.HomeDir)
+			}
+			dotBuilder.AddRow(target, "error")
+		}
+
 		output.WriteString(dotBuilder.Build())
 		output.WriteString("\n")
 	}
@@ -100,6 +110,9 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 	}
 	if driftedCount > 0 {
 		output.WriteString(fmt.Sprintf(", %d drifted", driftedCount))
+	}
+	if len(result.Errors) > 0 {
+		output.WriteString(fmt.Sprintf(", %d error(s)", len(result.Errors)))
 	}
 	output.WriteString("\n")
 
@@ -149,6 +162,22 @@ func (f DotfilesStatusFormatter) StructuredData() any {
 			Metadata: sanitizeMetadata(item.Metadata),
 		}
 		// Add target for dotfiles
+		if target, ok := item.Metadata["destination"].(string); ok {
+			managedItem.Target = target
+		}
+		items = append(items, managedItem)
+	}
+
+	// Add error items
+	for _, item := range result.Errors {
+		managedItem := ManagedItem{
+			Name:     item.Name,
+			Domain:   "dotfile",
+			State:    string(item.State),
+			Manager:  item.Manager,
+			Path:     item.Path,
+			Metadata: sanitizeMetadata(item.Metadata),
+		}
 		if target, ok := item.Metadata["destination"].(string); ok {
 			managedItem.Target = target
 		}

@@ -182,7 +182,8 @@ func filterDriftedStatus(arg string, driftedFiles []dotfiles.DotfileStatus) *dot
 			}
 		}
 		// Also check against the Name for shorthand matching (e.g., "vimrc" for ~/.vimrc)
-		if status.Name == arg {
+		// For template files, also match without the .tmpl suffix (e.g., "gitconfig" matches "gitconfig.tmpl")
+		if status.Name == arg || strings.TrimSuffix(status.Name, ".tmpl") == arg {
 			return status
 		}
 	}
