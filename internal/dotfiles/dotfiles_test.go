@@ -49,6 +49,8 @@ func TestDotfileManager_ToTarget(t *testing.T) {
 		{"zshrc", "/home/user/.zshrc"},
 		{"config/nvim/init.lua", "/home/user/.config/nvim/init.lua"},
 		{"bashrc", "/home/user/.bashrc"},
+		{"gitconfig.tmpl", "/home/user/.gitconfig"},
+		{"config/git/config.tmpl", "/home/user/.config/git/config"},
 	}
 
 	for _, tt := range tests {

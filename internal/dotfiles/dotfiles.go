@@ -65,6 +65,7 @@ type DotfileManager struct {
 	homeDir   string     // $HOME
 	fs        FileSystem // file operations
 	matcher   *ignore.Matcher
+	lookupEnv func(string) (string, bool)
 }
 
 // NewDotfileManager creates a manager using the real filesystem
@@ -79,6 +80,7 @@ func NewDotfileManagerWithFS(configDir, homeDir string, ignorePatterns []string,
 		homeDir:   homeDir,
 		fs:        fs,
 		matcher:   ignore.NewMatcher(ignorePatterns),
+		lookupEnv: os.LookupEnv,
 	}
 }
 
@@ -385,6 +387,11 @@ func (m *DotfileManager) Diff(d Dotfile) (string, error) {
 // e.g., "zshrc" -> "/home/user/.zshrc"
 // e.g., "config/nvim/init.lua" -> "/home/user/.config/nvim/init.lua"
 func (m *DotfileManager) toTarget(relPath string) string {
+	// Strip .tmpl extension for template files
+	if isTemplate(relPath) {
+		relPath = strings.TrimSuffix(relPath, templateExtension)
+	}
+
 	// Add dot prefix to the first path component
 	parts := strings.SplitN(relPath, string(os.PathSeparator), 2)
 	parts[0] = "." + parts[0]
