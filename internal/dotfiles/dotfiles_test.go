@@ -4,6 +4,7 @@
 package dotfiles
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -688,6 +689,41 @@ func TestDotfileManager_IsDrifted_Template(t *testing.T) {
 	}
 	if !drifted {
 		t.Error("IsDrifted() = false, want true (rendered content differs)")
+	}
+}
+
+func TestDotfileManager_Diff_Template(t *testing.T) {
+	fs := NewMemoryFS()
+	fs.Dirs["/config"] = true
+	fs.Dirs["/home/user"] = true
+	fs.Files["/config/gitconfig.tmpl"] = []byte("email = {{EMAIL}}")
+	fs.Files["/home/user/.gitconfig"] = []byte("email = old@example.com")
+
+	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
+	m.lookupEnv = func(key string) (string, bool) {
+		if key == "EMAIL" {
+			return "new@example.com", true
+		}
+		return "", false
+	}
+
+	d := Dotfile{
+		Name:   "gitconfig.tmpl",
+		Source: "/config/gitconfig.tmpl",
+		Target: "/home/user/.gitconfig",
+	}
+
+	diff, err := m.Diff(d)
+	if err != nil {
+		t.Fatalf("Diff() error = %v", err)
+	}
+
+	// Diff should show rendered source vs target, not raw template
+	if strings.Contains(diff, "{{EMAIL}}") {
+		t.Error("Diff() contains raw template placeholder, should contain rendered value")
+	}
+	if !strings.Contains(diff, "new@example.com") {
+		t.Error("Diff() should contain rendered value 'new@example.com'")
 	}
 }
 
