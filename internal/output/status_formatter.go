@@ -82,6 +82,7 @@ type ManagedItem struct {
 	Manager  string                 `json:"manager,omitempty" yaml:"manager,omitempty"`
 	Path     string                 `json:"path,omitempty" yaml:"path,omitempty"`
 	Target   string                 `json:"target,omitempty" yaml:"target,omitempty"`
+	Error    string                 `json:"error,omitempty" yaml:"error,omitempty"`
 	Metadata map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 

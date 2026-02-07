@@ -176,6 +176,7 @@ func (f DotfilesStatusFormatter) StructuredData() any {
 			State:    string(item.State),
 			Manager:  item.Manager,
 			Path:     item.Path,
+			Error:    item.Error,
 			Metadata: sanitizeMetadata(item.Metadata),
 		}
 		if target, ok := item.Metadata["destination"].(string); ok {
@@ -193,14 +194,17 @@ func (f DotfilesStatusFormatter) StructuredData() any {
 
 	// For backward compatibility with tests, add lowercase field aliases
 	// The test expects "missing", "managed", "untracked" fields
+	errorCount := len(result.Errors)
 	return map[string]interface{}{
 		"summary": map[string]interface{}{
 			"managed":         summary.TotalManaged,
 			"missing":         summary.TotalMissing,
 			"untracked":       summary.TotalUntracked,
+			"errors":          errorCount,
 			"total_managed":   summary.TotalManaged,
 			"total_missing":   summary.TotalMissing,
 			"total_untracked": summary.TotalUntracked,
+			"total_errors":    errorCount,
 		},
 		"items": items,
 	}
