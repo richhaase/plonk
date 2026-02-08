@@ -15,6 +15,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
+	"github.com/richhaase/plonk/internal/packages"
 )
 
 // HealthStatus represents overall system health
@@ -393,6 +394,14 @@ func checkPackageManagerHealth(_ context.Context) []HealthCheck {
 
 	missing := make([]string, 0)
 	for _, managerName := range requiredManagers {
+		if !packages.IsSupportedManager(managerName) {
+			check.Details = append(check.Details, fmt.Sprintf("%s: unsupported", managerName))
+			check.Issues = append(check.Issues, fmt.Sprintf("%s is not a supported package manager", managerName))
+			check.Suggestions = append(check.Suggestions, fmt.Sprintf("Remove %s entries from lock file or migrate to a supported manager", managerName))
+			missing = append(missing, managerName)
+			continue
+		}
+
 		binary := managerBinaries[managerName]
 		if binary == "" {
 			binary = managerName

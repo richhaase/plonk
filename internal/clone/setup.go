@@ -15,6 +15,7 @@ import (
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/orchestrator"
 	"github.com/richhaase/plonk/internal/output"
+	"github.com/richhaase/plonk/internal/packages"
 )
 
 // Config represents setup configuration options
@@ -146,10 +147,13 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool) e
 			orchestrator.WithDryRun(false),
 		)
 		result, err := orch.Apply(ctx)
-		if err != nil {
+		if err != nil && len(missingManagers) > 0 {
+			// Package failures are expected when managers are missing;
+			// report partial result instead of aborting
+			output.Printf("Apply completed with some package errors (expected due to missing managers)\n")
+		} else if err != nil {
 			return fmt.Errorf("failed to apply configuration: %w", err)
-		}
-		if result.Success {
+		} else if result.Success {
 			output.Printf("Applied configuration successfully\n")
 		} else {
 			output.Printf("Apply completed with some issues\n")
@@ -254,9 +258,15 @@ func installDetectedManagers(ctx context.Context, cfgData *config.Config, manage
 		"uv":    "uv",
 	}
 
-	// Find which managers are missing
+	// Find which managers are missing or unsupported
 	var missingManagers []string
 	for _, mgr := range managers {
+		if !packages.IsSupportedManager(mgr) {
+			output.Printf("Warning: %s is not a supported package manager and will be skipped\n", mgr)
+			missingManagers = append(missingManagers, mgr)
+			continue
+		}
+
 		binary := managerBinaries[mgr]
 		if binary == "" {
 			binary = mgr
