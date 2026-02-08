@@ -145,9 +145,7 @@ func (f PackagesStatusFormatter) StructuredData() any {
 			Domain:  "package",
 			State:   string(item.State),
 			Manager: item.Manager,
-		}
-		if item.Error != "" {
-			mi.Metadata = map[string]interface{}{"error": item.Error}
+			Error:   item.Error,
 		}
 		items = append(items, mi)
 	}

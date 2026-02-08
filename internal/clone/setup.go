@@ -147,12 +147,16 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool) e
 			orchestrator.WithDryRun(false),
 		)
 		result, err := orch.Apply(ctx)
-		if err != nil && len(missingManagers) > 0 {
-			// Package failures are expected when managers are missing;
-			// report partial result instead of aborting
-			output.Printf("Apply completed with some package errors (expected due to missing managers)\n")
-		} else if err != nil {
-			return fmt.Errorf("failed to apply configuration: %w", err)
+		if err != nil {
+			hasDotfileErrors := len(result.DotfileErrors) > 0
+			hasOnlyPackageErrors := len(result.PackageErrors) > 0 && !hasDotfileErrors
+
+			if hasOnlyPackageErrors && len(missingManagers) > 0 {
+				// Only package failures with known missing managers — expected
+				output.Printf("Apply completed with some package errors (expected due to missing managers)\n")
+			} else {
+				return fmt.Errorf("failed to apply configuration: %w", err)
+			}
 		} else if result.Success {
 			output.Printf("Applied configuration successfully\n")
 		} else {
