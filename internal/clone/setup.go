@@ -80,6 +80,7 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 		if err := createDefaultConfig(plonkDir); err != nil {
 			return fmt.Errorf("failed to create default configuration: %w", err)
 		}
+		hasConfig = true
 		output.Printf("Created default plonk.yaml configuration\n")
 	}
 
@@ -151,8 +152,8 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool) e
 			hasDotfileErrors := len(result.DotfileErrors) > 0
 			hasOnlyPackageErrors := len(result.PackageErrors) > 0 && !hasDotfileErrors
 
-			if hasOnlyPackageErrors && len(missingManagers) > 0 {
-				// Only package failures with known missing managers — expected
+			// Only suppress package errors that are fully explained by missing managers
+			if hasOnlyPackageErrors && len(missingManagers) > 0 && !hasPackageFailuresFromAvailableManagers(result, missingManagers) {
 				output.Printf("Apply completed with some package errors (expected due to missing managers)\n")
 			} else {
 				return fmt.Errorf("failed to apply configuration: %w", err)
@@ -294,4 +295,27 @@ func installDetectedManagers(ctx context.Context, cfgData *config.Config, manage
 	}
 
 	return missingManagers, nil
+}
+
+// hasPackageFailuresFromAvailableManagers checks if any package failures
+// came from managers that are NOT in the missing list.
+func hasPackageFailuresFromAvailableManagers(result output.ApplyResult, missingManagers []string) bool {
+	if result.Packages == nil {
+		return false
+	}
+	missingSet := make(map[string]bool, len(missingManagers))
+	for _, m := range missingManagers {
+		missingSet[m] = true
+	}
+	for _, mgr := range result.Packages.Managers {
+		if missingSet[mgr.Name] {
+			continue
+		}
+		for _, pkg := range mgr.Packages {
+			if pkg.Status == "failed" {
+				return true
+			}
+		}
+	}
+	return false
 }
