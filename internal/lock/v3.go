@@ -17,7 +17,7 @@ import (
 
 // v2 types - kept only for migration support
 type lockV2 struct {
-	Version   int              `yaml:"version"`
+	Version   int             `yaml:"version"`
 	Resources []resourceEntry `yaml:"resources"`
 }
 
@@ -197,9 +197,18 @@ func (s *LockV3Service) migrateV2(data []byte) (*LockV3, error) {
 			continue
 		}
 
-		// Extract manager and name from metadata
+		// Extract manager and name from metadata, preferring richer identifiers
+		// that carry the full install spec (e.g., Go import paths).
 		manager, _ := resource.Metadata["manager"].(string)
 		name, _ := resource.Metadata["name"].(string)
+
+		// Prefer full_name or source_path when available — these carry the
+		// complete install identifier needed by `plonk apply`.
+		if fullName, ok := resource.Metadata["full_name"].(string); ok && fullName != "" {
+			name = fullName
+		} else if sourcePath, ok := resource.Metadata["source_path"].(string); ok && sourcePath != "" {
+			name = sourcePath
+		}
 
 		// Fall back to parsing the legacy id field (format: "manager:package")
 		if (manager == "" || name == "") && resource.ID != "" {

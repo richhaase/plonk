@@ -66,17 +66,14 @@ func resolveDotfilePath(path, homeDir string) string {
 		}
 	}
 
-	// For plain names (no path separator, no dot prefix), prefer home dotfile
-	// over CWD to avoid CWD-dependent behavior. e.g., "vimrc" -> "~/.vimrc"
+	// For plain names (no path separator, no dot prefix), always resolve to
+	// home dotfile to avoid CWD-dependent behavior. e.g., "vimrc" -> "~/.vimrc"
 	isPlainName := !strings.HasPrefix(path, ".") && !strings.Contains(path, string(os.PathSeparator))
 	if isPlainName {
-		dottedPath := filepath.Join(homeDir, "."+path)
-		if _, statErr := os.Stat(dottedPath); statErr == nil {
-			return dottedPath // Dotted file exists in home
-		}
+		return filepath.Join(homeDir, "."+path)
 	}
 
-	// Relative path - try current directory, then home directory
+	// Relative path - try current directory first
 	absPath, err := filepath.Abs(path)
 	if err == nil {
 		if _, statErr := os.Stat(absPath); statErr == nil {
@@ -84,10 +81,10 @@ func resolveDotfilePath(path, homeDir string) string {
 		}
 	}
 
-	// Try home directory (non-dotted path) as fallback
+	// Try home directory as fallback
 	homePath := filepath.Join(homeDir, path)
 	if _, statErr := os.Stat(homePath); statErr == nil {
-		return homePath // File exists in home
+		return homePath
 	}
 
 	// Fall back to cwd-resolved path (will likely error later, but preserves original behavior)

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -17,6 +18,8 @@ import (
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/packages"
 )
+
+var templateVarPattern = regexp.MustCompile(`\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}`)
 
 // HealthStatus represents overall system health
 type HealthStatus struct {
@@ -141,6 +144,9 @@ func RunHealthChecksWithContext(ctx context.Context) HealthReport {
 	// Package manager health checks (UPDATED - replaces old logic)
 	packageHealthChecks := checkPackageManagerHealth(ctx)
 	report.Checks = append(report.Checks, packageHealthChecks...)
+
+	// Template readiness check
+	report.Checks = append(report.Checks, checkTemplateReadiness())
 
 	// Executable path check
 	report.Checks = append(report.Checks, checkExecutablePath())
@@ -436,6 +442,64 @@ func checkPackageManagerHealth(_ context.Context) []HealthCheck {
 }
 
 // checkExecutablePath checks if plonk executable is accessible
+// checkTemplateReadiness scans for .tmpl dotfiles and validates that
+// all referenced environment variables are set.
+func checkTemplateReadiness() HealthCheck {
+	check := NewHealthCheck("Template Readiness", "dotfiles", "All template variables are available")
+
+	configDir := config.GetDefaultConfigDirectory()
+	if _, err := os.Stat(configDir); err != nil {
+		// No config dir yet — nothing to check
+		check.Details = append(check.Details, "No config directory found; skipping template check")
+		return check
+	}
+
+	var missing []string
+	seen := make(map[string]bool)
+
+	// Walk config directory for .tmpl files
+	_ = filepath.Walk(configDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(info.Name(), ".tmpl") {
+			return nil
+		}
+
+		content, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return nil
+		}
+
+		// Scan for {{VAR}} patterns
+		for _, match := range templateVarPattern.FindAllSubmatch(content, -1) {
+			varName := string(match[1])
+			if seen[varName] {
+				continue
+			}
+			seen[varName] = true
+			if _, ok := os.LookupEnv(varName); !ok {
+				missing = append(missing, varName)
+			}
+		}
+		return nil
+	})
+
+	if len(missing) > 0 {
+		sort.Strings(missing)
+		check.Status = "warn"
+		check.Issues = append(check.Issues, fmt.Sprintf("Template variables not set: %s", strings.Join(missing, ", ")))
+		check.Suggestions = append(check.Suggestions, "Set the missing environment variables before running 'plonk apply'")
+		check.Message = fmt.Sprintf("%d template variable(s) missing", len(missing))
+	} else if len(seen) > 0 {
+		check.Details = append(check.Details, fmt.Sprintf("%d template variable(s) verified", len(seen)))
+	} else {
+		check.Details = append(check.Details, "No template files found")
+	}
+
+	return check
+}
+
 func checkExecutablePath() HealthCheck {
 	check := NewHealthCheck("Executable Path", "installation", "Executable is accessible")
 
@@ -490,4 +554,3 @@ func calculateOverallHealth(checks []HealthCheck) HealthStatus {
 func collectRequiredManagers(configDir string) []string {
 	return parseLockFileSummary(configDir).managers
 }
-

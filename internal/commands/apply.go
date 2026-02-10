@@ -183,21 +183,22 @@ func runSelectiveApply(ctx context.Context, paths []string, cfg *config.Config, 
 		DryRun: dryRun,
 		Filter: filterSet,
 	}
-	applyResult, err := dotfiles.ApplySelective(ctx, configDir, homeDir, cfg, opts)
-	if err != nil {
-		return fmt.Errorf("failed to apply dotfiles: %w", err)
-	}
+	applyResult, applyErr := dotfiles.ApplySelective(ctx, configDir, homeDir, cfg, opts)
 
 	// Wrap in ApplyResult for consistent output formatting
 	result := output.ApplyResult{
 		DryRun:   dryRun,
-		Success:  true,
+		Success:  applyErr == nil,
 		Scope:    "dotfiles (selective)",
 		Dotfiles: &applyResult,
 	}
 
-	// Render output
+	// Always render output so users see per-file diagnostics on partial failure
 	output.RenderOutput(result)
+
+	if applyErr != nil {
+		return fmt.Errorf("failed to apply dotfiles: %w", applyErr)
+	}
 
 	return nil
 }
