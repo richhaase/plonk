@@ -5,66 +5,91 @@ package packages
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os/exec"
+	"strings"
+	"sync"
 )
 
-// PNPMManager implements PackageManager for pnpm (Node.js package manager).
-type PNPMManager struct {
-	BaseManager
+// PNPMSimple implements Manager for pnpm
+type PNPMSimple struct {
+	mu        sync.Mutex
+	installed map[string]bool
 }
 
-// NewPNPMManager creates a new pnpm manager.
-func NewPNPMManager(exec CommandExecutor) *PNPMManager {
-	return &PNPMManager{
-		BaseManager: NewBaseManager(exec, "pnpm", "--version"),
+// NewPNPMSimple creates a new pnpm manager
+func NewPNPMSimple() *PNPMSimple {
+	return &PNPMSimple{}
+}
+
+// IsInstalled checks if a package is globally installed via pnpm
+func (p *PNPMSimple) IsInstalled(ctx context.Context, name string) (bool, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	// Load installed list on first call
+	if p.installed == nil {
+		if err := p.loadInstalled(ctx); err != nil {
+			return false, err
+		}
 	}
+
+	return p.installed[name], nil
 }
 
-// ListInstalled lists all globally installed pnpm packages.
-func (p *PNPMManager) ListInstalled(ctx context.Context) ([]string, error) {
-	output, err := p.Exec().Execute(ctx, "pnpm", "list", "-g", "--depth=0", "--json")
+// loadInstalled fetches all globally installed pnpm packages
+func (p *PNPMSimple) loadInstalled(ctx context.Context) error {
+	installed := make(map[string]bool)
+
+	cmd := exec.CommandContext(ctx, "pnpm", "list", "-g", "--depth=0", "--json")
+	output, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("failed to list packages: %w", err)
-	}
-	// pnpm outputs JSON array format: [{"dependencies": {...}}]
-	return parseJSONDependencies(output, true)
-}
-
-// Install installs a package globally via pnpm (idempotent).
-func (p *PNPMManager) Install(ctx context.Context, name string) error {
-	return p.RunIdempotent(ctx,
-		[]string{"already installed"},
-		fmt.Sprintf("failed to install %s", name),
-		"pnpm", "add", "-g", name,
-	)
-}
-
-// Uninstall removes a package globally via pnpm (idempotent).
-func (p *PNPMManager) Uninstall(ctx context.Context, name string) error {
-	return p.RunIdempotent(ctx,
-		[]string{"not installed", "not found"},
-		fmt.Sprintf("failed to uninstall %s", name),
-		"pnpm", "remove", "-g", name,
-	)
-}
-
-// Upgrade upgrades packages to their latest versions.
-// If packages is empty, upgrades all installed packages.
-func (p *PNPMManager) Upgrade(ctx context.Context, packages []string) error {
-	if len(packages) == 0 {
-		return p.UpgradeAll(ctx, []string{"already up-to-date", "up to date"}, "pnpm", "update", "-g")
+		return fmt.Errorf("failed to list pnpm packages: %w", err)
 	}
 
-	return p.UpgradeEach(ctx, packages, true,
-		func(pkg string) []string { return []string{"pnpm", "update", "-g", pkg} },
-		[]string{"already up-to-date", "up to date"},
-	)
+	// pnpm outputs JSON array: [{"dependencies": {...}}]
+	var result []struct {
+		Dependencies map[string]any `json:"dependencies"`
+	}
+	if err := json.Unmarshal(output, &result); err != nil {
+		return fmt.Errorf("failed to parse pnpm output: %w", err)
+	}
+
+	for _, item := range result {
+		for name := range item.Dependencies {
+			installed[name] = true
+		}
+	}
+
+	// Only set the cache after successful loading
+	p.installed = installed
+	return nil
 }
 
-// SelfInstall installs pnpm via Homebrew or the official installer.
-func (p *PNPMManager) SelfInstall(ctx context.Context) error {
-	return p.SelfInstallWithBrewFallback(ctx, p.IsAvailable, "pnpm",
-		`curl -fsSL https://get.pnpm.io/install.sh | sh -`,
-		"failed to install pnpm",
-	)
+// Install installs a package globally via pnpm
+func (p *PNPMSimple) Install(ctx context.Context, name string) error {
+	cmd := exec.CommandContext(ctx, "pnpm", "add", "-g", "--", name)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		// Check if already installed
+		if strings.Contains(strings.ToLower(string(output)), "already installed") {
+			p.markInstalled(name)
+			return nil
+		}
+		return fmt.Errorf("pnpm add -g %s: %s: %w", name, strings.TrimSpace(string(output)), err)
+	}
+
+	// Update cache after successful install
+	p.markInstalled(name)
+	return nil
+}
+
+// markInstalled updates the cache to mark a package as installed
+func (p *PNPMSimple) markInstalled(name string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.installed != nil {
+		p.installed[name] = true
+	}
 }

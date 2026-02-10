@@ -113,7 +113,7 @@ func TestGetConfigPath(t *testing.T) {
 func TestConfigEditRoundTripPreservesTopLevelFields(t *testing.T) {
 	// Create a test config with some non-default values.
 	configContent := `
-default_manager: npm
+default_manager: cargo
 operation_timeout: 600
 package_timeout: 200
 dotfile_timeout: 90
@@ -160,7 +160,7 @@ ignore_patterns:
 func TestCreateTempConfigFileWritesFullConfig(t *testing.T) {
 	// Create a test config with some values
 	configContent := `
-default_manager: npm
+default_manager: cargo
 operation_timeout: 450
 `
 	configDir := testutil.NewTestConfig(t, configContent)

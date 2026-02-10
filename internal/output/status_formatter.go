@@ -6,6 +6,7 @@ package output
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 )
 
@@ -20,6 +21,7 @@ const (
 	// Align with resources.StateDegraded.String() which returns "drifted"
 	StateDegraded  ItemState = "drifted"
 	StateUntracked ItemState = "untracked"
+	StateError     ItemState = "error"
 )
 
 // Item represents a resource item
@@ -28,6 +30,7 @@ type Item struct {
 	Manager  string                 `json:"manager,omitempty"`
 	Path     string                 `json:"path,omitempty"`
 	State    ItemState              `json:"state"`
+	Error    string                 `json:"error,omitempty"`
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 
@@ -37,6 +40,7 @@ type Result struct {
 	Managed   []Item `json:"managed"`
 	Missing   []Item `json:"missing"`
 	Untracked []Item `json:"untracked"`
+	Errors    []Item `json:"errors,omitempty"`
 }
 
 // Summary represents resource summary
@@ -44,6 +48,7 @@ type Summary struct {
 	TotalManaged   int      `json:"total_managed"`
 	TotalMissing   int      `json:"total_missing"`
 	TotalUntracked int      `json:"total_untracked"`
+	TotalErrors    int      `json:"total_errors,omitempty"`
 	Results        []Result `json:"results"`
 }
 
@@ -77,6 +82,7 @@ type ManagedItem struct {
 	Manager  string                 `json:"manager,omitempty" yaml:"manager,omitempty"`
 	Path     string                 `json:"path,omitempty" yaml:"path,omitempty"`
 	Target   string                 `json:"target,omitempty" yaml:"target,omitempty"`
+	Error    string                 `json:"error,omitempty" yaml:"error,omitempty"`
 	Metadata map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 }
 
@@ -92,30 +98,18 @@ func NewStatusFormatter(data StatusOutput) StatusFormatter {
 
 // sortItems sorts items by name in-place
 func sortItems(items []Item) {
-	// Simple bubble sort for stability
-	for i := 0; i < len(items); i++ {
-		for j := i + 1; j < len(items); j++ {
-			if items[i].Name > items[j].Name {
-				items[i], items[j] = items[j], items[i]
-			}
-		}
-	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].Name < items[j].Name
+	})
 }
 
 // sortItemsByManager returns sorted manager names from the map
 func sortItemsByManager(itemsByManager map[string][]Item) []string {
-	var managers []string
+	managers := make([]string, 0, len(itemsByManager))
 	for manager := range itemsByManager {
 		managers = append(managers, manager)
 	}
-	// Simple sort
-	for i := 0; i < len(managers); i++ {
-		for j := i + 1; j < len(managers); j++ {
-			if managers[i] > managers[j] {
-				managers[i], managers[j] = managers[j], managers[i]
-			}
-		}
-	}
+	sort.Strings(managers)
 	return managers
 }
 
@@ -135,147 +129,157 @@ func (f StatusFormatter) TableOutput() string {
 	s := f.Data
 	var output strings.Builder
 
-	// Title
-	output.WriteString("Plonk Status\n")
-	output.WriteString("============\n\n")
+	writeStatusTitle(&output)
 
-	// Process results by domain
-	var packageResult, dotfileResult *Result
-	for i := range s.StateSummary.Results {
-		switch s.StateSummary.Results[i].Domain {
-		case "package":
-			packageResult = &s.StateSummary.Results[i]
-		case "dotfile":
-			dotfileResult = &s.StateSummary.Results[i]
-		}
+	if packageResult := findResultByDomain(s.StateSummary.Results, "package"); packageResult != nil {
+		writePackagesTable(&output, *packageResult)
+	}
+	if dotfileResult := findResultByDomain(s.StateSummary.Results, "dotfile"); dotfileResult != nil {
+		writeDotfilesTable(&output, *dotfileResult, s.HomeDir)
 	}
 
-	// Show packages table
-	if packageResult != nil {
-		// Group packages by manager
-		packagesByManager := make(map[string][]Item)
-		missingPackages := []Item{}
+	driftedCount := countDriftedDotfiles(s.StateSummary.Results)
+	writeSummaryLine(&output, s.StateSummary, driftedCount)
+	writeDomainErrors(&output, s.StateSummary.Results)
 
-		// Show managed and missing items
-		for _, item := range packageResult.Managed {
-			packagesByManager[item.Manager] = append(packagesByManager[item.Manager], item)
-		}
-		missingPackages = append(missingPackages, packageResult.Missing...)
-
-		// Sort missing packages
-		sortItems(missingPackages)
-
-		// Build packages table
-		if len(packagesByManager) > 0 || len(missingPackages) > 0 {
-			// Create a table for packages
-			pkgBuilder := NewStandardTableBuilder("")
-			pkgBuilder.SetHeaders("PACKAGE", "MANAGER", "STATUS")
-
-			// Show managed packages by manager (sorted alphabetically)
-			sortedManagers := sortItemsByManager(packagesByManager)
-			for _, manager := range sortedManagers {
-				packages := packagesByManager[manager]
-				sortItems(packages) // Sort packages alphabetically within each manager
-				for _, pkg := range packages {
-					pkgBuilder.AddRow(pkg.Name, manager, "managed")
-				}
-			}
-
-			// Show missing packages
-			for _, pkg := range missingPackages {
-				pkgBuilder.AddRow(pkg.Name, pkg.Manager, "missing")
-			}
-
-			output.WriteString(pkgBuilder.Build())
-			output.WriteString("\n")
-		}
-	}
-
-	// Show dotfiles table
-	if dotfileResult != nil {
-		// Include managed and missing items
-		// Drifted files are already in Managed with State==StateDegraded
-		itemsToShow := append(dotfileResult.Managed, dotfileResult.Missing...)
-
-		if len(itemsToShow) > 0 {
-			// Create a table for dotfiles
-			dotBuilder := NewStandardTableBuilder("")
-
-			// Simple two-column format: target path and status
-			dotBuilder.SetHeaders("DOTFILE", "STATUS")
-
-			// Sort managed and missing dotfiles
-			sortItems(dotfileResult.Managed)
-			sortItems(dotfileResult.Missing)
-
-			// Show managed dotfiles
-			for _, item := range dotfileResult.Managed {
-				// Use destination (target) from metadata - this is where the dotfile is deployed
-				target := item.Name
-				if dest, ok := item.Metadata["destination"].(string); ok {
-					target = tildeShorthand(dest, s.HomeDir)
-				}
-				// Check if this is actually a drifted file
-				status := "deployed"
-				if item.State == StateDegraded {
-					status = "drifted"
-				}
-				dotBuilder.AddRow(target, status)
-			}
-
-			// Show missing dotfiles
-			for _, item := range dotfileResult.Missing {
-				// Use destination (target) from metadata
-				target := item.Name
-				if dest, ok := item.Metadata["destination"].(string); ok {
-					target = tildeShorthand(dest, s.HomeDir)
-				}
-				dotBuilder.AddRow(target, "missing")
-			}
-
-			output.WriteString(dotBuilder.Build())
-			output.WriteString("\n")
-		}
-	}
-
-	// Add summary
-	summary := s.StateSummary
-
-	// Count drifted items separately
-	driftedCount := 0
-	for _, result := range s.StateSummary.Results {
-		if result.Domain == "dotfile" {
-			for _, item := range result.Managed {
-				if item.State == StateDegraded {
-					driftedCount++
-				}
-			}
-		}
-	}
-
-	// Adjust managed count to exclude drifted
-	managedCount := summary.TotalManaged - driftedCount
-
-	output.WriteString("Summary: ")
-	output.WriteString(fmt.Sprintf("%d managed", managedCount))
-	if summary.TotalMissing > 0 {
-		output.WriteString(fmt.Sprintf(", %d missing", summary.TotalMissing))
-	}
-	if driftedCount > 0 {
-		output.WriteString(fmt.Sprintf(", %d drifted", driftedCount))
-	}
-	output.WriteString("\n")
-
-	// If no output was generated (except for title), show helpful message
-	outputStr := output.String()
-	if outputStr == "Plonk Status\n============\n\n" || outputStr == "" {
-		output.Reset()
-		output.WriteString("Plonk Status\n")
-		output.WriteString("============\n\n")
+	if output.String() == "Plonk Status\n============\n\n" {
 		output.WriteString("No managed items.\n")
 	}
 
 	return output.String()
+}
+
+func writeStatusTitle(output *strings.Builder) {
+	output.WriteString("Plonk Status\n")
+	output.WriteString("============\n\n")
+}
+
+func findResultByDomain(results []Result, domain string) *Result {
+	for i := range results {
+		if results[i].Domain == domain {
+			return &results[i]
+		}
+	}
+	return nil
+}
+
+func writePackagesTable(output *strings.Builder, result Result) {
+	packagesByManager := make(map[string][]Item)
+	for _, item := range result.Managed {
+		packagesByManager[item.Manager] = append(packagesByManager[item.Manager], item)
+	}
+
+	missingPackages := append([]Item(nil), result.Missing...)
+	sortItems(missingPackages)
+
+	if len(packagesByManager) == 0 && len(missingPackages) == 0 {
+		return
+	}
+
+	pkgBuilder := NewStandardTableBuilder("")
+	pkgBuilder.SetHeaders("PACKAGE", "MANAGER", "STATUS")
+
+	for _, manager := range sortItemsByManager(packagesByManager) {
+		packages := append([]Item(nil), packagesByManager[manager]...)
+		sortItems(packages)
+		for _, pkg := range packages {
+			pkgBuilder.AddRow(pkg.Name, manager, "managed")
+		}
+	}
+
+	for _, pkg := range missingPackages {
+		pkgBuilder.AddRow(pkg.Name, pkg.Manager, "missing")
+	}
+
+	output.WriteString(pkgBuilder.Build())
+	output.WriteString("\n")
+}
+
+func writeDotfilesTable(output *strings.Builder, result Result, homeDir string) {
+	itemsToShow := len(result.Managed) + len(result.Missing)
+	if itemsToShow == 0 {
+		return
+	}
+
+	dotBuilder := NewStandardTableBuilder("")
+	dotBuilder.SetHeaders("DOTFILE", "STATUS")
+
+	managed := append([]Item(nil), result.Managed...)
+	missing := append([]Item(nil), result.Missing...)
+	sortItems(managed)
+	sortItems(missing)
+
+	for _, item := range managed {
+		dotBuilder.AddRow(dotfileTarget(item, homeDir), dotfileStatus(item))
+	}
+	for _, item := range missing {
+		dotBuilder.AddRow(dotfileTarget(item, homeDir), "missing")
+	}
+
+	output.WriteString(dotBuilder.Build())
+	output.WriteString("\n")
+}
+
+func dotfileTarget(item Item, homeDir string) string {
+	target := item.Name
+	if dest, ok := item.Metadata["destination"].(string); ok {
+		target = tildeShorthand(dest, homeDir)
+	}
+	return target
+}
+
+func dotfileStatus(item Item) string {
+	if item.State == StateDegraded {
+		return "drifted"
+	}
+	return "deployed"
+}
+
+func countDriftedDotfiles(results []Result) int {
+	drifted := 0
+	for _, result := range results {
+		if result.Domain != "dotfile" {
+			continue
+		}
+		for _, item := range result.Managed {
+			if item.State == StateDegraded {
+				drifted++
+			}
+		}
+	}
+	return drifted
+}
+
+func writeSummaryLine(output *strings.Builder, summary Summary, driftedCount int) {
+	managedCount := summary.TotalManaged - driftedCount
+	output.WriteString("Summary: ")
+	fmt.Fprintf(output, "%d managed", managedCount)
+	if summary.TotalMissing > 0 {
+		fmt.Fprintf(output, ", %d missing", summary.TotalMissing)
+	}
+	if driftedCount > 0 {
+		fmt.Fprintf(output, ", %d drifted", driftedCount)
+	}
+	if summary.TotalErrors > 0 {
+		fmt.Fprintf(output, ", %d errors", summary.TotalErrors)
+	}
+	output.WriteString("\n")
+}
+
+func writeDomainErrors(output *strings.Builder, results []Result) {
+	for _, result := range results {
+		if len(result.Errors) == 0 {
+			continue
+		}
+		fmt.Fprintf(output, "\n%s errors:\n", result.Domain)
+		for _, item := range result.Errors {
+			if item.Error != "" {
+				fmt.Fprintf(output, "  ✗ %s: %s\n", item.Name, item.Error)
+				continue
+			}
+			fmt.Fprintf(output, "  ✗ %s\n", item.Name)
+		}
+	}
 }
 
 // StructuredData returns the structured data for serialization
@@ -312,6 +316,7 @@ func sanitizeSummary(sum Summary) Summary {
 		TotalManaged:   sum.TotalManaged,
 		TotalMissing:   sum.TotalMissing,
 		TotalUntracked: sum.TotalUntracked,
+		TotalErrors:    sum.TotalErrors,
 		Results:        make([]Result, len(sum.Results)),
 	}
 	for i, r := range sum.Results {
@@ -335,6 +340,13 @@ func sanitizeSummary(sum Summary) Summary {
 			for j, it := range r.Untracked {
 				it.Metadata = sanitizeMetadata(it.Metadata)
 				cr.Untracked[j] = it
+			}
+		}
+		if len(r.Errors) > 0 {
+			cr.Errors = make([]Item, len(r.Errors))
+			for j, it := range r.Errors {
+				it.Metadata = sanitizeMetadata(it.Metadata)
+				cr.Errors[j] = it
 			}
 		}
 		cleaned.Results[i] = cr

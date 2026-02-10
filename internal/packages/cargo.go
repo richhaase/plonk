@@ -6,64 +6,91 @@ package packages
 import (
 	"context"
 	"fmt"
+	"os/exec"
+	"strings"
+	"sync"
 )
 
-// CargoManager implements PackageManager for Rust's Cargo.
-type CargoManager struct {
-	BaseManager
+// CargoSimple implements Manager for Rust's Cargo
+type CargoSimple struct {
+	mu        sync.Mutex
+	installed map[string]bool
 }
 
-// NewCargoManager creates a new Cargo manager.
-func NewCargoManager(exec CommandExecutor) *CargoManager {
-	return &CargoManager{
-		BaseManager: NewBaseManager(exec, "cargo", "--version"),
+// NewCargoSimple creates a new Cargo manager
+func NewCargoSimple() *CargoSimple {
+	return &CargoSimple{}
+}
+
+// IsInstalled checks if a package is installed via cargo
+func (c *CargoSimple) IsInstalled(ctx context.Context, name string) (bool, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Load installed list on first call
+	if c.installed == nil {
+		if err := c.loadInstalled(ctx); err != nil {
+			return false, err
+		}
 	}
+
+	return c.installed[name], nil
 }
 
-// ListInstalled lists all packages installed by Cargo.
-// Output format: "package_name v1.2.3:\n    binary1\n    binary2\n"
-func (c *CargoManager) ListInstalled(ctx context.Context) ([]string, error) {
-	output, err := c.Exec().Execute(ctx, "cargo", "install", "--list")
+// loadInstalled fetches all installed cargo packages
+func (c *CargoSimple) loadInstalled(ctx context.Context) error {
+	installed := make(map[string]bool)
+
+	cmd := exec.CommandContext(ctx, "cargo", "install", "--list")
+	output, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("failed to list packages: %w", err)
+		return fmt.Errorf("failed to list cargo packages: %w", err)
 	}
 
-	return parseOutput(output, ParseConfig{SkipIndented: true, TakeFirstToken: true}), nil
+	// Parse output: each installed package starts at column 0
+	// Format: "package_name v1.2.3:\n    binary1\n"
+	// Skip indented lines (binary names) and non-package lines (e.g., "warning:")
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t") {
+			continue
+		}
+		fields := strings.Fields(line)
+		// Package lines have at least 2 fields: name and version (e.g., "ripgrep v14.1.1:")
+		if len(fields) >= 2 && strings.HasPrefix(fields[1], "v") {
+			installed[fields[0]] = true
+		}
+	}
+
+	// Only set the cache after successful loading
+	c.installed = installed
+	return nil
 }
 
-// Install installs a package via Cargo (idempotent).
-func (c *CargoManager) Install(ctx context.Context, name string) error {
-	return c.RunIdempotent(ctx,
-		[]string{"already exists", "already installed"},
-		fmt.Sprintf("failed to install %s", name),
-		"cargo", "install", name,
-	)
+// Install installs a package via cargo
+func (c *CargoSimple) Install(ctx context.Context, name string) error {
+	cmd := exec.CommandContext(ctx, "cargo", "install", "--", name)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		// Check if already installed (idempotent)
+		outStr := strings.ToLower(string(output))
+		if strings.Contains(outStr, "already exists") || strings.Contains(outStr, "already installed") {
+			c.markInstalled(name)
+			return nil
+		}
+		return fmt.Errorf("cargo install %s: %s: %w", name, strings.TrimSpace(string(output)), err)
+	}
+
+	// Update cache after successful install
+	c.markInstalled(name)
+	return nil
 }
 
-// Uninstall removes a package via Cargo (idempotent).
-func (c *CargoManager) Uninstall(ctx context.Context, name string) error {
-	return c.RunIdempotent(ctx,
-		[]string{"is not installed", "not installed"},
-		fmt.Sprintf("failed to uninstall %s", name),
-		"cargo", "uninstall", name,
-	)
+// markInstalled updates the cache to mark a package as installed
+func (c *CargoSimple) markInstalled(name string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.installed != nil {
+		c.installed[name] = true
+	}
 }
-
-// Upgrade upgrades packages to their latest versions.
-// Cargo doesn't have a native upgrade, so we use --force to reinstall.
-// Empty packages slice is not supported (no upgrade-all for cargo).
-func (c *CargoManager) Upgrade(ctx context.Context, packages []string) error {
-	return c.UpgradeEach(ctx, packages, false,
-		func(pkg string) []string { return []string{"cargo", "install", "--force", pkg} },
-		[]string{"already up-to-date", "up to date"},
-	)
-}
-
-// SelfInstall installs Rust and Cargo using rustup.
-func (c *CargoManager) SelfInstall(ctx context.Context) error {
-	return c.SelfInstallWithBrewFallback(ctx, c.IsAvailable, "rust",
-		`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y`,
-		"failed to install Rust via rustup",
-	)
-}
-

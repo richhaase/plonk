@@ -4,6 +4,8 @@
 package config
 
 import (
+	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -205,6 +207,8 @@ func LoadFromPath(configPath string) (*Config, error) {
 func LoadWithDefaults(configDir string) *Config {
 	cfg, err := Load(configDir)
 	if err != nil {
+		// Log warning so users know their config was ignored
+		log.Printf("Warning: failed to load config from %s, using defaults: %v", configDir, err)
 		// Return copy of defaults on any error
 		defaultCopy := defaultConfig
 		return &defaultCopy
@@ -237,8 +241,15 @@ func ApplyDefaults(cfg *Config) {
 
 // Utility functions for directory management
 
-// GetHomeDir returns the user's home directory
-func GetHomeDir() string {
-	homeDir, _ := os.UserHomeDir()
-	return homeDir
+// GetHomeDir returns the user's home directory or an error if it cannot be determined.
+// This is a critical function - most plonk operations depend on knowing the home directory.
+func GetHomeDir() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("cannot determine home directory: %w", err)
+	}
+	if homeDir == "" {
+		return "", fmt.Errorf("home directory is empty")
+	}
+	return homeDir, nil
 }

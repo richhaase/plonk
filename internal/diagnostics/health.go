@@ -5,20 +5,21 @@ package diagnostics
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/dotfiles"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/packages"
 )
+
+var templateVarPattern = regexp.MustCompile(`\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}`)
 
 // HealthStatus represents overall system health
 type HealthStatus struct {
@@ -89,26 +90,23 @@ type lockFileSummary struct {
 
 // parseLockFileSummary reads and parses lock file data once for use by multiple checks.
 func parseLockFileSummary(configDir string) lockFileSummary {
-	lockService := lock.NewYAMLLockService(configDir)
+	lockService := lock.NewLockV3Service(configDir)
 	lockFile, err := lockService.Read()
 	if err != nil {
 		return lockFileSummary{err: err}
 	}
 
+	// v3 format: packages are grouped by manager
 	managerCounts := make(map[string]int)
-	for _, resource := range lockFile.Resources {
-		if resource.Type == "package" {
-			if manager, ok := resource.Metadata["manager"].(string); ok && manager != "" {
-				managerCounts[manager]++
-			}
-		}
+	totalPackages := 0
+	for manager, pkgs := range lockFile.Packages {
+		managerCounts[manager] = len(pkgs)
+		totalPackages += len(pkgs)
 	}
 
-	totalPackages := 0
 	managers := make([]string, 0, len(managerCounts))
-	for name, count := range managerCounts {
+	for name := range managerCounts {
 		managers = append(managers, name)
-		totalPackages += count
 	}
 	sort.Strings(managers)
 
@@ -147,11 +145,11 @@ func RunHealthChecksWithContext(ctx context.Context) HealthReport {
 	packageHealthChecks := checkPackageManagerHealth(ctx)
 	report.Checks = append(report.Checks, packageHealthChecks...)
 
+	// Template readiness check
+	report.Checks = append(report.Checks, checkTemplateReadiness())
+
 	// Executable path check
 	report.Checks = append(report.Checks, checkExecutablePath())
-
-	// Template health check
-	report.Checks = append(report.Checks, checkTemplates())
 
 	// Determine overall health
 	report.Overall = calculateOverallHealth(report.Checks)
@@ -197,7 +195,13 @@ func checkEnvironmentVariables() HealthCheck {
 	check := NewHealthCheck("Environment Variables", "environment", "Environment variables configured")
 
 	// Check important environment variables
-	homeDir := config.GetHomeDir()
+	homeDir, err := config.GetHomeDir()
+	if err != nil {
+		check.Status = "fail"
+		check.Issues = append(check.Issues, fmt.Sprintf("Cannot determine home directory: %v", err))
+		check.Suggestions = append(check.Suggestions, "Ensure HOME environment variable is set correctly")
+		homeDir = "(unknown)"
+	}
 	configDir := config.GetDefaultConfigDirectory()
 
 	check.Details = append(check.Details,
@@ -375,9 +379,7 @@ func checkLockFileValidity() HealthCheck {
 }
 
 // checkPackageManagerHealth runs health checks for all package managers
-func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
-	registry := packages.GetRegistry()
-
+func checkPackageManagerHealth(_ context.Context) []HealthCheck {
 	requiredManagers := collectRequiredManagers(config.GetDefaultConfigDirectory())
 
 	check := NewHealthCheck("Package Managers", "package-managers", "No package managers configured")
@@ -387,37 +389,39 @@ func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
 		return []HealthCheck{check}
 	}
 
+	// Manager binary names (for checking availability)
+	managerBinaries := map[string]string{
+		"brew":  "brew",
+		"cargo": "cargo",
+		"go":    "go",
+		"pnpm":  "pnpm",
+		"uv":    "uv",
+	}
+
 	missing := make([]string, 0)
 	for _, managerName := range requiredManagers {
-		available := false
-		if mgr, err := registry.GetManager(managerName); err == nil {
-			if ok, err := mgr.IsAvailable(ctx); err == nil && ok {
-				available = true
-			}
+		if !packages.IsSupportedManager(managerName) {
+			check.Details = append(check.Details, fmt.Sprintf("%s: unsupported", managerName))
+			check.Issues = append(check.Issues, fmt.Sprintf("%s is not a supported package manager", managerName))
+			check.Suggestions = append(check.Suggestions, fmt.Sprintf("Remove %s entries from lock file or migrate to a supported manager", managerName))
+			missing = append(missing, managerName)
+			continue
 		}
 
-		var desc, hint, helpURL string
-		if meta, ok := registry.GetManagerMetadata(managerName); ok {
-			desc, hint, helpURL = meta.Description, meta.InstallHint, meta.HelpURL
+		binary := managerBinaries[managerName]
+		if binary == "" {
+			binary = managerName
 		}
-		label := managerName
-		if desc != "" {
-			label = desc
-		}
+
+		_, err := exec.LookPath(binary)
+		available := err == nil
 
 		if available {
-			check.Details = append(check.Details, fmt.Sprintf("%s: available", label))
+			check.Details = append(check.Details, fmt.Sprintf("%s: available", managerName))
 		} else {
-			check.Details = append(check.Details, fmt.Sprintf("%s: missing", label))
-			check.Issues = append(check.Issues, fmt.Sprintf("%s is not installed", label))
-			suggestion := hint
-			if suggestion == "" {
-				suggestion = fmt.Sprintf("Install %s using the appropriate instructions", label)
-			}
-			if helpURL != "" {
-				suggestion = fmt.Sprintf("%s – %s", suggestion, helpURL)
-			}
-			check.Suggestions = append(check.Suggestions, suggestion)
+			check.Details = append(check.Details, fmt.Sprintf("%s: missing", managerName))
+			check.Issues = append(check.Issues, fmt.Sprintf("%s is not installed", managerName))
+			check.Suggestions = append(check.Suggestions, fmt.Sprintf("Install %s using the appropriate instructions", managerName))
 			missing = append(missing, managerName)
 		}
 	}
@@ -438,6 +442,64 @@ func checkPackageManagerHealth(ctx context.Context) []HealthCheck {
 }
 
 // checkExecutablePath checks if plonk executable is accessible
+// checkTemplateReadiness scans for .tmpl dotfiles and validates that
+// all referenced environment variables are set.
+func checkTemplateReadiness() HealthCheck {
+	check := NewHealthCheck("Template Readiness", "dotfiles", "All template variables are available")
+
+	configDir := config.GetDefaultConfigDirectory()
+	if _, err := os.Stat(configDir); err != nil {
+		// No config dir yet — nothing to check
+		check.Details = append(check.Details, "No config directory found; skipping template check")
+		return check
+	}
+
+	var missing []string
+	seen := make(map[string]bool)
+
+	// Walk config directory for .tmpl files
+	_ = filepath.Walk(configDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(info.Name(), ".tmpl") {
+			return nil
+		}
+
+		content, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return nil
+		}
+
+		// Scan for {{VAR}} patterns
+		for _, match := range templateVarPattern.FindAllSubmatch(content, -1) {
+			varName := string(match[1])
+			if seen[varName] {
+				continue
+			}
+			seen[varName] = true
+			if _, ok := os.LookupEnv(varName); !ok {
+				missing = append(missing, varName)
+			}
+		}
+		return nil
+	})
+
+	if len(missing) > 0 {
+		sort.Strings(missing)
+		check.Status = "warn"
+		check.Issues = append(check.Issues, fmt.Sprintf("Template variables not set: %s", strings.Join(missing, ", ")))
+		check.Suggestions = append(check.Suggestions, "Set the missing environment variables before running 'plonk apply'")
+		check.Message = fmt.Sprintf("%d template variable(s) missing", len(missing))
+	} else if len(seen) > 0 {
+		check.Details = append(check.Details, fmt.Sprintf("%d template variable(s) verified", len(seen)))
+	} else {
+		check.Details = append(check.Details, "No template files found")
+	}
+
+	return check
+}
+
 func checkExecutablePath() HealthCheck {
 	check := NewHealthCheck("Executable Path", "installation", "Executable is accessible")
 
@@ -450,92 +512,6 @@ func checkExecutablePath() HealthCheck {
 		check.Message = "Executable not in PATH"
 	} else {
 		check.Details = append(check.Details, fmt.Sprintf("plonk found at: %s", plonkPath))
-	}
-
-	return check
-}
-
-// checkTemplates validates template files and local variables configuration
-func checkTemplates() HealthCheck {
-	check := NewHealthCheck("Templates", "dotfiles", "Template configuration is valid")
-
-	configDir := config.GetDefaultConfigDirectory()
-	templateProcessor := dotfiles.NewTemplateProcessor(configDir)
-
-	// Check if any templates exist
-	templates, err := templateProcessor.ListTemplates()
-	if err != nil {
-		// Error listing templates is unusual but not critical
-		check.Status = "warn"
-		check.Issues = append(check.Issues, fmt.Sprintf("Could not scan for templates: %v", err))
-		check.Suggestions = append(check.Suggestions, "Check permissions on the plonk config directory")
-		check.Message = "Unable to scan for templates"
-		return check
-	}
-
-	// No templates found - that's fine, just informational
-	if len(templates) == 0 {
-		check.Status = "info"
-		check.Message = "No template files found"
-		check.Details = append(check.Details, "Create .tmpl files to use templating features")
-		return check
-	}
-
-	check.Details = append(check.Details, fmt.Sprintf("Template files found: %d", len(templates)))
-	for _, t := range templates {
-		check.Details = append(check.Details, fmt.Sprintf("  - %s", t))
-	}
-
-	localVarsPath := templateProcessor.GetLocalVarsPath()
-	hasLocalVars := templateProcessor.HasLocalVars()
-
-	if hasLocalVars {
-		check.Details = append(check.Details, fmt.Sprintf("Variables file: %s", localVarsPath))
-	}
-
-	// Validate each template to find missing variables
-	var validationErrors []string
-	missingVars := make(map[string]bool)
-	for _, tmpl := range templates {
-		tmplPath := filepath.Join(configDir, tmpl)
-		if err := templateProcessor.ValidateTemplate(tmplPath); err != nil {
-			validationErrors = append(validationErrors, err.Error())
-			// Extract variable name from structured error
-			var validationErr *dotfiles.TemplateValidationError
-			if errors.As(err, &validationErr) && validationErr.VarName != "" {
-				missingVars[validationErr.VarName] = true
-			}
-		}
-	}
-
-	if len(validationErrors) > 0 {
-		check.Status = "warn"
-
-		if !hasLocalVars {
-			check.Message = "Template variables file missing"
-			check.Issues = append(check.Issues, fmt.Sprintf("%s does not exist", localVarsPath))
-		} else {
-			check.Message = fmt.Sprintf("%d template(s) have missing variables", len(validationErrors))
-		}
-
-		// Show which variables are missing
-		if len(missingVars) > 0 {
-			varList := make([]string, 0, len(missingVars))
-			for v := range missingVars {
-				varList = append(varList, v)
-			}
-			check.Issues = append(check.Issues, fmt.Sprintf("Missing variables: %s", strings.Join(varList, ", ")))
-
-			// Generate example local.yaml content
-			var example strings.Builder
-			example.WriteString(fmt.Sprintf("Create %s with:\n", localVarsPath))
-			for _, v := range varList {
-				example.WriteString(fmt.Sprintf("  %s: \"your-value-here\"\n", v))
-			}
-			check.Suggestions = append(check.Suggestions, example.String())
-		}
-	} else {
-		check.Details = append(check.Details, "All templates validated successfully")
 	}
 
 	return check
@@ -578,4 +554,3 @@ func calculateOverallHealth(checks []HealthCheck) HealthStatus {
 func collectRequiredManagers(configDir string) []string {
 	return parseLockFileSummary(configDir).managers
 }
-

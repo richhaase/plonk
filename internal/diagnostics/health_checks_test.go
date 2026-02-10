@@ -9,10 +9,17 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/packages"
 	"github.com/richhaase/plonk/internal/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	// Set up ManagerChecker for config validation during tests
+	config.ManagerChecker = packages.IsSupportedManager
+}
 
 func TestCheckSystemRequirements(t *testing.T) {
 	check := checkSystemRequirements()
@@ -203,18 +210,13 @@ func TestCheckLockFileValidity(t *testing.T) {
 	t.Run("valid lock file with packages", func(t *testing.T) {
 		tempDir := t.TempDir()
 		lockPath := filepath.Join(tempDir, "plonk.lock")
-		lockContent := `version: 2
-resources:
-  - type: package
-    name: ripgrep
-    metadata:
-      manager: brew
-      version: "13.0.0"
-  - type: package
-    name: prettier
-    metadata:
-      manager: npm
-      version: "2.8.0"`
+		// v3 format: packages grouped by manager
+		lockContent := `version: 3
+packages:
+  brew:
+    - ripgrep
+  pnpm:
+    - prettier`
 		require.NoError(t, os.WriteFile(lockPath, []byte(lockContent), 0644))
 
 		oldPlonkDir := os.Getenv("PLONK_DIR")
@@ -229,29 +231,30 @@ resources:
 
 		// Check details for package counts
 		hasBrewDetail := false
-		hasNpmDetail := false
+		hasPnpmDetail := false
 		hasTotalDetail := false
 		for _, detail := range check.Details {
 			if detail == "brew packages: 1" {
 				hasBrewDetail = true
 			}
-			if detail == "npm packages: 1" {
-				hasNpmDetail = true
+			if detail == "pnpm packages: 1" {
+				hasPnpmDetail = true
 			}
 			if detail == "Total managed packages: 2" {
 				hasTotalDetail = true
 			}
 		}
 		assert.True(t, hasBrewDetail, "Should have brew package count")
-		assert.True(t, hasNpmDetail, "Should have npm package count")
+		assert.True(t, hasPnpmDetail, "Should have pnpm package count")
 		assert.True(t, hasTotalDetail, "Should have total package count")
 	})
 
 	t.Run("valid but empty lock file", func(t *testing.T) {
 		tempDir := t.TempDir()
 		lockPath := filepath.Join(tempDir, "plonk.lock")
-		lockContent := `version: 2
-resources: []`
+		// v3 format with no packages
+		lockContent := `version: 3
+packages: {}`
 		require.NoError(t, os.WriteFile(lockPath, []byte(lockContent), 0644))
 
 		oldPlonkDir := os.Getenv("PLONK_DIR")

@@ -4,79 +4,11 @@
 package commands
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/packages"
 	"github.com/spf13/cobra"
 )
-
-// buildInstallExamples generates CLI examples for the install command based on
-// the available package managers.
-func buildInstallExamples() string {
-	var lines []string
-
-	// Always include a simple, manager-agnostic example.
-	lines = append(lines, "plonk install htop git neovim ripgrep")
-
-	// Add a few manager-prefixed examples using registry manager names.
-	managerNames := packages.GetRegistry().GetAllManagerNames()
-
-	const maxManagers = 4
-	for i, name := range managerNames {
-		if i >= maxManagers {
-			break
-		}
-		lines = append(lines, fmt.Sprintf("plonk install %s:PACKAGE", name))
-	}
-
-	return strings.Join(lines, "\n")
-}
-
-// buildUninstallExamples generates CLI examples for the uninstall command
-// based on the available package managers.
-func buildUninstallExamples() string {
-	var lines []string
-
-	lines = append(lines, "plonk uninstall htop git")
-
-	// Add a few manager-prefixed examples using registry manager names.
-	managerNames := packages.GetRegistry().GetAllManagerNames()
-
-	const maxManagers = 2
-	for i, name := range managerNames {
-		if i >= maxManagers {
-			break
-		}
-		lines = append(lines, fmt.Sprintf("plonk uninstall %s:PACKAGE", name))
-	}
-
-	return strings.Join(lines, "\n")
-}
-
-// buildUpgradeExamples generates CLI examples for the upgrade command using
-// the available managers.
-func buildUpgradeExamples() string {
-	var lines []string
-
-	// Generic examples that do not depend on specific manager names.
-	lines = append(lines, "plonk upgrade")
-	lines = append(lines, "plonk upgrade ripgrep")
-
-	// Add manager-specific examples using registry manager names.
-	managerNames := packages.GetRegistry().GetAllManagerNames()
-
-	if len(managerNames) > 0 {
-		lines = append(lines, fmt.Sprintf("plonk upgrade %s", managerNames[0]))
-	}
-	if len(managerNames) > 1 {
-		lines = append(lines, fmt.Sprintf("plonk upgrade %s %s", managerNames[0], managerNames[1]))
-	}
-
-	return strings.Join(lines, "\n")
-}
 
 // SimpleFlags represents basic command flags
 type SimpleFlags struct {
@@ -113,8 +45,8 @@ func parseSimpleFlags(cmd *cobra.Command) (*SimpleFlags, error) {
 
 // CompleteDotfilePaths provides file path completion for dotfiles
 func CompleteDotfilePaths(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	// Get home directory (no error handling needed)
-	_ = config.GetHomeDir()
+	// Get home directory - ignore errors for shell completion (best effort)
+	_, _ = config.GetHomeDir()
 
 	// Define common dotfile suggestions
 	commonDotfiles := []string{
@@ -176,16 +108,3 @@ func CompleteDotfilePaths(cmd *cobra.Command, args []string, toComplete string) 
 	return nil, cobra.ShellCompDirectiveDefault
 }
 
-// convertPackageSpecsToOutput converts packages.PackageSpec to output.Item
-// This is used by the packages command to convert domain-specific types to output types
-func convertPackageSpecsToOutput(specs []packages.PackageSpec) []output.Item {
-	converted := make([]output.Item, len(specs))
-	for i, spec := range specs {
-		converted[i] = output.Item{
-			Name:    spec.Name,
-			Manager: spec.Manager,
-			State:   "", // State is set by the caller based on which list this came from
-		}
-	}
-	return converted
-}

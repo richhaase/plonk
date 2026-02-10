@@ -5,11 +5,14 @@ package commands
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/orchestrator"
+	"github.com/richhaase/plonk/internal/dotfiles"
+	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/packages"
 	"github.com/spf13/cobra"
@@ -41,24 +44,34 @@ func init() {
 
 func runStatus(cmd *cobra.Command, args []string) error {
 	// Get directories
-	homeDir := config.GetHomeDir()
+	homeDir, err := config.GetHomeDir()
+	if err != nil {
+		return fmt.Errorf("cannot determine home directory: %w", err)
+	}
 	configDir := config.GetDefaultConfigDirectory()
 
 	// Load configuration (may fail if config is invalid, but we handle this gracefully)
 	_, configLoadErr := config.Load(configDir)
 
-	// Reconcile all domains with injected config
+	// Reconcile dotfiles with injected config
 	cfg := config.LoadWithDefaults(configDir)
-	ctx := context.Background()
 
-	// Reconcile all domains using orchestrator
-	result, err := orchestrator.ReconcileAllWithConfig(ctx, homeDir, configDir, cfg)
+	// Create DotfileManager and reconcile directly
+	dm := dotfiles.NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
+	statuses, err := dm.Reconcile()
 	if err != nil {
 		return err
 	}
 
-	// Convert domain results directly to output summary
-	summary := convertReconcileResultToSummary(result)
+	// Get package status from lock file
+	ctx := context.Background()
+	packageResult, err := getPackageStatus(ctx, configDir)
+	if err != nil {
+		return err
+	}
+
+	// Convert to output summary
+	summary := convertStatusToSummary(statuses, packageResult)
 
 	// Check file existence and validity
 	configPath := filepath.Join(configDir, "plonk.yaml")
@@ -93,46 +106,127 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// convertReconcileResultToSummary converts orchestrator.ReconcileAllResult to output.Summary
-func convertReconcileResultToSummary(result orchestrator.ReconcileAllResult) output.Summary {
-	// Convert dotfiles result to output.Result
-	dotfileResult := output.Result{
-		Domain:    "dotfile",
-		Managed:   convertDotfileItemsToOutput(result.Dotfiles.Managed),
-		Missing:   convertDotfileItemsToOutput(result.Dotfiles.Missing),
-		Untracked: convertDotfileItemsToOutput(result.Dotfiles.Untracked),
+// packageStatus holds status information about tracked packages
+type packageStatus struct {
+	Managed []output.Item
+	Missing []output.Item
+	Errors  []output.Item
+}
+
+// getPackageStatus reads the lock file and checks which packages are installed
+func getPackageStatus(ctx context.Context, configDir string) (packageStatus, error) {
+	result := packageStatus{}
+
+	// Check if lock file exists first
+	lockPath := filepath.Join(configDir, "plonk.lock")
+	if _, err := os.Stat(lockPath); os.IsNotExist(err) {
+		// No lock file yet - this is fine, just no packages tracked
+		return result, nil
 	}
 
-	// Convert packages result to output.Result
-	packageResult := output.Result{
-		Domain:    "package",
-		Managed:   convertPackageSpecsToOutputWithState(result.Packages.Managed, "managed"),
-		Missing:   convertPackageSpecsToOutputWithState(result.Packages.Missing, "missing"),
-		Untracked: convertPackageSpecsToOutputWithState(result.Packages.Untracked, "untracked"),
+	lockSvc := lock.NewLockV3Service(configDir)
+	lockFile, err := lockSvc.Read()
+	if err != nil {
+		return result, fmt.Errorf("failed to read lock file: %w", err)
 	}
 
-	// Calculate totals
-	totalManaged := len(result.Dotfiles.Managed) + len(result.Packages.Managed)
-	totalMissing := len(result.Dotfiles.Missing) + len(result.Packages.Missing)
-	totalUntracked := len(result.Dotfiles.Untracked) + len(result.Packages.Untracked)
+	// Check each package (sorted for deterministic output)
+	managers := make([]string, 0, len(lockFile.Packages))
+	for manager := range lockFile.Packages {
+		managers = append(managers, manager)
+	}
+	sort.Strings(managers)
+	for _, manager := range managers {
+		pkgs := lockFile.Packages[manager]
+		mgr, err := packages.GetManager(manager)
+		if err != nil {
+			// Unknown/unsupported manager - mark all as errors (not missing)
+			for _, pkg := range pkgs {
+				result.Errors = append(result.Errors, output.Item{
+					Name:    pkg,
+					Manager: manager,
+					State:   output.StateError,
+					Error:   fmt.Sprintf("unsupported manager: %s", manager),
+				})
+			}
+			continue
+		}
+
+		var managerBroken bool
+		var managerErr string
+		for _, pkg := range pkgs {
+			// Short-circuit remaining packages if the manager itself is broken
+			// (e.g., binary not on PATH) to avoid repeated failing subprocesses.
+			if managerBroken {
+				result.Errors = append(result.Errors, output.Item{
+					Name:    pkg,
+					Manager: manager,
+					State:   output.StateError,
+					Error:   managerErr,
+				})
+				continue
+			}
+
+			installed, err := mgr.IsInstalled(ctx, pkg)
+			if err != nil {
+				managerBroken = true
+				managerErr = err.Error()
+				result.Errors = append(result.Errors, output.Item{
+					Name:    pkg,
+					Manager: manager,
+					State:   output.StateError,
+					Error:   err.Error(),
+				})
+				continue
+			}
+			if installed {
+				result.Managed = append(result.Managed, output.Item{
+					Name:    pkg,
+					Manager: manager,
+					State:   output.StateManaged,
+				})
+			} else {
+				result.Missing = append(result.Missing, output.Item{
+					Name:    pkg,
+					Manager: manager,
+					State:   output.StateMissing,
+				})
+			}
+		}
+	}
+
+	return result, nil
+}
+
+// convertStatusToSummary combines dotfile statuses and package results into a unified summary
+func convertStatusToSummary(statuses []dotfiles.DotfileStatus, pkgResult packageStatus) output.Summary {
+	// Convert dotfiles to output format
+	managedItems, missingItems, errorItems := convertDotfileStatusToOutput(statuses)
+
+	dotfileOutput := output.Result{
+		Domain:  "dotfile",
+		Managed: managedItems,
+		Missing: missingItems,
+		Errors:  errorItems,
+	}
+
+	// Create package result
+	packageOutput := output.Result{
+		Domain:  "package",
+		Managed: pkgResult.Managed,
+		Missing: pkgResult.Missing,
+		Errors:  pkgResult.Errors,
+	}
+
+	totalManaged := len(managedItems) + len(pkgResult.Managed)
+	totalMissing := len(missingItems) + len(pkgResult.Missing)
+	totalErrors := len(errorItems) + len(pkgResult.Errors)
 
 	return output.Summary{
 		TotalManaged:   totalManaged,
 		TotalMissing:   totalMissing,
-		TotalUntracked: totalUntracked,
-		Results:        []output.Result{dotfileResult, packageResult},
+		TotalUntracked: 0,
+		TotalErrors:    totalErrors,
+		Results:        []output.Result{packageOutput, dotfileOutput},
 	}
-}
-
-// convertPackageSpecsToOutputWithState converts packages.PackageSpec slice to output.Item slice with state
-func convertPackageSpecsToOutputWithState(specs []packages.PackageSpec, state string) []output.Item {
-	converted := make([]output.Item, len(specs))
-	for i, spec := range specs {
-		converted[i] = output.Item{
-			Name:    spec.Name,
-			Manager: spec.Manager,
-			State:   output.ItemState(state),
-		}
-	}
-	return converted
 }

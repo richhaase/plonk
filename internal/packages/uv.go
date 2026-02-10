@@ -6,66 +6,84 @@ package packages
 import (
 	"context"
 	"fmt"
+	"os/exec"
+	"strings"
+	"sync"
 )
 
-// UVManager implements PackageManager for uv (Python package manager).
-type UVManager struct {
-	BaseManager
+// UVSimple implements Manager for uv (Python)
+type UVSimple struct {
+	mu        sync.Mutex
+	installed map[string]bool
 }
 
-// NewUVManager creates a new uv manager.
-func NewUVManager(exec CommandExecutor) *UVManager {
-	return &UVManager{
-		BaseManager: NewBaseManager(exec, "uv", "--version"),
+// NewUVSimple creates a new uv manager
+func NewUVSimple() *UVSimple {
+	return &UVSimple{}
+}
+
+// IsInstalled checks if a tool is installed via uv
+func (u *UVSimple) IsInstalled(ctx context.Context, name string) (bool, error) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+
+	// Load installed list on first call
+	if u.installed == nil {
+		if err := u.loadInstalled(ctx); err != nil {
+			return false, err
+		}
 	}
+
+	return u.installed[name], nil
 }
 
-// ListInstalled lists all tools installed by uv.
-func (u *UVManager) ListInstalled(ctx context.Context) ([]string, error) {
-	output, err := u.Exec().Execute(ctx, "uv", "tool", "list")
+// loadInstalled fetches all installed uv tools
+func (u *UVSimple) loadInstalled(ctx context.Context) error {
+	installed := make(map[string]bool)
+
+	cmd := exec.CommandContext(ctx, "uv", "tool", "list")
+	output, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("failed to list tools: %w", err)
+		return fmt.Errorf("failed to list uv tools: %w", err)
 	}
 
-	return parseOutput(output, ParseConfig{TakeFirstToken: true}), nil
-}
-
-// Install installs a tool via uv (idempotent).
-func (u *UVManager) Install(ctx context.Context, name string) error {
-	return u.RunIdempotent(ctx,
-		[]string{"already installed"},
-		fmt.Sprintf("failed to install %s", name),
-		"uv", "tool", "install", name,
-	)
-}
-
-// Uninstall removes a tool via uv (idempotent).
-func (u *UVManager) Uninstall(ctx context.Context, name string) error {
-	return u.RunIdempotent(ctx,
-		[]string{"not installed"},
-		fmt.Sprintf("failed to uninstall %s", name),
-		"uv", "tool", "uninstall", name,
-	)
-}
-
-// Upgrade upgrades tools to their latest versions.
-// If packages is empty, upgrades all installed tools.
-func (u *UVManager) Upgrade(ctx context.Context, packages []string) error {
-	if len(packages) == 0 {
-		return u.UpgradeAll(ctx, []string{"already up-to-date", "up to date"}, "uv", "tool", "upgrade", "--all")
+	// Parse output: tool names are first token on each line
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		fields := strings.Fields(line)
+		if len(fields) > 0 {
+			installed[fields[0]] = true
+		}
 	}
 
-	return u.UpgradeEach(ctx, packages, true,
-		func(pkg string) []string { return []string{"uv", "tool", "upgrade", pkg} },
-		[]string{"already up-to-date", "up to date"},
-	)
+	// Only set the cache after successful loading
+	u.installed = installed
+	return nil
 }
 
-// SelfInstall installs uv using brew or the official installer.
-func (u *UVManager) SelfInstall(ctx context.Context) error {
-	return u.SelfInstallWithBrewFallback(ctx, u.IsAvailable, "uv",
-		`curl -LsSf https://astral.sh/uv/install.sh | sh`,
-		"failed to install uv",
-	)
+// Install installs a tool via uv
+func (u *UVSimple) Install(ctx context.Context, name string) error {
+	cmd := exec.CommandContext(ctx, "uv", "tool", "install", "--", name)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		// Check if already installed
+		if strings.Contains(strings.ToLower(string(output)), "already installed") {
+			u.markInstalled(name)
+			return nil
+		}
+		return fmt.Errorf("uv tool install %s: %s: %w", name, strings.TrimSpace(string(output)), err)
+	}
+
+	// Update cache after successful install
+	u.markInstalled(name)
+	return nil
 }
 
+// markInstalled updates the cache to mark a package as installed
+func (u *UVSimple) markInstalled(name string) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	if u.installed != nil {
+		u.installed[name] = true
+	}
+}

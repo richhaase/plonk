@@ -8,155 +8,99 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
-	"github.com/richhaase/plonk/internal/output"
 )
 
-// Apply applies package configuration and returns the result
-func Apply(ctx context.Context, configDir string, cfg *config.Config, dryRun bool) (output.PackageResults, error) {
-	registry := GetRegistry()
-	lockService := lock.NewYAMLLockService(configDir)
-	return ApplyWith(ctx, cfg, lockService, registry, true, dryRun)
+// SimpleApplyResult holds the result of applying packages
+type SimpleApplyResult struct {
+	Installed    []string // Packages that were actually installed
+	WouldInstall []string // Packages that would be installed (dry-run only)
+	Skipped      []string // Packages already installed
+	Failed       []string // Packages that failed to install
+	Errors       []error  // Errors for failed packages
 }
 
-// ApplyWith applies package configuration with explicit dependencies for testability.
-// Set showProgress to false to disable spinner output (useful for tests).
-func ApplyWith(ctx context.Context, cfg *config.Config, lockService lock.LockService, registry *ManagerRegistry, showProgress bool, dryRun bool) (output.PackageResults, error) {
-	// Load lock file to get desired packages
-	lockData, err := lockService.Read()
+// SimpleApply installs all tracked packages that are missing
+func SimpleApply(ctx context.Context, configDir string, dryRun bool) (*SimpleApplyResult, error) {
+	lockSvc := lock.NewLockV3Service(configDir)
+	lockFile, err := lockSvc.Read()
 	if err != nil {
-		return output.PackageResults{}, err
+		return nil, fmt.Errorf("failed to read lock file: %w", err)
 	}
 
-	// Convert lock.ResourceEntry to LockResource for reconciliation
-	var lockResources []LockResource
-	for _, r := range lockData.Resources {
-		lockResources = append(lockResources, LockResource{
-			Type:     r.Type,
-			Metadata: r.Metadata,
-		})
+	result := &SimpleApplyResult{}
+
+	// Sort managers for deterministic order — ensures managers that provide
+	// tools (e.g., brew:go) are processed before managers that depend on them
+	// (e.g., go:golang.org/x/tools/gopls)
+	managers := make([]string, 0, len(lockFile.Packages))
+	for manager := range lockFile.Packages {
+		managers = append(managers, manager)
 	}
+	sort.Strings(managers)
 
-	// Simple reconciliation: compare lock file vs installed packages
-	result := ReconcileFromLock(ctx, lockResources, registry)
-
-	// Group missing packages by manager
-	missingByManager := make(map[string][]PackageSpec)
-	for _, pkg := range result.Missing {
-		missingByManager[pkg.Manager] = append(missingByManager[pkg.Manager], pkg)
-	}
-
-	var managerResults []output.ManagerResults
-	totalMissing := len(result.Missing)
-	totalInstalled := 0
-	totalFailed := 0
-	totalWouldInstall := 0
-
-	// Create spinner manager for progress display if enabled
-	var spinnerManager *output.SpinnerManager
-	if showProgress && totalMissing > 0 {
-		spinnerManager = output.NewSpinnerManager(totalMissing)
-	}
-
-	// Deterministic iteration over managers
-	managerNames := make([]string, 0, len(missingByManager))
-	for m := range missingByManager {
-		managerNames = append(managerNames, m)
-	}
-	sort.Strings(managerNames)
-
-	// Process each manager's missing packages
-	for _, managerName := range managerNames {
-		missingPkgs := missingByManager[managerName]
-		var packageResults []output.PackageOperation
-		installedCount := 0
-		failedCount := 0
-		wouldInstallCount := 0
-
-		// Get the manager instance
-		manager, err := registry.GetManager(managerName)
+	// Process each manager in sorted order
+	for _, manager := range managers {
+		pkgs := lockFile.Packages[manager]
+		mgr, err := GetManager(manager)
 		if err != nil {
-			// Manager not available - mark all as failed
-			for _, pkg := range missingPkgs {
-				packageResults = append(packageResults, output.PackageOperation{
-					Name:   pkg.Name,
-					Status: "failed",
-					Error:  fmt.Sprintf("manager %s not available: %v", managerName, err),
-				})
-				failedCount++
+			// Record failure for each package individually
+			for _, pkg := range pkgs {
+				spec := manager + ":" + pkg
+				result.Failed = append(result.Failed, spec)
+				result.Errors = append(result.Errors, fmt.Errorf("%s: manager not available: %w", spec, err))
 			}
-			managerResults = append(managerResults, output.ManagerResults{
-				Name:         managerName,
-				MissingCount: len(missingPkgs),
-				Packages:     packageResults,
-			})
-			totalFailed += failedCount
 			continue
 		}
 
-		// Sort packages by name for deterministic output
-		sort.Slice(missingPkgs, func(i, j int) bool { return missingPkgs[i].Name < missingPkgs[j].Name })
+		var managerBroken bool
+		var managerErr error
+		for _, pkg := range pkgs {
+			spec := manager + ":" + pkg
 
-		for _, pkg := range missingPkgs {
-			// Start spinner for this package
-			var spinner *output.Spinner
-			if spinnerManager != nil {
-				spinner = spinnerManager.StartSpinner("Installing", fmt.Sprintf("%s (%s)", pkg.Name, managerName))
+			// Short-circuit remaining packages if the manager itself is broken
+			// (e.g., binary not on PATH) to avoid repeated failing subprocesses.
+			if managerBroken {
+				result.Failed = append(result.Failed, spec)
+				result.Errors = append(result.Errors, fmt.Errorf("%s: %w", spec, managerErr))
+				continue
 			}
 
+			// Check if installed
+			installed, err := mgr.IsInstalled(ctx, pkg)
+			if err != nil {
+				managerBroken = true
+				managerErr = err
+				result.Failed = append(result.Failed, spec)
+				result.Errors = append(result.Errors, fmt.Errorf("%s: %w", spec, err))
+				continue
+			}
+
+			if installed {
+				result.Skipped = append(result.Skipped, spec)
+				continue
+			}
+
+			// Install (or mark as would-install for dry-run)
 			if dryRun {
-				packageResults = append(packageResults, output.PackageOperation{
-					Name:   pkg.Name,
-					Status: "would-install",
-				})
-				wouldInstallCount++
-				if spinner != nil {
-					spinner.Success(fmt.Sprintf("would-install %s", pkg.Name))
-				}
-			} else {
-				// Install directly via manager
-				err := manager.Install(ctx, pkg.Name)
-				if err != nil {
-					packageResults = append(packageResults, output.PackageOperation{
-						Name:   pkg.Name,
-						Status: "failed",
-						Error:  err.Error(),
-					})
-					failedCount++
-					if spinner != nil {
-						spinner.Error(fmt.Sprintf("Failed to install %s: %s", pkg.Name, err.Error()))
-					}
-				} else {
-					packageResults = append(packageResults, output.PackageOperation{
-						Name:   pkg.Name,
-						Status: "installed",
-					})
-					installedCount++
-					if spinner != nil {
-						spinner.Success(fmt.Sprintf("installed %s", pkg.Name))
-					}
-				}
+				result.WouldInstall = append(result.WouldInstall, spec)
+				continue
 			}
+
+			if err := mgr.Install(ctx, pkg); err != nil {
+				result.Failed = append(result.Failed, spec)
+				result.Errors = append(result.Errors, fmt.Errorf("%s: %w", spec, err))
+				continue
+			}
+
+			result.Installed = append(result.Installed, spec)
 		}
-
-		managerResults = append(managerResults, output.ManagerResults{
-			Name:         managerName,
-			MissingCount: len(missingPkgs),
-			Packages:     packageResults,
-		})
-
-		totalInstalled += installedCount
-		totalFailed += failedCount
-		totalWouldInstall += wouldInstallCount
 	}
 
-	return output.PackageResults{
-		DryRun:            dryRun,
-		TotalMissing:      totalMissing,
-		TotalInstalled:    totalInstalled,
-		TotalFailed:       totalFailed,
-		TotalWouldInstall: totalWouldInstall,
-		Managers:          managerResults,
-	}, nil
+	// Return error if any packages failed
+	if len(result.Failed) > 0 {
+		return result, fmt.Errorf("%d package(s) failed to install", len(result.Failed))
+	}
+
+	return result, nil
 }

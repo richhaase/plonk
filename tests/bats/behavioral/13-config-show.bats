@@ -50,7 +50,7 @@ setup() {
 @test "config show displays user-defined values" {
   # Create a config file with custom values
   cat > "$PLONK_DIR/plonk.yaml" << 'EOF'
-default_manager: npm
+default_manager: cargo
 operation_timeout: 600
 package_timeout: 120
 dotfile_timeout: 60
@@ -58,7 +58,7 @@ EOF
 
   run plonk config show
   assert_success
-  assert_output --partial "npm"
+  assert_output --partial "cargo"
   assert_output --partial "600"
 }
 

@@ -6,75 +6,103 @@ package packages
 import (
 	"context"
 	"fmt"
+	"os/exec"
+	"strings"
+	"sync"
 )
 
-// BrewManager implements PackageManager for Homebrew.
-type BrewManager struct {
-	BaseManager
+// BrewSimple implements Manager for Homebrew
+type BrewSimple struct {
+	mu        sync.Mutex
+	installed map[string]bool
 }
 
-// NewBrewManager creates a new Homebrew manager.
-func NewBrewManager(exec CommandExecutor) *BrewManager {
-	return &BrewManager{
-		BaseManager: NewBaseManager(exec, "brew", "--version"),
+// NewBrewSimple creates a new Homebrew manager
+func NewBrewSimple() *BrewSimple {
+	return &BrewSimple{}
+}
+
+// IsInstalled checks if a package is installed via brew
+func (b *BrewSimple) IsInstalled(ctx context.Context, name string) (bool, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	// Load installed list on first call
+	if b.installed == nil {
+		if err := b.loadInstalled(ctx); err != nil {
+			return false, err
+		}
 	}
+
+	// Normalize tap-qualified names (e.g., "homebrew/cask-fonts/font-hack-nerd-font"
+	// -> "font-hack-nerd-font") since `brew list` returns short token names.
+	shortName := name
+	if idx := strings.LastIndex(name, "/"); idx != -1 {
+		shortName = name[idx+1:]
+	}
+
+	return b.installed[name] || b.installed[shortName], nil
 }
 
-// ListInstalled lists all packages installed by Homebrew.
-func (b *BrewManager) ListInstalled(ctx context.Context) ([]string, error) {
-	output, err := b.Exec().Execute(ctx, "brew", "list")
+// loadInstalled fetches all installed formulas and casks
+func (b *BrewSimple) loadInstalled(ctx context.Context) error {
+	installed := make(map[string]bool)
+
+	// Get formulas
+	cmd := exec.CommandContext(ctx, "brew", "list", "--formula", "-1")
+	output, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("failed to list packages: %w", err)
+		return fmt.Errorf("failed to list brew formulas: %w", err)
+	}
+	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+		if line != "" {
+			installed[line] = true
+		}
 	}
 
-	return parseOutput(output, ParseConfig{TakeFirstToken: true}), nil
-}
-
-// Install installs a package via Homebrew (idempotent).
-func (b *BrewManager) Install(ctx context.Context, name string) error {
-	return b.RunIdempotent(ctx,
-		[]string{"already installed"},
-		fmt.Sprintf("failed to install %s", name),
-		"brew", "install", name,
-	)
-}
-
-// Uninstall removes a package via Homebrew (idempotent).
-func (b *BrewManager) Uninstall(ctx context.Context, name string) error {
-	return b.RunIdempotent(ctx,
-		[]string{"no such keg"},
-		fmt.Sprintf("failed to uninstall %s", name),
-		"brew", "uninstall", name,
-	)
-}
-
-// Upgrade upgrades packages to their latest versions.
-// If packages is empty, upgrades all installed packages.
-func (b *BrewManager) Upgrade(ctx context.Context, packages []string) error {
-	if len(packages) == 0 {
-		return b.UpgradeAll(ctx, []string{"already up-to-date"}, "brew", "upgrade")
+	// Get casks — failure is non-fatal (cask support may be unavailable, e.g., on Linux)
+	cmd = exec.CommandContext(ctx, "brew", "list", "--cask", "-1")
+	output, err = cmd.Output()
+	if err == nil {
+		for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+			if line != "" {
+				installed[line] = true
+			}
+		}
 	}
 
-	return b.UpgradeEach(ctx, packages, true,
-		func(pkg string) []string { return []string{"brew", "upgrade", pkg} },
-		[]string{"already up-to-date", "already installed"},
-	)
-}
-
-// SelfInstall installs Homebrew using the official installation script.
-func (b *BrewManager) SelfInstall(ctx context.Context) error {
-	// Check if already installed
-	available, _ := b.IsAvailable(ctx)
-	if available {
-		return nil
-	}
-
-	// Use the official Homebrew installation script
-	script := `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
-	_, err := b.Exec().CombinedOutput(ctx, "sh", "-c", script)
-	if err != nil {
-		return fmt.Errorf("failed to install Homebrew: %w", err)
-	}
-
+	// Set cache with whatever we loaded (formulas always, casks if available)
+	b.installed = installed
 	return nil
+}
+
+// Install installs a package via brew
+func (b *BrewSimple) Install(ctx context.Context, name string) error {
+	cmd := exec.CommandContext(ctx, "brew", "install", "--", name)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		// Check if already installed (idempotent)
+		if strings.Contains(strings.ToLower(string(output)), "already installed") {
+			b.markInstalled(name)
+			return nil
+		}
+		return fmt.Errorf("brew install %s: %s: %w", name, strings.TrimSpace(string(output)), err)
+	}
+
+	// Update cache after successful install
+	b.markInstalled(name)
+	return nil
+}
+
+// markInstalled updates the cache to mark a package as installed
+func (b *BrewSimple) markInstalled(name string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.installed != nil {
+		b.installed[name] = true
+		// Also cache the short token name for tap-qualified specs
+		if idx := strings.LastIndex(name, "/"); idx != -1 {
+			b.installed[name[idx+1:]] = true
+		}
+	}
 }

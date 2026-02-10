@@ -1,257 +1,142 @@
 # Plonk
 
 [![CI](https://github.com/richhaase/plonk/workflows/CI/badge.svg)](https://github.com/richhaase/plonk/actions)
-[![Security](https://github.com/richhaase/plonk/workflows/Security%20Check/badge.svg)](https://github.com/richhaase/plonk/actions)
 
-**The unified package and dotfile manager for developers who tinker.** One command to set up your entire development environment.
+**One command to set up your development environment.**
 
 ```bash
-# Install plonk and set up your environment
 brew install --cask richhaase/tap/plonk
 plonk clone user/dotfiles
-# Done. Seriously.
+# Done.
 ```
 
-## What is Plonk?
+## What It Does
 
-Plonk is the missing link between dotfile managers and package managers. Born from the frustration of maintaining separate tools for configuration files and installed packages, plonk unifies both in a single, simple tool.
+Plonk manages packages and dotfiles together. Install tools with your package manager, tell plonk to remember them, replicate everywhere.
 
-**Why another dotfile manager?** [→ Read the full story](docs/why-plonk.md)
-
-After trying bash scripts, symlink farms, [dotter](https://github.com/SuperCuber/dotter), and [chezmoi](https://www.chezmoi.io/), I wanted something that:
-- Manages packages as a first-class concern alongside dotfiles
-- Has zero configuration complexity (no templates, no YAML manifestos)
-- Adapts quickly to my constantly changing toolset
-- Just works
-
-**Key innovations:**
-- **Package Manager Manager™**: One interface for 8 package managers (brew, npm, pnpm, cargo, pipx, conda, gem, uv)
-- **Filesystem as truth**: Your dotfiles directory IS the state - no sync issues
-- **Copy, don't symlink**: Cleaner, simpler, and more compatible
-- **State-based**: Track what should exist, not what commands were run
-- **Drift detection**: Know when deployed dotfiles have been modified (`plonk diff`)
-- **AI-friendly**: Built with and for AI coding assistants
-
-**For developers who:**
-- Set up new machines/VMs regularly
-- Experiment with new CLI/TUI tools constantly
-- Want their environment manager to keep up with their tinkering
-- Value simplicity over features
-
-## Core Philosophy
-
-**Just works** - Zero configuration required
-**Unified** - Packages and dotfiles together
-**Simple** - Your filesystem IS the state
-**Fast** - One command from fresh OS to ready
+**Key ideas:**
+- **Track, don't install** - Record what's already installed
+- **Filesystem as state** - Your `~/.config/plonk/` directory IS your dotfiles
+- **Copy, don't symlink** - Simpler and more compatible
 
 ## Quick Start
 
-### Prerequisites
-
-1. **Install Homebrew** (if not already installed):
-   Visit [brew.sh](https://brew.sh) for installation instructions
-
-2. **Install plonk**:
-   ```bash
-   # Via Homebrew (recommended)
-   brew install --cask richhaase/tap/plonk
-
-   # Via Go (requires Go 1.23+)
-   go install github.com/richhaase/plonk/cmd/plonk@latest
-   ```
-
-**Requirements:** Homebrew, Git
-
-**📖 [Complete Installation Guide →](docs/installation.md)**
-
-### Basic Usage
-
 ```bash
-# Track your existing setup
-plonk add ~/.zshrc ~/.vimrc ~/.config/nvim/    # Add dotfiles
-plonk install ripgrep fd bat                   # Install & track packages
-# Ensure language/package managers (pnpm, cargo, etc.) are installed first
-# Use `plonk doctor` for detection and install guidance
+# Track your dotfiles
+plonk add ~/.zshrc ~/.vimrc ~/.config/nvim/
+
+# Install packages normally, then track them
+brew install ripgrep fd bat
+plonk track brew:ripgrep brew:fd brew:bat
 
 # See what plonk manages
-plonk status                                   # Show all resources
+plonk status
 
-# Replicate on a new machine
-plonk clone your-github/dotfiles              # Clone and apply everything
+# On a new machine: clone and apply
+plonk clone your-github/dotfiles
 ```
 
-The beauty is in what you don't need to do:
-- No configuration files to write
-- No symlinks to manage
-- No separate package lists to maintain
-- No complex templating languages to learn
-
-## Setting Up a New Machine
-
-The fastest way to set up a new development machine:
+## Commands
 
 ```bash
-# Install prerequisites (visit brew.sh for installation instructions)
-# After installing Homebrew:
+# Packages (must be installed first, then tracked)
+plonk track brew:ripgrep cargo:bat    # Remember installed packages
+plonk untrack brew:ripgrep            # Forget (doesn't uninstall)
 
-# Install plonk
-brew install --cask richhaase/tap/plonk
+# Dotfiles
+plonk add ~/.vimrc ~/.zshrc           # Start tracking
+plonk rm ~/.vimrc                     # Stop tracking (doesn't delete)
 
-# Clone existing dotfiles and set up environment
-plonk clone user/dotfiles                # GitHub shorthand
-plonk clone https://github.com/user/dotfiles.git
+# Sync
+plonk apply                           # Install missing packages, deploy dotfiles
+plonk apply --dry-run                 # Preview changes
+plonk status                          # Show managed items
+plonk diff                            # Show modified dotfiles
 
-# Or start fresh - just start using plonk
-plonk add ~/.zshrc                       # Start tracking your dotfiles
-```
-
-The `clone` command:
-1. Clones your dotfiles repository
-2. Verifies required package managers; if missing, use `plonk doctor` for instructions
-3. Runs `plonk apply` to install all packages and deploy dotfiles
-4. Gets your machine ready for development in minutes
-
-**Prerequisites**: Homebrew and Git are required before installing plonk.
-
-## Key Commands
-
-```bash
-# Package management
-plonk install ripgrep fd              # Install and track packages
-plonk install pnpm cargo              # Install package managers (must be available via another manager)
-plonk uninstall ripgrep               # Uninstall and stop tracking
-plonk upgrade                         # Upgrade all packages to latest versions
-plonk upgrade brew:ripgrep            # Upgrade specific package
-
-# Dotfile management
-plonk add ~/.vimrc ~/.zshrc           # Start tracking dotfiles
-plonk add -y                          # Sync all drifted files from $HOME to $PLONK_DIR
-plonk rm ~/.vimrc                     # Stop tracking (doesn't delete file)
-plonk dotfiles                        # List dotfiles with state info
-
-# System state
-plonk status                          # Show all managed items (including drift)
-plonk packages                        # Show only package status (alias: p)
-plonk dotfiles                        # Show only dotfile status (alias: d)
-plonk apply                           # Sync system to desired state
-plonk apply ~/.vimrc ~/.zshrc         # Apply only specific dotfiles
-plonk diff                            # Show differences for drifted dotfiles
+# Utilities
 plonk doctor                          # Check system health
-
-# Configuration
-plonk config show                     # View current settings
-plonk config edit                     # Edit configuration
+plonk config show                     # View settings
+plonk clone user/dotfiles             # Clone repo and apply
 ```
+
+## Migration Notes (v0.25+)
+
+If you're upgrading from older releases:
+
+- `plonk install`/`uninstall`/`upgrade` were removed.
+  - Use your package manager directly, then `plonk track` / `plonk untrack`.
+- Supported managers are now: `brew`, `cargo`, `go`, `pnpm`, `uv`.
+  - Legacy lock entries for unsupported managers are reported clearly in status/apply output.
+- Lock file format is now `version: 3` and migrates automatically from v2 on read.
 
 ## Supported Package Managers
 
-Plonk supports 8 package managers across multiple language ecosystems:
+| Manager | Prefix | Example |
+|---------|--------|---------|
+| Homebrew | `brew:` | `plonk track brew:ripgrep` |
+| Cargo | `cargo:` | `plonk track cargo:bat` |
+| Go | `go:` | `plonk track go:golang.org/x/tools/gopls` |
+| PNPM | `pnpm:` | `plonk track pnpm:typescript` |
+| UV | `uv:` | `plonk track uv:ruff` |
 
-### Package Managers
-- **Homebrew** (brew) - macOS/Linux packages and system tools
-- **NPM** (npm) - Node.js packages (global)
-- **PNPM** (pnpm) - Fast, disk-efficient Node.js packages (global)
-- **Cargo** (cargo) - Rust packages
-- **Pipx** (pipx) - Python applications in isolated environments
-- **Conda** (conda) - Scientific computing and data science packages
-- **Gem** (gem) - Ruby packages
-- **UV** (uv) - Fast Python tool manager with isolated environments
+## How It Works
 
-Package manager prefixes:
-```bash
-# Install packages via specific managers
-plonk install brew:wget npm:prettier pnpm:typescript cargo:ripgrep
-plonk install pipx:black conda:numpy gem:rubocop
-plonk install uv:ruff
 ```
+~/.config/plonk/
+├── plonk.lock        # Tracked packages (auto-managed)
+├── plonk.yaml        # Settings (optional, usually not needed)
+├── zshrc             # → ~/.zshrc
+├── vimrc             # → ~/.vimrc
+└── config/
+    └── nvim/
+        └── init.lua  # → ~/.config/nvim/init.lua
+```
+
+- **Packages**: Listed in `plonk.lock`, installed on `apply` if missing
+- **Dotfiles**: Files in this directory deploy to `$HOME` with a dot prefix
+
+## Installation
+
+```bash
+# Homebrew (recommended)
+brew install --cask richhaase/tap/plonk
+
+# Or via Go
+go install github.com/richhaase/plonk/cmd/plonk@latest
+```
+
+**Requirements:** Homebrew, Git, macOS/Linux/WSL
 
 ## Configuration
 
-Plonk stores its data in `~/.config/plonk/`:
-- **`plonk.lock`** - Automatically maintained list of packages
-- **`plonk.yaml`** - Optional configuration (only create if needed)
-- **Dotfiles** - Stored directly in the config directory (e.g., `zshrc`, `vimrc`)
+Plonk works without configuration. If needed, create `~/.config/plonk/plonk.yaml`:
 
-The lock file is automatically updated when you:
-- Install/uninstall packages via plonk
-
-Dotfiles are managed by the filesystem itself - files in `$PLONK_DIR` are your tracked dotfiles
-
-Share your `plonk.lock` file (e.g., in a dotfiles repo) to replicate your environment on other machines.
-
-## Output Formats
-
-All commands support multiple output formats:
-
-```bash
-plonk status --output json       # JSON output for scripts/tools
-plonk status --output yaml       # YAML output
-plonk status --output table      # Human-readable table (default)
+```yaml
+# All settings are optional
+diff_tool: delta                    # Custom diff viewer
+package_timeout: 300                # Seconds (default: 180)
+ignore_patterns:
+  - "*.swp"
+  - ".DS_Store"
 ```
 
-## Output
-
-Plonk uses minimal colorization for status indicators:
-- **Green**: Success/managed/available states
-- **Red**: Error/missing/failed states
-- **Yellow**: Warning/unmanaged states
-- **Blue**: Informational annotations
-
-Respects the standard `NO_COLOR` environment variable for color-free output.
-
-## Development
-
-For contributors and developers:
-
-```bash
-# Clone and set up development environment
-git clone https://github.com/richhaase/plonk
-cd plonk
-just dev-setup          # Install dependencies and tools
-
-# Run tests
-go test ./...           # Unit tests
-
-# Build and install locally
-just install
-```
+See [docs/reference.md](docs/reference.md) for all options.
 
 ## Documentation
 
-### Core Documentation
-- **[Why Plonk?](docs/why-plonk.md)** - The journey that led to plonk and what makes it different
-- **[Architecture](docs/architecture.md)** - Technical design, state model, and implementation details
+- **[CLI & Config Reference](docs/reference.md)** - Complete command and configuration details
+- **[Internals](docs/internals.md)** - Architecture for contributors
 
-### Command Documentation
-- **[Clone](docs/cmds/clone.md)** - Clone and set up existing dotfiles
-- **[Apply](docs/cmds/apply.md)** - Sync your system to desired state
-- **[Status](docs/cmds/status.md)** - View managed packages and dotfiles (combined view)
-- **[Packages](docs/cmds/packages.md)** - View package status (focused view)
-- **[Dotfiles](docs/cmds/dotfiles.md)** - View dotfile status (focused view)
-- **[Package Management](docs/cmds/package-management.md)** - install, uninstall, upgrade
-- **[Upgrade](docs/cmds/upgrade.md)** - Upgrade packages to latest versions
-- **[Dotfile Management](docs/cmds/dotfile-management.md)** - add, rm
-- **[Config](docs/cmds/config.md)** - Manage plonk configuration
-- **[Doctor](docs/cmds/doctor.md)** - Check system health
+## Development
 
-## Requirements
+```bash
+git clone https://github.com/richhaase/plonk
+cd plonk
+just dev-setup && go test ./...
+```
 
-- Homebrew (required prerequisite)
-- Git (for cloning repositories)
-- Go 1.23+ (only if installing via `go install`)
-- macOS, Linux, or Windows (WSL)
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file for details.
-
-## Contributing
-
-Contributions are welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes with tests
-4. Submit a pull request
-
-See the codebase for examples and patterns.
+MIT

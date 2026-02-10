@@ -3,193 +3,35 @@
 
 package dotfiles
 
-import (
-	"context"
-	"os"
+// Dotfile represents a single dotfile managed by plonk
+type Dotfile struct {
+	Name   string // "zshrc" (without dot prefix)
+	Source string // path in $PLONK_DIR
+	Target string // path in $HOME (with dot prefix)
+}
 
-	"github.com/richhaase/plonk/internal/ignore"
-)
-
-// ItemState represents the reconciliation state of a dotfile
-type ItemState int
+// SyncState represents the sync state of a dotfile
+type SyncState string
 
 const (
-	StateManaged   ItemState = iota // In config AND present/installed
-	StateMissing                    // In config BUT not present/installed
-	StateUntracked                  // Present/installed BUT not in config
-	StateDegraded                   // In config AND present BUT content differs (drifted)
+	SyncStateManaged   SyncState = "managed"   // source and target match
+	SyncStateMissing   SyncState = "missing"   // source exists, target doesn't
+	SyncStateDrifted   SyncState = "drifted"   // source and target differ
+	SyncStateError     SyncState = "error"     // could not determine state
 )
 
-// String returns a human-readable representation of the item state
-func (s ItemState) String() string {
-	switch s {
-	case StateManaged:
-		return "managed"
-	case StateMissing:
-		return "missing"
-	case StateUntracked:
-		return "untracked"
-	case StateDegraded:
-		return "drifted"
-	default:
-		return "unknown"
-	}
+// DotfileStatus combines a dotfile with its current state
+type DotfileStatus struct {
+	Dotfile
+	State SyncState
+	Error error // non-nil when State is SyncStateError
 }
 
-// DotfileItem represents a dotfile with its state and metadata
-type DotfileItem struct {
-	// Name is the relative path from home directory (e.g., ".bashrc", ".config/nvim/init.vim")
-	Name string
-
-	// State is the reconciliation state of this dotfile
-	State ItemState
-
-	// Source is the path to the dotfile in the config directory (e.g., "dotfiles/bashrc")
-	Source string
-
-	// Destination is the target path where the dotfile should be deployed (e.g., "~/.bashrc")
-	Destination string
-
-	// IsTemplate indicates if this dotfile is a template that needs processing
-	IsTemplate bool
-
-	// IsDirectory indicates if this dotfile is a directory
-	IsDirectory bool
-
-	// CompareFunc is used for drift detection - compares source and destination
-	// Returns true if identical (no drift), false if different (drift detected)
-	CompareFunc func() (bool, error)
-
-	// Error contains any error message associated with this dotfile
-	Error string
-
-	// Metadata contains additional dotfile-specific information
-	Metadata map[string]interface{}
-}
-
-// PathResolver handles all path resolution and generation operations
-type PathResolver interface {
-	ResolveDotfilePath(path string) (string, error)
-	GetSourcePath(source string) string
-	GetDestinationPath(destination string) (string, error)
-	GenerateDestinationPath(resolvedPath string) (string, error)
-	GenerateSourcePath(destination string) string
-	GeneratePaths(resolvedPath string) (source, destination string, err error)
-}
-
-// PathValidator handles path validation and safety checks
-type PathValidator interface {
-	ValidatePath(path string) error
-	ValidatePaths(source, destination string) error
-	ShouldSkipPath(relPath string, info os.FileInfo, matcher *ignore.Matcher) bool
-}
-
-// DirectoryScanner handles directory operations and file discovery
-type DirectoryScanner interface {
-	ExpandDirectoryPaths(dirPath string) ([]DirectoryEntry, error)
-	ExpandConfigDirectory(ignorePatterns []string) (map[string]string, error)
-	ListDotfiles(dir string) ([]string, error)
-	ExpandDirectory(sourceDir, destDir string) ([]DotfileInfo, error)
-}
-
-// ConfigHandler manages dotfile configuration operations
-type ConfigHandler interface {
-	GetConfiguredDotfiles() ([]DotfileItem, error)
-	GetActualDotfiles(ctx context.Context) ([]DotfileItem, error)
-}
-
-// FileComparator handles file comparison operations
-type FileComparator interface {
-	CompareFiles(path1, path2 string) (bool, error)
-	ComputeFileHash(path string) (string, error)
-}
-
-// DotfileInfo represents information about a dotfile (already exists in manager.go)
-// Keep existing definition to avoid breaking changes
-
-// DirectoryEntry represents a file found during directory expansion (already exists in manager.go)
-// Keep existing definition to avoid breaking changes
-
-// AddOptions configures dotfile addition operations (already exists in manager.go)
-// Keep existing definition to avoid breaking changes
-
-// RemoveOptions configures dotfile removal operations (already exists in manager.go)
-// Keep existing definition to avoid breaking changes
-
-// ApplyOptions configures dotfile apply operations (already exists in manager.go)
-// Keep existing definition to avoid breaking changes
-
-// Operation result types for dotfiles domain
-
-// AddStatus represents the status of a dotfile add operation
-type AddStatus string
-
-const (
-	AddStatusAdded       AddStatus = "added"
-	AddStatusUpdated     AddStatus = "updated"
-	AddStatusWouldAdd    AddStatus = "would-add"
-	AddStatusWouldUpdate AddStatus = "would-update"
-	AddStatusFailed      AddStatus = "failed"
-)
-
-// String returns the string representation of AddStatus
-func (s AddStatus) String() string {
-	return string(s)
-}
-
-// AddResult represents the result of adding a dotfile to plonk management
-type AddResult struct {
-	// Path is the original path provided by the user
-	Path string
-
-	// Source is the path in the config directory (e.g., "zshrc")
-	Source string
-
-	// Destination is the target path in home (e.g., "~/.zshrc")
-	Destination string
-
-	// Status is the result of the add operation
-	Status AddStatus
-
-	// AlreadyManaged indicates whether the file was already managed by plonk
-	AlreadyManaged bool
-
-	// FilesProcessed is the count of files processed (for directory operations)
-	FilesProcessed int
-
-	// Error contains any error that occurred during the operation
-	Error error
-}
-
-// RemoveStatus represents the status of a dotfile remove operation
-type RemoveStatus string
-
-const (
-	RemoveStatusRemoved     RemoveStatus = "removed"
-	RemoveStatusWouldRemove RemoveStatus = "would-remove"
-	RemoveStatusSkipped     RemoveStatus = "skipped"
-	RemoveStatusFailed      RemoveStatus = "failed"
-)
-
-// String returns the string representation of RemoveStatus
-func (s RemoveStatus) String() string {
-	return string(s)
-}
-
-// RemoveResult represents the result of removing a dotfile from plonk management
-type RemoveResult struct {
-	// Path is the original path provided by the user
-	Path string
-
-	// Source is the path in the config directory (e.g., "zshrc")
-	Source string
-
-	// Destination is the target path in home (e.g., "~/.zshrc")
-	Destination string
-
-	// Status is the result of the remove operation
-	Status RemoveStatus
-
-	// Error contains any error that occurred during the operation
-	Error error
+// DeployResult summarizes what Apply() did
+type DeployResult struct {
+	Deployed []Dotfile // files that were deployed
+	Skipped  []Dotfile // files already in sync
+	Failed   []Dotfile // files that failed to deploy
+	Errors   []error   // errors for failed files
+	DryRun   bool
 }

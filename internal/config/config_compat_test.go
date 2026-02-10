@@ -20,11 +20,11 @@ func TestConfig_CompatibilityWithExisting(t *testing.T) {
 		{
 			name: "minimal config with version",
 			content: `version: 1
-default_manager: npm
+default_manager: brew
 `,
 			check: func(t *testing.T, cfg *Config) {
-				if cfg.DefaultManager != "npm" {
-					t.Errorf("Expected default_manager npm, got %s", cfg.DefaultManager)
+				if cfg.DefaultManager != "brew" {
+					t.Errorf("Expected default_manager brew, got %s", cfg.DefaultManager)
 				}
 			},
 		},
@@ -91,13 +91,13 @@ packages:
 		},
 		{
 			name: "config with empty arrays gets defaults",
-			content: `default_manager: gem
+			content: `default_manager: pnpm
 expand_directories: []
 ignore_patterns: []
 `,
 			check: func(t *testing.T, cfg *Config) {
-				if cfg.DefaultManager != "gem" {
-					t.Errorf("Expected default_manager gem, got %s", cfg.DefaultManager)
+				if cfg.DefaultManager != "pnpm" {
+					t.Errorf("Expected default_manager pnpm, got %s", cfg.DefaultManager)
 				}
 				// Empty arrays in YAML get default values applied
 				if len(cfg.ExpandDirectories) == 0 {

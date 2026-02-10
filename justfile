@@ -21,11 +21,23 @@ build:
     fi
     echo "Built versioned plonk binary to bin/ (version: $VERSION)"
 
+# Install plonk to GOPATH/bin
+install:
+    @echo "Installing plonk..."
+    go install ./cmd/plonk
+    @echo "Installed plonk to $(go env GOPATH)/bin"
+
 # Run all unit tests
 test:
     @echo "Running unit tests..."
     go test ./...
     @echo "Unit tests passed!"
+
+# Run golangci-lint
+lint:
+    @echo "Running linter..."
+    go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint run --timeout=10m
+    @echo "Lint checks passed!"
 
 # Run BATS behavioral tests locally
 # ⚠️  WARNING: Prefer 'just docker-test' - local execution modifies your system!

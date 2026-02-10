@@ -4,11 +4,11 @@
 package commands
 
 import (
-	"context"
+	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
-	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/dotfiles"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/spf13/cobra"
 )
 
@@ -36,25 +36,30 @@ func init() {
 
 func runDotfiles(cmd *cobra.Command, args []string) error {
 	// Get directories
-	homeDir := config.GetHomeDir()
+	homeDir, err := config.GetHomeDir()
+	if err != nil {
+		return fmt.Errorf("cannot determine home directory: %w", err)
+	}
 	configDir := config.GetDefaultConfigDirectory()
 
 	// Load configuration
 	cfg := config.LoadWithDefaults(configDir)
-	ctx := context.Background()
 
-	// Reconcile dotfiles
-	dotfileResult, err := dotfiles.ReconcileWithConfig(ctx, homeDir, configDir, cfg)
+	// Create DotfileManager and reconcile directly
+	dm := dotfiles.NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
+	statuses, err := dm.Reconcile()
 	if err != nil {
 		return err
 	}
 
-	// Convert to output format
+	// Separate by state and convert to output format
+	managed, missing, errors := convertDotfileStatusToOutput(statuses)
+
 	outputResult := output.Result{
-		Domain:    dotfileResult.Domain,
-		Managed:   convertDotfileItemsToOutput(dotfileResult.Managed),
-		Missing:   convertDotfileItemsToOutput(dotfileResult.Missing),
-		Untracked: convertDotfileItemsToOutput(dotfileResult.Untracked),
+		Domain:  "dotfile",
+		Managed: managed,
+		Missing: missing,
+		Errors:  errors,
 	}
 
 	// Prepare output
@@ -68,44 +73,4 @@ func runDotfiles(cmd *cobra.Command, args []string) error {
 	formatter := output.NewDotfilesStatusFormatter(outputData)
 	output.RenderOutput(formatter)
 	return nil
-}
-
-// convertDotfileItemsToOutput converts dotfiles.DotfileItem to output.Item
-// This is used by the dotfiles command to convert domain-specific types to output types
-func convertDotfileItemsToOutput(items []dotfiles.DotfileItem) []output.Item {
-	converted := make([]output.Item, len(items))
-	for i, item := range items {
-		// Convert state
-		var state output.ItemState
-		switch item.State {
-		case dotfiles.StateManaged:
-			state = output.ItemState("managed")
-		case dotfiles.StateMissing:
-			state = output.ItemState("missing")
-		case dotfiles.StateUntracked:
-			state = output.ItemState("untracked")
-		case dotfiles.StateDegraded:
-			state = output.StateDegraded
-		}
-
-		// Build metadata
-		metadata := make(map[string]interface{})
-		if item.Metadata != nil {
-			for k, v := range item.Metadata {
-				metadata[k] = v
-			}
-		}
-		metadata["source"] = item.Source
-		metadata["destination"] = item.Destination
-		metadata["isTemplate"] = item.IsTemplate
-		metadata["isDirectory"] = item.IsDirectory
-
-		converted[i] = output.Item{
-			Name:     item.Name,
-			Path:     item.Destination,
-			State:    state,
-			Metadata: metadata,
-		}
-	}
-	return converted
 }

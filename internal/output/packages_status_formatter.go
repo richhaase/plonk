@@ -72,13 +72,29 @@ func (f PackagesStatusFormatter) TableOutput() string {
 	// Add summary
 	managedCount := len(result.Managed)
 	missingCount := len(result.Missing)
+	errorCount := len(result.Errors)
 
 	output.WriteString("Summary: ")
 	output.WriteString(fmt.Sprintf("%d managed", managedCount))
 	if missingCount > 0 {
 		output.WriteString(fmt.Sprintf(", %d missing", missingCount))
 	}
+	if errorCount > 0 {
+		output.WriteString(fmt.Sprintf(", %d errors", errorCount))
+	}
 	output.WriteString("\n")
+
+	// Show errors if any
+	if len(result.Errors) > 0 {
+		output.WriteString("\nErrors:\n")
+		for _, item := range result.Errors {
+			if item.Error != "" {
+				output.WriteString(fmt.Sprintf("  ✗ %s: %s\n", item.Name, item.Error))
+			} else {
+				output.WriteString(fmt.Sprintf("  ✗ %s\n", item.Name))
+			}
+		}
+	}
 
 	// If no output was generated (except for title), show helpful message
 	outputStr := output.String()
@@ -122,10 +138,23 @@ func (f PackagesStatusFormatter) StructuredData() any {
 		})
 	}
 
+	// Add error items
+	for _, item := range result.Errors {
+		mi := ManagedItem{
+			Name:    item.Name,
+			Domain:  "package",
+			State:   string(item.State),
+			Manager: item.Manager,
+			Error:   item.Error,
+		}
+		items = append(items, mi)
+	}
+
 	summary := Summary{
 		TotalManaged:   len(result.Managed),
 		TotalMissing:   len(result.Missing),
 		TotalUntracked: len(result.Untracked),
+		TotalErrors:    len(result.Errors),
 		Results:        []Result{result},
 	}
 

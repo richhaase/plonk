@@ -33,9 +33,10 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 	output.WriteString("Dotfiles Status\n")
 	output.WriteString("===============\n\n")
 
-	// Include managed and missing items
+	// Include managed, missing, and error items
 	// Drifted files are already in Managed with State==StateDegraded
 	itemsToShow := append(result.Managed, result.Missing...)
+	itemsToShow = append(itemsToShow, result.Errors...)
 
 	if len(itemsToShow) > 0 {
 		// Create a table for dotfiles
@@ -77,6 +78,15 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 			dotBuilder.AddRow(target, "missing")
 		}
 
+		// Show error dotfiles
+		for _, item := range result.Errors {
+			target := item.Name
+			if dest, ok := item.Metadata["destination"].(string); ok {
+				target = tildeShorthand(dest, f.Data.HomeDir)
+			}
+			dotBuilder.AddRow(target, "error")
+		}
+
 		output.WriteString(dotBuilder.Build())
 		output.WriteString("\n")
 	}
@@ -100,6 +110,9 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 	}
 	if driftedCount > 0 {
 		output.WriteString(fmt.Sprintf(", %d drifted", driftedCount))
+	}
+	if len(result.Errors) > 0 {
+		output.WriteString(fmt.Sprintf(", %d error(s)", len(result.Errors)))
 	}
 	output.WriteString("\n")
 
@@ -155,6 +168,23 @@ func (f DotfilesStatusFormatter) StructuredData() any {
 		items = append(items, managedItem)
 	}
 
+	// Add error items
+	for _, item := range result.Errors {
+		managedItem := ManagedItem{
+			Name:     item.Name,
+			Domain:   "dotfile",
+			State:    string(item.State),
+			Manager:  item.Manager,
+			Path:     item.Path,
+			Error:    item.Error,
+			Metadata: sanitizeMetadata(item.Metadata),
+		}
+		if target, ok := item.Metadata["destination"].(string); ok {
+			managedItem.Target = target
+		}
+		items = append(items, managedItem)
+	}
+
 	summary := Summary{
 		TotalManaged:   len(result.Managed),
 		TotalMissing:   len(result.Missing),
@@ -164,14 +194,17 @@ func (f DotfilesStatusFormatter) StructuredData() any {
 
 	// For backward compatibility with tests, add lowercase field aliases
 	// The test expects "missing", "managed", "untracked" fields
+	errorCount := len(result.Errors)
 	return map[string]interface{}{
 		"summary": map[string]interface{}{
 			"managed":         summary.TotalManaged,
 			"missing":         summary.TotalMissing,
 			"untracked":       summary.TotalUntracked,
+			"errors":          errorCount,
 			"total_managed":   summary.TotalManaged,
 			"total_missing":   summary.TotalMissing,
 			"total_untracked": summary.TotalUntracked,
+			"total_errors":    errorCount,
 		},
 		"items": items,
 	}

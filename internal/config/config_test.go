@@ -49,7 +49,7 @@ func TestLoad_MissingFile(t *testing.T) {
 
 func TestLoad_ValidConfig(t *testing.T) {
 	configContent := `
-default_manager: npm
+default_manager: brew
 operation_timeout: 600
 package_timeout: 300
 dotfile_timeout: 120
@@ -68,8 +68,8 @@ ignore_patterns:
 	}
 
 	// Verify loaded values
-	if cfg.DefaultManager != "npm" {
-		t.Errorf("Expected default manager 'npm', got %s", cfg.DefaultManager)
+	if cfg.DefaultManager != "brew" {
+		t.Errorf("Expected default manager 'brew', got %s", cfg.DefaultManager)
 	}
 	if cfg.OperationTimeout != 600 {
 		t.Errorf("Expected operation timeout 600, got %d", cfg.OperationTimeout)
@@ -161,7 +161,7 @@ default_manager: custom-manager
 func TestLoad_UnknownFieldsIgnored(t *testing.T) {
 	// Unknown fields in YAML (like legacy 'managers:') are silently ignored
 	configContent := `
-default_manager: npm
+default_manager: brew
 managers:
   npm:
     install:
@@ -174,9 +174,9 @@ managers:
 		t.Fatalf("Load failed: %v", err)
 	}
 
-	// default_manager is valid (npm is a hardcoded manager)
-	if cfg.DefaultManager != "npm" {
-		t.Errorf("Expected default_manager 'npm', got %s", cfg.DefaultManager)
+	// default_manager should be brew (what we specified in the config)
+	if cfg.DefaultManager != "brew" {
+		t.Errorf("Expected default_manager 'brew', got %s", cfg.DefaultManager)
 	}
 }
 
@@ -311,7 +311,7 @@ func TestConfig_Resolve(t *testing.T) {
 func TestLoad_DotfilesConfig(t *testing.T) {
 	// Write config with dotfiles section
 	configContent := `
-default_manager: npm
+default_manager: brew
 dotfiles:
   unmanaged_filters:
     - "*.log"
@@ -335,7 +335,7 @@ dotfiles:
 func TestLoad_EmptyDotfilesConfig(t *testing.T) {
 	// Write config with empty dotfiles section
 	configContent := `
-default_manager: npm
+default_manager: brew
 dotfiles:
   unmanaged_filters: []
 `

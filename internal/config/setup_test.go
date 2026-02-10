@@ -9,7 +9,7 @@ import (
 )
 
 // supportedManagers mirrors the list from the packages registry for testing
-var supportedManagers = []string{"brew", "cargo", "gem", "go", "npm", "pnpm", "bun", "uv"}
+var supportedManagers = []string{"brew", "cargo", "go", "pnpm", "uv"}
 
 // TestMain sets up the test environment for all tests in this package.
 // It initializes the manager checker that would normally be set by

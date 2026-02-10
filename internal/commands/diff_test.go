@@ -82,20 +82,29 @@ func TestNormalizePath(t *testing.T) {
 	}
 }
 
-func TestFilterDriftedFile(t *testing.T) {
-	// Create test items using DotfileItem
-	driftedFiles := []dotfiles.DotfileItem{
+func TestFilterDriftedStatus(t *testing.T) {
+	// Create test items using DotfileStatus
+	driftedFiles := []dotfiles.DotfileStatus{
 		{
-			Name:        ".zshrc",
-			Destination: "~/.zshrc",
+			Dotfile: dotfiles.Dotfile{
+				Name:   "zshrc",
+				Target: "~/.zshrc",
+			},
+			State: dotfiles.SyncStateDrifted,
 		},
 		{
-			Name:        ".bashrc",
-			Destination: "~/.bashrc",
+			Dotfile: dotfiles.Dotfile{
+				Name:   "bashrc",
+				Target: "~/.bashrc",
+			},
+			State: dotfiles.SyncStateDrifted,
 		},
 		{
-			Name:        ".config/nvim/init.lua",
-			Destination: "~/.config/nvim/init.lua",
+			Dotfile: dotfiles.Dotfile{
+				Name:   "config/nvim/init.lua",
+				Target: "~/.config/nvim/init.lua",
+			},
+			State: dotfiles.SyncStateDrifted,
 		},
 	}
 
@@ -117,25 +126,37 @@ func TestFilterDriftedFile(t *testing.T) {
 			name:      "find by tilde path",
 			arg:       "~/.zshrc",
 			wantFound: true,
-			wantName:  ".zshrc",
+			wantName:  "zshrc",
 		},
 		{
 			name:      "find by HOME var",
 			arg:       "$HOME/.bashrc",
 			wantFound: true,
-			wantName:  ".bashrc",
+			wantName:  "bashrc",
 		},
 		{
 			name:      "find by absolute path",
 			arg:       filepath.Join(testHome, ".zshrc"),
 			wantFound: true,
-			wantName:  ".zshrc",
+			wantName:  "zshrc",
 		},
 		{
 			name:      "nested path",
 			arg:       "~/.config/nvim/init.lua",
 			wantFound: true,
-			wantName:  ".config/nvim/init.lua",
+			wantName:  "config/nvim/init.lua",
+		},
+		{
+			name:      "find by shorthand name",
+			arg:       "zshrc",
+			wantFound: true,
+			wantName:  "zshrc",
+		},
+		{
+			name:      "find nested by shorthand name",
+			arg:       "config/nvim/init.lua",
+			wantFound: true,
+			wantName:  "config/nvim/init.lua",
 		},
 		{
 			name:      "not found",
@@ -147,16 +168,16 @@ func TestFilterDriftedFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := filterDriftedFile(tt.arg, driftedFiles)
+			got := filterDriftedStatus(tt.arg, driftedFiles)
 			if tt.wantFound {
 				if got == nil {
-					t.Errorf("filterDriftedFile() = nil, want item with name %v", tt.wantName)
+					t.Errorf("filterDriftedStatus() = nil, want item with name %v", tt.wantName)
 				} else if got.Name != tt.wantName {
-					t.Errorf("filterDriftedFile() returned item with name %v, want %v", got.Name, tt.wantName)
+					t.Errorf("filterDriftedStatus() returned item with name %v, want %v", got.Name, tt.wantName)
 				}
 			} else {
 				if got != nil {
-					t.Errorf("filterDriftedFile() = %v, want nil", got.Name)
+					t.Errorf("filterDriftedStatus() = %v, want nil", got.Name)
 				}
 			}
 		})

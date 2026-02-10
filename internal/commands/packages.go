@@ -8,7 +8,6 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
-	"github.com/richhaase/plonk/internal/packages"
 	"github.com/spf13/cobra"
 )
 
@@ -36,23 +35,20 @@ func init() {
 func runPackages(cmd *cobra.Command, args []string) error {
 	// Get directories
 	configDir := config.GetDefaultConfigDirectory()
-
-	// Load configuration
-	cfg := config.LoadWithDefaults(configDir)
 	ctx := context.Background()
 
-	// Reconcile packages
-	packageResult, err := packages.ReconcileWithConfig(ctx, configDir, cfg)
+	// Get package status from lock file
+	pkgResult, err := getPackageStatus(ctx, configDir)
 	if err != nil {
 		return err
 	}
 
 	// Convert to output format
 	outputResult := output.Result{
-		Domain:    "package",
-		Managed:   convertPackageSpecsToOutput(packageResult.Managed),
-		Missing:   convertPackageSpecsToOutput(packageResult.Missing),
-		Untracked: convertPackageSpecsToOutput(packageResult.Untracked),
+		Domain:  "package",
+		Managed: pkgResult.Managed,
+		Missing: pkgResult.Missing,
+		Errors:  pkgResult.Errors,
 	}
 
 	// Prepare output

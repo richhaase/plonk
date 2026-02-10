@@ -7,8 +7,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"strings"
+	"sort"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
@@ -56,9 +57,7 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 
 	// Check if PLONK_DIR already exists
 	if _, err := os.Stat(plonkDir); err == nil {
-		output.Printf("Plonk directory already exists at: %s\n", plonkDir)
-		output.Printf("If you want to clone a repository, manually delete the directory and run setup again.\n")
-		return nil
+		return fmt.Errorf("plonk directory already exists at %s; delete it manually and re-run clone if you want to replace it", plonkDir)
 	}
 
 	// Clone repository
@@ -81,6 +80,7 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 		if err := createDefaultConfig(plonkDir); err != nil {
 			return fmt.Errorf("failed to create default configuration: %w", err)
 		}
+		hasConfig = true
 		output.Printf("Created default plonk.yaml configuration\n")
 	}
 
@@ -101,7 +101,7 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool) e
 	detectedManagers, err := DetectRequiredManagers(lockPath)
 	if err != nil {
 		output.Printf("Warning: Could not read lock file: %v\n", err)
-		output.Printf("No package managers will be installed. You can run 'plonk init' later if needed.\n")
+		output.Printf("No package managers will be installed. Run 'plonk doctor' to check system readiness.\n")
 		detectedManagers = []string{} // Empty list
 	}
 
@@ -133,7 +133,10 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool) e
 		}
 
 		output.StageUpdate("Running plonk apply...")
-		homeDir := config.GetHomeDir()
+		homeDir, err := config.GetHomeDir()
+		if err != nil {
+			return fmt.Errorf("cannot determine home directory: %w", err)
+		}
 		cfg := repoCfg
 		if cfg == nil {
 			cfg = config.LoadWithDefaults(plonkDir)
@@ -146,9 +149,20 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool) e
 		)
 		result, err := orch.Apply(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to apply configuration: %w", err)
-		}
-		if result.Success {
+			hasDotfileErrors := len(result.DotfileErrors) > 0
+			hasOnlyPackageErrors := len(result.PackageErrors) > 0 && !hasDotfileErrors
+
+			// Re-evaluate manager availability after apply since earlier package installs
+			// may have made some managers available during this run.
+			currentlyMissing := missingManagersNow(detectedManagers)
+
+			// Only suppress package errors that are fully explained by currently missing managers.
+			if hasOnlyPackageErrors && len(currentlyMissing) > 0 && !hasPackageFailuresFromAvailableManagers(result, currentlyMissing) {
+				output.Printf("Apply completed with some package errors (expected due to missing managers)\n")
+			} else {
+				return fmt.Errorf("failed to apply configuration: %w", err)
+			}
+		} else if result.Success {
 			output.Printf("Applied configuration successfully\n")
 		} else {
 			output.Printf("Apply completed with some issues\n")
@@ -207,70 +221,31 @@ ignore_patterns:`
 // Package manager installation is only done by clone command when needed.
 
 // getManagerDescription returns a user-friendly description of the package manager
-func getManagerDescription(cfg *config.Config, manager string) string {
-	// Use registry metadata for built-in managers
-	registry := packages.GetRegistry()
-	if meta, ok := registry.GetManagerMetadata(manager); ok && meta.Description != "" {
-		return meta.Description
-	}
-
+func getManagerDescription(_ *config.Config, manager string) string {
 	return fmt.Sprintf("%s package manager", manager)
 }
 
 // getManualInstallInstructions returns manual installation instructions
-func getManualInstallInstructions(cfg *config.Config, manager string) string {
-	// Use registry metadata for built-in managers
-	registry := packages.GetRegistry()
-	if meta, ok := registry.GetManagerMetadata(manager); ok && meta.InstallHint != "" {
-		return meta.InstallHint
-	}
-
+func getManualInstallInstructions(_ *config.Config, _ string) string {
 	return "See official documentation for installation instructions"
 }
 
 // DetectRequiredManagers reads a lock file and returns unique package managers
 func DetectRequiredManagers(lockPath string) ([]string, error) {
-	lockService := lock.NewYAMLLockService(filepath.Dir(lockPath))
+	lockService := lock.NewLockV3Service(filepath.Dir(lockPath))
 	lockFile, err := lockService.Read()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read lock file: %w", err)
 	}
 
-	// Use a map to track unique managers
-	managersMap := make(map[string]bool)
-
-	for _, resource := range lockFile.Resources {
-		// Only process package resources
-		if resource.Type != "package" {
-			continue
-		}
-
-		// Extract manager from metadata or ID prefix
-		var manager string
-
-		// Try to get manager from metadata first (v2 format)
-		if managerVal, ok := resource.Metadata["manager"]; ok {
-			if managerStr, ok := managerVal.(string); ok {
-				manager = managerStr
-			}
-		}
-
-		// If not in metadata, extract from ID prefix (fallback)
-		if manager == "" && strings.Contains(resource.ID, ":") {
-			parts := strings.SplitN(resource.ID, ":", 2)
-			manager = parts[0]
-		}
-
-		if manager != "" {
-			managersMap[manager] = true
-		}
-	}
-
-	// Convert map to sorted slice
+	// Extract unique managers from v3 format (packages grouped by manager)
 	var managers []string
-	for mgr := range managersMap {
-		managers = append(managers, mgr)
+	for manager := range lockFile.Packages {
+		managers = append(managers, manager)
 	}
+
+	// Sort for deterministic output
+	sort.Strings(managers)
 
 	return managers, nil
 }
@@ -281,28 +256,33 @@ func installDetectedManagers(ctx context.Context, cfgData *config.Config, manage
 		return nil, nil
 	}
 
-	registry := packages.GetRegistry()
-
 	output.StageUpdate(fmt.Sprintf("Checking package managers (%d total)...", len(managers)))
 
-	// Find which managers are missing
+	// Manager binary names
+	managerBinaries := map[string]string{
+		"brew":  "brew",
+		"cargo": "cargo",
+		"go":    "go",
+		"pnpm":  "pnpm",
+		"uv":    "uv",
+	}
+
+	// Find which managers are missing or unsupported
 	var missingManagers []string
 	for _, mgr := range managers {
-		packageManager, err := registry.GetManager(mgr)
-		if err != nil {
-			output.Printf("Warning: Unknown package manager '%s', skipping\n", mgr)
+		if !packages.IsSupportedManager(mgr) {
+			output.Printf("Warning: %s is not a supported package manager and will be skipped\n", mgr)
 			missingManagers = append(missingManagers, mgr)
 			continue
 		}
 
-		available, err := packageManager.IsAvailable(ctx)
-		if err != nil {
-			output.Printf("Warning: Could not check availability of %s: %v\n", mgr, err)
-			missingManagers = append(missingManagers, mgr)
-			continue
+		binary := managerBinaries[mgr]
+		if binary == "" {
+			binary = mgr
 		}
 
-		if !available {
+		_, err := exec.LookPath(binary)
+		if err != nil {
 			missingManagers = append(missingManagers, mgr)
 		}
 	}
@@ -319,4 +299,54 @@ func installDetectedManagers(ctx context.Context, cfgData *config.Config, manage
 	}
 
 	return missingManagers, nil
+}
+
+// missingManagersNow returns managers that are currently unavailable on PATH.
+func missingManagersNow(managers []string) []string {
+	managerBinaries := map[string]string{
+		"brew":  "brew",
+		"cargo": "cargo",
+		"go":    "go",
+		"pnpm":  "pnpm",
+		"uv":    "uv",
+	}
+
+	var missing []string
+	for _, mgr := range managers {
+		if !packages.IsSupportedManager(mgr) {
+			missing = append(missing, mgr)
+			continue
+		}
+		binary := managerBinaries[mgr]
+		if binary == "" {
+			binary = mgr
+		}
+		if _, err := exec.LookPath(binary); err != nil {
+			missing = append(missing, mgr)
+		}
+	}
+	return missing
+}
+
+// hasPackageFailuresFromAvailableManagers checks if any package failures
+// came from managers that are NOT in the missing list.
+func hasPackageFailuresFromAvailableManagers(result output.ApplyResult, missingManagers []string) bool {
+	if result.Packages == nil {
+		return false
+	}
+	missingSet := make(map[string]bool, len(missingManagers))
+	for _, m := range missingManagers {
+		missingSet[m] = true
+	}
+	for _, mgr := range result.Packages.Managers {
+		if missingSet[mgr.Name] {
+			continue
+		}
+		for _, pkg := range mgr.Packages {
+			if pkg.Status == "failed" {
+				return true
+			}
+		}
+	}
+	return false
 }
