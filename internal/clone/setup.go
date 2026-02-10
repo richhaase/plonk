@@ -101,7 +101,7 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool) e
 	detectedManagers, err := DetectRequiredManagers(lockPath)
 	if err != nil {
 		output.Printf("Warning: Could not read lock file: %v\n", err)
-		output.Printf("No package managers will be installed. You can run 'plonk init' later if needed.\n")
+		output.Printf("No package managers will be installed. Run 'plonk doctor' to check system readiness.\n")
 		detectedManagers = []string{} // Empty list
 	}
 
