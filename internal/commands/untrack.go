@@ -23,7 +23,7 @@ longer managed by plonk.
 
 Examples:
   plonk untrack brew:ripgrep           # Stop tracking a brew package
-  plonk untrack cargo:bat go:gopls     # Stop tracking multiple packages`,
+  plonk untrack cargo:bat go:golang.org/x/tools/gopls # Stop tracking multiple packages`,
 	Args:         cobra.MinimumNArgs(1),
 	RunE:         runUntrack,
 	SilenceUsage: true,

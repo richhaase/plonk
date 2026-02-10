@@ -14,9 +14,11 @@ func TestParsePackageSpec(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "valid", spec: "brew:ripgrep", wantMgr: "brew", wantPkg: "ripgrep"},
+		{name: "valid go import path", spec: "go:golang.org/x/tools/gopls", wantMgr: "go", wantPkg: "golang.org/x/tools/gopls"},
 		{name: "invalid format", spec: "ripgrep", wantErr: true},
 		{name: "unsupported manager", spec: "npm:typescript", wantErr: true},
 		{name: "empty package", spec: "brew:", wantErr: true},
+		{name: "invalid go shorthand", spec: "go:gopls", wantErr: true},
 	}
 
 	for _, tt := range tests {

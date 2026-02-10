@@ -152,8 +152,12 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool) e
 			hasDotfileErrors := len(result.DotfileErrors) > 0
 			hasOnlyPackageErrors := len(result.PackageErrors) > 0 && !hasDotfileErrors
 
-			// Only suppress package errors that are fully explained by missing managers
-			if hasOnlyPackageErrors && len(missingManagers) > 0 && !hasPackageFailuresFromAvailableManagers(result, missingManagers) {
+			// Re-evaluate manager availability after apply since earlier package installs
+			// may have made some managers available during this run.
+			currentlyMissing := missingManagersNow(detectedManagers)
+
+			// Only suppress package errors that are fully explained by currently missing managers.
+			if hasOnlyPackageErrors && len(currentlyMissing) > 0 && !hasPackageFailuresFromAvailableManagers(result, currentlyMissing) {
 				output.Printf("Apply completed with some package errors (expected due to missing managers)\n")
 			} else {
 				return fmt.Errorf("failed to apply configuration: %w", err)
@@ -295,6 +299,33 @@ func installDetectedManagers(ctx context.Context, cfgData *config.Config, manage
 	}
 
 	return missingManagers, nil
+}
+
+// missingManagersNow returns managers that are currently unavailable on PATH.
+func missingManagersNow(managers []string) []string {
+	managerBinaries := map[string]string{
+		"brew":  "brew",
+		"cargo": "cargo",
+		"go":    "go",
+		"pnpm":  "pnpm",
+		"uv":    "uv",
+	}
+
+	var missing []string
+	for _, mgr := range managers {
+		if !packages.IsSupportedManager(mgr) {
+			missing = append(missing, mgr)
+			continue
+		}
+		binary := managerBinaries[mgr]
+		if binary == "" {
+			binary = mgr
+		}
+		if _, err := exec.LookPath(binary); err != nil {
+			missing = append(missing, mgr)
+		}
+	}
+	return missing
 }
 
 // hasPackageFailuresFromAvailableManagers checks if any package failures

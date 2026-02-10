@@ -6,6 +6,7 @@ package dotfiles
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
@@ -34,7 +35,7 @@ func ApplySelective(ctx context.Context, configDir, homeDir string, cfg *config.
 	if len(opts.Filter) > 0 {
 		var filtered []DotfileStatus
 		for _, s := range statuses {
-			if opts.Filter[s.Target] {
+			if opts.Filter[normalizePath(s.Target)] {
 				filtered = append(filtered, s)
 			}
 		}
@@ -54,6 +55,13 @@ func Apply(ctx context.Context, configDir, homeDir string, cfg *config.Config, d
 	}
 
 	return applyStatuses(ctx, manager, statuses, dryRun)
+}
+
+func normalizePath(path string) string {
+	if abs, err := filepath.Abs(path); err == nil {
+		return filepath.Clean(abs)
+	}
+	return filepath.Clean(path)
 }
 
 // applyStatuses applies the given dotfile statuses and returns results

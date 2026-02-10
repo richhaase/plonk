@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
 )
@@ -54,6 +55,10 @@ func ParsePackageSpec(spec string) (manager, pkg string, err error) {
 
 	if pkg[0] == '-' {
 		return "", "", fmt.Errorf("invalid package name %q: must not start with '-'", pkg)
+	}
+
+	if manager == "go" && !strings.Contains(pkg, "/") {
+		return "", "", fmt.Errorf("invalid go package %q: expected full import path (e.g., golang.org/x/tools/gopls)", pkg)
 	}
 
 	return manager, pkg, nil

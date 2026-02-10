@@ -75,7 +75,7 @@ If you're upgrading from older releases:
 |---------|--------|---------|
 | Homebrew | `brew:` | `plonk track brew:ripgrep` |
 | Cargo | `cargo:` | `plonk track cargo:bat` |
-| Go | `go:` | `plonk track go:gopls` |
+| Go | `go:` | `plonk track go:golang.org/x/tools/gopls` |
 | PNPM | `pnpm:` | `plonk track pnpm:typescript` |
 | UV | `uv:` | `plonk track uv:ruff` |
 

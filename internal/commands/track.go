@@ -26,7 +26,7 @@ The package must already be installed - track only records existing packages.
 
 Examples:
   plonk track brew:ripgrep           # Track a brew package
-  plonk track cargo:bat go:gopls     # Track multiple packages
+  plonk track cargo:bat go:golang.org/x/tools/gopls # Track multiple packages
   plonk track pnpm:typescript        # Track a pnpm package`,
 	Args:         cobra.MinimumNArgs(1),
 	RunE:         runTrack,

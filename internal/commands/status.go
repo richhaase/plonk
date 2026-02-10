@@ -65,7 +65,10 @@ func runStatus(cmd *cobra.Command, args []string) error {
 
 	// Get package status from lock file
 	ctx := context.Background()
-	packageResult := getPackageStatus(ctx, configDir)
+	packageResult, err := getPackageStatus(ctx, configDir)
+	if err != nil {
+		return err
+	}
 
 	// Convert to output summary
 	summary := convertStatusToSummary(statuses, packageResult)
@@ -111,26 +114,20 @@ type packageStatus struct {
 }
 
 // getPackageStatus reads the lock file and checks which packages are installed
-func getPackageStatus(ctx context.Context, configDir string) packageStatus {
+func getPackageStatus(ctx context.Context, configDir string) (packageStatus, error) {
 	result := packageStatus{}
 
 	// Check if lock file exists first
 	lockPath := filepath.Join(configDir, "plonk.lock")
 	if _, err := os.Stat(lockPath); os.IsNotExist(err) {
 		// No lock file yet - this is fine, just no packages tracked
-		return result
+		return result, nil
 	}
 
 	lockSvc := lock.NewLockV3Service(configDir)
 	lockFile, err := lockSvc.Read()
 	if err != nil {
-		// Lock file exists but couldn't be read - this is an error
-		result.Errors = append(result.Errors, output.Item{
-			Name:  "plonk.lock",
-			State: output.StateError,
-			Error: err.Error(),
-		})
-		return result
+		return result, fmt.Errorf("failed to read lock file: %w", err)
 	}
 
 	// Check each package (sorted for deterministic output)
@@ -183,7 +180,7 @@ func getPackageStatus(ctx context.Context, configDir string) packageStatus {
 		}
 	}
 
-	return result
+	return result, nil
 }
 
 // convertStatusToSummary combines dotfile statuses and package results into a unified summary

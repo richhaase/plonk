@@ -24,7 +24,7 @@ plonk track <manager:package>...
 - Format `manager:package` is required (no default manager)
 
 ```bash
-plonk track brew:ripgrep cargo:bat go:gopls
+plonk track brew:ripgrep cargo:bat go:golang.org/x/tools/gopls
 ```
 
 ### plonk untrack

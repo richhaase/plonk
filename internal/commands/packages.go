@@ -38,7 +38,10 @@ func runPackages(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 
 	// Get package status from lock file
-	pkgResult := getPackageStatus(ctx, configDir)
+	pkgResult, err := getPackageStatus(ctx, configDir)
+	if err != nil {
+		return err
+	}
 
 	// Convert to output format
 	outputResult := output.Result{
