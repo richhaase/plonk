@@ -34,7 +34,14 @@ func (b *BrewSimple) IsInstalled(ctx context.Context, name string) (bool, error)
 		}
 	}
 
-	return b.installed[name], nil
+	// Normalize tap-qualified names (e.g., "homebrew/cask-fonts/font-hack-nerd-font"
+	// -> "font-hack-nerd-font") since `brew list` returns short token names.
+	shortName := name
+	if idx := strings.LastIndex(name, "/"); idx != -1 {
+		shortName = name[idx+1:]
+	}
+
+	return b.installed[name] || b.installed[shortName], nil
 }
 
 // loadInstalled fetches all installed formulas and casks
@@ -93,5 +100,9 @@ func (b *BrewSimple) markInstalled(name string) {
 	defer b.mu.Unlock()
 	if b.installed != nil {
 		b.installed[name] = true
+		// Also cache the short token name for tap-qualified specs
+		if idx := strings.LastIndex(name, "/"); idx != -1 {
+			b.installed[name[idx+1:]] = true
+		}
 	}
 }

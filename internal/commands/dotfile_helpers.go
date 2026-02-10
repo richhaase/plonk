@@ -66,12 +66,17 @@ func resolveDotfilePath(path, homeDir string) string {
 		}
 	}
 
-	// Everything else: resolve relative to CWD via filepath.Abs
+	// Relative path: resolve via filepath.Abs (uses CWD).
+	// If the result is not under $HOME, fall back to $HOME-relative —
+	// `plonk add .zshrc` should work regardless of CWD.
 	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return path
+		return filepath.Join(homeDir, path)
 	}
-	return absPath
+	if strings.HasPrefix(absPath, homeDir+string(os.PathSeparator)) || absPath == homeDir {
+		return absPath
+	}
+	return filepath.Join(homeDir, path)
 }
 
 // resolveDotfileName resolves a path to the dotfile name (without leading dot)
