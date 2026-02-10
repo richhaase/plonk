@@ -91,32 +91,98 @@ func TestSimpleApply_InstallSuccess(t *testing.T) {
 	assert.Empty(t, result.Failed)
 }
 
-func TestSimpleApply_CollectsPerPackageFailures(t *testing.T) {
+func TestSimpleApply_ShortCircuitsOnIsInstalledFailure(t *testing.T) {
 	ResetManagerCache()
 	t.Cleanup(ResetManagerCache)
 
+	// Packages are sorted, so order is: bad-check, ok, other.
+	// Once bad-check fails IsInstalled, ok and other are short-circuited.
 	tmpDir := t.TempDir()
 	writeLockFile(t, tmpDir, func(l *lock.LockV3) {
 		l.AddPackage("brew", "ok")
 		l.AddPackage("brew", "bad-check")
-		l.AddPackage("brew", "bad-install")
+		l.AddPackage("brew", "other")
 	})
 
 	mgr := &stubManager{
-		installed:    map[string]bool{"ok": false, "bad-check": false, "bad-install": false},
+		installed:    map[string]bool{"ok": false, "bad-check": false, "other": false},
 		isInstalledE: map[string]error{"bad-check": errors.New("check failed")},
-		installE:     map[string]error{"bad-install": errors.New("install failed")},
 	}
 	setCachedManager("brew", mgr)
 
 	result, err := SimpleApply(context.Background(), tmpDir, false)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "2 package(s) failed")
-	assert.ElementsMatch(t, []string{"brew:bad-check", "brew:bad-install"}, result.Failed)
+	// bad-check fails first (sorted), then ok and other are short-circuited
+	assert.Contains(t, err.Error(), "3 package(s) failed")
+	assert.ElementsMatch(t, []string{"brew:bad-check", "brew:ok", "brew:other"}, result.Failed)
+	require.Len(t, result.Errors, 3)
+}
+
+func TestSimpleApply_InstallFailureDoesNotShortCircuit(t *testing.T) {
+	ResetManagerCache()
+	t.Cleanup(ResetManagerCache)
+
+	tmpDir := t.TempDir()
+	writeLockFile(t, tmpDir, func(l *lock.LockV3) {
+		l.AddPackage("brew", "bad-install")
+		l.AddPackage("brew", "ok")
+	})
+
+	mgr := &stubManager{
+		installed: map[string]bool{"bad-install": false, "ok": false},
+		installE:  map[string]error{"bad-install": errors.New("install failed")},
+	}
+	setCachedManager("brew", mgr)
+
+	result, err := SimpleApply(context.Background(), tmpDir, false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "1 package(s) failed")
+	assert.ElementsMatch(t, []string{"brew:bad-install"}, result.Failed)
 	assert.ElementsMatch(t, []string{"brew:ok"}, result.Installed)
-	require.Len(t, result.Errors, 2)
-	assert.Contains(t, result.Errors[0].Error()+result.Errors[1].Error(), "bad-check")
-	assert.Contains(t, result.Errors[0].Error()+result.Errors[1].Error(), "bad-install")
+}
+
+func TestSimpleApply_ShortCircuitsAfterFirstIsInstalledError(t *testing.T) {
+	ResetManagerCache()
+	t.Cleanup(ResetManagerCache)
+
+	tmpDir := t.TempDir()
+	writeLockFile(t, tmpDir, func(l *lock.LockV3) {
+		l.AddPackage("brew", "aaa")
+		l.AddPackage("brew", "bbb")
+		l.AddPackage("brew", "ccc")
+	})
+
+	callCount := 0
+	mgr := &stubManager{
+		installed: map[string]bool{},
+		isInstalledE: map[string]error{
+			"aaa": errors.New("manager broken"),
+		},
+	}
+	// Wrap to count calls
+	wrapper := &countingManager{inner: mgr, calls: &callCount}
+	setCachedManager("brew", wrapper)
+
+	result, err := SimpleApply(context.Background(), tmpDir, false)
+	require.Error(t, err)
+	assert.Len(t, result.Failed, 3)
+	// Only one actual IsInstalled call should be made; the rest short-circuit.
+	assert.Equal(t, 1, callCount)
+}
+
+// countingManager wraps a Manager to count IsInstalled calls
+type countingManager struct {
+	inner Manager
+	calls *int
+}
+
+func (c *countingManager) IsInstalled(ctx context.Context, name string) (bool, error) {
+	*c.calls++
+	return c.inner.IsInstalled(ctx, name)
+}
+
+func (c *countingManager) Install(ctx context.Context, name string) error {
+	return c.inner.Install(ctx, name)
 }
 
 func TestSimpleApply_UnsupportedManagerFailsEachPackage(t *testing.T) {

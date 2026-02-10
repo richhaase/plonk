@@ -53,12 +53,24 @@ func SimpleApply(ctx context.Context, configDir string, dryRun bool) (*SimpleApp
 			continue
 		}
 
+		var managerBroken bool
+		var managerErr error
 		for _, pkg := range pkgs {
 			spec := manager + ":" + pkg
+
+			// Short-circuit remaining packages if the manager itself is broken
+			// (e.g., binary not on PATH) to avoid repeated failing subprocesses.
+			if managerBroken {
+				result.Failed = append(result.Failed, spec)
+				result.Errors = append(result.Errors, fmt.Errorf("%s: %w", spec, managerErr))
+				continue
+			}
 
 			// Check if installed
 			installed, err := mgr.IsInstalled(ctx, pkg)
 			if err != nil {
+				managerBroken = true
+				managerErr = err
 				result.Failed = append(result.Failed, spec)
 				result.Errors = append(result.Errors, fmt.Errorf("%s: %w", spec, err))
 				continue

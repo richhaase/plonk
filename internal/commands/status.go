@@ -152,10 +152,25 @@ func getPackageStatus(ctx context.Context, configDir string) (packageStatus, err
 			continue
 		}
 
+		var managerBroken bool
+		var managerErr string
 		for _, pkg := range pkgs {
+			// Short-circuit remaining packages if the manager itself is broken
+			// (e.g., binary not on PATH) to avoid repeated failing subprocesses.
+			if managerBroken {
+				result.Errors = append(result.Errors, output.Item{
+					Name:    pkg,
+					Manager: manager,
+					State:   output.StateError,
+					Error:   managerErr,
+				})
+				continue
+			}
+
 			installed, err := mgr.IsInstalled(ctx, pkg)
 			if err != nil {
-				// Check failed - mark as error, not missing
+				managerBroken = true
+				managerErr = err.Error()
 				result.Errors = append(result.Errors, output.Item{
 					Name:    pkg,
 					Manager: manager,
