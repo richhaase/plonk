@@ -49,14 +49,14 @@ func convertDotfileStatusToOutput(statuses []dotfiles.DotfileStatus) (managed, m
 	return managed, missing, errors
 }
 
-// resolveDotfilePath resolves a path to an absolute path, trying cwd first then home
+// resolveDotfilePath expands a path to an absolute path. No magic resolution —
+// just tilde expansion and filepath.Abs. Callers validate the result.
 func resolveDotfilePath(path, homeDir string) string {
-	// Absolute paths used as-is
 	if filepath.IsAbs(path) {
 		return path
 	}
 
-	// Handle tilde expansion
+	// Tilde expansion
 	if len(path) > 0 && path[0] == '~' {
 		if len(path) == 1 {
 			return homeDir
@@ -66,11 +66,10 @@ func resolveDotfilePath(path, homeDir string) string {
 		}
 	}
 
-	// Resolve relative path against CWD. The caller (Add) validates that the
-	// result is under $HOME and dot-prefixed — we don't guess or rewrite here.
+	// Everything else: resolve relative to CWD via filepath.Abs
 	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return filepath.Join(homeDir, path)
+		return path
 	}
 	return absPath
 }
