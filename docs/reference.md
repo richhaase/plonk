@@ -2,6 +2,13 @@
 
 Complete CLI and configuration reference.
 
+## Migration Notes (v0.25+)
+
+- `install`, `uninstall`, and `upgrade` commands were removed.
+- Package operations are now centered on `track`, `untrack`, and `apply`.
+- Supported package managers: `brew`, `cargo`, `go`, `pnpm`, `uv`.
+- Lock files are `version: 3` and older v2 lock files are auto-migrated.
+
 ## Commands
 
 ### plonk track

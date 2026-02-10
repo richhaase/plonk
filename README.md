@@ -59,6 +59,16 @@ plonk config show                     # View settings
 plonk clone user/dotfiles             # Clone repo and apply
 ```
 
+## Migration Notes (v0.25+)
+
+If you're upgrading from older releases:
+
+- `plonk install`/`uninstall`/`upgrade` were removed.
+  - Use your package manager directly, then `plonk track` / `plonk untrack`.
+- Supported managers are now: `brew`, `cargo`, `go`, `pnpm`, `uv`.
+  - Legacy lock entries for unsupported managers are reported clearly in status/apply output.
+- Lock file format is now `version: 3` and migrates automatically from v2 on read.
+
 ## Supported Package Managers
 
 | Manager | Prefix | Example |

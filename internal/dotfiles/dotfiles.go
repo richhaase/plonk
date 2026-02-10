@@ -617,7 +617,7 @@ func (m *DotfileManager) walkDir(root string, fn func(path string, isDir bool) e
 		path := filepath.Join(root, entry.Name())
 
 		if err := fn(path, entry.IsDir()); err != nil {
-			if err == errSkipDir {
+			if errors.Is(err, errSkipDir) {
 				continue // Skip this directory, don't recurse
 			}
 			return err

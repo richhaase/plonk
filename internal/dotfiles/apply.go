@@ -78,7 +78,7 @@ func applyStatuses(ctx context.Context, manager *DotfileManager, statuses []Dotf
 	for _, s := range statuses {
 		// Check for context cancellation/timeout between files
 		if err := ctx.Err(); err != nil {
-			return result, fmt.Errorf("apply cancelled: %w", err)
+			return result, fmt.Errorf("apply canceled: %w", err)
 		}
 
 		switch s.State {
