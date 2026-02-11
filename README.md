@@ -59,7 +59,7 @@ plonk config show                     # View settings
 plonk clone user/dotfiles             # Clone repo and apply
 ```
 
-## Migration Notes (v0.25+)
+## Migration Notes (v0.26+)
 
 If you're upgrading from older releases:
 
