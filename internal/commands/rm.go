@@ -8,6 +8,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/dotfiles"
+	"github.com/richhaase/plonk/internal/gitops"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -108,6 +109,11 @@ func runRm(cmd *cobra.Command, args []string) error {
 	}
 	formatter := output.NewDotfileRemovalFormatter(formatterData)
 	output.RenderOutput(formatter)
+
+	// Auto-commit if any files were actually removed
+	if !flags.DryRun && summary.Removed > 0 {
+		gitops.AutoCommit(configDir, "rm", args)
+	}
 
 	// Check if all operations failed and return appropriate error
 	return validateRemoveResultsErr(results)

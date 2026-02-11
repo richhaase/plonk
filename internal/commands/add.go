@@ -8,6 +8,7 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/dotfiles"
+	"github.com/richhaase/plonk/internal/gitops"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/spf13/cobra"
 )
@@ -133,6 +134,11 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	// Render output
 	output.RenderOutput(outputData)
 
+	// Auto-commit if any files were actually added/updated
+	if !opts.DryRun && validateAddResultsErr(results) == nil {
+		gitops.AutoCommit(configDir, "add", args)
+	}
+
 	// Check if all operations failed and return appropriate error
 	return validateAddResultsErr(results)
 }
@@ -200,6 +206,11 @@ func runSyncDrifted(cfg *config.Config, configDir, homeDir string, dryRun bool) 
 
 	// Render output
 	output.RenderOutput(outputData)
+
+	// Auto-commit synced drifted files
+	if !dryRun && validateAddResultsErr(results) == nil {
+		gitops.AutoCommit(configDir, "add --sync-drifted", paths)
+	}
 
 	// Check if all operations failed and return appropriate error
 	return validateAddResultsErr(results)

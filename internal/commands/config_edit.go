@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/gitops"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -98,6 +99,7 @@ func editConfigVisudoStyle(configDir string) error {
 		}
 
 		output.Printf("%s Configuration saved (only non-default values)\n", output.Success())
+		gitops.AutoCommit(configDir, "config edit", nil)
 		return nil
 	}
 }

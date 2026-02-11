@@ -603,4 +603,4 @@ setup() {
 - **Merge on pull**: We use `git pull` (merge, not rebase). Dotfile changes across machines are independent learnings, not linear incremental progress — merge preserves that intent.
 - **No branch tracking logic**: `plonk push`/`pull` rely on git's default remote tracking branch. If the user hasn't set upstream, git will error and we surface that message.
 - **Auto-commit is best-effort**: Failures in auto-commit are warnings, not errors. The mutation (add/rm/track/untrack) itself already succeeded — we don't roll it back if git fails.
-- **`AutoCommit` loads config itself**: Callers just pass `configDir`. The on-disk config at the time of the call governs behavior. No command pre-loads config for auto-commit purposes.
+- **`AutoCommit` reads config from disk**: Callers just pass `configDir`. Whatever `auto_commit` says on disk at call time is what happens.

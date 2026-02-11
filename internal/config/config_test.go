@@ -399,3 +399,40 @@ func TestLoadFromPath_PermissionError(t *testing.T) {
 		t.Error("Expected error for unreadable file")
 	}
 }
+
+func TestAutoCommitEnabledDefault(t *testing.T) {
+	cfg := &Config{}
+	if !cfg.AutoCommitEnabled() {
+		t.Error("expected auto-commit to be enabled by default (nil)")
+	}
+}
+
+func TestAutoCommitEnabledExplicitTrue(t *testing.T) {
+	val := true
+	cfg := &Config{Git: GitConfig{AutoCommit: &val}}
+	if !cfg.AutoCommitEnabled() {
+		t.Error("expected auto-commit to be enabled when explicitly true")
+	}
+}
+
+func TestAutoCommitEnabledExplicitFalse(t *testing.T) {
+	val := false
+	cfg := &Config{Git: GitConfig{AutoCommit: &val}}
+	if cfg.AutoCommitEnabled() {
+		t.Error("expected auto-commit to be disabled when explicitly false")
+	}
+}
+
+func TestGitConfigYAMLRoundTrip(t *testing.T) {
+	yaml := `git:
+  auto_commit: false
+`
+	tempDir := testutil.NewTestConfig(t, yaml)
+	cfg, err := Load(tempDir)
+	if err != nil {
+		t.Fatalf("failed to load config: %v", err)
+	}
+	if cfg.AutoCommitEnabled() {
+		t.Error("expected auto-commit to be disabled after loading YAML with auto_commit: false")
+	}
+}
