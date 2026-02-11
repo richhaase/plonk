@@ -79,21 +79,51 @@ If you're upgrading from older releases:
 | PNPM | `pnpm:` | `plonk track pnpm:typescript` |
 | UV | `uv:` | `plonk track uv:ruff` |
 
+## Templates
+
+Dotfiles can use environment variable substitution via `.tmpl` files. This lets you keep machine-specific values (email, paths, hostnames) out of your dotfiles repo.
+
+**Create a template** in `$PLONK_DIR` with the `.tmpl` extension:
+
+```ini
+# ~/.config/plonk/gitconfig.tmpl → deploys to ~/.gitconfig
+[user]
+    email = {{EMAIL}}
+    name = {{GIT_USER_NAME}}
+```
+
+**Set the variables** in your shell, then apply:
+
+```bash
+export EMAIL="me@example.com"
+export GIT_USER_NAME="My Name"
+plonk apply
+```
+
+**Rules:**
+- Syntax: `{{VAR_NAME}}` (environment variables only, no defaults or conditionals)
+- All referenced variables must be set or `apply` fails with a clear error
+- A plain file and `.tmpl` file cannot target the same destination
+- `plonk doctor` warns about missing template variables
+- `plonk diff` and `plonk status` compare rendered output, not raw templates
+
 ## How It Works
 
 ```
 ~/.config/plonk/
-├── plonk.lock        # Tracked packages (auto-managed)
-├── plonk.yaml        # Settings (optional, usually not needed)
-├── zshrc             # → ~/.zshrc
-├── vimrc             # → ~/.vimrc
+├── plonk.lock          # Tracked packages (auto-managed)
+├── plonk.yaml          # Settings (optional, usually not needed)
+├── zshrc               # → ~/.zshrc
+├── vimrc               # → ~/.vimrc
+├── gitconfig.tmpl      # → ~/.gitconfig (rendered with env vars)
 └── config/
     └── nvim/
-        └── init.lua  # → ~/.config/nvim/init.lua
+        └── init.lua    # → ~/.config/nvim/init.lua
 ```
 
 - **Packages**: Listed in `plonk.lock`, installed on `apply` if missing
 - **Dotfiles**: Files in this directory deploy to `$HOME` with a dot prefix
+- **Templates**: `.tmpl` files are rendered (env var substitution) before deployment
 
 ## Installation
 

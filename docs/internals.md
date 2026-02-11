@@ -94,7 +94,7 @@ packages:
 
 ### Dotfile State
 
-The filesystem IS the state. Files in `$PLONK_DIR` (excluding `plonk.yaml`, `plonk.lock`) are managed dotfiles.
+The filesystem IS the state. Files in `$PLONK_DIR` (excluding `plonk.yaml`, `plonk.lock`) are managed dotfiles. Files with the `.tmpl` extension are rendered via environment variable substitution before deployment.
 
 ### Resource States
 
@@ -113,7 +113,7 @@ User → track command → Verify installed → Update lock file
 ### Apply Flow
 ```
 Lock file → List tracked → Check installed → Install missing
-Config dir → List files → Check deployed → Deploy missing
+Config dir → List files → Render .tmpl → Check deployed → Deploy missing/drifted
 ```
 
 ### Status Flow
@@ -168,6 +168,19 @@ bats tests/bats/behavioral/
 ```
 
 BATS tests call the real CLI and real package managers. Use the safe package list in `tests/bats/config/safe-packages.list`.
+
+## Template Rendering
+
+Files ending in `.tmpl` go through environment variable substitution before deployment or comparison.
+
+### Implementation
+
+- **`dotfiles.go`**: `renderTemplate()` scans for `{{VAR}}` patterns (regex: `\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}`), looks up each in the environment, and replaces atomically. Returns an error listing all missing variables.
+- **`DotfileManager`**: Has a `lookupEnv` field (defaults to `os.LookupEnv`, injectable for testing). `Deploy()`, `IsDrifted()`, `Diff()`, and `RenderSource()` all call `renderTemplate()` when the source is a `.tmpl` file.
+- **`toTarget()`**: Strips the `.tmpl` extension before adding the dot prefix, so `gitconfig.tmpl` targets `~/.gitconfig`.
+- **Conflict detection**: `List()` builds a target-path map and errors if two sources (e.g., `gitconfig` and `gitconfig.tmpl`) resolve to the same target.
+- **`diagnostics/health.go`**: `checkTemplateReadiness()` walks `$PLONK_DIR` for `.tmpl` files, validates all referenced variables are set, and reports warnings.
+- **`commands/diff.go`**: Renders templates to temporary files so external diff tools see substituted values.
 
 ## Error Handling
 

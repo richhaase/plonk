@@ -132,7 +132,7 @@ Check system health.
 plonk doctor
 ```
 
-Reports: config directory, permissions, package manager availability.
+Reports: config directory, permissions, package manager availability, template variable readiness.
 
 ### plonk config
 
@@ -211,6 +211,42 @@ ignore_patterns:
 2. Environment variables
 3. `plonk.yaml`
 4. Built-in defaults
+
+## Templates
+
+Dotfiles with a `.tmpl` extension are rendered via environment variable substitution before deployment.
+
+### Syntax
+
+Use `{{VAR_NAME}}` to reference environment variables:
+
+```ini
+# gitconfig.tmpl
+[user]
+    email = {{EMAIL}}
+    name = {{GIT_USER_NAME}}
+```
+
+### How It Works
+
+1. Place a `.tmpl` file in `$PLONK_DIR` (e.g., `gitconfig.tmpl`)
+2. On `plonk apply`, plonk replaces `{{VAR}}` placeholders with environment variable values
+3. The rendered output is deployed to `$HOME` with the `.tmpl` extension stripped (e.g., `~/.gitconfig`)
+
+### Behavior
+
+- All referenced variables must be set. If any are missing, `apply` errors with the list of missing variables.
+- A plain file and a `.tmpl` file must not target the same destination (e.g., `gitconfig` and `gitconfig.tmpl` cannot coexist).
+- `plonk status` and `plonk diff` compare rendered content against the deployed file.
+- `plonk diff` renders templates to a temporary file so external diff tools see values, not placeholders.
+- `plonk doctor` checks that all template variables are set and warns if any are missing.
+- `plonk rm gitconfig` recognizes and removes the `gitconfig.tmpl` source file.
+
+### Limitations (By Design)
+
+- No conditionals, loops, or template functions
+- No default/fallback values
+- Environment variables only (no YAML variable files)
 
 ## Lock File
 
