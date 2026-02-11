@@ -108,7 +108,7 @@ func (c *Client) Push() error {
 
 // Pull pulls from the default remote/branch.
 func (c *Client) Pull() error {
-    cmd := exec.Command("git", "-C", c.dir, "pull", "--rebase")
+    cmd := exec.Command("git", "-C", c.dir, "pull")
     if out, err := cmd.CombinedOutput(); err != nil {
         return fmt.Errorf("git pull failed: %w\n%s", err, out)
     }
@@ -281,12 +281,15 @@ if untracked > 0 {
 
 **`internal/commands/config_edit.go` — `editConfigVisudoStyle()`**
 
+Load config *before* the edit loop begins, and use that for auto-commit. This way the `auto_commit` setting in effect when the command started governs the current command — the new setting takes effect on the next command.
+
 After `saveNonDefaultValues()` succeeds (the "Success - save" branch), add:
 
 ```go
-cfg := config.LoadWithDefaults(configDir)
 gitops.AutoCommit(cfg, configDir, "config edit", nil)
 ```
+
+Where `cfg` was loaded at the top of `editConfigVisudoStyle()`, before the editor opens.
 
 ### 5. Add `plonk push` command
 
@@ -599,7 +602,7 @@ setup() {
 ## Assumptions
 
 - **`git` is on PATH**: We use `os/exec` to call git. The `plonk doctor` command already checks for git availability. We don't add a new dependency.
-- **`--rebase` on pull**: We use `git pull --rebase` to keep history linear. This matches typical dotfiles workflow. If a user prefers merge, they can run git manually.
+- **Merge on pull**: We use `git pull` (merge, not rebase). Dotfile changes across machines are independent learnings, not linear incremental progress — merge preserves that intent.
 - **No branch tracking logic**: `plonk push`/`pull` rely on git's default remote tracking branch. If the user hasn't set upstream, git will error and we surface that message.
 - **Auto-commit is best-effort**: Failures in auto-commit are warnings, not errors. The mutation (add/rm/track/untrack) itself already succeeded — we don't roll it back if git fails.
-- **`config edit` auto-commit uses reloaded config**: After saving the config, we reload it before calling `AutoCommit`. This means if the user just disabled `auto_commit`, it won't auto-commit the config change itself. This is correct behavior.
+- **`config edit` uses pre-edit config for auto-commit**: Config is loaded before the editor opens. The `auto_commit` setting in effect when the command started governs whether *that* command's change is committed. The new value takes effect on the next command. This applies uniformly — config is not special.
