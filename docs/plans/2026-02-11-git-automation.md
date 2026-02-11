@@ -203,9 +203,11 @@ import (
 )
 
 // AutoCommit is the standard post-mutation hook.
-// It checks config, verifies git repo, and commits if appropriate.
+// It loads config from configDir, checks if auto-commit is enabled,
+// verifies git repo, and commits if appropriate.
 // Errors are reported as warnings, never fatal.
-func AutoCommit(cfg *config.Config, configDir string, command string, args []string) {
+func AutoCommit(configDir string, command string, args []string) {
+    cfg := config.LoadWithDefaults(configDir)
     if !cfg.AutoCommitEnabled() {
         return
     }
@@ -235,7 +237,7 @@ After `output.RenderOutput(outputData)` and before the final return, add:
 ```go
 // Auto-commit if any files were actually added/updated (not dry-run, not all-failed)
 if !opts.DryRun && validateAddResultsErr(results) == nil {
-    gitops.AutoCommit(cfg, configDir, "add", args)
+    gitops.AutoCommit(configDir, "add", args)
 }
 ```
 
@@ -247,7 +249,7 @@ After `output.RenderOutput(formatter)`, before final return:
 
 ```go
 if !flags.DryRun && summary.Removed > 0 {
-    gitops.AutoCommit(cfg, configDir, "rm", args)
+    gitops.AutoCommit(configDir, "rm", args)
 }
 ```
 
@@ -260,8 +262,7 @@ if tracked > 0 {
     if err := lockSvc.Write(lockFile); err != nil {
         return fmt.Errorf("failed to write lock file: %w", err)
     }
-    cfg := config.LoadWithDefaults(configDir)
-    gitops.AutoCommit(cfg, configDir, "track", args)
+    gitops.AutoCommit(configDir, "track", args)
 }
 ```
 
@@ -274,22 +275,19 @@ if untracked > 0 {
     if err := lockSvc.Write(lockFile); err != nil {
         return fmt.Errorf("failed to write lock file: %w", err)
     }
-    cfg := config.LoadWithDefaults(configDir)
-    gitops.AutoCommit(cfg, configDir, "untrack", args)
+    gitops.AutoCommit(configDir, "untrack", args)
 }
 ```
 
 **`internal/commands/config_edit.go` — `editConfigVisudoStyle()`**
 
-Load config *before* the edit loop begins, and use that for auto-commit. This way the `auto_commit` setting in effect when the command started governs the current command — the new setting takes effect on the next command.
-
 After `saveNonDefaultValues()` succeeds (the "Success - save" branch), add:
 
 ```go
-gitops.AutoCommit(cfg, configDir, "config edit", nil)
+gitops.AutoCommit(configDir, "config edit", nil)
 ```
 
-Where `cfg` was loaded at the top of `editConfigVisudoStyle()`, before the editor opens.
+`AutoCommit` reads the just-saved config from disk, so the current state of `auto_commit` governs the commit decision.
 
 ### 5. Add `plonk push` command
 
@@ -605,4 +603,4 @@ setup() {
 - **Merge on pull**: We use `git pull` (merge, not rebase). Dotfile changes across machines are independent learnings, not linear incremental progress — merge preserves that intent.
 - **No branch tracking logic**: `plonk push`/`pull` rely on git's default remote tracking branch. If the user hasn't set upstream, git will error and we surface that message.
 - **Auto-commit is best-effort**: Failures in auto-commit are warnings, not errors. The mutation (add/rm/track/untrack) itself already succeeded — we don't roll it back if git fails.
-- **`config edit` uses pre-edit config for auto-commit**: Config is loaded before the editor opens. The `auto_commit` setting in effect when the command started governs whether *that* command's change is committed. The new value takes effect on the next command. This applies uniformly — config is not special.
+- **`AutoCommit` loads config itself**: Callers just pass `configDir`. The on-disk config at the time of the call governs behavior. No command pre-loads config for auto-commit purposes.
