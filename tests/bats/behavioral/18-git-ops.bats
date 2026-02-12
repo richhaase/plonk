@@ -76,7 +76,7 @@ setup() {
 @test "push command works with remote" {
     # Set up a bare remote
     local remote_dir="$BATS_TEST_TMPDIR/remote.git"
-    git init --bare "$remote_dir"
+    git init --bare -b main "$remote_dir"
     git -C "$PLONK_DIR" remote add origin "$remote_dir"
     git -C "$PLONK_DIR" push -u origin main
 
@@ -92,7 +92,7 @@ setup() {
 
 @test "push commits pending changes" {
     local remote_dir="$BATS_TEST_TMPDIR/remote.git"
-    git init --bare "$remote_dir"
+    git init --bare -b main "$remote_dir"
     git -C "$PLONK_DIR" remote add origin "$remote_dir"
     git -C "$PLONK_DIR" push -u origin main
 
@@ -124,7 +124,7 @@ setup() {
 
 @test "pull command works" {
     local remote_dir="$BATS_TEST_TMPDIR/remote.git"
-    git init --bare "$remote_dir"
+    git init --bare -b main "$remote_dir"
     git -C "$PLONK_DIR" remote add origin "$remote_dir"
     git -C "$PLONK_DIR" push -u origin main
 
@@ -148,7 +148,7 @@ setup() {
 
 @test "pull auto-commits dirty state" {
     local remote_dir="$BATS_TEST_TMPDIR/remote.git"
-    git init --bare "$remote_dir"
+    git init --bare -b main "$remote_dir"
     git -C "$PLONK_DIR" remote add origin "$remote_dir"
     git -C "$PLONK_DIR" push -u origin main
 
@@ -166,7 +166,7 @@ setup() {
 
 @test "pull --apply runs apply after pull" {
     local remote_dir="$BATS_TEST_TMPDIR/remote.git"
-    git init --bare "$remote_dir"
+    git init --bare -b main "$remote_dir"
     git -C "$PLONK_DIR" remote add origin "$remote_dir"
     git -C "$PLONK_DIR" push -u origin main
 
@@ -192,13 +192,18 @@ setup() {
 
 @test "pull refuses dirty state when auto_commit disabled" {
     local remote_dir="$BATS_TEST_TMPDIR/remote.git"
-    git init --bare "$remote_dir"
+    git init --bare -b main "$remote_dir"
     git -C "$PLONK_DIR" remote add origin "$remote_dir"
     git -C "$PLONK_DIR" push -u origin main
 
-    # Disable auto_commit
+    # Disable auto_commit and commit the config change
     echo 'git:' > "$PLONK_DIR/plonk.yaml"
     echo '  auto_commit: false' >> "$PLONK_DIR/plonk.yaml"
+    git -C "$PLONK_DIR" add -A && git -C "$PLONK_DIR" commit -m "disable auto_commit"
+    git -C "$PLONK_DIR" push
+
+    # Now create a separate dirty file
+    echo "dirty" > "$PLONK_DIR/uncommitted-file"
 
     run plonk pull
     assert_failure

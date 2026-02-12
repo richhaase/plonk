@@ -57,7 +57,7 @@ func TestHasRemote(t *testing.T) {
 
 	// Add a bare remote
 	remoteDir := t.TempDir()
-	run(t, remoteDir, "git", "init", "--bare")
+	run(t, remoteDir, "git", "init", "--bare", "-b", "main")
 	run(t, dir, "git", "remote", "add", "origin", remoteDir)
 
 	client := New(dir)
@@ -154,7 +154,7 @@ func TestPushPull(t *testing.T) {
 	// Set up repo with bare remote
 	dir := initTestRepo(t)
 	remoteDir := t.TempDir()
-	run(t, remoteDir, "git", "init", "--bare")
+	run(t, remoteDir, "git", "init", "--bare", "-b", "main")
 	run(t, dir, "git", "remote", "add", "origin", remoteDir)
 	run(t, dir, "git", "push", "-u", "origin", "main")
 
@@ -174,8 +174,8 @@ func TestPushPull(t *testing.T) {
 	}
 
 	// Clone into a second dir and verify the file arrived
-	cloneDir := t.TempDir()
-	run(t, cloneDir, "git", "clone", remoteDir, ".")
+	cloneDir := filepath.Join(t.TempDir(), "clone")
+	run(t, ".", "git", "clone", remoteDir, cloneDir)
 
 	data, err := os.ReadFile(filepath.Join(cloneDir, "pushed"))
 	if err != nil {
@@ -222,6 +222,7 @@ func TestCommitMessage(t *testing.T) {
 		{"rm", []string{"a", "b", "c", "d", "e", "f"}, "plonk: rm a b c d e (+1 more)"},
 		{"push", nil, "plonk: push"},
 		{"config edit", nil, "plonk: config edit"},
+		{"add", []string{"file\nwith\nnewlines"}, "plonk: add file with newlines"},
 	}
 
 	for _, tt := range tests {

@@ -4,7 +4,6 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -58,7 +57,7 @@ func runPull(cmd *cobra.Command, args []string) error {
 	if dirty {
 		cfg := config.LoadWithDefaults(configDir)
 		if !cfg.AutoCommitEnabled() {
-			return fmt.Errorf("uncommitted changes in %s; commit or stash manually, or enable git.auto_commit", configDir)
+			return fmt.Errorf("uncommitted changes in %s; commit manually or enable git.auto_commit", configDir)
 		}
 		msg := gitops.CommitMessage("pre-pull snapshot", nil)
 		if err := client.Commit(msg); err != nil {
@@ -82,7 +81,7 @@ func runPull(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("cannot determine home directory: %w", err)
 		}
 		cfg := config.LoadWithDefaults(configDir)
-		ctx := context.Background()
+		ctx := cmd.Context()
 
 		orch := orchestrator.New(
 			orchestrator.WithConfig(cfg),

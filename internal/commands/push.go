@@ -42,10 +42,17 @@ func runPush(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no remote configured for %s", configDir)
 	}
 
-	// Commit any pending changes — no-ops if nothing to commit
-	msg := gitops.CommitMessage("push", nil)
-	if err := client.Commit(msg); err != nil {
-		return fmt.Errorf("failed to commit: %w", err)
+	// Commit any pending changes
+	dirty, err := client.IsDirty()
+	if err != nil {
+		return err
+	}
+	if dirty {
+		msg := gitops.CommitMessage("push", nil)
+		if err := client.Commit(msg); err != nil {
+			return fmt.Errorf("failed to commit: %w", err)
+		}
+		output.Println("Committed pending changes")
 	}
 
 	// Push

@@ -22,7 +22,7 @@ func New(dir string) *Client {
 }
 
 // IsRepo checks if dir itself is the root of a git work tree
-// (i.e., has a .git directory/file directly inside it).
+// (i.e., has a .git directory or file directly inside it).
 func (c *Client) IsRepo() bool {
 	_, err := os.Stat(filepath.Join(c.dir, ".git"))
 	return err == nil
@@ -48,20 +48,24 @@ func (c *Client) IsDirty() (bool, error) {
 // Commit stages all changes and commits with the given message.
 // Returns nil if there's nothing to commit.
 func (c *Client) Commit(message string) error {
+	// Check dirty state first to avoid unnecessary git add on clean repos
+	dirty, err := c.IsDirty()
+	if err != nil {
+		return err
+	}
+	if !dirty {
+		return nil
+	}
+
 	// Stage everything
 	addCmd := exec.Command("git", "-C", c.dir, "add", "-A")
 	if out, err := addCmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("git add failed: %w\n%s", err, out)
 	}
 
-	// Commit — if nothing staged, git returns exit 1 with "nothing to commit".
-	// That's not an error for us.
+	// Commit
 	commitCmd := exec.Command("git", "-C", c.dir, "commit", "-m", message)
-	out, err := commitCmd.CombinedOutput()
-	if err != nil {
-		if strings.Contains(string(out), "nothing to commit") {
-			return nil
-		}
+	if out, err := commitCmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("git commit failed: %w\n%s", err, out)
 	}
 
@@ -69,10 +73,8 @@ func (c *Client) Commit(message string) error {
 }
 
 // Push pushes to the default remote/branch.
-// Sets GIT_TERMINAL_PROMPT=0 to avoid hanging on credential prompts.
 func (c *Client) Push() error {
 	cmd := exec.Command("git", "-C", c.dir, "push")
-	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("git push failed: %w\n%s", err, out)
 	}
@@ -82,10 +84,8 @@ func (c *Client) Push() error {
 // Pull pulls from the default remote/branch using merge (never rebase).
 // Uses --no-rebase to be explicit regardless of user's global git config,
 // and --no-edit to avoid opening an editor for merge commits.
-// Sets GIT_TERMINAL_PROMPT=0 to avoid hanging on credential prompts.
 func (c *Client) Pull() error {
 	cmd := exec.Command("git", "-C", c.dir, "pull", "--no-rebase", "--no-edit")
-	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("git pull failed: %w\n%s", err, out)
 	}
@@ -97,7 +97,12 @@ func CommitMessage(command string, args []string) string {
 	if len(args) == 0 {
 		return fmt.Sprintf("plonk: %s", command)
 	}
-	display := args
+	// Sanitize args — strip newlines to prevent malformed commit messages
+	sanitized := make([]string, len(args))
+	for i, arg := range args {
+		sanitized[i] = strings.ReplaceAll(strings.ReplaceAll(arg, "\n", " "), "\r", "")
+	}
+	display := sanitized
 	suffix := ""
 	if len(display) > 5 {
 		display = display[:5]
