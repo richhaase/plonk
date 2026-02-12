@@ -41,9 +41,11 @@ func (c *Client) HasRemote(ctx context.Context) bool {
 func (c *Client) IsDirty(ctx context.Context) (bool, error) {
 	//nolint:gosec // G204: git args are constant strings, not user input
 	cmd := exec.CommandContext(ctx, "git", "-C", c.dir, "status", "--porcelain", "--untracked-files=normal")
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
 	out, err := cmd.Output()
 	if err != nil {
-		return false, fmt.Errorf("git status failed: %w", err)
+		return false, fmt.Errorf("git status failed: %w\n%s", err, stderr.String())
 	}
 	return strings.TrimSpace(string(out)) != "", nil
 }
