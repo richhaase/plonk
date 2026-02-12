@@ -90,7 +90,7 @@ setup() {
     assert_output --partial "Push complete"
 }
 
-@test "push commits pending changes" {
+@test "push warns about uncommitted changes" {
     local remote_dir="$BATS_TEST_TMPDIR/remote.git"
     git init --bare -b main "$remote_dir"
     git -C "$PLONK_DIR" remote add origin "$remote_dir"
@@ -101,11 +101,12 @@ setup() {
 
     run plonk push
     assert_success
+    assert_output --partial "Warning: uncommitted changes"
     assert_output --partial "Push complete"
 
-    # Verify the file was committed
+    # Verify the file is still uncommitted
     run git -C "$PLONK_DIR" status --porcelain
-    assert_output ""
+    assert_output --partial "newfile"
 }
 
 @test "push fails without remote" {

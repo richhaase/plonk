@@ -47,22 +47,13 @@ func runPush(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no remote configured for %s", configDir)
 	}
 
-	// If dirty, commit if auto_commit is enabled; otherwise just warn and push committed work
+	// Warn if there are uncommitted changes
 	dirty, err := client.IsDirty(ctx)
 	if err != nil {
 		return err
 	}
 	if dirty {
-		cfg := config.LoadWithDefaults(configDir)
-		if cfg.AutoCommitEnabled() {
-			msg := gitops.CommitMessage("push", nil)
-			if err := client.Commit(ctx, msg); err != nil {
-				return fmt.Errorf("failed to commit: %w", err)
-			}
-			output.Println("Committed pending changes")
-		} else {
-			output.Println("Warning: uncommitted changes exist but auto_commit is disabled; pushing committed work only")
-		}
+		output.Println("Warning: uncommitted changes in working tree")
 	}
 
 	// Push
