@@ -24,6 +24,7 @@ plonk/
 │   ├── orchestrator/       # Coordination
 │   ├── config/             # Configuration
 │   ├── lock/               # Lock file handling
+│   ├── gitops/             # Git automation (auto-commit, push, pull)
 │   ├── clone/              # Repository cloning
 │   ├── diagnostics/        # Health checks
 │   └── output/             # Output formatting

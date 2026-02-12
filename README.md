@@ -53,21 +53,29 @@ plonk apply --dry-run                 # Preview changes
 plonk status                          # Show managed items
 plonk diff                            # Show modified dotfiles
 
+# Git
+plonk push                            # Push committed changes to remote
+plonk pull                            # Pull remote changes
+plonk pull --apply                    # Pull and apply changes
+
 # Utilities
 plonk doctor                          # Check system health
 plonk config show                     # View settings
 plonk clone user/dotfiles             # Clone repo and apply
 ```
 
-## Migration Notes (v0.26+)
+## Migration Notes (v0.27+)
 
 If you're upgrading from older releases:
 
-- `plonk install`/`uninstall`/`upgrade` were removed.
+- **New in v0.27**: Mutating commands (`add`, `rm`, `track`, `untrack`, `config edit`) now auto-commit to git.
+  - Disable with `git.auto_commit: false` in `plonk.yaml`.
+  - If `$PLONK_DIR` is not a git repo, plonk warns and skips git operations.
+- **New in v0.27**: `plonk push` and `plonk pull` commands for syncing your dotfiles repo.
+- `plonk install`/`uninstall`/`upgrade` were removed (v0.26).
   - Use your package manager directly, then `plonk track` / `plonk untrack`.
-- Supported managers are now: `brew`, `cargo`, `go`, `pnpm`, `uv`.
-  - Legacy lock entries for unsupported managers are reported clearly in status/apply output.
-- Lock file format is now `version: 3` and migrates automatically from v2 on read.
+- Supported managers: `brew`, `cargo`, `go`, `pnpm`, `uv`.
+- Lock file format is `version: 3` and migrates automatically from v2 on read.
 
 ## Supported Package Managers
 
@@ -143,8 +151,10 @@ Plonk works without configuration. If needed, create `~/.config/plonk/plonk.yaml
 
 ```yaml
 # All settings are optional
-diff_tool: delta                    # Custom diff viewer
-package_timeout: 300                # Seconds (default: 180)
+git:
+  auto_commit: true                  # Auto-commit after mutations (default: true)
+diff_tool: delta                     # Custom diff viewer
+package_timeout: 300                 # Seconds (default: 180)
 ignore_patterns:
   - "*.swp"
   - ".DS_Store"

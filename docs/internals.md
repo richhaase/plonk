@@ -22,6 +22,8 @@ plonk/
 │   │   ├── status.go           # Status display
 │   │   ├── diff.go             # Drift display
 │   │   ├── clone.go            # Repository cloning
+│   │   ├── push.go             # Git push
+│   │   ├── pull.go             # Git pull (with optional apply)
 │   │   ├── doctor.go           # Health checks
 │   │   └── config*.go          # Configuration commands
 │   ├── packages/               # Package management
@@ -47,6 +49,9 @@ plonk/
 │   ├── lock/                   # Lock file
 │   │   ├── v3.go               # V3 format + migration
 │   │   └── types.go            # Lock types
+│   ├── gitops/                 # Git automation
+│   │   ├── gitops.go           # Git client (commit, push, pull)
+│   │   └── autocommit.go       # Post-mutation auto-commit hook
 │   ├── clone/                  # Clone operations
 │   │   ├── setup.go            # Clone + apply
 │   │   └── git.go              # Git operations
@@ -115,6 +120,13 @@ User → track command → Verify installed → Update lock file
 Lock file → List tracked → Check installed → Install missing
 Config dir → List files → Render .tmpl → Check deployed → Deploy missing/drifted
 ```
+
+### Auto-Commit Flow
+```
+Mutation command succeeds → gitops.AutoCommit → Check config → Check git repo → git add -A → git commit
+```
+
+Auto-commit is best-effort: failures are warnings, not errors. The mutation itself already succeeded. Controlled by `git.auto_commit` in `plonk.yaml` (default: `true`). If `$PLONK_DIR` is not a git repo, warns and skips.
 
 ### Status Flow
 ```

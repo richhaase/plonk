@@ -2,10 +2,12 @@
 
 Complete CLI and configuration reference.
 
-## Migration Notes (v0.25+)
+## Migration Notes (v0.27+)
 
-- `install`, `uninstall`, and `upgrade` commands were removed.
-- Package operations are now centered on `track`, `untrack`, and `apply`.
+- **v0.27**: Mutating commands (`add`, `rm`, `track`, `untrack`, `config edit`) now auto-commit to git. Disable with `git.auto_commit: false` in `plonk.yaml`.
+- **v0.27**: New `plonk push` and `plonk pull` commands for syncing your dotfiles repo.
+- `install`, `uninstall`, and `upgrade` commands were removed (v0.26).
+- Package operations are centered on `track`, `untrack`, and `apply`.
 - Supported package managers: `brew`, `cargo`, `go`, `pnpm`, `uv`.
 - Lock files are `version: 3` and older v2 lock files are auto-migrated.
 
@@ -124,6 +126,35 @@ plonk clone https://github.com/u/r.git # Full URL
 plonk clone --dry-run user/dotfiles    # Preview
 ```
 
+### plonk push
+
+Push committed changes to the remote.
+
+```bash
+plonk push
+```
+
+- Warns if there are uncommitted changes in the working tree
+- Requires a configured remote
+
+### plonk pull
+
+Pull remote changes into your plonk directory.
+
+```bash
+plonk pull [options]
+```
+
+**Options:**
+- `--apply, -a` - Run `plonk apply` after pulling
+
+If there are uncommitted local changes and `auto_commit` is enabled, they are committed first. If `auto_commit` is disabled and there are uncommitted changes, the pull is refused.
+
+```bash
+plonk pull                    # Pull remote changes
+plonk pull --apply            # Pull and apply
+```
+
 ### plonk doctor
 
 Check system health.
@@ -173,6 +204,10 @@ All settings are optional. Plonk uses sensible defaults.
 ### Settings
 
 ```yaml
+# Git integration
+git:
+  auto_commit: true        # Auto-commit after mutations (default: true)
+
 # Package manager default (for discovery, not tracking)
 default_manager: brew
 
