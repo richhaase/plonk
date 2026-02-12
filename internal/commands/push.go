@@ -17,8 +17,8 @@ var pushCmd = &cobra.Command{
 	Short: "Commit pending changes and push to remote",
 	Long: `Commit any uncommitted changes in your plonk directory and push to the remote.
 
-This stages all changes, creates a commit, and pushes to the default remote.
-If there are no changes, only a push is performed.
+If auto_commit is enabled, pending changes are committed before pushing.
+If auto_commit is disabled and there are uncommitted changes, the push is refused.
 
 Examples:
   plonk push    # Commit and push`,
@@ -42,12 +42,16 @@ func runPush(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no remote configured for %s", configDir)
 	}
 
-	// Commit any pending changes
+	// Handle dirty state based on auto_commit config
 	dirty, err := client.IsDirty()
 	if err != nil {
 		return err
 	}
 	if dirty {
+		cfg := config.LoadWithDefaults(configDir)
+		if !cfg.AutoCommitEnabled() {
+			return fmt.Errorf("uncommitted changes in %s; commit manually or enable git.auto_commit", configDir)
+		}
 		msg := gitops.CommitMessage("push", nil)
 		if err := client.Commit(msg); err != nil {
 			return fmt.Errorf("failed to commit: %w", err)

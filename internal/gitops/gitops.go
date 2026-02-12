@@ -30,6 +30,7 @@ func (c *Client) IsRepo() bool {
 
 // HasRemote checks if the repo has at least one remote configured.
 func (c *Client) HasRemote() bool {
+	//nolint:gosec // G204: git args are constant strings, not user input
 	cmd := exec.Command("git", "-C", c.dir, "remote")
 	out, err := cmd.Output()
 	return err == nil && strings.TrimSpace(string(out)) != ""
@@ -37,6 +38,7 @@ func (c *Client) HasRemote() bool {
 
 // IsDirty returns true if there are uncommitted changes (staged, unstaged, or untracked).
 func (c *Client) IsDirty() (bool, error) {
+	//nolint:gosec // G204: git args are constant strings, not user input
 	cmd := exec.Command("git", "-C", c.dir, "status", "--porcelain", "--untracked-files=normal")
 	out, err := cmd.Output()
 	if err != nil {
@@ -58,12 +60,14 @@ func (c *Client) Commit(message string) error {
 	}
 
 	// Stage everything
+	//nolint:gosec // G204: git args are constant strings, not user input
 	addCmd := exec.Command("git", "-C", c.dir, "add", "-A")
 	if out, err := addCmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("git add failed: %w\n%s", err, out)
 	}
 
 	// Commit
+	//nolint:gosec // G204: message comes from CommitMessage(), not external input
 	commitCmd := exec.Command("git", "-C", c.dir, "commit", "-m", message)
 	if out, err := commitCmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("git commit failed: %w\n%s", err, out)
@@ -74,6 +78,7 @@ func (c *Client) Commit(message string) error {
 
 // Push pushes to the default remote/branch.
 func (c *Client) Push() error {
+	//nolint:gosec // G204: git args are constant strings, not user input
 	cmd := exec.Command("git", "-C", c.dir, "push")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("git push failed: %w\n%s", err, out)
@@ -85,6 +90,7 @@ func (c *Client) Push() error {
 // Uses --no-rebase to be explicit regardless of user's global git config,
 // and --no-edit to avoid opening an editor for merge commits.
 func (c *Client) Pull() error {
+	//nolint:gosec // G204: git args are constant strings, not user input
 	cmd := exec.Command("git", "-C", c.dir, "pull", "--no-rebase", "--no-edit")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("git pull failed: %w\n%s", err, out)
