@@ -19,8 +19,11 @@ var pullCmd = &cobra.Command{
 	Short: "Pull remote changes into plonk directory",
 	Long: `Pull remote changes into your plonk directory.
 
-If there are uncommitted local changes, they are committed first to avoid
-conflicts. Use --apply to automatically run 'plonk apply' after pulling.
+If there are uncommitted local changes and auto_commit is enabled, they are
+committed first to avoid conflicts. If auto_commit is disabled and there are
+uncommitted changes, the pull is refused.
+
+Use --apply to automatically run 'plonk apply' after pulling.
 
 Examples:
   plonk pull            # Pull remote changes
@@ -43,12 +46,20 @@ func runPull(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("%s is not a git repository", configDir)
 	}
 
-	// Auto-commit local changes before pulling
+	if !client.HasRemote() {
+		return fmt.Errorf("no remote configured for %s", configDir)
+	}
+
+	// Check for dirty state — commit or refuse depending on config
 	dirty, err := client.IsDirty()
 	if err != nil {
 		return err
 	}
 	if dirty {
+		cfg := config.LoadWithDefaults(configDir)
+		if !cfg.AutoCommitEnabled() {
+			return fmt.Errorf("uncommitted changes in %s; commit or stash manually, or enable git.auto_commit", configDir)
+		}
 		msg := gitops.CommitMessage("pre-pull snapshot", nil)
 		if err := client.Commit(msg); err != nil {
 			return fmt.Errorf("failed to commit local changes: %w", err)

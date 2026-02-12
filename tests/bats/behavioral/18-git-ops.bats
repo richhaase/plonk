@@ -7,7 +7,7 @@ setup() {
     setup_test_env
 
     # Initialize PLONK_DIR as a git repo
-    git -C "$PLONK_DIR" init
+    git -C "$PLONK_DIR" init -b main
     git -C "$PLONK_DIR" config user.email "test@test.com"
     git -C "$PLONK_DIR" config user.name "Test"
     git -C "$PLONK_DIR" commit --allow-empty -m "initial"
@@ -101,8 +101,11 @@ setup() {
 
     run plonk push
     assert_success
-    assert_output --partial "Committed pending changes"
     assert_output --partial "Push complete"
+
+    # Verify the file was committed
+    run git -C "$PLONK_DIR" status --porcelain
+    assert_output ""
 }
 
 @test "push fails without remote" {
@@ -179,4 +182,25 @@ setup() {
     run plonk pull
     assert_failure
     assert_output --partial "not a git repository"
+}
+
+@test "pull fails without remote" {
+    run plonk pull
+    assert_failure
+    assert_output --partial "no remote configured"
+}
+
+@test "pull refuses dirty state when auto_commit disabled" {
+    local remote_dir="$BATS_TEST_TMPDIR/remote.git"
+    git init --bare "$remote_dir"
+    git -C "$PLONK_DIR" remote add origin "$remote_dir"
+    git -C "$PLONK_DIR" push -u origin main
+
+    # Disable auto_commit
+    echo 'git:' > "$PLONK_DIR/plonk.yaml"
+    echo '  auto_commit: false' >> "$PLONK_DIR/plonk.yaml"
+
+    run plonk pull
+    assert_failure
+    assert_output --partial "uncommitted changes"
 }
