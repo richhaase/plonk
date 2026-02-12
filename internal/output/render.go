@@ -5,7 +5,11 @@ package output
 
 import "fmt"
 
-// RenderOutput renders data in table format
+// RenderOutput renders data in table format.
+// No-op if data is nil.
 func RenderOutput(data OutputData) {
+	if data == nil {
+		return
+	}
 	fmt.Print(data.TableOutput())
 }
