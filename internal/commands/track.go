@@ -97,7 +97,7 @@ func runTrack(cmd *cobra.Command, args []string) error {
 		if err := lockSvc.Write(lockFile); err != nil {
 			return fmt.Errorf("failed to write lock file: %w", err)
 		}
-		gitops.AutoCommit(configDir, "track", args)
+		gitops.AutoCommit(cmd.Context(), configDir, "track", args)
 	}
 
 	// Summary

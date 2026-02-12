@@ -4,6 +4,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -88,7 +89,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 	// Handle sync-drifted flag
 	if syncDrifted {
-		return runSyncDrifted(cfg, configDir, homeDir, dryRun)
+		return runSyncDrifted(cmd.Context(), cfg, configDir, homeDir, dryRun)
 	}
 
 	// Require at least one file argument if not syncing drifted
@@ -136,7 +137,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 
 	// Auto-commit if any files were actually added/updated
 	if !opts.DryRun && validateAddResultsErr(results) == nil {
-		gitops.AutoCommit(configDir, "add", args)
+		gitops.AutoCommit(cmd.Context(), configDir, "add", args)
 	}
 
 	// Check if all operations failed and return appropriate error
@@ -144,7 +145,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 }
 
 // runSyncDrifted syncs all drifted files from $HOME back to $PLONKDIR
-func runSyncDrifted(cfg *config.Config, configDir, homeDir string, dryRun bool) error {
+func runSyncDrifted(ctx context.Context, cfg *config.Config, configDir, homeDir string, dryRun bool) error {
 	// Get drifted dotfiles from reconciliation
 	driftedFiles, err := getDriftedDotfileStatuses(cfg, configDir, homeDir)
 	if err != nil {
@@ -209,7 +210,7 @@ func runSyncDrifted(cfg *config.Config, configDir, homeDir string, dryRun bool) 
 
 	// Auto-commit synced drifted files
 	if !dryRun && validateAddResultsErr(results) == nil {
-		gitops.AutoCommit(configDir, "add --sync-drifted", paths)
+		gitops.AutoCommit(ctx, configDir, "add --sync-drifted", paths)
 	}
 
 	// Check if all operations failed and return appropriate error

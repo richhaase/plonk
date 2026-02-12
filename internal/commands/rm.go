@@ -112,7 +112,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 
 	// Auto-commit if any files were actually removed
 	if !flags.DryRun && summary.Removed > 0 {
-		gitops.AutoCommit(configDir, "rm", args)
+		gitops.AutoCommit(cmd.Context(), configDir, "rm", args)
 	}
 
 	// Check if all operations failed and return appropriate error

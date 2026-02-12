@@ -5,6 +5,7 @@ package commands
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -52,11 +53,11 @@ func runConfigEdit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
-	return editConfigVisudoStyle(configDir)
+	return editConfigVisudoStyle(cmd.Context(), configDir)
 }
 
 // editConfigVisudoStyle implements the visudo-style edit workflow
-func editConfigVisudoStyle(configDir string) error {
+func editConfigVisudoStyle(ctx context.Context, configDir string) error {
 	// Create temp file with merged runtime config
 	tempFile, err := createTempConfigFile(configDir)
 	if err != nil {
@@ -99,7 +100,7 @@ func editConfigVisudoStyle(configDir string) error {
 		}
 
 		output.Printf("%s Configuration saved (only non-default values)\n", output.Success())
-		gitops.AutoCommit(configDir, "config edit", nil)
+		gitops.AutoCommit(ctx, configDir, "config edit", nil)
 		return nil
 	}
 }

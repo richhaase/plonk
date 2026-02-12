@@ -13,7 +13,7 @@ import (
 // AutoCommit is the standard post-mutation hook.
 // Reads config from disk, checks if auto-commit is enabled, and commits if appropriate.
 // Errors are warnings, never fatal.
-func AutoCommit(configDir string, command string, args []string) {
+func AutoCommit(ctx context.Context, configDir string, command string, args []string) {
 	cfg := config.LoadWithDefaults(configDir)
 	if !cfg.AutoCommitEnabled() {
 		return
@@ -27,7 +27,7 @@ func AutoCommit(configDir string, command string, args []string) {
 	}
 
 	msg := CommitMessage(command, args)
-	if err := client.Commit(context.Background(), msg); err != nil {
+	if err := client.Commit(ctx, msg); err != nil {
 		output.Printf("Warning: auto-commit failed: %v\n", err)
 	}
 }
