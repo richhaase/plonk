@@ -63,7 +63,11 @@ func TestHasRemote(t *testing.T) {
 	run(t, dir, "git", "remote", "add", "origin", remoteDir)
 
 	client := New(dir)
-	if !client.HasRemote(ctx) {
+	hasRemote, err := client.HasRemote(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !hasRemote {
 		t.Error("expected HasRemote to return true")
 	}
 }
@@ -72,7 +76,11 @@ func TestHasRemoteFalse(t *testing.T) {
 	dir := initTestRepo(t)
 	client := New(dir)
 
-	if client.HasRemote(context.Background()) {
+	hasRemote, err := client.HasRemote(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if hasRemote {
 		t.Error("expected HasRemote to return false")
 	}
 }

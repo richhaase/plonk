@@ -18,7 +18,7 @@ var pushCmd = &cobra.Command{
 	Long: `Commit any uncommitted changes in your plonk directory and push to the remote.
 
 If auto_commit is enabled, pending changes are committed before pushing.
-If auto_commit is disabled and there are uncommitted changes, the push is refused.
+If auto_commit is disabled, only already-committed work is pushed.
 
 Examples:
   plonk push    # Commit and push`,
@@ -39,25 +39,30 @@ func runPush(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("%s is not a git repository", configDir)
 	}
 
-	if !client.HasRemote(ctx) {
+	hasRemote, err := client.HasRemote(ctx)
+	if err != nil {
+		return err
+	}
+	if !hasRemote {
 		return fmt.Errorf("no remote configured for %s", configDir)
 	}
 
-	// Handle dirty state based on auto_commit config
+	// If dirty, commit if auto_commit is enabled; otherwise just warn and push committed work
 	dirty, err := client.IsDirty(ctx)
 	if err != nil {
 		return err
 	}
 	if dirty {
 		cfg := config.LoadWithDefaults(configDir)
-		if !cfg.AutoCommitEnabled() {
-			return fmt.Errorf("uncommitted changes in %s; commit manually or enable git.auto_commit", configDir)
+		if cfg.AutoCommitEnabled() {
+			msg := gitops.CommitMessage("push", nil)
+			if err := client.Commit(ctx, msg); err != nil {
+				return fmt.Errorf("failed to commit: %w", err)
+			}
+			output.Println("Committed pending changes")
+		} else {
+			output.Println("Warning: uncommitted changes exist but auto_commit is disabled; pushing committed work only")
 		}
-		msg := gitops.CommitMessage("push", nil)
-		if err := client.Commit(ctx, msg); err != nil {
-			return fmt.Errorf("failed to commit: %w", err)
-		}
-		output.Println("Committed pending changes")
 	}
 
 	// Push

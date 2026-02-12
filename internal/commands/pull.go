@@ -46,7 +46,11 @@ func runPull(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("%s is not a git repository", configDir)
 	}
 
-	if !client.HasRemote(ctx) {
+	hasRemote, err := client.HasRemote(ctx)
+	if err != nil {
+		return err
+	}
+	if !hasRemote {
 		return fmt.Errorf("no remote configured for %s", configDir)
 	}
 

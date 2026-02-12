@@ -30,11 +30,16 @@ func (c *Client) IsRepo() bool {
 }
 
 // HasRemote checks if the repo has at least one remote configured.
-func (c *Client) HasRemote(ctx context.Context) bool {
+func (c *Client) HasRemote(ctx context.Context) (bool, error) {
 	//nolint:gosec // G204: git args are constant strings, not user input
 	cmd := exec.CommandContext(ctx, "git", "-C", c.dir, "remote")
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
 	out, err := cmd.Output()
-	return err == nil && strings.TrimSpace(string(out)) != ""
+	if err != nil {
+		return false, fmt.Errorf("git remote failed: %w\n%s", err, stderr.String())
+	}
+	return strings.TrimSpace(string(out)) != "", nil
 }
 
 // IsDirty returns true if there are uncommitted changes (staged, unstaged, or untracked).
