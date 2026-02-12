@@ -38,6 +38,7 @@ func init() {
 
 func runPull(cmd *cobra.Command, args []string) error {
 	applyAfter, _ := cmd.Flags().GetBool("apply")
+	ctx := cmd.Context()
 	configDir := config.GetDefaultConfigDirectory()
 	client := gitops.New(configDir)
 
@@ -45,12 +46,12 @@ func runPull(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("%s is not a git repository", configDir)
 	}
 
-	if !client.HasRemote() {
+	if !client.HasRemote(ctx) {
 		return fmt.Errorf("no remote configured for %s", configDir)
 	}
 
 	// Check for dirty state — commit or refuse depending on config
-	dirty, err := client.IsDirty()
+	dirty, err := client.IsDirty(ctx)
 	if err != nil {
 		return err
 	}
@@ -60,7 +61,7 @@ func runPull(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("uncommitted changes in %s; commit manually or enable git.auto_commit", configDir)
 		}
 		msg := gitops.CommitMessage("pre-pull snapshot", nil)
-		if err := client.Commit(msg); err != nil {
+		if err := client.Commit(ctx, msg); err != nil {
 			return fmt.Errorf("failed to commit local changes: %w", err)
 		}
 		output.Println("Committed local changes before pull")
@@ -68,7 +69,7 @@ func runPull(cmd *cobra.Command, args []string) error {
 
 	// Pull
 	output.Println("Pulling from remote...")
-	if err := client.Pull(); err != nil {
+	if err := client.Pull(ctx); err != nil {
 		return err
 	}
 	output.Println("Pull complete")
@@ -81,7 +82,6 @@ func runPull(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("cannot determine home directory: %w", err)
 		}
 		cfg := config.LoadWithDefaults(configDir)
-		ctx := cmd.Context()
 
 		orch := orchestrator.New(
 			orchestrator.WithConfig(cfg),

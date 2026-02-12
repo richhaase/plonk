@@ -4,6 +4,7 @@
 package gitops
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -54,6 +55,7 @@ func TestIsRepoFalse(t *testing.T) {
 
 func TestHasRemote(t *testing.T) {
 	dir := initTestRepo(t)
+	ctx := context.Background()
 
 	// Add a bare remote
 	remoteDir := t.TempDir()
@@ -61,7 +63,7 @@ func TestHasRemote(t *testing.T) {
 	run(t, dir, "git", "remote", "add", "origin", remoteDir)
 
 	client := New(dir)
-	if !client.HasRemote() {
+	if !client.HasRemote(ctx) {
 		t.Error("expected HasRemote to return true")
 	}
 }
@@ -70,7 +72,7 @@ func TestHasRemoteFalse(t *testing.T) {
 	dir := initTestRepo(t)
 	client := New(dir)
 
-	if client.HasRemote() {
+	if client.HasRemote(context.Background()) {
 		t.Error("expected HasRemote to return false")
 	}
 }
@@ -78,8 +80,9 @@ func TestHasRemoteFalse(t *testing.T) {
 func TestIsDirtyClean(t *testing.T) {
 	dir := initTestRepo(t)
 	client := New(dir)
+	ctx := context.Background()
 
-	dirty, err := client.IsDirty()
+	dirty, err := client.IsDirty(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -91,13 +94,14 @@ func TestIsDirtyClean(t *testing.T) {
 func TestIsDirty(t *testing.T) {
 	dir := initTestRepo(t)
 	client := New(dir)
+	ctx := context.Background()
 
 	// Create an untracked file
 	if err := os.WriteFile(filepath.Join(dir, "newfile"), []byte("hello"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	dirty, err := client.IsDirty()
+	dirty, err := client.IsDirty(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -109,6 +113,7 @@ func TestIsDirty(t *testing.T) {
 func TestCommit(t *testing.T) {
 	dir := initTestRepo(t)
 	client := New(dir)
+	ctx := context.Background()
 
 	// Create a file
 	if err := os.WriteFile(filepath.Join(dir, "testfile"), []byte("content"), 0644); err != nil {
@@ -116,12 +121,12 @@ func TestCommit(t *testing.T) {
 	}
 
 	// Commit
-	if err := client.Commit("test commit message"); err != nil {
+	if err := client.Commit(ctx, "test commit message"); err != nil {
 		t.Fatalf("commit failed: %v", err)
 	}
 
 	// Should be clean now
-	dirty, err := client.IsDirty()
+	dirty, err := client.IsDirty(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -145,8 +150,27 @@ func TestCommitNoop(t *testing.T) {
 	client := New(dir)
 
 	// Commit on clean repo should be a no-op
-	if err := client.Commit("should not appear"); err != nil {
+	if err := client.Commit(context.Background(), "should not appear"); err != nil {
 		t.Fatalf("commit on clean repo should not error: %v", err)
+	}
+}
+
+func TestCommitCancellation(t *testing.T) {
+	dir := initTestRepo(t)
+	client := New(dir)
+
+	// Create a file so there's something to commit
+	if err := os.WriteFile(filepath.Join(dir, "testfile"), []byte("content"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Cancel the context before calling Commit
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := client.Commit(ctx, "should fail")
+	if err == nil {
+		t.Error("expected error from cancelled context")
 	}
 }
 
@@ -159,17 +183,18 @@ func TestPushPull(t *testing.T) {
 	run(t, dir, "git", "push", "-u", "origin", "main")
 
 	client := New(dir)
+	ctx := context.Background()
 
 	// Create a file and commit
 	if err := os.WriteFile(filepath.Join(dir, "pushed"), []byte("data"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := client.Commit("push test"); err != nil {
+	if err := client.Commit(ctx, "push test"); err != nil {
 		t.Fatal(err)
 	}
 
 	// Push
-	if err := client.Push(); err != nil {
+	if err := client.Push(ctx); err != nil {
 		t.Fatalf("push failed: %v", err)
 	}
 
@@ -196,7 +221,7 @@ func TestPushPull(t *testing.T) {
 	run(t, cloneDir, "git", "push")
 
 	// Pull from original
-	if err := client.Pull(); err != nil {
+	if err := client.Pull(ctx); err != nil {
 		t.Fatalf("pull failed: %v", err)
 	}
 

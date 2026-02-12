@@ -31,6 +31,7 @@ func init() {
 }
 
 func runPush(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	configDir := config.GetDefaultConfigDirectory()
 	client := gitops.New(configDir)
 
@@ -38,12 +39,12 @@ func runPush(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("%s is not a git repository", configDir)
 	}
 
-	if !client.HasRemote() {
+	if !client.HasRemote(ctx) {
 		return fmt.Errorf("no remote configured for %s", configDir)
 	}
 
 	// Handle dirty state based on auto_commit config
-	dirty, err := client.IsDirty()
+	dirty, err := client.IsDirty(ctx)
 	if err != nil {
 		return err
 	}
@@ -53,7 +54,7 @@ func runPush(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("uncommitted changes in %s; commit manually or enable git.auto_commit", configDir)
 		}
 		msg := gitops.CommitMessage("push", nil)
-		if err := client.Commit(msg); err != nil {
+		if err := client.Commit(ctx, msg); err != nil {
 			return fmt.Errorf("failed to commit: %w", err)
 		}
 		output.Println("Committed pending changes")
@@ -61,7 +62,7 @@ func runPush(cmd *cobra.Command, args []string) error {
 
 	// Push
 	output.Println("Pushing to remote...")
-	if err := client.Push(); err != nil {
+	if err := client.Push(ctx); err != nil {
 		return err
 	}
 	output.Println("Push complete")
