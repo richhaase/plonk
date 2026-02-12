@@ -170,7 +170,7 @@ func TestCommitCancellation(t *testing.T) {
 
 	err := client.Commit(ctx, "should fail")
 	if err == nil {
-		t.Error("expected error from cancelled context")
+		t.Error("expected error from canceled context")
 	}
 }
 
