@@ -20,6 +20,11 @@ var (
 	validatorInitErr  error
 )
 
+// GitConfig contains git-related configuration
+type GitConfig struct {
+	AutoCommit *bool `yaml:"auto_commit,omitempty"`
+}
+
 // Config represents the plonk configuration
 type Config struct {
 	DefaultManager    string                   `yaml:"default_manager,omitempty" validate:"omitempty,validmanager"`
@@ -30,6 +35,16 @@ type Config struct {
 	IgnorePatterns    []string                 `yaml:"ignore_patterns,omitempty"`
 	Dotfiles          Dotfiles                 `yaml:"dotfiles,omitempty"`
 	DiffTool          string                   `yaml:"diff_tool,omitempty"`
+	Git               GitConfig                `yaml:"git,omitempty"`
+}
+
+// AutoCommitEnabled returns whether auto-commit is enabled.
+// Defaults to true if not explicitly set.
+func (c *Config) AutoCommitEnabled() bool {
+	if c.Git.AutoCommit == nil {
+		return true
+	}
+	return *c.Git.AutoCommit
 }
 
 // Dotfiles contains dotfile-specific configuration

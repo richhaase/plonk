@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/gitops"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/packages"
 	"github.com/spf13/cobra"
@@ -96,6 +97,7 @@ func runTrack(cmd *cobra.Command, args []string) error {
 		if err := lockSvc.Write(lockFile); err != nil {
 			return fmt.Errorf("failed to write lock file: %w", err)
 		}
+		gitops.AutoCommit(cmd.Context(), configDir, "track", args)
 	}
 
 	// Summary

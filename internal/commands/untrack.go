@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/gitops"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/spf13/cobra"
 )
@@ -71,6 +72,7 @@ func runUntrack(cmd *cobra.Command, args []string) error {
 		if err := lockSvc.Write(lockFile); err != nil {
 			return fmt.Errorf("failed to write lock file: %w", err)
 		}
+		gitops.AutoCommit(cmd.Context(), configDir, "untrack", args)
 	}
 
 	// Summary
