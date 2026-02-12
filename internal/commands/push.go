@@ -14,14 +14,15 @@ import (
 
 var pushCmd = &cobra.Command{
 	Use:   "push",
-	Short: "Commit pending changes and push to remote",
-	Long: `Commit any uncommitted changes in your plonk directory and push to the remote.
+	Short: "Push committed changes to remote",
+	Long: `Push committed changes in your plonk directory to the remote.
 
-If auto_commit is enabled, pending changes are committed before pushing.
-If auto_commit is disabled, only already-committed work is pushed.
+Warns if there are uncommitted changes in the working tree.
+Use mutation commands (add, rm, track, untrack) with auto_commit enabled
+to commit changes automatically, or commit manually before pushing.
 
 Examples:
-  plonk push    # Commit and push`,
+  plonk push    # Push to remote`,
 	RunE:         runPush,
 	SilenceUsage: true,
 }
