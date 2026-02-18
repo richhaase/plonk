@@ -104,15 +104,15 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 	managedCount := len(result.Managed) - driftedCount
 
 	output.WriteString("Summary: ")
-	output.WriteString(fmt.Sprintf("%d managed", managedCount))
+	fmt.Fprintf(&output, "%d managed", managedCount)
 	if len(result.Missing) > 0 {
-		output.WriteString(fmt.Sprintf(", %d missing", len(result.Missing)))
+		fmt.Fprintf(&output, ", %d missing", len(result.Missing))
 	}
 	if driftedCount > 0 {
-		output.WriteString(fmt.Sprintf(", %d drifted", driftedCount))
+		fmt.Fprintf(&output, ", %d drifted", driftedCount)
 	}
 	if len(result.Errors) > 0 {
-		output.WriteString(fmt.Sprintf(", %d error(s)", len(result.Errors)))
+		fmt.Fprintf(&output, ", %d error(s)", len(result.Errors))
 	}
 	output.WriteString("\n")
 

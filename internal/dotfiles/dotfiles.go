@@ -393,8 +393,8 @@ func (m *DotfileManager) Diff(d Dotfile) (string, error) {
 	targetLines := strings.Split(string(targetContent), "\n")
 
 	var diff strings.Builder
-	diff.WriteString(fmt.Sprintf("--- %s (source)\n", d.Source))
-	diff.WriteString(fmt.Sprintf("+++ %s (target)\n", d.Target))
+	fmt.Fprintf(&diff, "--- %s (source)\n", d.Source)
+	fmt.Fprintf(&diff, "+++ %s (target)\n", d.Target)
 
 	// Find differences
 	maxLen := len(sourceLines)
@@ -413,10 +413,10 @@ func (m *DotfileManager) Diff(d Dotfile) (string, error) {
 
 		if srcLine != tgtLine {
 			if i < len(sourceLines) {
-				diff.WriteString(fmt.Sprintf("-%s\n", srcLine))
+				fmt.Fprintf(&diff, "-%s\n", srcLine)
 			}
 			if i < len(targetLines) {
-				diff.WriteString(fmt.Sprintf("+%s\n", tgtLine))
+				fmt.Fprintf(&diff, "+%s\n", tgtLine)
 			}
 		}
 	}

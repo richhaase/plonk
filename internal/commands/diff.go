@@ -96,16 +96,18 @@ func runDiff(cmd *cobra.Command, args []string) error {
 				diffErrors = append(diffErrors, status.Name)
 				continue
 			}
-			tmpPath := tmpFile.Name()
+			tmpPath := filepath.Clean(tmpFile.Name())
+			// cleanupTmp removes the temp file on error paths. Path is safe: derived from os.CreateTemp.
+			cleanupTmp := func() { os.Remove(tmpPath) }
 			if _, err := tmpFile.Write(rendered); err != nil {
 				tmpFile.Close()
-				os.Remove(tmpPath)
+				cleanupTmp()
 				fmt.Fprintf(os.Stderr, "Error writing temp file for %s: %v\n", status.Name, err)
 				diffErrors = append(diffErrors, status.Name)
 				continue
 			}
 			if err := tmpFile.Close(); err != nil {
-				os.Remove(tmpPath)
+				cleanupTmp()
 				fmt.Fprintf(os.Stderr, "Error closing temp file for %s: %v\n", status.Name, err)
 				diffErrors = append(diffErrors, status.Name)
 				continue
@@ -121,7 +123,7 @@ func runDiff(cmd *cobra.Command, args []string) error {
 
 		// Clean up temp file immediately after use (not deferred in loop)
 		if sourcePath != status.Source {
-			os.Remove(sourcePath)
+			os.Remove(sourcePath) //nolint:gosec // G703: sourcePath is set from tmpPath (os.CreateTemp), not user input
 		}
 	}
 
