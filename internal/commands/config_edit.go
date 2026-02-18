@@ -145,6 +145,7 @@ func createTempConfigFile(configDir string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	tmpName := filepath.Clean(tempFile.Name())
 
 	// Write header
 	header := `# Plonk Configuration Editor
@@ -153,32 +154,35 @@ func createTempConfigFile(configDir string) (string, error) {
 # - Save and exit to apply, or exit without saving to cancel
 
 `
+	// cleanupTmp removes the temp file on error paths. Path is safe: derived from os.CreateTemp.
+	cleanupTmp := func() { os.Remove(tmpName) }
+
 	if _, err := tempFile.WriteString(header); err != nil {
-		os.Remove(tempFile.Name())
+		cleanupTmp()
 		return "", err
 	}
 
 	if loadErr == nil {
 		if err := writeFullConfig(tempFile, cfg); err != nil {
-			os.Remove(tempFile.Name())
+			cleanupTmp()
 			return "", err
 		}
 	} else {
 		if !os.IsNotExist(loadErr) {
 			raw, readErr := os.ReadFile(configPath)
 			if readErr != nil {
-				os.Remove(tempFile.Name())
+				cleanupTmp()
 				return "", fmt.Errorf("failed to load existing config: %w", loadErr)
 			}
 			useRaw = true
 			if _, err := tempFile.Write(raw); err != nil {
-				os.Remove(tempFile.Name())
+				cleanupTmp()
 				return "", err
 			}
 		} else {
 			defaultCfg := config.LoadWithDefaults(configDir)
 			if err := writeFullConfig(tempFile, defaultCfg); err != nil {
-				os.Remove(tempFile.Name())
+				cleanupTmp()
 				return "", err
 			}
 		}
@@ -186,11 +190,11 @@ func createTempConfigFile(configDir string) (string, error) {
 
 	if useRaw {
 		tempFile.Close()
-		return tempFile.Name(), nil
+		return tmpName, nil
 	}
 
 	tempFile.Close()
-	return tempFile.Name(), nil
+	return tmpName, nil
 }
 
 // writeFullConfig writes the full config to the provided file in YAML format.
@@ -238,7 +242,7 @@ func parseAndValidateConfig(filename string) (*config.Config, error) {
 			if i > 0 {
 				errorMsg.WriteString("\n")
 			}
-			errorMsg.WriteString(fmt.Sprintf("  - %s", err))
+			fmt.Fprintf(&errorMsg, "  - %s", err)
 		}
 		return nil, fmt.Errorf("%s", errorMsg.String())
 	}

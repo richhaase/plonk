@@ -164,7 +164,7 @@ func (t *StandardTableBuilder) Build() string {
 	if len(t.errors) > 0 {
 		output.WriteString("\nErrors:\n")
 		for _, err := range t.errors {
-			output.WriteString(fmt.Sprintf("  %s %s\n", IconError, err))
+			fmt.Fprintf(&output, "  %s %s\n", IconError, err)
 		}
 	}
 

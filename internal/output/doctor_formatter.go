@@ -62,7 +62,7 @@ func (f DoctorFormatter) TableOutput() string {
 		red := color.New(color.FgRed, color.Bold)
 		output.WriteString(red.Sprintf("Overall Status: UNHEALTHY\n"))
 	}
-	output.WriteString(fmt.Sprintf("   %s\n\n", d.Overall.Message))
+	fmt.Fprintf(&output, "   %s\n\n", d.Overall.Message)
 
 	// Group checks by category
 	categories := make(map[string][]HealthCheck)
@@ -74,7 +74,7 @@ func (f DoctorFormatter) TableOutput() string {
 	categoryOrder := []string{"system", "environment", "permissions", "configuration", "package-managers", "installation", "dotfiles"}
 	for _, category := range categoryOrder {
 		if checks, exists := categories[category]; exists {
-			output.WriteString(fmt.Sprintf("## %s\n", titleCase(strings.ReplaceAll(category, "-", " "))))
+			fmt.Fprintf(&output, "## %s\n", titleCase(strings.ReplaceAll(category, "-", " ")))
 
 			for _, check := range checks {
 				// Color-coded status
@@ -101,28 +101,28 @@ func (f DoctorFormatter) TableOutput() string {
 				coloredName := statusColor.Sprintf("### %s", check.Name)
 				coloredStatus := statusColor.Sprintf("**Status**: %s", statusText)
 
-				output.WriteString(fmt.Sprintf("%s\n", coloredName))
-				output.WriteString(fmt.Sprintf("%s\n", coloredStatus))
-				output.WriteString(fmt.Sprintf("**Message**: %s\n", check.Message))
+				fmt.Fprintf(&output, "%s\n", coloredName)
+				fmt.Fprintf(&output, "%s\n", coloredStatus)
+				fmt.Fprintf(&output, "**Message**: %s\n", check.Message)
 
 				if len(check.Details) > 0 {
 					output.WriteString("\n**Details:**\n")
 					for _, detail := range check.Details {
-						output.WriteString(fmt.Sprintf("- %s\n", detail))
+						fmt.Fprintf(&output, "- %s\n", detail)
 					}
 				}
 
 				if len(check.Issues) > 0 {
 					output.WriteString("\n**Issues:**\n")
 					for _, issue := range check.Issues {
-						output.WriteString(fmt.Sprintf("- %s\n", issue))
+						fmt.Fprintf(&output, "- %s\n", issue)
 					}
 				}
 
 				if len(check.Suggestions) > 0 {
 					output.WriteString("\n**Suggestions:**\n")
 					for _, suggestion := range check.Suggestions {
-						output.WriteString(fmt.Sprintf("- %s\n", suggestion))
+						fmt.Fprintf(&output, "- %s\n", suggestion)
 					}
 				}
 

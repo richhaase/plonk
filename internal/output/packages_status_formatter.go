@@ -75,12 +75,12 @@ func (f PackagesStatusFormatter) TableOutput() string {
 	errorCount := len(result.Errors)
 
 	output.WriteString("Summary: ")
-	output.WriteString(fmt.Sprintf("%d managed", managedCount))
+	fmt.Fprintf(&output, "%d managed", managedCount)
 	if missingCount > 0 {
-		output.WriteString(fmt.Sprintf(", %d missing", missingCount))
+		fmt.Fprintf(&output, ", %d missing", missingCount)
 	}
 	if errorCount > 0 {
-		output.WriteString(fmt.Sprintf(", %d errors", errorCount))
+		fmt.Fprintf(&output, ", %d errors", errorCount)
 	}
 	output.WriteString("\n")
 
@@ -89,9 +89,9 @@ func (f PackagesStatusFormatter) TableOutput() string {
 		output.WriteString("\nErrors:\n")
 		for _, item := range result.Errors {
 			if item.Error != "" {
-				output.WriteString(fmt.Sprintf("  ✗ %s: %s\n", item.Name, item.Error))
+				fmt.Fprintf(&output, "  ✗ %s: %s\n", item.Name, item.Error)
 			} else {
-				output.WriteString(fmt.Sprintf("  ✗ %s\n", item.Name))
+				fmt.Fprintf(&output, "  ✗ %s\n", item.Name)
 			}
 		}
 	}
