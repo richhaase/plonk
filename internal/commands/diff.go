@@ -123,7 +123,7 @@ func runDiff(cmd *cobra.Command, args []string) error {
 
 		// Clean up temp file immediately after use (not deferred in loop)
 		if sourcePath != status.Source {
-			os.Remove(sourcePath) //nolint:gosec // G703: sourcePath is set from tmpPath (os.CreateTemp), not user input
+			os.Remove(sourcePath)
 		}
 	}
 
