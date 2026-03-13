@@ -6,6 +6,7 @@ package diagnostics
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -457,16 +458,23 @@ func checkTemplateReadiness() HealthCheck {
 	var missing []string
 	seen := make(map[string]bool)
 
-	// Walk config directory for .tmpl files
-	_ = filepath.Walk(configDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
+	// Walk config directory for .tmpl files using os.Root to prevent symlink traversal
+	root, rootErr := os.OpenRoot(configDir)
+	if rootErr != nil {
+		check.Details = append(check.Details, fmt.Sprintf("Cannot open config directory: %v", rootErr))
+		return check
+	}
+	defer root.Close()
+
+	_ = fs.WalkDir(root.FS(), ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
 			return nil
 		}
-		if !strings.HasSuffix(info.Name(), ".tmpl") {
+		if !strings.HasSuffix(d.Name(), ".tmpl") {
 			return nil
 		}
 
-		content, readErr := os.ReadFile(path)
+		content, readErr := root.ReadFile(path)
 		if readErr != nil {
 			return nil
 		}
