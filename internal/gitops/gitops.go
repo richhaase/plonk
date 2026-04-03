@@ -134,6 +134,48 @@ func (c *Client) Pull(ctx context.Context) error {
 	return nil
 }
 
+// Fetch fetches from the default remote.
+func (c *Client) Fetch(ctx context.Context) error {
+	//nolint:gosec // G204: git args are constant strings, not user input
+	cmd := exec.CommandContext(ctx, "git", "-C", c.dir, "fetch")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git fetch failed: %w\n%s", err, out)
+	}
+	return nil
+}
+
+// RemoteStatus fetches from the remote and returns how the local branch
+// relates to its upstream tracking branch (ahead/behind counts).
+func (c *Client) RemoteStatus(ctx context.Context) (*SyncStatus, error) {
+	if err := c.Fetch(ctx); err != nil {
+		return nil, err
+	}
+
+	//nolint:gosec // G204: git args are constant strings, not user input
+	cmd := exec.CommandContext(ctx, "git", "-C", c.dir, "rev-list", "--count", "--left-right", "HEAD...@{upstream}")
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("git rev-list failed: %w\n%s", err, stderr.String())
+	}
+
+	parts := strings.Fields(strings.TrimSpace(string(out)))
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("unexpected git rev-list output: %q", string(out))
+	}
+
+	var status SyncStatus
+	if _, err := fmt.Sscanf(parts[0], "%d", &status.Ahead); err != nil {
+		return nil, fmt.Errorf("parsing ahead count: %w", err)
+	}
+	if _, err := fmt.Sscanf(parts[1], "%d", &status.Behind); err != nil {
+		return nil, fmt.Errorf("parsing behind count: %w", err)
+	}
+
+	return &status, nil
+}
+
 // CommitMessage builds a commit message from a plonk command and its arguments.
 func CommitMessage(command string, args []string) string {
 	if len(args) == 0 {

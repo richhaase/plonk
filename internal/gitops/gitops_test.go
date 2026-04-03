@@ -266,6 +266,94 @@ func TestSyncStatusString(t *testing.T) {
 	}
 }
 
+func TestFetch(t *testing.T) {
+	// Set up repo with bare remote
+	dir := initTestRepo(t)
+	remoteDir := t.TempDir()
+	run(t, remoteDir, "git", "init", "--bare", "-b", "main")
+	run(t, dir, "git", "remote", "add", "origin", remoteDir)
+	run(t, dir, "git", "push", "-u", "origin", "main")
+
+	client := New(dir)
+	ctx := context.Background()
+
+	if err := client.Fetch(ctx); err != nil {
+		t.Fatalf("Fetch failed: %v", err)
+	}
+}
+
+func TestRemoteStatusUpToDate(t *testing.T) {
+	dir := initTestRepo(t)
+	remoteDir := t.TempDir()
+	run(t, remoteDir, "git", "init", "--bare", "-b", "main")
+	run(t, dir, "git", "remote", "add", "origin", remoteDir)
+	run(t, dir, "git", "push", "-u", "origin", "main")
+
+	client := New(dir)
+	ctx := context.Background()
+
+	status, err := client.RemoteStatus(ctx)
+	if err != nil {
+		t.Fatalf("RemoteStatus failed: %v", err)
+	}
+	if status.Ahead != 0 || status.Behind != 0 {
+		t.Errorf("expected up to date, got ahead=%d behind=%d", status.Ahead, status.Behind)
+	}
+}
+
+func TestRemoteStatusAhead(t *testing.T) {
+	dir := initTestRepo(t)
+	remoteDir := t.TempDir()
+	run(t, remoteDir, "git", "init", "--bare", "-b", "main")
+	run(t, dir, "git", "remote", "add", "origin", remoteDir)
+	run(t, dir, "git", "push", "-u", "origin", "main")
+
+	// Make a local commit without pushing
+	if err := os.WriteFile(filepath.Join(dir, "local"), []byte("data"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	run(t, dir, "git", "add", "-A")
+	run(t, dir, "git", "commit", "-m", "local commit")
+
+	client := New(dir)
+	status, err := client.RemoteStatus(context.Background())
+	if err != nil {
+		t.Fatalf("RemoteStatus failed: %v", err)
+	}
+	if status.Ahead != 1 || status.Behind != 0 {
+		t.Errorf("expected ahead=1 behind=0, got ahead=%d behind=%d", status.Ahead, status.Behind)
+	}
+}
+
+func TestRemoteStatusBehind(t *testing.T) {
+	dir := initTestRepo(t)
+	remoteDir := t.TempDir()
+	run(t, remoteDir, "git", "init", "--bare", "-b", "main")
+	run(t, dir, "git", "remote", "add", "origin", remoteDir)
+	run(t, dir, "git", "push", "-u", "origin", "main")
+
+	// Clone, commit, push from a second checkout to simulate remote changes
+	cloneDir := filepath.Join(t.TempDir(), "clone")
+	run(t, ".", "git", "clone", remoteDir, cloneDir)
+	if err := os.WriteFile(filepath.Join(cloneDir, "remote-file"), []byte("data"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	run(t, cloneDir, "git", "add", "-A")
+	run(t, cloneDir, "git", "config", "user.email", "test@test.com")
+	run(t, cloneDir, "git", "config", "user.name", "Test")
+	run(t, cloneDir, "git", "commit", "-m", "remote commit")
+	run(t, cloneDir, "git", "push")
+
+	client := New(dir)
+	status, err := client.RemoteStatus(context.Background())
+	if err != nil {
+		t.Fatalf("RemoteStatus failed: %v", err)
+	}
+	if status.Ahead != 0 || status.Behind != 1 {
+		t.Errorf("expected ahead=0 behind=1, got ahead=%d behind=%d", status.Ahead, status.Behind)
+	}
+}
+
 func TestCommitMessage(t *testing.T) {
 	tests := []struct {
 		command string
