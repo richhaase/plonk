@@ -117,13 +117,7 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 	}
 	output.WriteString("\n")
 
-	// If no output was generated (except for title), show helpful message
-	titleOnly := "Dotfiles Status\n===============\n\n"
-	if f.Data.RemoteSync != "" {
-		titleOnly += fmt.Sprintf("Remote: %s\n\n", f.Data.RemoteSync)
-	}
-	outputStr := output.String()
-	if outputStr == titleOnly {
+	if len(result.Managed) == 0 && len(result.Missing) == 0 && len(result.Errors) == 0 {
 		output.Reset()
 		WriteTitle(&output, "Dotfiles Status")
 		WriteRemoteSync(&output, f.Data.RemoteSync)

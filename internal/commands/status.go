@@ -64,7 +64,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	}
 
 	// Get package status from lock file
-	ctx := context.Background()
+	ctx := cmd.Context()
 	remoteSync := getRemoteSyncStatus(ctx, configDir)
 	packageResult, err := getPackageStatus(ctx, configDir)
 	if err != nil {

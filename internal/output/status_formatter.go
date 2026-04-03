@@ -145,7 +145,10 @@ func (f StatusFormatter) TableOutput() string {
 	writeSummaryLine(&output, s.StateSummary, driftedCount)
 	writeDomainErrors(&output, s.StateSummary.Results)
 
-	if output.String() == "Plonk Status\n============\n\n" {
+	if s.StateSummary.TotalManaged == 0 && s.StateSummary.TotalMissing == 0 && s.StateSummary.TotalErrors == 0 {
+		output.Reset()
+		WriteTitle(&output, "Plonk Status")
+		WriteRemoteSync(&output, s.RemoteSync)
 		output.WriteString("No managed items.\n")
 	}
 

@@ -4,8 +4,6 @@
 package commands
 
 import (
-	"context"
-
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/output"
 	"github.com/spf13/cobra"
@@ -35,7 +33,7 @@ func init() {
 func runPackages(cmd *cobra.Command, args []string) error {
 	// Get directories
 	configDir := config.GetDefaultConfigDirectory()
-	ctx := context.Background()
+	ctx := cmd.Context()
 	remoteSync := getRemoteSyncStatus(ctx, configDir)
 
 	// Get package status from lock file

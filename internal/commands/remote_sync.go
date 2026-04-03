@@ -5,13 +5,16 @@ package commands
 
 import (
 	"context"
+	"time"
 
 	"github.com/richhaase/plonk/internal/gitops"
 )
 
+const fetchTimeout = 10 * time.Second
+
 // getRemoteSyncStatus fetches from the remote and returns a human-readable
 // sync status string. Returns "" if not a git repo, no remote is configured,
-// or no upstream tracking branch exists (graceful degradation).
+// no upstream tracking branch exists, or the fetch times out (graceful degradation).
 func getRemoteSyncStatus(ctx context.Context, configDir string) string {
 	client := gitops.New(configDir)
 	if !client.IsRepo() {
@@ -23,7 +26,10 @@ func getRemoteSyncStatus(ctx context.Context, configDir string) string {
 		return ""
 	}
 
-	status, err := client.RemoteStatus(ctx)
+	fetchCtx, cancel := context.WithTimeout(ctx, fetchTimeout)
+	defer cancel()
+
+	status, err := client.RemoteStatus(fetchCtx)
 	if err != nil {
 		return ""
 	}
