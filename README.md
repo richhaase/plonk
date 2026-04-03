@@ -50,7 +50,7 @@ plonk rm ~/.vimrc                     # Stop tracking (doesn't delete)
 # Sync
 plonk apply                           # Install missing packages, deploy dotfiles
 plonk apply --dry-run                 # Preview changes
-plonk status                          # Show managed items
+plonk status                          # Show managed items + remote sync status
 plonk diff                            # Show modified dotfiles
 
 # Git
@@ -72,6 +72,7 @@ If you're upgrading from older releases:
   - Disable with `git.auto_commit: false` in `plonk.yaml`.
   - If `$PLONK_DIR` is not a git repo, plonk warns and skips git operations.
 - **New in v0.27**: `plonk push` and `plonk pull` commands for syncing your dotfiles repo.
+- **New in v0.28**: `plonk status`, `plonk packages`, and `plonk dotfiles` now show remote sync status (ahead/behind) when a remote is configured.
 - `plonk install`/`uninstall`/`upgrade` were removed (v0.26).
   - Use your package manager directly, then `plonk track` / `plonk untrack`.
 - Supported managers: `brew`, `cargo`, `go`, `pnpm`, `uv`.
