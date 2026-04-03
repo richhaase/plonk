@@ -162,7 +162,7 @@ func (c *Client) RemoteStatus(ctx context.Context) (*SyncStatus, error) {
 		return nil, err
 	}
 	if !hasUpstream {
-		return nil, fmt.Errorf("no upstream tracking branch configured")
+		return nil, nil
 	}
 
 	if err := c.Fetch(ctx); err != nil {

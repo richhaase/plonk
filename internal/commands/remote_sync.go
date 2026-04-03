@@ -30,7 +30,7 @@ func getRemoteSyncStatus(ctx context.Context, configDir string) string {
 	defer cancel()
 
 	status, err := client.RemoteStatus(fetchCtx)
-	if err != nil {
+	if err != nil || status == nil {
 		return ""
 	}
 
