@@ -10,7 +10,7 @@ import (
 	"github.com/richhaase/plonk/internal/gitops"
 )
 
-const fetchTimeout = 10 * time.Second
+const fetchTimeout = 5 * time.Second
 
 // getRemoteSyncStatus fetches from the remote and returns a human-readable
 // sync status string. Returns "" if not a git repo, no remote is configured,
