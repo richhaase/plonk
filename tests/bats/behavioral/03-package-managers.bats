@@ -273,7 +273,7 @@ EOF
 
   run plonk packages
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Errors:"* ]]
+  [[ "$output" == *"package errors:"* ]]
   [[ "$output" == *"unsupported manager"* ]]
 }
 

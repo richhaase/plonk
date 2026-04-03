@@ -243,6 +243,117 @@ func TestPushPull(t *testing.T) {
 	}
 }
 
+func TestSyncStatusString(t *testing.T) {
+	tests := []struct {
+		name   string
+		status SyncStatus
+		want   string
+	}{
+		{"up to date", SyncStatus{Ahead: 0, Behind: 0}, "up to date"},
+		{"ahead by 1", SyncStatus{Ahead: 1, Behind: 0}, "ahead by 1 commit (run plonk push)"},
+		{"ahead by 3", SyncStatus{Ahead: 3, Behind: 0}, "ahead by 3 commits (run plonk push)"},
+		{"behind by 1", SyncStatus{Ahead: 0, Behind: 1}, "behind by 1 commit (run plonk pull)"},
+		{"behind by 5", SyncStatus{Ahead: 0, Behind: 5}, "behind by 5 commits (run plonk pull)"},
+		{"diverged", SyncStatus{Ahead: 2, Behind: 3}, "diverged (ahead 2, behind 3)"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.status.String()
+			if got != tt.want {
+				t.Errorf("SyncStatus.String() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFetch(t *testing.T) {
+	// Set up repo with bare remote
+	dir := initTestRepo(t)
+	remoteDir := t.TempDir()
+	run(t, remoteDir, "git", "init", "--bare", "-b", "main")
+	run(t, dir, "git", "remote", "add", "origin", remoteDir)
+	run(t, dir, "git", "push", "-u", "origin", "main")
+
+	client := New(dir)
+	ctx := context.Background()
+
+	if err := client.Fetch(ctx); err != nil {
+		t.Fatalf("Fetch failed: %v", err)
+	}
+}
+
+func TestRemoteStatusUpToDate(t *testing.T) {
+	dir := initTestRepo(t)
+	remoteDir := t.TempDir()
+	run(t, remoteDir, "git", "init", "--bare", "-b", "main")
+	run(t, dir, "git", "remote", "add", "origin", remoteDir)
+	run(t, dir, "git", "push", "-u", "origin", "main")
+
+	client := New(dir)
+	ctx := context.Background()
+
+	status, err := client.RemoteStatus(ctx)
+	if err != nil {
+		t.Fatalf("RemoteStatus failed: %v", err)
+	}
+	if status.Ahead != 0 || status.Behind != 0 {
+		t.Errorf("expected up to date, got ahead=%d behind=%d", status.Ahead, status.Behind)
+	}
+}
+
+func TestRemoteStatusAhead(t *testing.T) {
+	dir := initTestRepo(t)
+	remoteDir := t.TempDir()
+	run(t, remoteDir, "git", "init", "--bare", "-b", "main")
+	run(t, dir, "git", "remote", "add", "origin", remoteDir)
+	run(t, dir, "git", "push", "-u", "origin", "main")
+
+	// Make a local commit without pushing
+	if err := os.WriteFile(filepath.Join(dir, "local"), []byte("data"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	run(t, dir, "git", "add", "-A")
+	run(t, dir, "git", "commit", "-m", "local commit")
+
+	client := New(dir)
+	status, err := client.RemoteStatus(context.Background())
+	if err != nil {
+		t.Fatalf("RemoteStatus failed: %v", err)
+	}
+	if status.Ahead != 1 || status.Behind != 0 {
+		t.Errorf("expected ahead=1 behind=0, got ahead=%d behind=%d", status.Ahead, status.Behind)
+	}
+}
+
+func TestRemoteStatusBehind(t *testing.T) {
+	dir := initTestRepo(t)
+	remoteDir := t.TempDir()
+	run(t, remoteDir, "git", "init", "--bare", "-b", "main")
+	run(t, dir, "git", "remote", "add", "origin", remoteDir)
+	run(t, dir, "git", "push", "-u", "origin", "main")
+
+	// Clone, commit, push from a second checkout to simulate remote changes
+	cloneDir := filepath.Join(t.TempDir(), "clone")
+	run(t, ".", "git", "clone", remoteDir, cloneDir)
+	if err := os.WriteFile(filepath.Join(cloneDir, "remote-file"), []byte("data"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	run(t, cloneDir, "git", "add", "-A")
+	run(t, cloneDir, "git", "config", "user.email", "test@test.com")
+	run(t, cloneDir, "git", "config", "user.name", "Test")
+	run(t, cloneDir, "git", "commit", "-m", "remote commit")
+	run(t, cloneDir, "git", "push")
+
+	client := New(dir)
+	status, err := client.RemoteStatus(context.Background())
+	if err != nil {
+		t.Fatalf("RemoteStatus failed: %v", err)
+	}
+	if status.Ahead != 0 || status.Behind != 1 {
+		t.Errorf("expected ahead=0 behind=1, got ahead=%d behind=%d", status.Ahead, status.Behind)
+	}
+}
+
 func TestCommitMessage(t *testing.T) {
 	tests := []struct {
 		command string

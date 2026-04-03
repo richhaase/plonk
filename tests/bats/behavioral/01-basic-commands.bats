@@ -17,13 +17,13 @@ setup() {
 @test "plonk status works with empty config" {
   run plonk status
   assert_success
-  assert_output --partial "0 managed"
+  assert_output --partial "No managed items."
 }
 
 @test "plonk st alias works" {
   run plonk st
   assert_success
-  assert_output --partial "0 managed"
+  assert_output --partial "No managed items."
 }
 
 @test "help for specific command works" {

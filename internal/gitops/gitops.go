@@ -12,6 +12,34 @@ import (
 	"strings"
 )
 
+// SyncStatus represents how the local branch relates to its upstream tracking branch.
+type SyncStatus struct {
+	Ahead  int
+	Behind int
+}
+
+// String returns a human-readable description of the sync state.
+func (s SyncStatus) String() string {
+	switch {
+	case s.Ahead == 0 && s.Behind == 0:
+		return "up to date"
+	case s.Behind == 0:
+		noun := "commits"
+		if s.Ahead == 1 {
+			noun = "commit"
+		}
+		return fmt.Sprintf("ahead by %d %s (run plonk push)", s.Ahead, noun)
+	case s.Ahead == 0:
+		noun := "commits"
+		if s.Behind == 1 {
+			noun = "commit"
+		}
+		return fmt.Sprintf("behind by %d %s (run plonk pull)", s.Behind, noun)
+	default:
+		return fmt.Sprintf("diverged (ahead %d, behind %d)", s.Ahead, s.Behind)
+	}
+}
+
 // Client wraps git CLI operations on a specific directory.
 type Client struct {
 	dir string
@@ -104,6 +132,66 @@ func (c *Client) Pull(ctx context.Context) error {
 		return fmt.Errorf("git pull failed: %w\n%s", err, out)
 	}
 	return nil
+}
+
+// Fetch fetches from the default remote.
+func (c *Client) Fetch(ctx context.Context) error {
+	//nolint:gosec // G204: git args are constant strings, not user input
+	cmd := exec.CommandContext(ctx, "git", "-C", c.dir, "fetch")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("git fetch failed: %w\n%s", err, out)
+	}
+	return nil
+}
+
+// HasUpstream returns true if the current branch has an upstream tracking branch configured.
+func (c *Client) HasUpstream(ctx context.Context) (bool, error) {
+	//nolint:gosec // G204: git args are constant strings, not user input
+	cmd := exec.CommandContext(ctx, "git", "-C", c.dir, "rev-parse", "--abbrev-ref", "@{upstream}")
+	if err := cmd.Run(); err != nil {
+		return false, nil
+	}
+	return true, nil
+}
+
+// RemoteStatus fetches from the remote and returns how the local branch
+// relates to its upstream tracking branch (ahead/behind counts).
+func (c *Client) RemoteStatus(ctx context.Context) (*SyncStatus, error) {
+	hasUpstream, err := c.HasUpstream(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !hasUpstream {
+		return nil, nil
+	}
+
+	if err := c.Fetch(ctx); err != nil {
+		return nil, err
+	}
+
+	//nolint:gosec // G204: git args are constant strings, not user input
+	cmd := exec.CommandContext(ctx, "git", "-C", c.dir, "rev-list", "--count", "--left-right", "HEAD...@{upstream}")
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("git rev-list failed: %w\n%s", err, stderr.String())
+	}
+
+	parts := strings.Fields(strings.TrimSpace(string(out)))
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("unexpected git rev-list output: %q", string(out))
+	}
+
+	var status SyncStatus
+	if _, err := fmt.Sscanf(parts[0], "%d", &status.Ahead); err != nil {
+		return nil, fmt.Errorf("parsing ahead count: %w", err)
+	}
+	if _, err := fmt.Sscanf(parts[1], "%d", &status.Behind); err != nil {
+		return nil, fmt.Errorf("parsing behind count: %w", err)
+	}
+
+	return &status, nil
 }
 
 // CommitMessage builds a commit message from a plonk command and its arguments.
