@@ -4,6 +4,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -41,6 +42,8 @@ func runDotfiles(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("cannot determine home directory: %w", err)
 	}
 	configDir := config.GetDefaultConfigDirectory()
+	ctx := context.Background()
+	remoteSync := getRemoteSyncStatus(ctx, configDir)
 
 	// Load configuration
 	cfg := config.LoadWithDefaults(configDir)
@@ -64,9 +67,10 @@ func runDotfiles(cmd *cobra.Command, args []string) error {
 
 	// Prepare output
 	outputData := output.DotfilesStatusOutput{
-		Result:    outputResult,
-		ConfigDir: configDir,
-		HomeDir:   homeDir,
+		RemoteSync: remoteSync,
+		Result:     outputResult,
+		ConfigDir:  configDir,
+		HomeDir:    homeDir,
 	}
 
 	// Create formatter and render
