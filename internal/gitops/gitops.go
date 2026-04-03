@@ -12,6 +12,34 @@ import (
 	"strings"
 )
 
+// SyncStatus represents how the local branch relates to its upstream tracking branch.
+type SyncStatus struct {
+	Ahead  int
+	Behind int
+}
+
+// String returns a human-readable description of the sync state.
+func (s SyncStatus) String() string {
+	switch {
+	case s.Ahead == 0 && s.Behind == 0:
+		return "up to date"
+	case s.Behind == 0:
+		noun := "commits"
+		if s.Ahead == 1 {
+			noun = "commit"
+		}
+		return fmt.Sprintf("ahead by %d %s (run plonk push)", s.Ahead, noun)
+	case s.Ahead == 0:
+		noun := "commits"
+		if s.Behind == 1 {
+			noun = "commit"
+		}
+		return fmt.Sprintf("behind by %d %s (run plonk pull)", s.Behind, noun)
+	default:
+		return fmt.Sprintf("diverged (ahead %d, behind %d)", s.Ahead, s.Behind)
+	}
+}
+
 // Client wraps git CLI operations on a specific directory.
 type Client struct {
 	dir string

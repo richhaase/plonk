@@ -243,6 +243,29 @@ func TestPushPull(t *testing.T) {
 	}
 }
 
+func TestSyncStatusString(t *testing.T) {
+	tests := []struct {
+		name   string
+		status SyncStatus
+		want   string
+	}{
+		{"up to date", SyncStatus{Ahead: 0, Behind: 0}, "up to date"},
+		{"ahead by 1", SyncStatus{Ahead: 1, Behind: 0}, "ahead by 1 commit (run plonk push)"},
+		{"ahead by 3", SyncStatus{Ahead: 3, Behind: 0}, "ahead by 3 commits (run plonk push)"},
+		{"behind by 1", SyncStatus{Ahead: 0, Behind: 1}, "behind by 1 commit (run plonk pull)"},
+		{"behind by 5", SyncStatus{Ahead: 0, Behind: 5}, "behind by 5 commits (run plonk pull)"},
+		{"diverged", SyncStatus{Ahead: 2, Behind: 3}, "diverged (ahead 2, behind 3)"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.status.String()
+			if got != tt.want {
+				t.Errorf("SyncStatus.String() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestCommitMessage(t *testing.T) {
 	tests := []struct {
 		command string
