@@ -10,7 +10,8 @@ import (
 
 // PackagesStatusOutput represents the output structure for packages status command
 type PackagesStatusOutput struct {
-	Result Result `json:"result" yaml:"result"`
+	Result     Result `json:"result" yaml:"result"`
+	RemoteSync string `json:"remote_sync,omitempty" yaml:"remote_sync,omitempty"`
 }
 
 // PackagesStatusFormatter formats packages status output
@@ -28,8 +29,8 @@ func (f PackagesStatusFormatter) TableOutput() string {
 	var output strings.Builder
 	result := f.Data.Result
 
-	output.WriteString("Packages Status\n")
-	output.WriteString("===============\n\n")
+	WriteTitle(&output, "Packages Status")
+	WriteRemoteSync(&output, f.Data.RemoteSync)
 
 	// Group packages by manager
 	packagesByManager := make(map[string][]Item)
@@ -84,24 +85,18 @@ func (f PackagesStatusFormatter) TableOutput() string {
 	}
 	output.WriteString("\n")
 
-	// Show errors if any
-	if len(result.Errors) > 0 {
-		output.WriteString("\nErrors:\n")
-		for _, item := range result.Errors {
-			if item.Error != "" {
-				fmt.Fprintf(&output, "  ✗ %s: %s\n", item.Name, item.Error)
-			} else {
-				fmt.Fprintf(&output, "  ✗ %s\n", item.Name)
-			}
-		}
-	}
+	WriteErrors(&output, "package", result.Errors)
 
 	// If no output was generated (except for title), show helpful message
+	titleOnly := "Packages Status\n===============\n\n"
+	if f.Data.RemoteSync != "" {
+		titleOnly += fmt.Sprintf("Remote: %s\n\n", f.Data.RemoteSync)
+	}
 	outputStr := output.String()
-	if outputStr == "Packages Status\n===============\n\n" || outputStr == "" {
+	if outputStr == titleOnly {
 		output.Reset()
-		output.WriteString("Packages Status\n")
-		output.WriteString("===============\n\n")
+		WriteTitle(&output, "Packages Status")
+		WriteRemoteSync(&output, f.Data.RemoteSync)
 		output.WriteString("No managed packages.\n")
 	}
 

@@ -59,6 +59,7 @@ type StatusOutput struct {
 	ConfigExists bool    `json:"config_exists" yaml:"config_exists"`
 	ConfigValid  bool    `json:"config_valid" yaml:"config_valid"`
 	LockExists   bool    `json:"lock_exists" yaml:"lock_exists"`
+	RemoteSync   string  `json:"remote_sync,omitempty" yaml:"remote_sync,omitempty"`
 	StateSummary Summary `json:"state_summary" yaml:"state_summary"`
 	ConfigDir    string  `json:"-" yaml:"-"` // Not included in JSON/YAML output
 	HomeDir      string  `json:"-" yaml:"-"` // Not included in JSON/YAML output
@@ -71,6 +72,7 @@ type StatusOutputSummary struct {
 	ConfigExists bool    `json:"config_exists" yaml:"config_exists"`
 	ConfigValid  bool    `json:"config_valid" yaml:"config_valid"`
 	LockExists   bool    `json:"lock_exists" yaml:"lock_exists"`
+	RemoteSync   string  `json:"remote_sync,omitempty" yaml:"remote_sync,omitempty"`
 	StateSummary Summary `json:"state_summary" yaml:"state_summary"`
 }
 
@@ -129,7 +131,8 @@ func (f StatusFormatter) TableOutput() string {
 	s := f.Data
 	var output strings.Builder
 
-	writeStatusTitle(&output)
+	WriteTitle(&output, "Plonk Status")
+	WriteRemoteSync(&output, s.RemoteSync)
 
 	if packageResult := findResultByDomain(s.StateSummary.Results, "package"); packageResult != nil {
 		writePackagesTable(&output, *packageResult)
@@ -147,11 +150,6 @@ func (f StatusFormatter) TableOutput() string {
 	}
 
 	return output.String()
-}
-
-func writeStatusTitle(output *strings.Builder) {
-	output.WriteString("Plonk Status\n")
-	output.WriteString("============\n\n")
 }
 
 func findResultByDomain(results []Result, domain string) *Result {
@@ -291,6 +289,7 @@ func (f StatusFormatter) StructuredData() any {
 		ConfigExists: s.ConfigExists,
 		ConfigValid:  s.ConfigValid,
 		LockExists:   s.LockExists,
+		RemoteSync:   s.RemoteSync,
 		StateSummary: sanitizeSummary(s.StateSummary),
 	}
 }

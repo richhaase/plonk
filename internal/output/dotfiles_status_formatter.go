@@ -10,9 +10,10 @@ import (
 
 // DotfilesStatusOutput represents the output structure for dotfiles status command
 type DotfilesStatusOutput struct {
-	Result    Result `json:"result" yaml:"result"`
-	ConfigDir string `json:"-" yaml:"-"` // Not included in JSON/YAML output
-	HomeDir   string `json:"-" yaml:"-"` // Not included in JSON/YAML output
+	Result     Result `json:"result" yaml:"result"`
+	RemoteSync string `json:"remote_sync,omitempty" yaml:"remote_sync,omitempty"`
+	ConfigDir  string `json:"-" yaml:"-"` // Not included in JSON/YAML output
+	HomeDir    string `json:"-" yaml:"-"` // Not included in JSON/YAML output
 }
 
 // DotfilesStatusFormatter formats dotfiles status output
@@ -30,8 +31,8 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 	var output strings.Builder
 	result := f.Data.Result
 
-	output.WriteString("Dotfiles Status\n")
-	output.WriteString("===============\n\n")
+	WriteTitle(&output, "Dotfiles Status")
+	WriteRemoteSync(&output, f.Data.RemoteSync)
 
 	// Include managed, missing, and error items
 	// Drifted files are already in Managed with State==StateDegraded
@@ -117,11 +118,15 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 	output.WriteString("\n")
 
 	// If no output was generated (except for title), show helpful message
+	titleOnly := "Dotfiles Status\n===============\n\n"
+	if f.Data.RemoteSync != "" {
+		titleOnly += fmt.Sprintf("Remote: %s\n\n", f.Data.RemoteSync)
+	}
 	outputStr := output.String()
-	if outputStr == "Dotfiles Status\n===============\n\n" || outputStr == "" {
+	if outputStr == titleOnly {
 		output.Reset()
-		output.WriteString("Dotfiles Status\n")
-		output.WriteString("===============\n\n")
+		WriteTitle(&output, "Dotfiles Status")
+		WriteRemoteSync(&output, f.Data.RemoteSync)
 		output.WriteString("No managed dotfiles.\n")
 	}
 
