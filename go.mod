@@ -7,7 +7,7 @@ require (
 	github.com/go-git/go-git/v5 v5.17.2
 	github.com/go-playground/validator/v10 v10.30.2
 	github.com/golangci/golangci-lint/v2 v2.11.4
-	github.com/mattn/go-isatty v0.0.20
+	github.com/mattn/go-isatty v0.0.21
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/text v0.35.0
