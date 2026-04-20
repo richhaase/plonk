@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/fatih/color v1.19.0
-	github.com/go-git/go-git/v5 v5.17.2
+	github.com/go-git/go-git/v5 v5.18.0
 	github.com/go-playground/validator/v10 v10.30.2
 	github.com/golangci/golangci-lint/v2 v2.11.4
 	github.com/mattn/go-isatty v0.0.20
