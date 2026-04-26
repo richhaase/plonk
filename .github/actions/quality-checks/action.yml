@@ -33,12 +33,12 @@ runs:
 
     - name: Run security checks
       if: ${{ inputs.run-security == 'true' }}
-      run: just security
+      run: make security
       shell: bash
 
     - name: Test build
       if: ${{ inputs.test-build == 'true' }}
-      run: just build
+      run: make build
       shell: bash
 
     - name: Verify quality checks

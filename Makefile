@@ -1,6 +1,6 @@
 # Plonk development tasks
 
-.PHONY: help build install test lint test-bats test-coverage clean dev-setup find-dead-code docker-build docker-test docker-test-smoke docker-test-file docker-verify docker-shell docker-clean docker-test-all
+.PHONY: help build install test lint test-bats test-coverage test-coverage-ci security precommit clean dev-setup find-dead-code docker-build docker-test docker-test-smoke docker-test-file docker-verify docker-shell docker-clean docker-test-all
 
 # Show available targets
 help:
@@ -11,6 +11,9 @@ help:
 	@echo "  lint             - Run golangci-lint"
 	@echo "  test-bats        - Run BATS behavioral tests locally"
 	@echo "  test-coverage    - Run tests with coverage"
+	@echo "  test-coverage-ci - Run tests with CI coverage output"
+	@echo "  security         - Run vulnerability and security checks"
+	@echo "  precommit        - Run pre-commit hooks"
 	@echo "  clean            - Clean build artifacts and test cache"
 	@echo "  dev-setup        - Setup development environment"
 	@echo "  find-dead-code   - Find dead code"
@@ -85,6 +88,28 @@ test-coverage:
 	@awk 'END{printf "Total coverage (normalized): %s\n", $$3}' coverage.txt
 	@go tool cover -html=coverage.out -o coverage.html
 	@echo "Unit tests passed! Coverage report: coverage.html (see also coverage.txt)"
+
+# Run tests with coverage for CI
+test-coverage-ci:
+	@echo "Running unit tests with CI coverage..."
+	@go test -covermode=atomic -coverprofile=coverage.out ./...
+	@go tool cover -func=coverage.out > coverage.txt
+	@awk 'END{printf "Total coverage: %s\n", $$3}' coverage.txt
+	@echo "Unit tests passed! Coverage report: coverage.txt"
+
+# Run vulnerability and security checks
+security:
+	@echo "Checking for vulnerabilities in dependencies..."
+	@go run golang.org/x/vuln/cmd/govulncheck ./...
+	@echo "Running security analysis..."
+	@go run github.com/securego/gosec/v2/cmd/gosec ./...
+	@echo "Security checks passed!"
+
+# Run pre-commit hooks
+precommit:
+	@echo "Running pre-commit hooks..."
+	@pre-commit run --all-files
+	@echo "Pre-commit hooks passed!"
 
 # Clean build artifacts and test cache
 clean:
