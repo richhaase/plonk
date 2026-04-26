@@ -34,8 +34,8 @@ Fixes #(issue number)
 <!-- Provide details about testing -->
 ```bash
 # Commands used to test
-just test
-just precommit
+make test
+make precommit
 ```
 
 ## Documentation

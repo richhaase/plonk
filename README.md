@@ -173,7 +173,7 @@ See [docs/reference.md](docs/reference.md) for all options.
 ```bash
 git clone https://github.com/richhaase/plonk
 cd plonk
-just dev-setup && go test ./...
+make dev-setup && go test ./...
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for details.

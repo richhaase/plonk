@@ -5,12 +5,12 @@
 ```bash
 git clone https://github.com/richhaase/plonk.git
 cd plonk
-just dev-setup
+make dev-setup
 go test ./...
-just install
+make install
 ```
 
-**Requirements:** Go 1.23+, Homebrew, Git, just (`brew install just`)
+**Requirements:** Go 1.23+, Homebrew, Git, Make
 
 ## Project Structure
 
@@ -37,10 +37,10 @@ See [docs/internals.md](docs/internals.md) for architecture details.
 ## Development Tasks
 
 ```bash
-just build        # Build to bin/plonk
-just install      # Install to system
-just test         # Run tests
-just lint         # Run linters
+make build        # Build to bin/plonk
+make install      # Install to system
+make test         # Run tests
+make lint         # Run linters
 ```
 
 ## Testing
@@ -104,7 +104,7 @@ To add a new one:
 
 1. Fork and create a feature branch
 2. Make changes with tests
-3. Run `go test ./...` and `just lint`
+3. Run `go test ./...` and `make lint`
 4. Submit PR with clear description
 
 ### Commit Messages
