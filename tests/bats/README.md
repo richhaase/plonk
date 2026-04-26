@@ -6,19 +6,19 @@
 
 ```bash
 # Build Docker image and run all tests
-just docker-test-all
+make docker-test-all
 
 # Run all tests (if image already built)
-just docker-test
+make docker-test
 
 # Run smoke tests only (fast verification)
-just docker-test-smoke
+make docker-test-smoke
 
 # Run specific test file
-just docker-test-file tests/bats/behavioral/02-package-install.bats
+make docker-test-file file=tests/bats/behavioral/02-package-install.bats
 
 # Interactive shell for debugging
-just docker-shell
+make docker-shell
 ```
 
 ---
