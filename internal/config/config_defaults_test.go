@@ -22,8 +22,7 @@ func TestApplyDefaults(t *testing.T) {
 			expected: &Config{
 				DefaultManager:    "brew",
 				OperationTimeout:  300, // 5 minutes
-				PackageTimeout:    180, // 3 minutes
-				DotfileTimeout:    60,  // 1 minute
+				DotfileTimeout:    60, // 1 minute
 				ExpandDirectories: []string{".config"},
 				IgnorePatterns:    defaultConfig.IgnorePatterns,
 			},
@@ -37,8 +36,7 @@ func TestApplyDefaults(t *testing.T) {
 			expected: &Config{
 				DefaultManager:    "npm",
 				OperationTimeout:  60,  // 1 minute
-				PackageTimeout:    180, // 3 minutes
-				DotfileTimeout:    60,  // 1 minute
+				DotfileTimeout:    60, // 1 minute
 				ExpandDirectories: []string{".config"},
 				IgnorePatterns:    defaultConfig.IgnorePatterns,
 			},
@@ -52,8 +50,7 @@ func TestApplyDefaults(t *testing.T) {
 			expected: &Config{
 				DefaultManager:    "brew",
 				OperationTimeout:  300, // 5 minutes
-				PackageTimeout:    180, // 3 minutes
-				DotfileTimeout:    60,  // 1 minute
+				DotfileTimeout:    60, // 1 minute
 				ExpandDirectories: []string{"custom-dir"},
 				IgnorePatterns:    []string{"custom.txt"},
 			},
@@ -62,17 +59,15 @@ func TestApplyDefaults(t *testing.T) {
 			name: "all values set preserves everything",
 			input: &Config{
 				DefaultManager:    "cargo",
-				OperationTimeout:  300,  // 5 minutes
-				PackageTimeout:    1200, // 20 minutes
-				DotfileTimeout:    60,   // 1 minute
+				OperationTimeout:  300, // 5 minutes
+				DotfileTimeout:    60,  // 1 minute
 				ExpandDirectories: []string{"my-config"},
 				IgnorePatterns:    []string{"*.bak"},
 			},
 			expected: &Config{
 				DefaultManager:    "cargo",
-				OperationTimeout:  300,  // 5 minutes
-				PackageTimeout:    1200, // 20 minutes
-				DotfileTimeout:    60,   // 1 minute
+				OperationTimeout:  300, // 5 minutes
+				DotfileTimeout:    60,  // 1 minute
 				ExpandDirectories: []string{"my-config"},
 				IgnorePatterns:    []string{"*.bak"},
 			},

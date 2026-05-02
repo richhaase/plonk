@@ -29,7 +29,6 @@ type GitConfig struct {
 type Config struct {
 	DefaultManager    string                   `yaml:"default_manager,omitempty" validate:"omitempty,validmanager"`
 	OperationTimeout  int                      `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"`
-	PackageTimeout    int                      `yaml:"package_timeout,omitempty" validate:"omitempty,min=0,max=1800"`
 	DotfileTimeout    int                      `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`
 	ExpandDirectories []string                 `yaml:"expand_directories,omitempty"`
 	IgnorePatterns    []string                 `yaml:"ignore_patterns,omitempty"`
@@ -56,7 +55,6 @@ type Dotfiles struct {
 var defaultConfig = Config{
 	DefaultManager:   "brew",
 	OperationTimeout: 300, // 5 minutes
-	PackageTimeout:   180, // 3 minutes
 	DotfileTimeout:   60,  // 1 minute
 	ExpandDirectories: []string{
 		".config",
@@ -239,9 +237,6 @@ func ApplyDefaults(cfg *Config) {
 	}
 	if cfg.OperationTimeout == 0 {
 		cfg.OperationTimeout = defaultConfig.OperationTimeout
-	}
-	if cfg.PackageTimeout == 0 {
-		cfg.PackageTimeout = defaultConfig.PackageTimeout
 	}
 	if cfg.DotfileTimeout == 0 {
 		cfg.DotfileTimeout = defaultConfig.DotfileTimeout

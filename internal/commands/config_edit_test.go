@@ -115,7 +115,6 @@ func TestConfigEditRoundTripPreservesTopLevelFields(t *testing.T) {
 	configContent := `
 default_manager: cargo
 operation_timeout: 600
-package_timeout: 200
 dotfile_timeout: 90
 expand_directories:
   - ".config"
@@ -145,7 +144,6 @@ ignore_patterns:
 
 	assert.Equal(t, originalCfg.DefaultManager, reloadedCfg.DefaultManager)
 	assert.Equal(t, originalCfg.OperationTimeout, reloadedCfg.OperationTimeout)
-	assert.Equal(t, originalCfg.PackageTimeout, reloadedCfg.PackageTimeout)
 	assert.Equal(t, originalCfg.DotfileTimeout, reloadedCfg.DotfileTimeout)
 	assert.Equal(t, originalCfg.ExpandDirectories, reloadedCfg.ExpandDirectories)
 	assert.Equal(t, originalCfg.IgnorePatterns, reloadedCfg.IgnorePatterns)
