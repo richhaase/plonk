@@ -28,9 +28,6 @@ func TestLoad_MissingFile(t *testing.T) {
 	if cfg.OperationTimeout != 300 {
 		t.Errorf("Expected operation timeout 300, got %d", cfg.OperationTimeout)
 	}
-	if cfg.PackageTimeout != 180 {
-		t.Errorf("Expected package timeout 180, got %d", cfg.PackageTimeout)
-	}
 	if cfg.DotfileTimeout != 60 {
 		t.Errorf("Expected dotfile timeout 60, got %d", cfg.DotfileTimeout)
 	}
@@ -51,7 +48,6 @@ func TestLoad_ValidConfig(t *testing.T) {
 	configContent := `
 default_manager: brew
 operation_timeout: 600
-package_timeout: 300
 dotfile_timeout: 120
 expand_directories:
   - .vim
@@ -73,9 +69,6 @@ ignore_patterns:
 	}
 	if cfg.OperationTimeout != 600 {
 		t.Errorf("Expected operation timeout 600, got %d", cfg.OperationTimeout)
-	}
-	if cfg.PackageTimeout != 300 {
-		t.Errorf("Expected package timeout 300, got %d", cfg.PackageTimeout)
 	}
 	if cfg.DotfileTimeout != 120 {
 		t.Errorf("Expected dotfile timeout 120, got %d", cfg.DotfileTimeout)
@@ -114,9 +107,6 @@ operation_timeout: 400
 	}
 
 	// Check defaults for unspecified values
-	if cfg.PackageTimeout != 180 {
-		t.Errorf("Expected default package timeout 180, got %d", cfg.PackageTimeout)
-	}
 	if cfg.DotfileTimeout != 60 {
 		t.Errorf("Expected default dotfile timeout 60, got %d", cfg.DotfileTimeout)
 	}
@@ -198,12 +188,6 @@ operation_timeout: 3601
 `,
 		},
 		{
-			name: "package timeout too large",
-			content: `
-package_timeout: 1801
-`,
-		},
-		{
 			name: "dotfile timeout too large",
 			content: `
 dotfile_timeout: 601
@@ -266,7 +250,6 @@ func TestConfig_DirectFieldAccess(t *testing.T) {
 	cfg := &Config{
 		DefaultManager:    "npm",
 		OperationTimeout:  500,
-		PackageTimeout:    200,
 		DotfileTimeout:    100,
 		ExpandDirectories: []string{".config", ".vim"},
 		IgnorePatterns:    []string{"*.tmp", "*.log"},
@@ -278,9 +261,6 @@ func TestConfig_DirectFieldAccess(t *testing.T) {
 	}
 	if cfg.OperationTimeout != 500 {
 		t.Error("OperationTimeout returned wrong value")
-	}
-	if cfg.PackageTimeout != 200 {
-		t.Error("PackageTimeout returned wrong value")
 	}
 	if cfg.DotfileTimeout != 100 {
 		t.Error("DotfileTimeout returned wrong value")

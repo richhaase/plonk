@@ -34,7 +34,7 @@ func TestConfigResolutionInCommands(t *testing.T) {
 	t.Run("config with partial overrides resolves correctly", func(t *testing.T) {
 		configContent := `default_manager: cargo
 operation_timeout: 900
-# Note: package_timeout and dotfile_timeout not specified - should use defaults
+# Note: dotfile_timeout not specified - should use the default
 `
 		tmpDir := testutil.NewTestConfig(t, configContent)
 
@@ -54,10 +54,6 @@ operation_timeout: 900
 		}
 
 		// Check default values for unspecified settings
-		if cfg.PackageTimeout != 180 {
-			t.Errorf("Expected default package timeout 180, got %d", cfg.PackageTimeout)
-		}
-
 		if cfg.DotfileTimeout != 60 {
 			t.Errorf("Expected default dotfile timeout 60, got %d", cfg.DotfileTimeout)
 		}

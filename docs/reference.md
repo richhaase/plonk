@@ -212,9 +212,9 @@ git:
 default_manager: brew
 
 # Timeouts (seconds)
-package_timeout: 180       # Package installation
 operation_timeout: 300     # General operations
 dotfile_timeout: 60        # File operations
+# Note: package installs use a fixed 10-minute per-package timeout.
 
 # Diff tool for viewing drifted files
 diff_tool: delta           # Default: git diff --no-index

@@ -8,7 +8,6 @@ import "time"
 // Timeouts provides typed duration values derived from Config timeouts (seconds)
 type Timeouts struct {
 	Operation time.Duration
-	Package   time.Duration
 	Dotfile   time.Duration
 }
 
@@ -18,13 +17,11 @@ func GetTimeouts(cfg *Config) Timeouts {
 		d := GetDefaults()
 		return Timeouts{
 			Operation: time.Duration(d.OperationTimeout) * time.Second,
-			Package:   time.Duration(d.PackageTimeout) * time.Second,
 			Dotfile:   time.Duration(d.DotfileTimeout) * time.Second,
 		}
 	}
 	return Timeouts{
 		Operation: time.Duration(cfg.OperationTimeout) * time.Second,
-		Package:   time.Duration(cfg.PackageTimeout) * time.Second,
 		Dotfile:   time.Duration(cfg.DotfileTimeout) * time.Second,
 	}
 }

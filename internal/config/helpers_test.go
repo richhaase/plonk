@@ -41,7 +41,6 @@ func TestGetDefaults(t *testing.T) {
 	assert.NotNil(t, defaults)
 	assert.Equal(t, "brew", defaults.DefaultManager)
 	assert.Equal(t, 300, defaults.OperationTimeout)
-	assert.Equal(t, 180, defaults.PackageTimeout)
 	assert.Equal(t, 60, defaults.DotfileTimeout)
 	assert.Contains(t, defaults.ExpandDirectories, ".config")
 	assert.Greater(t, len(defaults.IgnorePatterns), 0)
@@ -62,7 +61,6 @@ func TestValidateConfigFromYAML(t *testing.T) {
 		validYAML := []byte(`
 default_manager: brew
 operation_timeout: 300
-package_timeout: 180
 dotfile_timeout: 60
 `)
 		result := validator.ValidateConfigFromYAML(validYAML)
