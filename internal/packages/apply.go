@@ -7,8 +7,10 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/richhaase/plonk/internal/lock"
+	"github.com/richhaase/plonk/internal/output"
 )
 
 // SimpleApplyResult holds the result of applying packages
@@ -19,6 +21,10 @@ type SimpleApplyResult struct {
 	Failed       []string // Packages that failed to install
 	Errors       []error  // Errors for failed packages
 }
+
+// PerPackageTimeout bounds a single Install or IsInstalled invocation.
+// The orchestrator no longer caps the whole batch — each package gets its own budget.
+const PerPackageTimeout = 10 * time.Minute
 
 // SimpleApply installs all tracked packages that are missing
 func SimpleApply(ctx context.Context, configDir string, dryRun bool) (*SimpleApplyResult, error) {
@@ -39,12 +45,18 @@ func SimpleApply(ctx context.Context, configDir string, dryRun bool) (*SimpleApp
 	}
 	sort.Strings(managers)
 
-	// Process each manager in sorted order
+	// Phase 1: build install plan, recording skipped/would-install/failed-from-IsInstalled.
+	type planEntry struct {
+		spec string
+		pkg  string
+		mgr  Manager
+	}
+	var plan []planEntry
+
 	for _, manager := range managers {
 		pkgs := lockFile.Packages[manager]
 		mgr, err := GetManager(manager)
 		if err != nil {
-			// Record failure for each package individually
 			for _, pkg := range pkgs {
 				spec := manager + ":" + pkg
 				result.Failed = append(result.Failed, spec)
@@ -58,16 +70,15 @@ func SimpleApply(ctx context.Context, configDir string, dryRun bool) (*SimpleApp
 		for _, pkg := range pkgs {
 			spec := manager + ":" + pkg
 
-			// Short-circuit remaining packages if the manager itself is broken
-			// (e.g., binary not on PATH) to avoid repeated failing subprocesses.
 			if managerBroken {
 				result.Failed = append(result.Failed, spec)
 				result.Errors = append(result.Errors, fmt.Errorf("%s: %w", spec, managerErr))
 				continue
 			}
 
-			// Check if installed
-			installed, err := mgr.IsInstalled(ctx, pkg)
+			installed, err := callWithTimeout(ctx, func(c context.Context) (bool, error) {
+				return mgr.IsInstalled(c, pkg)
+			})
 			if err != nil {
 				managerBroken = true
 				managerErr = err
@@ -81,19 +92,31 @@ func SimpleApply(ctx context.Context, configDir string, dryRun bool) (*SimpleApp
 				continue
 			}
 
-			// Install (or mark as would-install for dry-run)
 			if dryRun {
 				result.WouldInstall = append(result.WouldInstall, spec)
 				continue
 			}
 
-			if err := mgr.Install(ctx, pkg); err != nil {
-				result.Failed = append(result.Failed, spec)
-				result.Errors = append(result.Errors, fmt.Errorf("%s: %w", spec, err))
+			plan = append(plan, planEntry{spec: spec, pkg: pkg, mgr: mgr})
+		}
+	}
+
+	// Phase 2: execute installs with live spinner feedback.
+	if len(plan) > 0 {
+		sm := output.NewSpinnerManager(len(plan))
+		for _, p := range plan {
+			spinner := sm.StartSpinner("Installing", p.spec)
+			err := callWithTimeoutVoid(ctx, func(c context.Context) error {
+				return p.mgr.Install(c, p.pkg)
+			})
+			if err != nil {
+				spinner.Error(fmt.Sprintf("%s: %s", p.spec, err.Error()))
+				result.Failed = append(result.Failed, p.spec)
+				result.Errors = append(result.Errors, fmt.Errorf("%s: %w", p.spec, err))
 				continue
 			}
-
-			result.Installed = append(result.Installed, spec)
+			spinner.Success(fmt.Sprintf("installed %s", p.spec))
+			result.Installed = append(result.Installed, p.spec)
 		}
 	}
 
@@ -103,4 +126,18 @@ func SimpleApply(ctx context.Context, configDir string, dryRun bool) (*SimpleApp
 	}
 
 	return result, nil
+}
+
+// callWithTimeout runs fn with a per-call timeout derived from PerPackageTimeout,
+// inheriting cancellation from the parent context.
+func callWithTimeout[T any](ctx context.Context, fn func(context.Context) (T, error)) (T, error) {
+	c, cancel := context.WithTimeout(ctx, PerPackageTimeout)
+	defer cancel()
+	return fn(c)
+}
+
+func callWithTimeoutVoid(ctx context.Context, fn func(context.Context) error) error {
+	c, cancel := context.WithTimeout(ctx, PerPackageTimeout)
+	defer cancel()
+	return fn(c)
 }

@@ -49,11 +49,12 @@ func (o *Orchestrator) Apply(ctx context.Context) (output.ApplyResult, error) {
 	// Derive per-domain timeouts
 	t := config.GetTimeouts(o.config)
 
-	// Apply packages (unless dotfiles-only)
+	// Apply packages (unless dotfiles-only).
+	// Per-package timeouts live inside packages.SimpleApply; we no longer wrap
+	// the whole batch in one budget — a single slow Homebrew download used to
+	// burn the entire phase's deadline.
 	if !o.dotfilesOnly {
-		pctx, pcancel := context.WithTimeout(ctx, t.Package)
-		simpleResult, err := packages.SimpleApply(pctx, o.configDir, o.dryRun)
-		pcancel()
+		simpleResult, err := packages.SimpleApply(ctx, o.configDir, o.dryRun)
 		if simpleResult != nil {
 			packageResult := convertSimpleApplyResult(simpleResult, o.dryRun)
 			result.Packages = &packageResult

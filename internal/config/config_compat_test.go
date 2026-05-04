@@ -29,6 +29,8 @@ default_manager: brew
 			},
 		},
 		{
+			// package_timeout is a legacy field (now ignored) — kept here to verify
+			// configs from older plonk versions still load cleanly.
 			name: "config with all fields",
 			content: `version: 1
 default_manager: cargo
@@ -48,9 +50,6 @@ ignore_patterns:
 				}
 				if cfg.OperationTimeout != 600 {
 					t.Errorf("Expected operation_timeout 600, got %d", cfg.OperationTimeout)
-				}
-				if cfg.PackageTimeout != 300 {
-					t.Errorf("Expected package_timeout 300, got %d", cfg.PackageTimeout)
 				}
 				if cfg.DotfileTimeout != 120 {
 					t.Errorf("Expected dotfile_timeout 120, got %d", cfg.DotfileTimeout)

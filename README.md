@@ -155,7 +155,7 @@ Plonk works without configuration. If needed, create `~/.config/plonk/plonk.yaml
 git:
   auto_commit: true                  # Auto-commit after mutations (default: true)
 diff_tool: delta                     # Custom diff viewer
-package_timeout: 300                 # Seconds (default: 180)
+operation_timeout: 600               # Seconds (default: 300)
 ignore_patterns:
   - "*.swp"
   - ".DS_Store"

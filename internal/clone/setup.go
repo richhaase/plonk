@@ -148,6 +148,8 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool) e
 			orchestrator.WithDryRun(false),
 		)
 		result, err := orch.Apply(ctx)
+		result.Scope = "all"
+		output.RenderOutput(result)
 		if err != nil {
 			hasDotfileErrors := len(result.DotfileErrors) > 0
 			hasOnlyPackageErrors := len(result.PackageErrors) > 0 && !hasDotfileErrors
@@ -185,11 +187,10 @@ default_manager: %s
 
 # Timeout settings (in seconds)
 operation_timeout: %d
-package_timeout: %d
 dotfile_timeout: %d
 
 # Directories to expand when listing dotfiles
-expand_directories:`, defaults.DefaultManager, defaults.OperationTimeout, defaults.PackageTimeout, defaults.DotfileTimeout)
+expand_directories:`, defaults.DefaultManager, defaults.OperationTimeout, defaults.DotfileTimeout)
 
 	// Add expand directories
 	for _, dir := range defaults.ExpandDirectories {

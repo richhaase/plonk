@@ -46,7 +46,7 @@ func TestIsFieldUserDefined(t *testing.T) {
 		assert.True(t, checker.IsFieldUserDefined("default_manager", "cargo"))
 		assert.True(t, checker.IsFieldUserDefined("operation_timeout", 600))
 		// Same as default, so not user-defined
-		assert.False(t, checker.IsFieldUserDefined("package_timeout", 180))
+		assert.False(t, checker.IsFieldUserDefined("dotfile_timeout", 60))
 	})
 
 	t.Run("with user config", func(t *testing.T) {
@@ -65,8 +65,8 @@ operation_timeout: 600
 		// 600 is different from default (300)
 		assert.True(t, checker.IsFieldUserDefined("operation_timeout", 600))
 
-		// 180 is same as default
-		assert.False(t, checker.IsFieldUserDefined("package_timeout", 180))
+		// 60 is same as default
+		assert.False(t, checker.IsFieldUserDefined("dotfile_timeout", 60))
 	})
 }
 
@@ -116,7 +116,6 @@ ignore_patterns:
 		assert.Contains(t, patterns, "custom_pattern")
 
 		// Should not contain defaults
-		assert.NotContains(t, nonDefaults, "package_timeout")
 		assert.NotContains(t, nonDefaults, "dotfile_timeout")
 	})
 
@@ -127,7 +126,6 @@ ignore_patterns:
 		cfg := &Config{
 			DefaultManager:    "brew",
 			OperationTimeout:  300,
-			PackageTimeout:    180,
 			DotfileTimeout:    60,
 			ExpandDirectories: []string{".config"},
 			IgnorePatterns:    checker.defaults.IgnorePatterns,
@@ -162,7 +160,6 @@ func TestGetDefaultFieldValue(t *testing.T) {
 	}{
 		{"default_manager", "brew"},
 		{"operation_timeout", 300},
-		{"package_timeout", 180},
 		{"dotfile_timeout", 60},
 		{"expand_directories", []string{".config"}},
 		{"diff_tool", ""},
