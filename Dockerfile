@@ -119,6 +119,8 @@ ENV PATH="${HOME}/.bun/bin:${PATH}"
 # Install BATS support libraries via Homebrew
 RUN brew install bats-core && \
     brew tap bats-core/bats-core && \
+    brew trust --formula bats-core/bats-core/bats-support && \
+    brew trust --formula bats-core/bats-core/bats-assert && \
     brew install bats-support bats-assert
 
 # Create the bats library directories that test_helper.bash expects
