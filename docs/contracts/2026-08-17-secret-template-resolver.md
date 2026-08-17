@@ -2,11 +2,11 @@
 contract_version: "1.1"
 id: "plonk-secret-template-resolver"
 title: "Secret-Aware Template Resolution with macOS Keychain Backend (Stage A)"
-state: draft
+state: approved
 created_at: "2026-08-17T23:30:00Z"
-updated_at: "2026-08-17T23:50:00Z"
-approved_at: null
-approved_by: null
+updated_at: "2026-08-17T23:55:00Z"
+approved_at: "2026-08-17T23:55:00Z"
+approved_by: "richhaase"
 ---
 
 # plonk-secret-template-resolver — Stage A
