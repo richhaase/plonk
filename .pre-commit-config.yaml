@@ -4,14 +4,14 @@ repos:
     hooks:
       - id: go-fmt-import
         name: Format Go code
-        entry: sh -c 'go run golang.org/x/tools/cmd/goimports -w .'
+        entry: sh -c 'go tool goimports -w .'
         language: system
         files: \.go$
         pass_filenames: false
 
       - id: go-lint
         name: Lint Go code
-        entry: sh -c 'go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint run --timeout=10m'
+        entry: sh -c 'go tool golangci-lint run --timeout=10m'
         language: system
         files: \.go$
         pass_filenames: false

@@ -28,13 +28,13 @@ jobs:
     - name: Run govulncheck
       run: |
         echo "Checking for vulnerabilities in dependencies..."
-        go run golang.org/x/vuln/cmd/govulncheck ./...
+        go tool govulncheck ./...
       continue-on-error: true
 
     - name: Run gosec
       run: |
         echo "Running security analysis..."
-        go run github.com/securego/gosec/v2/cmd/gosec ./...
+        go tool gosec ./...
       continue-on-error: true
 
     - name: Summary

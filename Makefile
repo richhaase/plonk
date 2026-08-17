@@ -54,7 +54,7 @@ test:
 # Run golangci-lint
 lint:
 	@echo "Running linter..."
-	@go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint run --timeout=10m
+	@go tool golangci-lint run --timeout=10m
 	@echo "Lint checks passed!"
 
 # Run BATS behavioral tests locally
@@ -100,9 +100,9 @@ test-coverage-ci:
 # Run vulnerability and security checks
 security:
 	@echo "Checking for vulnerabilities in dependencies..."
-	@go run golang.org/x/vuln/cmd/govulncheck ./...
+	@go tool govulncheck ./...
 	@echo "Running security analysis..."
-	@go run github.com/securego/gosec/v2/cmd/gosec ./...
+	@go tool gosec ./...
 	@echo "Security checks passed!"
 
 # Run pre-commit hooks
