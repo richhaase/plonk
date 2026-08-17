@@ -63,15 +63,17 @@ func (OSFileSystem) Chmod(path string, mode os.FileMode) error {
 
 // MemoryFS implements FileSystem for testing
 type MemoryFS struct {
-	Files map[string][]byte
-	Dirs  map[string]bool
+	Files      map[string][]byte
+	Dirs       map[string]bool
+	ChmodCalls map[string]os.FileMode // path -> mode passed to Chmod
 }
 
 // NewMemoryFS creates a new in-memory filesystem
 func NewMemoryFS() *MemoryFS {
 	return &MemoryFS{
-		Files: make(map[string][]byte),
-		Dirs:  make(map[string]bool),
+		Files:      make(map[string][]byte),
+		Dirs:       make(map[string]bool),
+		ChmodCalls: make(map[string]os.FileMode),
 	}
 }
 
@@ -191,8 +193,9 @@ func (m *MemoryFS) Rename(old, new string) error {
 	return os.ErrNotExist
 }
 
-func (m *MemoryFS) Chmod(_ string, _ os.FileMode) error {
-	// MemoryFS doesn't track permissions, so this is a no-op
+func (m *MemoryFS) Chmod(path string, mode os.FileMode) error {
+	// MemoryFS doesn't track permissions, so this records the call for tests.
+	m.ChmodCalls[path] = mode
 	return nil
 }
 

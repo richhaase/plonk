@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 
 	"github.com/go-playground/validator/v10"
@@ -46,9 +47,35 @@ func (c *Config) AutoCommitEnabled() bool {
 	return *c.Git.AutoCommit
 }
 
+// DotfileRule configures per-dotfile deployment overrides.
+type DotfileRule struct {
+	Name string `yaml:"name,omitempty" validate:"required"`
+	Mode string `yaml:"mode,omitempty" validate:"omitempty,filemode"`
+}
+
 // Dotfiles contains dotfile-specific configuration
 type Dotfiles struct {
-	UnmanagedFilters []string `yaml:"unmanaged_filters,omitempty"`
+	UnmanagedFilters []string      `yaml:"unmanaged_filters,omitempty"`
+	Rules            []DotfileRule `yaml:"rules,omitempty" validate:"omitempty,dive"`
+}
+
+// DeployModes returns a map of dotfile name to its configured deploy mode.
+// Rules without an explicit mode are omitted. Modes have already been
+// validated as octal file permissions during config loading, so parsing here
+// cannot fail for a config that passed validation.
+func (d Dotfiles) DeployModes() (map[string]os.FileMode, error) {
+	modes := make(map[string]os.FileMode, len(d.Rules))
+	for _, r := range d.Rules {
+		if r.Mode == "" {
+			continue
+		}
+		v, err := strconv.ParseUint(r.Mode, 8, 16)
+		if err != nil {
+			return nil, fmt.Errorf("invalid deploy mode %q for dotfile %q: %w", r.Mode, r.Name, err)
+		}
+		modes[r.Name] = os.FileMode(v)
+	}
+	return modes, nil
 }
 
 // defaultConfig holds the default configuration values
