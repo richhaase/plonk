@@ -12,7 +12,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/text v0.41.0
 	golang.org/x/tools v0.49.0
-	golang.org/x/vuln v1.6.0
+	golang.org/x/vuln v1.7.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
