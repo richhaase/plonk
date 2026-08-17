@@ -24,6 +24,9 @@ type ApplyFilterOptions struct {
 // The filter should contain normalized absolute paths (use filepath.Abs and filepath.Clean).
 func ApplySelective(ctx context.Context, configDir, homeDir string, cfg *config.Config, opts ApplyFilterOptions) (output.DotfileResults, error) {
 	manager := NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
+	if err := applyDeployModes(manager, cfg); err != nil {
+		return output.DotfileResults{DryRun: opts.DryRun}, err
+	}
 
 	// Get all statuses
 	statuses, err := manager.Reconcile()
@@ -48,6 +51,9 @@ func ApplySelective(ctx context.Context, configDir, homeDir string, cfg *config.
 // Apply applies dotfile configuration and returns the result
 func Apply(ctx context.Context, configDir, homeDir string, cfg *config.Config, dryRun bool) (output.DotfileResults, error) {
 	manager := NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
+	if err := applyDeployModes(manager, cfg); err != nil {
+		return output.DotfileResults{DryRun: dryRun}, err
+	}
 
 	statuses, err := manager.Reconcile()
 	if err != nil {
@@ -55,6 +61,19 @@ func Apply(ctx context.Context, configDir, homeDir string, cfg *config.Config, d
 	}
 
 	return applyStatuses(ctx, manager, statuses, dryRun)
+}
+
+// applyDeployModes configures the manager with per-dotfile deploy modes from
+// the config, if any.
+func applyDeployModes(manager *DotfileManager, cfg *config.Config) error {
+	modes, err := cfg.Dotfiles.DeployModes()
+	if err != nil {
+		return err
+	}
+	if len(modes) > 0 {
+		manager.SetDeployModes(modes)
+	}
+	return nil
 }
 
 func normalizePath(path string) string {

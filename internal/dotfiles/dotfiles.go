@@ -61,11 +61,12 @@ func renderTemplate(content []byte, lookupEnv func(string) (string, bool)) ([]by
 
 // DotfileManager manages dotfiles in a single config directory
 type DotfileManager struct {
-	configDir string     // $PLONK_DIR
-	homeDir   string     // $HOME
-	fs        FileSystem // file operations
-	matcher   *ignore.Matcher
-	lookupEnv func(string) (string, bool)
+	configDir   string     // $PLONK_DIR
+	homeDir     string     // $HOME
+	fs          FileSystem // file operations
+	matcher     *ignore.Matcher
+	lookupEnv   func(string) (string, bool)
+	deployModes map[string]os.FileMode // name -> explicit deploy mode
 }
 
 // NewDotfileManager creates a manager using the real filesystem
@@ -325,6 +326,12 @@ func (m *DotfileManager) Deploy(name string) error {
 			log.Printf("Warning: failed to clean up temp file %s: %v", tmpPath, cleanupErr)
 		}
 		return fmt.Errorf("failed to rename: %w", err)
+	}
+
+	// Use the configured deploy mode for this dotfile when present,
+	// otherwise fall back to the source file's permissions.
+	if configured, ok := m.deployModes[name]; ok {
+		mode = configured
 	}
 
 	// Set final permissions after rename (rename preserves temp file permissions)
@@ -631,6 +638,13 @@ func (m *DotfileManager) walkDir(root string, fn func(path string, isDir bool) e
 	}
 
 	return nil
+}
+
+// SetDeployModes sets explicit deploy modes keyed by dotfile name. A dotfile
+// with a configured mode is deployed with that mode instead of inheriting the
+// source file's permissions.
+func (m *DotfileManager) SetDeployModes(modes map[string]os.FileMode) {
+	m.deployModes = modes
 }
 
 // RenderSource reads a source file and renders it if it's a template.

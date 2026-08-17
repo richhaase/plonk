@@ -229,7 +229,26 @@ ignore_patterns:
   - "*.tmp"
   - ".DS_Store"
   - ".git/*"
+
+# Per-dotfile deploy permissions (optional)
+dotfiles:
+  rules:
+    - name: "pi/agent/auth.json.tmpl"   # Source path relative to $PLONK_DIR
+      mode: "0600"                       # Octal permissions for the deployed file
 ```
+
+#### Per-dotfile deploy mode (`dotfiles.rules`)
+
+Optionally assign explicit permissions to specific dotfiles on deploy, overriding
+the source/git file permissions. This is useful for secret templates (e.g. auth
+files) that should be deployed with restrictive permissions such as `0600` even
+when committed with standard `0644` permissions.
+
+- `name` - Dotfile source path relative to `$PLONK_DIR` (e.g. `pi/agent/auth.json.tmpl`). Required.
+- `mode` - Octal file permissions applied to the deployed target after write and rename. Must be in the range `0000`-`0777` (digits `0`-`7` only). Invalid values produce a configuration validation error.
+
+When no rule matches, or a rule has no `mode`, behavior is unchanged: the deployed
+file keeps the source file permissions.
 
 ### Environment Variables
 
