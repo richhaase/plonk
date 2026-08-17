@@ -4,8 +4,11 @@
 package dotfiles
 
 import (
+	"context"
 	"strings"
 	"testing"
+
+	"github.com/richhaase/plonk/internal/template"
 )
 
 func TestDotfileManager_List(t *testing.T) {
@@ -585,9 +588,10 @@ func TestRenderTemplate(t *testing.T) {
 		},
 	}
 
+	r := template.NewRenderer(template.NewEnvResolverFromLookup(lookup))
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := renderTemplate([]byte(tt.input), lookup)
+			got, err := r.Render(context.Background(), []byte(tt.input), template.RenderOptions{})
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("renderTemplate() expected error, got nil")
@@ -611,12 +615,12 @@ func TestDotfileManager_Deploy_Template(t *testing.T) {
 	fs.Files["/config/gitconfig.tmpl"] = []byte("[user]\n    email = {{EMAIL}}")
 
 	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
-	m.lookupEnv = func(key string) (string, bool) {
+	m.SetResolvers(template.NewEnvResolverFromLookup(func(key string) (string, bool) {
 		if key == "EMAIL" {
 			return "user@example.com", true
 		}
 		return "", false
-	}
+	}))
 
 	err := m.Deploy("gitconfig.tmpl")
 	if err != nil {
@@ -641,9 +645,9 @@ func TestDotfileManager_Deploy_Template_MissingVar(t *testing.T) {
 	fs.Files["/config/gitconfig.tmpl"] = []byte("email = {{MISSING_VAR}}")
 
 	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
-	m.lookupEnv = func(key string) (string, bool) {
+	m.SetResolvers(template.NewEnvResolverFromLookup(func(key string) (string, bool) {
 		return "", false
-	}
+	}))
 
 	err := m.Deploy("gitconfig.tmpl")
 	if err == nil {
@@ -659,12 +663,12 @@ func TestDotfileManager_IsDrifted_Template(t *testing.T) {
 	fs.Files["/home/user/.gitconfig"] = []byte("email = user@example.com")
 
 	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
-	m.lookupEnv = func(key string) (string, bool) {
+	m.SetResolvers(template.NewEnvResolverFromLookup(func(key string) (string, bool) {
 		if key == "EMAIL" {
 			return "user@example.com", true
 		}
 		return "", false
-	}
+	}))
 
 	d := Dotfile{
 		Name:   "gitconfig.tmpl",
@@ -700,12 +704,12 @@ func TestDotfileManager_Diff_Template(t *testing.T) {
 	fs.Files["/home/user/.gitconfig"] = []byte("email = old@example.com")
 
 	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
-	m.lookupEnv = func(key string) (string, bool) {
+	m.SetResolvers(template.NewEnvResolverFromLookup(func(key string) (string, bool) {
 		if key == "EMAIL" {
 			return "new@example.com", true
 		}
 		return "", false
-	}
+	}))
 
 	d := Dotfile{
 		Name:   "gitconfig.tmpl",

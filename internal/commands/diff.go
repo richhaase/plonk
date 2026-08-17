@@ -80,50 +80,73 @@ func runDiff(cmd *cobra.Command, args []string) error {
 	for _, status := range driftedFiles {
 		sourcePath := status.Source
 		destPath := status.Target
+		var cleanupPaths []string
 
 		// For template files, render to a temp file so the external diff tool
-		// sees rendered content instead of raw {{VAR}} placeholders
+		// sees rendered content instead of raw {{VAR}} placeholders. Secret-bearing
+		// templates are never written unmasked: both sides are masked with
+		// [REDACTED_SECRET] before being handed to the diff tool.
 		if strings.HasSuffix(status.Name, ".tmpl") {
-			rendered, err := dm.RenderSource(status.Name)
+			hasSecrets, err := dm.HasSecrets(status.Name)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error rendering template %s: %v\n", status.Name, err)
+				fmt.Fprintf(os.Stderr, "Error inspecting template %s: %v\n", status.Name, err)
 				diffErrors = append(diffErrors, status.Name)
 				continue
 			}
-			tmpFile, err := os.CreateTemp("", "plonk-diff-*.rendered")
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error creating temp file for %s: %v\n", status.Name, err)
-				diffErrors = append(diffErrors, status.Name)
-				continue
+			if hasSecrets {
+				targetContent, err := os.ReadFile(destPath)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error reading target %s: %v\n", destPath, err)
+					diffErrors = append(diffErrors, status.Name)
+					continue
+				}
+				maskedSource, maskedTarget, err := dm.RenderForDiff(status.Name, targetContent)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error rendering template %s: %v\n", status.Name, err)
+					diffErrors = append(diffErrors, status.Name)
+					continue
+				}
+				tmp, err := writeTempDiffFile(status.Name, maskedSource)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error creating temp file for %s: %v\n", status.Name, err)
+					diffErrors = append(diffErrors, status.Name)
+					continue
+				}
+				cleanupPaths = append(cleanupPaths, tmp)
+				sourcePath = tmp
+				tmp, err = writeTempDiffFile(status.Name, maskedTarget)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error creating temp file for %s: %v\n", status.Name, err)
+					diffErrors = append(diffErrors, status.Name)
+					continue
+				}
+				cleanupPaths = append(cleanupPaths, tmp)
+				destPath = tmp
+			} else {
+				rendered, err := dm.RenderSource(status.Name)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error rendering template %s: %v\n", status.Name, err)
+					diffErrors = append(diffErrors, status.Name)
+					continue
+				}
+				tmp, err := writeTempDiffFile(status.Name, rendered)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error creating temp file for %s: %v\n", status.Name, err)
+					diffErrors = append(diffErrors, status.Name)
+					continue
+				}
+				cleanupPaths = append(cleanupPaths, tmp)
+				sourcePath = tmp
 			}
-			tmpPath := filepath.Clean(tmpFile.Name())
-			// cleanupTmp removes the temp file on error paths. Path is safe: derived from os.CreateTemp.
-			cleanupTmp := func() { os.Remove(tmpPath) }
-			if _, err := tmpFile.Write(rendered); err != nil {
-				tmpFile.Close()
-				cleanupTmp()
-				fmt.Fprintf(os.Stderr, "Error writing temp file for %s: %v\n", status.Name, err)
-				diffErrors = append(diffErrors, status.Name)
-				continue
-			}
-			if err := tmpFile.Close(); err != nil {
-				cleanupTmp()
-				fmt.Fprintf(os.Stderr, "Error closing temp file for %s: %v\n", status.Name, err)
-				diffErrors = append(diffErrors, status.Name)
-				continue
-			}
-			sourcePath = tmpPath
 		}
 
 		if err := executeDiffTool(diffTool, sourcePath, destPath); err != nil {
-			// Report error but continue with other files
 			fmt.Fprintf(os.Stderr, "Error showing diff for %s: %v\n", status.Name, err)
 			diffErrors = append(diffErrors, status.Name)
 		}
 
-		// Clean up temp file immediately after use (not deferred in loop)
-		if sourcePath != status.Source {
-			os.Remove(sourcePath)
+		for _, p := range cleanupPaths {
+			removeTempFile(p)
 		}
 	}
 
@@ -131,6 +154,36 @@ func runDiff(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to show diff for %d file(s): %v", len(diffErrors), diffErrors)
 	}
 	return nil
+}
+
+// writeTempDiffFile writes content to a temp file for use by an external diff tool.
+// The caller is responsible for removing the returned path.
+func writeTempDiffFile(name string, content []byte) (string, error) {
+	base := strings.TrimSuffix(name, ".tmpl")
+	base = strings.ReplaceAll(base, string(os.PathSeparator), "-")
+	if base == "" {
+		base = "file"
+	}
+	tmpFile, err := os.CreateTemp("", "plonk-diff-"+base+"-*.rendered")
+	if err != nil {
+		return "", err
+	}
+	tmpPath := filepath.Clean(tmpFile.Name())
+	if _, err := tmpFile.Write(content); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpPath)
+		return "", err
+	}
+	if err := tmpFile.Close(); err != nil {
+		os.Remove(tmpPath)
+		return "", err
+	}
+	return tmpPath, nil
+}
+
+func removeTempFile(path string) {
+	//nolint:gosec // G703: path comes from os.CreateTemp in writeTempDiffFile
+	os.Remove(path)
 }
 
 // getDriftedDotfileStatuses reconciles dotfiles and returns only drifted ones.

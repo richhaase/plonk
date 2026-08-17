@@ -5,15 +5,16 @@ package dotfiles
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/ignore"
+	"github.com/richhaase/plonk/internal/template"
 )
 
 // errSkipDir is returned by walkDir callbacks to skip a directory
@@ -21,51 +22,17 @@ var errSkipDir = errors.New("skip directory")
 
 const templateExtension = ".tmpl"
 
-var templateVarPattern = regexp.MustCompile(`\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}`)
-
 func isTemplate(name string) bool {
 	return strings.HasSuffix(name, templateExtension)
 }
 
-func renderTemplate(content []byte, lookupEnv func(string) (string, bool)) ([]byte, error) {
-	matches := templateVarPattern.FindAllSubmatch(content, -1)
-	if len(matches) == 0 {
-		return content, nil
-	}
-
-	var missing []string
-	seen := make(map[string]bool)
-	for _, match := range matches {
-		varName := string(match[1])
-		if seen[varName] {
-			continue
-		}
-		seen[varName] = true
-		if _, ok := lookupEnv(varName); !ok {
-			missing = append(missing, varName)
-		}
-	}
-
-	if len(missing) > 0 {
-		return nil, fmt.Errorf("missing environment variables: %s", strings.Join(missing, ", "))
-	}
-
-	result := templateVarPattern.ReplaceAllFunc(content, func(match []byte) []byte {
-		varName := string(templateVarPattern.FindSubmatch(match)[1])
-		val, _ := lookupEnv(varName)
-		return []byte(val)
-	})
-
-	return result, nil
-}
-
 // DotfileManager manages dotfiles in a single config directory
 type DotfileManager struct {
-	configDir   string     // $PLONK_DIR
-	homeDir     string     // $HOME
-	fs          FileSystem // file operations
+	configDir   string               // $PLONK_DIR
+	homeDir     string               // $HOME
+	fs          FileSystem           // file operations
 	matcher     *ignore.Matcher
-	lookupEnv   func(string) (string, bool)
+	renderer    *template.Renderer   // template directive resolver
 	deployModes map[string]os.FileMode // name -> explicit deploy mode
 }
 
@@ -77,11 +44,18 @@ func NewDotfileManager(configDir, homeDir string, ignorePatterns []string) *Dotf
 // NewDotfileManagerWithFS creates a manager with a custom filesystem (for testing)
 func NewDotfileManagerWithFS(configDir, homeDir string, ignorePatterns []string, fs FileSystem) *DotfileManager {
 	return &DotfileManager{
-		configDir: configDir,
-		homeDir:   homeDir,
-		fs:        fs,
-		matcher:   ignore.NewMatcher(ignorePatterns),
-		lookupEnv: os.LookupEnv,
+		configDir:   configDir,
+		homeDir:     homeDir,
+		fs:          fs,
+		matcher:     ignore.NewMatcher(ignorePatterns),
+		renderer:    template.NewRenderer(defaultResolvers()...),
+	}
+}
+
+func defaultResolvers() []template.SecretResolver {
+	return []template.SecretResolver{
+		template.NewEnvResolver(),
+		template.NewMacOSKeychainResolver(),
 	}
 }
 
@@ -302,7 +276,7 @@ func (m *DotfileManager) Deploy(name string) error {
 
 	// Render template if needed
 	if isTemplate(name) {
-		content, err = renderTemplate(content, m.lookupEnv)
+		content, err = m.render(content)
 		if err != nil {
 			return fmt.Errorf("failed to render template %s: %w", name, err)
 		}
@@ -351,7 +325,7 @@ func (m *DotfileManager) IsDrifted(d Dotfile) (bool, error) {
 
 	// Render template if needed
 	if isTemplate(d.Name) {
-		sourceContent, err = renderTemplate(sourceContent, m.lookupEnv)
+		sourceContent, err = m.render(sourceContent)
 		if err != nil {
 			return false, fmt.Errorf("failed to render template %s: %w", d.Name, err)
 		}
@@ -377,7 +351,7 @@ func (m *DotfileManager) Diff(d Dotfile) (string, error) {
 
 	// Render template if needed
 	if isTemplate(d.Name) {
-		sourceContent, err = renderTemplate(sourceContent, m.lookupEnv)
+		sourceContent, err = m.render(sourceContent)
 		if err != nil {
 			return "", fmt.Errorf("failed to render template %s: %w", d.Name, err)
 		}
@@ -657,13 +631,111 @@ func (m *DotfileManager) RenderSource(name string) ([]byte, error) {
 	}
 
 	if isTemplate(name) {
-		content, err = renderTemplate(content, m.lookupEnv)
+		content, err = m.render(content)
 		if err != nil {
 			return nil, fmt.Errorf("failed to render template %s: %w", name, err)
 		}
 	}
 
 	return content, nil
+}
+
+// SetResolvers replaces the template secret resolvers used by the manager.
+func (m *DotfileManager) SetResolvers(resolvers ...template.SecretResolver) {
+	m.renderer = template.NewRenderer(resolvers...)
+}
+
+func (m *DotfileManager) render(content []byte) ([]byte, error) {
+	res, err := m.renderer.Render(context.Background(), content, template.RenderOptions{})
+	return res, err
+}
+
+// HasSecrets reports whether the source template contains secret-bearing directives.
+func (m *DotfileManager) HasSecrets(name string) (bool, error) {
+	sourcePath := filepath.Join(m.configDir, name)
+	content, err := m.fs.ReadFile(sourcePath)
+	if err != nil {
+		return false, fmt.Errorf("failed to read source: %w", err)
+	}
+	ds, err := template.Directives(content)
+	if err != nil {
+		return false, err
+	}
+	for _, d := range ds {
+		if template.IsSecretDirective(d) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// RenderForDiff renders a secret-bearing template's source and target both masked,
+// so diff output never contains resolved secret values. The caller still holds the
+// resolved secrets in memory only.
+func (m *DotfileManager) RenderForDiff(name string, target []byte) ([]byte, []byte, error) {
+	sourcePath := filepath.Join(m.configDir, name)
+	content, err := m.fs.ReadFile(sourcePath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to read source: %w", err)
+	}
+	directives, err := template.Directives(content)
+	if err != nil {
+		return nil, nil, err
+	}
+	rendered, secrets, err := m.renderer.RenderWithSecrets(context.Background(), content, template.RenderOptions{})
+	if err != nil {
+		return nil, nil, err
+	}
+	src := maskSecretValues(rendered, secrets)
+	dst := maskTargetSecretRegions(content, target, directives, secrets)
+	return src, dst, nil
+}
+
+func maskSecretValues(content []byte, secrets []string) []byte {
+	out := content
+	for _, s := range secrets {
+		if s == "" {
+			continue
+		}
+		out = bytes.ReplaceAll(out, []byte(s), []byte(template.RedactedMarker))
+	}
+	return out
+}
+
+// maskTargetSecretRegions hides the target's secret-bearing regions by line/column
+// alignment with the source template. This masks even stale secret values that were
+// deployed earlier and can no longer be resolved, so a diff never leaks them.
+func maskTargetSecretRegions(content, target []byte, directives []template.Directive, secrets []string) []byte {
+	if len(directives) == 0 {
+		return target
+	}
+	sourceLines := bytes.Split(content, []byte("\n"))
+	targetLines := bytes.Split(target, []byte("\n"))
+	if len(targetLines) != len(sourceLines) {
+		return maskSecretValues(target, secrets)
+	}
+
+	out := make([][]byte, len(targetLines))
+	for i, l := range targetLines {
+		out[i] = append([]byte(nil), l...)
+	}
+	for _, d := range directives {
+		if !template.IsSecretDirective(d) {
+			continue
+		}
+		lineIdx := bytes.Count(content[:d.Start], []byte("\n"))
+		lineStart := bytes.LastIndexByte(content[:d.Start], '\n') + 1
+		col := d.Start - lineStart
+		if lineIdx >= len(out) {
+			continue
+		}
+		line := out[lineIdx]
+		if col < len(line) {
+			masked := append(append([]byte(nil), line[:col]...), []byte(template.RedactedMarker)...)
+			out[lineIdx] = masked
+		}
+	}
+	return bytes.Join(out, []byte("\n"))
 }
 
 // ValidateAdd checks if a path can be added without actually adding it
