@@ -43,8 +43,8 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 		// Create a table for dotfiles
 		dotBuilder := NewStandardTableBuilder("")
 
-		// Simple two-column format: target path and status
-		dotBuilder.SetHeaders("DOTFILE", "STATUS")
+		// Show the deployed target, its source type, and current status.
+		dotBuilder.SetHeaders("DOTFILE", "TYPE", "STATUS")
 
 		// Sort managed and missing dotfiles
 		sortItems(result.Managed)
@@ -66,7 +66,7 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 					status = "drifted"
 				}
 			}
-			dotBuilder.AddRow(target, status)
+			dotBuilder.AddRow(target, sourceType(item), status)
 		}
 
 		// Show missing dotfiles
@@ -76,7 +76,7 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 			if dest, ok := item.Metadata["destination"].(string); ok {
 				target = tildeShorthand(dest, f.Data.HomeDir)
 			}
-			dotBuilder.AddRow(target, "missing")
+			dotBuilder.AddRow(target, sourceType(item), "missing")
 		}
 
 		// Show error dotfiles
@@ -85,7 +85,7 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 			if dest, ok := item.Metadata["destination"].(string); ok {
 				target = tildeShorthand(dest, f.Data.HomeDir)
 			}
-			dotBuilder.AddRow(target, "error")
+			dotBuilder.AddRow(target, sourceType(item), "error")
 		}
 
 		output.WriteString(dotBuilder.Build())
@@ -125,6 +125,16 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 	}
 
 	return output.String()
+}
+
+func sourceType(item Item) string {
+	if value, ok := item.Metadata["source_type"].(string); ok && value != "" {
+		return value
+	}
+	if source, ok := item.Metadata["source"].(string); ok && strings.HasSuffix(source, ".tmpl") {
+		return "template"
+	}
+	return "file"
 }
 
 // StructuredData returns the structured data for serialization

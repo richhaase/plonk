@@ -13,6 +13,13 @@ import (
 	"github.com/richhaase/plonk/internal/output"
 )
 
+func dotfileSourceType(source string) string {
+	if strings.HasSuffix(source, ".tmpl") {
+		return "template"
+	}
+	return "file"
+}
+
 // convertDotfileStatusToOutput converts []dotfiles.DotfileStatus to separate managed, missing, and error slices.
 // Drifted items are included in managed with StateDegraded state.
 func convertDotfileStatusToOutput(statuses []dotfiles.DotfileStatus) (managed, missing, errors []output.Item) {
@@ -25,6 +32,7 @@ func convertDotfileStatusToOutput(statuses []dotfiles.DotfileStatus) (managed, m
 			Metadata: map[string]interface{}{
 				"source":      s.Source,
 				"destination": s.Target,
+				"source_type": dotfileSourceType(s.Source),
 			},
 		}
 

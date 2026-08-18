@@ -2,6 +2,27 @@ package output
 
 import "testing"
 
+func TestDotfilesStatusFormatter_ShowsSourceType(t *testing.T) {
+	result := Result{
+		Domain: "dotfile",
+		Managed: []Item{
+			{Name: ".zshrc", State: StateManaged, Metadata: map[string]any{
+				"destination": "/home/test/.zshrc", "source_type": "file",
+			}},
+			{Name: ".auth.json", State: StateManaged, Metadata: map[string]any{
+				"destination": "/home/test/.pi/agent/auth.json", "source_type": "template",
+			}},
+		},
+	}
+	out := NewDotfilesStatusFormatter(DotfilesStatusOutput{
+		Result:  result,
+		HomeDir: "/home/test",
+	}).TableOutput()
+	if !contains(out, "TYPE") || !contains(out, "template") || !contains(out, "file") {
+		t.Fatalf("expected source type column in output: %s", out)
+	}
+}
+
 func makeSummary(pkgs, missingPkgs, untrackedPkgs []Item, dots, missingDots, untrackedDots []Item) Summary {
 	return Summary{
 		TotalManaged:   len(pkgs) + len(dots),

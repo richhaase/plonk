@@ -203,7 +203,7 @@ func writeDotfilesTable(output *strings.Builder, result Result, homeDir string) 
 	}
 
 	dotBuilder := NewStandardTableBuilder("")
-	dotBuilder.SetHeaders("DOTFILE", "STATUS")
+	dotBuilder.SetHeaders("DOTFILE", "TYPE", "STATUS")
 
 	managed := append([]Item(nil), result.Managed...)
 	missing := append([]Item(nil), result.Missing...)
@@ -211,10 +211,10 @@ func writeDotfilesTable(output *strings.Builder, result Result, homeDir string) 
 	sortItems(missing)
 
 	for _, item := range managed {
-		dotBuilder.AddRow(dotfileTarget(item, homeDir), dotfileStatus(item))
+		dotBuilder.AddRow(dotfileTarget(item, homeDir), sourceType(item), dotfileStatus(item))
 	}
 	for _, item := range missing {
-		dotBuilder.AddRow(dotfileTarget(item, homeDir), "missing")
+		dotBuilder.AddRow(dotfileTarget(item, homeDir), sourceType(item), "missing")
 	}
 
 	output.WriteString(dotBuilder.Build())
