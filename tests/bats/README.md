@@ -15,7 +15,7 @@ make docker-test
 make docker-test-smoke
 
 # Run specific test file
-make docker-test-file file=tests/bats/behavioral/02-package-install.bats
+make docker-test-file file=tests/bats/behavioral/02-package-track.bats
 
 # Interactive shell for debugging
 make docker-shell

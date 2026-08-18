@@ -171,7 +171,7 @@ docker-test-smoke:
 # Run specific BATS test file in Docker
 docker-test-file:
 	@if [ -z "$(file)" ]; then \
-		echo "Usage: make docker-test-file file=tests/bats/behavioral/02-package-install.bats"; \
+		echo "Usage: make docker-test-file file=tests/bats/behavioral/02-package-track.bats"; \
 		exit 2; \
 	fi
 	@echo "Running $(file) in Docker..."

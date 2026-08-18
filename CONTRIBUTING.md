@@ -10,7 +10,7 @@ go test ./...
 make install
 ```
 
-**Requirements:** Go 1.23+, Homebrew, Git, Make
+**Requirements:** Go 1.25.0+, Homebrew, Git, Make
 
 ## Project Structure
 
@@ -27,6 +27,7 @@ plonk/
 │   ├── gitops/             # Git automation (auto-commit, push, pull)
 │   ├── clone/              # Repository cloning
 │   ├── diagnostics/        # Health checks
+│   ├── template/           # Template parsing and secret resolvers
 │   └── output/             # Output formatting
 ├── docs/                   # Documentation
 └── tests/bats/             # Integration tests
@@ -99,13 +100,15 @@ To add a new one:
 - Return structured results with per-item status
 - Pass context through all layers
 - Support table/JSON/YAML output formats
+- Treat template resolver values as sensitive: do not put resolved secrets in errors, logs, command output, test fixtures, command arguments, or environment dumps. Use `internal/template.MockSecretResolver` for tests.
 
 ## Pull Request Process
 
 1. Fork and create a feature branch
 2. Make changes with tests
-3. Run `go test ./...` and `make lint`
-4. Submit PR with clear description
+3. Run `go test ./...`, `go vet ./...`, and `make lint`
+4. Run `make test-coverage` for non-trivial behavior changes
+5. Submit PR with clear description
 
 ### Commit Messages
 

@@ -64,19 +64,15 @@ plonk config show                     # View settings
 plonk clone user/dotfiles             # Clone repo and apply
 ```
 
-## Migration Notes (v0.27+)
+## Migration Notes
 
-If you're upgrading from older releases:
-
-- **New in v0.27**: Mutating commands (`add`, `rm`, `track`, `untrack`, `config edit`) now auto-commit to git.
-  - Disable with `git.auto_commit: false` in `plonk.yaml`.
-  - If `$PLONK_DIR` is not a git repo, plonk warns and skips git operations.
-- **New in v0.27**: `plonk push` and `plonk pull` commands for syncing your dotfiles repo.
-- **New in v0.28**: `plonk status`, `plonk packages`, and `plonk dotfiles` now show remote sync status (ahead/behind) when a remote is configured.
-- `plonk install`/`uninstall`/`upgrade` were removed (v0.26).
-  - Use your package manager directly, then `plonk track` / `plonk untrack`.
-- Supported managers: `brew`, `cargo`, `go`, `pnpm`, `uv`.
-- Lock file format is `version: 3` and migrates automatically from v2 on read.
+- **v0.31**: Templates support macOS Keychain directives such as `{{keychain:plonk/openrouter}}`. Keychain-backed values stay out of shell environment variables and are masked by `plonk diff`.
+- **v0.30**: `dotfiles.rules` supports an explicit deploy mode such as `"0600"` for a secret template's rendered target.
+- **v0.27**: Mutating commands (`add`, `rm`, `track`, `untrack`, `config edit`) auto-commit to git by default. Disable with `git.auto_commit: false` in `plonk.yaml`.
+- **v0.27**: `plonk push` and `plonk pull` synchronize a dotfiles repository.
+- **v0.28**: `plonk status`, `plonk packages`, and `plonk dotfiles` show ahead/behind status when a remote is configured.
+- `plonk install`/`uninstall`/`upgrade` were removed in v0.26. Install with your package manager, then use `plonk track` / `plonk untrack`.
+- Supported managers: `brew`, `cargo`, `go`, `pnpm`, `uv`; the lock format is `version: 3` and automatically migrates from v2 on read.
 
 ## Supported Package Managers
 
@@ -88,33 +84,46 @@ If you're upgrading from older releases:
 | PNPM | `pnpm:` | `plonk track pnpm:typescript` |
 | UV | `uv:` | `plonk track uv:ruff` |
 
-## Templates
+## Templates and Secrets
 
-Dotfiles can use environment variable substitution via `.tmpl` files. This lets you keep machine-specific values (email, paths, hostnames) out of your dotfiles repo.
-
-**Create a template** in `$PLONK_DIR` with the `.tmpl` extension:
+Files ending in `.tmpl` are rendered before deployment. Use legacy `{{VAR_NAME}}` or explicit `{{env:VAR_NAME}}` for ordinary machine-specific environment values:
 
 ```ini
-# ~/.config/plonk/gitconfig.tmpl → deploys to ~/.gitconfig
+# ~/.config/plonk/gitconfig.tmpl → ~/.gitconfig
 [user]
     email = {{EMAIL}}
-    name = {{GIT_USER_NAME}}
+    name = {{env:GIT_USER_NAME}}
 ```
 
-**Set the variables** in your shell, then apply:
+For a macOS secret, use Keychain instead of exporting a credential into your shell:
+
+```json
+// ~/.config/plonk/pi/agent/auth.json.tmpl → ~/.pi/agent/auth.json
+{"key":"{{keychain:plonk/openrouter}}"}
+```
+
+The locator is `keychain:service/account`; omitting `/account` defaults to the current macOS user. Create a Keychain item interactively (do not put the value in a shell command or shell profile):
 
 ```bash
-export EMAIL="me@example.com"
-export GIT_USER_NAME="My Name"
-plonk apply
+security add-generic-password -s plonk -a openrouter -w
+```
+
+For a rendered secret file, explicitly set a restrictive deployment mode:
+
+```yaml
+dotfiles:
+  rules:
+    - name: pi/agent/auth.json.tmpl
+      mode: "0600"
 ```
 
 **Rules:**
-- Syntax: `{{VAR_NAME}}` (environment variables only, no defaults or conditionals)
-- All referenced variables must be set or `apply` fails with a clear error
-- A plain file and `.tmpl` file cannot target the same destination
-- `plonk doctor` warns about missing template variables
-- `plonk diff` and `plonk status` compare rendered output, not raw templates
+- Environment, Keychain, and legacy directives have no defaults or conditionals.
+- Missing or inaccessible directives make `apply` fail before that file is written; `plonk doctor` identifies the locator and offers remediation without printing secret values.
+- Keychain directives require macOS. On other platforms Plonk reports the provider as unavailable.
+- A plain file and `.tmpl` file cannot target the same destination.
+- `plonk status` compares rendered content in memory. `plonk diff` masks Keychain-derived values as `[REDACTED_SECRET]` before invoking an external diff tool.
+- Never run `plonk add` on an existing secret-bearing file. Create a `.tmpl` with a Keychain directive instead.
 
 ## How It Works
 
@@ -124,7 +133,7 @@ plonk apply
 ├── plonk.yaml          # Settings (optional, usually not needed)
 ├── zshrc               # → ~/.zshrc
 ├── vimrc               # → ~/.vimrc
-├── gitconfig.tmpl      # → ~/.gitconfig (rendered with env vars)
+├── gitconfig.tmpl      # → ~/.gitconfig (rendered template)
 └── config/
     └── nvim/
         └── init.lua    # → ~/.config/nvim/init.lua
@@ -132,7 +141,7 @@ plonk apply
 
 - **Packages**: Listed in `plonk.lock`, installed on `apply` if missing
 - **Dotfiles**: Files in this directory deploy to `$HOME` with a dot prefix
-- **Templates**: `.tmpl` files are rendered (env var substitution) before deployment
+- **Templates**: `.tmpl` files resolve environment values and, on macOS, Keychain values before deployment
 
 ## Installation
 
@@ -159,6 +168,12 @@ operation_timeout: 600               # Seconds (default: 300)
 ignore_patterns:
   - "*.swp"
   - ".DS_Store"
+
+# Optional restrictive permissions for an individual deployed file
+dotfiles:
+  rules:
+    - name: pi/agent/auth.json.tmpl
+      mode: "0600"
 ```
 
 See [docs/reference.md](docs/reference.md) for all options.

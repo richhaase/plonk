@@ -2,11 +2,13 @@
 contract_version: "1.1"
 id: "plonk-secret-template-resolver"
 title: "Secret-Aware Template Resolution with macOS Keychain Backend (Stage A)"
-state: approved
+state: completed
 created_at: "2026-08-17T23:30:00Z"
-updated_at: "2026-08-17T23:55:00Z"
+updated_at: "2026-08-18T00:20:00Z"
 approved_at: "2026-08-17T23:55:00Z"
 approved_by: "richhaase"
+implemented_at: "2026-08-18T00:00:00Z"
+implemented_by: "PR #130, merge commit 7eae869"
 ---
 
 # plonk-secret-template-resolver — Stage A
@@ -84,6 +86,10 @@ Enable Plonk templates (`.tmpl`) to resolve sensitive credentials directly from 
 - **Backwards Compatibility**: All existing environment-variable templates continue to function identically without config changes.
 
 ---
+
+## Completion Assessment
+
+**Verdict: pass.** Implemented in PR #130 (merged as `7eae869`) and released in v0.31.0. Unit tests, lint, security scan, and BATS CI passed. A disposable macOS Keychain item was used to verify resolution, mode `0600`, doctor readiness, secret-masked drift/diff behavior, and cleanup without touching a user credential.
 
 ## Validation / Review
 

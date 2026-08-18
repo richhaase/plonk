@@ -57,6 +57,11 @@ plonk/
 │   │   └── git.go              # Git operations
 │   ├── diagnostics/            # Health checks
 │   │   └── health.go           # System checks
+│   ├── template/               # Template parser and value resolvers
+│   │   ├── template.go         # Directive grammar and parsing
+│   │   ├── render.go           # Rendering and secret masking
+│   │   ├── env.go              # Environment resolver
+│   │   └── keychain.go         # macOS Keychain resolver
 │   └── output/                 # Output formatting
 │       ├── formatters.go       # Table/JSON/YAML
 │       └── colors.go           # Terminal colors
@@ -99,7 +104,7 @@ packages:
 
 ### Dotfile State
 
-The filesystem IS the state. Files in `$PLONK_DIR` (excluding `plonk.yaml`, `plonk.lock`) are managed dotfiles. Files with the `.tmpl` extension are rendered via environment variable substitution before deployment.
+The filesystem IS the state. Files in `$PLONK_DIR` (excluding `plonk.yaml`, `plonk.lock`) are managed dotfiles. Files with the `.tmpl` extension are rendered before deployment using environment variables and, on macOS, Keychain generic-password items.
 
 ### Resource States
 
@@ -118,7 +123,7 @@ User → track command → Verify installed → Update lock file
 ### Apply Flow
 ```
 Lock file → List tracked → Check installed → Install missing
-Config dir → List files → Render .tmpl → Check deployed → Deploy missing/drifted
+Config dir → List files → Resolve and render .tmpl → Check deployed → Deploy missing/drifted
 ```
 
 ### Auto-Commit Flow
@@ -181,18 +186,29 @@ bats tests/bats/behavioral/
 
 BATS tests call the real CLI and real package managers. Use the safe package list in `tests/bats/config/safe-packages.list`.
 
-## Template Rendering
+## Template Rendering and Secret Resolution
 
-Files ending in `.tmpl` go through environment variable substitution before deployment or comparison.
+Files ending in `.tmpl` are rendered before deployment or comparison. The shared `internal/template` package owns directive parsing, resolution, redaction, and error classification; template grammar is not duplicated across commands and diagnostics.
+
+### Directive forms
+
+- `{{VAR_NAME}}` — legacy environment variable.
+- `{{env:VAR_NAME}}` — explicit environment variable.
+- `{{keychain:service/account}}` — macOS Keychain generic-password item. Omitting `/account` defaults to the current macOS username.
 
 ### Implementation
 
-- **`dotfiles.go`**: `renderTemplate()` scans for `{{VAR}}` patterns (regex: `\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}`), looks up each in the environment, and replaces atomically. Returns an error listing all missing variables.
-- **`DotfileManager`**: Has a `lookupEnv` field (defaults to `os.LookupEnv`, injectable for testing). `Deploy()`, `IsDrifted()`, `Diff()`, and `RenderSource()` all call `renderTemplate()` when the source is a `.tmpl` file.
-- **`toTarget()`**: Strips the `.tmpl` extension before adding the dot prefix, so `gitconfig.tmpl` targets `~/.gitconfig`.
+- **`internal/template`**: Parses directives in two phases, dispatches to registered resolvers, and exposes typed errors for missing secrets, unavailable providers, locked Keychain, access denial, and malformed directives.
+- **Resolvers**: `EnvResolver` preserves legacy behavior. `MacOSKeychainResolver` invokes literal `/usr/bin/security` with separated arguments, a restricted environment, and a timeout. `MockSecretResolver` supports deterministic tests without a host Keychain.
+- **`DotfileManager`**: Uses the shared renderer for deployment, drift detection, and source rendering. Resolved values remain in memory until the normal atomic deployment path writes the authorized target under `$HOME`.
+- **`toTarget()`**: Strips `.tmpl` before adding the dot prefix, so `gitconfig.tmpl` targets `~/.gitconfig`.
 - **Conflict detection**: `List()` builds a target-path map and errors if two sources (e.g., `gitconfig` and `gitconfig.tmpl`) resolve to the same target.
-- **`diagnostics/health.go`**: `checkTemplateReadiness()` walks `$PLONK_DIR` for `.tmpl` files, validates all referenced variables are set, and reports warnings.
-- **`commands/diff.go`**: Renders templates to temporary files so external diff tools see substituted values.
+- **`diagnostics/health.go`**: Parses templates through the shared package and reports unresolved locators with provider-owned remediation hints, never resolved values.
+- **`commands/diff.go`**: Uses a redacted render for templates containing Keychain directives. `[REDACTED_SECRET]`, not a plaintext secret, is written to temporary diff files or passed to an external diff tool.
+
+### Secret boundary
+
+Plaintext secrets are permitted only while rendering in process memory and in the explicitly authorized deployed target file. They must not be emitted in command output, errors, logs, environment variables, command arguments, or temporary diff files.
 
 ## Error Handling
 

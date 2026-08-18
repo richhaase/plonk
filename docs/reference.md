@@ -2,14 +2,15 @@
 
 Complete CLI and configuration reference.
 
-## Migration Notes (v0.27+)
+## Migration Notes
 
-- **v0.27**: Mutating commands (`add`, `rm`, `track`, `untrack`, `config edit`) now auto-commit to git. Disable with `git.auto_commit: false` in `plonk.yaml`.
-- **v0.27**: New `plonk push` and `plonk pull` commands for syncing your dotfiles repo.
-- `install`, `uninstall`, and `upgrade` commands were removed (v0.26).
-- Package operations are centered on `track`, `untrack`, and `apply`.
+- **v0.31**: Templates support macOS Keychain directives (`{{keychain:service/account}}`) and mask Keychain-derived values in `plonk diff`.
+- **v0.30**: `dotfiles.rules` can set an explicit deploy mode, such as `"0600"`, for an individual dotfile.
+- **v0.27**: Mutating commands (`add`, `rm`, `track`, `untrack`, `config edit`) auto-commit by default. Disable with `git.auto_commit: false` in `plonk.yaml`.
+- **v0.27**: `plonk push` and `plonk pull` synchronize your dotfiles repository.
+- `install`, `uninstall`, and `upgrade` were removed in v0.26; package operations use `track`, `untrack`, and `apply`.
 - Supported package managers: `brew`, `cargo`, `go`, `pnpm`, `uv`.
-- Lock files are `version: 3` and older v2 lock files are auto-migrated.
+- Lock files use `version: 3`; older v2 files migrate automatically.
 
 ## Commands
 
@@ -268,39 +269,66 @@ file keeps the source file permissions.
 
 ## Templates
 
-Dotfiles with a `.tmpl` extension are rendered via environment variable substitution before deployment.
+Dotfiles with a `.tmpl` extension are rendered before deployment. A template may use an environment variable or, on macOS, a generic-password item from Keychain.
 
 ### Syntax
 
-Use `{{VAR_NAME}}` to reference environment variables:
+#### Environment variables
+
+Legacy `{{VAR_NAME}}` and explicit `{{env:VAR_NAME}}` both resolve environment variables:
 
 ```ini
 # gitconfig.tmpl
 [user]
     email = {{EMAIL}}
-    name = {{GIT_USER_NAME}}
+    name = {{env:GIT_USER_NAME}}
 ```
+
+#### macOS Keychain secrets
+
+Use `{{keychain:service/account}}` for a generic-password item. If `/account` is omitted, Plonk uses the current macOS username as the account.
+
+```json
+// pi/agent/auth.json.tmpl
+{
+  "openrouter": {
+    "type": "api_key",
+    "key": "{{keychain:plonk/openrouter}}"
+  }
+}
+```
+
+Create the item interactively so its value is not exposed through shell history or a command argument:
+
+```bash
+security add-generic-password -s plonk -a openrouter -w
+```
+
+Plonk reads Keychain using the macOS `security` tool with a fixed executable path, a restricted process environment, and a timeout. It is a Keychain consumer only; it never stores or changes Keychain values.
 
 ### How It Works
 
 1. Place a `.tmpl` file in `$PLONK_DIR` (e.g., `gitconfig.tmpl`)
-2. On `plonk apply`, plonk replaces `{{VAR}}` placeholders with environment variable values
-3. The rendered output is deployed to `$HOME` with the `.tmpl` extension stripped (e.g., `~/.gitconfig`)
+2. On `plonk apply`, Plonk resolves each directive in memory
+3. The rendered output is deployed to `$HOME` with `.tmpl` stripped (e.g., `~/.gitconfig`)
+4. Configure `dotfiles.rules` mode `"0600"` for a template whose rendered output contains a secret
 
-### Behavior
+### Behavior and Security
 
-- All referenced variables must be set. If any are missing, `apply` errors with the list of missing variables.
+- Missing, locked, inaccessible, malformed, or unavailable providers fail the affected apply without printing a secret value.
+- `plonk doctor` checks directives and reports their locator plus a provider-specific remediation hint; it never reports a resolved value.
 - A plain file and a `.tmpl` file must not target the same destination (e.g., `gitconfig` and `gitconfig.tmpl` cannot coexist).
-- `plonk status` and `plonk diff` compare rendered content against the deployed file.
-- `plonk diff` renders templates to a temporary file so external diff tools see values, not placeholders.
-- `plonk doctor` checks that all template variables are set and warns if any are missing.
+- `plonk status` compares rendered content in memory.
+- For templates containing Keychain directives, `plonk diff` masks resolved values as `[REDACTED_SECRET]` before writing temp files or invoking the configured external diff tool.
 - `plonk rm gitconfig` recognizes and removes the `gitconfig.tmpl` source file.
+- Keychain directives are supported only on macOS. On other operating systems Plonk reports the provider as unavailable.
 
 ### Limitations (By Design)
 
 - No conditionals, loops, or template functions
 - No default/fallback values
-- Environment variables only (no YAML variable files)
+- No Keychain writes from Plonk
+- No Linux Secret Service or Windows Credential Manager provider yet
 
 ## Lock File
 
@@ -322,6 +350,8 @@ packages:
 
 - `0` - Success
 - `1` - Error
+
+Template-provider failures are reported with a specific cause in the error message: secret not found, provider unavailable, Keychain locked, access denied, or invalid directive syntax.
 
 ## Output Formats
 
