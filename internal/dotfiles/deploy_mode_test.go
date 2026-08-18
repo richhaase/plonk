@@ -6,6 +6,8 @@ package dotfiles
 import (
 	"os"
 	"testing"
+
+	"github.com/richhaase/plonk/internal/template"
 )
 
 func TestDotfileManager_Deploy_ConfiguredMode(t *testing.T) {
@@ -17,12 +19,12 @@ func TestDotfileManager_Deploy_ConfiguredMode(t *testing.T) {
 	fs.Dirs["/config/pi/agent"] = true
 
 	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
-	m.lookupEnv = func(key string) (string, bool) {
+	m.SetResolvers(template.NewEnvResolverFromLookup(func(key string) (string, bool) {
 		if key == "TOKEN" {
 			return "secret", true
 		}
 		return "", false
-	}
+	}))
 
 	// Default source mode is 0644 (from memFileInfo.Mode).
 	m.SetDeployModes(map[string]os.FileMode{

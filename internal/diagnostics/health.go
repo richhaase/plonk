@@ -5,22 +5,22 @@ package diagnostics
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/packages"
+	"github.com/richhaase/plonk/internal/template"
 )
-
-var templateVarPattern = regexp.MustCompile(`\{\{([A-Za-z_][A-Za-z0-9_]*)\}\}`)
 
 // HealthStatus represents overall system health
 type HealthStatus struct {
@@ -47,6 +47,8 @@ type HealthReport struct {
 
 // fileStatus represents the state of a file for health checks
 type fileStatus int
+
+const keychainHealthTimeout = 10 * time.Second
 
 const (
 	fileExists fileStatus = iota
@@ -446,19 +448,24 @@ func checkPackageManagerHealth(_ context.Context) []HealthCheck {
 // checkTemplateReadiness scans for .tmpl dotfiles and validates that
 // all referenced environment variables are set.
 func checkTemplateReadiness() HealthCheck {
+	ctx, cancel := context.WithTimeout(context.Background(), keychainHealthTimeout)
+	defer cancel()
+
+	return checkTemplateReadinessAt(config.GetDefaultConfigDirectory(), newTemplateIssueClassifier(ctx))
+}
+
+func checkTemplateReadinessAt(configDir string, classifier templateIssueClassifier) HealthCheck {
 	check := NewHealthCheck("Template Readiness", "dotfiles", "All template variables are available")
 
-	configDir := config.GetDefaultConfigDirectory()
 	if _, err := os.Stat(configDir); err != nil {
-		// No config dir yet — nothing to check
 		check.Details = append(check.Details, "No config directory found; skipping template check")
 		return check
 	}
 
-	var missing []string
 	seen := make(map[string]bool)
+	fileCount := 0
+	directiveCount := 0
 
-	// Walk config directory for .tmpl files using os.Root to prevent symlink traversal
 	root, rootErr := os.OpenRoot(configDir)
 	if rootErr != nil {
 		check.Details = append(check.Details, fmt.Sprintf("Cannot open config directory: %v", rootErr))
@@ -478,34 +485,107 @@ func checkTemplateReadiness() HealthCheck {
 		if readErr != nil {
 			return nil
 		}
+		fileCount++
 
-		// Scan for {{VAR}} patterns
-		for _, match := range templateVarPattern.FindAllSubmatch(content, -1) {
-			varName := string(match[1])
-			if seen[varName] {
+		directives, parseErr := template.Directives(content)
+		if parseErr != nil {
+			if !seen["syntax:"+path] {
+				seen["syntax:"+path] = true
+				check.Issues = append(check.Issues, fmt.Sprintf("%s: %v", path, parseErr))
+				check.Suggestions = append(check.Suggestions, "Fix the malformed template directive and run `plonk apply` again")
+			}
+			return nil
+		}
+
+		for _, d := range directives {
+			directiveCount++
+			label := scopeLabel(d)
+			if seen[label] {
 				continue
 			}
-			seen[varName] = true
-			if _, ok := os.LookupEnv(varName); !ok {
-				missing = append(missing, varName)
+			seen[label] = true
+			if issue, suggestion := classifier.classify(d); issue != "" {
+				check.Issues = append(check.Issues, issue)
+				if suggestion != "" {
+					check.Suggestions = append(check.Suggestions, suggestion)
+				}
 			}
 		}
 		return nil
 	})
 
-	if len(missing) > 0 {
-		sort.Strings(missing)
+	sort.Strings(check.Issues)
+	sort.Strings(check.Suggestions)
+
+	switch {
+	case len(check.Issues) > 0:
 		check.Status = "warn"
-		check.Issues = append(check.Issues, fmt.Sprintf("Template variables not set: %s", strings.Join(missing, ", ")))
-		check.Suggestions = append(check.Suggestions, "Set the missing environment variables before running 'plonk apply'")
-		check.Message = fmt.Sprintf("%d template variable(s) missing", len(missing))
-	} else if len(seen) > 0 {
-		check.Details = append(check.Details, fmt.Sprintf("%d template variable(s) verified", len(seen)))
-	} else {
+		check.Message = fmt.Sprintf("%d template issue(s) detected", len(check.Issues))
+		check.Details = append(check.Details, "Template issues are listed above; suggestions show how to resolve each one")
+	case fileCount > 0:
+		check.Details = append(check.Details, fmt.Sprintf("%d template(s) verified (%d directive reference(s))", fileCount, directiveCount))
+	default:
 		check.Details = append(check.Details, "No template files found")
 	}
 
 	return check
+}
+
+func scopeLabel(d template.Directive) string {
+	if d.Provider == "" {
+		return d.Locator
+	}
+	return d.Provider + ":" + d.Locator
+}
+
+type templateIssueClassifier struct {
+	ctx      context.Context
+	env      template.SecretResolver
+	keychain template.SecretResolver
+}
+
+func newTemplateIssueClassifier(ctx context.Context) templateIssueClassifier {
+	return templateIssueClassifier{
+		ctx:      ctx,
+		env:      template.NewEnvResolver(),
+		keychain: template.NewMacOSKeychainResolver(),
+	}
+}
+
+func (c templateIssueClassifier) classify(d template.Directive) (string, string) {
+	label := scopeLabel(d)
+	switch d.Provider {
+	case "", template.ProviderEnv:
+		if _, err := c.env.Resolve(c.ctx, d.Locator); err != nil {
+			return fmt.Sprintf("Environment variable not set: %s", d.Locator), c.env.RemediationHint(d.Locator)
+		}
+		return "", ""
+	default:
+		_, err := c.keychain.Resolve(c.ctx, d.Locator)
+		switch {
+		case err == nil:
+			return "", ""
+		case errors.Is(err, template.ErrSecretNotFound):
+			return fmt.Sprintf("Keychain secret not found: %s", label), keychainRemediationHint(d.Locator)
+		case errors.Is(err, template.ErrProviderUnavailable):
+			return fmt.Sprintf("Keychain provider unavailable: %s", label), "Keychain resolution requires macOS with the `security` tool"
+		case errors.Is(err, template.ErrKeychainLocked):
+			return fmt.Sprintf("Keychain locked: %s", label), "Unlock the macOS Keychain (and allow terminal access) then rerun `plonk doctor`"
+		default:
+			return fmt.Sprintf("Keychain access denied: %s", label), keychainRemediationHint(d.Locator)
+		}
+	}
+}
+
+func keychainRemediationHint(locator string) string {
+	service, account := template.ParseKeychainLocator(locator)
+	acct := account
+	if acct == "" {
+		acct = "$(your user account)"
+	}
+	return fmt.Sprintf(
+		"run `security add-generic-password -s %s -a %s -w`, enter the secret securely "+
+			"(without saving it in shell history), then run `plonk apply`", service, acct)
 }
 
 func checkExecutablePath() HealthCheck {
