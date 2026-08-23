@@ -93,8 +93,8 @@ func TestDotfileManager_ShouldIgnore(t *testing.T) {
 	}{
 		{"zshrc", false},
 		{"zshrc.bak", true},
-		{".git", true},           // ignored by both dot-prefix rule and pattern
-		{".gitignore", true},     // ignored by dot-prefix rule (internal file)
+		{".git", true},             // ignored by both dot-prefix rule and pattern
+		{".gitignore", true},       // ignored by dot-prefix rule (internal file)
 		{"config/app.yaml", false}, // nested config files are not ignored
 	}
 
@@ -201,6 +201,18 @@ func TestDotfileManager_Add(t *testing.T) {
 	}
 	if string(content) != "zsh content" {
 		t.Errorf("Add() content = %q, want %q", string(content), "zsh content")
+	}
+}
+
+func TestDotfileManager_Add_MissingPathReportsDoesNotExist(t *testing.T) {
+	fs := NewMemoryFS()
+	fs.Dirs["/home/user"] = true
+	fs.Dirs["/config"] = true
+	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
+
+	err := m.Add("/home/user/.missing")
+	if err == nil || !strings.Contains(err.Error(), "does not exist") {
+		t.Fatalf("Add() error = %v, want missing-path error", err)
 	}
 }
 
