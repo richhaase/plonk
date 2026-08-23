@@ -247,7 +247,8 @@ func convertAddResultsToAddOutput(results []AddResult) []output.DotfileAddOutput
 	return outputs
 }
 
-// validateAddResultsErr checks if all add operations failed and returns appropriate error
+// validateAddResultsErr returns an error if any add operation failed
+// (partial failure is a non-zero exit per the documented batch policy)
 func validateAddResultsErr(results []AddResult) error {
 	return ValidateBatchResults(len(results), "add dotfiles", func(i int) bool {
 		return results[i].Status == AddStatusFailed

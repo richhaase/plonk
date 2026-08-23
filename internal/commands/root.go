@@ -4,6 +4,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/output"
@@ -44,14 +45,16 @@ func init() {
 	rootCmd.Flags().BoolP("version", "v", false, "Show version information")
 }
 
-// ExecuteWithExitCode runs the root command and returns appropriate exit code
-func ExecuteWithExitCode(version, commit, date string) int {
+// ExecuteWithExitCode runs the root command and returns appropriate exit code.
+// The provided context is installed as the command context so every RunE can
+// obtain it via cmd.Context(); main wires it to SIGINT/SIGTERM cancellation.
+func ExecuteWithExitCode(ctx context.Context, version, commit, date string) int {
 	versionInfo = VersionInfo{
 		Version: version,
 		Commit:  commit,
 		Date:    date,
 	}
-	err := rootCmd.Execute()
+	err := rootCmd.ExecuteContext(ctx)
 	if err != nil {
 		return 1
 	}

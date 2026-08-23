@@ -163,7 +163,8 @@ func convertRemoveResultsToSerializable(results []RemoveResult) []output.Seriali
 	return converted
 }
 
-// validateRemoveResultsErr checks if all remove operations failed and returns appropriate error
+// validateRemoveResultsErr returns an error if any remove operation failed
+// (partial failure is a non-zero exit per the documented batch policy)
 func validateRemoveResultsErr(results []RemoveResult) error {
 	return ValidateBatchResults(len(results), "remove dotfiles", func(i int) bool {
 		return results[i].Status == RemoveStatusFailed

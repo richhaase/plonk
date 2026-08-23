@@ -29,14 +29,15 @@ func TestValidateBatchResults(t *testing.T) {
 			operationName: "install packages",
 			isFailed:      func(i int) bool { return true },
 			wantErr:       true,
-			errContains:   "install packages operation failed: all 3 item(s) failed to process",
+			errContains:   "install packages operation failed: 3 of 3 item(s) failed to process",
 		},
 		{
-			name:          "some succeeded returns nil",
+			name:          "some failed returns error (partial failure is nonzero)",
 			count:         3,
-			operationName: "test",
+			operationName: "add dotfiles",
 			isFailed:      func(i int) bool { return i == 0 }, // Only first failed
-			wantErr:       false,
+			wantErr:       true,
+			errContains:   "add dotfiles operation failed: 1 of 3 item(s) failed to process",
 		},
 		{
 			name:          "none failed returns nil",
@@ -51,7 +52,7 @@ func TestValidateBatchResults(t *testing.T) {
 			operationName: "add dotfiles",
 			isFailed:      func(i int) bool { return true },
 			wantErr:       true,
-			errContains:   "add dotfiles operation failed: all 1 item(s) failed to process",
+			errContains:   "add dotfiles operation failed: 1 of 1 item(s) failed to process",
 		},
 	}
 

@@ -37,42 +37,50 @@ func init() {
 func runUntrack(cmd *cobra.Command, args []string) error {
 	configDir := config.GetDefaultConfigDirectory()
 	lockSvc := lock.NewLockV3Service(configDir)
-
-	lockFile, err := lockSvc.Read()
-	if err != nil {
-		return fmt.Errorf("failed to read lock file: %w", err)
-	}
+	ctx := cmd.Context()
 
 	var untracked, skipped, failed int
 
-	for _, arg := range args {
-		// Parse without validating manager - allows untracking legacy managers
-		manager, pkg, err := parsePackageSpecNoValidate(arg)
+	// Serialize the read-modify-write cycle against concurrent plonk processes
+	err := lock.WithMutationLock(configDir, func() error {
+		lockFile, err := lockSvc.Read()
 		if err != nil {
-			fmt.Printf("Error: %s: %v\n", arg, err)
-			failed++
-			continue
+			return fmt.Errorf("failed to read lock file: %w", err)
 		}
 
-		// Check if tracked
-		if !lockFile.HasPackage(manager, pkg) {
-			fmt.Printf("Skipping %s:%s (not tracked)\n", manager, pkg)
-			skipped++
-			continue
+		for _, arg := range args {
+			// Parse without validating manager - allows untracking legacy managers
+			manager, pkg, err := parsePackageSpecNoValidate(arg)
+			if err != nil {
+				fmt.Printf("Error: %s: %v\n", arg, err)
+				failed++
+				continue
+			}
+
+			// Check if tracked
+			if !lockFile.HasPackage(manager, pkg) {
+				fmt.Printf("Skipping %s:%s (not tracked)\n", manager, pkg)
+				skipped++
+				continue
+			}
+
+			// Remove from lock file
+			lockFile.RemovePackage(manager, pkg)
+			fmt.Printf("Untracking %s:%s\n", manager, pkg)
+			untracked++
 		}
 
-		// Remove from lock file
-		lockFile.RemovePackage(manager, pkg)
-		fmt.Printf("Untracking %s:%s\n", manager, pkg)
-		untracked++
-	}
-
-	// Write updated lock file
-	if untracked > 0 {
-		if err := lockSvc.Write(lockFile); err != nil {
-			return fmt.Errorf("failed to write lock file: %w", err)
+		// Write updated lock file
+		if untracked > 0 {
+			if err := lockSvc.Write(lockFile); err != nil {
+				return fmt.Errorf("failed to write lock file: %w", err)
+			}
+			gitops.AutoCommit(ctx, configDir, "untrack", args)
 		}
-		gitops.AutoCommit(cmd.Context(), configDir, "untrack", args)
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	// Summary

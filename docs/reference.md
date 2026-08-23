@@ -346,10 +346,18 @@ packages:
     - golang.org/x/tools/gopls
 ```
 
+Lock-file mutations (track/untrack) are serialized across concurrent plonk processes with an advisory file lock, and the lock file is written atomically via a unique same-directory temporary file. Concurrent plonk invocations cannot lose lock-file updates.
+
 ## Exit Codes
 
-- `0` - Success
-- `1` - Error
+- `0` - Success: every requested item succeeded (skipped items do not count as failures)
+- `1` - Error: any requested item failed, even if others succeeded (partial failure)
+
+This policy is consistent across all batch commands (`apply`, `track`, `untrack`, `add`, `rm`): a non-zero exit means at least one requested mutation did not complete.
+
+SIGINT/SIGTERM cancels the current operation and its child processes (Git, package managers, diff tools) promptly.
+
+Diff tools are invoked per the documented diff(1) convention: exit status `1` means "files differ" and is treated as success; any other non-zero exit is a failure and is propagated.
 
 Template-provider failures are reported with a specific cause in the error message: secret not found, provider unavailable, Keychain locked, access denied, or invalid directive syntax.
 

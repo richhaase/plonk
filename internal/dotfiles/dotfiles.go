@@ -6,11 +6,14 @@ package dotfiles
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/richhaase/plonk/internal/ignore"
@@ -28,11 +31,11 @@ func isTemplate(name string) bool {
 
 // DotfileManager manages dotfiles in a single config directory
 type DotfileManager struct {
-	configDir   string               // $PLONK_DIR
-	homeDir     string               // $HOME
-	fs          FileSystem           // file operations
+	configDir   string     // $PLONK_DIR
+	homeDir     string     // $HOME
+	fs          FileSystem // file operations
 	matcher     *ignore.Matcher
-	renderer    *template.Renderer   // template directive resolver
+	renderer    *template.Renderer     // template directive resolver
 	deployModes map[string]os.FileMode // name -> explicit deploy mode
 }
 
@@ -44,11 +47,11 @@ func NewDotfileManager(configDir, homeDir string, ignorePatterns []string) *Dotf
 // NewDotfileManagerWithFS creates a manager with a custom filesystem (for testing)
 func NewDotfileManagerWithFS(configDir, homeDir string, ignorePatterns []string, fs FileSystem) *DotfileManager {
 	return &DotfileManager{
-		configDir:   configDir,
-		homeDir:     homeDir,
-		fs:          fs,
-		matcher:     ignore.NewMatcher(ignorePatterns),
-		renderer:    template.NewRenderer(defaultResolvers()...),
+		configDir: configDir,
+		homeDir:   homeDir,
+		fs:        fs,
+		matcher:   ignore.NewMatcher(ignorePatterns),
+		renderer:  template.NewRenderer(defaultResolvers()...),
 	}
 }
 
@@ -57,6 +60,16 @@ func defaultResolvers() []template.SecretResolver {
 		template.NewEnvResolver(),
 		template.NewMacOSKeychainResolver(),
 	}
+}
+
+// randomSuffix returns a short random string used to make temporary file
+// names unique, falling back to the PID if randomness is unavailable.
+func randomSuffix() string {
+	var b [6]byte
+	if _, err := rand.Read(b[:]); err == nil {
+		return hex.EncodeToString(b[:])
+	}
+	return strconv.Itoa(os.Getpid())
 }
 
 // List returns all dotfiles in the config directory
@@ -290,9 +303,11 @@ func (m *DotfileManager) Deploy(name string) error {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	// Atomic write: write to temp file, then rename
+	// Atomic write: write to a uniquely named temp file, then rename.
+	// The unique suffix prevents collisions between concurrent plonk processes
+	// deploying to the same target.
 	// Use restrictive permissions for temp file, final permissions set after rename
-	tmpPath := targetPath + ".plonk.tmp"
+	tmpPath := fmt.Sprintf("%s.plonk.tmp.%s", targetPath, randomSuffix())
 	if err := m.fs.WriteFile(tmpPath, content, 0600); err != nil {
 		return fmt.Errorf("failed to write temp file: %w", err)
 	}

@@ -4,9 +4,12 @@
 package main
 
 import (
+	"context"
 	"os"
+	"os/signal"
 	"runtime/debug"
 	"strings"
+	"syscall"
 
 	"github.com/richhaase/plonk/internal/commands"
 )
@@ -59,6 +62,13 @@ func getVersionInfo() (string, string, string) {
 
 func main() {
 	v, c, d := getVersionInfo()
-	exitCode := commands.ExecuteWithExitCode(v, c, d)
+
+	// Signal-aware execution: SIGINT/SIGTERM cancels the command context,
+	// which propagates to all child Git and package-manager processes so they
+	// terminate promptly instead of being orphaned.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	exitCode := commands.ExecuteWithExitCode(ctx, v, c, d)
 	os.Exit(exitCode)
 }
