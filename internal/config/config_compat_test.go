@@ -122,4 +122,3 @@ ignore_patterns: []
 		})
 	}
 }
-

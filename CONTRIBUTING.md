@@ -119,6 +119,23 @@ docs: update Z documentation
 test: add tests for W
 ```
 
+### Required Status Checks
+
+All checks are **blocking** — a PR cannot merge until every one passes:
+
+| Check | Workflow | What it enforces |
+|---|---|---|
+| Unit Tests | `CI` | `go test ./...` with coverage |
+| Integration Tests (BATS) | `CI` | Behavioral tests in Docker |
+| Quality checks (lint + formatting) | `CI` | golangci-lint (incl. gosec) and read-only gofmt drift check |
+| Security Scan | `Security Check` | govulncheck on dependencies; gosec via golangci-lint |
+
+Notes for maintainers:
+
+- Formatting is verified read-only (`gofmt -l -s`); the workflow never rewrites the checkout. If it fails, run `gofmt -w -s .` locally and push.
+- Releases (`v*` tags) additionally run the Release Quality Gate (formatting, lint, unit tests, security) before GoReleaser publishes.
+- These checks must be configured as *required* in the repository's branch protection settings for `main` (Settings → Branches → Branch protection rule → Require status checks).
+
 ## Documentation
 
 When changing functionality, update:

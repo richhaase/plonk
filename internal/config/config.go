@@ -16,9 +16,9 @@ import (
 )
 
 var (
-	validatorOnce     sync.Once
-	cachedValidator   *validator.Validate
-	validatorInitErr  error
+	validatorOnce    sync.Once
+	cachedValidator  *validator.Validate
+	validatorInitErr error
 )
 
 // GitConfig contains git-related configuration
@@ -28,14 +28,14 @@ type GitConfig struct {
 
 // Config represents the plonk configuration
 type Config struct {
-	DefaultManager    string                   `yaml:"default_manager,omitempty" validate:"omitempty,validmanager"`
-	OperationTimeout  int                      `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"`
-	DotfileTimeout    int                      `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`
-	ExpandDirectories []string                 `yaml:"expand_directories,omitempty"`
-	IgnorePatterns    []string                 `yaml:"ignore_patterns,omitempty"`
-	Dotfiles          Dotfiles                 `yaml:"dotfiles,omitempty"`
-	DiffTool          string                   `yaml:"diff_tool,omitempty"`
-	Git               GitConfig                `yaml:"git,omitempty"`
+	DefaultManager    string    `yaml:"default_manager,omitempty" validate:"omitempty,validmanager"`
+	OperationTimeout  int       `yaml:"operation_timeout,omitempty" validate:"omitempty,min=0,max=3600"`
+	DotfileTimeout    int       `yaml:"dotfile_timeout,omitempty" validate:"omitempty,min=0,max=600"`
+	ExpandDirectories []string  `yaml:"expand_directories,omitempty"`
+	IgnorePatterns    []string  `yaml:"ignore_patterns,omitempty"`
+	Dotfiles          Dotfiles  `yaml:"dotfiles,omitempty"`
+	DiffTool          string    `yaml:"diff_tool,omitempty"`
+	Git               GitConfig `yaml:"git,omitempty"`
 }
 
 // AutoCommitEnabled returns whether auto-commit is enabled.

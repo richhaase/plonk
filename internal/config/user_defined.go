@@ -75,5 +75,3 @@ func (c *UserDefinedChecker) getDefaultFieldValue(fieldName string) interface{} 
 	}
 	return nil
 }
-
-

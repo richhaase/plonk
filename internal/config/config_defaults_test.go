@@ -22,7 +22,7 @@ func TestApplyDefaults(t *testing.T) {
 			expected: &Config{
 				DefaultManager:    "brew",
 				OperationTimeout:  300, // 5 minutes
-				DotfileTimeout:    60, // 1 minute
+				DotfileTimeout:    60,  // 1 minute
 				ExpandDirectories: []string{".config"},
 				IgnorePatterns:    defaultConfig.IgnorePatterns,
 			},
@@ -35,7 +35,7 @@ func TestApplyDefaults(t *testing.T) {
 			},
 			expected: &Config{
 				DefaultManager:    "npm",
-				OperationTimeout:  60,  // 1 minute
+				OperationTimeout:  60, // 1 minute
 				DotfileTimeout:    60, // 1 minute
 				ExpandDirectories: []string{".config"},
 				IgnorePatterns:    defaultConfig.IgnorePatterns,
@@ -50,7 +50,7 @@ func TestApplyDefaults(t *testing.T) {
 			expected: &Config{
 				DefaultManager:    "brew",
 				OperationTimeout:  300, // 5 minutes
-				DotfileTimeout:    60, // 1 minute
+				DotfileTimeout:    60,  // 1 minute
 				ExpandDirectories: []string{"custom-dir"},
 				IgnorePatterns:    []string{"custom.txt"},
 			},

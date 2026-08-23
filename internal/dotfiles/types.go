@@ -14,10 +14,10 @@ type Dotfile struct {
 type SyncState string
 
 const (
-	SyncStateManaged   SyncState = "managed"   // source and target match
-	SyncStateMissing   SyncState = "missing"   // source exists, target doesn't
-	SyncStateDrifted   SyncState = "drifted"   // source and target differ
-	SyncStateError     SyncState = "error"     // could not determine state
+	SyncStateManaged SyncState = "managed" // source and target match
+	SyncStateMissing SyncState = "missing" // source exists, target doesn't
+	SyncStateDrifted SyncState = "drifted" // source and target differ
+	SyncStateError   SyncState = "error"   // could not determine state
 )
 
 // DotfileStatus combines a dotfile with its current state
