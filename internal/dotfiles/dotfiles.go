@@ -70,7 +70,7 @@ type DotfileManager struct {
 
 // NewDotfileManager creates a manager using the real filesystem
 func NewDotfileManager(configDir, homeDir string, ignorePatterns []string) *DotfileManager {
-	return NewDotfileManagerWithFS(configDir, homeDir, ignorePatterns, OSFileSystem{})
+	return NewDotfileManagerWithFS(configDir, homeDir, ignorePatterns, NewRootedOSFileSystem(configDir, homeDir))
 }
 
 // NewDotfileManagerWithFS creates a manager with a custom filesystem (for testing)

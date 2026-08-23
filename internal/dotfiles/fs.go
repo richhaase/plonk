@@ -4,8 +4,11 @@
 package dotfiles
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -59,6 +62,164 @@ func (OSFileSystem) Rename(old, new string) error {
 
 func (OSFileSystem) Chmod(path string, mode os.FileMode) error {
 	return os.Chmod(path, mode)
+}
+
+// RootedOSFileSystem performs filesystem operations relative to either the
+// configured home or config directory. os.Root prevents symlinks in an
+// operation's path from escaping that directory, including when a path is
+// replaced between validation and use.
+//
+// Paths passed to this filesystem must be lexically under one of its roots.
+// A config directory nested in home is selected first because it is the more
+// restrictive root.
+type RootedOSFileSystem struct {
+	configDir string
+	homeDir   string
+}
+
+// NewRootedOSFileSystem returns a filesystem confined to configDir and homeDir.
+func NewRootedOSFileSystem(configDir, homeDir string) RootedOSFileSystem {
+	return RootedOSFileSystem{
+		configDir: filepath.Clean(configDir),
+		homeDir:   filepath.Clean(homeDir),
+	}
+}
+
+func (f RootedOSFileSystem) ReadFile(path string) ([]byte, error) {
+	root, relPath, err := f.open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer root.Close()
+	return root.ReadFile(relPath)
+}
+
+func (f RootedOSFileSystem) WriteFile(path string, data []byte, perm os.FileMode) error {
+	root, relPath, err := f.open(path)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+	return root.WriteFile(relPath, data, perm)
+}
+
+func (f RootedOSFileSystem) Stat(path string) (os.FileInfo, error) {
+	root, relPath, err := f.open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer root.Close()
+	return root.Stat(relPath)
+}
+
+func (f RootedOSFileSystem) ReadDir(path string) ([]os.DirEntry, error) {
+	root, relPath, err := f.open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer root.Close()
+
+	dir, err := root.Open(relPath)
+	if err != nil {
+		return nil, err
+	}
+	defer dir.Close()
+	return dir.ReadDir(-1)
+}
+
+func (f RootedOSFileSystem) MkdirAll(path string, perm os.FileMode) error {
+	rootPath, relPath, err := f.rootPath(path)
+	if err != nil {
+		return err
+	}
+
+	// Adding the first dotfile creates $PLONK_DIR on demand. Creating the
+	// configured root is safe: that root is an explicit user configuration;
+	// every operation below it remains rooted afterwards.
+	if rootPath == f.configDir {
+		if err := os.MkdirAll(rootPath, perm); err != nil {
+			return err
+		}
+	}
+
+	root, err := os.OpenRoot(rootPath)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+	return root.MkdirAll(relPath, perm)
+}
+
+func (f RootedOSFileSystem) Remove(path string) error {
+	root, relPath, err := f.open(path)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+	return root.Remove(relPath)
+}
+
+func (f RootedOSFileSystem) RemoveAll(path string) error {
+	root, relPath, err := f.open(path)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+	return root.RemoveAll(relPath)
+}
+
+func (f RootedOSFileSystem) Rename(oldPath, newPath string) error {
+	rootPath, oldRelPath, err := f.rootPath(oldPath)
+	if err != nil {
+		return err
+	}
+	newRootPath, newRelPath, err := f.rootPath(newPath)
+	if err != nil {
+		return err
+	}
+	if rootPath != newRootPath {
+		return fmt.Errorf("cannot rename across managed roots")
+	}
+
+	root, err := os.OpenRoot(rootPath)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+	return root.Rename(oldRelPath, newRelPath)
+}
+
+func (f RootedOSFileSystem) Chmod(path string, mode os.FileMode) error {
+	root, relPath, err := f.open(path)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+	return root.Chmod(relPath, mode)
+}
+
+func (f RootedOSFileSystem) open(path string) (*os.Root, string, error) {
+	rootPath, relPath, err := f.rootPath(path)
+	if err != nil {
+		return nil, "", err
+	}
+	root, err := os.OpenRoot(rootPath)
+	if err != nil {
+		return nil, "", err
+	}
+	return root, relPath, nil
+}
+
+func (f RootedOSFileSystem) rootPath(path string) (string, string, error) {
+	cleanPath := filepath.Clean(path)
+	for _, rootPath := range []string{f.configDir, f.homeDir} {
+		relPath, err := filepath.Rel(rootPath, cleanPath)
+		if err != nil || relPath == ".." || strings.HasPrefix(relPath, ".."+string(os.PathSeparator)) {
+			continue
+		}
+		return rootPath, relPath, nil
+	}
+	return "", "", fmt.Errorf("path %s is outside managed roots", path)
 }
 
 // MemoryFS implements FileSystem for testing
