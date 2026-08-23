@@ -5,8 +5,10 @@
 
 package lock
 
+import "context"
+
 // WithMutationLock is a no-op on platforms without flock support.
 // Mutations are serialized within a process only.
-func WithMutationLock(configDir string, fn func() error) error {
+func WithMutationLock(ctx context.Context, configDir string, fn func() error) error {
 	return fn()
 }

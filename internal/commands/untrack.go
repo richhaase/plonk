@@ -42,7 +42,7 @@ func runUntrack(cmd *cobra.Command, args []string) error {
 	var untracked, skipped, failed int
 
 	// Serialize the read-modify-write cycle against concurrent plonk processes
-	err := lock.WithMutationLock(configDir, func() error {
+	err := lock.WithMutationLock(ctx, configDir, func() error {
 		lockFile, err := lockSvc.Read()
 		if err != nil {
 			return fmt.Errorf("failed to read lock file: %w", err)

@@ -6,9 +6,11 @@
 package lock
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -33,7 +35,7 @@ func TestWithMutationLockSerializes(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < iterations; i++ {
-				err := WithMutationLock(dir, func() error {
+				err := WithMutationLock(context.Background(), dir, func() error {
 					// Unlocked read-modify-write; only safe under the lock
 					v := counter
 					v++
@@ -63,7 +65,7 @@ func TestWithMutationLockSerializes(t *testing.T) {
 // created in the config directory.
 func TestWithMutationLockCreatesLockFile(t *testing.T) {
 	dir := t.TempDir()
-	if err := WithMutationLock(dir, func() error { return nil }); err != nil {
+	if err := WithMutationLock(context.Background(), dir, func() error { return nil }); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".plonk.mutlock")); err != nil {
@@ -82,7 +84,7 @@ func TestWithMutationLockCrossProcess(t *testing.T) {
 
 	if os.Getenv("PLONK_MUTLOCK_CHILD") == "1" {
 		readyPath := os.Getenv("PLONK_MUTLOCK_READY")
-		err := WithMutationLock(os.Getenv("PLONK_MUTLOCK_DIR"), func() error {
+		err := WithMutationLock(context.Background(), os.Getenv("PLONK_MUTLOCK_DIR"), func() error {
 			// Signal that the lock is held, then hold it for the test duration
 			if err := os.WriteFile(readyPath, []byte("1"), 0644); err != nil {
 				os.Exit(2)
@@ -125,7 +127,7 @@ func TestWithMutationLockCrossProcess(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	start := time.Now()
-	if err := WithMutationLock(dir, func() error { return nil }); err != nil {
+	if err := WithMutationLock(context.Background(), dir, func() error { return nil }); err != nil {
 		t.Fatal(err)
 	}
 	elapsed := time.Since(start)
@@ -175,5 +177,111 @@ func TestWriteConcurrentNoTempCollisions(t *testing.T) {
 	}
 	if lock.Version != 3 {
 		t.Errorf("lock version = %d, want 3", lock.Version)
+	}
+}
+
+// TestWithMutationLockCanceledWhileContended verifies that acquisition honors
+// context cancellation: when another process holds the lock, a canceled
+// context must return ctx.Err() promptly instead of blocking until release.
+func TestWithMutationLockCanceledWhileContended(t *testing.T) {
+	if os.Getenv("PLONK_MUTLOCK_CHILD") == "1" {
+		readyPath := os.Getenv("PLONK_MUTLOCK_READY")
+		err := WithMutationLock(context.Background(), os.Getenv("PLONK_MUTLOCK_DIR"), func() error {
+			if err := os.WriteFile(readyPath, []byte("1"), 0644); err != nil {
+				os.Exit(2)
+			}
+			// Hold the lock long enough for the parent to attempt and cancel
+			time.Sleep(10 * time.Second)
+			return nil
+		})
+		if err != nil {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
+	dir := t.TempDir()
+	readyPath := filepath.Join(dir, "ready")
+	cmd := exec.Command(os.Args[0], "-test.run=TestWithMutationLockCanceledWhileContended")
+	cmd.Env = append(os.Environ(),
+		"PLONK_MUTLOCK_CHILD=1",
+		"PLONK_MUTLOCK_DIR="+dir,
+		"PLONK_MUTLOCK_READY="+readyPath)
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer cmd.Wait()
+	defer cmd.Process.Kill()
+
+	// Wait until the child holds the lock
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		if _, err := os.Stat(readyPath); err == nil {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("timed out waiting for child to acquire the lock")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		cancel()
+	}()
+
+	start := time.Now()
+	err := WithMutationLock(ctx, dir, func() error { return nil })
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected ctx.Err() while contended with canceled context, got nil")
+	}
+	if elapsed > 2*time.Second {
+		t.Errorf("cancellation took %v; expected prompt return", elapsed)
+	}
+}
+
+// TestWithMutationLockExcludesFromGit verifies that the internal lock file is
+// added to .git/info/exclude so `git add -A` (auto-commit) never stages it.
+func TestWithMutationLockExcludesFromGit(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+
+	dir := t.TempDir()
+	if out, err := exec.Command("git", "-C", dir, "init", "-q").CombinedOutput(); err != nil {
+		t.Fatalf("git init failed: %v\n%s", err, out)
+	}
+
+	if err := WithMutationLock(context.Background(), dir, func() error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, ".git", "info", "exclude"))
+	if err != nil {
+		t.Fatalf("failed to read .git/info/exclude: %v", err)
+	}
+	found := false
+	for _, line := range strings.Split(string(data), "\n") {
+		if strings.TrimSpace(line) == ".plonk.mutlock" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf(".plonk.mutlock not in .git/info/exclude:\n%s", data)
+	}
+
+	// Verify git add -A does not stage the lock file
+	if out, err := exec.Command("git", "-C", dir, "add", "-A").CombinedOutput(); err != nil {
+		t.Fatalf("git add failed: %v\n%s", err, out)
+	}
+	out, err := exec.Command("git", "-C", dir, "status", "--porcelain").CombinedOutput()
+	if err != nil {
+		t.Fatalf("git status failed: %v", err)
+	}
+	if strings.Contains(string(out), ".plonk.mutlock") {
+		t.Errorf("mutation lock file staged by git add -A:\n%s", out)
 	}
 }
