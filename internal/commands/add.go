@@ -136,8 +136,10 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	// Render output
 	output.RenderOutput(outputData)
 
-	// Auto-commit if any files were actually added/updated
-	if !opts.DryRun && validateAddResultsErr(results) == nil {
+	// Auto-commit if any files were actually added/updated (even on partial
+	// failure: successful mutations are committed, matching rm/track behavior;
+	// the exit status below still reflects any failure)
+	if !opts.DryRun && anyAddSucceeded(results) {
 		gitops.AutoCommit(cmd.Context(), configDir, "add", args)
 	}
 
@@ -209,8 +211,9 @@ func runSyncDrifted(ctx context.Context, cfg *config.Config, configDir, homeDir 
 	// Render output
 	output.RenderOutput(outputData)
 
-	// Auto-commit synced drifted files
-	if !dryRun && validateAddResultsErr(results) == nil {
+	// Auto-commit synced drifted files (including on partial failure —
+	// successful mutations are committed regardless of the exit status)
+	if !dryRun && anyAddSucceeded(results) {
 		gitops.AutoCommit(ctx, configDir, "add --sync-drifted", paths)
 	}
 
@@ -245,6 +248,19 @@ func convertAddResultsToAddOutput(results []AddResult) []output.DotfileAddOutput
 		})
 	}
 	return outputs
+}
+
+// anyAddSucceeded reports whether at least one add result represents an
+// actual mutation (added or updated), used to decide whether to auto-commit.
+// This is independent of the exit-status policy: successful partial batches
+// are still committed, even if other items failed.
+func anyAddSucceeded(results []AddResult) bool {
+	for _, result := range results {
+		if result.Status == AddStatusAdded || result.Status == AddStatusUpdated {
+			return true
+		}
+	}
+	return false
 }
 
 // validateAddResultsErr returns an error if any add operation failed

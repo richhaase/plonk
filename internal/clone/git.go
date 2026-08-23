@@ -4,6 +4,7 @@
 package clone
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -46,15 +47,16 @@ func parseGitURL(input string) (string, error) {
 	return "", fmt.Errorf("unsupported git URL format: %s (supported: user/repo, https://..., git@...)", input)
 }
 
-// cloneRepository clones a git repository into the specified directory
-func cloneRepository(gitURL, targetDir string) error {
+// cloneRepository clones a git repository into the specified directory.
+// The clone subprocess is tied to ctx so SIGINT/SIGTERM cancels it promptly.
+func cloneRepository(ctx context.Context, gitURL, targetDir string) error {
 	// Check if git is available
 	if _, err := exec.LookPath("git"); err != nil {
 		return fmt.Errorf("git is not installed or not in PATH")
 	}
 
 	// Clone the repository
-	cmd := exec.Command("git", "clone", gitURL, targetDir)
+	cmd := exec.CommandContext(ctx, "git", "clone", gitURL, targetDir)
 
 	// Capture output for better error reporting
 	output, err := cmd.CombinedOutput()

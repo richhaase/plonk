@@ -62,7 +62,7 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 
 	// Clone repository
 	output.StageUpdate("Cloning repository...")
-	if err := cloneRepository(gitURL, plonkDir); err != nil {
+	if err := cloneRepository(ctx, gitURL, plonkDir); err != nil {
 		// Clean up on failure
 		os.RemoveAll(plonkDir)
 		return fmt.Errorf("failed to clone repository: %w", err)

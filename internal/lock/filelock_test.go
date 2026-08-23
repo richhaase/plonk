@@ -72,14 +72,21 @@ func TestWithMutationLockCreatesLockFile(t *testing.T) {
 }
 
 // TestWithMutationLockCrossProcess verifies mutual exclusion across processes:
-// a child process holds the lock for a fixed duration while the parent
-// attempts to acquire it. The parent's acquisition must block until the child
-// releases. Uses the standard subprocess re-invocation test pattern.
+// a child process acquires the lock, signals readiness through a file, and
+// holds the lock for a fixed duration while the parent attempts to acquire
+// it. The parent's acquisition must block until the child releases. Uses the
+// standard subprocess re-invocation test pattern with an explicit readiness
+// handshake instead of timing-based synchronization.
 func TestWithMutationLockCrossProcess(t *testing.T) {
 	const childHold = 500 * time.Millisecond
 
 	if os.Getenv("PLONK_MUTLOCK_CHILD") == "1" {
+		readyPath := os.Getenv("PLONK_MUTLOCK_READY")
 		err := WithMutationLock(os.Getenv("PLONK_MUTLOCK_DIR"), func() error {
+			// Signal that the lock is held, then hold it for the test duration
+			if err := os.WriteFile(readyPath, []byte("1"), 0644); err != nil {
+				os.Exit(2)
+			}
 			time.Sleep(childHold)
 			return nil
 		})
@@ -90,14 +97,31 @@ func TestWithMutationLockCrossProcess(t *testing.T) {
 	}
 
 	dir := t.TempDir()
+	readyPath := filepath.Join(dir, "ready")
 	cmd := exec.Command(os.Args[0], "-test.run=TestWithMutationLockCrossProcess")
-	cmd.Env = append(os.Environ(), "PLONK_MUTLOCK_CHILD=1", "PLONK_MUTLOCK_DIR="+dir)
+	cmd.Env = append(os.Environ(),
+		"PLONK_MUTLOCK_CHILD=1",
+		"PLONK_MUTLOCK_DIR="+dir,
+		"PLONK_MUTLOCK_READY="+readyPath)
 	if err := cmd.Start(); err != nil {
 		t.Fatal(err)
 	}
 	defer cmd.Wait()
 
-	// Give the child time to acquire the lock first
+	// Wait for the explicit readiness signal: the child now holds the lock
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		if _, err := os.Stat(readyPath); err == nil {
+			break
+		}
+		if time.Now().After(deadline) {
+			cmd.Process.Kill()
+			t.Fatal("timed out waiting for child to acquire the lock")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	// The ready file is written while the child holds the lock; wait out the
+	// remaining hold window with margin so the parent's attempt overlaps the hold
 	time.Sleep(100 * time.Millisecond)
 
 	start := time.Now()
@@ -107,7 +131,7 @@ func TestWithMutationLockCrossProcess(t *testing.T) {
 	elapsed := time.Since(start)
 
 	// The parent must have blocked until the child released the lock
-	if elapsed < childHold-100*time.Millisecond {
+	if elapsed < childHold-200*time.Millisecond {
 		t.Errorf("parent acquired lock after %v; expected to block ~%v (no cross-process exclusion)", elapsed, childHold)
 	}
 }
@@ -116,7 +140,9 @@ func TestWithMutationLockCrossProcess(t *testing.T) {
 // using a unique temp file) leave no stray temp files and a valid lock.
 func TestWriteConcurrentNoTempCollisions(t *testing.T) {
 	dir := t.TempDir()
-	svc := NewLockV3Service(filepath.Join(dir, "plonk.lock"))
+	// NewLockV3Service takes the config directory and resolves the lock file
+	// path inside it, so temp files are created in dir alongside plonk.lock
+	svc := NewLockV3Service(dir)
 
 	const writers = 16
 	var wg sync.WaitGroup
