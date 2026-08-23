@@ -44,7 +44,8 @@ Security:
 
 Special Cases:
 - Directories: Recursively processes all files (add only)
-- Symlinks: Follows links and copies target file
+- Symlinks: Follows relative links only when their targets remain within $HOME
+- Absolute, broken, and escaping symlinks are rejected
 - Hidden files: Automatically handled (dot removed in plonk dir)
 
 File Mapping:

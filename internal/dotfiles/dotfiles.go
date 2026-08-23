@@ -160,7 +160,7 @@ func (m *DotfileManager) Add(targetPath string) error {
 	// Verify source exists
 	info, err := m.fs.Stat(absTarget)
 	if err != nil {
-		return fmt.Errorf("%s does not exist", absTarget)
+		return fmt.Errorf("cannot access %s: %w", absTarget, err)
 	}
 
 	if info.IsDir() {
@@ -677,7 +677,7 @@ func (m *DotfileManager) ValidateAdd(targetPath string) error {
 
 	// Verify target exists
 	if _, err := m.fs.Stat(absTarget); err != nil {
-		return fmt.Errorf("%s does not exist", absTarget)
+		return fmt.Errorf("cannot access %s: %w", absTarget, err)
 	}
 
 	return nil

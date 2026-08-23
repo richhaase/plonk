@@ -70,8 +70,8 @@ func (OSFileSystem) Chmod(path string, mode os.FileMode) error {
 // replaced between validation and use.
 //
 // Paths passed to this filesystem must be lexically under one of its roots.
-// A config directory nested in home is selected first because it is the more
-// restrictive root.
+// When roots overlap, operations use the most-specific matching root so an
+// ancestor root cannot weaken the boundary of its descendant.
 type RootedOSFileSystem struct {
 	configDir string
 	homeDir   string
@@ -212,12 +212,20 @@ func (f RootedOSFileSystem) open(path string) (*os.Root, string, error) {
 
 func (f RootedOSFileSystem) rootPath(path string) (string, string, error) {
 	cleanPath := filepath.Clean(path)
+	var bestRootPath string
+	var bestRelPath string
 	for _, rootPath := range []string{f.configDir, f.homeDir} {
 		relPath, err := filepath.Rel(rootPath, cleanPath)
 		if err != nil || relPath == ".." || strings.HasPrefix(relPath, ".."+string(os.PathSeparator)) {
 			continue
 		}
-		return rootPath, relPath, nil
+		if bestRootPath == "" || len(rootPath) > len(bestRootPath) {
+			bestRootPath = rootPath
+			bestRelPath = relPath
+		}
+	}
+	if bestRootPath != "" {
+		return bestRootPath, bestRelPath, nil
 	}
 	return "", "", fmt.Errorf("path %s is outside managed roots", path)
 }
@@ -376,7 +384,9 @@ type memDirEntry struct {
 	isDir bool
 }
 
-func (m *memDirEntry) Name() string               { return m.name }
-func (m *memDirEntry) IsDir() bool                { return m.isDir }
-func (m *memDirEntry) Type() fs.FileMode          { return 0 }
-func (m *memDirEntry) Info() (fs.FileInfo, error) { return &memFileInfo{name: m.name, isDir: m.isDir}, nil }
+func (m *memDirEntry) Name() string      { return m.name }
+func (m *memDirEntry) IsDir() bool       { return m.isDir }
+func (m *memDirEntry) Type() fs.FileMode { return 0 }
+func (m *memDirEntry) Info() (fs.FileInfo, error) {
+	return &memFileInfo{name: m.name, isDir: m.isDir}, nil
+}
