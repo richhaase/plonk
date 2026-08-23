@@ -168,10 +168,28 @@ func (s *LockV3Service) Write(lock *LockV3) error {
 		return fmt.Errorf("failed to create lock directory: %w", err)
 	}
 
-	// Atomic write: write to temp file, then rename
-	tmpPath := s.lockPath + ".tmp"
-	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+	// Atomic write: write to a unique temp file in the same directory, then
+	// rename. A unique name avoids collisions between concurrent processes
+	// writing the lock file.
+	tmp, err := os.CreateTemp(dir, ".plonk-lock-*.tmp")
+	if err != nil {
+		return fmt.Errorf("failed to create temp lock file: %w", err)
+	}
+	tmpPath := tmp.Name()
+
+	if err := tmp.Chmod(0644); err != nil {
+		tmp.Close()
+		os.Remove(tmpPath)
+		return fmt.Errorf("failed to set temp lock file permissions: %w", err)
+	}
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		os.Remove(tmpPath)
 		return fmt.Errorf("failed to write temp lock file: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("failed to close temp lock file: %w", err)
 	}
 
 	if err := os.Rename(tmpPath, s.lockPath); err != nil {

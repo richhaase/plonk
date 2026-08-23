@@ -4,8 +4,6 @@
 package commands
 
 import (
-	"context"
-
 	"github.com/richhaase/plonk/internal/clone"
 	"github.com/spf13/cobra"
 )
@@ -47,7 +45,7 @@ func init() {
 }
 
 func runClone(cmd *cobra.Command, args []string) error {
-	ctx := context.Background()
+	ctx := cmd.Context()
 	gitRepo := args[0]
 
 	cloneConfig := clone.Config{

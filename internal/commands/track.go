@@ -4,7 +4,6 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -41,63 +40,70 @@ func init() {
 func runTrack(cmd *cobra.Command, args []string) error {
 	configDir := config.GetDefaultConfigDirectory()
 	lockSvc := lock.NewLockV3Service(configDir)
+	ctx := cmd.Context()
 
-	lockFile, err := lockSvc.Read()
-	if err != nil {
-		return fmt.Errorf("failed to read lock file: %w", err)
-	}
-
-	ctx := context.Background()
 	var tracked, skipped, failed int
 
-	for _, arg := range args {
-		manager, pkg, err := packages.ParsePackageSpec(arg)
+	// Serialize the read-modify-write cycle against concurrent plonk processes
+	err := lock.WithMutationLock(ctx, configDir, func() error {
+		lockFile, err := lockSvc.Read()
 		if err != nil {
-			fmt.Printf("Error: %s: %v\n", arg, err)
-			failed++
-			continue
+			return fmt.Errorf("failed to read lock file: %w", err)
 		}
 
-		// Check if already tracked
-		if lockFile.HasPackage(manager, pkg) {
-			fmt.Printf("Skipping %s:%s (already tracked)\n", manager, pkg)
-			skipped++
-			continue
+		for _, arg := range args {
+			manager, pkg, err := packages.ParsePackageSpec(arg)
+			if err != nil {
+				fmt.Printf("Error: %s: %v\n", arg, err)
+				failed++
+				continue
+			}
+
+			// Check if already tracked
+			if lockFile.HasPackage(manager, pkg) {
+				fmt.Printf("Skipping %s:%s (already tracked)\n", manager, pkg)
+				skipped++
+				continue
+			}
+
+			// Get manager and verify package is installed
+			mgr, err := packages.GetManager(manager)
+			if err != nil {
+				fmt.Printf("Error: %s: %v\n", arg, err)
+				failed++
+				continue
+			}
+
+			installed, err := mgr.IsInstalled(ctx, pkg)
+			if err != nil {
+				fmt.Printf("Error checking %s:%s: %v\n", manager, pkg, err)
+				failed++
+				continue
+			}
+
+			if !installed {
+				fmt.Printf("Error: %s:%s is not installed\n", manager, pkg)
+				failed++
+				continue
+			}
+
+			// Add to lock file
+			lockFile.AddPackage(manager, pkg)
+			fmt.Printf("Tracking %s:%s\n", manager, pkg)
+			tracked++
 		}
 
-		// Get manager and verify package is installed
-		mgr, err := packages.GetManager(manager)
-		if err != nil {
-			fmt.Printf("Error: %s: %v\n", arg, err)
-			failed++
-			continue
+		// Write updated lock file
+		if tracked > 0 {
+			if err := lockSvc.Write(lockFile); err != nil {
+				return fmt.Errorf("failed to write lock file: %w", err)
+			}
+			gitops.AutoCommit(ctx, configDir, "track", args)
 		}
-
-		installed, err := mgr.IsInstalled(ctx, pkg)
-		if err != nil {
-			fmt.Printf("Error checking %s:%s: %v\n", manager, pkg, err)
-			failed++
-			continue
-		}
-
-		if !installed {
-			fmt.Printf("Error: %s:%s is not installed\n", manager, pkg)
-			failed++
-			continue
-		}
-
-		// Add to lock file
-		lockFile.AddPackage(manager, pkg)
-		fmt.Printf("Tracking %s:%s\n", manager, pkg)
-		tracked++
-	}
-
-	// Write updated lock file
-	if tracked > 0 {
-		if err := lockSvc.Write(lockFile); err != nil {
-			return fmt.Errorf("failed to write lock file: %w", err)
-		}
-		gitops.AutoCommit(cmd.Context(), configDir, "track", args)
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	// Summary

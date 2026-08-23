@@ -4,6 +4,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -140,7 +141,7 @@ func runDiff(cmd *cobra.Command, args []string) error {
 			}
 		}
 
-		if err := executeDiffTool(diffTool, sourcePath, destPath); err != nil {
+		if err := executeDiffTool(cmd.Context(), diffTool, sourcePath, destPath); err != nil {
 			fmt.Fprintf(os.Stderr, "Error showing diff for %s: %v\n", status.Name, err)
 			diffErrors = append(diffErrors, status.Name)
 		}
@@ -245,8 +246,11 @@ func filterDriftedStatus(arg string, driftedFiles []dotfiles.DotfileStatus) *dot
 	return nil
 }
 
-// executeDiffTool runs the configured diff tool
-func executeDiffTool(tool string, source, dest string) error {
+// executeDiffTool runs the configured diff tool. Per the documented diff
+// convention (diff(1), git diff --no-index), exit status 1 means the files
+// differ; any other non-zero exit (e.g. diff(1) status 2 for trouble, a tool
+// crash, or signal death) is treated as a failure and propagated.
+func executeDiffTool(ctx context.Context, tool string, source, dest string) error {
 	// Split the tool command in case it has flags (e.g., "git diff --no-index")
 	parts := strings.Fields(tool)
 	if len(parts) == 0 {
@@ -257,17 +261,16 @@ func executeDiffTool(tool string, source, dest string) error {
 	args := append(parts[1:], dest, source)
 
 	//nolint:gosec // G204: diff tool from user config (cfg.DiffTool) - intentional user control like $EDITOR
-	cmd := exec.Command(parts[0], args...)
+	cmd := exec.CommandContext(ctx, parts[0], args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 
 	// Run the command
 	if err := cmd.Run(); err != nil {
-		// Check if it's just a non-zero exit code (common for diff tools)
 		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			// This is expected for diff tools when files differ
+		if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
+			// Exit status 1 is the documented "files differ" result
 			return nil
 		}
 		return fmt.Errorf("diff tool failed: %w", err)

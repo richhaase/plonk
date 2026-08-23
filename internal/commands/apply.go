@@ -77,7 +77,7 @@ func runApply(cmd *cobra.Command, args []string) error {
 	// Load configuration
 	cfg := config.LoadWithDefaults(configDir)
 
-	ctx := context.Background()
+	ctx := cmd.Context()
 
 	// If specific files are provided, apply only those dotfiles
 	if len(args) > 0 {
