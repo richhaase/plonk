@@ -17,11 +17,21 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Set up Go
+    - name: Set up configured Go version
+      if: ${{ inputs.go-version != '' }}
       uses: actions/setup-go@v6
       with:
-        go-version: ${{ inputs.go-version != '' && inputs.go-version || 'stable' }}
-        go-version-file: ${{ inputs.go-version == '' && 'go.mod' || '' }}
+        go-version: ${{ inputs.go-version }}
+        cache: true
+        cache-dependency-path: |
+          go.sum
+          tools/tools.go
+
+    - name: Set up Go from go.mod
+      if: ${{ inputs.go-version == '' }}
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: go.mod
         cache: true
         cache-dependency-path: |
           go.sum
