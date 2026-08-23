@@ -285,3 +285,100 @@ func TestWithMutationLockExcludesFromGit(t *testing.T) {
 		t.Errorf("mutation lock file staged by git add -A:\n%s", out)
 	}
 }
+
+// TestWithMutationLockPreCanceledContext verifies that an already-canceled
+// context prevents the callback from running at all — no state mutation after
+// cancellation, even when the lock is uncontended.
+func TestWithMutationLockPreCanceledContext(t *testing.T) {
+	dir := t.TempDir()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	called := false
+	err := WithMutationLock(ctx, dir, func() error {
+		called = true
+		return nil
+	})
+
+	if err == nil {
+		t.Fatal("expected error from pre-canceled context, got nil")
+	}
+	if called {
+		t.Error("callback ran despite pre-canceled context")
+	}
+}
+
+// TestWithMutationLockWorktreeExclude verifies that in a linked git worktree
+// (where .git is a file pointing at the main repository's worktrees dir), the
+// mutation lock exclusion lands in the correct exclude file and git add -A
+// does not stage .plonk.mutlock.
+func TestWithMutationLockWorktreeExclude(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+
+	mainDir := t.TempDir()
+	if out, err := exec.Command("git", "-C", mainDir, "init", "-q").CombinedOutput(); err != nil {
+		t.Fatalf("git init failed: %v\n%s", err, out)
+	}
+	commitFile(t, mainDir, "README.md")
+
+	wtDir := t.TempDir()
+	if out, err := exec.Command("git", "-C", mainDir, "worktree", "add", wtDir, "-b", "wt-test").CombinedOutput(); err != nil {
+		t.Fatalf("git worktree add failed: %v\n%s", err, out)
+	}
+	t.Cleanup(func() {
+		exec.Command("git", "-C", mainDir, "worktree", "remove", "--force", wtDir).Run()
+	})
+
+	if err := WithMutationLock(context.Background(), wtDir, func() error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+
+	// The exclude entry must resolve via git rev-parse (for a linked worktree
+	// this is the main repository's exclude file, which covers the worktree)
+	resolved, err := exec.Command("git", "-C", wtDir, "rev-parse", "--git-path", "info/exclude").Output()
+	if err != nil {
+		t.Fatalf("rev-parse failed: %v", err)
+	}
+	excludePath := strings.TrimSpace(string(resolved))
+	if !filepath.IsAbs(excludePath) {
+		excludePath = filepath.Join(wtDir, excludePath)
+	}
+	data, err := os.ReadFile(excludePath)
+	if err != nil {
+		t.Fatalf("failed to read resolved exclude %s: %v", excludePath, err)
+	}
+	if !strings.Contains(string(data), ".plonk.mutlock") {
+		t.Errorf("exclusion missing from %s:\n%s", excludePath, data)
+	}
+
+	if out, err := exec.Command("git", "-C", wtDir, "add", "-A").CombinedOutput(); err != nil {
+		t.Fatalf("git add failed: %v\n%s", err, out)
+	}
+	status, err := exec.Command("git", "-C", wtDir, "status", "--porcelain").CombinedOutput()
+	if err != nil {
+		t.Fatalf("git status failed: %v", err)
+	}
+	if strings.Contains(string(status), ".plonk.mutlock") {
+		t.Errorf("mutation lock file staged by git add -A in worktree:\n%s", status)
+	}
+}
+
+// commitFile writes and commits a file so git worktree add has a HEAD.
+func commitFile(t *testing.T, dir, name string) {
+	t.Helper()
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, []byte("x\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{"add", "-A"}, {"commit", "-q", "-m", "init"}} {
+		cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
+		cmd.Env = append(os.Environ(),
+			"GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@t",
+			"GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@t")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v failed: %v\n%s", args, err, out)
+		}
+	}
+}

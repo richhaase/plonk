@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -41,6 +42,11 @@ var processMutexes sync.Map // string -> *sync.Mutex
 // Acquisition is cancellation-aware: if ctx is canceled while another process
 // holds the lock, this returns ctx.Err() instead of blocking indefinitely.
 func WithMutationLock(ctx context.Context, configDir string, fn func() error) error {
+	// Refuse to start mutating state once cancellation has been requested
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	//nolint:gosec // G301: configDir comes from plonk's own config directory resolution
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		return fmt.Errorf("failed to create lock directory: %w", err)
@@ -73,11 +79,20 @@ func WithMutationLock(ctx context.Context, configDir string, fn func() error) er
 	}
 	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN) //nolint:errcheck // best-effort unlock; close() also releases
 
+	// Final cancellation check before entering the critical section, so a
+	// signal that arrived during (uncontended) acquisition never mutates state
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	return fn()
 }
 
 // acquireProcessMutex acquires mu, waiting at most until ctx is canceled.
 func acquireProcessMutex(ctx context.Context, mu *sync.Mutex) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	locked := make(chan struct{})
 	go func() {
 		mu.Lock()
@@ -125,9 +140,11 @@ func acquireFlock(ctx context.Context, f *os.File) error {
 // no-op when configDir is not a git repository. Unlike .gitignore,
 // info/exclude is local-only and never touches the user's tracked files.
 func excludeFromGit(configDir, entry string) {
-	excludePath := filepath.Join(configDir, ".git", "info", "exclude")
+	excludePath := resolveGitExcludePath(configDir)
+	if excludePath == "" {
+		return // not a git repository; best-effort
+	}
 
-	//nolint:gosec // G304: path derived from plonk's own config directory, not user input
 	data, err := os.ReadFile(excludePath)
 	if err != nil && !os.IsNotExist(err) {
 		return // no permission / not a repo; best-effort
@@ -139,10 +156,9 @@ func excludeFromGit(configDir, entry string) {
 		}
 	}
 
-	//nolint:gosec // G304: path derived from plonk's own config directory
 	f, err := os.OpenFile(excludePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return // .git/info may not exist (not a repo); best-effort
+		return // no permission; best-effort
 	}
 	defer f.Close()
 
@@ -150,4 +166,34 @@ func excludeFromGit(configDir, entry string) {
 		fmt.Fprintln(f)
 	}
 	fmt.Fprintln(f, entry)
+}
+
+// resolveGitExcludePath returns the absolute path of the repository's local
+// exclude file, or "" if configDir is not a git repository. It uses
+// `git rev-parse --git-path info/exclude`, which resolves correctly for
+// worktrees and submodules (where .git is a file, not a directory) and for
+// linked worktrees whose exclude lives under .git/worktrees/<name>/info/.
+// Falls back to the plain <configDir>/.git/info/exclude path when git is
+// unavailable or fails.
+func resolveGitExcludePath(configDir string) string {
+	//nolint:gosec // G204: git args are constant strings; configDir is plonk's own config directory
+	out, err := exec.Command("git", "-C", configDir, "rev-parse", "--git-path", "info/exclude").Output()
+	if err == nil {
+		if p := strings.TrimSpace(string(out)); p != "" {
+			if filepath.IsAbs(p) {
+				return p
+			}
+			return filepath.Join(configDir, p)
+		}
+	}
+
+	// Fallback: plain repository layout
+	fallback := filepath.Join(configDir, ".git", "info", "exclude")
+	//nolint:gosec // G304: path derived from plonk's own config directory, not user input
+	if info, err := os.Stat(filepath.Join(configDir, ".git")); err == nil && !info.IsDir() {
+		// .git is a file (worktree/submodule gitlink) and git rev-parse
+		// failed; we cannot safely resolve the real exclude path.
+		return ""
+	}
+	return fallback
 }
