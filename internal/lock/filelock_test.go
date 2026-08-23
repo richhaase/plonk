@@ -382,3 +382,36 @@ func commitFile(t *testing.T, dir, name string) {
 		}
 	}
 }
+
+// TestWithMutationLockNestedDirDoesNotTouchParentRepo verifies that when
+// PLONK_DIR is a subdirectory of an unrelated git repository, plonk never
+// writes to that parent repository's exclude file.
+func TestWithMutationLockNestedDirDoesNotTouchParentRepo(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+
+	parent := t.TempDir()
+	if out, err := exec.Command("git", "-C", parent, "init", "-q").CombinedOutput(); err != nil {
+		t.Fatalf("git init failed: %v\n%s", err, out)
+	}
+	parentExclude := filepath.Join(parent, ".git", "info", "exclude")
+	before, err := os.ReadFile(parentExclude)
+	if err != nil {
+		t.Fatalf("failed to read parent exclude: %v", err)
+	}
+
+	// Nested config directory inside the parent repo
+	nested := filepath.Join(parent, "nested", "plonk")
+	if err := WithMutationLock(context.Background(), nested, func() error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+
+	after, err := os.ReadFile(parentExclude)
+	if err != nil {
+		t.Fatalf("failed to re-read parent exclude: %v", err)
+	}
+	if string(before) != string(after) {
+		t.Errorf("parent repository exclude was modified:\nbefore:\n%s\nafter:\n%s", before, after)
+	}
+}

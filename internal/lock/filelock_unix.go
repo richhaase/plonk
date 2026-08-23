@@ -176,6 +176,30 @@ func excludeFromGit(configDir, entry string) {
 // Falls back to the plain <configDir>/.git/info/exclude path when git is
 // unavailable or fails.
 func resolveGitExcludePath(configDir string) string {
+	// The exclusion only applies to the repository rooted at configDir itself.
+	// Verify the toplevel worktree matches configDir so a PLONK_DIR nested
+	// inside an unrelated repository never causes us to modify that parent
+	// repository's local git metadata.
+	//nolint:gosec // G204: git args are constant strings; configDir is plonk's own config directory
+	rootOut, rootErr := exec.Command("git", "-C", configDir, "rev-parse", "--show-toplevel").Output()
+	if rootErr != nil {
+		// Not inside any git repository (or git unavailable)
+		return ""
+	}
+	root := strings.TrimSpace(string(rootOut))
+	if root == "" {
+		return ""
+	}
+	absConfig, err := filepath.Abs(configDir)
+	if err != nil {
+		return ""
+	}
+	if !samePath(root, absConfig) {
+		// configDir is a subdirectory of an unrelated repository; do not
+		// touch that repository's exclude file
+		return ""
+	}
+
 	//nolint:gosec // G204: git args are constant strings; configDir is plonk's own config directory
 	out, err := exec.Command("git", "-C", configDir, "rev-parse", "--git-path", "info/exclude").Output()
 	if err == nil {
@@ -187,13 +211,21 @@ func resolveGitExcludePath(configDir string) string {
 		}
 	}
 
-	// Fallback: plain repository layout
-	fallback := filepath.Join(configDir, ".git", "info", "exclude")
-	//nolint:gosec // G304: path derived from plonk's own config directory, not user input
-	if info, err := os.Stat(filepath.Join(configDir, ".git")); err == nil && !info.IsDir() {
-		// .git is a file (worktree/submodule gitlink) and git rev-parse
-		// failed; we cannot safely resolve the real exclude path.
-		return ""
+	// Fallback: plain repository layout. (Only reached when the toplevel
+	// check above passed but the --git-path query itself failed.)
+	return filepath.Join(configDir, ".git", "info", "exclude")
+}
+
+// samePath compares two paths accounting for case-insensitive filesystems.
+func samePath(a, b string) bool {
+	a, b = filepath.Clean(a), filepath.Clean(b)
+	if strings.EqualFold(a, b) {
+		return true
 	}
-	return fallback
+	aRes, aErr := filepath.EvalSymlinks(a)
+	bRes, bErr := filepath.EvalSymlinks(b)
+	if aErr != nil || bErr != nil {
+		return false
+	}
+	return strings.EqualFold(filepath.Clean(aRes), filepath.Clean(bRes))
 }
