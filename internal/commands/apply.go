@@ -34,6 +34,11 @@ Think of it like 'git pull' - it brings your system state in line with your conf
 You can optionally specify specific dotfiles to apply. If files are specified,
 only those dotfiles will be deployed (packages are not applied).
 
+Symlink Policy:
+Plonk follows relative symlinks only when their targets remain within the relevant
+root ($PLONK_DIR for managed sources and $HOME for deployment targets). Absolute,
+broken, and escaping symlinks are rejected.
+
 Examples:
   plonk apply                    # Apply all configuration changes
   plonk apply --dry-run          # Show what would be applied without making changes
