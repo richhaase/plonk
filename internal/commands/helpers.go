@@ -107,4 +107,3 @@ func CompleteDotfilePaths(cmd *cobra.Command, args []string, toComplete string) 
 	// Fall back to default file completion for absolute paths and other cases
 	return nil, cobra.ShellCompDirectiveDefault
 }
-

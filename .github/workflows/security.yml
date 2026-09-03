@@ -25,18 +25,20 @@ jobs:
       with:
         go-version-file: 'go.mod'
 
+    # Blocking: a reachable vulnerability in module dependencies fails CI.
     - name: Run govulncheck
       run: |
         echo "Checking for vulnerabilities in dependencies..."
         go tool govulncheck ./...
-      continue-on-error: true
 
-    - name: Run gosec
+    # Blocking: gosec runs as part of golangci-lint with the project's
+    # curated exclusion policy (.golangci.yml gosec.excludes). Running it
+    # through golangci-lint keeps a single source of truth for exclusions
+    # instead of maintaining a parallel standalone gosec config.
+    - name: Run gosec (via golangci-lint)
       run: |
         echo "Running security analysis..."
-        go tool gosec ./...
-      continue-on-error: true
+        go tool golangci-lint run --timeout=10m ./...
 
     - name: Summary
-      if: always()
-      run: echo "Security checks completed. Review any findings above."
+      run: echo "Security checks passed."

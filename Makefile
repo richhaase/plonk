@@ -97,12 +97,14 @@ test-coverage-ci:
 	@awk 'END{printf "Total coverage: %s\n", $$3}' coverage.txt
 	@echo "Unit tests passed! Coverage report: coverage.txt"
 
-# Run vulnerability and security checks
+# Run vulnerability and security checks (blocking)
+# gosec runs as part of golangci-lint with the curated exclusion policy in
+# .golangci.yml, keeping a single source of truth for exclusions.
 security:
 	@echo "Checking for vulnerabilities in dependencies..."
 	@go tool govulncheck ./...
-	@echo "Running security analysis..."
-	@go tool gosec ./...
+	@echo "Running security analysis (gosec via golangci-lint)..."
+	@go tool golangci-lint run --timeout=10m ./...
 	@echo "Security checks passed!"
 
 # Run pre-commit hooks
