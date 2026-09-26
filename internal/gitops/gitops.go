@@ -145,23 +145,16 @@ func (c *Client) Fetch(ctx context.Context) error {
 }
 
 // HasUpstream returns true if the current branch has an upstream tracking branch configured.
-func (c *Client) HasUpstream(ctx context.Context) (bool, error) {
+func (c *Client) HasUpstream(ctx context.Context) bool {
 	//nolint:gosec // G204: git args are constant strings, not user input
 	cmd := exec.CommandContext(ctx, "git", "-C", c.dir, "rev-parse", "--abbrev-ref", "@{upstream}")
-	if err := cmd.Run(); err != nil {
-		return false, nil
-	}
-	return true, nil
+	return cmd.Run() == nil
 }
 
 // RemoteStatus fetches from the remote and returns how the local branch
 // relates to its upstream tracking branch (ahead/behind counts).
 func (c *Client) RemoteStatus(ctx context.Context) (*SyncStatus, error) {
-	hasUpstream, err := c.HasUpstream(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if !hasUpstream {
+	if !c.HasUpstream(ctx) {
 		return nil, nil
 	}
 

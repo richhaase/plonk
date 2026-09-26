@@ -48,64 +48,45 @@ func TestGetDefaults(t *testing.T) {
 	assert.Greater(t, len(defaults.Dotfiles.UnmanagedFilters), 0)
 }
 
-func TestNewSimpleValidator(t *testing.T) {
-	validator := NewSimpleValidator()
-	assert.NotNil(t, validator)
-	assert.NotNil(t, validator.validator)
+func TestParse(t *testing.T) {
+	tests := []struct {
+		name, yaml, wantError string
+	}{
+		{"valid", "default_manager: brew\noperation_timeout: 300\ndotfile_timeout: 60\n", ""},
+		{"invalid YAML", "default_manager: [", "invalid YAML"},
+		{"invalid values", "default_manager: invalid_manager\noperation_timeout: -1\n", "failed on"},
+		{"custom manager", "default_manager: custom-manager\n", "validmanager"},
+		{"empty uses defaults", "", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, err := Parse([]byte(tt.yaml))
+			if tt.wantError != "" {
+				assert.ErrorContains(t, err, tt.wantError)
+				return
+			}
+			if assert.NoError(t, err) && assert.NotNil(t, cfg) {
+				assert.Equal(t, "brew", cfg.DefaultManager)
+				assert.Equal(t, 300, cfg.OperationTimeout)
+				assert.Equal(t, 60, cfg.DotfileTimeout)
+			}
+		})
+	}
 }
 
-func TestValidateConfigFromYAML(t *testing.T) {
-	validator := NewSimpleValidator()
-
-	t.Run("valid config", func(t *testing.T) {
-		validYAML := []byte(`
-default_manager: brew
-operation_timeout: 300
-dotfile_timeout: 60
-`)
-		result := validator.ValidateConfigFromYAML(validYAML)
-		assert.True(t, result.Valid)
-		assert.Empty(t, result.Errors)
-	})
-
-	t.Run("invalid YAML", func(t *testing.T) {
-		invalidYAML := []byte(`
-default_manager: brew
-invalid yaml content {{
-`)
-		result := validator.ValidateConfigFromYAML(invalidYAML)
-		assert.False(t, result.Valid)
-		assert.NotEmpty(t, result.Errors)
-		assert.Contains(t, result.Errors[0], "invalid YAML")
-	})
-
-	t.Run("invalid config values", func(t *testing.T) {
-		invalidConfig := []byte(`
-default_manager: invalid_manager
-operation_timeout: -1
-`)
-		result := validator.ValidateConfigFromYAML(invalidConfig)
-		assert.False(t, result.Valid)
-		assert.NotEmpty(t, result.Errors)
-	})
-
-	t.Run("custom manager in default_manager is not valid", func(t *testing.T) {
-		// Custom managers are no longer supported - only hardcoded managers are valid
-		customConfig := []byte(`
-default_manager: custom-manager
-`)
-		result := validator.ValidateConfigFromYAML(customConfig)
-		assert.False(t, result.Valid)
-		assert.NotEmpty(t, result.Errors)
-	})
-
-	t.Run("empty config uses defaults", func(t *testing.T) {
-		emptyYAML := []byte(``)
-		result := validator.ValidateConfigFromYAML(emptyYAML)
-		// Empty config is valid because defaults are applied
-		assert.True(t, result.Valid)
-		assert.Empty(t, result.Errors)
-	})
+func TestParsePreservesEditorDefaults(t *testing.T) {
+	cfg, err := Parse(nil)
+	assert.NoError(t, err)
+	if assert.NotNil(t, cfg) {
+		// The editor has always left omitted nested settings empty, whereas
+		// loading a config file merges them with the runtime defaults.
+		assert.Empty(t, cfg.Dotfiles.UnmanagedFilters)
+	}
+	loaded, err := Load(t.TempDir())
+	assert.NoError(t, err)
+	if assert.NotNil(t, loaded) {
+		assert.NotEmpty(t, loaded.Dotfiles.UnmanagedFilters)
+	}
 }
 
 func TestGetDefaultConfigDirectory_WithTilde(t *testing.T) {

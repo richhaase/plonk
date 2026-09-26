@@ -4,7 +4,6 @@
 package dotfiles
 
 import (
-	"fmt"
 	"os"
 )
 
@@ -59,44 +58,4 @@ func (m *DotfileManager) getState(d Dotfile) (SyncState, error) {
 	}
 
 	return SyncStateManaged, nil
-}
-
-// ApplyAll deploys all missing or drifted dotfiles.
-// Returns an error if any files fail to deploy. On partial failure,
-// check result.Failed and result.Errors for details about which files failed.
-func (m *DotfileManager) ApplyAll(dryRun bool) (DeployResult, error) {
-	statuses, err := m.Reconcile()
-	if err != nil {
-		return DeployResult{DryRun: dryRun}, err
-	}
-
-	result := DeployResult{DryRun: dryRun}
-
-	for _, status := range statuses {
-		switch status.State {
-		case SyncStateManaged:
-			result.Skipped = append(result.Skipped, status.Dotfile)
-
-		case SyncStateError:
-			result.Failed = append(result.Failed, status.Dotfile)
-			result.Errors = append(result.Errors, status.Error)
-
-		case SyncStateMissing, SyncStateDrifted:
-			if dryRun {
-				result.Deployed = append(result.Deployed, status.Dotfile)
-			} else {
-				if err := m.Deploy(status.Name); err != nil {
-					result.Failed = append(result.Failed, status.Dotfile)
-					result.Errors = append(result.Errors, err)
-				} else {
-					result.Deployed = append(result.Deployed, status.Dotfile)
-				}
-			}
-		}
-	}
-
-	if len(result.Failed) > 0 {
-		return result, fmt.Errorf("failed to deploy %d of %d file(s)", len(result.Failed), len(result.Failed)+len(result.Deployed))
-	}
-	return result, nil
 }

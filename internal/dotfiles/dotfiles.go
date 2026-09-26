@@ -360,69 +360,6 @@ func (m *DotfileManager) IsDrifted(d Dotfile) (bool, error) {
 	return !bytes.Equal(sourceContent, targetContent), nil
 }
 
-// Diff returns the difference between source and target
-func (m *DotfileManager) Diff(d Dotfile) (string, error) {
-	sourceContent, err := m.fs.ReadFile(d.Source)
-	if err != nil {
-		return "", fmt.Errorf("failed to read source: %w", err)
-	}
-
-	// Render template if needed
-	if isTemplate(d.Name) {
-		sourceContent, err = m.render(sourceContent)
-		if err != nil {
-			return "", fmt.Errorf("failed to render template %s: %w", d.Name, err)
-		}
-	}
-
-	targetContent, err := m.fs.ReadFile(d.Target)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Sprintf("(target missing, source has %d bytes)", len(sourceContent)), nil
-		}
-		return "", fmt.Errorf("failed to read target: %w", err)
-	}
-
-	if bytes.Equal(sourceContent, targetContent) {
-		return "", nil // no diff
-	}
-
-	// Simple line-by-line diff
-	sourceLines := strings.Split(string(sourceContent), "\n")
-	targetLines := strings.Split(string(targetContent), "\n")
-
-	var diff strings.Builder
-	fmt.Fprintf(&diff, "--- %s (source)\n", d.Source)
-	fmt.Fprintf(&diff, "+++ %s (target)\n", d.Target)
-
-	// Find differences
-	maxLen := len(sourceLines)
-	if len(targetLines) > maxLen {
-		maxLen = len(targetLines)
-	}
-
-	for i := 0; i < maxLen; i++ {
-		var srcLine, tgtLine string
-		if i < len(sourceLines) {
-			srcLine = sourceLines[i]
-		}
-		if i < len(targetLines) {
-			tgtLine = targetLines[i]
-		}
-
-		if srcLine != tgtLine {
-			if i < len(sourceLines) {
-				fmt.Fprintf(&diff, "-%s\n", srcLine)
-			}
-			if i < len(targetLines) {
-				fmt.Fprintf(&diff, "+%s\n", tgtLine)
-			}
-		}
-	}
-
-	return diff.String(), nil
-}
-
 // toTarget converts a relative source path to an absolute target path
 // e.g., "zshrc" -> "/home/user/.zshrc"
 // e.g., "config/nvim/init.lua" -> "/home/user/.config/nvim/init.lua"
@@ -543,11 +480,6 @@ func relEscapes(rel string) bool {
 	return rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator))
 }
 
-// shouldIgnore returns true if the path should be ignored (assumes it's a file)
-func (m *DotfileManager) shouldIgnore(relPath string) bool {
-	return m.shouldIgnoreWithDir(relPath, false)
-}
-
 // shouldIgnoreWithDir returns true if the path should be ignored, with explicit isDir flag
 func (m *DotfileManager) shouldIgnoreWithDir(relPath string, isDir bool) bool {
 	// Ignore files/dirs that start with a dot in the config directory
@@ -572,7 +504,7 @@ func (m *DotfileManager) shouldIgnoreWithDir(relPath string, isDir bool) bool {
 }
 
 // shouldIgnoreWithDot checks if a path should be ignored when adding from $HOME.
-// Unlike shouldIgnore (for configDir paths), this preserves dots and only ignores
+// Unlike shouldIgnoreWithDir (for configDir paths), this preserves dots and only ignores
 // specific VCS/system files, not all dotfiles.
 func (m *DotfileManager) shouldIgnoreWithDot(relPath string, isDir bool) bool {
 	// List of always-ignored file/directory names (VCS and system files)

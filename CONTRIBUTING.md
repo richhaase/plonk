@@ -89,7 +89,7 @@ To add a new one:
 
 1. Create `internal/commands/newcmd.go`
 2. Register with root command in `init()`
-3. Add output format support if displaying data
+3. Use `internal/output` formatters if displaying data
 4. Add tests
 5. Update docs/reference.md
 
@@ -99,7 +99,7 @@ To add a new one:
 - Use `gofmt`
 - Return structured results with per-item status
 - Pass context through all layers
-- Support table/JSON/YAML output formats
+- Keep command output in `internal/output` formatters
 - Treat template resolver values as sensitive: do not put resolved secrets in errors, logs, command output, test fixtures, command arguments, or environment dumps. Use `internal/template.MockSecretResolver` for tests.
 
 ## Pull Request Process

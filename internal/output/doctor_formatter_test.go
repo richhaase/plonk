@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestDoctorFormatter_TableAndStructured(t *testing.T) {
+func TestDoctorFormatter_TableOutput(t *testing.T) {
 	data := DoctorOutput{
 		Overall: HealthStatus{Status: "warning", Message: "Some checks have warnings"},
 		Checks: []HealthCheck{
@@ -20,8 +20,5 @@ func TestDoctorFormatter_TableAndStructured(t *testing.T) {
 		if !strings.Contains(out, w) {
 			t.Fatalf("missing %q in:\n%s", w, out)
 		}
-	}
-	if f.StructuredData().(DoctorOutput).Overall.Status != "warning" {
-		t.Fatalf("structured mismatch")
 	}
 }

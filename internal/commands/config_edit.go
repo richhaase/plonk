@@ -138,7 +138,6 @@ func openInEditor(editor, filename string) error {
 func createTempConfigFile(configDir string) (string, error) {
 	configPath := getConfigPath(configDir)
 	cfg, loadErr := config.LoadFromPath(configPath)
-	useRaw := false
 
 	// Create temp file
 	tempFile, err := os.CreateTemp("", "plonk-config-*.yaml")
@@ -174,7 +173,6 @@ func createTempConfigFile(configDir string) (string, error) {
 				cleanupTmp()
 				return "", fmt.Errorf("failed to load existing config: %w", loadErr)
 			}
-			useRaw = true
 			if _, err := tempFile.Write(raw); err != nil {
 				cleanupTmp()
 				return "", err
@@ -186,11 +184,6 @@ func createTempConfigFile(configDir string) (string, error) {
 				return "", err
 			}
 		}
-	}
-
-	if useRaw {
-		tempFile.Close()
-		return tmpName, nil
 	}
 
 	tempFile.Close()
@@ -231,41 +224,17 @@ func parseAndValidateConfig(filename string) (*config.Config, error) {
 	}
 	cleanData := []byte(strings.Join(configLines, "\n"))
 
-	// Use plonk's validator which provides detailed errors
-	validator := config.NewSimpleValidator()
-	result := validator.ValidateConfigFromYAML(cleanData)
-
-	if !result.Valid {
-		// Build detailed error message with all errors
-		var errorMsg strings.Builder
-		for i, err := range result.Errors {
-			if i > 0 {
-				errorMsg.WriteString("\n")
-			}
-			fmt.Fprintf(&errorMsg, "  - %s", err)
-		}
-		return nil, fmt.Errorf("%s", errorMsg.String())
+	cfg, err := config.Parse(cleanData)
+	if err != nil {
+		return nil, fmt.Errorf("  - %w", err)
 	}
-
-	// Parse again to get the actual config object
-	var cfg config.Config
-	if err := yaml.Unmarshal(cleanData, &cfg); err != nil {
-		return nil, fmt.Errorf("failed to parse YAML: %w", err)
-	}
-
-	// Apply defaults to ensure we have complete config
-	config.ApplyDefaults(&cfg)
-
-	return &cfg, nil
+	return cfg, nil
 }
 
 // saveNonDefaultValues writes only non-default values to plonk.yaml
 func saveNonDefaultValues(configDir string, cfg *config.Config) error {
-	// Create checker to get non-default fields
-	checker := config.NewUserDefinedChecker(configDir)
-
 	// Get only non-default top-level values
-	nonDefaults := checker.GetNonDefaultFields(cfg)
+	nonDefaults := config.GetNonDefaultFields(cfg)
 
 	// If everything is default, write empty file
 	configPath := filepath.Join(configDir, "plonk.yaml")

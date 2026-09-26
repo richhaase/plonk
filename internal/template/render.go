@@ -36,10 +36,6 @@ func (r *Renderer) Register(res SecretResolver) {
 	r.resolvers[res.Scheme()] = res
 }
 
-func (r *Renderer) Resolver(scheme string) SecretResolver {
-	return r.resolvers[scheme]
-}
-
 func (r *Renderer) Render(ctx context.Context, content []byte, opts RenderOptions) ([]byte, error) {
 	out, _, err := r.render(ctx, content, opts, false)
 	return out, err

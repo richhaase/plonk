@@ -73,19 +73,13 @@ func (t *TableBuilder) Build() string {
 
 // StandardTableBuilder provides consistent table formatting across commands
 type StandardTableBuilder struct {
-	title   string
 	headers []string
 	rows    [][]string
-	summary string
-	errors  []string
 }
 
 // NewStandardTableBuilder creates a new standardized table builder
-func NewStandardTableBuilder(title string) *StandardTableBuilder {
-	return &StandardTableBuilder{
-		title: title,
-		rows:  make([][]string, 0),
-	}
+func NewStandardTableBuilder() *StandardTableBuilder {
+	return &StandardTableBuilder{}
 }
 
 // SetHeaders sets the table column headers
@@ -100,98 +94,45 @@ func (t *StandardTableBuilder) AddRow(values ...string) *StandardTableBuilder {
 	return t
 }
 
-// SetSummary sets the summary line displayed after the table
-func (t *StandardTableBuilder) SetSummary(summary string) *StandardTableBuilder {
-	t.summary = summary
-	return t
-}
-
 // Build constructs the final table output
 func (t *StandardTableBuilder) Build() string {
+	if len(t.headers) == 0 && len(t.rows) == 0 {
+		return ""
+	}
+
 	var output strings.Builder
+	writer := tabwriter.NewWriter(&output, 0, 2, 2, ' ', 0)
 
-	// Title
-	if t.title != "" {
-		output.WriteString(t.title + "\n")
-		output.WriteString(strings.Repeat("=", len(t.title)) + "\n\n")
+	// Compute column widths (max of header and all row values)
+	colWidths := make([]int, len(t.headers))
+	for i, h := range t.headers {
+		colWidths[i] = len(h)
 	}
-
-	// Table with proper alignment
-	if len(t.headers) > 0 || len(t.rows) > 0 {
-		var tableOutput strings.Builder
-		writer := tabwriter.NewWriter(&tableOutput, 0, 2, 2, ' ', 0)
-
-		// Compute column widths (max of header and all row values)
-		colWidths := make([]int, len(t.headers))
-		for i, h := range t.headers {
-			colWidths[i] = len(h)
-		}
-		for _, row := range t.rows {
-			for i, val := range row {
-				if i < len(colWidths) && len(val) > colWidths[i] {
-					colWidths[i] = len(val)
-				}
+	for _, row := range t.rows {
+		for i, val := range row {
+			if i < len(colWidths) && len(val) > colWidths[i] {
+				colWidths[i] = len(val)
 			}
 		}
-
-		// Headers with separator
-		if len(t.headers) > 0 {
-			fmt.Fprintln(writer, strings.Join(t.headers, "\t"))
-			// Add dashed separator under headers (matching column widths)
-			separators := make([]string, len(t.headers))
-			for i := range t.headers {
-				separators[i] = strings.Repeat("-", colWidths[i])
-			}
-			fmt.Fprintln(writer, strings.Join(separators, "\t"))
-		}
-
-		// Rows
-		for _, row := range t.rows {
-			fmt.Fprintln(writer, strings.Join(row, "\t"))
-		}
-
-		writer.Flush()
-		output.WriteString(tableOutput.String())
-		output.WriteString("\n")
 	}
 
-	// Summary
-	if t.summary != "" {
-		output.WriteString(t.summary + "\n")
-	}
-
-	// Errors
-	if len(t.errors) > 0 {
-		output.WriteString("\nErrors:\n")
-		for _, err := range t.errors {
-			fmt.Fprintf(&output, "  %s %s\n", IconError, err)
+	// Headers with separator
+	if len(t.headers) > 0 {
+		fmt.Fprintln(writer, strings.Join(t.headers, "\t"))
+		// Add dashed separator under headers (matching column widths)
+		separators := make([]string, len(t.headers))
+		for i := range t.headers {
+			separators[i] = strings.Repeat("-", colWidths[i])
 		}
+		fmt.Fprintln(writer, strings.Join(separators, "\t"))
 	}
 
+	// Rows
+	for _, row := range t.rows {
+		fmt.Fprintln(writer, strings.Join(row, "\t"))
+	}
+
+	writer.Flush()
+	output.WriteString("\n")
 	return output.String()
-}
-
-// OperationSummary is a generic summary for operations
-type OperationSummary struct {
-	Total     int `json:"total" yaml:"total"`
-	Succeeded int `json:"succeeded" yaml:"succeeded"`
-	Skipped   int `json:"skipped" yaml:"skipped"`
-	Failed    int `json:"failed" yaml:"failed"`
-}
-
-// CommonSummary provides fields common to many operations
-type CommonSummary struct {
-	Added   int `json:"added,omitempty" yaml:"added,omitempty"`
-	Updated int `json:"updated,omitempty" yaml:"updated,omitempty"`
-	Removed int `json:"removed,omitempty" yaml:"removed,omitempty"`
-	Skipped int `json:"skipped,omitempty" yaml:"skipped,omitempty"`
-	Failed  int `json:"failed,omitempty" yaml:"failed,omitempty"`
-}
-
-// StateSummary provides fields for state-based operations
-type StateSummary struct {
-	Total     int `json:"total" yaml:"total"`
-	Managed   int `json:"managed" yaml:"managed"`
-	Missing   int `json:"missing" yaml:"missing"`
-	Untracked int `json:"untracked,omitempty" yaml:"untracked,omitempty"`
 }

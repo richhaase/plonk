@@ -50,17 +50,7 @@ func ApplySelective(ctx context.Context, configDir, homeDir string, cfg *config.
 
 // Apply applies dotfile configuration and returns the result
 func Apply(ctx context.Context, configDir, homeDir string, cfg *config.Config, dryRun bool) (output.DotfileResults, error) {
-	manager := NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
-	if err := applyDeployModes(manager, cfg); err != nil {
-		return output.DotfileResults{DryRun: dryRun}, err
-	}
-
-	statuses, err := manager.Reconcile()
-	if err != nil {
-		return output.DotfileResults{DryRun: dryRun}, err
-	}
-
-	return applyStatuses(ctx, manager, statuses, dryRun)
+	return ApplySelective(ctx, configDir, homeDir, cfg, ApplyFilterOptions{DryRun: dryRun})
 }
 
 // applyDeployModes configures the manager with per-dotfile deploy modes from
@@ -125,80 +115,43 @@ func applyStatuses(ctx context.Context, manager *DotfileManager, statuses []Dotf
 			result.Actions = append(result.Actions, action)
 			result.Summary.Failed++
 
-		case SyncStateMissing:
-			var spinner *output.Spinner
-			if spinnerManager != nil {
-				spinner = spinnerManager.StartSpinner("Deploying", s.Name)
+		case SyncStateMissing, SyncStateDrifted:
+			stage, verb, completed := "Deploying", "deploy", "deployed"
+			status, dryStatus := "added", "would-add"
+			if s.State == SyncStateDrifted {
+				stage, verb, completed = "Updating", "update", "updated"
+				status, dryStatus = "updated", "would-update"
 			}
-
+			spinner := spinnerManager.StartSpinner(stage, s.Name)
 			action := output.DotfileOperation{
 				Source:      s.Source,
 				Destination: s.Target,
+				Action:      "copy",
+				Status:      status,
 			}
 
-			if dryRun {
-				action.Action = "would-copy"
-				action.Status = "would-add"
-				result.Summary.Added++
-				if spinner != nil {
-					spinner.Success("would-deploy " + s.Name)
-				}
+			var deployErr error
+			if !dryRun {
+				deployErr = manager.Deploy(s.Name)
+			}
+			if deployErr != nil {
+				action.Action = "error"
+				action.Status = "failed"
+				action.Error = deployErr.Error()
+				result.Summary.Failed++
+				spinner.Error("Failed to " + verb + " " + s.Name + ": " + deployErr.Error())
 			} else {
-				err := manager.Deploy(s.Name)
-				if err != nil {
-					action.Action = "error"
-					action.Status = "failed"
-					action.Error = err.Error()
-					result.Summary.Failed++
-					if spinner != nil {
-						spinner.Error("Failed to deploy " + s.Name + ": " + err.Error())
-					}
-				} else {
-					action.Action = "copy"
-					action.Status = "added"
+				if s.State == SyncStateMissing {
 					result.Summary.Added++
-					if spinner != nil {
-						spinner.Success("deployed " + s.Name)
-					}
-				}
-			}
-			result.Actions = append(result.Actions, action)
-
-		case SyncStateDrifted:
-			var spinner *output.Spinner
-			if spinnerManager != nil {
-				spinner = spinnerManager.StartSpinner("Updating", s.Name)
-			}
-
-			action := output.DotfileOperation{
-				Source:      s.Source,
-				Destination: s.Target,
-			}
-
-			if dryRun {
-				action.Action = "would-copy"
-				action.Status = "would-update"
-				result.Summary.Updated++
-				if spinner != nil {
-					spinner.Success("would-update " + s.Name)
-				}
-			} else {
-				err := manager.Deploy(s.Name)
-				if err != nil {
-					action.Action = "error"
-					action.Status = "failed"
-					action.Error = err.Error()
-					result.Summary.Failed++
-					if spinner != nil {
-						spinner.Error("Failed to update " + s.Name + ": " + err.Error())
-					}
 				} else {
-					action.Action = "copy"
-					action.Status = "updated"
 					result.Summary.Updated++
-					if spinner != nil {
-						spinner.Success("updated " + s.Name)
-					}
+				}
+				if dryRun {
+					action.Action = "would-copy"
+					action.Status = dryStatus
+					spinner.Success("would-" + verb + " " + s.Name)
+				} else {
+					spinner.Success(completed + " " + s.Name)
 				}
 			}
 			result.Actions = append(result.Actions, action)

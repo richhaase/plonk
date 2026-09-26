@@ -81,23 +81,6 @@ func (l *LockV3) HasPackage(manager, pkg string) bool {
 	return slices.Contains(l.Packages[manager], pkg)
 }
 
-// GetPackages returns all packages for a manager
-func (l *LockV3) GetPackages(manager string) []string {
-	return l.Packages[manager]
-}
-
-// GetAllPackages returns all manager:package pairs
-func (l *LockV3) GetAllPackages() []string {
-	var result []string
-	for manager, pkgs := range l.Packages {
-		for _, pkg := range pkgs {
-			result = append(result, manager+":"+pkg)
-		}
-	}
-	sort.Strings(result)
-	return result
-}
-
 // LockV3Service handles v3 lock file operations
 type LockV3Service struct {
 	lockPath string
@@ -249,9 +232,4 @@ func (s *LockV3Service) migrateV2(data []byte) (*LockV3, error) {
 	}
 
 	return v3, nil
-}
-
-// GetLockPath returns the path to the lock file
-func (s *LockV3Service) GetLockPath() string {
-	return s.lockPath
 }

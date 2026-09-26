@@ -68,7 +68,6 @@ func runDotfiles(cmd *cobra.Command, args []string) error {
 	outputData := output.DotfilesStatusOutput{
 		RemoteSync: remoteSync,
 		Result:     outputResult,
-		ConfigDir:  configDir,
 		HomeDir:    homeDir,
 	}
 

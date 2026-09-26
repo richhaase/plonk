@@ -4,6 +4,7 @@
 package dotfiles
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -82,7 +83,7 @@ func TestDotfileManager_Deploy_NoModesConfigured(t *testing.T) {
 	}
 }
 
-func TestDotfileManager_ApplyAll_ConfiguredMode(t *testing.T) {
+func TestApplyStatuses_ConfiguredMode(t *testing.T) {
 	fs := NewMemoryFS()
 	fs.Dirs["/config"] = true
 	fs.Dirs["/home/user"] = true
@@ -91,13 +92,17 @@ func TestDotfileManager_ApplyAll_ConfiguredMode(t *testing.T) {
 	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
 	m.SetDeployModes(map[string]os.FileMode{"missing": 0o600})
 
-	_, err := m.ApplyAll(false)
+	statuses, err := m.Reconcile()
 	if err != nil {
-		t.Fatalf("ApplyAll() error = %v", err)
+		t.Fatal(err)
+	}
+	_, err = applyStatuses(context.Background(), m, statuses, false)
+	if err != nil {
+		t.Fatalf("applyStatuses() error = %v", err)
 	}
 
 	mode := fs.ChmodCalls["/home/user/.missing"]
 	if mode != 0o600 {
-		t.Errorf("AppliedAll deployed mode = %v (0o%o), want 0o600", mode, mode)
+		t.Errorf("applyStatuses deployed mode = %v (0o%o), want 0o600", mode, mode)
 	}
 }

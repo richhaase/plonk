@@ -37,13 +37,10 @@ func IsSupportedManager(name string) bool {
 
 // ParsePackageSpec parses "manager:package" format and validates the manager
 func ParsePackageSpec(spec string) (manager, pkg string, err error) {
-	idx := indexOf(spec, ':')
-	if idx == -1 {
+	manager, pkg, found := strings.Cut(spec, ":")
+	if !found {
 		return "", "", fmt.Errorf("invalid format, expected manager:package")
 	}
-
-	manager = spec[:idx]
-	pkg = spec[idx+1:]
 
 	if !IsSupportedManager(manager) {
 		return "", "", fmt.Errorf("unsupported manager: %s (supported: %v)", manager, SupportedManagers)
@@ -62,14 +59,4 @@ func ParsePackageSpec(spec string) (manager, pkg string, err error) {
 	}
 
 	return manager, pkg, nil
-}
-
-// indexOf returns the index of the first occurrence of sep in s, or -1 if not present
-func indexOf(s string, sep byte) int {
-	for i := 0; i < len(s); i++ {
-		if s[i] == sep {
-			return i
-		}
-	}
-	return -1
 }

@@ -1,6 +1,9 @@
 package output
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestDotfilesStatusFormatter_ShowsSourceType(t *testing.T) {
 	result := Result{
@@ -18,7 +21,7 @@ func TestDotfilesStatusFormatter_ShowsSourceType(t *testing.T) {
 		Result:  result,
 		HomeDir: "/home/test",
 	}).TableOutput()
-	if !contains(out, "TYPE") || !contains(out, "template") || !contains(out, "file") {
+	if !strings.Contains(out, "TYPE") || !strings.Contains(out, "template") || !strings.Contains(out, "file") {
 		t.Fatalf("expected source type column in output: %s", out)
 	}
 }
@@ -47,14 +50,14 @@ func TestStatusFormatter_Table_Variants(t *testing.T) {
 	// default (show both packages and dotfiles)
 	s := StatusOutput{StateSummary: summary}
 	out := NewStatusFormatter(s).TableOutput()
-	if !contains(out, "PACKAGE") {
+	if !strings.Contains(out, "PACKAGE") {
 		t.Fatalf("expected packages table header: %s", out)
 	}
-	if !contains(out, "DOTFILE") {
+	if !strings.Contains(out, "DOTFILE") {
 		t.Fatalf("expected dotfiles table header: %s", out)
 	}
 	// should show missing entries in output
-	if !contains(out, "missing") {
+	if !strings.Contains(out, "missing") {
 		t.Fatalf("expected missing entries in output: %s", out)
 	}
 }

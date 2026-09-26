@@ -6,7 +6,9 @@ package orchestrator
 import (
 	"context"
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
+	"strings"
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/dotfiles"
@@ -14,49 +16,31 @@ import (
 	"github.com/richhaase/plonk/internal/packages"
 )
 
-// Orchestrator manages resources and coordinates apply operations
-type Orchestrator struct {
-	ctx          context.Context
-	config       *config.Config
-	configDir    string
-	homeDir      string
-	dryRun       bool
-	packagesOnly bool
-	dotfilesOnly bool
+// Options selects the configuration and resources to apply.
+type Options struct {
+	Config       *config.Config
+	ConfigDir    string
+	HomeDir      string
+	DryRun       bool
+	PackagesOnly bool
+	DotfilesOnly bool
 }
 
-// New creates a new orchestrator instance with options
-func New(opts ...Option) *Orchestrator {
-	o := &Orchestrator{}
-
-	for _, opt := range opts {
-		opt(o)
-	}
-
-	return o
-}
-
-// Apply orchestrates the application of all resources
-func (o *Orchestrator) Apply(ctx context.Context) (output.ApplyResult, error) {
-	result := output.ApplyResult{
-		DryRun:  o.dryRun,
-		Success: false,
-	}
-
-	// Store context
-	o.ctx = ctx
+// Apply installs missing packages and deploys dotfiles, collecting partial failures.
+func Apply(ctx context.Context, opts Options) (output.ApplyResult, error) {
+	result := output.ApplyResult{DryRun: opts.DryRun}
 
 	// Derive per-domain timeouts
-	t := config.GetTimeouts(o.config)
+	t := config.GetTimeouts(opts.Config)
 
 	// Apply packages (unless dotfiles-only).
 	// Per-package timeouts live inside packages.SimpleApply; we no longer wrap
 	// the whole batch in one budget — a single slow Homebrew download used to
 	// burn the entire phase's deadline.
-	if !o.dotfilesOnly {
-		simpleResult, err := packages.SimpleApply(ctx, o.configDir, o.dryRun)
+	if !opts.DotfilesOnly {
+		simpleResult, err := packages.SimpleApply(ctx, opts.ConfigDir, opts.DryRun)
 		if simpleResult != nil {
-			packageResult := convertSimpleApplyResult(simpleResult, o.dryRun)
+			packageResult := convertSimpleApplyResult(simpleResult, opts.DryRun)
 			result.Packages = &packageResult
 		}
 		if err != nil {
@@ -65,9 +49,9 @@ func (o *Orchestrator) Apply(ctx context.Context) (output.ApplyResult, error) {
 	}
 
 	// Apply dotfiles (unless packages-only)
-	if !o.packagesOnly {
+	if !opts.PackagesOnly {
 		dctx, dcancel := context.WithTimeout(ctx, t.Dotfile)
-		dotfileResult, err := dotfiles.Apply(dctx, o.configDir, o.homeDir, o.config, o.dryRun)
+		dotfileResult, err := dotfiles.Apply(dctx, opts.ConfigDir, opts.HomeDir, opts.Config, opts.DryRun)
 		dcancel()
 		result.Dotfiles = &dotfileResult
 		if err != nil {
@@ -80,36 +64,24 @@ func (o *Orchestrator) Apply(ctx context.Context) (output.ApplyResult, error) {
 	// This supports idempotent operations - running apply multiple times is safe.
 	result.Success = !result.HasErrors()
 
-	// Determine if any changes were made (useful for reporting)
-	changed := false
 	if result.Packages != nil {
-		if !o.dryRun && result.Packages.TotalInstalled > 0 {
-			changed = true
-		} else if o.dryRun && result.Packages.TotalWouldInstall > 0 {
-			changed = true
-		}
+		result.Changed = (!opts.DryRun && result.Packages.TotalInstalled > 0) ||
+			(opts.DryRun && result.Packages.TotalWouldInstall > 0)
 	}
 	if result.Dotfiles != nil {
-		if !o.dryRun && (result.Dotfiles.Summary.Added > 0 || result.Dotfiles.Summary.Updated > 0) {
-			changed = true
-		} else if o.dryRun && (result.Dotfiles.Summary.Added > 0 || result.Dotfiles.Summary.Updated > 0) {
-			changed = true
-		}
-	}
-	result.Changed = changed
-
-	// If we had any failures, return an error even if some operations succeeded
-	if result.HasErrors() {
-		return result, result.GetCombinedError()
+		result.Changed = result.Changed || result.Dotfiles.Summary.Added > 0 || result.Dotfiles.Summary.Updated > 0
 	}
 
-	return result, nil
+	return result, result.GetCombinedError()
 }
 
 // convertSimpleApplyResult converts packages.SimpleApplyResult to output.PackageResults
 func convertSimpleApplyResult(r *packages.SimpleApplyResult, dryRun bool) output.PackageResults {
 	result := output.PackageResults{
-		DryRun: dryRun,
+		DryRun:            dryRun,
+		TotalInstalled:    len(r.Installed),
+		TotalWouldInstall: len(r.WouldInstall),
+		TotalFailed:       len(r.Failed),
 	}
 
 	// Group by manager
@@ -122,7 +94,6 @@ func convertSimpleApplyResult(r *packages.SimpleApplyResult, dryRun bool) output
 			Name:   pkg,
 			Status: "installed",
 		})
-		result.TotalInstalled++
 	}
 
 	// Handle would-install packages (dry-run)
@@ -132,7 +103,6 @@ func convertSimpleApplyResult(r *packages.SimpleApplyResult, dryRun bool) output
 			Name:   pkg,
 			Status: "would-install",
 		})
-		result.TotalWouldInstall++
 	}
 
 	// Build error map for failed packages
@@ -154,7 +124,6 @@ func convertSimpleApplyResult(r *packages.SimpleApplyResult, dryRun bool) output
 			op.Error = errMsg
 		}
 		managerPackages[manager] = append(managerPackages[manager], op)
-		result.TotalFailed++
 	}
 
 	// TotalMissing = packages that were not installed at reconciliation time
@@ -167,25 +136,11 @@ func convertSimpleApplyResult(r *packages.SimpleApplyResult, dryRun bool) output
 	}
 
 	// Build manager results with per-manager missing counts (sorted for deterministic output)
-	sortedManagers := make([]string, 0, len(managerPackages))
-	for manager := range managerPackages {
-		sortedManagers = append(sortedManagers, manager)
-	}
-	sort.Strings(sortedManagers)
-	for _, manager := range sortedManagers {
+	for _, manager := range slices.Sorted(maps.Keys(managerPackages)) {
 		pkgs := managerPackages[manager]
-		// Count missing packages for this manager
-		// Missing = packages that needed action (install/fail in real run, would-install in dry run)
-		missingCount := 0
-		for _, pkg := range pkgs {
-			switch pkg.Status {
-			case "installed", "failed", "would-install":
-				missingCount++
-			}
-		}
 		result.Managers = append(result.Managers, output.ManagerResults{
 			Name:         manager,
-			MissingCount: missingCount,
+			MissingCount: len(pkgs),
 			Packages:     pkgs,
 		})
 	}
@@ -195,10 +150,9 @@ func convertSimpleApplyResult(r *packages.SimpleApplyResult, dryRun bool) output
 
 // splitSpec splits "manager:package" into manager and package
 func splitSpec(spec string) (string, string) {
-	for i, c := range spec {
-		if c == ':' {
-			return spec[:i], spec[i+1:]
-		}
+	manager, pkg, found := strings.Cut(spec, ":")
+	if !found {
+		return "", spec
 	}
-	return "", spec
+	return manager, pkg
 }

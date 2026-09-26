@@ -87,14 +87,11 @@ func runPull(cmd *cobra.Command, args []string) error {
 		}
 		cfg := config.LoadWithDefaults(configDir)
 
-		orch := orchestrator.New(
-			orchestrator.WithConfig(cfg),
-			orchestrator.WithConfigDir(configDir),
-			orchestrator.WithHomeDir(homeDir),
-			orchestrator.WithDryRun(false),
-		)
-
-		result, err := orch.Apply(ctx)
+		result, err := orchestrator.Apply(ctx, orchestrator.Options{
+			Config:    cfg,
+			ConfigDir: configDir,
+			HomeDir:   homeDir,
+		})
 		output.RenderOutput(result)
 		if err != nil {
 			return err

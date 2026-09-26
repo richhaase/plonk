@@ -43,29 +43,12 @@ func runConfigShow(cmd *cobra.Command, args []string) error {
 	cfg := config.LoadWithDefaults(configDir)
 
 	// Build output data
-	outputData := ConfigShowOutput{
+	outputData := output.ConfigShowOutput{
 		ConfigPath: configPath,
 		Config:     cfg,
-		Checker:    config.NewUserDefinedChecker(configDir),
-		ConfigDir:  configDir,
 	}
 
-	// Convert to output package type and create formatter
-	formatterData := output.ConfigShowOutput{
-		ConfigPath: outputData.ConfigPath,
-		Config:     outputData.Config,
-		Checker:    outputData.Checker,
-		ConfigDir:  outputData.ConfigDir,
-	}
-	formatter := output.NewConfigShowFormatter(formatterData)
+	formatter := output.NewConfigShowFormatter(outputData)
 	output.RenderOutput(formatter)
 	return nil
-}
-
-// ConfigShowOutput represents the output structure for config show command
-type ConfigShowOutput struct {
-	ConfigPath string                     `json:"config_path" yaml:"config_path"`
-	Config     *config.Config             `json:"config" yaml:"config"`
-	Checker    *config.UserDefinedChecker `json:"-" yaml:"-"` // Not included in JSON/YAML
-	ConfigDir  string                     `json:"-" yaml:"-"` // Not included in JSON/YAML
 }

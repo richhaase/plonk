@@ -52,44 +52,6 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 	// Run comprehensive health checks using diagnostics with context
 	healthReport := diagnostics.RunHealthChecksWithContext(ctx)
 
-	// Convert to command output type
-	doctorOutput := DoctorOutput{
-		Overall: healthReport.Overall,
-		Checks:  healthReport.Checks,
-	}
-
-	// Convert to output package type and create formatter
-	formatterData := output.DoctorOutput{
-		Overall: output.HealthStatus{
-			Status:  doctorOutput.Overall.Status,
-			Message: doctorOutput.Overall.Message,
-		},
-		Checks: convertHealthChecks(doctorOutput.Checks),
-	}
-	formatter := output.NewDoctorFormatter(formatterData)
-	output.RenderOutput(formatter)
+	output.RenderOutput(output.NewDoctorFormatter(healthReport))
 	return nil
-}
-
-// convertHealthChecks converts from diagnostics types to output types
-func convertHealthChecks(checks []diagnostics.HealthCheck) []output.HealthCheck {
-	converted := make([]output.HealthCheck, len(checks))
-	for i, check := range checks {
-		converted[i] = output.HealthCheck{
-			Name:        check.Name,
-			Category:    check.Category,
-			Status:      check.Status,
-			Message:     check.Message,
-			Details:     check.Details,
-			Issues:      check.Issues,
-			Suggestions: check.Suggestions,
-		}
-	}
-	return converted
-}
-
-// DoctorOutput represents the output of the doctor command (health checks)
-type DoctorOutput struct {
-	Overall diagnostics.HealthStatus  `json:"overall" yaml:"overall"`
-	Checks  []diagnostics.HealthCheck `json:"checks" yaml:"checks"`
 }

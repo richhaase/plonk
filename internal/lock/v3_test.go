@@ -18,37 +18,25 @@ func TestLockV3_AddRemovePackage(t *testing.T) {
 	// Add package
 	l.AddPackage("brew", "ripgrep")
 	assert.True(t, l.HasPackage("brew", "ripgrep"))
-	assert.Equal(t, []string{"ripgrep"}, l.GetPackages("brew"))
+	assert.Equal(t, []string{"ripgrep"}, l.Packages["brew"])
 
 	// Add another package (should be sorted)
 	l.AddPackage("brew", "fzf")
-	assert.Equal(t, []string{"fzf", "ripgrep"}, l.GetPackages("brew"))
+	assert.Equal(t, []string{"fzf", "ripgrep"}, l.Packages["brew"])
 
 	// Add duplicate (should be no-op)
 	l.AddPackage("brew", "ripgrep")
-	assert.Equal(t, []string{"fzf", "ripgrep"}, l.GetPackages("brew"))
+	assert.Equal(t, []string{"fzf", "ripgrep"}, l.Packages["brew"])
 
 	// Remove package
 	l.RemovePackage("brew", "fzf")
 	assert.False(t, l.HasPackage("brew", "fzf"))
-	assert.Equal(t, []string{"ripgrep"}, l.GetPackages("brew"))
+	assert.Equal(t, []string{"ripgrep"}, l.Packages["brew"])
 
 	// Remove last package (manager key should be deleted)
 	l.RemovePackage("brew", "ripgrep")
 	assert.False(t, l.HasPackage("brew", "ripgrep"))
-	assert.Nil(t, l.GetPackages("brew"))
-}
-
-func TestLockV3_GetAllPackages(t *testing.T) {
-	l := NewLockV3()
-
-	l.AddPackage("brew", "ripgrep")
-	l.AddPackage("cargo", "bat")
-	l.AddPackage("brew", "fzf")
-
-	all := l.GetAllPackages()
-	// Should be sorted: brew:fzf, brew:ripgrep, cargo:bat
-	assert.Equal(t, []string{"brew:fzf", "brew:ripgrep", "cargo:bat"}, all)
+	assert.Nil(t, l.Packages["brew"])
 }
 
 func TestLockV3Service_ReadWriteRoundtrip(t *testing.T) {
@@ -192,15 +180,13 @@ resources:
 
 	// Verify all 8 packages were migrated
 	assert.Equal(t, 3, lock.Version)
-	assert.Equal(t, []string{"fzf", "jq", "ripgrep"}, lock.GetPackages("brew"))
-	assert.Equal(t, []string{"bat", "eza"}, lock.GetPackages("cargo"))
-	assert.Equal(t, []string{"golang.org/x/tools/gopls@latest"}, lock.GetPackages("go"))
-	assert.Equal(t, []string{"typescript"}, lock.GetPackages("pnpm"))
-	assert.Equal(t, []string{"ruff"}, lock.GetPackages("uv"))
-
-	// Total package count
-	all := lock.GetAllPackages()
-	assert.Equal(t, 8, len(all))
+	assert.Equal(t, map[string][]string{
+		"brew":  {"fzf", "jq", "ripgrep"},
+		"cargo": {"bat", "eza"},
+		"go":    {"golang.org/x/tools/gopls@latest"},
+		"pnpm":  {"typescript"},
+		"uv":    {"ruff"},
+	}, lock.Packages)
 }
 
 func TestLockV3Service_MigrateV2_SkipsMalformedEntries(t *testing.T) {
@@ -250,9 +236,11 @@ resources:
 	assert.False(t, lock.HasPackage("", "orphan-package"))
 	assert.False(t, lock.HasPackage("cargo", ""))
 
-	// Total should be 2 (the valid ones)
-	all := lock.GetAllPackages()
-	assert.Equal(t, 2, len(all))
+	// Only the two valid entries remain.
+	assert.Equal(t, map[string][]string{
+		"brew": {"ripgrep"},
+		"go":   {"golang.org/x/tools/gopls@latest"},
+	}, lock.Packages)
 }
 
 func TestLockV3Service_MigrateV2_EmptyLock(t *testing.T) {

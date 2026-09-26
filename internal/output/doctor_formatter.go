@@ -134,11 +134,6 @@ func (f DoctorFormatter) TableOutput() string {
 	return output.String()
 }
 
-// StructuredData returns the structured data for serialization
-func (f DoctorFormatter) StructuredData() any {
-	return f.Data
-}
-
 // titleCase converts a string to title case (first letter of each word uppercase)
 // This is a simple replacement for the deprecated strings.Title
 func titleCase(s string) string {

@@ -172,7 +172,6 @@ View and edit configuration.
 
 ```bash
 plonk config show              # View current config
-plonk config show -o json      # JSON output
 plonk config edit              # Edit in $EDITOR
 ```
 
@@ -361,9 +360,6 @@ Diff tools are invoked per the documented diff(1) convention: exit status `1` me
 
 Template-provider failures are reported with a specific cause in the error message: secret not found, provider unavailable, Keychain locked, access denied, or invalid directive syntax.
 
-## Output Formats
+## Output
 
-Commands support `--output` / `-o`:
-- `table` (default)
-- `json`
-- `yaml`
+Commands display human-readable output. `plonk config show` displays configuration as YAML with comments and optional terminal colors. There is no `--output` / `-o` flag.

@@ -5,7 +5,6 @@ package output
 
 import (
 	"fmt"
-	"reflect"
 	"sort"
 	"strings"
 )
@@ -16,9 +15,8 @@ import (
 type ItemState string
 
 const (
-	StateManaged ItemState = "managed"
-	StateMissing ItemState = "missing"
-	// Align with resources.StateDegraded.String() which returns "drifted"
+	StateManaged   ItemState = "managed"
+	StateMissing   ItemState = "missing"
 	StateDegraded  ItemState = "drifted"
 	StateUntracked ItemState = "untracked"
 	StateError     ItemState = "error"
@@ -54,38 +52,9 @@ type Summary struct {
 
 // StatusOutput represents the output structure for status command
 type StatusOutput struct {
-	ConfigPath   string  `json:"config_path" yaml:"config_path"`
-	LockPath     string  `json:"lock_path" yaml:"lock_path"`
-	ConfigExists bool    `json:"config_exists" yaml:"config_exists"`
-	ConfigValid  bool    `json:"config_valid" yaml:"config_valid"`
-	LockExists   bool    `json:"lock_exists" yaml:"lock_exists"`
-	RemoteSync   string  `json:"remote_sync,omitempty" yaml:"remote_sync,omitempty"`
-	StateSummary Summary `json:"state_summary" yaml:"state_summary"`
-	ConfigDir    string  `json:"-" yaml:"-"` // Not included in JSON/YAML output
-	HomeDir      string  `json:"-" yaml:"-"` // Not included in JSON/YAML output
-}
-
-// StatusOutputSummary represents a summary-focused version for JSON/YAML output
-type StatusOutputSummary struct {
-	ConfigPath   string  `json:"config_path" yaml:"config_path"`
-	LockPath     string  `json:"lock_path" yaml:"lock_path"`
-	ConfigExists bool    `json:"config_exists" yaml:"config_exists"`
-	ConfigValid  bool    `json:"config_valid" yaml:"config_valid"`
-	LockExists   bool    `json:"lock_exists" yaml:"lock_exists"`
-	RemoteSync   string  `json:"remote_sync,omitempty" yaml:"remote_sync,omitempty"`
-	StateSummary Summary `json:"state_summary" yaml:"state_summary"`
-}
-
-// ManagedItem represents an item under management with its details
-type ManagedItem struct {
-	Name     string                 `json:"name" yaml:"name"`
-	Domain   string                 `json:"domain" yaml:"domain"`
-	State    string                 `json:"state" yaml:"state"`
-	Manager  string                 `json:"manager,omitempty" yaml:"manager,omitempty"`
-	Path     string                 `json:"path,omitempty" yaml:"path,omitempty"`
-	Target   string                 `json:"target,omitempty" yaml:"target,omitempty"`
-	Error    string                 `json:"error,omitempty" yaml:"error,omitempty"`
-	Metadata map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	RemoteSync   string
+	StateSummary Summary
+	HomeDir      string
 }
 
 // StatusFormatter formats status output
@@ -177,7 +146,7 @@ func writePackagesTable(output *strings.Builder, result Result) {
 		return
 	}
 
-	pkgBuilder := NewStandardTableBuilder("")
+	pkgBuilder := NewStandardTableBuilder()
 	pkgBuilder.SetHeaders("PACKAGE", "MANAGER", "STATUS")
 
 	for _, manager := range sortItemsByManager(packagesByManager) {
@@ -202,7 +171,7 @@ func writeDotfilesTable(output *strings.Builder, result Result, homeDir string) 
 		return
 	}
 
-	dotBuilder := NewStandardTableBuilder("")
+	dotBuilder := NewStandardTableBuilder()
 	dotBuilder.SetHeaders("DOTFILE", "TYPE", "STATUS")
 
 	managed := append([]Item(nil), result.Managed...)
@@ -269,89 +238,6 @@ func writeSummaryLine(output *strings.Builder, summary Summary, driftedCount int
 
 func writeDomainErrors(output *strings.Builder, results []Result) {
 	for _, result := range results {
-		if len(result.Errors) == 0 {
-			continue
-		}
-		fmt.Fprintf(output, "\n%s errors:\n", result.Domain)
-		for _, item := range result.Errors {
-			if item.Error != "" {
-				fmt.Fprintf(output, "  ✗ %s: %s\n", item.Name, item.Error)
-				continue
-			}
-			fmt.Fprintf(output, "  ✗ %s\n", item.Name)
-		}
+		WriteErrors(output, result.Domain, result.Errors)
 	}
-}
-
-// StructuredData returns the structured data for serialization
-func (f StatusFormatter) StructuredData() any {
-	s := f.Data
-	return StatusOutputSummary{
-		ConfigPath:   s.ConfigPath,
-		LockPath:     s.LockPath,
-		ConfigExists: s.ConfigExists,
-		ConfigValid:  s.ConfigValid,
-		LockExists:   s.LockExists,
-		RemoteSync:   s.RemoteSync,
-		StateSummary: sanitizeSummary(s.StateSummary),
-	}
-}
-
-// sanitizeMetadata returns a shallow copy of metadata without function-typed values
-func sanitizeMetadata(meta map[string]interface{}) map[string]interface{} {
-	if meta == nil {
-		return nil
-	}
-	cleaned := make(map[string]interface{}, len(meta))
-	for k, v := range meta {
-		if reflect.ValueOf(v).Kind() == reflect.Func {
-			continue
-		}
-		cleaned[k] = v
-	}
-	return cleaned
-}
-
-// sanitizeSummary removes function-typed metadata values from summary items
-func sanitizeSummary(sum Summary) Summary {
-	cleaned := Summary{
-		TotalManaged:   sum.TotalManaged,
-		TotalMissing:   sum.TotalMissing,
-		TotalUntracked: sum.TotalUntracked,
-		TotalErrors:    sum.TotalErrors,
-		Results:        make([]Result, len(sum.Results)),
-	}
-	for i, r := range sum.Results {
-		cr := Result{Domain: r.Domain}
-		if len(r.Managed) > 0 {
-			cr.Managed = make([]Item, len(r.Managed))
-			for j, it := range r.Managed {
-				it.Metadata = sanitizeMetadata(it.Metadata)
-				cr.Managed[j] = it
-			}
-		}
-		if len(r.Missing) > 0 {
-			cr.Missing = make([]Item, len(r.Missing))
-			for j, it := range r.Missing {
-				it.Metadata = sanitizeMetadata(it.Metadata)
-				cr.Missing[j] = it
-			}
-		}
-		if len(r.Untracked) > 0 {
-			cr.Untracked = make([]Item, len(r.Untracked))
-			for j, it := range r.Untracked {
-				it.Metadata = sanitizeMetadata(it.Metadata)
-				cr.Untracked[j] = it
-			}
-		}
-		if len(r.Errors) > 0 {
-			cr.Errors = make([]Item, len(r.Errors))
-			for j, it := range r.Errors {
-				it.Metadata = sanitizeMetadata(it.Metadata)
-				cr.Errors[j] = it
-			}
-		}
-		cleaned.Results[i] = cr
-	}
-	return cleaned
 }
