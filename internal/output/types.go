@@ -207,35 +207,3 @@ func (r *ApplyResult) GetCombinedError() error {
 func (r *ApplyResult) HasErrors() bool {
 	return len(r.PackageErrors) > 0 || len(r.DotfileErrors) > 0
 }
-
-// StructuredData returns the data structure for JSON/YAML serialization
-func (r ApplyResult) StructuredData() any {
-	return r
-}
-
-// UpgradeOutput represents the output format for upgrade operations
-type UpgradeOutput struct {
-	Command    string          `json:"command" yaml:"command"`
-	DryRun     bool            `json:"dry_run" yaml:"dry_run"`
-	TotalItems int             `json:"total_items" yaml:"total_items"`
-	Results    []UpgradeResult `json:"results" yaml:"results"`
-	Summary    UpgradeSummary  `json:"summary" yaml:"summary"`
-}
-
-// UpgradeResult represents the result of upgrading a single package
-type UpgradeResult struct {
-	Manager     string `json:"manager" yaml:"manager"`
-	Package     string `json:"package" yaml:"package"`
-	FromVersion string `json:"from_version,omitempty" yaml:"from_version,omitempty"`
-	ToVersion   string `json:"to_version,omitempty" yaml:"to_version,omitempty"`
-	Status      string `json:"status" yaml:"status"` // "upgraded", "failed", "skipped"
-	Error       string `json:"error,omitempty" yaml:"error,omitempty"`
-}
-
-// UpgradeSummary provides summary statistics for upgrade operations
-type UpgradeSummary struct {
-	Total    int `json:"total" yaml:"total"`
-	Upgraded int `json:"upgraded" yaml:"upgraded"`
-	Failed   int `json:"failed" yaml:"failed"`
-	Skipped  int `json:"skipped" yaml:"skipped"`
-}

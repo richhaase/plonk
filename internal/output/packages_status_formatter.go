@@ -32,43 +32,7 @@ func (f PackagesStatusFormatter) TableOutput() string {
 	WriteTitle(&output, "Packages Status")
 	WriteRemoteSync(&output, f.Data.RemoteSync)
 
-	// Group packages by manager
-	packagesByManager := make(map[string][]Item)
-	missingPackages := []Item{}
-
-	// Show managed and missing items
-	for _, item := range result.Managed {
-		packagesByManager[item.Manager] = append(packagesByManager[item.Manager], item)
-	}
-	missingPackages = append(missingPackages, result.Missing...)
-
-	// Sort missing packages
-	sortItems(missingPackages)
-
-	// Build packages table
-	if len(packagesByManager) > 0 || len(missingPackages) > 0 {
-		// Create a table for packages
-		pkgBuilder := NewStandardTableBuilder("")
-		pkgBuilder.SetHeaders("PACKAGE", "MANAGER", "STATUS")
-
-		// Show managed packages by manager (sorted alphabetically)
-		sortedManagers := sortItemsByManager(packagesByManager)
-		for _, manager := range sortedManagers {
-			packages := packagesByManager[manager]
-			sortItems(packages) // Sort packages alphabetically within each manager
-			for _, pkg := range packages {
-				pkgBuilder.AddRow(pkg.Name, manager, "managed")
-			}
-		}
-
-		// Show missing packages
-		for _, pkg := range missingPackages {
-			pkgBuilder.AddRow(pkg.Name, pkg.Manager, "missing")
-		}
-
-		output.WriteString(pkgBuilder.Build())
-		output.WriteString("\n")
-	}
+	writePackagesTable(&output, result)
 
 	// Add summary
 	managedCount := len(result.Managed)
@@ -95,66 +59,4 @@ func (f PackagesStatusFormatter) TableOutput() string {
 	}
 
 	return output.String()
-}
-
-// StructuredData returns the structured data for serialization
-func (f PackagesStatusFormatter) StructuredData() any {
-	result := f.Data.Result
-
-	var items []ManagedItem
-
-	// Add managed items
-	for _, item := range result.Managed {
-		items = append(items, ManagedItem{
-			Name:     item.Name,
-			Domain:   "package",
-			State:    string(item.State),
-			Manager:  item.Manager,
-			Path:     item.Path,
-			Metadata: sanitizeMetadata(item.Metadata),
-		})
-	}
-
-	// Add missing items
-	for _, item := range result.Missing {
-		items = append(items, ManagedItem{
-			Name:     item.Name,
-			Domain:   "package",
-			State:    string(item.State),
-			Manager:  item.Manager,
-			Path:     item.Path,
-			Metadata: sanitizeMetadata(item.Metadata),
-		})
-	}
-
-	// Add error items
-	for _, item := range result.Errors {
-		mi := ManagedItem{
-			Name:    item.Name,
-			Domain:  "package",
-			State:   string(item.State),
-			Manager: item.Manager,
-			Error:   item.Error,
-		}
-		items = append(items, mi)
-	}
-
-	summary := Summary{
-		TotalManaged:   len(result.Managed),
-		TotalMissing:   len(result.Missing),
-		TotalUntracked: len(result.Untracked),
-		TotalErrors:    len(result.Errors),
-		Results:        []Result{result},
-	}
-
-	return PackagesStatusOutputSummary{
-		Summary: summary,
-		Items:   items,
-	}
-}
-
-// PackagesStatusOutputSummary represents the structured output format
-type PackagesStatusOutputSummary struct {
-	Summary Summary       `json:"summary" yaml:"summary"`
-	Items   []ManagedItem `json:"items" yaml:"items"`
 }

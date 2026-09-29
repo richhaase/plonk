@@ -87,18 +87,15 @@ func runApply(cmd *cobra.Command, args []string) error {
 		return runSelectiveApply(ctx, args, cfg, configDir, homeDir, dryRun)
 	}
 
-	// Create new orchestrator with all options
-	orch := orchestrator.New(
-		orchestrator.WithConfig(cfg),
-		orchestrator.WithConfigDir(configDir),
-		orchestrator.WithHomeDir(homeDir),
-		orchestrator.WithDryRun(dryRun),
-		orchestrator.WithPackagesOnly(packagesOnly),
-		orchestrator.WithDotfilesOnly(dotfilesOnly),
-	)
-
-	// Run apply
-	result, err := orch.Apply(ctx)
+	// Apply the selected resources
+	result, err := orchestrator.Apply(ctx, orchestrator.Options{
+		Config:       cfg,
+		ConfigDir:    configDir,
+		HomeDir:      homeDir,
+		DryRun:       dryRun,
+		PackagesOnly: packagesOnly,
+		DotfilesOnly: dotfilesOnly,
+	})
 
 	// Set the scope on the result
 	result.Scope = getApplyScope(packagesOnly, dotfilesOnly)

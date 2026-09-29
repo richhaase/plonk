@@ -122,8 +122,3 @@ func (f DotfileRemovalFormatter) TableOutput() string {
 
 	return tb.Build()
 }
-
-// StructuredData returns the structured data for serialization
-func (f DotfileRemovalFormatter) StructuredData() any {
-	return f.Data
-}

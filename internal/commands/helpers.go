@@ -6,48 +6,11 @@ package commands
 import (
 	"strings"
 
-	"github.com/richhaase/plonk/internal/config"
 	"github.com/spf13/cobra"
 )
 
-// SimpleFlags represents basic command flags
-type SimpleFlags struct {
-	DryRun  bool
-	Force   bool
-	Verbose bool
-}
-
-// ParseSimpleFlags parses basic flags for commands
-func ParseSimpleFlags(cmd *cobra.Command) (*SimpleFlags, error) {
-	flags := &SimpleFlags{}
-
-	// Parse common flags
-	flags.DryRun, _ = cmd.Flags().GetBool("dry-run")
-	flags.Force, _ = cmd.Flags().GetBool("force")
-	flags.Verbose, _ = cmd.Flags().GetBool("verbose")
-
-	return flags, nil
-}
-
-// normalizeDisplayFlags sets defaults when no flags specified
-func normalizeDisplayFlags(showPackages, showDotfiles bool) (packages, dotfiles bool) {
-	// If neither flag is set, show both
-	if !showPackages && !showDotfiles {
-		return true, true
-	}
-	return showPackages, showDotfiles
-}
-
-// parseSimpleFlags parses basic flags for commands
-func parseSimpleFlags(cmd *cobra.Command) (*SimpleFlags, error) {
-	return ParseSimpleFlags(cmd)
-}
-
 // CompleteDotfilePaths provides file path completion for dotfiles
 func CompleteDotfilePaths(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-	// Get home directory - ignore errors for shell completion (best effort)
-	_, _ = config.GetHomeDir()
-
 	// Define common dotfile suggestions
 	commonDotfiles := []string{
 		"~/.zshrc", "~/.bashrc", "~/.bash_profile", "~/.profile",

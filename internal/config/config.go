@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/go-playground/validator/v10"
@@ -228,19 +229,30 @@ func LoadFromPath(configPath string) (*Config, error) {
 		return nil, err
 	}
 
-	// Apply defaults for any unset fields
-	ApplyDefaults(&cfg)
+	return validateConfig(&cfg)
+}
 
-	// Validate
+// Parse validates edited YAML and returns it with defaults for unset fields.
+// Unlike LoadFromPath, it starts from an empty config so deleting a nested
+// setting in the editor retains the existing edit/save behavior.
+func Parse(data []byte) (*Config, error) {
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("invalid YAML: %w", err)
+	}
+	return validateConfig(&cfg)
+}
+
+func validateConfig(cfg *Config) (*Config, error) {
+	ApplyDefaults(cfg)
 	validate, err := getValidator()
 	if err != nil {
 		return nil, err
 	}
-	if err := validate.Struct(&cfg); err != nil {
+	if err := validate.Struct(cfg); err != nil {
 		return nil, err
 	}
-
-	return &cfg, nil
+	return cfg, nil
 }
 
 // LoadWithDefaults provides zero-config behavior matching current LoadConfigWithDefaults
@@ -289,4 +301,24 @@ func GetHomeDir() (string, error) {
 		return "", fmt.Errorf("home directory is empty")
 	}
 	return homeDir, nil
+}
+
+// GetDefaultConfigDirectory returns the default config directory, checking PLONK_DIR environment variable first
+func GetDefaultConfigDirectory() string {
+	// Check for PLONK_DIR environment variable
+	if envDir := os.Getenv("PLONK_DIR"); envDir != "" {
+		// Expand ~ if present
+		if strings.HasPrefix(envDir, "~/") {
+			return filepath.Join(os.Getenv("HOME"), envDir[2:])
+		}
+		return envDir
+	}
+
+	// Default location
+	return filepath.Join(os.Getenv("HOME"), ".config", "plonk")
+}
+
+// GetDefaults returns the default configuration
+func GetDefaults() *Config {
+	return &defaultConfig
 }

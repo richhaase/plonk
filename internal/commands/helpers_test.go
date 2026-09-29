@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/spf13/cobra"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestCompleteDotfilePaths(t *testing.T) {
@@ -87,52 +86,6 @@ func TestCompleteDotfilePaths(t *testing.T) {
 					t.Errorf("Expected to find %q in suggestions", check)
 				}
 			}
-		})
-	}
-}
-func TestNormalizeDisplayFlags(t *testing.T) {
-	tests := []struct {
-		name         string
-		showPackages bool
-		showDotfiles bool
-		wantPackages bool
-		wantDotfiles bool
-	}{
-		{
-			name:         "both false returns both true",
-			showPackages: false,
-			showDotfiles: false,
-			wantPackages: true,
-			wantDotfiles: true,
-		},
-		{
-			name:         "packages only",
-			showPackages: true,
-			showDotfiles: false,
-			wantPackages: true,
-			wantDotfiles: false,
-		},
-		{
-			name:         "dotfiles only",
-			showPackages: false,
-			showDotfiles: true,
-			wantPackages: false,
-			wantDotfiles: true,
-		},
-		{
-			name:         "both true stays both true",
-			showPackages: true,
-			showDotfiles: true,
-			wantPackages: true,
-			wantDotfiles: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			packages, dotfiles := normalizeDisplayFlags(tt.showPackages, tt.showDotfiles)
-			assert.Equal(t, tt.wantPackages, packages)
-			assert.Equal(t, tt.wantDotfiles, dotfiles)
 		})
 	}
 }

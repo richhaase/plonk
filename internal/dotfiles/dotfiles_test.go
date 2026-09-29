@@ -102,7 +102,7 @@ func TestDotfileManager_ShouldIgnore(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := m.shouldIgnore(tt.path)
+		got := m.shouldIgnoreWithDir(tt.path, false)
 		if got != tt.want {
 			t.Errorf("shouldIgnore(%q) = %v, want %v", tt.path, got, tt.want)
 		}
@@ -457,7 +457,7 @@ func TestDotfileManager_Deploy(t *testing.T) {
 	}
 }
 
-func TestDotfileManager_ApplyAll(t *testing.T) {
+func TestApplyStatuses(t *testing.T) {
 	fs := NewMemoryFS()
 	fs.Dirs["/config"] = true
 	fs.Dirs["/home/user"] = true
@@ -469,34 +469,38 @@ func TestDotfileManager_ApplyAll(t *testing.T) {
 
 	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
 
-	result, err := m.ApplyAll(false)
+	statuses, err := m.Reconcile()
 	if err != nil {
-		t.Fatalf("ApplyAll() error = %v", err)
+		t.Fatal(err)
+	}
+	result, err := applyStatuses(context.Background(), m, statuses, false)
+	if err != nil {
+		t.Fatalf("applyStatuses() error = %v", err)
 	}
 
-	if len(result.Deployed) != 2 {
-		t.Errorf("ApplyAll() deployed %d files, want 2", len(result.Deployed))
+	if (result.Summary.Added + result.Summary.Updated) != 2 {
+		t.Errorf("applyStatuses() deployed %d files, want 2", (result.Summary.Added + result.Summary.Updated))
 	}
-	if len(result.Skipped) != 1 {
-		t.Errorf("ApplyAll() skipped %d files, want 1", len(result.Skipped))
+	if result.Summary.Unchanged != 1 {
+		t.Errorf("applyStatuses() skipped %d files, want 1", result.Summary.Unchanged)
 	}
-	if len(result.Failed) != 0 {
-		t.Errorf("ApplyAll() failed %d files, want 0", len(result.Failed))
+	if result.Summary.Failed != 0 {
+		t.Errorf("applyStatuses() failed %d files, want 0", result.Summary.Failed)
 	}
 
 	// Verify missing file was deployed
 	if _, ok := fs.Files["/home/user/.missing"]; !ok {
-		t.Error("ApplyAll() did not deploy missing file")
+		t.Error("applyStatuses() did not deploy missing file")
 	}
 
 	// Verify drifted file was updated
 	content := string(fs.Files["/home/user/.drifted"])
 	if content != "source" {
-		t.Errorf("ApplyAll() drifted content = %q, want %q", content, "source")
+		t.Errorf("applyStatuses() drifted content = %q, want %q", content, "source")
 	}
 }
 
-func TestDotfileManager_ApplyAll_DryRun(t *testing.T) {
+func TestApplyStatuses_DryRun(t *testing.T) {
 	fs := NewMemoryFS()
 	fs.Dirs["/config"] = true
 	fs.Dirs["/home/user"] = true
@@ -504,22 +508,26 @@ func TestDotfileManager_ApplyAll_DryRun(t *testing.T) {
 
 	m := NewDotfileManagerWithFS("/config", "/home/user", nil, fs)
 
-	result, err := m.ApplyAll(true)
+	statuses, err := m.Reconcile()
 	if err != nil {
-		t.Fatalf("ApplyAll(dryRun=true) error = %v", err)
+		t.Fatal(err)
+	}
+	result, err := applyStatuses(context.Background(), m, statuses, true)
+	if err != nil {
+		t.Fatalf("applyStatuses(dryRun=true) error = %v", err)
 	}
 
 	if !result.DryRun {
-		t.Error("ApplyAll(dryRun=true) result.DryRun = false")
+		t.Error("applyStatuses(dryRun=true) result.DryRun = false")
 	}
 
-	if len(result.Deployed) != 1 {
-		t.Errorf("ApplyAll(dryRun=true) deployed %d files, want 1", len(result.Deployed))
+	if (result.Summary.Added + result.Summary.Updated) != 1 {
+		t.Errorf("applyStatuses(dryRun=true) deployed %d files, want 1", (result.Summary.Added + result.Summary.Updated))
 	}
 
 	// Verify file was NOT actually deployed
 	if _, ok := fs.Files["/home/user/.missing"]; ok {
-		t.Error("ApplyAll(dryRun=true) actually deployed file")
+		t.Error("applyStatuses(dryRun=true) actually deployed file")
 	}
 }
 
@@ -708,7 +716,7 @@ func TestDotfileManager_IsDrifted_Template(t *testing.T) {
 	}
 }
 
-func TestDotfileManager_Diff_Template(t *testing.T) {
+func TestDotfileManager_RenderSource_Template(t *testing.T) {
 	fs := NewMemoryFS()
 	fs.Dirs["/config"] = true
 	fs.Dirs["/home/user"] = true
@@ -723,23 +731,12 @@ func TestDotfileManager_Diff_Template(t *testing.T) {
 		return "", false
 	}))
 
-	d := Dotfile{
-		Name:   "gitconfig.tmpl",
-		Source: "/config/gitconfig.tmpl",
-		Target: "/home/user/.gitconfig",
-	}
-
-	diff, err := m.Diff(d)
+	rendered, err := m.RenderSource("gitconfig.tmpl")
 	if err != nil {
-		t.Fatalf("Diff() error = %v", err)
+		t.Fatalf("RenderSource() error = %v", err)
 	}
-
-	// Diff should show rendered source vs target, not raw template
-	if strings.Contains(diff, "{{EMAIL}}") {
-		t.Error("Diff() contains raw template placeholder, should contain rendered value")
-	}
-	if !strings.Contains(diff, "new@example.com") {
-		t.Error("Diff() should contain rendered value 'new@example.com'")
+	if string(rendered) != "email = new@example.com" {
+		t.Errorf("RenderSource() = %q, want rendered content", rendered)
 	}
 }
 

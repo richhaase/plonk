@@ -14,11 +14,7 @@ type Timeouts struct {
 // GetTimeouts returns duration-based timeouts from a Config, applying defaults when nil
 func GetTimeouts(cfg *Config) Timeouts {
 	if cfg == nil {
-		d := GetDefaults()
-		return Timeouts{
-			Operation: time.Duration(d.OperationTimeout) * time.Second,
-			Dotfile:   time.Duration(d.DotfileTimeout) * time.Second,
-		}
+		cfg = GetDefaults()
 	}
 	return Timeouts{
 		Operation: time.Duration(cfg.OperationTimeout) * time.Second,

@@ -26,12 +26,3 @@ type DotfileStatus struct {
 	State SyncState
 	Error error // non-nil when State is SyncStateError
 }
-
-// DeployResult summarizes what Apply() did
-type DeployResult struct {
-	Deployed []Dotfile // files that were deployed
-	Skipped  []Dotfile // files already in sync
-	Failed   []Dotfile // files that failed to deploy
-	Errors   []error   // errors for failed files
-	DryRun   bool
-}

@@ -95,13 +95,10 @@ func runUntrack(cmd *cobra.Command, args []string) error {
 // This allows untracking legacy managers (e.g., npm, gem) that are no longer supported
 // but may still exist in old lock files.
 func parsePackageSpecNoValidate(spec string) (manager, pkg string, err error) {
-	idx := strings.Index(spec, ":")
-	if idx == -1 {
+	manager, pkg, found := strings.Cut(spec, ":")
+	if !found {
 		return "", "", fmt.Errorf("invalid format, expected manager:package")
 	}
-
-	manager = spec[:idx]
-	pkg = spec[idx+1:]
 
 	if manager == "" {
 		return "", "", fmt.Errorf("manager name cannot be empty")

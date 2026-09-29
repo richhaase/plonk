@@ -109,15 +109,10 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool) e
 	if len(detectedManagers) > 0 {
 		output.Printf("Detected required package managers from lock file:\n")
 		for _, mgr := range detectedManagers {
-			output.Printf("- %s\n", getManagerDescription(repoCfg, mgr))
+			output.Printf("- %s package manager\n", mgr)
 		}
 
-		// Install only detected managers
-		var installErr error
-		missingManagers, installErr = installDetectedManagers(ctx, repoCfg, detectedManagers)
-		if installErr != nil {
-			return fmt.Errorf("failed to evaluate required tools: %w", installErr)
-		}
+		missingManagers = reportMissingManagers(detectedManagers)
 		if len(missingManagers) > 0 {
 			output.Printf("\nThe package managers listed above are missing. Install them manually and run 'plonk doctor' when ready.\n")
 		}
@@ -137,17 +132,11 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool) e
 		if err != nil {
 			return fmt.Errorf("cannot determine home directory: %w", err)
 		}
-		cfg := repoCfg
-		if cfg == nil {
-			cfg = config.LoadWithDefaults(plonkDir)
-		}
-		orch := orchestrator.New(
-			orchestrator.WithConfig(cfg),
-			orchestrator.WithConfigDir(plonkDir),
-			orchestrator.WithHomeDir(homeDir),
-			orchestrator.WithDryRun(false),
-		)
-		result, err := orch.Apply(ctx)
+		result, err := orchestrator.Apply(ctx, orchestrator.Options{
+			Config:    repoCfg,
+			ConfigDir: plonkDir,
+			HomeDir:   homeDir,
+		})
 		result.Scope = "all"
 		output.RenderOutput(result)
 		if err != nil {
@@ -218,19 +207,6 @@ ignore_patterns:`
 	return nil
 }
 
-// Note: The doctor command no longer supports --fix flag.
-// Package manager installation is only done by clone command when needed.
-
-// getManagerDescription returns a user-friendly description of the package manager
-func getManagerDescription(_ *config.Config, manager string) string {
-	return fmt.Sprintf("%s package manager", manager)
-}
-
-// getManualInstallInstructions returns manual installation instructions
-func getManualInstallInstructions(_ *config.Config, _ string) string {
-	return "See official documentation for installation instructions"
-}
-
 // DetectRequiredManagers reads a lock file and returns unique package managers
 func DetectRequiredManagers(lockPath string) ([]string, error) {
 	lockService := lock.NewLockV3Service(filepath.Dir(lockPath))
@@ -251,79 +227,40 @@ func DetectRequiredManagers(lockPath string) ([]string, error) {
 	return managers, nil
 }
 
-// installDetectedManagers evaluates which managers are available and returns the missing ones.
-func installDetectedManagers(ctx context.Context, cfgData *config.Config, managers []string) ([]string, error) {
+// reportMissingManagers reports unavailable managers and how to install them.
+func reportMissingManagers(managers []string) []string {
 	if len(managers) == 0 {
-		return nil, nil
+		return nil
 	}
-
 	output.StageUpdate(fmt.Sprintf("Checking package managers (%d total)...", len(managers)))
-
-	// Manager binary names
-	managerBinaries := map[string]string{
-		"brew":  "brew",
-		"cargo": "cargo",
-		"go":    "go",
-		"pnpm":  "pnpm",
-		"uv":    "uv",
-	}
-
-	// Find which managers are missing or unsupported
-	var missingManagers []string
+	missing := missingManagersNow(managers)
 	for _, mgr := range managers {
 		if !packages.IsSupportedManager(mgr) {
 			output.Printf("Warning: %s is not a supported package manager and will be skipped\n", mgr)
-			missingManagers = append(missingManagers, mgr)
-			continue
-		}
-
-		binary := managerBinaries[mgr]
-		if binary == "" {
-			binary = mgr
-		}
-
-		_, err := exec.LookPath(binary)
-		if err != nil {
-			missingManagers = append(missingManagers, mgr)
 		}
 	}
-
-	if len(missingManagers) == 0 {
+	if len(missing) == 0 {
 		output.Printf("All required package managers are already installed\n")
-		return nil, nil
+		return nil
 	}
-
 	output.Printf("\nMissing package managers (automatic installation not supported):\n")
-	for _, manager := range missingManagers {
-		output.Printf("- %s\n", getManagerDescription(cfgData, manager))
-		output.Printf("  Installation: %s\n", getManualInstallInstructions(cfgData, manager))
+	for _, manager := range missing {
+		output.Printf("- %s package manager\n", manager)
+		output.Printf("  Installation: See official documentation for installation instructions\n")
 	}
-
-	return missingManagers, nil
+	return missing
 }
 
-// missingManagersNow returns managers that are currently unavailable on PATH.
+// missingManagersNow returns managers that are unsupported or unavailable on PATH.
 func missingManagersNow(managers []string) []string {
-	managerBinaries := map[string]string{
-		"brew":  "brew",
-		"cargo": "cargo",
-		"go":    "go",
-		"pnpm":  "pnpm",
-		"uv":    "uv",
-	}
-
 	var missing []string
-	for _, mgr := range managers {
-		if !packages.IsSupportedManager(mgr) {
-			missing = append(missing, mgr)
+	for _, manager := range managers {
+		if !packages.IsSupportedManager(manager) {
+			missing = append(missing, manager)
 			continue
 		}
-		binary := managerBinaries[mgr]
-		if binary == "" {
-			binary = mgr
-		}
-		if _, err := exec.LookPath(binary); err != nil {
-			missing = append(missing, mgr)
+		if _, err := exec.LookPath(manager); err != nil {
+			missing = append(missing, manager)
 		}
 	}
 	return missing

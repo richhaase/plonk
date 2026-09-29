@@ -25,45 +25,6 @@ type FileSystem interface {
 	Chmod(path string, mode os.FileMode) error
 }
 
-// OSFileSystem implements FileSystem using the os package
-type OSFileSystem struct{}
-
-func (OSFileSystem) ReadFile(path string) ([]byte, error) {
-	return os.ReadFile(path)
-}
-
-func (OSFileSystem) WriteFile(path string, data []byte, perm os.FileMode) error {
-	return os.WriteFile(path, data, perm)
-}
-
-func (OSFileSystem) Stat(path string) (os.FileInfo, error) {
-	return os.Stat(path)
-}
-
-func (OSFileSystem) ReadDir(path string) ([]os.DirEntry, error) {
-	return os.ReadDir(path)
-}
-
-func (OSFileSystem) MkdirAll(path string, perm os.FileMode) error {
-	return os.MkdirAll(path, perm)
-}
-
-func (OSFileSystem) Remove(path string) error {
-	return os.Remove(path)
-}
-
-func (OSFileSystem) RemoveAll(path string) error {
-	return os.RemoveAll(path)
-}
-
-func (OSFileSystem) Rename(old, new string) error {
-	return os.Rename(old, new)
-}
-
-func (OSFileSystem) Chmod(path string, mode os.FileMode) error {
-	return os.Chmod(path, mode)
-}
-
 // RootedOSFileSystem performs filesystem operations relative to either the
 // configured home or config directory. os.Root prevents symlinks in an
 // operation's path from escaping that directory, including when a path is

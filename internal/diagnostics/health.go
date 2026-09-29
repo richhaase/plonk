@@ -18,32 +18,15 @@ import (
 
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/lock"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/packages"
 	"github.com/richhaase/plonk/internal/template"
 )
 
-// HealthStatus represents overall system health
-type HealthStatus struct {
-	Status  string `json:"status" yaml:"status"`
-	Message string `json:"message" yaml:"message"`
-}
-
-// HealthCheck represents a single health check result
-type HealthCheck struct {
-	Name        string   `json:"name" yaml:"name"`
-	Category    string   `json:"category" yaml:"category"`
-	Status      string   `json:"status" yaml:"status"`
-	Message     string   `json:"message" yaml:"message"`
-	Details     []string `json:"details,omitempty" yaml:"details,omitempty"`
-	Issues      []string `json:"issues,omitempty" yaml:"issues,omitempty"`
-	Suggestions []string `json:"suggestions,omitempty" yaml:"suggestions,omitempty"`
-}
-
-// HealthReport represents the complete health check report
-type HealthReport struct {
-	Overall HealthStatus  `json:"overall" yaml:"overall"`
-	Checks  []HealthCheck `json:"checks" yaml:"checks"`
-}
+// Health results use the same types throughout diagnostics and rendering.
+type HealthStatus = output.HealthStatus
+type HealthCheck = output.HealthCheck
+type HealthReport = output.DoctorOutput
 
 // fileStatus represents the state of a file for health checks
 type fileStatus int
@@ -392,15 +375,6 @@ func checkPackageManagerHealth(_ context.Context) []HealthCheck {
 		return []HealthCheck{check}
 	}
 
-	// Manager binary names (for checking availability)
-	managerBinaries := map[string]string{
-		"brew":  "brew",
-		"cargo": "cargo",
-		"go":    "go",
-		"pnpm":  "pnpm",
-		"uv":    "uv",
-	}
-
 	missing := make([]string, 0)
 	for _, managerName := range requiredManagers {
 		if !packages.IsSupportedManager(managerName) {
@@ -411,12 +385,7 @@ func checkPackageManagerHealth(_ context.Context) []HealthCheck {
 			continue
 		}
 
-		binary := managerBinaries[managerName]
-		if binary == "" {
-			binary = managerName
-		}
-
-		_, err := exec.LookPath(binary)
+		_, err := exec.LookPath(managerName)
 		available := err == nil
 
 		if available {

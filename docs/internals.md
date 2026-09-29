@@ -38,14 +38,14 @@ plonk/
 │   ├── dotfiles/               # Dotfile management
 │   │   ├── dotfiles.go         # Manager + operations
 │   │   ├── reconcile.go        # State reconciliation
-│   │   ├── apply.go            # Selective apply
+│   │   ├── apply.go            # Full and selective apply
 │   │   ├── types.go            # Dotfile/Status types
 │   │   └── fs.go               # FileSystem abstraction
 │   ├── orchestrator/           # Coordination
-│   │   ├── coordinator.go      # Apply coordination
-│   │   └── reconcile.go        # Cross-domain reconciliation
+│   │   └── coordinator.go      # Apply coordination and options
 │   ├── config/                 # Configuration
-│   │   └── config.go           # Config loading/defaults
+│   │   ├── config.go           # Config parsing, validation, loading/defaults
+│   │   └── user_defined.go     # Comparison with defaults
 │   ├── lock/                   # Lock file
 │   │   ├── v3.go               # V3 format + migration
 │   │   └── types.go            # Lock types
@@ -63,7 +63,7 @@ plonk/
 │   │   ├── env.go              # Environment resolver
 │   │   └── keychain.go         # macOS Keychain resolver
 │   └── output/                 # Output formatting
-│       ├── formatters.go       # Table/JSON/YAML
+│       ├── formatters.go       # Human-readable output
 │       └── colors.go           # Terminal colors
 └── tests/bats/                 # Integration tests
 ```
@@ -125,6 +125,8 @@ User → track command → Verify installed → Update lock file
 Lock file → List tracked → Check installed → Install missing
 Config dir → List files → Resolve and render .tmpl → Check deployed → Deploy missing/drifted
 ```
+
+`orchestrator.Apply(ctx, Options)` coordinates both domains and collects partial failures. Full and selective dotfile application share reconciliation and deployment code; the selective path filters the reconciled files before applying them.
 
 ### Auto-Commit Flow
 ```
@@ -218,4 +220,4 @@ Plaintext secrets are permitted only while rendering in process memory and in th
 
 ## Output Formatting
 
-All commands support `-o table|json|yaml`. Table is default for humans, JSON/YAML for scripting.
+Commands render human-readable output through `output.RenderOutput`, which calls the formatter's `TableOutput` method. Status formatters share package-table and error rendering helpers. `config show` renders configuration as YAML with comments and optional terminal colors. There is no `--output` / `-o` flag.

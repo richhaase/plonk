@@ -4,7 +4,6 @@
 package output
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 )
@@ -232,38 +231,5 @@ func TestMapStatusToAction(t *testing.T) {
 					tt.status, got, tt.want)
 			}
 		})
-	}
-}
-
-func TestDotfileAddOutput_StructuredData(t *testing.T) {
-	output := DotfileAddOutput{
-		Path:        "~/.bashrc",
-		Source:      "~/.config/plonk/.bashrc",
-		Destination: "~/.bashrc",
-		Action:      "added",
-	}
-
-	result := output.StructuredData()
-	// Compare the values since result is interface{}
-	if actualOutput, ok := result.(DotfileAddOutput); !ok || actualOutput != output {
-		t.Errorf("StructuredData() = %v, want %v", result, output)
-	}
-}
-
-func TestDotfileBatchAddOutput_StructuredData(t *testing.T) {
-	output := DotfileBatchAddOutput{
-		TotalFiles: 3,
-		AddedFiles: []DotfileAddOutput{
-			{
-				Path:   "~/.bashrc",
-				Action: "added",
-			},
-		},
-	}
-
-	result := output.StructuredData()
-	// Use reflect.DeepEqual for slice comparison
-	if !reflect.DeepEqual(result, output) {
-		t.Errorf("StructuredData() = %v, want %v", result, output)
 	}
 }

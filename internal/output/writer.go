@@ -30,8 +30,3 @@ func (s *StdoutWriter) IsTerminal() bool {
 
 // Package-level writer instance
 var writer Writer = &StdoutWriter{}
-
-// SetWriter allows tests to override the writer
-func SetWriter(w Writer) {
-	writer = w
-}

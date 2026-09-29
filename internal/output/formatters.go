@@ -7,39 +7,6 @@ import (
 	"fmt"
 )
 
-// ManagerApplyResult represents the result for a specific manager
-
-// DotfileAction represents a single dotfile deployment action
-type DotfileAction struct {
-	Source      string `json:"source" yaml:"source"`
-	Destination string `json:"destination" yaml:"destination"`
-	Status      string `json:"status" yaml:"status"`
-	Reason      string `json:"reason,omitempty" yaml:"reason,omitempty"`
-}
-
-// DotfileListOutput represents the output structure for dotfile listing operations
-type DotfileListOutput struct {
-	Summary  DotfileListSummary `json:"summary" yaml:"summary"`
-	Dotfiles []DotfileInfo      `json:"dotfiles" yaml:"dotfiles"`
-}
-
-// DotfileListSummary provides summary information for dotfile listing
-type DotfileListSummary struct {
-	Total     int  `json:"total" yaml:"total"`
-	Managed   int  `json:"managed" yaml:"managed"`
-	Missing   int  `json:"missing" yaml:"missing"`
-	Untracked int  `json:"untracked" yaml:"untracked"`
-	Verbose   bool `json:"verbose" yaml:"verbose"`
-}
-
-// DotfileInfo represents information about a single dotfile
-type DotfileInfo struct {
-	Name   string `json:"name" yaml:"name"`
-	State  string `json:"state" yaml:"state"`
-	Target string `json:"target" yaml:"target"`
-	Source string `json:"source" yaml:"source"`
-}
-
 // DotfileAddOutput represents the output structure for dotfile add command
 type DotfileAddOutput struct {
 	Source      string `json:"source" yaml:"source"`
@@ -100,11 +67,6 @@ func (d DotfileAddOutput) TableOutput() string {
 		}
 	}
 	return output
-}
-
-// StructuredData returns the structured data for serialization
-func (d DotfileAddOutput) StructuredData() any {
-	return d
 }
 
 // TableOutput generates human-friendly table output for batch dotfile add
@@ -172,11 +134,6 @@ func (d DotfileBatchAddOutput) TableOutput() string {
 		output += "\nAll files have been copied to your plonk config directory\n"
 	}
 	return output
-}
-
-// StructuredData returns the structured data for serialization
-func (d DotfileBatchAddOutput) StructuredData() any {
-	return d
 }
 
 // MapStatusToAction converts operation status to an action string

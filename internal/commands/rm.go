@@ -68,10 +68,7 @@ func init() {
 
 func runRm(cmd *cobra.Command, args []string) error {
 	// Get flags
-	flags, err := parseSimpleFlags(cmd)
-	if err != nil {
-		return err
-	}
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
 
 	// Get directories
 	homeDir, err := config.GetHomeDir()
@@ -88,7 +85,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 
 	// Configure options
 	opts := RemoveOptions{
-		DryRun: flags.DryRun,
+		DryRun: dryRun,
 	}
 
 	// Process dotfiles using helper function
@@ -111,7 +108,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 	output.RenderOutput(formatter)
 
 	// Auto-commit if any files were actually removed
-	if !flags.DryRun && summary.Removed > 0 {
+	if !dryRun && summary.Removed > 0 {
 		gitops.AutoCommit(cmd.Context(), configDir, "rm", args)
 	}
 

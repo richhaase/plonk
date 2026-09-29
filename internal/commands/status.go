@@ -50,10 +50,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	}
 	configDir := config.GetDefaultConfigDirectory()
 
-	// Load configuration (may fail if config is invalid, but we handle this gracefully)
-	_, configLoadErr := config.Load(configDir)
-
-	// Reconcile dotfiles with injected config
+	// Load configuration for dotfile reconciliation.
 	cfg := config.LoadWithDefaults(configDir)
 
 	// Create DotfileManager and reconcile directly
@@ -74,33 +71,10 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	// Convert to output summary
 	summary := convertStatusToSummary(statuses, packageResult)
 
-	// Check file existence and validity
-	configPath := filepath.Join(configDir, "plonk.yaml")
-	lockPath := filepath.Join(configDir, "plonk.lock")
-
-	configExists := false
-	configValid := false
-	if _, err := os.Stat(configPath); err == nil {
-		configExists = true
-		// Config is valid only if it loaded without error
-		configValid = (configLoadErr == nil)
-	}
-
-	lockExists := false
-	if _, err := os.Stat(lockPath); err == nil {
-		lockExists = true
-	}
-
 	// Create formatter data directly
 	formatterData := output.StatusOutput{
-		ConfigPath:   configPath,
-		LockPath:     lockPath,
-		ConfigExists: configExists,
-		ConfigValid:  configValid,
-		LockExists:   lockExists,
 		RemoteSync:   remoteSync,
 		StateSummary: summary,
-		ConfigDir:    configDir,
 		HomeDir:      homeDir,
 	}
 	formatter := output.NewStatusFormatter(formatterData)

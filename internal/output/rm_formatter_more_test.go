@@ -1,6 +1,7 @@
 package output
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -16,7 +17,7 @@ func TestDotfileRemovalFormatter_TableOutput_SingleAndBatch(t *testing.T) {
 		Summary: DotfileRemovalSummary{Removed: 1},
 	}
 	out := NewDotfileRemovalFormatter(d1).TableOutput()
-	if !contains(out, "Removed dotfile") {
+	if !strings.Contains(out, "Removed dotfile") {
 		t.Fatalf("unexpected: %s", out)
 	}
 
@@ -27,7 +28,7 @@ func TestDotfileRemovalFormatter_TableOutput_SingleAndBatch(t *testing.T) {
 		Summary:    DotfileRemovalSummary{},
 	}
 	out2 := NewDotfileRemovalFormatter(d2).TableOutput()
-	if !contains(out2, "Would remove 2 dotfiles") {
+	if !strings.Contains(out2, "Would remove 2 dotfiles") {
 		t.Fatalf("unexpected: %s", out2)
 	}
 
@@ -42,7 +43,7 @@ func TestDotfileRemovalFormatter_TableOutput_SingleAndBatch(t *testing.T) {
 		Summary: DotfileRemovalSummary{Removed: 1, Skipped: 1, Failed: 1},
 	}
 	out3 := NewDotfileRemovalFormatter(d3).TableOutput()
-	if !(contains(out3, "Removed 1") && contains(out3, "1 skipped") && contains(out3, "1 failed")) {
+	if !(strings.Contains(out3, "Removed 1") && strings.Contains(out3, "1 skipped") && strings.Contains(out3, "1 failed")) {
 		t.Fatalf("unexpected: %s", out3)
 	}
 }
