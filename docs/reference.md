@@ -67,6 +67,8 @@ plonk rm --dry-run
 
 Install missing packages and deploy missing/drifted dotfiles.
 
+Packages are processed one manager at a time in alphabetical order (`brew`, `cargo`, `go`, `pnpm`, `uv`). Each manager finishes its installations before the next is checked, so a tracked package such as `brew:pnpm` can make `pnpm` available for packages in the same run, provided it becomes available on the current `PATH`. Dry-run only checks the current environment; a manager that would be installed is still reported as unavailable.
+
 ```bash
 plonk apply [options] [files...]
 ```
