@@ -50,7 +50,8 @@ plonk rm ~/.vimrc                     # Stop tracking (doesn't delete)
 # Sync
 plonk apply                           # Install missing packages, deploy dotfiles
 plonk apply --dry-run                 # Preview changes
-plonk status                          # Show managed items + remote sync status
+plonk status                          # Show remote status and actionable items
+plonk status --all                    # Include healthy managed items
 plonk diff                            # Show modified dotfiles
 
 # Git

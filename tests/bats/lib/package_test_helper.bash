@@ -124,14 +124,14 @@ verify_not_in_lock_file() {
 # Verify package is in plonk status
 verify_in_status() {
   local package="$1"
-  run plonk status
+  run plonk status --all
   assert_output --partial "$package"
 }
 
 # Verify package is NOT in plonk status
 verify_not_in_status() {
   local package="$1"
-  run plonk status
+  run plonk status --all
   refute_output --partial "$package"
 }
 

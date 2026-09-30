@@ -21,7 +21,7 @@ setup() {
   assert_output --partial "$testfile"
 
   # Verify in status
-  run plonk status
+  run plonk status --all
   assert_output --partial "$testfile"
 }
 
@@ -50,7 +50,7 @@ setup() {
   assert_output --partial "Added"
 
   # Verify files tracked including nested ones
-  run plonk status
+  run plonk status --all
   assert_output --partial "config.yaml"
   assert_output --partial "nested.conf"
   assert_output --partial "deeply.nested"
@@ -71,7 +71,7 @@ setup() {
   track_artifact "dotfile" "$testfile"
 
   # Verify plonk is now managing it
-  run plonk status
+  run plonk status --all
   assert_output --partial "$testfile"
 }
 
@@ -90,7 +90,7 @@ setup() {
   assert_output_contains_all "$file1" "$file2" "Added"
 
   # Verify both in status
-  run plonk status
+  run plonk status --all
   assert_output_contains_all "$file1" "$file2"
 }
 

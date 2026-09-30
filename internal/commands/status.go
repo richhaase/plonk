@@ -24,25 +24,30 @@ var statusCmd = &cobra.Command{
 	Use:     "status",
 	Aliases: []string{"st"},
 	Short:   "Display overall plonk status",
-	Long: `Display a detailed list of all plonk-managed items and their status.
+	Long: `Display remote sync status and items that need attention.
 
-Shows:
-- All managed packages and dotfiles
-- Missing items that need to be installed
-- Configuration and lock file status
+Shows missing packages and dotfiles, drifted dotfiles, and errors.
+Use --all to also list healthy managed items and summary counts.
 
 Examples:
-  plonk status    # Show all managed items
-  plonk st        # Short alias`,
+  plonk status        # Show remote status and actionable items
+  plonk status --all  # Show all managed items
+  plonk st            # Short alias`,
 	RunE:         runStatus,
 	SilenceUsage: true,
 }
 
 func init() {
+	statusCmd.Flags().BoolP("all", "a", false, "Show all managed items and summary counts")
 	rootCmd.AddCommand(statusCmd)
 }
 
 func runStatus(cmd *cobra.Command, args []string) error {
+	showAll, err := cmd.Flags().GetBool("all")
+	if err != nil {
+		return err
+	}
+
 	// Get directories
 	homeDir, err := config.GetHomeDir()
 	if err != nil {
@@ -74,6 +79,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	// Create formatter data directly
 	formatterData := output.StatusOutput{
 		RemoteSync:   remoteSync,
+		ShowAll:      showAll,
 		StateSummary: summary,
 		HomeDir:      homeDir,
 	}
