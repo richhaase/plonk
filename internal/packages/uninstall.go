@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"strings"
 )
 
@@ -70,7 +69,7 @@ func (g *GoSimple) Uninstall(ctx context.Context, name string) error {
 		return err
 	}
 	importPath, _, _ := strings.Cut(name, "@")
-	binary := path.Base(importPath)
+	binary := goExecutableName(name)
 	if binary == "." || binary == ".." || binary == "/" || binary == "" || !strings.Contains(importPath, "/") {
 		return fmt.Errorf("invalid Go package path: %s", name)
 	}

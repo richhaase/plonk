@@ -66,10 +66,14 @@ Forced file removal accepts individual files, including template targets; it doe
 not recursively delete directories. An already absent deployed file or package
 can still be removed from management. Plain package removal also accepts legacy
 manager names in old lock files; forced removal requires a supported manager.
+Forced file removal protects Plonk control files even when a template maps to
+one of those files.
 
 Go removal deletes the binary in `GOBIN` or the first `GOPATH` entry's `bin`
 directory (default `~/go/bin`) after verifying that its build metadata matches
-the requested import path. It leaves downloaded modules and caches intact.
+the requested import path. Import paths ending in a major version such as `/v2`
+use the preceding component as the executable name, matching Go. It leaves
+downloaded modules and caches intact.
 Other managers use their normal uninstall commands; `-f` does not bypass the
 manager's dependency checks or request extra cleanup.
 

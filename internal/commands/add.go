@@ -63,6 +63,9 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	if len(specs) > 0 {
 		errs = append(errs, mutatePackages(cmd.Context(), config.GetDefaultConfigDirectory(), specs, true, false, dryRun))
 	}
+	if err := cmd.Context().Err(); err != nil {
+		return errors.Join(append(errs, err)...)
+	}
 	if len(files) > 0 {
 		errs = append(errs, runAddFiles(cmd, files))
 	}

@@ -55,6 +55,9 @@ func mutatePackages(ctx context.Context, configDir string, specs []string, add, 
 			return fmt.Errorf("failed to read lock file: %w", err)
 		}
 		for _, spec := range specs {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			manager, pkg, err := parseRemovalSpec(spec)
 			if add || force {
 				manager, pkg, err = packages.ParsePackageSpec(spec)

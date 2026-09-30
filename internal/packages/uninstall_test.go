@@ -86,3 +86,28 @@ func TestGoUninstallVerifiesImportPathAndRespectsGOBIN(t *testing.T) {
 	require.Error(t, g.Uninstall(context.Background(), "example.com/.."))
 	require.DirExists(t, bin)
 }
+
+func TestGoMajorVersionExecutableRemoval(t *testing.T) {
+	dir, bin := t.TempDir(), t.TempDir()
+	t.Setenv("GOBIN", bin)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/review/tool/v2\n\ngo 1.26.5\n"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\nfunc main() {}\n"), 0644))
+	cmd := exec.Command("go", "install", ".")
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOWORK=off", "GO111MODULE=on")
+	result, err := cmd.CombinedOutput()
+	require.NoError(t, err, string(result))
+	target := filepath.Join(bin, "tool")
+	require.FileExists(t, target)
+	g := NewGoSimple()
+	installed, err := g.IsInstalled(context.Background(), "example.com/review/tool/v2@latest")
+	require.NoError(t, err)
+	require.True(t, installed)
+	require.Error(t, g.Uninstall(context.Background(), "example.com/other/tool/v2"))
+	require.FileExists(t, target)
+	require.NoError(t, g.Uninstall(context.Background(), "example.com/review/tool/v2@latest"))
+	require.NoFileExists(t, target)
+	for spec, want := range map[string]string{"example.com/tool/v10@latest": "tool", "example.com/tool/v1": "v1", "example.com/tool/v02": "v02", "example.com/tool/v2/cmd": "cmd"} {
+		require.Equal(t, want, goExecutableName(spec))
+	}
+}

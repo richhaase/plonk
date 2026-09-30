@@ -4,6 +4,7 @@
 package dotfiles
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -59,4 +60,35 @@ func TestRemoveDeployedUnlinksFinalSymlinkWithoutFollowing(t *testing.T) {
 	_, err := os.Lstat(target)
 	require.True(t, os.IsNotExist(err))
 	require.FileExists(t, outsideFile)
+}
+
+func TestRemoveDeployedProtectsControlFilesAndParentAliases(t *testing.T) {
+	for _, control := range []string{"plonk.lock", "plonk.yaml", ".plonk.mutlock", ".git/config"} {
+		for _, alias := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/alias=%t", control, alias), func(t *testing.T) {
+				home := t.TempDir()
+				configDir := filepath.Join(home, ".config", "plonk")
+				require.NoError(t, os.MkdirAll(configDir, 0755))
+				target := filepath.Join(configDir, control)
+				require.NoError(t, os.MkdirAll(filepath.Dir(target), 0755))
+				require.NoError(t, os.WriteFile(target, []byte("protected"), 0600))
+				name := "config/plonk/" + control + ".tmpl"
+				if alias {
+					require.NoError(t, os.Symlink(configDir, filepath.Join(home, ".alias")))
+					name = "alias/" + control + ".tmpl"
+				}
+				source := filepath.Join(configDir, name)
+				require.NoError(t, os.MkdirAll(filepath.Dir(source), 0755))
+				require.NoError(t, os.WriteFile(source, []byte("template"), 0600))
+				dm := NewDotfileManager(configDir, home, nil)
+				for _, dryRun := range []bool{true, false} {
+					require.ErrorContains(t, dm.RemoveDeployed(name, dryRun), "internal deployed file")
+					contents, err := os.ReadFile(target)
+					require.NoError(t, err)
+					require.Equal(t, "protected", string(contents))
+					require.FileExists(t, source)
+				}
+			})
+		}
+	}
 }

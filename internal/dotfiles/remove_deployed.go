@@ -25,6 +25,9 @@ func (m *DotfileManager) RemoveDeployed(name string, dryRun bool) error {
 		return fmt.Errorf("force removal requires an individual file: %s", name)
 	}
 	target := m.toTarget(name)
+	if err := m.validateDeployedRemoval(target); err != nil {
+		return err
+	}
 	rel, err := filepath.Rel(m.homeDir, target)
 	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
 		return fmt.Errorf("invalid deployed target: %s", target)
@@ -49,6 +52,35 @@ func (m *DotfileManager) RemoveDeployed(name string, dryRun bool) error {
 	}
 	if err := root.Remove(rel); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("cannot remove deployed file: %w", err)
+	}
+	return nil
+}
+
+// Check both lexical paths and parent symlink aliases. Do not resolve the final
+// symlink: removing it unlinks the alias without deleting the referenced file.
+func (m *DotfileManager) validateDeployedRemoval(target string) error {
+	configDir, err := filepath.EvalSymlinks(m.configDir)
+	if err != nil {
+		return err
+	}
+	paths := []string{target}
+	parent, err := filepath.EvalSymlinks(filepath.Dir(target))
+	if err == nil {
+		paths = append(paths, filepath.Join(parent, filepath.Base(target)))
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	for _, candidate := range paths {
+		for _, root := range []string{m.configDir, configDir} {
+			rel, err := filepath.Rel(root, candidate)
+			if err != nil || relEscapes(rel) {
+				continue
+			}
+			first := strings.SplitN(rel, string(os.PathSeparator), 2)[0]
+			if rel == "plonk.lock" || rel == "plonk.yaml" || strings.HasPrefix(first, ".") {
+				return fmt.Errorf("cannot remove internal deployed file: %s", target)
+			}
+		}
 	}
 	return nil
 }

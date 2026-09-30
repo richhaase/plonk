@@ -265,3 +265,112 @@ SH
   grep -Fxq 'install Demo_Tool[extra]==1.2.3' "$UV_LOG"
   grep -Fxq 'uninstall demo-tool' "$UV_LOG"
 }
+
+@test "cancellation stops mixed add and forced removal before touching files" {
+  export CANCEL_READY="$BATS_TEST_TMPDIR/cancel-ready"
+  cat > "$BATS_TEST_TMPDIR/bin/brew" <<'PY'
+#!/usr/bin/env python3
+import os, sys, time
+from pathlib import Path
+if sys.argv[1] == 'list':
+    if os.environ['CANCEL_MODE'] == 'rm' and sys.argv[2] == '--formula':
+        print('demo\nother')
+else:
+    Path(os.environ['CANCEL_READY']).write_text(sys.argv[-1])
+    time.sleep(30)
+PY
+  chmod +x "$BATS_TEST_TMPDIR/bin/brew"
+  export CANCEL_FILE="$HOME/.plonk-cancel-$BATS_TEST_NUMBER"
+  track_artifact dotfile "${CANCEL_FILE##*/}"
+  run python3 - <<'PY'
+import os, signal, subprocess, time
+from pathlib import Path
+file = Path(os.environ['CANCEL_FILE'])
+source = Path(os.environ['PLONK_DIR']) / file.name[1:]
+ready = Path(os.environ['CANCEL_READY'])
+lock = Path(os.environ['PLONK_DIR']) / 'plonk.lock'
+for mode in ('add', 'rm'):
+    ready.unlink(missing_ok=True)
+    file.write_text('deployed')
+    if mode == 'rm':
+        source.write_text('managed')
+        lock.write_text('version: 3\npackages:\n  brew: [demo, other]\n')
+    env = dict(os.environ, CANCEL_MODE=mode)
+    args = ['plonk', mode] + (['-f'] if mode == 'rm' else [])
+    proc = subprocess.Popen(args + [str(file), 'brew:demo', 'brew:other'], env=env,
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    try:
+        deadline = time.monotonic() + 10
+        while not ready.exists() and proc.poll() is None and time.monotonic() < deadline:
+            time.sleep(0.02)
+        assert ready.exists(), 'package operation did not start'
+        proc.send_signal(signal.SIGTERM)
+        output, _ = proc.communicate(timeout=10)
+        print(output)
+        assert proc.returncode != 0
+        assert file.read_text() == 'deployed'
+        if mode == 'add':
+            assert not source.exists(), 'canceled add copied a file'
+        else:
+            assert source.read_text() == 'managed', 'canceled removal deleted source'
+            assert lock.read_text() == 'version: 3\npackages:\n  brew: [demo, other]\n'
+        assert ready.read_text() == 'demo', 'batch continued to another package'
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.communicate()
+PY
+  assert_success
+}
+
+@test "Go major version package removal uses the executable name and checks ownership" {
+  local module="$BATS_TEST_TMPDIR/go-tool"
+  export GOBIN="$BATS_TEST_TMPDIR/go-bin"
+  mkdir -p "$module" "$GOBIN"
+  printf 'module example.com/review/tool/v2\n\ngo 1.26.5\n' > "$module/go.mod"
+  printf 'package main\nfunc main() {}\n' > "$module/main.go"
+  (cd "$module" && GOWORK=off GO111MODULE=on go install .)
+  [ -f "$GOBIN/tool" ]
+  run plonk add go:example.com/review/tool/v2@latest
+  assert_success
+  assert_output --partial 'tracked'
+  run plonk add go:example.com/other/tool/v2
+  assert_success
+  run plonk rm -f go:example.com/other/tool/v2
+  assert_failure
+  [ -f "$GOBIN/tool" ]
+  grep -Fq 'example.com/other/tool/v2' "$PLONK_DIR/plonk.lock"
+  run plonk rm -nf go:example.com/review/tool/v2@latest
+  assert_success
+  [ -f "$GOBIN/tool" ]
+  run plonk rm -f go:example.com/review/tool/v2@latest
+  assert_success
+  [ ! -f "$GOBIN/tool" ]
+  ! grep -Fq 'example.com/review/tool/v2@latest' "$PLONK_DIR/plonk.lock"
+}
+
+@test "forced template removal protects deployed Plonk control files" {
+  local home="$BATS_TEST_TMPDIR/control-home"
+  local control source
+  mkdir -p "$home/.config/plonk"
+  export HOME="$home"
+  export PLONK_DIR="$home/.config/plonk"
+  printf 'version: 3\npackages:\n  brew: [demo]\n' > "$PLONK_DIR/plonk.lock"
+  printf 'git:\n  auto_commit: false\n' > "$PLONK_DIR/plonk.yaml"
+  printf 'locked' > "$PLONK_DIR/.plonk.mutlock"
+  for control in plonk.lock plonk.yaml .plonk.mutlock; do
+    source="$PLONK_DIR/config/plonk/$control.tmpl"
+    mkdir -p "${source%/*}"
+    echo template > "$source"
+    cp "$PLONK_DIR/$control" "$BATS_TEST_TMPDIR/control-before"
+    run plonk rm -nf "$HOME/.config/plonk/$control"
+    assert_failure
+    assert_output --partial 'internal deployed file'
+    cmp "$PLONK_DIR/$control" "$BATS_TEST_TMPDIR/control-before"
+    run plonk rm -f "$HOME/.config/plonk/$control"
+    assert_failure
+    assert_output --partial 'internal deployed file'
+    cmp "$PLONK_DIR/$control" "$BATS_TEST_TMPDIR/control-before"
+    [ -f "$source" ]
+  done
+}

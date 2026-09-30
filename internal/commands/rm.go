@@ -53,6 +53,9 @@ func runRm(cmd *cobra.Command, args []string) error {
 	if len(specs) > 0 {
 		errs = append(errs, mutatePackages(cmd.Context(), config.GetDefaultConfigDirectory(), specs, false, force, dryRun))
 	}
+	if err := cmd.Context().Err(); err != nil {
+		return errors.Join(append(errs, err)...)
+	}
 	if len(files) > 0 {
 		errs = append(errs, runRmFiles(cmd, files))
 	}
