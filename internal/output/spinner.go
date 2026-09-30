@@ -73,15 +73,13 @@ func (s *Spinner) Stop() {
 // Success stops the spinner and shows a success message
 func (s *Spinner) Success(message string) {
 	s.Stop()
-	icon := GetStatusIcon("success")
-	s.writer.Printf("%s %s\n", icon, message)
+	printAction(s.writer, "done", message, "")
 }
 
 // Error stops the spinner and shows an error message
 func (s *Spinner) Error(message string) {
 	s.Stop()
-	icon := GetStatusIcon("failed")
-	s.writer.Printf("%s %s\n", icon, message)
+	printAction(s.writer, "failed", message, "")
 }
 
 // spin runs the spinner animation loop

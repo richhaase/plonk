@@ -19,7 +19,7 @@ setup() {
   # Remove it
   run plonk rm "$testfile"
   assert_success
-  assert_output --partial "Removed"
+  assert_output --partial "removed"
 
   # Verify gone from status
   run plonk status --all
@@ -29,7 +29,7 @@ setup() {
 @test "remove non-managed dotfile shows error" {
   run plonk rm ".not-managed-file"
   assert_success  # Returns success but skips
-  assert_output --partial "Skipped"
+  assert_output --partial "skipped"
 }
 
 @test "remove directory removes all nested files" {
@@ -49,7 +49,7 @@ setup() {
   # Remove the directory - should succeed and rm -rf from plonk config
   run plonk rm "$testdir"
   assert_success  # BUG: Currently fails with "directory not empty"
-  assert_output --partial "Removed"
+  assert_output --partial "removed"
 
   # Verify all files gone from status
   run plonk status --all
@@ -74,7 +74,7 @@ setup() {
   # Remove just one file
   run plonk rm "$testdir/config.yaml"
   assert_success
-  assert_output --partial "Removed"
+  assert_output --partial "removed"
   assert_output --partial "config.yaml"
 
   # Verify only that file is gone
@@ -100,7 +100,7 @@ setup() {
   # Remove both
   run plonk rm "$file1" "$file2"
   assert_success
-  assert_output_contains_all "$file1" "$file2" "✓"
+  assert_output_contains_all "$file1" "$file2" "removed"
 
   # Verify both gone from status
   run plonk status --all

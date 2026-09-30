@@ -71,7 +71,7 @@ func editConfigVisudoStyle(ctx context.Context, configDir string) error {
 	// Edit loop
 	for {
 		// Open in editor
-		output.Printf("Opening configuration with %s...\n", editor)
+		output.PrintAction("info", "Open editor", editor)
 		if err := openInEditor(editor, tempFile); err != nil {
 			return fmt.Errorf("failed to open editor: %w", err)
 		}
@@ -79,7 +79,7 @@ func editConfigVisudoStyle(ctx context.Context, configDir string) error {
 		// Parse and validate
 		editedConfig, validationErr := parseAndValidateConfig(tempFile)
 		if validationErr != nil {
-			fmt.Fprintf(os.Stderr, "\n%s\n%s\n", output.ColorError("Configuration validation failed:"), validationErr)
+			output.PrintAction("error", "Configuration validation", validationErr.Error())
 
 			// Prompt for action
 			action := promptAction()
@@ -87,7 +87,7 @@ func editConfigVisudoStyle(ctx context.Context, configDir string) error {
 			case 'e':
 				continue // Edit again
 			case 'r':
-				output.Println("Changes reverted.")
+				output.PrintAction("skipped", "Configuration", "changes reverted")
 				return nil // Revert (don't save)
 			case 'q':
 				return fmt.Errorf("configuration invalid, changes discarded")
@@ -99,7 +99,7 @@ func editConfigVisudoStyle(ctx context.Context, configDir string) error {
 			return fmt.Errorf("failed to save configuration: %w", err)
 		}
 
-		output.Printf("%s Configuration saved (only non-default values)\n", output.Success())
+		output.PrintAction("saved", "plonk.yaml", "saved non-default values")
 		gitops.AutoCommit(ctx, configDir, "config edit", nil)
 		return nil
 	}

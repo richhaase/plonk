@@ -19,8 +19,9 @@ import (
 )
 
 var diffCmd = &cobra.Command{
-	Use:   "diff [file]",
-	Short: "Show differences for drifted dotfiles",
+	GroupID: "inspect",
+	Use:     "diff [file]",
+	Short:   "Show differences for drifted dotfiles",
 	Long: `Show differences between source and deployed dotfiles that have drifted.
 
 With no arguments, shows diffs for all drifted dotfiles.

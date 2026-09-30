@@ -36,24 +36,23 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 
 	// Dry run mode: just show what would happen
 	if cfg.DryRun {
-		output.Printf("Dry run: would set up plonk with repository: %s\n", gitURL)
-		output.Printf("Dry run: would clone to: %s\n", plonkDir)
-
-		// Check if PLONK_DIR already exists
+		output.Println("Dry run · no changes will be made")
+		output.StageUpdate("Setup")
+		output.PrintAction("would-clone", gitURL, "to "+plonkDir)
 		if _, err := os.Stat(plonkDir); err == nil {
-			output.Printf("Dry run: plonk directory already exists at: %s\n", plonkDir)
-			output.Printf("Dry run: would skip clone (directory exists)\n")
+			output.PrintAction("skipped", "Clone", "directory already exists: "+plonkDir)
+			output.Println("No changes made.")
 			return nil
 		}
-
-		output.Printf("Dry run: would create default plonk.yaml configuration\n")
-		output.Printf("Dry run: would detect required package managers from lock file\n")
-		output.Printf("Dry run: would run 'plonk apply' after setup\n")
-		output.Printf("Dry run: no changes made\n")
+		output.PrintAction("would-create", "plonk.yaml", "default configuration")
+		output.PrintAction("would-check", "Package managers", "required managers from plonk.lock")
+		output.PrintAction("would-apply", "Configuration", "run plonk apply after setup")
+		output.Println("No changes made.")
 		return nil
 	}
 
-	output.Printf("Setting up plonk with repository: %s\n", gitURL)
+	output.StageUpdate("Setup")
+	output.PrintAction("info", "Repository", gitURL)
 
 	// Check if PLONK_DIR already exists
 	if _, err := os.Stat(plonkDir); err == nil {
@@ -61,33 +60,33 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 	}
 
 	// Clone repository
-	output.StageUpdate("Cloning repository...")
+	output.PrintAction("info", "Cloning repository", "")
 	if err := cloneRepository(ctx, gitURL, plonkDir); err != nil {
 		// Clean up on failure
 		os.RemoveAll(plonkDir)
 		return fmt.Errorf("failed to clone repository: %w", err)
 	}
-	output.Printf("Repository cloned successfully\n")
+	output.PrintAction("done", "Clone repository", plonkDir)
 
 	// Check for existing plonk.yaml
 	configFilePath := filepath.Join(plonkDir, "plonk.yaml")
 	hasConfig := false
 	if _, err := os.Stat(configFilePath); err == nil {
 		hasConfig = true
-		output.Printf("Found existing plonk.yaml configuration\n")
+		output.PrintAction("done", "Read configuration", "plonk.yaml loaded")
 	} else {
 		// Create default configuration file
 		if err := createDefaultConfig(plonkDir); err != nil {
 			return fmt.Errorf("failed to create default configuration: %w", err)
 		}
 		hasConfig = true
-		output.Printf("Created default plonk.yaml configuration\n")
+		output.PrintAction("created", "plonk.yaml", "default configuration")
 	}
 
 	if err := SetupFromClonedRepo(ctx, plonkDir, hasConfig); err != nil {
 		return err
 	}
-	output.Printf("Setup complete! Your dotfiles are now managed by plonk.\n")
+	output.PrintAction("done", "Setup complete", "")
 	return nil
 }
 
@@ -96,20 +95,19 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool) e
 	repoCfg := config.LoadWithDefaults(plonkDir)
 
 	// Detect required managers from lock file
-	output.StageUpdate("Detecting required package managers...")
+	output.StageUpdate("Package managers")
 	lockPath := filepath.Join(plonkDir, "plonk.lock")
 	detectedManagers, err := DetectRequiredManagers(lockPath)
 	if err != nil {
-		output.Printf("Warning: Could not read lock file: %v\n", err)
+		output.PrintAction("warn", "plonk.lock", err.Error())
 		output.Printf("No package managers will be installed. Run 'plonk doctor' to check system readiness.\n")
 		detectedManagers = []string{} // Empty list
 	}
 
 	missingManagers := []string{}
 	if len(detectedManagers) > 0 {
-		output.Printf("Detected required package managers from lock file:\n")
 		for _, mgr := range detectedManagers {
-			output.Printf("- %s package manager\n", mgr)
+			output.PrintAction("info", mgr, "required by plonk.lock")
 		}
 
 		missingManagers = reportMissingManagers(detectedManagers)
@@ -127,7 +125,7 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool) e
 			output.Printf("After installing the missing managers, re-run 'plonk doctor' and 'plonk apply' to reconcile remaining packages.\n")
 		}
 
-		output.StageUpdate("Running plonk apply...")
+		output.StageUpdate("Apply")
 		homeDir, err := config.GetHomeDir()
 		if err != nil {
 			return fmt.Errorf("cannot determine home directory: %w", err)
@@ -149,14 +147,12 @@ func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool) e
 
 			// Only suppress package errors that are fully explained by currently missing managers.
 			if hasOnlyPackageErrors && len(currentlyMissing) > 0 && !hasPackageFailuresFromAvailableManagers(result, currentlyMissing) {
-				output.Printf("Apply completed with some package errors (expected due to missing managers)\n")
+				output.PrintAction("warn", "Apply", "package errors due to missing managers")
 			} else {
 				return fmt.Errorf("failed to apply configuration: %w", err)
 			}
-		} else if result.Success {
-			output.Printf("Applied configuration successfully\n")
-		} else {
-			output.Printf("Apply completed with some issues\n")
+		} else if !result.Success {
+			output.PrintAction("warn", "Apply", "completed with some issues")
 		}
 	}
 	return nil
@@ -232,21 +228,18 @@ func reportMissingManagers(managers []string) []string {
 	if len(managers) == 0 {
 		return nil
 	}
-	output.StageUpdate(fmt.Sprintf("Checking package managers (%d total)...", len(managers)))
 	missing := missingManagersNow(managers)
 	for _, mgr := range managers {
 		if !packages.IsSupportedManager(mgr) {
-			output.Printf("Warning: %s is not a supported package manager and will be skipped\n", mgr)
+			output.PrintAction("warn", mgr, "unsupported package manager; skipped")
 		}
 	}
 	if len(missing) == 0 {
-		output.Printf("All required package managers are already installed\n")
+		output.PrintAction("pass", "Required package managers", "available on PATH")
 		return nil
 	}
-	output.Printf("\nMissing package managers (automatic installation not supported):\n")
 	for _, manager := range missing {
-		output.Printf("- %s package manager\n", manager)
-		output.Printf("  Installation: See official documentation for installation instructions\n")
+		output.PrintAction("missing", manager, "install manually; see official installation instructions")
 	}
 	return missing
 }

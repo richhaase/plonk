@@ -14,8 +14,9 @@ import (
 )
 
 var rmCmd = &cobra.Command{
-	Use:   "rm <files...>",
-	Short: "Remove dotfiles from plonk management",
+	GroupID: "manage",
+	Use:     "rm <files...>",
+	Short:   "Remove dotfiles from plonk management",
 	Long: `Remove dotfiles from plonk management by deleting them from the configuration directory.
 
 This command removes dotfiles from plonk management by deleting them from your

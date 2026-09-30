@@ -10,6 +10,7 @@ import (
 )
 
 var packagesCmd = &cobra.Command{
+	GroupID: "inspect",
 	Use:     "packages",
 	Aliases: []string{"p"},
 	Short:   "Display package status",

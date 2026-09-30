@@ -7,7 +7,7 @@
 ```bash
 brew install --cask richhaase/tap/plonk
 plonk clone user/dotfiles
-# Done.
+# Install any required package managers first.
 ```
 
 ## What It Does
@@ -29,8 +29,8 @@ plonk add ~/.zshrc ~/.vimrc ~/.config/nvim/
 brew install ripgrep fd bat
 plonk track brew:ripgrep brew:fd brew:bat
 
-# See what plonk manages
-plonk status
+# See everything plonk manages
+plonk status --all
 
 # On a new machine: clone and apply
 plonk clone your-github/dotfiles
@@ -65,16 +65,6 @@ plonk config show                     # View settings
 plonk clone user/dotfiles             # Clone repo and apply
 ```
 
-## Migration Notes
-
-- **v0.31**: Templates support macOS Keychain directives such as `{{keychain:plonk/openrouter}}`. Keychain-backed values stay out of shell environment variables and are masked by `plonk diff`.
-- **v0.30**: `dotfiles.rules` supports an explicit deploy mode such as `"0600"` for a secret template's rendered target.
-- **v0.27**: Mutating commands (`add`, `rm`, `track`, `untrack`, `config edit`) auto-commit to git by default. Disable with `git.auto_commit: false` in `plonk.yaml`.
-- **v0.27**: `plonk push` and `plonk pull` synchronize a dotfiles repository.
-- **v0.28**: `plonk status`, `plonk packages`, and `plonk dotfiles` show ahead/behind status when a remote is configured.
-- `plonk install`/`uninstall`/`upgrade` were removed in v0.26. Install with your package manager, then use `plonk track` / `plonk untrack`.
-- Supported managers: `brew`, `cargo`, `go`, `pnpm`, `uv`; the lock format is `version: 3` and automatically migrates from v2 on read.
-
 ## Supported Package Managers
 
 | Manager | Prefix | Example |
@@ -98,8 +88,9 @@ Files ending in `.tmpl` are rendered before deployment. Use legacy `{{VAR_NAME}}
 
 For a macOS secret, use Keychain instead of exporting a credential into your shell:
 
+`pi/agent/auth.json.tmpl` deploys to `~/.pi/agent/auth.json`:
+
 ```json
-// ~/.config/plonk/pi/agent/auth.json.tmpl → ~/.pi/agent/auth.json
 {"key":"{{keychain:plonk/openrouter}}"}
 ```
 
@@ -156,28 +147,22 @@ brew install --cask richhaase/tap/plonk
 go install github.com/richhaase/plonk/cmd/plonk@latest
 ```
 
-**Requirements:** Homebrew, Git, macOS/Linux/WSL
+Install the package managers you use and ensure their executables are on `PATH`.
+Git is needed for clone, repository synchronization, auto-commit, and the default
+diff tool. Keychain templates require macOS.
 
 ## Configuration
 
 Plonk works without configuration. If needed, create `~/.config/plonk/plonk.yaml`:
 
 ```yaml
-# All settings are optional
 git:
-  auto_commit: true                  # Auto-commit after mutations (default: true)
-diff_tool: delta                     # Custom diff viewer
-operation_timeout: 600               # Seconds (default: 300)
-ignore_patterns:
-  - "*.swp"
-  - ".DS_Store"
-
-# Optional restrictive permissions for an individual deployed file
-dotfiles:
-  rules:
-    - name: pi/agent/auth.json.tmpl
-      mode: "0600"
+  auto_commit: false       # Default: true
+operation_timeout: 600    # Default: 300 seconds
 ```
+
+Use `plonk config show` to inspect effective settings and `plonk config edit` to
+edit them. Color is automatic on terminals; set `NO_COLOR=1` to disable it.
 
 See [docs/reference.md](docs/reference.md) for all options.
 
@@ -191,7 +176,8 @@ See [docs/reference.md](docs/reference.md) for all options.
 ```bash
 git clone https://github.com/richhaase/plonk
 cd plonk
-make dev-setup && go test ./...
+make build
+go test ./...
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for details.

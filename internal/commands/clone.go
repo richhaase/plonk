@@ -11,18 +11,13 @@ import (
 var cloneDryRun bool
 
 var cloneCmd = &cobra.Command{
-	Use:   "clone <git-repo>",
-	Short: "Clone dotfiles repository and set up plonk",
-	Long: `Clone an existing dotfiles repository and intelligently set up plonk.
+	GroupID: "sync",
+	Use:     "clone <git-repo>",
+	Short:   "Clone dotfiles repository and set up plonk",
+	Long: `Clone a dotfiles repository into your plonk directory and run 'plonk apply'.
 
-This command:
-- Clones the repository into your plonk directory
-- Reads the plonk.lock file to detect required package managers
-- Installs ONLY the package managers needed by your dotfiles
-- Runs 'plonk apply' to configure your system
-
-The intelligent detection feature means you don't need to manually specify
-which package managers to install - plonk will figure it out from your lock file.
+Install required package managers beforehand. Clone reports unavailable managers
+and applies what it can. An existing plonk directory is not overwritten.
 
 Git repository formats supported:
 - GitHub shorthand: user/repo (defaults to HTTPS)
@@ -31,7 +26,7 @@ Git repository formats supported:
 - Git protocol: git://github.com/user/repo.git
 
 Examples:
-  plonk clone user/dotfiles              # Clone and auto-detect managers
+  plonk clone user/dotfiles              # Clone and apply
   plonk clone richhaase/dotfiles         # Clone specific user's dotfiles`,
 	Args:         cobra.ExactArgs(1),
 	RunE:         runClone,

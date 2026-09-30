@@ -15,8 +15,9 @@ import (
 // No flags needed for doctor command anymore
 
 var doctorCmd = &cobra.Command{
-	Use:   "doctor",
-	Short: "Check system readiness for using plonk",
+	GroupID: "inspect",
+	Use:     "doctor",
+	Short:   "Check system readiness for using plonk",
 	Long: `Perform health checks to ensure your system is properly configured
 for plonk. This includes checking for required package managers,
 configuration files, and system compatibility.
@@ -29,7 +30,7 @@ Shows:
 - Any issues that would prevent plonk from working
 
 Doctor reports issues with suggestions on how to fix them.
-To automatically install missing package managers, use 'plonk clone'.
+Install any missing package managers and ensure their executables are on PATH.
 
 Examples:
   plonk doctor    # Run health checks`,

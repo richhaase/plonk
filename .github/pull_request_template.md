@@ -1,62 +1,17 @@
-# Pull Request
-
 ## Summary
-<!-- Brief description of what this PR does -->
 
-## Type of Change
-<!-- Check all that apply -->
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] Documentation update
-- [ ] Performance improvement
-- [ ] Code refactoring
-- [ ] Test improvements
+<!-- State the problem and resulting behavior. Link related issues when relevant. -->
 
-## Related Issues
-<!-- Link to related issues -->
-Fixes #(issue number)
+## Validation
 
-## Changes Made
-<!-- List the specific changes made -->
--
--
--
-
-## Testing
-<!-- Describe how you tested your changes -->
-- [ ] Unit tests added/updated
-- [ ] BATS Integration tests added/updated
-- [ ] Manual testing performed
-- [ ] All existing tests pass
-
-### Test Details
-<!-- Provide details about testing -->
-```bash
-# Commands used to test
-make test
-make precommit
-```
+<!-- List checks actually run and their results, including skips or limitations.
+Typical checks: go test ./..., go vet ./..., make lint.
+For CLI behavior changes: make docker-test-all. -->
 
 ## Documentation
-<!-- Check if documentation needs updates -->
-- [ ] Code comments updated
-- [ ] API documentation updated (if applicable)
-- [ ] User documentation updated (if applicable)
-- [ ] CHANGELOG updated (if applicable)
 
-## Checklist
-<!-- Ensure all items are completed -->
-- [ ] Code follows the project's style guidelines
-- [ ] Self-review of code completed
-- [ ] Code is properly commented
-- [ ] Tests added for new functionality
-- [ ] All tests pass locally
-- [ ] No breaking changes (or breaking changes documented)
-- [ ] Documentation updated as needed
+<!-- Mention documentation updated, or explain why none is needed. -->
 
-## Additional Context
-<!-- Any additional information, screenshots, or context -->
+## Reviewer notes
 
-## Reviewer Notes
-<!-- Anything specific you want reviewers to focus on -->
+<!-- Include material risks, compatibility changes, or focused review requests. -->

@@ -33,53 +33,7 @@ func (f DotfilesStatusFormatter) TableOutput() string {
 	WriteTitle(&output, "Dotfiles Status")
 	WriteRemoteSync(&output, f.Data.RemoteSync)
 
-	// Include managed, missing, and error items
-	// Drifted files are already in Managed with State==StateDegraded
-	itemsToShow := len(result.Managed) + len(result.Missing) + len(result.Errors)
-
-	if itemsToShow > 0 {
-		// Create a table for dotfiles
-		dotBuilder := NewStandardTableBuilder()
-
-		// Show the deployed target, its source type, and current status.
-		dotBuilder.SetHeaders("DOTFILE", "TYPE", "STATUS")
-
-		// Sort managed and missing dotfiles
-		sortItems(result.Managed)
-		sortItems(result.Missing)
-
-		// Show managed dotfiles
-		for _, item := range result.Managed {
-			// Use destination (target) from metadata - this is where the dotfile is deployed
-			target := dotfileTarget(item, f.Data.HomeDir)
-			// Check if this is actually a drifted file or has an error
-			status := "deployed"
-			if item.State == StateDegraded {
-				if driftStatus, ok := item.Metadata["drift_status"].(string); ok && driftStatus == "error" {
-					status = "error"
-				} else {
-					status = "drifted"
-				}
-			}
-			dotBuilder.AddRow(target, sourceType(item), status)
-		}
-
-		// Show missing dotfiles
-		for _, item := range result.Missing {
-			// Use destination (target) from metadata
-			target := dotfileTarget(item, f.Data.HomeDir)
-			dotBuilder.AddRow(target, sourceType(item), "missing")
-		}
-
-		// Show error dotfiles
-		for _, item := range result.Errors {
-			target := dotfileTarget(item, f.Data.HomeDir)
-			dotBuilder.AddRow(target, sourceType(item), "error")
-		}
-
-		output.WriteString(dotBuilder.Build())
-		output.WriteString("\n")
-	}
+	writeDotfilesTable(&output, result, f.Data.HomeDir)
 
 	// Add summary
 	// Count drifted items separately

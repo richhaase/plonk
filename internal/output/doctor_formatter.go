@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/fatih/color"
+	"sort"
 )
 
 // HealthStatus represents the overall health status
@@ -43,95 +43,51 @@ func NewDoctorFormatter(data DoctorOutput) DoctorFormatter {
 	return DoctorFormatter{Data: data}
 }
 
-// TableOutput generates human-friendly table output for doctor command
+// TableOutput groups diagnostic checks without printing Markdown syntax.
 func (f DoctorFormatter) TableOutput() string {
 	d := f.Data
-	var output strings.Builder
-
-	// Overall status
-	output.WriteString("Plonk Doctor Report\n\n")
-
-	switch d.Overall.Status {
-	case "healthy":
-		green := color.New(color.FgGreen, color.Bold)
-		output.WriteString(green.Sprintf("Overall Status: HEALTHY\n"))
-	case "warning":
-		yellow := color.New(color.FgYellow, color.Bold)
-		output.WriteString(yellow.Sprintf("Overall Status: WARNING\n"))
-	case "unhealthy":
-		red := color.New(color.FgRed, color.Bold)
-		output.WriteString(red.Sprintf("Overall Status: UNHEALTHY\n"))
-	}
-	fmt.Fprintf(&output, "   %s\n\n", d.Overall.Message)
-
-	// Group checks by category
+	var w strings.Builder
+	WriteAction(&w, d.Overall.Status, "System readiness", d.Overall.Message, false)
 	categories := make(map[string][]HealthCheck)
 	for _, check := range d.Checks {
 		categories[check.Category] = append(categories[check.Category], check)
 	}
-
-	// Display each category
-	categoryOrder := []string{"system", "environment", "permissions", "configuration", "package-managers", "installation", "dotfiles"}
-	for _, category := range categoryOrder {
-		if checks, exists := categories[category]; exists {
-			fmt.Fprintf(&output, "## %s\n", titleCase(strings.ReplaceAll(category, "-", " ")))
-
-			for _, check := range checks {
-				// Color-coded status
-				var statusColor *color.Color
-				var statusText string
-				switch check.Status {
-				case "pass":
-					statusColor = color.New(color.FgGreen)
-					statusText = "PASS"
-				case "warn":
-					statusColor = color.New(color.FgYellow)
-					statusText = "WARN"
-				case "fail":
-					statusColor = color.New(color.FgRed)
-					statusText = "FAIL"
-				case "info":
-					statusColor = color.New(color.FgBlue)
-					statusText = "INFO"
-				default:
-					statusColor = color.New(color.FgWhite)
-					statusText = "UNKNOWN"
-				}
-
-				coloredName := statusColor.Sprintf("### %s", check.Name)
-				coloredStatus := statusColor.Sprintf("**Status**: %s", statusText)
-
-				fmt.Fprintf(&output, "%s\n", coloredName)
-				fmt.Fprintf(&output, "%s\n", coloredStatus)
-				fmt.Fprintf(&output, "**Message**: %s\n", check.Message)
-
-				if len(check.Details) > 0 {
-					output.WriteString("\n**Details:**\n")
-					for _, detail := range check.Details {
-						fmt.Fprintf(&output, "- %s\n", detail)
-					}
-				}
-
-				if len(check.Issues) > 0 {
-					output.WriteString("\n**Issues:**\n")
-					for _, issue := range check.Issues {
-						fmt.Fprintf(&output, "- %s\n", issue)
-					}
-				}
-
-				if len(check.Suggestions) > 0 {
-					output.WriteString("\n**Suggestions:**\n")
-					for _, suggestion := range check.Suggestions {
-						fmt.Fprintf(&output, "- %s\n", suggestion)
-					}
-				}
-
-				output.WriteString("\n")
+	order := []string{"system", "environment", "permissions", "configuration", "package-managers", "installation", "dotfiles"}
+	var extra []string
+	for category := range categories {
+		found := false
+		for _, known := range order {
+			if category == known {
+				found = true
+				break
+			}
+		}
+		if !found {
+			extra = append(extra, category)
+		}
+	}
+	sort.Strings(extra)
+	order = append(order, extra...)
+	for _, category := range order {
+		checks := categories[category]
+		if len(checks) == 0 {
+			continue
+		}
+		fmt.Fprintf(&w, "\n%s\n", titleCase(strings.ReplaceAll(category, "-", " ")))
+		for _, check := range checks {
+			WriteAction(&w, check.Status, check.Name, check.Message, true)
+			for _, detail := range check.Details {
+				fmt.Fprintf(&w, "  %s\n", detail)
+			}
+			for _, issue := range check.Issues {
+				fmt.Fprintf(&w, "  %s\n", issue)
+			}
+			for _, suggestion := range check.Suggestions {
+				fmt.Fprintf(&w, "  Next: %s\n", suggestion)
 			}
 		}
 	}
-
-	return output.String()
+	return w.String()
 }
 
 // titleCase converts a string to title case (first letter of each word uppercase)

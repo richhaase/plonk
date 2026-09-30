@@ -81,14 +81,11 @@ type Manager interface {
 
 That's it. Two methods per package manager.
 
-### Lock Service
+### Lock service
 
-```go
-type LockV3Service interface {
-    Read() (*LockV3, error)
-    Write(lock *LockV3) error
-}
-```
+`lock.LockV3Service` is a concrete service for reading, migrating, and atomically
+writing `plonk.lock`. Track/untrack serialize read-modify-write operations using
+an advisory lock.
 
 ## State Model
 
@@ -110,8 +107,8 @@ The filesystem IS the state. Files in `$PLONK_DIR` (excluding `plonk.yaml`, `plo
 
 - **managed** - Tracked and exists
 - **missing** - Tracked but doesn't exist
-- **drifted** - Exists but modified (dotfiles only)
-- **unmanaged** - Exists but not tracked
+- **drifted** - Contents or explicitly configured mode differ (dotfiles only)
+- **error** - Could not inspect or reconcile the item
 
 ## Data Flow
 
@@ -142,53 +139,7 @@ Auto-commit is best-effort: failures are warnings, not errors. The mutation itse
 Lock file + system state → Reconcile → Display differences
 ```
 
-## Adding a Package Manager
-
-1. Create `internal/packages/newmanager.go`:
-
-```go
-type NewManagerSimple struct{}
-
-func NewNewManagerSimple() *NewManagerSimple {
-    return &NewManagerSimple{}
-}
-
-func (m *NewManagerSimple) IsInstalled(ctx context.Context, name string) (bool, error) {
-    // Check if package is installed
-}
-
-func (m *NewManagerSimple) Install(ctx context.Context, name string) error {
-    // Install package
-}
-```
-
-2. Register in `internal/packages/registry.go`:
-
-```go
-case "newmanager":
-    return NewNewManagerSimple(), nil
-```
-
-3. Add to `SupportedManagers` in `internal/packages/manager.go`
-
-4. Add tests in `tests/bats/behavioral/03-package-managers.bats`
-
-## Testing
-
-### Unit Tests
-
-```bash
-go test ./...
-go test -v ./internal/packages/...
-```
-
-### BATS Integration Tests
-
-```bash
-bats tests/bats/behavioral/
-```
-
-BATS tests call the real CLI and real package managers. Use the safe package list in `tests/bats/config/safe-packages.list`.
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for extension and testing workflows.
 
 ## Template Rendering and Secret Resolution
 
@@ -222,4 +173,6 @@ Plaintext secrets are permitted only while rendering in process memory and in th
 
 ## Output Formatting
 
-Commands render human-readable output through `output.RenderOutput`, which calls the formatter's `TableOutput` method. Status formatters share package-table and error rendering helpers. `config show` renders configuration as YAML with comments and optional terminal colors. There is no `--output` / `-o` flag.
+Commands render human-readable output through `output.RenderOutput`, which calls the formatter's `TableOutput` method. Status formatters share state-ledger and error rendering helpers. Actions use
+compact labels; doctor and clone use grouped steps. Color detection is per stream
+and honors nonempty `NO_COLOR` and `TERM=dumb`. `config show` renders configuration as YAML with comments and optional terminal colors. There is no `--output` / `-o` flag.

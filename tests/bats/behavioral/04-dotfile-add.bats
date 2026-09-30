@@ -17,7 +17,7 @@ setup() {
   # Add to plonk
   run plonk add "$HOME/$testfile"
   assert_success
-  assert_output --partial "Added"
+  assert_output --partial "added"
   assert_output --partial "$testfile"
 
   # Verify in status
@@ -47,7 +47,7 @@ setup() {
   # Add directory
   run plonk add "$HOME/$testdir"
   assert_success
-  assert_output --partial "Added"
+  assert_output --partial "added"
 
   # Verify files tracked including nested ones
   run plonk status --all
@@ -66,7 +66,7 @@ setup() {
   # Add to plonk (plonk should win)
   run plonk add "$HOME/$testfile"
   assert_success
-  assert_output --partial "Added"
+  assert_output --partial "added"
 
   track_artifact "dotfile" "$testfile"
 
@@ -87,7 +87,7 @@ setup() {
   # Add both files
   run plonk add "$HOME/$file1" "$HOME/$file2"
   assert_success
-  assert_output_contains_all "$file1" "$file2" "Added"
+  assert_output_contains_all "$file1" "$file2" "added"
 
   # Verify both in status
   run plonk status --all
@@ -107,5 +107,5 @@ setup() {
   # Try to add again
   run plonk add "$HOME/$testfile"
   assert_success
-  assert_output --partial "Updated existing"
+  assert_output --partial "updated"
 }

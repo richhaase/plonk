@@ -24,13 +24,13 @@ func TestDotfileAddOutput_TableOutput(t *testing.T) {
 				Path:        "/home/user/.vimrc",
 			},
 			wantStrs: []string{
-				"Added dotfile to plonk configuration",
-				"Source: ~/.config/plonk/.vimrc",
-				"Destination: ~/.vimrc",
-				"Original: /home/user/.vimrc",
-				"has been copied to your plonk config",
+				"added  /home/user/.vimrc",
+				"copied to ~/.config/plonk/.vimrc",
+				"/home/user/.vimrc",
+				"/home/user/.vimrc",
+				"copied to ~/.config/plonk/.vimrc",
 			},
-			noWant: []string{"(dry-run)", "Would add"},
+			noWant: []string{"Dry run", "Would add"},
 		},
 		{
 			name: "successful update",
@@ -41,9 +41,9 @@ func TestDotfileAddOutput_TableOutput(t *testing.T) {
 				Path:        "/home/user/.bashrc",
 			},
 			wantStrs: []string{
-				"Updated existing dotfile in plonk configuration",
-				"Source: ~/.config/plonk/.bashrc",
-				"has been copied to your plonk config directory, overwriting the previous version",
+				"updated  /home/user/.bashrc",
+				"~/.config/plonk/.bashrc",
+				"copied to ~/.config/plonk/.bashrc",
 			},
 		},
 		{
@@ -55,9 +55,9 @@ func TestDotfileAddOutput_TableOutput(t *testing.T) {
 				Path:        "/home/user/.bashrc",
 			},
 			wantStrs: []string{
-				"Would add dotfile",
-				"(dry-run)",
-				"Source: ~/.config/plonk/.bashrc",
+				"would add",
+				"Dry run",
+				"~/.config/plonk/.bashrc",
 			},
 			noWant: []string{"has been copied"},
 		},
@@ -70,8 +70,8 @@ func TestDotfileAddOutput_TableOutput(t *testing.T) {
 				Path:        "/home/user/.gitconfig",
 			},
 			wantStrs: []string{
-				"Would update existing dotfile in plonk configuration",
-				"(dry-run)",
+				"would update",
+				"Dry run",
 			},
 		},
 		{
@@ -82,7 +82,7 @@ func TestDotfileAddOutput_TableOutput(t *testing.T) {
 				Error:  "permission denied",
 			},
 			wantStrs: []string{
-				"✗",
+				"failed",
 				"/home/user/.config/test",
 				"permission denied",
 			},
@@ -97,8 +97,8 @@ func TestDotfileAddOutput_TableOutput(t *testing.T) {
 				Path:        "",
 			},
 			wantStrs: []string{
-				"Added dotfile",
-				"Source: ~/.config/plonk/.zshrc",
+				"added",
+				"copied to ~/.config/plonk/.zshrc",
 			},
 		},
 	}
@@ -143,9 +143,9 @@ func TestDotfileBatchAddOutput_TableOutput(t *testing.T) {
 				},
 			},
 			wantStrs: []string{
-				"Dotfile Directory Add",
-				"Would add 3 files to plonk configuration - dry-run",
-				"+ dest3 → src3",
+				"Dry run",
+				"1 added, 1 updated, 1 planned, 0 failed",
+				"would add  file3",
 			},
 		},
 		{
@@ -161,8 +161,8 @@ func TestDotfileBatchAddOutput_TableOutput(t *testing.T) {
 				},
 			},
 			wantStrs: []string{
-				"Added 2 files to plonk configuration",
-				"Warnings:",
+				"1 added, 0 updated, 0 planned, 2 failed",
+				"error  add",
 				"Error processing file2: permission denied",
 				"Error processing file3: file not found",
 			},
@@ -177,9 +177,9 @@ func TestDotfileBatchAddOutput_TableOutput(t *testing.T) {
 				},
 			},
 			wantStrs: []string{
-				"Would process 2 files (1 add, 1 update) - dry-run",
-				"+ dest1 → src1",
-				"↻ dest2 → src2",
+				"0 added, 0 updated, 2 planned, 0 failed",
+				"would add  file1",
+				"would update  file2",
 			},
 		},
 		{
@@ -189,8 +189,8 @@ func TestDotfileBatchAddOutput_TableOutput(t *testing.T) {
 				AddedFiles: []DotfileAddOutput{},
 			},
 			wantStrs: []string{
-				"Added 0 files to plonk configuration",
-				"All files have been copied to your plonk config directory",
+				"No dotfiles to add.",
+				"No dotfiles to add.",
 			},
 		},
 	}

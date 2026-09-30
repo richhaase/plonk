@@ -72,7 +72,7 @@ load '../lib/assertions'
   run plonk help
   assert_success
   assert_output --partial "Usage:"
-  assert_output --partial "Available Commands:"
+  assert_output --partial "Inspect:"
 }
 
 @test "plonk version shows version info" {

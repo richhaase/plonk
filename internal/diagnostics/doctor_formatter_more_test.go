@@ -17,7 +17,7 @@ func TestDoctorFormatter_TableOutput_Categories(t *testing.T) {
 		},
 	}
 	outStr := out.NewDoctorFormatter(d).TableOutput()
-	if !contains(outStr, "Plonk Doctor Report") {
+	if !contains(outStr, "System readiness") {
 		t.Fatalf("missing header")
 	}
 }

@@ -124,7 +124,7 @@ func TestSpinner_Success(t *testing.T) {
 	spinner.Success("Operation completed")
 
 	output := buf.String()
-	if !strings.Contains(output, IconSuccess) {
+	if !strings.Contains(output, "done") {
 		t.Errorf("Success message should contain success icon, got: %q", output)
 	}
 	if !strings.Contains(output, "Operation completed") {
@@ -149,7 +149,7 @@ func TestSpinner_Error(t *testing.T) {
 	spinner.Error("Operation failed")
 
 	output := buf.String()
-	if !strings.Contains(output, IconError) {
+	if !strings.Contains(output, "failed") {
 		t.Errorf("Error message should contain error icon, got: %q", output)
 	}
 	if !strings.Contains(output, "Operation failed") {

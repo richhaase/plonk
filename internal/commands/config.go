@@ -8,8 +8,9 @@ import (
 )
 
 var configCmd = &cobra.Command{
-	Use:   "config",
-	Short: "Manage plonk configuration",
+	GroupID: "configure",
+	Use:     "config",
+	Short:   "Manage plonk configuration",
 	Long: `Manage plonk configuration files.
 
 Commands:

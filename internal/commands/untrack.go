@@ -10,12 +10,14 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/gitops"
 	"github.com/richhaase/plonk/internal/lock"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/spf13/cobra"
 )
 
 var untrackCmd = &cobra.Command{
-	Use:   "untrack <manager:package>...",
-	Short: "Stop tracking packages",
+	GroupID: "manage",
+	Use:     "untrack <manager:package>...",
+	Short:   "Stop tracking packages",
 	Long: `Stop tracking packages without uninstalling them.
 
 This command removes packages from your lock file but does NOT uninstall
@@ -52,21 +54,21 @@ func runUntrack(cmd *cobra.Command, args []string) error {
 			// Parse without validating manager - allows untracking legacy managers
 			manager, pkg, err := parsePackageSpecNoValidate(arg)
 			if err != nil {
-				fmt.Printf("Error: %s: %v\n", arg, err)
+				output.PrintAction("error", arg, err.Error())
 				failed++
 				continue
 			}
 
 			// Check if tracked
 			if !lockFile.HasPackage(manager, pkg) {
-				fmt.Printf("Skipping %s:%s (not tracked)\n", manager, pkg)
+				output.PrintAction("skipped", manager+":"+pkg, "not tracked")
 				skipped++
 				continue
 			}
 
 			// Remove from lock file
 			lockFile.RemovePackage(manager, pkg)
-			fmt.Printf("Untracking %s:%s\n", manager, pkg)
+			output.PrintAction("untracked", manager+":"+pkg, "removed from plonk.lock; package kept installed")
 			untracked++
 		}
 
