@@ -22,7 +22,7 @@ setup() {
   assert_output --partial "Removed"
 
   # Verify gone from status
-  run plonk status
+  run plonk status --all
   refute_output --partial "$testfile"
 }
 
@@ -52,7 +52,7 @@ setup() {
   assert_output --partial "Removed"
 
   # Verify all files gone from status
-  run plonk status
+  run plonk status --all
   refute_output --partial "config.yaml"
   refute_output --partial "nested.conf"
 }
@@ -78,7 +78,7 @@ setup() {
   assert_output --partial "config.yaml"
 
   # Verify only that file is gone
-  run plonk status
+  run plonk status --all
   refute_output --partial "config.yaml"
   assert_output --partial "settings.json"
 }
@@ -103,7 +103,7 @@ setup() {
   assert_output_contains_all "$file1" "$file2" "✓"
 
   # Verify both gone from status
-  run plonk status
+  run plonk status --all
   refute_output --partial "$file1"
   refute_output --partial "$file2"
 }
