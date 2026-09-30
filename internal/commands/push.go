@@ -19,7 +19,7 @@ var pushCmd = &cobra.Command{
 	Long: `Push committed changes in your plonk directory to the remote.
 
 Warns if there are uncommitted changes in the working tree.
-Use mutation commands (add, rm, track, untrack) with auto_commit enabled
+Use mutation commands (add, rm) with auto_commit enabled
 to commit changes automatically, or commit manually before pushing.
 
 Examples:

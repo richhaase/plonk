@@ -14,10 +14,8 @@ plonk/
 ├── internal/
 │   ├── commands/               # CLI commands
 │   │   ├── root.go             # Root command, global flags
-│   │   ├── track.go            # Package tracking
-│   │   ├── untrack.go          # Package untracking
-│   │   ├── add.go              # Dotfile addition
-│   │   ├── rm.go               # Dotfile removal
+│   │   ├── add.go              # File/package addition
+│   │   ├── rm.go               # File/package removal
 │   │   ├── apply.go            # State application
 │   │   ├── status.go           # Status display
 │   │   ├── diff.go             # Drift display
@@ -76,15 +74,16 @@ plonk/
 type Manager interface {
     IsInstalled(ctx context.Context, name string) (bool, error)
     Install(ctx context.Context, name string) error
+    Uninstall(ctx context.Context, name string) error
 }
 ```
 
-That's it. Two methods per package manager.
+Managers own installation checks, installation, and explicit removal.
 
 ### Lock service
 
 `lock.LockV3Service` is a concrete service for reading, migrating, and atomically
-writing `plonk.lock`. Track/untrack serialize read-modify-write operations using
+writing `plonk.lock`. Package add/rm serialize read-modify-write operations using
 an advisory lock.
 
 ## State Model
@@ -112,9 +111,10 @@ The filesystem IS the state. Files in `$PLONK_DIR` (excluding `plonk.yaml`, `plo
 
 ## Data Flow
 
-### Track Flow
+### Package Add/Remove Flow
 ```
-User → track command → Verify installed → Update lock file
+add → Check installed → Install if missing → Update lock file
+rm → Optional uninstall (-f) → Remove lock entry
 ```
 
 ### Apply Flow

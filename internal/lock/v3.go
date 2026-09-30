@@ -95,6 +95,15 @@ func NewLockV3Service(configDir string) *LockV3Service {
 
 // Read reads the lock file, auto-migrating v2 if needed
 func (s *LockV3Service) Read() (*LockV3, error) {
+	return s.read(true)
+}
+
+// ReadOnly converts legacy data in memory without changing the lock file.
+func (s *LockV3Service) ReadOnly() (*LockV3, error) {
+	return s.read(false)
+}
+
+func (s *LockV3Service) read(persistMigration bool) (*LockV3, error) {
 	// If lock file doesn't exist, return empty lock
 	if _, err := os.Stat(s.lockPath); os.IsNotExist(err) {
 		return NewLockV3(), nil
@@ -115,7 +124,7 @@ func (s *LockV3Service) Read() (*LockV3, error) {
 
 	// Handle v2 migration
 	if versionCheck.Version == 2 {
-		return s.migrateV2(data)
+		return s.migrateV2(data, persistMigration)
 	}
 
 	// Parse v3
@@ -184,8 +193,8 @@ func (s *LockV3Service) Write(lock *LockV3) error {
 	return nil
 }
 
-// migrateV2 converts a v2 lock to v3 format and persists it
-func (s *LockV3Service) migrateV2(data []byte) (*LockV3, error) {
+// migrateV2 converts a v2 lock to v3 format, optionally persisting it.
+func (s *LockV3Service) migrateV2(data []byte, persist bool) (*LockV3, error) {
 	var old lockV2
 	if err := yaml.Unmarshal(data, &old); err != nil {
 		return nil, fmt.Errorf("failed to parse v2 lock: %w", err)
@@ -227,8 +236,10 @@ func (s *LockV3Service) migrateV2(data []byte) (*LockV3, error) {
 	}
 
 	// Persist the migrated v3 format to disk
-	if err := s.Write(v3); err != nil {
-		return nil, fmt.Errorf("failed to persist v2 migration: %w", err)
+	if persist {
+		if err := s.Write(v3); err != nil {
+			return nil, fmt.Errorf("failed to persist v2 migration: %w", err)
+		}
 	}
 
 	return v3, nil

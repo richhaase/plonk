@@ -5,6 +5,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -16,51 +17,22 @@ import (
 
 var addCmd = &cobra.Command{
 	GroupID: "manage",
-	Use:     "add [files...]",
-	Short:   "Add dotfiles to plonk management",
-	Long: `Add dotfiles to plonk management by copying them to the configuration directory.
+	Use:     "add [files|manager:package...]",
+	Short:   "Add dotfiles or install and track packages",
+	Long: `Copy dotfiles from $HOME into $PLONK_DIR, or add manager:package specifications.
 
-This command copies dotfiles from their current locations to your plonk configuration
-directory ($PLONK_DIR) for management. The original files remain unchanged in their
-current locations.
+Installed packages are tracked; missing packages are installed before tracking.
+Files and packages can be mixed in one invocation. Use an explicit path (./ or /)
+for filenames containing a colon. Package managers must already be available.
 
-For directories, plonk will recursively process all files individually, respecting
-ignore patterns configured in your plonk.yaml. After adding files, use 'plonk apply'
-to deploy them from the configuration directory to your home directory.
-
-Path Resolution:
-Plonk accepts paths in multiple formats and intelligently resolves them:
-
-- Absolute paths: /home/user/.vimrc → Used as-is
-- Tilde paths: ~/.vimrc → Expands to /home/user/.vimrc
-- Relative paths: .vimrc → Tries:
-  1. Current directory: /current/dir/.vimrc
-  2. Home directory: /home/user/.vimrc
-- Plain names: vimrc → Resolves to ~/.vimrc (dot prefix added automatically)
-
-Security:
-- All paths must resolve to dotfiles (first path component starts with '.')
-- All paths must resolve to locations under your home directory ($HOME)
-- Paths outside $HOME are rejected to prevent unintended file operations
-
-Special Cases:
-- Directories: Recursively processes all files (add only)
-- Symlinks: Follows relative links only when their targets remain within $HOME
-- Absolute, broken, and escaping symlinks are rejected
-- Hidden files: Automatically handled (dot removed in plonk dir)
-
-File Mapping:
-- ~/.zshrc → $PLONK_DIR/zshrc (leading dot removed)
-- ~/.config/nvim/init.lua → $PLONK_DIR/config/nvim/init.lua
+File paths must stay under $HOME. Directories are added recursively with configured
+ignore patterns. Templates should be edited directly rather than overwritten.
 
 Examples:
-  plonk add ~/.zshrc                    # Add single file
-  plonk add ~/.zshrc ~/.vimrc           # Add multiple files
-  plonk add vimrc                       # Finds ~/.vimrc automatically
-  plonk add .config/nvim                # Adds entire nvim config directory
-  plonk add ../myfile                   # Relative to current directory
-  plonk add --dry-run ~/.zshrc ~/.vimrc # Preview what would be added
-  plonk add -y                          # Sync all drifted files back to $PLONKDIR`,
+  plonk add ~/.zshrc brew:ripgrep
+  plonk add cargo:bat go:golang.org/x/tools/gopls
+  plonk add --dry-run ~/.vimrc pnpm:typescript
+  plonk add -y   # Sync drifted files back to $PLONK_DIR`,
 	RunE:         runAdd,
 	SilenceUsage: true,
 }
@@ -71,10 +43,33 @@ func init() {
 	addCmd.Flags().BoolP("sync-drifted", "y", false, "Sync all drifted files from $HOME back to $PLONKDIR")
 
 	// Add file path completion
-	addCmd.ValidArgsFunction = CompleteDotfilePaths
+	addCmd.ValidArgsFunction = CompleteResourceArgs
 }
 
 func runAdd(cmd *cobra.Command, args []string) error {
+	syncDrifted, _ := cmd.Flags().GetBool("sync-drifted")
+	if syncDrifted {
+		if len(args) != 0 {
+			return fmt.Errorf("--sync-drifted cannot be combined with file or package arguments")
+		}
+		return runAddFiles(cmd, args)
+	}
+	if len(args) == 0 {
+		return fmt.Errorf("specify a file or manager:package")
+	}
+	files, specs := splitResourceArgs(args)
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	var errs []error
+	if len(specs) > 0 {
+		errs = append(errs, mutatePackages(cmd.Context(), config.GetDefaultConfigDirectory(), specs, true, false, dryRun))
+	}
+	if len(files) > 0 {
+		errs = append(errs, runAddFiles(cmd, files))
+	}
+	return errors.Join(errs...)
+}
+
+func runAddFiles(cmd *cobra.Command, args []string) error {
 	// Get flags
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 	syncDrifted, _ := cmd.Flags().GetBool("sync-drifted")
@@ -138,7 +133,7 @@ func runAdd(cmd *cobra.Command, args []string) error {
 	output.RenderOutput(outputData)
 
 	// Auto-commit if any files were actually added/updated (even on partial
-	// failure: successful mutations are committed, matching rm/track behavior;
+	// failure: successful mutations are committed, matching rm behavior;
 	// the exit status below still reflects any failure)
 	if !opts.DryRun && anyAddSucceeded(results) {
 		gitops.AutoCommit(cmd.Context(), configDir, "add", args)

@@ -18,13 +18,16 @@ func init() {
 }
 
 // Manager defines the simplified package manager interface.
-// Only two operations: check if installed, install if missing.
+// Check installation, install missing packages, and explicitly uninstall.
 type Manager interface {
 	// IsInstalled checks if a package is installed
 	IsInstalled(ctx context.Context, name string) (bool, error)
 
 	// Install installs a package (should be idempotent)
 	Install(ctx context.Context, name string) error
+
+	// Uninstall removes an installed package.
+	Uninstall(ctx context.Context, name string) error
 }
 
 // SupportedManagers lists all available package managers

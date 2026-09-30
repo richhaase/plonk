@@ -7,7 +7,7 @@ import "fmt"
 
 // ValidateBatchResults enforces the documented partial-failure exit policy:
 // any failed item in a batch produces a non-zero exit status, matching the
-// behavior of track/untrack/apply. This keeps exit codes consistent across
+// behavior of add/rm/apply. This keeps exit codes consistent across
 // all batch commands: success (exit 0) only when every requested item
 // succeeded (skips do not count as failures).
 //
