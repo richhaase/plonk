@@ -141,7 +141,7 @@ dotfiles:
         └── init.lua    # → ~/.config/nvim/init.lua
 ```
 
-- **Packages**: Listed in `plonk.lock`, installed on `apply` if missing
+- **Packages**: Listed in `plonk.lock`, installed on `apply` if missing. Each manager finishes before the next is checked, so tracked tools such as `brew:pnpm` can supply a later manager on the current `PATH`.
 - **Dotfiles**: Files in this directory deploy to `$HOME` with a dot prefix
 - **Templates**: `.tmpl` files resolve environment values and, on macOS, Keychain values before deployment
 

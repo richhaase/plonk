@@ -122,9 +122,11 @@ User → track command → Verify installed → Update lock file
 
 ### Apply Flow
 ```
-Lock file → List tracked → Check installed → Install missing
+Lock file → Sort managers → For each manager: check installed → Install missing
 Config dir → List files → Resolve and render .tmpl → Check deployed → Deploy missing/drifted
 ```
+
+`packages.SimpleApply` completes each manager’s install plan before checking the next manager. This lets an earlier tracked package supply a later manager on the current `PATH`, without inferring dependencies or installing untracked managers.
 
 `orchestrator.Apply(ctx, Options)` coordinates both domains and collects partial failures. Full and selective dotfile application share reconciliation and deployment code; the selective path filters the reconciled files before applying them.
 
