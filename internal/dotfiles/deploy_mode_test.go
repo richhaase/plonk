@@ -6,9 +6,13 @@ package dotfiles
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/richhaase/plonk/internal/config"
+
 	"github.com/richhaase/plonk/internal/template"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDotfileManager_Deploy_ConfiguredMode(t *testing.T) {
@@ -105,4 +109,99 @@ func TestApplyStatuses_ConfiguredMode(t *testing.T) {
 	if mode != 0o600 {
 		t.Errorf("applyStatuses deployed mode = %v (0o%o), want 0o600", mode, mode)
 	}
+}
+
+func TestApply_ReconcilesConfiguredMode(t *testing.T) {
+	for _, templateFile := range []bool{false, true} {
+		name := "zshrc"
+		content := []byte("export EDITOR=vim\n")
+		source := content
+		if templateFile {
+			name += ".tmpl"
+			source = []byte("export EDITOR={{PLONK_DEPLOY_MODE_TEST}}\n")
+		}
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("PLONK_DEPLOY_MODE_TEST", "vim")
+			for _, tc := range []struct {
+				name    string
+				rules   []config.DotfileRule
+				updated int
+				mode    os.FileMode
+			}{
+				{"configured", []config.DotfileRule{{Name: name, Mode: "0600"}}, 1, 0600},
+				{"unconfigured", nil, 0, 0640},
+				{"unmatched", []config.DotfileRule{{Name: "other", Mode: "0600"}}, 0, 0640},
+				{"no mode", []config.DotfileRule{{Name: name}}, 0, 0640},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					configDir, homeDir := t.TempDir(), t.TempDir()
+					target := filepath.Join(homeDir, ".zshrc")
+					require.NoError(t, os.WriteFile(filepath.Join(configDir, name), source, 0644))
+					require.NoError(t, os.WriteFile(target, content, 0600))
+					require.NoError(t, os.Chmod(target, 0640))
+					before, err := os.Stat(target)
+					require.NoError(t, err)
+					cfg := config.LoadWithDefaults(configDir)
+					cfg.Dotfiles.Rules = tc.rules
+
+					dryResult, err := Apply(context.Background(), configDir, homeDir, cfg, true)
+					require.NoError(t, err)
+					require.Equal(t, tc.updated, dryResult.Summary.Updated)
+					require.Equal(t, 1-tc.updated, dryResult.Summary.Unchanged)
+					if tc.updated == 1 {
+						require.Len(t, dryResult.Actions, 1)
+						require.Equal(t, "would-update", dryResult.Actions[0].Status)
+					}
+					afterDryRun, err := os.Stat(target)
+					require.NoError(t, err)
+					require.Equal(t, os.FileMode(0640), afterDryRun.Mode().Perm())
+					require.True(t, os.SameFile(before, afterDryRun), "dry-run must not replace the target")
+					afterContent, err := os.ReadFile(target)
+					require.NoError(t, err)
+					require.Equal(t, content, afterContent)
+
+					result, err := Apply(context.Background(), configDir, homeDir, cfg, false)
+					require.NoError(t, err)
+					require.Equal(t, tc.updated, result.Summary.Updated)
+					require.Equal(t, 1-tc.updated, result.Summary.Unchanged)
+					afterApply, err := os.Stat(target)
+					require.NoError(t, err)
+					require.Equal(t, tc.mode, afterApply.Mode().Perm())
+					afterContent, err = os.ReadFile(target)
+					require.NoError(t, err)
+					require.Equal(t, content, afterContent)
+
+					repeated, err := Apply(context.Background(), configDir, homeDir, cfg, false)
+					require.NoError(t, err)
+					require.Equal(t, 1, repeated.Summary.Unchanged)
+					require.Empty(t, repeated.Actions)
+				})
+			}
+		})
+	}
+}
+
+func TestApplySelective_ReconcilesOnlySelectedMode(t *testing.T) {
+	configDir, homeDir := t.TempDir(), t.TempDir()
+	cfg := config.LoadWithDefaults(configDir)
+	for _, name := range []string{"zshrc", "vimrc"} {
+		require.NoError(t, os.WriteFile(filepath.Join(configDir, name), []byte("content"), 0644))
+		target := filepath.Join(homeDir, "."+name)
+		require.NoError(t, os.WriteFile(target, []byte("content"), 0600))
+		require.NoError(t, os.Chmod(target, 0644))
+		cfg.Dotfiles.Rules = append(cfg.Dotfiles.Rules, config.DotfileRule{Name: name, Mode: "0600"})
+	}
+
+	result, err := ApplySelective(context.Background(), configDir, homeDir, cfg, ApplyFilterOptions{
+		Filter: map[string]bool{filepath.Join(homeDir, ".zshrc"): true},
+	})
+	require.NoError(t, err)
+	require.Equal(t, 1, result.Summary.Updated)
+	require.Equal(t, 1, result.TotalFiles)
+	selected, err := os.Stat(filepath.Join(homeDir, ".zshrc"))
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(0600), selected.Mode().Perm())
+	unselected, err := os.Stat(filepath.Join(homeDir, ".vimrc"))
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(0644), unselected.Mode().Perm())
 }
