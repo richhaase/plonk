@@ -130,3 +130,52 @@ func TestRemovedCommandsAreNotRegistered(t *testing.T) {
 		require.NotEqual(t, "untrack", cmd.Name())
 	}
 }
+
+func TestUVRequirementRemovalLifecycle(t *testing.T) {
+	bin := t.TempDir()
+	state := filepath.Join(bin, "installed")
+	log := filepath.Join(bin, "operations")
+	t.Setenv("UV_REVIEW_STATE", state)
+	t.Setenv("UV_REVIEW_LOG", log)
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	script := `#!/bin/sh
+case "$2" in
+ list) if [ -f "$UV_REVIEW_STATE" ]; then echo 'demo-tool v1.2.3'; echo '- demo'; fi ;;
+ install) echo "$4" >> "$UV_REVIEW_LOG"; touch "$UV_REVIEW_STATE" ;;
+ uninstall) [ "$4" = demo-tool ] || exit 1
+  [ "$UV_REVIEW_FAIL" = 1 ] && exit 1
+  echo "uninstall $4" >> "$UV_REVIEW_LOG"; rm "$UV_REVIEW_STATE" ;;
+ *) exit 1 ;;
+esac
+`
+	require.NoError(t, os.WriteFile(filepath.Join(bin, "uv"), []byte(script), 0755))
+	packages.ResetManagerCache()
+	t.Cleanup(packages.ResetManagerCache)
+	dir := packageConfig(t)
+	ctx := context.Background()
+	spec := "uv:Demo_Tool[extra]==1.2.3"
+	require.NoError(t, mutatePackages(ctx, dir, []string{spec}, true, false, false))
+	// Reload the inventory as a subsequent CLI process would.
+	packages.ResetManagerCache()
+	require.NoError(t, mutatePackages(ctx, dir, []string{spec}, true, false, false))
+	contents, err := os.ReadFile(log)
+	require.NoError(t, err)
+	require.Equal(t, "Demo_Tool[extra]==1.2.3\n", string(contents))
+	require.NoError(t, mutatePackages(ctx, dir, []string{spec}, false, true, true))
+	require.FileExists(t, state)
+	t.Setenv("UV_REVIEW_FAIL", "1")
+	require.Error(t, mutatePackages(ctx, dir, []string{spec}, false, true, false))
+	current, err := lock.NewLockV3Service(dir).ReadOnly()
+	require.NoError(t, err)
+	require.True(t, current.HasPackage("uv", "Demo_Tool[extra]==1.2.3"))
+	require.FileExists(t, state)
+	t.Setenv("UV_REVIEW_FAIL", "0")
+	require.NoError(t, mutatePackages(ctx, dir, []string{spec}, false, true, false))
+	require.NoFileExists(t, state)
+	current, err = lock.NewLockV3Service(dir).ReadOnly()
+	require.NoError(t, err)
+	require.False(t, current.HasPackage("uv", "Demo_Tool[extra]==1.2.3"))
+	contents, err = os.ReadFile(log)
+	require.NoError(t, err)
+	require.Equal(t, "Demo_Tool[extra]==1.2.3\nuninstall demo-tool\n", string(contents))
+}

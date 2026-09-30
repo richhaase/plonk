@@ -34,7 +34,7 @@ func (u *UVSimple) IsInstalled(ctx context.Context, name string) (bool, error) {
 		}
 	}
 
-	return u.installed[name], nil
+	return u.installed[uvPackageName(name)], nil
 }
 
 // loadInstalled fetches all installed uv tools
@@ -52,7 +52,7 @@ func (u *UVSimple) loadInstalled(ctx context.Context) error {
 	for _, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) > 0 {
-			installed[fields[0]] = true
+			installed[uvPackageName(fields[0])] = true
 		}
 	}
 
@@ -84,6 +84,20 @@ func (u *UVSimple) markInstalled(name string) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	if u.installed != nil {
-		u.installed[name] = true
+		u.installed[uvPackageName(name)] = true
 	}
+}
+
+// uvPackageName extracts the distribution identity from a named Python
+// requirement. UV inventories and uninstall accept names, not version selectors
+// or extras. Python distribution names ignore case and runs of '-', '_' and '.'.
+func uvPackageName(spec string) string {
+	name := strings.TrimSpace(spec)
+	if i := strings.IndexAny(name, "[ <>=!~;@"); i >= 0 {
+		name = name[:i]
+	}
+	parts := strings.FieldsFunc(strings.ToLower(name), func(r rune) bool {
+		return r == '-' || r == '_' || r == '.'
+	})
+	return strings.Join(parts, "-")
 }

@@ -219,3 +219,49 @@ PY
   grep -Fxq 'remove typescript' "$PNPM_LOG"
   grep -Fxq 'remove @scope/tool' "$PNPM_LOG"
 }
+
+@test "forced UV removal normalizes pinned requirements and preserves failed removals" {
+  export UV_STATE="$BATS_TEST_TMPDIR/uv-installed"
+  export UV_LOG="$BATS_TEST_TMPDIR/uv.log"
+  cat > "$BATS_TEST_TMPDIR/bin/uv" <<'SH'
+#!/bin/sh
+case "$2" in
+ list) if [ -f "$UV_STATE" ]; then echo 'demo-tool v1.2.3'; echo '- demo'; fi ;;
+ install) echo "install $4" >> "$UV_LOG"; touch "$UV_STATE" ;;
+ uninstall) [ "$4" = demo-tool ] || exit 1
+  [ "$UV_FAIL" = 1 ] && exit 1
+  echo "uninstall $4" >> "$UV_LOG"; rm "$UV_STATE" ;;
+ *) exit 1 ;;
+esac
+SH
+  chmod +x "$BATS_TEST_TMPDIR/bin/uv"
+  local spec='uv:Demo_Tool[extra]==1.2.3'
+  run plonk add "$spec"
+  assert_success
+  grep -Fq 'Demo_Tool[extra]==1.2.3' "$PLONK_DIR/plonk.lock"
+  run plonk add "$spec"
+  assert_success
+  assert_output --partial 'already installed and tracked'
+  [ "$(wc -l < "$UV_LOG")" -eq 1 ]
+
+  cp "$PLONK_DIR/plonk.lock" "$BATS_TEST_TMPDIR/uv-before.lock"
+  run plonk rm -nf "$spec"
+  assert_success
+  cmp "$PLONK_DIR/plonk.lock" "$BATS_TEST_TMPDIR/uv-before.lock"
+  [ -f "$UV_STATE" ]
+  [ "$(wc -l < "$UV_LOG")" -eq 1 ]
+
+  export UV_FAIL=1
+  run plonk rm -f "$spec"
+  assert_failure
+  cmp "$PLONK_DIR/plonk.lock" "$BATS_TEST_TMPDIR/uv-before.lock"
+  [ -f "$UV_STATE" ]
+  export UV_FAIL=0
+  run plonk rm -f "$spec"
+  assert_success
+  assert_output --partial 'uninstalled and removed'
+  [ ! -f "$UV_STATE" ]
+  ! grep -Fq 'Demo_Tool[extra]==1.2.3' "$PLONK_DIR/plonk.lock"
+  grep -Fxq 'install Demo_Tool[extra]==1.2.3' "$UV_LOG"
+  grep -Fxq 'uninstall demo-tool' "$UV_LOG"
+}

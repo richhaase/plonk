@@ -53,7 +53,7 @@ func (p *PNPMSimple) Uninstall(ctx context.Context, name string) error {
 }
 
 func (u *UVSimple) Uninstall(ctx context.Context, name string) error {
-	if err := uninstallCommand(ctx, "uv", "tool", "uninstall", "--", name); err != nil {
+	if err := uninstallCommand(ctx, "uv", "tool", "uninstall", "--", uvPackageName(name)); err != nil {
 		return err
 	}
 	u.mu.Lock()
