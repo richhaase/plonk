@@ -53,6 +53,7 @@ type Summary struct {
 // StatusOutput represents the output structure for status command
 type StatusOutput struct {
 	RemoteSync   string
+	ShowAll      bool
 	StateSummary Summary
 	HomeDir      string
 }
@@ -104,14 +105,29 @@ func (f StatusFormatter) TableOutput() string {
 	WriteRemoteSync(&output, s.RemoteSync)
 
 	if packageResult := findResultByDomain(s.StateSummary.Results, "package"); packageResult != nil {
-		writePackagesTable(&output, *packageResult)
+		result := *packageResult
+		if !s.ShowAll {
+			result.Managed = nil
+		}
+		writePackagesTable(&output, result)
 	}
 	if dotfileResult := findResultByDomain(s.StateSummary.Results, "dotfile"); dotfileResult != nil {
-		writeDotfilesTable(&output, *dotfileResult, s.HomeDir)
+		result := *dotfileResult
+		if !s.ShowAll {
+			result.Managed = nil
+			for _, item := range dotfileResult.Managed {
+				if item.State == StateDegraded {
+					result.Managed = append(result.Managed, item)
+				}
+			}
+		}
+		writeDotfilesTable(&output, result, s.HomeDir)
 	}
 
 	driftedCount := countDriftedDotfiles(s.StateSummary.Results)
-	writeSummaryLine(&output, s.StateSummary, driftedCount)
+	if s.ShowAll {
+		writeSummaryLine(&output, s.StateSummary, driftedCount)
+	}
 	writeDomainErrors(&output, s.StateSummary.Results)
 
 	if s.StateSummary.TotalManaged == 0 && s.StateSummary.TotalMissing == 0 && s.StateSummary.TotalErrors == 0 {

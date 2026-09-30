@@ -86,11 +86,13 @@ plonk apply ~/.vimrc           # Specific dotfile
 
 ### plonk status
 
-Show managed packages and dotfiles.
+Show remote sync status and actionable items: missing packages or dotfiles, drifted dotfiles, and errors. Healthy items and summary counts are hidden by default.
 
 ```bash
 plonk status
 plonk st                       # Alias
+plonk status --all              # Include healthy items and summary counts
+plonk status -a                 # Short form of --all
 ```
 
 **States:**
