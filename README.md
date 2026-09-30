@@ -118,6 +118,8 @@ dotfiles:
       mode: "0600"
 ```
 
+`plonk apply` also corrects explicitly configured permissions when file contents are unchanged; `--dry-run` previews the update.
+
 **Rules:**
 - Environment, Keychain, and legacy directives have no defaults or conditionals.
 - Missing or inaccessible directives make `apply` fail before that file is written; `plonk doctor` identifies the locator and offers remediation without printing secret values.

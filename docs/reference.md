@@ -251,8 +251,14 @@ when committed with standard `0644` permissions.
 - `name` - Dotfile source path relative to `$PLONK_DIR` (e.g. `pi/agent/auth.json.tmpl`). Required.
 - `mode` - Octal file permissions applied to the deployed target after write and rename. Must be in the range `0000`-`0777` (digits `0`-`7` only). Invalid values produce a configuration validation error.
 
-When no rule matches, or a rule has no `mode`, behavior is unchanged: the deployed
-file keeps the source file permissions.
+`plonk apply` updates a target whose permissions differ from its explicit `mode`,
+even when its contents already match. This applies to ordinary files and rendered
+templates, including selective apply. `--dry-run` reports the update without
+changing the target contents or permissions.
+
+When no rule matches, or a rule has no `mode`, behavior is unchanged: deployment
+uses the source file permissions, and permission-only changes do not trigger an
+update.
 
 ### Environment Variables
 

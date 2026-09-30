@@ -39,7 +39,7 @@ func (m *DotfileManager) Reconcile() ([]DotfileStatus, error) {
 // getState determines the sync state of a single dotfile
 func (m *DotfileManager) getState(d Dotfile) (SyncState, error) {
 	// Check if target exists
-	_, err := m.fs.Stat(d.Target)
+	info, err := m.fs.Stat(d.Target)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return SyncStateMissing, nil
@@ -54,6 +54,11 @@ func (m *DotfileManager) getState(d Dotfile) (SyncState, error) {
 	}
 
 	if drifted {
+		return SyncStateDrifted, nil
+	}
+
+	// Only explicit deployment modes participate in permission drift detection.
+	if mode, ok := m.deployModes[d.Name]; ok && info.Mode().Perm() != mode {
 		return SyncStateDrifted, nil
 	}
 
