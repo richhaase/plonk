@@ -43,7 +43,7 @@ func (c *CargoSimple) Uninstall(ctx context.Context, name string) error {
 }
 
 func (p *PNPMSimple) Uninstall(ctx context.Context, name string) error {
-	if err := uninstallCommand(ctx, "pnpm", "remove", "-g", "--", name); err != nil {
+	if err := uninstallCommand(ctx, "pnpm", "remove", "-g", "--", pnpmPackageName(name)); err != nil {
 		return err
 	}
 	p.mu.Lock()

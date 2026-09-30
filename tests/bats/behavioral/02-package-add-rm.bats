@@ -172,3 +172,50 @@ SH
   assert_success
   [ ! -e "$PLONK_DIR/$name" ]
 }
+
+@test "forced removal normalizes versioned pnpm specs including scoped packages" {
+  export PNPM_STATE="$BATS_TEST_TMPDIR/pnpm.json"
+  export PNPM_LOG="$BATS_TEST_TMPDIR/pnpm.log"
+  cat > "$BATS_TEST_TMPDIR/bin/pnpm" <<'PY'
+#!/usr/bin/env python3
+import json, os, sys
+from pathlib import Path
+state = Path(os.environ['PNPM_STATE'])
+packages = json.loads(state.read_text()) if state.exists() else {}
+command = sys.argv[1]
+if command == 'list':
+    print(json.dumps([{'dependencies': packages}]))
+else:
+    spec = sys.argv[4]
+    index = spec.find('@', 1)
+    name = spec[:index] if index >= 0 else spec
+    if command == 'add':
+        packages[name] = {}
+    elif command == 'remove':
+        if spec != name:
+            sys.exit('remove requires the installed package name')
+        packages.pop(name, None)
+    else:
+        sys.exit(1)
+    with open(os.environ['PNPM_LOG'], 'a') as log:
+        log.write(command + ' ' + spec + '\n')
+    state.write_text(json.dumps(packages))
+PY
+  chmod +x "$BATS_TEST_TMPDIR/bin/pnpm"
+  for spec in 'typescript@5.9.2' '@scope/tool@1.2.3'; do
+    run plonk add "pnpm:$spec"
+    assert_success
+    grep -Fq "$spec" "$PLONK_DIR/plonk.lock"
+    # A fresh CLI process must recognize the installed, versioned spec.
+    run plonk add "pnpm:$spec"
+    assert_success
+    assert_output --partial 'already installed and tracked'
+    run plonk rm -f "pnpm:$spec"
+    assert_success
+    assert_output --partial 'uninstalled and removed'
+    ! grep -Fq "$spec" "$PLONK_DIR/plonk.lock"
+    [ "$(cat "$PNPM_STATE")" = '{}' ]
+  done
+  grep -Fxq 'remove typescript' "$PNPM_LOG"
+  grep -Fxq 'remove @scope/tool' "$PNPM_LOG"
+}
