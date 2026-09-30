@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -36,19 +37,7 @@ func (g *GoSimple) IsInstalled(ctx context.Context, name string) (bool, error) {
 		}
 	}
 
-	// Extract binary name from package path
-	// e.g., "golang.org/x/tools/gopls" -> "gopls"
-	binaryName := name
-	if strings.Contains(name, "/") {
-		parts := strings.Split(name, "/")
-		binaryName = parts[len(parts)-1]
-	}
-	// Remove @version suffix if present
-	if idx := strings.Index(binaryName, "@"); idx != -1 {
-		binaryName = binaryName[:idx]
-	}
-
-	return g.installed[binaryName], nil
+	return g.installed[goExecutableName(name)], nil
 }
 
 // loadInstalled scans the Go bin directory for installed binaries
@@ -103,21 +92,10 @@ func (g *GoSimple) Install(ctx context.Context, name string) error {
 
 // markInstalled updates the cache to mark a package as installed
 func (g *GoSimple) markInstalled(name string) {
-	// Extract binary name to match IsInstalled cache key format
-	binaryName := name
-	if strings.Contains(name, "/") {
-		parts := strings.Split(name, "/")
-		binaryName = parts[len(parts)-1]
-	}
-	// Remove @version suffix if present
-	if idx := strings.Index(binaryName, "@"); idx != -1 {
-		binaryName = binaryName[:idx]
-	}
-
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	if g.installed != nil {
-		g.installed[binaryName] = true
+		g.installed[goExecutableName(name)] = true
 	}
 }
 
@@ -143,4 +121,23 @@ func goBinDir() string {
 		return ""
 	}
 	return filepath.Join(paths[0], "bin")
+}
+
+// goExecutableName follows Go's module-aware executable naming convention.
+func goExecutableName(spec string) string {
+	importPath, _, _ := strings.Cut(spec, "@")
+	name := path.Base(importPath)
+	if len(name) >= 2 && name[0] == 'v' && name[1] >= '1' && name[1] <= '9' && name != "v1" && strings.Contains(importPath, "/") {
+		version := true
+		for _, r := range name[2:] {
+			if r < '0' || r > '9' {
+				version = false
+				break
+			}
+		}
+		if version {
+			name = path.Base(path.Dir(importPath))
+		}
+	}
+	return name
 }

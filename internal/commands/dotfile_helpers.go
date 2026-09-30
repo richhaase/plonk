@@ -263,6 +263,7 @@ func (s RemoveStatus) String() string {
 
 // RemoveResult represents the result of a remove operation
 type RemoveResult struct {
+	Force       bool
 	Path        string
 	Source      string
 	Destination string
@@ -272,6 +273,7 @@ type RemoveResult struct {
 
 // RemoveOptions configures dotfile removal
 type RemoveOptions struct {
+	Force  bool
 	DryRun bool
 }
 
@@ -281,7 +283,8 @@ func removeDotfiles(dm *dotfiles.DotfileManager, configDir, homeDir string, path
 
 	for _, path := range paths {
 		result := RemoveResult{
-			Path: path,
+			Force: opts.Force,
+			Path:  path,
 		}
 
 		// Resolve path to get the name in config dir
@@ -302,6 +305,15 @@ func removeDotfiles(dm *dotfiles.DotfileManager, configDir, homeDir string, path
 					continue
 				}
 			} else {
+				result.Status = RemoveStatusFailed
+				result.Error = err
+				results = append(results, result)
+				continue
+			}
+		}
+
+		if opts.Force {
+			if err := dm.RemoveDeployed(name, opts.DryRun); err != nil {
 				result.Status = RemoveStatusFailed
 				result.Error = err
 				results = append(results, result)

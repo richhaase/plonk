@@ -18,8 +18,8 @@ cleanup_all_test_packages() {
 
   for package in "${SAFE_PACKAGES[@]}"; do
     # Check if package is managed by plonk
-    if plonk status 2>/dev/null | grep -q "${package#*:}"; then
-      plonk uninstall "$package" --force 2>/dev/null || true
+    if plonk status --all 2>/dev/null | grep -q "${package#*:}"; then
+      plonk rm --force "$package" 2>/dev/null || true
       echo "Removed test package: $package"
     fi
   done
@@ -51,7 +51,7 @@ check_for_test_artifacts() {
 
   # Check packages
   for package in "${SAFE_PACKAGES[@]}"; do
-    if plonk status 2>/dev/null | grep -q "${package#*:}"; then
+    if plonk status --all 2>/dev/null | grep -q "${package#*:}"; then
       echo "Found test package: $package"
       ((found_artifacts++))
     fi

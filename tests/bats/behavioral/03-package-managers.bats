@@ -16,12 +16,12 @@ setup() {
   require_package_manager brew
 
   # git is almost always installed on dev machines
-  run plonk track brew:git
+  run plonk add --dry-run brew:git
   # Either succeeds (git installed) or fails with "not installed"
   if [[ "$status" -eq 0 ]]; then
-    [[ "$output" == *"tracked"* ]] || [[ "$output" == *"already tracked"* ]]
+    [[ "$output" == *"would track"* ]] || [[ "$output" == *"would install"* ]]
   else
-    [[ "$output" == *"not installed"* ]]
+    [[ "$output" == *"would install"* ]]
     skip "git not installed via brew"
   fi
 }
@@ -29,9 +29,9 @@ setup() {
 @test "brew: IsInstalled returns false for non-existent package" {
   require_package_manager brew
 
-  run plonk track brew:this-package-definitely-does-not-exist-xyz987
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"not installed"* ]]
+  run plonk add --dry-run brew:this-package-definitely-does-not-exist-xyz987
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"would install"* ]]
 }
 
 @test "brew: install and track workflow" {
@@ -42,7 +42,7 @@ setup() {
   brew install cowsay 2>/dev/null || true
 
   # Track it
-  run plonk track brew:cowsay
+  run plonk add brew:cowsay
   [ "$status" -eq 0 ]
 
   # Verify in lock file
@@ -50,7 +50,7 @@ setup() {
   [[ "$output" == *"cowsay"* ]]
 
   # Untrack (cleanup)
-  plonk untrack brew:cowsay
+  plonk rm brew:cowsay
 }
 
 # =============================================================================
@@ -61,9 +61,9 @@ setup() {
   require_package_manager cargo
 
   # Try to track a package that's likely not installed
-  run plonk track cargo:nonexistent-crate-xyz123
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"not installed"* ]]
+  run plonk add --dry-run cargo:nonexistent-crate-xyz123
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"would install"* ]]
 }
 
 @test "cargo: IsInstalled handles installed packages" {
@@ -72,9 +72,9 @@ setup() {
 
   # Check if bat is installed
   if cargo install --list 2>/dev/null | grep -q "^bat "; then
-    run plonk track cargo:bat
+    run plonk add cargo:bat
     [ "$status" -eq 0 ]
-    plonk untrack cargo:bat
+    plonk rm cargo:bat
   else
     skip "bat not installed via cargo"
   fi
@@ -84,7 +84,7 @@ setup() {
   require_package_manager cargo
 
   # Try to install a nonexistent crate - should fail
-  run plonk track cargo:this-crate-does-not-exist-xyz
+  run plonk add cargo:this-crate-does-not-exist-xyz
   [ "$status" -ne 0 ]
 }
 
@@ -96,9 +96,9 @@ setup() {
   require_package_manager go
 
   # Try a package that definitely doesn't exist
-  run plonk track go:nonexistent.example.com/fake/tool
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"not installed"* ]]
+  run plonk add --dry-run go:nonexistent.example.com/fake/tool
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"would install"* ]]
 }
 
 @test "go: IsInstalled finds installed binaries" {
@@ -108,9 +108,9 @@ setup() {
   # Check if hey is in GOBIN
   local gobin="${GOBIN:-${GOPATH:-$HOME/go}/bin}"
   if [[ -x "$gobin/hey" ]]; then
-    run plonk track "go:github.com/rakyll/hey"
+    run plonk add "go:github.com/rakyll/hey"
     [ "$status" -eq 0 ]
-    plonk untrack "go:github.com/rakyll/hey"
+    plonk rm "go:github.com/rakyll/hey"
   else
     skip "hey not installed"
   fi
@@ -123,9 +123,9 @@ setup() {
   local gobin="${GOBIN:-${GOPATH:-$HOME/go}/bin}"
   if [[ -x "$gobin/gopls" ]]; then
     # Should recognize gopls even with @version
-    run plonk track "go:golang.org/x/tools/gopls@latest"
+    run plonk add "go:golang.org/x/tools/gopls@latest"
     [ "$status" -eq 0 ]
-    plonk untrack "go:golang.org/x/tools/gopls@latest"
+    plonk rm "go:golang.org/x/tools/gopls@latest"
   else
     skip "gopls not installed"
   fi
@@ -139,9 +139,9 @@ setup() {
   require_package_manager pnpm
 
   # Non-existent package
-  run plonk track pnpm:this-package-does-not-exist-xyz123
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"not installed"* ]]
+  run plonk add --dry-run pnpm:this-package-does-not-exist-xyz123
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"would install"* ]]
 }
 
 @test "pnpm: IsInstalled finds globally installed packages" {
@@ -150,9 +150,9 @@ setup() {
 
   # Check if prettier is globally installed
   if pnpm list -g --depth=0 --json 2>/dev/null | grep -q '"prettier"'; then
-    run plonk track pnpm:prettier
+    run plonk add pnpm:prettier
     [ "$status" -eq 0 ]
-    plonk untrack pnpm:prettier
+    plonk rm pnpm:prettier
   else
     skip "prettier not globally installed via pnpm"
   fi
@@ -162,9 +162,9 @@ setup() {
   require_package_manager pnpm
 
   # Should gracefully handle check against empty/minimal global list
-  run plonk track pnpm:definitely-not-installed-xyz
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"not installed"* ]]
+  run plonk add --dry-run pnpm:definitely-not-installed-xyz
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"would install"* ]]
 }
 
 # =============================================================================
@@ -175,9 +175,9 @@ setup() {
   require_package_manager uv
 
   # Non-existent tool
-  run plonk track uv:this-tool-does-not-exist-xyz123
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"not installed"* ]]
+  run plonk add --dry-run uv:this-tool-does-not-exist-xyz123
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"would install"* ]]
 }
 
 @test "uv: IsInstalled finds installed tools" {
@@ -186,9 +186,9 @@ setup() {
 
   # Check if cowsay is installed via uv
   if uv tool list 2>/dev/null | grep -q "^cowsay "; then
-    run plonk track uv:cowsay
+    run plonk add uv:cowsay
     [ "$status" -eq 0 ]
-    plonk untrack uv:cowsay
+    plonk rm uv:cowsay
   else
     skip "cowsay not installed via uv"
   fi
@@ -202,11 +202,14 @@ setup() {
   uv tool install cowsay 2>/dev/null || true
 
   # Track should succeed
-  run plonk track uv:cowsay
+  run plonk add uv:cowsay
   [ "$status" -eq 0 ]
 
-  # Clean up
-  plonk untrack uv:cowsay
+  # Uninstall and untrack through the real manager
+  run plonk rm -f uv:cowsay
+  assert_success
+  ! uv tool list 2>/dev/null | grep -q "^cowsay "
+  ! grep -q cowsay "$PLONK_DIR/plonk.lock"
 }
 
 # =============================================================================
@@ -221,7 +224,7 @@ setup() {
   brew install cowsay 2>/dev/null || true
 
   # Track it
-  plonk track brew:cowsay
+  plonk add brew:cowsay
 
   # Dry-run apply should show it would be skipped (already installed)
   run plonk apply --dry-run
@@ -229,7 +232,7 @@ setup() {
   [[ "$output" == *"Already up to date. No changes."* ]]
 
   # Clean up
-  plonk untrack brew:cowsay
+  plonk rm brew:cowsay
 }
 
 @test "apply: handles empty lock file gracefully" {
@@ -297,7 +300,7 @@ EOF
 # =============================================================================
 
 @test "registry: GetManager returns error for unsupported manager" {
-  run plonk track npm:left-pad
+  run plonk add npm:left-pad
   [ "$status" -ne 0 ]
   [[ "$output" == *"unsupported manager"* ]]
 }
@@ -305,7 +308,7 @@ EOF
 @test "registry: all supported managers are recognized" {
   # These should fail with "not installed", not "unsupported manager"
   for manager in brew cargo go pnpm uv; do
-    run plonk track "${manager}:fake-package-xyz"
+    run plonk add --dry-run "${manager}:fake-package-xyz"
     [[ "$output" != *"unsupported manager"* ]]
   done
 }
@@ -319,7 +322,7 @@ EOF
     skip "brew is available"
   fi
 
-  run plonk track brew:cowsay
+  run plonk add brew:cowsay
   [ "$status" -ne 0 ]
   # Should fail, not crash
 }
@@ -329,7 +332,7 @@ EOF
     skip "cargo is available"
   fi
 
-  run plonk track cargo:bat
+  run plonk add cargo:bat
   [ "$status" -ne 0 ]
 }
 
@@ -337,7 +340,8 @@ EOF
   require_package_manager brew
 
   # This is hard to test directly, but we can at least verify
-  # the track command completes in reasonable time for invalid packages
-  timeout 30 plonk track brew:this-does-not-exist-xyz || true
+  # the add command completes in reasonable time for invalid packages
+  run timeout 30 plonk add --dry-run brew:this-does-not-exist-xyz
+  assert_success
   # If we get here without hanging, the test passes
 }

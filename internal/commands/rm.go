@@ -4,6 +4,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/richhaase/plonk/internal/config"
@@ -15,45 +16,21 @@ import (
 
 var rmCmd = &cobra.Command{
 	GroupID: "manage",
-	Use:     "rm <files...>",
-	Short:   "Remove dotfiles from plonk management",
-	Long: `Remove dotfiles from plonk management by deleting them from the configuration directory.
+	Use:     "rm <files|manager:package...>",
+	Short:   "Remove files or packages from management",
+	Long: `Remove managed dotfile sources or package entries from $PLONK_DIR.
 
-This command removes dotfiles from plonk management by deleting them from your
-plonk configuration directory ($PLONK_DIR). The original files in your home
-directory are NOT affected and remain in place unchanged.
+By default, deployed files and installed packages are kept. With --force (-f),
+also delete the deployed file or uninstall the package before removing it from
+management. Failed removals stay managed. Unmanaged items are skipped.
 
-After removal, the dotfiles will no longer be managed by plonk and won't be
-affected by 'plonk apply' operations. Use 'plonk status' to see which files
-are currently managed.
-
-Path Resolution:
-Plonk resolves paths relative to your home directory for removal:
-
-- Absolute paths: /home/user/.vimrc → Used as-is
-- Tilde paths: ~/.vimrc → Expands to /home/user/.vimrc
-- Relative paths: .vimrc → Resolves to /home/user/.vimrc
-- Plain names: vimrc → Resolves to /home/user/vimrc
-
-Security:
-- All paths must resolve to locations under your home directory ($HOME)
-- Paths outside $HOME are rejected to prevent unintended file operations
-
-Special Cases:
-- Only removes from $PLONK_DIR, never touches files in $HOME
-- Cannot remove directories (individual files only)
-- Dotfiles within $PLONK_DIR (like .git) are protected
-
-File Mapping (what gets removed):
-- ~/.zshrc removes → $PLONK_DIR/zshrc
-- ~/.config/nvim/init.lua removes → $PLONK_DIR/config/nvim/init.lua
+Files and packages can be mixed. Explicit file paths (./ or /) disambiguate names
+containing a colon. File removal stays under $HOME and $PLONK_DIR.
 
 Examples:
-  plonk rm ~/.zshrc                    # Remove single file from management
-  plonk rm ~/.zshrc ~/.vimrc           # Remove multiple files from management
-  plonk rm vimrc                       # Finds ~/.vimrc automatically
-  plonk rm .config/nvim/init.lua       # Remove specific nested file
-  plonk rm --dry-run ~/.zshrc ~/.vimrc # Preview what would be removed`,
+  plonk rm ~/.vimrc brew:ripgrep         # Stop managing; keep installed items
+  plonk rm -f ~/.vimrc brew:ripgrep      # Delete/uninstall and stop managing
+  plonk rm --dry-run -f cargo:bat        # Preview both steps`,
 	Args:         cobra.MinimumNArgs(1),
 	RunE:         runRm,
 	SilenceUsage: true,
@@ -61,15 +38,35 @@ Examples:
 
 func init() {
 	rootCmd.AddCommand(rmCmd)
+	rmCmd.Flags().BoolP("force", "f", false, "Also delete deployed files or uninstall packages")
 	rmCmd.Flags().BoolP("dry-run", "n", false, "Show what would be removed without making changes")
 
 	// Add file path completion
-	rmCmd.ValidArgsFunction = CompleteDotfilePaths
+	rmCmd.ValidArgsFunction = CompleteResourceArgs
 }
 
 func runRm(cmd *cobra.Command, args []string) error {
+	files, specs := splitResourceArgs(args)
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	force, _ := cmd.Flags().GetBool("force")
+	var errs []error
+	if len(specs) > 0 {
+		errs = append(errs, mutatePackages(cmd.Context(), config.GetDefaultConfigDirectory(), specs, false, force, dryRun))
+	}
+	if err := cmd.Context().Err(); err != nil {
+		return errors.Join(append(errs, err)...)
+	}
+	if len(files) > 0 {
+		errs = append(errs, runRmFiles(cmd, files))
+	}
+	return errors.Join(errs...)
+}
+
+func runRmFiles(cmd *cobra.Command, args []string) error {
 	// Get flags
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
+
+	force, _ := cmd.Flags().GetBool("force")
 
 	// Get directories
 	homeDir, err := config.GetHomeDir()
@@ -87,6 +84,7 @@ func runRm(cmd *cobra.Command, args []string) error {
 	// Configure options
 	opts := RemoveOptions{
 		DryRun: dryRun,
+		Force:  force,
 	}
 
 	// Process dotfiles using helper function
@@ -129,7 +127,7 @@ func calculateRemovalSummary(results []RemoveResult) DotfileRemovalSummary {
 	summary := DotfileRemovalSummary{}
 	for _, result := range results {
 		switch result.Status {
-		case RemoveStatusRemoved, RemoveStatusWouldRemove:
+		case RemoveStatusRemoved:
 			summary.Removed++
 		case RemoveStatusSkipped:
 			summary.Skipped++
@@ -155,6 +153,7 @@ func convertRemoveResultsToSerializable(results []RemoveResult) []output.Seriali
 			Metadata: map[string]interface{}{
 				"source":      result.Source,
 				"destination": result.Destination,
+				"force":       result.Force,
 			},
 		}
 	}

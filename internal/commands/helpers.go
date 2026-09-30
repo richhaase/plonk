@@ -4,6 +4,9 @@
 package commands
 
 import (
+	"github.com/richhaase/plonk/internal/config"
+	"github.com/richhaase/plonk/internal/lock"
+	"github.com/richhaase/plonk/internal/packages"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -69,4 +72,32 @@ func CompleteDotfilePaths(cmd *cobra.Command, args []string, toComplete string) 
 
 	// Fall back to default file completion for absolute paths and other cases
 	return nil, cobra.ShellCompDirectiveDefault
+}
+
+// CompleteResourceArgs offers manager prefixes alongside existing file completion.
+func CompleteResourceArgs(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	_, specs := splitResourceArgs([]string{toComplete})
+	if len(specs) > 0 {
+		var suggestions []string
+		current, err := lock.NewLockV3Service(config.GetDefaultConfigDirectory()).ReadOnly()
+		if err == nil {
+			for manager, pkgs := range current.Packages {
+				for _, pkg := range pkgs {
+					spec := manager + ":" + pkg
+					if strings.HasPrefix(spec, toComplete) {
+						suggestions = append(suggestions, spec)
+					}
+				}
+			}
+		}
+		return suggestions, cobra.ShellCompDirectiveNoFileComp
+	}
+	suggestions, directive := CompleteDotfilePaths(cmd, args, toComplete)
+	for _, manager := range packages.SupportedManagers {
+		if strings.HasPrefix(manager+":", toComplete) {
+			suggestions = append(suggestions, manager+":")
+			directive |= cobra.ShellCompDirectiveNoSpace
+		}
+	}
+	return suggestions, directive
 }

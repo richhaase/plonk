@@ -361,7 +361,7 @@ func TestCommitMessage(t *testing.T) {
 		want    string
 	}{
 		{"add", nil, "plonk: add"},
-		{"track", []string{"brew:ripgrep"}, "plonk: track brew:ripgrep"},
+		{"add", []string{"brew:ripgrep"}, "plonk: add brew:ripgrep"},
 		{"add", []string{".zshrc", ".vimrc"}, "plonk: add .zshrc .vimrc"},
 		{"rm", []string{"a", "b", "c", "d", "e", "f"}, "plonk: rm a b c d e (+1 more)"},
 		{"push", nil, "plonk: push"},

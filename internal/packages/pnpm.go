@@ -35,7 +35,7 @@ func (p *PNPMSimple) IsInstalled(ctx context.Context, name string) (bool, error)
 		}
 	}
 
-	return p.installed[name], nil
+	return p.installed[pnpmPackageName(name)], nil
 }
 
 // loadInstalled fetches all globally installed pnpm packages
@@ -90,6 +90,17 @@ func (p *PNPMSimple) markInstalled(name string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if p.installed != nil {
-		p.installed[name] = true
+		p.installed[pnpmPackageName(name)] = true
 	}
+}
+
+// pnpmPackageName strips the installation selector, preserving a scoped name's
+// leading @. Installed inventories and removal commands use package identities.
+func pnpmPackageName(spec string) string {
+	if len(spec) > 1 {
+		if i := strings.Index(spec[1:], "@"); i >= 0 {
+			return spec[:i+1]
+		}
+	}
+	return spec
 }

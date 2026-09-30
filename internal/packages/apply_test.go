@@ -292,3 +292,7 @@ func TestSimpleApply_CancellationAcrossManagers(t *testing.T) {
 		assert.ErrorIs(t, resultErr, context.Canceled)
 	}
 }
+
+func (s *stubManager) Uninstall(_ context.Context, _ string) error     { return nil }
+func (c *countingManager) Uninstall(_ context.Context, _ string) error { return nil }
+func (m contextManager) Uninstall(_ context.Context, _ string) error   { return nil }

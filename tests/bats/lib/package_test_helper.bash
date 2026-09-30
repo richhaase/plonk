@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Package test helpers for consolidated package manager testing
-# Reduces duplication across install, uninstall, and upgrade tests
+# Helpers for package add and forced removal tests
 
 # =============================================================================
 # Manager-specific package verification
@@ -148,10 +148,9 @@ test_install_single() {
 
   require_safe_package "$full_spec"
 
-  run plonk install "$full_spec"
+  run plonk add "$full_spec"
   assert_success
   assert_output --partial "$package"
-  assert_output --partial "added"
 
   track_artifact "package" "$full_spec"
 
@@ -170,7 +169,7 @@ test_uninstall_managed() {
   require_safe_package "$full_spec"
 
   # Install first
-  run plonk install "$full_spec"
+  run plonk add "$full_spec"
   assert_success
   track_artifact "package" "$full_spec"
 
@@ -178,7 +177,7 @@ test_uninstall_managed() {
   verify_package_installed "$manager" "$package"
 
   # Then uninstall
-  run plonk uninstall "$full_spec"
+  run plonk rm -f "$full_spec"
   assert_success
   assert_output --partial "removed"
 
@@ -186,63 +185,4 @@ test_uninstall_managed() {
   verify_package_not_installed "$manager" "$package"
   verify_not_in_lock_file "$package"
   verify_not_in_status "$package"
-}
-
-# Test upgrading a single package
-# Usage: test_upgrade_single <manager> <package>
-test_upgrade_single() {
-  local manager="$1"
-  local package="$2"
-  local full_spec="${manager}:${package}"
-
-  require_safe_package "$full_spec"
-
-  # Install first
-  run plonk install "$full_spec"
-  if [[ $status -ne 0 ]]; then
-    skip "Failed to install $full_spec"
-  fi
-  track_artifact "package" "$full_spec"
-
-  # Upgrade the specific package
-  run plonk upgrade "$full_spec"
-  assert_success
-  assert_output --partial "$package"
-
-  # Should still be installed after upgrade
-  verify_package_installed "$manager" "$package"
-}
-
-# Test upgrading all packages for a manager
-# Usage: test_upgrade_all_manager <manager> <package1> [package2...]
-test_upgrade_all_manager() {
-  local manager="$1"
-  shift
-  local packages=("$@")
-
-  # Install all packages
-  local full_specs=()
-  for pkg in "${packages[@]}"; do
-    local full_spec="${manager}:${pkg}"
-    require_safe_package "$full_spec"
-    full_specs+=("$full_spec")
-  done
-
-  run plonk install "${full_specs[@]}"
-  assert_success
-  for full_spec in "${full_specs[@]}"; do
-    track_artifact "package" "$full_spec"
-  done
-
-  # Upgrade all for this manager
-  run plonk upgrade "$manager"
-  assert_success
-  for pkg in "${packages[@]}"; do
-    assert_output --partial "$pkg"
-  done
-
-  # All should still be installed
-  for pkg in "${packages[@]}"; do
-    verify_package_installed "$manager" "$pkg"
-  done
 }

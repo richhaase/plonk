@@ -267,7 +267,7 @@ cleanup_test_artifacts() {
         ;;
       package)
         if [[ "$PLONK_TEST_CLEANUP_PACKAGES" != "0" ]]; then
-          plonk uninstall "$name" --force 2>/dev/null || true
+          plonk rm --force "$name" 2>/dev/null || true
         fi
         ;;
     esac

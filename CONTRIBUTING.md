@@ -76,6 +76,7 @@ To add a new one:
    type Manager interface {
        IsInstalled(ctx context.Context, name string) (bool, error)
        Install(ctx context.Context, name string) error
+       Uninstall(ctx context.Context, name string) error
    }
    ```
 

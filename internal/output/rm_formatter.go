@@ -61,6 +61,14 @@ func (f DotfileRemovalFormatter) TableOutput() string {
 		if r.Status == "would-remove" {
 			detail = "would remove source from configuration; deployed file would be kept"
 		}
+		if force, _ := r.Metadata["force"].(bool); force {
+			if r.Status == "removed" {
+				detail = "source and deployed file removed"
+			}
+			if r.Status == "would-remove" {
+				detail = "would remove source and deployed file"
+			}
+		}
 		if source, ok := r.Metadata["source"].(string); ok && (r.Status == "removed" || r.Status == "would-remove") {
 			detail += "\n  source: " + source
 		}

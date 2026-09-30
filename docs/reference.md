@@ -4,12 +4,13 @@ Complete CLI and configuration reference.
 
 ## Migration Notes
 
+- **Current development**: `track` and `untrack` are removed. Use `add manager:package` (install if missing, then track) and `rm manager:package` (untrack). `rm -f` also uninstalls packages or deletes deployed files.
 - **v0.33**: `status` shows actionable items by default; use `--all` for the complete inventory.
 - **v0.31**: Templates support macOS Keychain directives (`{{keychain:service/account}}`) and mask Keychain-derived values in `plonk diff`.
 - **v0.30**: `dotfiles.rules` can set an explicit deploy mode, such as `"0600"`, for an individual dotfile.
-- **v0.27**: Mutating commands (`add`, `rm`, `track`, `untrack`, `config edit`) auto-commit by default. Disable with `git.auto_commit: false` in `plonk.yaml`.
+- **v0.27**: Mutating commands (`add`, `rm`, `config edit`) auto-commit by default. Disable with `git.auto_commit: false` in `plonk.yaml`.
 - **v0.27**: `plonk push` and `plonk pull` synchronize your dotfiles repository.
-- `install`, `uninstall`, and `upgrade` were removed in v0.26; package operations use `track`, `untrack`, and `apply`.
+- `install`, `uninstall`, and `upgrade` were removed in v0.26; package operations use `add`, `rm`, and `apply`.
 - Supported package managers: `brew`, `cargo`, `go`, `pnpm`, `uv`.
 - Lock files use `version: 3`; older v2 files migrate automatically.
 
@@ -31,54 +32,50 @@ tool's native output.
 
 ## Commands
 
-### plonk track
-
-Track packages that are already installed.
-
-```bash
-plonk track <manager:package>...
-```
-
-- Verifies packages are installed before tracking
-- Adds to `plonk.lock`
-- Format `manager:package` is required (no default manager)
-
-```bash
-plonk track brew:ripgrep cargo:bat go:golang.org/x/tools/gopls
-```
-
-### plonk untrack
-
-Stop tracking packages (does not uninstall).
-
-```bash
-plonk untrack <manager:package>...
-```
-
-```bash
-plonk untrack brew:ripgrep
-```
-
 ### plonk add
 
-Add dotfiles to management.
+Copy files from `$HOME` into `$PLONK_DIR`, stripping the leading dot. For
+`manager:package`, track an installed package or install it first if missing.
+Installation failures are not added to the lock file. Already tracked packages
+are checked and installed if missing.
 
 ```bash
-plonk add <file>...
-plonk add -y              # Sync all drifted files back to $PLONK_DIR
-plonk add --dry-run ~/.vimrc # Preview
+plonk add ~/.vimrc brew:ripgrep  # Files and packages may be mixed
+plonk add cargo:bat             # Install if missing, then track
+plonk add --dry-run uv:ruff     # Preview without installing or tracking
+plonk add -y                   # Sync drifted files back to $PLONK_DIR
 ```
 
-Copies files from `$HOME` to `$PLONK_DIR`, stripping the dot prefix.
+`--sync-drifted` (`-y`) accepts no file or package arguments. Use explicit file
+paths (`./` or `/`) to disambiguate filenames containing a colon.
 
 ### plonk rm
 
-Remove dotfiles from management (does not delete deployed files).
+Remove dotfile sources or package entries from management. By default, deployed
+files and installed packages are kept. `--force` (`-f`) also deletes the deployed
+file or uninstalls the package before removing it from management. A failed
+removal stays managed. Unmanaged items are skipped, including with `-f`.
 
 ```bash
-plonk rm <file>...
-plonk rm --dry-run ~/.vimrc
+plonk rm ~/.vimrc brew:ripgrep          # Keep deployed/installed items
+plonk rm -f ~/.vimrc brew:ripgrep       # Delete/uninstall and stop managing
+plonk rm --dry-run -f go:golang.org/x/tools/gopls
 ```
+
+Forced file removal accepts individual files, including template targets; it does
+not recursively delete directories. An already absent deployed file or package
+can still be removed from management. Plain package removal also accepts legacy
+manager names in old lock files; forced removal requires a supported manager.
+Forced file removal protects Plonk control files even when a template maps to
+one of those files.
+
+Go removal deletes the binary in `GOBIN` or the first `GOPATH` entry's `bin`
+directory (default `~/go/bin`) after verifying that its build metadata matches
+the requested import path. Import paths ending in a major version such as `/v2`
+use the preceding component as the executable name, matching Go. It leaves
+downloaded modules and caches intact.
+Other managers use their normal uninstall commands; `-f` does not bypass the
+manager's dependency checks or request extra cleanup.
 
 ### plonk apply
 
@@ -386,7 +383,7 @@ packages:
     - golang.org/x/tools/gopls
 ```
 
-Lock-file mutations (track/untrack) are serialized across concurrent plonk processes with an advisory file lock, and the lock file is written atomically via a unique same-directory temporary file.
+Lock-file mutations (package add/rm) are serialized across concurrent plonk processes with an advisory file lock, and the lock file is written atomically via a unique same-directory temporary file.
 
 ## Exit Codes
 
@@ -396,7 +393,7 @@ Lock-file mutations (track/untrack) are serialized across concurrent plonk proce
 `status`, `packages`, `dotfiles`, and `doctor` may report unhealthy items while
 returning `0`; inspect their output for health information.
 
-The mutation failure policy is consistent across all batch commands (`apply`, `track`, `untrack`, `add`, `rm`): a non-zero exit means at least one requested mutation did not complete.
+The mutation failure policy is consistent across all batch commands (`apply`, `add`, `rm`): a non-zero exit means at least one requested mutation did not complete.
 
 SIGINT/SIGTERM cancels the current operation and its child processes (Git, package managers, diff tools) promptly.
 
