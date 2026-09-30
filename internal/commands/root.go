@@ -38,11 +38,18 @@ and managing dotfiles across multiple package managers.`,
 		}
 		return cmd.Help()
 	},
-	SilenceUsage: true,
+	SilenceUsage:  true,
+	SilenceErrors: true,
 }
 
 func init() {
 	rootCmd.Flags().BoolP("version", "v", false, "Show version information")
+	rootCmd.AddGroup(
+		&cobra.Group{ID: "inspect", Title: "Inspect:"},
+		&cobra.Group{ID: "manage", Title: "Manage:"},
+		&cobra.Group{ID: "sync", Title: "Sync:"},
+		&cobra.Group{ID: "configure", Title: "Configure:"},
+	)
 }
 
 // ExecuteWithExitCode runs the root command and returns appropriate exit code.
@@ -56,6 +63,7 @@ func ExecuteWithExitCode(ctx context.Context, version, commit, date string) int 
 	}
 	err := rootCmd.ExecuteContext(ctx)
 	if err != nil {
+		output.PrintAction("error", err.Error(), "")
 		return 1
 	}
 	return 0

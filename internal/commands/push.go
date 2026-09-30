@@ -13,8 +13,9 @@ import (
 )
 
 var pushCmd = &cobra.Command{
-	Use:   "push",
-	Short: "Push committed changes to remote",
+	GroupID: "sync",
+	Use:     "push",
+	Short:   "Push committed changes to remote",
 	Long: `Push committed changes in your plonk directory to the remote.
 
 Warns if there are uncommitted changes in the working tree.
@@ -54,14 +55,14 @@ func runPush(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if dirty {
-		output.Println("Warning: uncommitted changes in working tree")
+		output.PrintAction("warn", "Working tree", "uncommitted changes are not included")
 	}
 
 	// Push
-	output.Println("Pushing to remote...")
+	output.PrintAction("info", "Pushing committed changes", "")
 	if err := client.Push(ctx); err != nil {
 		return err
 	}
-	output.Println("Push complete")
+	output.PrintAction("done", "Push", "committed changes sent to remote")
 	return nil
 }

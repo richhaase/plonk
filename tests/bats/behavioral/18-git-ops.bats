@@ -87,7 +87,7 @@ setup() {
 
     run plonk push
     assert_success
-    assert_output --partial "Push complete"
+    assert_output --partial "done  Push"
 }
 
 @test "push warns about uncommitted changes" {
@@ -101,8 +101,8 @@ setup() {
 
     run plonk push
     assert_success
-    assert_output --partial "Warning: uncommitted changes"
-    assert_output --partial "Push complete"
+    assert_output --partial "uncommitted changes are not included"
+    assert_output --partial "done  Push"
 
     # Verify the file is still uncommitted
     run git -C "$PLONK_DIR" status --porcelain
@@ -141,7 +141,7 @@ setup() {
 
     run plonk pull
     assert_success
-    assert_output --partial "Pull complete"
+    assert_output --partial "done  Pull"
 
     # Verify the file arrived
     [ -f "$PLONK_DIR/remotefile" ]
@@ -158,7 +158,7 @@ setup() {
 
     run plonk pull
     assert_success
-    assert_output --partial "Committed local changes before pull"
+    assert_output --partial "committed local changes before pull"
 
     # Verify file was committed
     run git -C "$PLONK_DIR" status --porcelain
@@ -173,8 +173,8 @@ setup() {
 
     run plonk pull --apply
     assert_success
-    assert_output --partial "Pull complete"
-    assert_output --partial "Applying configuration"
+    assert_output --partial "done  Pull"
+    assert_output --partial "Apply"
 }
 
 @test "pull fails for non-git-repo" {

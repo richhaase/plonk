@@ -22,12 +22,12 @@ func AutoCommit(ctx context.Context, configDir string, command string, args []st
 	client := New(configDir)
 
 	if !client.IsRepo() {
-		output.Printf("Warning: %s is not a git repository; changes not committed. Set git.auto_commit: false in plonk.yaml to silence this warning.\n", configDir)
+		output.PrintAction("warn", configDir, "not a git repository; changes not committed. Set git.auto_commit: false in plonk.yaml to silence this warning.")
 		return
 	}
 
 	msg := CommitMessage(command, args)
 	if err := client.Commit(ctx, msg); err != nil {
-		output.Printf("Warning: auto-commit failed: %v\n", err)
+		output.PrintAction("warn", "Auto-commit", err.Error())
 	}
 }

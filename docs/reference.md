@@ -4,6 +4,7 @@ Complete CLI and configuration reference.
 
 ## Migration Notes
 
+- **v0.33**: `status` shows actionable items by default; use `--all` for the complete inventory.
 - **v0.31**: Templates support macOS Keychain directives (`{{keychain:service/account}}`) and mask Keychain-derived values in `plonk diff`.
 - **v0.30**: `dotfiles.rules` can set an explicit deploy mode, such as `"0600"`, for an individual dotfile.
 - **v0.27**: Mutating commands (`add`, `rm`, `track`, `untrack`, `config edit`) auto-commit by default. Disable with `git.auto_commit: false` in `plonk.yaml`.
@@ -11,6 +12,22 @@ Complete CLI and configuration reference.
 - `install`, `uninstall`, and `upgrade` were removed in v0.26; package operations use `track`, `untrack`, and `apply`.
 - Supported package managers: `brew`, `cargo`, `go`, `pnpm`, `uv`.
 - Lock files use `version: 3`; older v2 files migrate automatically.
+
+## Output conventions
+
+Actions use compact, labeled results (`added`, `installed`, `would update`,
+`failed`) with explanations on the following line. Inventories align the state
+before each package or dotfile; package identities include their manager.
+`doctor` and clone setup group related checks and steps. Healthy `status` output
+confirms that managed items are in sync without listing them.
+
+Color reinforces the text labels when the output stream supports it: green for
+completed actions, amber for missing or drifted items and warnings, red for
+failures, and blue for information and dry-run plans. Paths stay uncolored.
+`NO_COLOR=1` and `TERM=dumb` disable color. Redirected output is plain text;
+progress uses stderr and detects its terminal support independently of stdout.
+Configuration output remains YAML, and `diff` retains the configured diff
+tool's native output.
 
 ## Commands
 
@@ -49,7 +66,7 @@ Add dotfiles to management.
 ```bash
 plonk add <file>...
 plonk add -y              # Sync all drifted files back to $PLONK_DIR
-plonk add --dry-run       # Preview
+plonk add --dry-run ~/.vimrc # Preview
 ```
 
 Copies files from `$HOME` to `$PLONK_DIR`, stripping the dot prefix.
@@ -60,7 +77,7 @@ Remove dotfiles from management (does not delete deployed files).
 
 ```bash
 plonk rm <file>...
-plonk rm --dry-run
+plonk rm --dry-run ~/.vimrc
 ```
 
 ### plonk apply
@@ -98,11 +115,21 @@ plonk status -a                 # Short form of --all
 **States:**
 - `managed` - Tracked and present
 - `missing` - Tracked but not present
-- `drifted` - Dotfile modified since deployment
+- `drifted` - Deployed contents or explicitly configured permissions differ
+- `error` - The item could not be checked
+
+### plonk packages
+
+Show all tracked packages, including healthy items, and remote sync status.
+
+```bash
+plonk packages
+plonk p                        # Alias
+```
 
 ### plonk dotfiles
 
-Show dotfile status only.
+Show all managed dotfiles, including healthy items, and remote sync status.
 
 ```bash
 plonk dotfiles
@@ -122,7 +149,9 @@ Uses `git diff` by default, or `diff_tool` from config.
 
 ### plonk clone
 
-Clone a dotfiles repository and apply.
+Clone into `$PLONK_DIR` and apply. An existing directory is not overwritten.
+Install required package managers beforehand; clone reports unavailable managers
+and applies what it can.
 
 ```bash
 plonk clone <repo>
@@ -176,7 +205,7 @@ View and edit configuration.
 
 ```bash
 plonk config show              # View current config
-plonk config edit              # Edit in $EDITOR
+plonk config edit              # Edit, validate, and save non-default settings
 ```
 
 ### plonk completion
@@ -187,6 +216,7 @@ Generate shell completions.
 plonk completion bash
 plonk completion zsh
 plonk completion fish
+plonk completion powershell
 ```
 
 ## Package Managers
@@ -201,7 +231,7 @@ plonk completion fish
 
 ## Configuration
 
-Configuration file: `~/.config/plonk/plonk.yaml`
+Configuration file: `$PLONK_DIR/plonk.yaml` (default: `~/.config/plonk/plonk.yaml`)
 
 All settings are optional. Plonk uses sensible defaults.
 
@@ -212,27 +242,20 @@ All settings are optional. Plonk uses sensible defaults.
 git:
   auto_commit: true        # Auto-commit after mutations (default: true)
 
-# Package manager default (for discovery, not tracking)
-default_manager: brew
-
 # Timeouts (seconds)
-operation_timeout: 300     # General operations
-dotfile_timeout: 60        # File operations
+operation_timeout: 300     # Doctor health checks
+dotfile_timeout: 60        # Dotfile apply context
 # Note: package installs use a fixed 10-minute per-package timeout.
 
 # Diff tool for viewing drifted files
-diff_tool: delta           # Default: git diff --no-index
-
-# Directories to scan for dotfiles
-expand_directories:
-  - .config                # Default
+diff_tool: diff -u         # Default: git diff --no-index
 
 # Files to ignore
 ignore_patterns:
   - "*.swp"
   - "*.tmp"
   - ".DS_Store"
-  - ".git/*"
+  - ".git"
 
 # Per-dotfile deploy permissions (optional)
 dotfiles:
@@ -249,7 +272,7 @@ files) that should be deployed with restrictive permissions such as `0600` even
 when committed with standard `0644` permissions.
 
 - `name` - Dotfile source path relative to `$PLONK_DIR` (e.g. `pi/agent/auth.json.tmpl`). Required.
-- `mode` - Octal file permissions applied to the deployed target after write and rename. Must be in the range `0000`-`0777` (digits `0`-`7` only). Invalid values produce a configuration validation error.
+- `mode` - Octal file permissions applied during deployment. Must be in the range `0000`-`0777` (digits `0`-`7` only). Invalid values produce a configuration validation error.
 
 `plonk apply` updates a target whose permissions differ from its explicit `mode`,
 even when its contents already match. This applies to ordinary files and rendered
@@ -267,14 +290,21 @@ update.
 | `PLONK_DIR` | Config directory (default: `~/.config/plonk`) |
 | `VISUAL` | Editor for `config edit` |
 | `EDITOR` | Fallback editor |
-| `NO_COLOR` | Disable colored output |
+| `NO_COLOR` | Disable colored output when nonempty |
+| `TERM` | `dumb` disables colored output |
 
-### Precedence
+### Defaults and tool commands
 
-1. Command-line flags
-2. Environment variables
-3. `plonk.yaml`
-4. Built-in defaults
+Missing settings use built-in defaults. Nonempty `ignore_patterns` replaces the
+default list; `plonk config show` displays the effective configuration.
+`default_manager` (default `brew`), `expand_directories` (default `[.config]`), and
+`dotfiles.unmanaged_filters` are retained configuration fields, but do not control
+current tracking or file discovery. Tracking always requires `manager:package`.
+
+The editor is selected from `VISUAL`, then `EDITOR`, then `vim`. Editor and
+`diff_tool` commands are split on whitespace, without shell expansion or quoting.
+The diff tool receives the deployed path followed by the source path, and must
+accept two file arguments. Exit `1` means differences; other nonzero exits fail.
 
 ## Templates
 
@@ -297,8 +327,9 @@ Legacy `{{VAR_NAME}}` and explicit `{{env:VAR_NAME}}` both resolve environment v
 
 Use `{{keychain:service/account}}` for a generic-password item. If `/account` is omitted, Plonk uses the current macOS username as the account.
 
+For `pi/agent/auth.json.tmpl`:
+
 ```json
-// pi/agent/auth.json.tmpl
 {
   "openrouter": {
     "type": "api_key",
@@ -313,7 +344,7 @@ Create the item interactively so its value is not exposed through shell history 
 security add-generic-password -s plonk -a openrouter -w
 ```
 
-Plonk reads Keychain using the macOS `security` tool with a fixed executable path, a restricted process environment, and a timeout. It is a Keychain consumer only; it never stores or changes Keychain values.
+Plonk reads Keychain items; it never stores or changes them.
 
 ### How It Works
 
@@ -355,21 +386,20 @@ packages:
     - golang.org/x/tools/gopls
 ```
 
-Lock-file mutations (track/untrack) are serialized across concurrent plonk processes with an advisory file lock, and the lock file is written atomically via a unique same-directory temporary file. Concurrent plonk invocations cannot lose lock-file updates.
+Lock-file mutations (track/untrack) are serialized across concurrent plonk processes with an advisory file lock, and the lock file is written atomically via a unique same-directory temporary file.
 
 ## Exit Codes
 
-- `0` - Success: every requested item succeeded (skipped items do not count as failures)
+- `0` - Command completed; skipped mutations do not count as failures
 - `1` - Error: any requested item failed, even if others succeeded (partial failure)
 
-This policy is consistent across all batch commands (`apply`, `track`, `untrack`, `add`, `rm`): a non-zero exit means at least one requested mutation did not complete.
+`status`, `packages`, `dotfiles`, and `doctor` may report unhealthy items while
+returning `0`; inspect their output for health information.
+
+The mutation failure policy is consistent across all batch commands (`apply`, `track`, `untrack`, `add`, `rm`): a non-zero exit means at least one requested mutation did not complete.
 
 SIGINT/SIGTERM cancels the current operation and its child processes (Git, package managers, diff tools) promptly.
 
 Diff tools are invoked per the documented diff(1) convention: exit status `1` means "files differ" and is treated as success; any other non-zero exit is a failure and is propagated.
 
 Template-provider failures are reported with a specific cause in the error message: secret not found, provider unavailable, Keychain locked, access denied, or invalid directive syntax.
-
-## Output
-
-Commands display human-readable output. `plonk config show` displays configuration as YAML with comments and optional terminal colors. There is no `--output` / `-o` flag.

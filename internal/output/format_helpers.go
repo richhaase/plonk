@@ -5,31 +5,42 @@ import (
 	"strings"
 )
 
-// WriteTitle writes a title with underline to the builder.
-func WriteTitle(w *strings.Builder, title string) {
-	w.WriteString(title + "\n")
-	w.WriteString(strings.Repeat("=", len(title)) + "\n\n")
+// WriteTitle writes a quiet section heading without decorative rules.
+func WriteTitle(w *strings.Builder, title string) { fmt.Fprintf(w, "%s\n\n", title) }
+
+// WriteAction keeps the state separate from the copyable item and its details.
+// Padding is applied before color so escape sequences do not affect alignment.
+func WriteAction(w *strings.Builder, state, item, detail string, ledger bool) {
+	label := strings.ReplaceAll(state, "-", " ")
+	padding := "  "
+	if ledger && len(label) < 15 {
+		padding = strings.Repeat(" ", 15-len(label))
+	}
+	fmt.Fprintf(w, "%s%s%s\n", ColorState(label), padding, item)
+	if detail != "" {
+		fmt.Fprintf(w, "  %s\n", detail)
+	}
 }
 
-// WriteRemoteSync writes the remote sync status line if non-empty.
+// WriteRemoteSync writes the remote state without coloring paths or hints.
 func WriteRemoteSync(w *strings.Builder, syncStatus string) {
 	if syncStatus == "" {
 		return
 	}
-	fmt.Fprintf(w, "Remote: %s\n\n", syncStatus)
+	state := "warning"
+	if syncStatus == "up to date" {
+		state = "success"
+	}
+	fmt.Fprintf(w, "Remote: %s\n\n", colorState(syncStatus, state, nil))
 }
 
-// WriteErrors writes domain-specific error items.
-func WriteErrors(w *strings.Builder, domain string, errors []Item) {
-	if len(errors) == 0 {
-		return
-	}
-	fmt.Fprintf(w, "\n%s errors:\n", domain)
-	for _, item := range errors {
-		if item.Error != "" {
-			fmt.Fprintf(w, "  %s %s: %s\n", IconError, item.Name, item.Error)
-		} else {
-			fmt.Fprintf(w, "  %s %s\n", IconError, item.Name)
+// WriteErrors displays each error with its qualified identity and explanation.
+func WriteErrors(w *strings.Builder, domain string, items []Item) {
+	for _, item := range items {
+		name := item.Name
+		if domain == "package" && item.Manager != "" {
+			name = item.Manager + ":" + name
 		}
+		WriteAction(w, "error", name, item.Error, false)
 	}
 }

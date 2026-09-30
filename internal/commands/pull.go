@@ -14,8 +14,9 @@ import (
 )
 
 var pullCmd = &cobra.Command{
-	Use:   "pull",
-	Short: "Pull remote changes into plonk directory",
+	GroupID: "sync",
+	Use:     "pull",
+	Short:   "Pull remote changes into plonk directory",
 	Long: `Pull remote changes into your plonk directory.
 
 If there are uncommitted local changes and auto_commit is enabled, they are
@@ -68,19 +69,19 @@ func runPull(cmd *cobra.Command, args []string) error {
 		if err := client.Commit(ctx, msg); err != nil {
 			return fmt.Errorf("failed to commit local changes: %w", err)
 		}
-		output.Println("Committed local changes before pull")
+		output.PrintAction("done", "Snapshot", "committed local changes before pull")
 	}
 
 	// Pull
-	output.Println("Pulling from remote...")
+	output.PrintAction("info", "Pulling remote changes", "")
 	if err := client.Pull(ctx); err != nil {
 		return err
 	}
-	output.Println("Pull complete")
+	output.PrintAction("done", "Pull", "remote changes received")
 
 	// Optionally apply
 	if applyAfter {
-		output.Println("Applying configuration...")
+		output.StageUpdate("Apply")
 		homeDir, err := config.GetHomeDir()
 		if err != nil {
 			return fmt.Errorf("cannot determine home directory: %w", err)

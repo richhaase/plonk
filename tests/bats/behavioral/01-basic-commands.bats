@@ -11,7 +11,7 @@ setup() {
   run plonk
   assert_success
   assert_output --partial "Usage:"
-  assert_output --partial "Available Commands:"
+  assert_output --partial "Inspect:"
 }
 
 @test "plonk status works with empty config" {
@@ -53,9 +53,9 @@ setup() {
   assert_output --partial "plonk"
 }
 
-@test "status supports table format (default)" {
+@test "status uses compact output by default" {
   run plonk status
   assert_success
-  # Look for table-like formatting
-  assert_output --partial "Plonk Status"
+  # Empty status needs no decorative heading
+  assert_output --partial "No managed items."
 }

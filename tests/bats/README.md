@@ -1,121 +1,46 @@
-# BATS Tests for Plonk
+# BATS Tests
 
-## Running Tests (Docker - Recommended)
+BATS exercises the real CLI and package managers. Use Docker: host execution can
+install packages and overwrite files under `$HOME`, even though `$PLONK_DIR` is
+isolated per test.
 
-**Always use Docker** to run BATS tests. This isolates test effects from your local system:
-
-```bash
-# Build Docker image and run all tests
-make docker-test-all
-
-# Run all tests (if image already built)
-make docker-test
-
-# Run smoke tests only (fast verification)
-make docker-test-smoke
-
-# Run specific test file
-make docker-test-file file=tests/bats/behavioral/02-package-track.bats
-
-# Interactive shell for debugging
-make docker-shell
-```
-
----
-
-## ⚠️ Local Execution Warning ⚠️
-
-> **Only run tests locally if you:**
-> - Are certain you understand the risks
-> - Accept that tests WILL modify your system
-> - Have backed up your plonk configuration
-
-### What Local Tests Do
-- **INSTALL REAL PACKAGES** via brew, npm, cargo, uv, etc.
-- **CREATE REAL DOTFILES** in your home directory
-- **MODIFY SYSTEM STATE** that persists after tests complete
-
-### Local Execution (Not Recommended)
-
-If you must run locally:
+## Run
 
 ```bash
-# 1. BACKUP FIRST
-cp -r ~/.config/plonk ~/.config/plonk.backup
-
-# 2. Review what will be installed
-cat tests/bats/config/safe-packages.list
-cat tests/bats/config/safe-dotfiles.list
-
-# 3. Run tests
-bats tests/bats/behavioral/
-
-# 4. Cleanup if needed
-bats tests/bats/cleanup/99-cleanup-all.bats
+make docker-test-all            # Build the current checkout and run all tests
+make docker-test                # Run the existing image
+make docker-test-smoke          # Smoke tests in the existing image
+make docker-test-file file=tests/bats/behavioral/19-output-presentation.bats
+make docker-shell              # Debug interactively
 ```
 
----
+Rebuild after source changes: Compose does not mount the checkout by default.
+Tests requiring unavailable managers or fixtures may skip; inspect the BATS
+summary and skip reasons.
 
-## Environment Variables
+## Write tests
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PLONK_TEST_CLEANUP_PACKAGES` | `1` | Set to `0` to keep test packages |
-| `PLONK_TEST_CLEANUP_DOTFILES` | `1` | Set to `0` to keep test dotfiles |
-| `PLONK_TEST_SAFE_PACKAGES` | See safe-packages.list | Comma-separated list of allowed packages |
-| `PLONK_TEST_SAFE_DOTFILES` | See safe-dotfiles.list | Comma-separated list of allowed dotfiles |
+- Use fixtures from `config/safe-packages.list` and `config/safe-dotfiles.list`.
+- Initialize the environment with `lib/test_helper.bash` and track artifacts for
+  cleanup using its helpers.
+- Assert behavior, exit codes, and relevant output rather than entire transcripts.
+- Validate in Docker before submitting changes.
 
-### Test Development Guidelines
+`behavioral/19-output-presentation.bats` covers compact actions, inventories,
+healthy status, dry runs, diagnostics, help groups, and terminal color. Its
+Python 3 helper (`lib/capture_terminal.py`) captures a pseudo-terminal and checks
+`NO_COLOR` and `TERM=dumb`. Captured nonterminal output must be free of ANSI color.
 
-1. **Only use packages/dotfiles from the safe lists**
-2. **Always track created artifacts for cleanup**
-3. **Test on a non-critical system first**
-4. **Provide clear test descriptions**
+## Environment
 
-### Directory Structure
+| Variable | Default | Purpose |
+|---|---|---|
+| `PLONK_TEST_CLEANUP_PACKAGES` | `1` | Set `0` to keep installed test packages |
+| `PLONK_TEST_CLEANUP_DOTFILES` | `1` | Set `0` to keep created test dotfiles |
+| `PLONK_TEST_SAFE_PACKAGES` | `config/safe-packages.list` | Override allowed packages with a comma-separated list |
+| `PLONK_TEST_SAFE_DOTFILES` | `config/safe-dotfiles.list` | Override allowed dotfiles with a comma-separated list |
 
-```
-tests/bats/
-├── README.md              # This file
-├── config/                # Configuration files
-│   ├── safe-packages.list # Allowed test packages
-│   └── safe-dotfiles.list # Allowed test dotfiles
-├── lib/                   # Test utilities
-│   ├── test_helper.bash   # Core test functions
-│   ├── assertions.bash    # Custom assertions
-│   └── cleanup.bash       # Cleanup utilities
-├── behavioral/            # Main test suites
-│   ├── 00-smoke.bats     # Basic setup verification
-│   ├── 01-basic-commands.bats
-│   └── ...
-└── cleanup/              # Cleanup tests
-    └── 99-cleanup-all.bats
-```
-
-### Troubleshooting
-
-**Tests fail with "command not found"**
-- Ensure plonk is in your PATH
-- Run `go build` to create the binary
-
-**Tests fail with "package manager not available"**
-- Install required package managers (brew, npm, etc.)
-- Or skip tests for unavailable managers
-
-**Tests leave artifacts**
-- Tests should cleanup automatically
-- If not, run: `bats tests/bats/cleanup/99-cleanup-all.bats`
-- Or set `PLONK_TEST_CLEANUP_PACKAGES=0` to intentionally keep packages
-
-**Permission errors**
-- Some tests may require sudo (though we try to avoid this)
-- Run tests as your normal user, not root
-
-### Contributing
-
-When adding new tests:
-1. Use descriptive test names
-2. Always use safe packages/dotfiles
-3. Track all artifacts for cleanup
-4. Test locally before committing
-5. Update safe lists if needed (with team review)
+For disposable host environments only, build `plonk` onto `PATH`, install BATS
+and Python 3, then run `make test-bats`. Review fixtures first. The cleanup suite
+is `tests/bats/cleanup/99-cleanup-all.bats`; cleanup is not a substitute for
+isolation or a backup.

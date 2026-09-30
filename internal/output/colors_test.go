@@ -12,6 +12,8 @@ import (
 )
 
 func TestInitColors(t *testing.T) {
+	t.Setenv("NO_COLOR", "")
+	t.Setenv("TERM", "xterm-256color")
 	// Save original state
 	originalWriter := writer
 	originalNoColor := color.NoColor

@@ -21,6 +21,7 @@ import (
 // Status command implementation using unified state management system
 
 var statusCmd = &cobra.Command{
+	GroupID: "inspect",
 	Use:     "status",
 	Aliases: []string{"st"},
 	Short:   "Display overall plonk status",

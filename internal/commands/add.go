@@ -15,8 +15,9 @@ import (
 )
 
 var addCmd = &cobra.Command{
-	Use:   "add [files...]",
-	Short: "Add dotfiles to plonk management",
+	GroupID: "manage",
+	Use:     "add [files...]",
+	Short:   "Add dotfiles to plonk management",
 	Long: `Add dotfiles to plonk management by copying them to the configuration directory.
 
 This command copies dotfiles from their current locations to your plonk configuration

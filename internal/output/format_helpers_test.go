@@ -8,7 +8,7 @@ import (
 func TestWriteTitle(t *testing.T) {
 	var b strings.Builder
 	WriteTitle(&b, "Plonk Status")
-	want := "Plonk Status\n============\n\n"
+	want := "Plonk Status\n\n"
 	if got := b.String(); got != want {
 		t.Errorf("WriteTitle() = %q, want %q", got, want)
 	}
@@ -42,10 +42,10 @@ func TestWriteErrors(t *testing.T) {
 		}
 		WriteErrors(&b, "package", errors)
 		got := b.String()
-		if !strings.Contains(got, "package errors:") {
+		if !strings.Contains(got, "error  foo") {
 			t.Errorf("expected domain header, got %q", got)
 		}
-		if !strings.Contains(got, "foo: not found") {
+		if !strings.Contains(got, "foo\n  not found") {
 			t.Errorf("expected error detail, got %q", got)
 		}
 	})

@@ -5,5 +5,5 @@ package output
 
 // StageUpdate prints a stage update for multi-stage operations
 func StageUpdate(stage string) {
-	progressWriter.Printf("%s\n", stage)
+	progressWriter.Printf("\n%s\n", stage)
 }

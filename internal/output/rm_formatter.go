@@ -3,6 +3,11 @@
 
 package output
 
+import (
+	"fmt"
+	"strings"
+)
+
 // SerializableRemovalResult represents a removal result for serialization
 type SerializableRemovalResult struct {
 	Name     string                 `json:"name" yaml:"name"`
@@ -35,90 +40,37 @@ func NewDotfileRemovalFormatter(data DotfileRemovalOutput) DotfileRemovalFormatt
 	return DotfileRemovalFormatter{Data: data}
 }
 
-// TableOutput generates human-friendly output
+// TableOutput generates compact removal results, retaining every failure reason.
 func (f DotfileRemovalFormatter) TableOutput() string {
 	d := f.Data
-	tb := NewTableBuilder()
-
-	// For single file operations, show inline result
-	if d.TotalFiles == 1 && len(d.Results) == 1 {
-		result := d.Results[0]
-		switch result.Status {
-		case "removed":
-			tb.AddLine("Removed dotfile from plonk management")
-			tb.AddLine("   File: %s", result.Name)
-			if source, ok := result.Metadata["source"].(string); ok {
-				tb.AddLine("   Source: %s (removed from config)", source)
-			}
-		case "would-remove":
-			tb.AddLine("Would remove dotfile from plonk management (dry-run)")
-			tb.AddLine("   File: %s", result.Name)
-			if source, ok := result.Metadata["source"].(string); ok {
-				tb.AddLine("   Source: %s", source)
-			}
-		case "skipped":
-			tb.AddLine("Skipped: %s", result.Name)
-			if result.Error != "" {
-				tb.AddLine("   Reason: %s", result.Error)
-			}
-		case "failed":
-			tb.AddLine("Failed: %s", result.Name)
-			if result.Error != "" {
-				tb.AddLine("   Error: %s", result.Error)
-			}
-		}
-		return tb.Build()
-	}
-
-	// For batch operations, show summary
-	tb.AddTitle("Dotfile Removal")
-	tb.AddNewline()
-
-	// Check if this is a dry run
-	isDryRun := false
-	wouldRemoveCount := 0
-	for _, result := range d.Results {
-		if result.Status == "would-remove" {
-			isDryRun = true
-			wouldRemoveCount++
+	var w strings.Builder
+	planned := 0
+	for _, r := range d.Results {
+		if r.Status == "would-remove" {
+			planned++
 		}
 	}
-
-	if isDryRun {
-		if wouldRemoveCount > 0 {
-			tb.AddLine("Would remove %d dotfiles (dry-run)", wouldRemoveCount)
+	if planned > 0 {
+		w.WriteString("Dry run · no changes will be made\n\n")
+	}
+	for _, r := range d.Results {
+		detail := r.Error
+		if r.Status == "removed" {
+			detail = "source removed from configuration; deployed file kept"
 		}
-	} else {
-		if d.Summary.Removed > 0 {
-			tb.AddLine("📄 Removed %d dotfiles", d.Summary.Removed)
+		if r.Status == "would-remove" {
+			detail = "would remove source from configuration; deployed file would be kept"
 		}
-	}
-
-	if d.Summary.Skipped > 0 {
-		tb.AddLine("%d skipped", d.Summary.Skipped)
-	}
-	if d.Summary.Failed > 0 {
-		tb.AddLine("%d failed", d.Summary.Failed)
-	}
-
-	tb.AddNewline()
-
-	// Show individual files
-	for _, result := range d.Results {
-		switch result.Status {
-		case "removed":
-			tb.AddLine("   ✓ %s", result.Name)
-		case "would-remove":
-			tb.AddLine("   - %s", result.Name)
-		case "skipped":
-			tb.AddLine("   %s (not managed)", result.Name)
-		case "failed":
-			tb.AddLine("   ✗ %s", result.Name)
+		if source, ok := r.Metadata["source"].(string); ok && (r.Status == "removed" || r.Status == "would-remove") {
+			detail += "\n  source: " + source
 		}
+		WriteAction(&w, r.Status, r.Name, detail, false)
 	}
-
-	tb.AddNewline()
-	tb.AddLine("Total: %d dotfiles processed", d.TotalFiles)
-
-	return tb.Build()
+	if len(d.Results) > 1 {
+		fmt.Fprintf(&w, "\n%d removed, %d planned, %d skipped, %d failed\n", d.Summary.Removed, planned, d.Summary.Skipped, d.Summary.Failed)
+	}
+	if len(d.Results) == 0 {
+		w.WriteString("No dotfiles to remove.\n")
+	}
+	return w.String()
 }

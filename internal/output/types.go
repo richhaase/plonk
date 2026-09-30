@@ -6,6 +6,7 @@ package output
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // ApplyResult represents the top-level result of any apply operation
@@ -70,115 +71,62 @@ type DotfileSummary struct {
 	Failed    int `json:"failed" yaml:"failed"`
 }
 
-// TableOutput generates human-friendly table output for apply
-//
-//nolint:gocyclo // complexity justified: multi-domain apply formatter with package and dotfile results rendering
+// TableOutput generates compact results for apply without hiding partial failures.
 func (r ApplyResult) TableOutput() string {
-	output := ""
-
+	var w strings.Builder
 	if r.DryRun {
-		output += "Plonk Apply (Dry Run)\n"
-		output += "=====================\n\n"
-	} else {
-		output += "Plonk Apply\n"
-		output += "===========\n\n"
+		w.WriteString("Dry run · no changes will be made\n\n")
 	}
-
-	// Show detailed results if available
-
-	// Package details
-	if r.Packages != nil && len(r.Packages.Managers) > 0 {
-		for _, mgr := range r.Packages.Managers {
-			if len(mgr.Packages) > 0 {
-				output += fmt.Sprintf("%s:\n", mgr.Name)
-				for _, pkg := range mgr.Packages {
-					switch pkg.Status {
-					case "installed":
-						output += fmt.Sprintf("  ✓ %s\n", pkg.Name)
-					case "would-install":
-						output += fmt.Sprintf("  → %s (would install)\n", pkg.Name)
-					case "failed":
-						output += fmt.Sprintf("  ✗ %s: %s\n", pkg.Name, pkg.Error)
-					}
-				}
-				output += "\n"
-			}
-		}
-	}
-
-	// Dotfile details
-	if r.Dotfiles != nil && len(r.Dotfiles.Actions) > 0 {
-		output += "Dotfiles:\n"
-		for _, action := range r.Dotfiles.Actions {
-			switch action.Status {
-			case "added":
-				output += fmt.Sprintf("  ✓ %s\n", action.Destination)
-			case "updated":
-				output += fmt.Sprintf("  ✓ %s\n", action.Destination)
-			case "would-add":
-				output += fmt.Sprintf("  → %s (would deploy)\n", action.Destination)
-			case "would-update":
-				output += fmt.Sprintf("  → %s (would deploy)\n", action.Destination)
-			case "failed":
-				output += fmt.Sprintf("  ✗ %s: %s\n", action.Destination, action.Error)
-			}
-		}
-		output += "\n"
-	}
-
-	// Summary section
-	output += "Summary:\n"
-	output += "--------\n"
-
-	totalSucceeded := 0
-	totalFailed := 0
-
-	// Package summary
+	installed, deployed, failed, planned := 0, 0, 0, 0
 	if r.Packages != nil {
-		if r.DryRun {
-			output += fmt.Sprintf("Packages: %d would be installed\n", r.Packages.TotalWouldInstall)
-		} else {
-			if r.Packages.TotalInstalled > 0 || r.Packages.TotalFailed > 0 {
-				output += fmt.Sprintf("Packages: %d installed, %d failed\n", r.Packages.TotalInstalled, r.Packages.TotalFailed)
-				totalSucceeded += r.Packages.TotalInstalled
-				totalFailed += r.Packages.TotalFailed
-			} else if r.Packages.TotalMissing == 0 {
-				output += "Packages: All up to date\n"
+		installed = r.Packages.TotalInstalled
+		failed += r.Packages.TotalFailed
+		planned += r.Packages.TotalWouldInstall
+		for _, manager := range r.Packages.Managers {
+			for _, pkg := range manager.Packages {
+				WriteAction(&w, pkg.Status, manager.Name+":"+pkg.Name, pkg.Error, false)
 			}
 		}
 	}
-
-	// Dotfile summary
 	if r.Dotfiles != nil {
-		deployed := r.Dotfiles.Summary.Added + r.Dotfiles.Summary.Updated
+		deployed = r.Dotfiles.Summary.Added + r.Dotfiles.Summary.Updated
+		failed += r.Dotfiles.Summary.Failed
 		if r.DryRun {
-			output += fmt.Sprintf("Dotfiles: %d would be deployed\n", deployed)
-		} else {
-			if deployed > 0 || r.Dotfiles.Summary.Failed > 0 {
-				output += fmt.Sprintf("Dotfiles: %d deployed, %d failed\n", deployed, r.Dotfiles.Summary.Failed)
-				totalSucceeded += deployed
-				totalFailed += r.Dotfiles.Summary.Failed
-			} else if r.Dotfiles.TotalFiles == 0 {
-				output += "Dotfiles: None configured\n"
+			planned += deployed
+			deployed = 0
+		}
+		for _, item := range r.Dotfiles.Actions {
+			WriteAction(&w, item.Status, item.Destination, item.Error, false)
+		}
+	}
+	// Domain-level failures may have no per-item action to render.
+	for _, err := range r.PackageErrors {
+		WriteAction(&w, "error", "packages", err.Error(), false)
+	}
+	for _, err := range r.DotfileErrors {
+		WriteAction(&w, "error", "dotfiles", err.Error(), false)
+	}
+	if r.Error != "" {
+		WriteAction(&w, "error", "apply", r.Error, false)
+	}
+	if installed+deployed+planned+failed == 0 && !r.HasErrors() && r.Error == "" {
+		w.WriteString("Already up to date. No changes.\n")
+	} else {
+		if installed+deployed+planned+failed > 0 {
+			if r.DryRun {
+				fmt.Fprintf(&w, "\n%d planned, %d failed\n", planned, failed)
 			} else {
-				output += "Dotfiles: All up to date\n"
+				fmt.Fprintf(&w, "\n%d installed, %d deployed, %d failed\n", installed, deployed, failed)
 			}
 		}
-	}
-
-	// Overall result
-	if !r.DryRun && (totalSucceeded > 0 || totalFailed > 0) {
-		output += fmt.Sprintf("\nTotal: %d succeeded, %d failed\n", totalSucceeded, totalFailed)
-		if totalFailed > 0 {
-			output += "\nSome operations failed. Check the errors above.\n"
+		if failed > 0 || r.HasErrors() || r.Error != "" {
+			w.WriteString(ColorState("failed") + "  Completed with errors.\n")
 		}
 	}
-
 	if r.DryRun {
-		output += "\nUse 'plonk apply' without --dry-run to apply these changes\n"
+		w.WriteString("No changes made.\n")
 	}
-
-	return output
+	return w.String()
 }
 
 // AddPackageError adds an error to the package errors list

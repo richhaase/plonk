@@ -47,7 +47,7 @@ func TestStageUpdate(t *testing.T) {
 
 			StageUpdate(tt.stage)
 
-			if got := buf.String(); got != tt.want {
+			if got := buf.String(); got != "\n"+tt.want {
 				t.Errorf("StageUpdate() = %q, want %q", got, tt.want)
 			}
 		})

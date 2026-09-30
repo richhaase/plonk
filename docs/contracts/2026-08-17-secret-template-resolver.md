@@ -13,6 +13,10 @@ implemented_by: "PR #130, merge commit 7eae869"
 
 # plonk-secret-template-resolver — Stage A
 
+This is the completed historical design contract. For current usage, see the
+[template reference](../reference.md#templates); implementation notes are in
+[internals](../internals.md#template-rendering-and-secret-resolution).
+
 ## Intent
 
 Enable Plonk templates (`.tmpl`) to resolve sensitive credentials directly from secure system secret stores (beginning with macOS Keychain) at deployment time without placing plaintext secrets into shell environment variables, command arguments, Git repositories, log files, external diff tools, or AI tool observation streams.
@@ -23,7 +27,7 @@ Enable Plonk templates (`.tmpl`) to resolve sensitive credentials directly from 
 
 - **AC1: Centralized, Namespaced Template Directive Grammar**
   - Consolidate regex and parsing logic from `dotfiles.go` and `health.go` into a unified `internal/template` package.
-  - Support namespaced directives: `{{keychain:service/account}}` and `{{keychain:service}}` (defaulting account to current user `$USER`).
+  - Support namespaced directives: `{{keychain:service/account}}` and `{{keychain:service}}` (defaulting account to current macOS username).
   - Maintain 100% backwards compatibility for legacy `{{VAR_NAME}}` environment variable syntax and explicit `{{env:VAR_NAME}}`.
   - Directive parsing uses two-phase tokenization (`{{` ... `}}` closure matching followed by provider prefix split) allowing slashes, dashes, dots, and underscores in locator paths.
 
@@ -99,7 +103,7 @@ Enable Plonk templates (`.tmpl`) to resolve sensitive credentials directly from 
    - Test missing keychain item error message contains only service name, no keys.
    - Test `plonk diff` masks secret values when comparing drifted secret templates.
 2. **Integration Verification (macOS)**:
-   - Add test credential via `security add-generic-password -U -s plonk-test-svc -a testuser -w "supersecretval"`.
+   - Add a disposable test credential interactively via `security add-generic-password -U -s plonk-test-svc -a testuser -w` (enter the value at the prompt).
    - Render template `test.tmpl` containing `key={{keychain:plonk-test-svc/testuser}}`.
    - Verify target file receives rendered secret with configured mode (`0600`).
    - Verify `plonk doctor` reports 0 missing variables.

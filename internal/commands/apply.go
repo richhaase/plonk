@@ -18,8 +18,9 @@ import (
 )
 
 var applyCmd = &cobra.Command{
-	Use:   "apply [files...]",
-	Short: "Apply configuration to reconcile system state",
+	GroupID: "manage",
+	Use:     "apply [files...]",
+	Short:   "Apply configuration to reconcile system state",
 	Long: `Apply reads your plonk configuration and reconciles the system state
 to match, installing missing packages and managing dotfiles.
 

@@ -37,8 +37,8 @@ setup() {
   fi
 }
 
-# Test that status displays clear column headers with tilde paths
-@test "status shows DOTFILE and STATUS headers with tilde paths" {
+# Test that inventories display clear state labels with tilde paths
+@test "dotfiles shows state labels with tilde paths" {
   local testfile=".plonk-test-headers"
   require_safe_dotfile "$testfile"
 
@@ -52,9 +52,9 @@ setup() {
   run plonk dotfiles
   assert_success
 
-  # Check for column headers
-  assert_output --partial "DOTFILE"
-  assert_output --partial "STATUS"
+  # Check for state labels and summary
+  assert_output --partial "deployed"
+  assert_output --partial "Summary:"
   # Check for tilde shorthand in paths
   assert_output --partial "~/"
 
@@ -111,7 +111,7 @@ setup() {
   run plonk add -y
   assert_success
   assert_output --partial "$testfile"
-  assert_output --partial "Updated"
+  assert_output --partial "updated"
 
   # Verify the plonk dir has the new content
   local stored_name="${testfile#.}"
@@ -140,7 +140,7 @@ setup() {
   # Dry-run should show what would happen
   run plonk add -y --dry-run
   assert_success
-  assert_output --partial "Would update"
+  assert_output --partial "would update"
   assert_output --partial "$testfile"
 
   # Verify plonk dir still has original content
@@ -251,11 +251,11 @@ setup() {
   # 2. Modify to create drift
   echo "version 2 - edited in home" > "$HOME/$testfile"
 
-  # 3. Check status - should show drifted with column headers and tilde paths
+  # 3. Check status - should show a drifted state and tilde path
   run plonk dotfiles
   assert_success
   assert_output --partial "drifted"
-  assert_output --partial "DOTFILE"
+  assert_output --partial "$testfile"
   assert_output --partial "~/"
 
   # 4. Use add -y to sync changes back

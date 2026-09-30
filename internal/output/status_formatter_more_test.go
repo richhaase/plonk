@@ -21,7 +21,7 @@ func TestDotfilesStatusFormatter_ShowsSourceType(t *testing.T) {
 		Result:  result,
 		HomeDir: "/home/test",
 	}).TableOutput()
-	if !strings.Contains(out, "TYPE") || !strings.Contains(out, "template") || !strings.Contains(out, "file") {
+	if !strings.Contains(out, "template") || !strings.Contains(out, "file") {
 		t.Fatalf("expected source type column in output: %s", out)
 	}
 }
@@ -50,10 +50,10 @@ func TestStatusFormatter_Table_Variants(t *testing.T) {
 	// default (show both packages and dotfiles)
 	s := StatusOutput{StateSummary: summary}
 	out := NewStatusFormatter(s).TableOutput()
-	if !strings.Contains(out, "PACKAGE") {
+	if !strings.Contains(out, "brew:c") {
 		t.Fatalf("expected packages table header: %s", out)
 	}
-	if !strings.Contains(out, "DOTFILE") {
+	if !strings.Contains(out, ".vimrc") {
 		t.Fatalf("expected dotfiles table header: %s", out)
 	}
 	// should show missing entries in output

@@ -83,7 +83,7 @@ setup() {
   assert_success
   assert_output --partial "Dry run"
   assert_output --partial "already exists"
-  assert_output --partial "would skip clone"
+  assert_output --partial "skipped  Clone"
 }
 
 # URL format tests

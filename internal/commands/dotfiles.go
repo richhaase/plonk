@@ -13,6 +13,7 @@ import (
 )
 
 var dotfilesCmd = &cobra.Command{
+	GroupID: "inspect",
 	Use:     "dotfiles",
 	Aliases: []string{"d"},
 	Short:   "Display dotfile status",

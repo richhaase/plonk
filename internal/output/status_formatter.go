@@ -5,6 +5,7 @@ package output
 
 import (
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -75,22 +76,12 @@ func sortItems(items []Item) {
 	})
 }
 
-// sortItemsByManager returns sorted manager names from the map
-func sortItemsByManager(itemsByManager map[string][]Item) []string {
-	managers := make([]string, 0, len(itemsByManager))
-	for manager := range itemsByManager {
-		managers = append(managers, manager)
-	}
-	sort.Strings(managers)
-	return managers
-}
-
 // tildeShorthand replaces the home directory prefix with ~ for display
 func tildeShorthand(path, homeDir string) string {
 	if homeDir == "" {
 		return path
 	}
-	if strings.HasPrefix(path, homeDir) {
+	if path == homeDir || strings.HasPrefix(path, homeDir+string(filepath.Separator)) {
 		return "~" + strings.TrimPrefix(path, homeDir)
 	}
 	return path
@@ -101,7 +92,6 @@ func (f StatusFormatter) TableOutput() string {
 	s := f.Data
 	var output strings.Builder
 
-	WriteTitle(&output, "Plonk Status")
 	WriteRemoteSync(&output, s.RemoteSync)
 
 	if packageResult := findResultByDomain(s.StateSummary.Results, "package"); packageResult != nil {
@@ -109,7 +99,7 @@ func (f StatusFormatter) TableOutput() string {
 		if !s.ShowAll {
 			result.Managed = nil
 		}
-		writePackagesTable(&output, result)
+		writePackages(&output, result, s.ShowAll)
 	}
 	if dotfileResult := findResultByDomain(s.StateSummary.Results, "dotfile"); dotfileResult != nil {
 		result := *dotfileResult
@@ -121,22 +111,23 @@ func (f StatusFormatter) TableOutput() string {
 				}
 			}
 		}
-		writeDotfilesTable(&output, result, s.HomeDir)
+		writeDotfiles(&output, result, s.HomeDir, s.ShowAll)
 	}
 
 	driftedCount := countDriftedDotfiles(s.StateSummary.Results)
 	if s.ShowAll {
 		writeSummaryLine(&output, s.StateSummary, driftedCount)
 	}
-	writeDomainErrors(&output, s.StateSummary.Results)
 
 	if s.StateSummary.TotalManaged == 0 && s.StateSummary.TotalMissing == 0 && s.StateSummary.TotalErrors == 0 {
 		output.Reset()
-		WriteTitle(&output, "Plonk Status")
 		WriteRemoteSync(&output, s.RemoteSync)
 		output.WriteString("No managed items.\n")
 	}
 
+	if !s.ShowAll && s.StateSummary.TotalManaged > 0 && s.StateSummary.TotalMissing == 0 && s.StateSummary.TotalErrors == 0 && driftedCount == 0 {
+		output.WriteString("All managed items are in sync.\n")
+	}
 	return output.String()
 }
 
@@ -149,61 +140,75 @@ func findResultByDomain(results []Result, domain string) *Result {
 	return nil
 }
 
-func writePackagesTable(output *strings.Builder, result Result) {
-	packagesByManager := make(map[string][]Item)
-	for _, item := range result.Managed {
-		packagesByManager[item.Manager] = append(packagesByManager[item.Manager], item)
-	}
-
-	missingPackages := append([]Item(nil), result.Missing...)
-	sortItems(missingPackages)
-
-	if len(packagesByManager) == 0 && len(missingPackages) == 0 {
-		return
-	}
-
-	pkgBuilder := NewStandardTableBuilder()
-	pkgBuilder.SetHeaders("PACKAGE", "MANAGER", "STATUS")
-
-	for _, manager := range sortItemsByManager(packagesByManager) {
-		packages := append([]Item(nil), packagesByManager[manager]...)
-		sortItems(packages)
-		for _, pkg := range packages {
-			pkgBuilder.AddRow(pkg.Name, manager, "managed")
+// statusItems normalizes states from their result buckets without changing input.
+func statusItems(result Result) []Item {
+	items := append([]Item(nil), result.Managed...)
+	for i := range items {
+		if items[i].State == "" {
+			items[i].State = StateManaged
 		}
 	}
-
-	for _, pkg := range missingPackages {
-		pkgBuilder.AddRow(pkg.Name, pkg.Manager, "missing")
+	for _, item := range result.Missing {
+		item.State = StateMissing
+		items = append(items, item)
 	}
-
-	output.WriteString(pkgBuilder.Build())
-	output.WriteString("\n")
+	for _, item := range result.Errors {
+		item.State = StateError
+		items = append(items, item)
+	}
+	return items
 }
 
-func writeDotfilesTable(output *strings.Builder, result Result, homeDir string) {
-	itemsToShow := len(result.Managed) + len(result.Missing)
-	if itemsToShow == 0 {
-		return
+func writePackagesTable(w *strings.Builder, result Result) { writePackages(w, result, true) }
+
+func writePackages(w *strings.Builder, result Result, ledger bool) {
+	items := statusItems(result)
+	sort.SliceStable(items, func(i, j int) bool {
+		if items[i].Manager != items[j].Manager {
+			return items[i].Manager < items[j].Manager
+		}
+		return items[i].Name < items[j].Name
+	})
+	for _, item := range items {
+		state := string(item.State)
+		if item.Error != "" {
+			state = "error"
+		}
+		name := item.Name
+		if item.Manager != "" {
+			name = item.Manager + ":" + name
+		}
+		WriteAction(w, state, name, item.Error, ledger)
 	}
-
-	dotBuilder := NewStandardTableBuilder()
-	dotBuilder.SetHeaders("DOTFILE", "TYPE", "STATUS")
-
-	managed := append([]Item(nil), result.Managed...)
-	missing := append([]Item(nil), result.Missing...)
-	sortItems(managed)
-	sortItems(missing)
-
-	for _, item := range managed {
-		dotBuilder.AddRow(dotfileTarget(item, homeDir), sourceType(item), dotfileStatus(item))
+	if len(items) > 0 {
+		w.WriteString("\n")
 	}
-	for _, item := range missing {
-		dotBuilder.AddRow(dotfileTarget(item, homeDir), sourceType(item), "missing")
-	}
+}
 
-	output.WriteString(dotBuilder.Build())
-	output.WriteString("\n")
+func writeDotfilesTable(w *strings.Builder, result Result, homeDir string) {
+	writeDotfiles(w, result, homeDir, true)
+}
+
+func writeDotfiles(w *strings.Builder, result Result, homeDir string, ledger bool) {
+	items := statusItems(result)
+	sortItems(items)
+	for _, item := range items {
+		state := dotfileStatus(item)
+		if item.State == StateMissing {
+			state = "missing"
+		}
+		if item.State == StateError || item.Error != "" {
+			state = "error"
+		}
+		detail := sourceType(item)
+		if item.Error != "" {
+			detail += ": " + item.Error
+		}
+		WriteAction(w, state, dotfileTarget(item, homeDir), detail, ledger)
+	}
+	if len(items) > 0 {
+		w.WriteString("\n")
+	}
 }
 
 func dotfileTarget(item Item, homeDir string) string {
@@ -216,6 +221,9 @@ func dotfileTarget(item Item, homeDir string) string {
 
 func dotfileStatus(item Item) string {
 	if item.State == StateDegraded {
+		if item.Metadata["drift_status"] == "error" {
+			return "error"
+		}
 		return "drifted"
 	}
 	return "deployed"
@@ -250,10 +258,4 @@ func writeSummaryLine(output *strings.Builder, summary Summary, driftedCount int
 		fmt.Fprintf(output, ", %d errors", summary.TotalErrors)
 	}
 	output.WriteString("\n")
-}
-
-func writeDomainErrors(output *strings.Builder, results []Result) {
-	for _, result := range results {
-		WriteErrors(output, result.Domain, result.Errors)
-	}
 }

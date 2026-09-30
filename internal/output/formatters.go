@@ -5,6 +5,8 @@ package output
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
 )
 
 // DotfileAddOutput represents the output structure for dotfile add command
@@ -23,117 +25,63 @@ type DotfileBatchAddOutput struct {
 	Errors     []string           `json:"errors,omitempty" yaml:"errors,omitempty"`
 }
 
-// TableOutput generates human-friendly table output for dotfile add
+// TableOutput generates compact output for one dotfile addition.
 func (d DotfileAddOutput) TableOutput() string {
-	output := "Dotfile Add\n===========\n\n"
-
-	// Handle failed action
-	if d.Action == "failed" {
-		output += fmt.Sprintf("✗ %s - %s\n", d.Path, d.Error)
-		return output
+	var w strings.Builder
+	dry := strings.HasPrefix(d.Action, "would-")
+	if dry {
+		w.WriteString("Dry run · no changes will be made\n\n")
 	}
-
-	var actionText string
-	var isDryRun bool
-	switch d.Action {
-	case "would-add":
-		actionText = "Would add dotfile to plonk configuration"
-		isDryRun = true
-	case "would-update":
-		actionText = "Would update existing dotfile in plonk configuration"
-		isDryRun = true
-	case "updated":
-		actionText = "Updated existing dotfile in plonk configuration"
-	case "added":
-		actionText = "Added dotfile to plonk configuration"
-	default:
-		actionText = d.Action
-	}
-
-	if isDryRun {
-		output += fmt.Sprintf("%s (dry-run)\n", actionText)
-	} else {
-		output += fmt.Sprintf("%s\n", actionText)
-	}
-	output += fmt.Sprintf("   Source: %s\n", d.Source)
-	output += fmt.Sprintf("   Destination: %s\n", d.Destination)
-	output += fmt.Sprintf("   Original: %s\n", d.Path)
-
-	if !isDryRun {
-		if d.Action == "updated" {
-			output += "\nThe system file has been copied to your plonk config directory, overwriting the previous version\n"
-		} else {
-			output += "\nThe dotfile has been copied to your plonk config directory\n"
-		}
-	}
-	return output
+	w.WriteString(d.tableOutputWithoutBanner())
+	return w.String()
 }
 
-// TableOutput generates human-friendly table output for batch dotfile add
+// TableOutput lists batch results and keeps failures beside their explanations.
 func (d DotfileBatchAddOutput) TableOutput() string {
-	output := "Dotfile Directory Add\n=====================\n\n"
-
-	// Count added vs updated
-	var addedCount, updatedCount, wouldAddCount, wouldUpdateCount int
+	var w strings.Builder
+	var added, updated, planned int
 	for _, file := range d.AddedFiles {
 		switch file.Action {
-		case "updated":
-			updatedCount++
 		case "added":
-			addedCount++
-		case "would-update":
-			wouldUpdateCount++
-		case "would-add":
-			wouldAddCount++
+			added++
+		case "updated":
+			updated++
+		case "would-add", "would-update":
+			planned++
 		}
 	}
-
-	isDryRun := wouldAddCount > 0 || wouldUpdateCount > 0
-
-	if isDryRun {
-		if wouldAddCount > 0 && wouldUpdateCount > 0 {
-			output += fmt.Sprintf("Would process %d files (%d add, %d update) - dry-run\n\n", d.TotalFiles, wouldAddCount, wouldUpdateCount)
-		} else if wouldUpdateCount > 0 {
-			output += fmt.Sprintf("Would update %d files in plonk configuration - dry-run\n\n", d.TotalFiles)
-		} else {
-			output += fmt.Sprintf("Would add %d files to plonk configuration - dry-run\n\n", d.TotalFiles)
-		}
+	if planned > 0 {
+		w.WriteString("Dry run · no changes will be made\n\n")
+	}
+	for _, file := range d.AddedFiles {
+		w.WriteString(file.tableOutputWithoutBanner())
+	}
+	for _, err := range d.Errors {
+		WriteAction(&w, "error", "add", err, false)
+	}
+	if len(d.AddedFiles) == 0 && len(d.Errors) == 0 {
+		w.WriteString("No dotfiles to add.\n")
 	} else {
-		if addedCount > 0 && updatedCount > 0 {
-			output += fmt.Sprintf("Processed %d files (%d added, %d updated)\n\n", d.TotalFiles, addedCount, updatedCount)
-		} else if updatedCount > 0 {
-			output += fmt.Sprintf("Updated %d files in plonk configuration\n\n", d.TotalFiles)
-		} else {
-			output += fmt.Sprintf("Added %d files to plonk configuration\n\n", d.TotalFiles)
-		}
+		fmt.Fprintf(&w, "\n%d added, %d updated, %d planned, %d failed\n", added, updated, planned, len(d.Errors))
 	}
+	return w.String()
+}
 
-	for _, file := range d.AddedFiles {
-		var actionIndicator string
-		switch file.Action {
-		case "updated":
-			actionIndicator = "↻"
-		case "added":
-			actionIndicator = "+"
-		case "would-update":
-			actionIndicator = "↻"
-		case "would-add":
-			actionIndicator = "+"
-		}
-		output += fmt.Sprintf("   %s %s → %s\n", actionIndicator, file.Destination, file.Source)
+func (d DotfileAddOutput) tableOutputWithoutBanner() string {
+	var w strings.Builder
+	item := d.Path
+	if item == "" {
+		item = d.Destination
 	}
-
-	if len(d.Errors) > 0 {
-		output += "\nWarnings:\n"
-		for _, err := range d.Errors {
-			output += fmt.Sprintf("   %s\n", err)
-		}
+	detail := "copied to " + addSource(d.Source)
+	if strings.HasPrefix(d.Action, "would-") {
+		detail = "would copy to " + addSource(d.Source)
 	}
-
-	if !isDryRun {
-		output += "\nAll files have been copied to your plonk config directory\n"
+	if d.Action == "failed" {
+		detail = d.Error
 	}
-	return output
+	WriteAction(&w, d.Action, item, detail, false)
+	return w.String()
 }
 
 // MapStatusToAction converts operation status to an action string
@@ -144,4 +92,11 @@ func MapStatusToAction(status string) string {
 	default:
 		return "failed"
 	}
+}
+
+func addSource(source string) string {
+	if source == "" || filepath.IsAbs(source) || strings.HasPrefix(source, "~") {
+		return source
+	}
+	return "$PLONK_DIR/" + source
 }

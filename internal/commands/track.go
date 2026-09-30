@@ -9,13 +9,15 @@ import (
 	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/gitops"
 	"github.com/richhaase/plonk/internal/lock"
+	"github.com/richhaase/plonk/internal/output"
 	"github.com/richhaase/plonk/internal/packages"
 	"github.com/spf13/cobra"
 )
 
 var trackCmd = &cobra.Command{
-	Use:   "track <manager:package>...",
-	Short: "Track installed packages",
+	GroupID: "manage",
+	Use:     "track <manager:package>...",
+	Short:   "Track installed packages",
 	Long: `Track packages that are already installed on your system.
 
 This command verifies that each package is installed, then adds it to your
@@ -54,14 +56,14 @@ func runTrack(cmd *cobra.Command, args []string) error {
 		for _, arg := range args {
 			manager, pkg, err := packages.ParsePackageSpec(arg)
 			if err != nil {
-				fmt.Printf("Error: %s: %v\n", arg, err)
+				output.PrintAction("error", arg, err.Error())
 				failed++
 				continue
 			}
 
 			// Check if already tracked
 			if lockFile.HasPackage(manager, pkg) {
-				fmt.Printf("Skipping %s:%s (already tracked)\n", manager, pkg)
+				output.PrintAction("skipped", manager+":"+pkg, "already tracked")
 				skipped++
 				continue
 			}
@@ -69,27 +71,27 @@ func runTrack(cmd *cobra.Command, args []string) error {
 			// Get manager and verify package is installed
 			mgr, err := packages.GetManager(manager)
 			if err != nil {
-				fmt.Printf("Error: %s: %v\n", arg, err)
+				output.PrintAction("error", arg, err.Error())
 				failed++
 				continue
 			}
 
 			installed, err := mgr.IsInstalled(ctx, pkg)
 			if err != nil {
-				fmt.Printf("Error checking %s:%s: %v\n", manager, pkg, err)
+				output.PrintAction("error", manager+":"+pkg, err.Error())
 				failed++
 				continue
 			}
 
 			if !installed {
-				fmt.Printf("Error: %s:%s is not installed\n", manager, pkg)
+				output.PrintAction("error", manager+":"+pkg, "not installed")
 				failed++
 				continue
 			}
 
 			// Add to lock file
 			lockFile.AddPackage(manager, pkg)
-			fmt.Printf("Tracking %s:%s\n", manager, pkg)
+			output.PrintAction("tracked", manager+":"+pkg, "added to plonk.lock")
 			tracked++
 		}
 

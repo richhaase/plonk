@@ -49,8 +49,6 @@ func (f PackagesStatusFormatter) TableOutput() string {
 	}
 	output.WriteString("\n")
 
-	WriteErrors(&output, "package", result.Errors)
-
 	if len(result.Managed) == 0 && len(result.Missing) == 0 && len(result.Errors) == 0 {
 		output.Reset()
 		WriteTitle(&output, "Packages Status")

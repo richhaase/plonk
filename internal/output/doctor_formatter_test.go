@@ -15,7 +15,7 @@ func TestDoctorFormatter_TableOutput(t *testing.T) {
 	}
 	f := NewDoctorFormatter(data)
 	out := f.TableOutput()
-	wants := []string{"Overall Status: WARNING", "System", "Homebrew", "Suggestions"}
+	wants := []string{"warning", "System", "Homebrew", "Next: Install brew"}
 	for _, w := range wants {
 		if !strings.Contains(out, w) {
 			t.Fatalf("missing %q in:\n%s", w, out)

@@ -5,12 +5,14 @@
 ```bash
 git clone https://github.com/richhaase/plonk.git
 cd plonk
-make dev-setup
+make build
 go test ./...
 make install
 ```
 
-**Requirements:** Go 1.25.0+, Homebrew, Git, Make
+**Requirements:** Go version specified in `go.mod`, Git, and Make. Docker is
+required for isolated BATS testing. `make dev-setup` additionally requires
+`pre-commit` and installs repository hooks.
 
 ## Project Structure
 
@@ -39,7 +41,7 @@ See [docs/internals.md](docs/internals.md) for architecture details.
 
 ```bash
 make build        # Build to bin/plonk
-make install      # Install to system
+make install      # Install to GOPATH/bin
 make test         # Run tests
 make lint         # Run linters
 ```
@@ -55,13 +57,13 @@ go test -v ./internal/packages/...
 
 ### BATS Integration Tests
 
-BATS tests exercise the real CLI with real package managers.
+BATS tests exercise the CLI and real package managers. Run them in Docker:
 
 ```bash
-bats tests/bats/behavioral/
+make docker-test-all
 ```
 
-Test packages are defined in `tests/bats/config/safe-packages.list`.
+See [tests/bats/README.md](tests/bats/README.md) for focused runs and test fixtures.
 
 ## Adding a Package Manager
 
@@ -121,13 +123,13 @@ test: add tests for W
 
 ### Required Status Checks
 
-All checks are **blocking** — a PR cannot merge until every one passes:
+CI runs the following checks. Repository branch protection determines which
+checks block merging:
 
 | Check | Workflow | What it enforces |
 |---|---|---|
-| Unit Tests | `CI` | `go test ./...` with coverage |
+| Unit Tests | `CI` | Tests with coverage, lint (including gosec), and formatting |
 | Integration Tests (BATS) | `CI` | Behavioral tests in Docker |
-| Quality checks (lint + formatting) | `CI` | golangci-lint (incl. gosec) and read-only gofmt drift check |
 | Security Scan | `Security Check` | govulncheck on dependencies; gosec via golangci-lint |
 
 Notes for maintainers:

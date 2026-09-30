@@ -19,7 +19,7 @@ setup() {
   run plonk track brew:git
   # Either succeeds (git installed) or fails with "not installed"
   if [[ "$status" -eq 0 ]]; then
-    [[ "$output" == *"Tracking"* ]] || [[ "$output" == *"already tracked"* ]]
+    [[ "$output" == *"tracked"* ]] || [[ "$output" == *"already tracked"* ]]
   else
     [[ "$output" == *"not installed"* ]]
     skip "git not installed via brew"
@@ -226,7 +226,7 @@ setup() {
   # Dry-run apply should show it would be skipped (already installed)
   run plonk apply --dry-run
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Skipped"* ]] || [[ "$output" == *"skipped"* ]] || [[ "$output" == *"installed"* ]]
+  [[ "$output" == *"Already up to date. No changes."* ]]
 
   # Clean up
   plonk untrack brew:cowsay
@@ -273,7 +273,7 @@ EOF
 
   run plonk packages
   [ "$status" -eq 0 ]
-  [[ "$output" == *"package errors:"* ]]
+  [[ "$output" == *"error"* ]]
   [[ "$output" == *"unsupported manager"* ]]
 }
 
@@ -288,7 +288,7 @@ EOF
 
   run plonk status
   [ "$status" -eq 0 ]
-  [[ "$output" == *"package errors:"* ]]
+  [[ "$output" == *"error"* ]]
   [[ "$output" == *"unsupported manager"* ]]
 }
 
