@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/stretchr/testify/assert"
@@ -201,4 +202,93 @@ func TestSimpleApply_UnsupportedManagerFailsEachPackage(t *testing.T) {
 	assert.ElementsMatch(t, []string{"npm:eslint", "npm:typescript"}, result.Failed)
 	require.Len(t, result.Errors, 2)
 	assert.Contains(t, result.Errors[0].Error()+result.Errors[1].Error(), "manager not available")
+}
+
+func TestSimpleApply_ProviderFailureContinuesOtherManagers(t *testing.T) {
+	ResetManagerCache()
+	t.Cleanup(ResetManagerCache)
+	tmpDir := t.TempDir()
+	writeLockFile(t, tmpDir, func(l *lock.LockV3) {
+		l.AddPackage("brew", "pnpm")
+		l.AddPackage("pnpm", "typescript")
+		l.AddPackage("uv", "ruff")
+	})
+	setCachedManager("brew", &stubManager{
+		installed: map[string]bool{},
+		installE:  map[string]error{"pnpm": errors.New("provider install failed")},
+	})
+	setCachedManager("pnpm", &stubManager{
+		isInstalledE: map[string]error{"typescript": errors.New("pnpm unavailable")},
+	})
+	setCachedManager("uv", &stubManager{installed: map[string]bool{}})
+
+	result, err := SimpleApply(context.Background(), tmpDir, false)
+	require.Error(t, err)
+	assert.Equal(t, []string{"brew:pnpm", "pnpm:typescript"}, result.Failed)
+	assert.Equal(t, []string{"uv:ruff"}, result.Installed)
+	assert.Len(t, result.Errors, 2)
+}
+
+type contextManager struct {
+	check   func(context.Context, string) (bool, error)
+	install func(context.Context, string) error
+}
+
+func (m contextManager) IsInstalled(ctx context.Context, name string) (bool, error) {
+	return m.check(ctx, name)
+}
+
+func (m contextManager) Install(ctx context.Context, name string) error {
+	return m.install(ctx, name)
+}
+
+func TestSimpleApply_CancellationAcrossManagers(t *testing.T) {
+	ResetManagerCache()
+	t.Cleanup(ResetManagerCache)
+	tmpDir := t.TempDir()
+	writeLockFile(t, tmpDir, func(l *lock.LockV3) {
+		l.AddPackage("brew", "pnpm")
+		l.AddPackage("pnpm", "typescript")
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	checkDeadline := func(callCtx context.Context) {
+		deadline, ok := callCtx.Deadline()
+		require.True(t, ok, "each manager call must have a timeout")
+		assert.WithinDuration(t, time.Now().Add(PerPackageTimeout), deadline, time.Second)
+	}
+	calls := []string{}
+	setCachedManager("brew", contextManager{
+		check: func(c context.Context, name string) (bool, error) {
+			checkDeadline(c)
+			calls = append(calls, "check brew:"+name)
+			return false, c.Err()
+		},
+		install: func(c context.Context, name string) error {
+			checkDeadline(c)
+			calls = append(calls, "install brew:"+name)
+			cancel()
+			return c.Err()
+		},
+	})
+	setCachedManager("pnpm", contextManager{
+		check: func(c context.Context, name string) (bool, error) {
+			checkDeadline(c)
+			calls = append(calls, "check pnpm:"+name)
+			return false, c.Err()
+		},
+		install: func(context.Context, string) error {
+			t.Fatal("must not install after the canceled check")
+			return nil
+		},
+	})
+
+	result, err := SimpleApply(ctx, tmpDir, false)
+	require.Error(t, err)
+	assert.Equal(t, []string{"check brew:pnpm", "install brew:pnpm", "check pnpm:typescript"}, calls)
+	assert.Equal(t, []string{"brew:pnpm", "pnpm:typescript"}, result.Failed)
+	require.Len(t, result.Errors, 2)
+	for _, resultErr := range result.Errors {
+		assert.ErrorIs(t, resultErr, context.Canceled)
+	}
 }

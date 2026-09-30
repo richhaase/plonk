@@ -36,24 +36,21 @@ func SimpleApply(ctx context.Context, configDir string, dryRun bool) (*SimpleApp
 
 	result := &SimpleApplyResult{}
 
-	// Sort managers for deterministic order — ensures managers that provide
-	// tools (e.g., brew:go) are processed before managers that depend on them
-	// (e.g., go:golang.org/x/tools/gopls)
+	// Keep the existing deterministic manager order. Finish each manager before
+	// checking the next so earlier installs can supply later managers on PATH.
 	managers := make([]string, 0, len(lockFile.Packages))
 	for manager := range lockFile.Packages {
 		managers = append(managers, manager)
 	}
 	sort.Strings(managers)
 
-	// Phase 1: build install plan, recording skipped/would-install/failed-from-IsInstalled.
-	type planEntry struct {
-		spec string
-		pkg  string
-		mgr  Manager
-	}
-	var plan []planEntry
-
 	for _, manager := range managers {
+		// Plan only this manager's packages; later managers may not exist yet.
+		type planEntry struct {
+			spec string
+			pkg  string
+		}
+		var plan []planEntry
 		pkgs := lockFile.Packages[manager]
 		mgr, err := GetManager(manager)
 		if err != nil {
@@ -97,26 +94,26 @@ func SimpleApply(ctx context.Context, configDir string, dryRun bool) (*SimpleApp
 				continue
 			}
 
-			plan = append(plan, planEntry{spec: spec, pkg: pkg, mgr: mgr})
+			plan = append(plan, planEntry{spec: spec, pkg: pkg})
 		}
-	}
 
-	// Phase 2: execute installs with live spinner feedback.
-	if len(plan) > 0 {
-		sm := output.NewSpinnerManager(len(plan))
-		for _, p := range plan {
-			spinner := sm.StartSpinner("Installing", p.spec)
-			err := callWithTimeoutVoid(ctx, func(c context.Context) error {
-				return p.mgr.Install(c, p.pkg)
-			})
-			if err != nil {
-				spinner.Error(fmt.Sprintf("%s: %s", p.spec, err.Error()))
-				result.Failed = append(result.Failed, p.spec)
-				result.Errors = append(result.Errors, fmt.Errorf("%s: %w", p.spec, err))
-				continue
+		// Complete this manager before checking the next, with live spinner feedback.
+		if len(plan) > 0 {
+			sm := output.NewSpinnerManager(len(plan))
+			for _, p := range plan {
+				spinner := sm.StartSpinner("Installing", p.spec)
+				err := callWithTimeoutVoid(ctx, func(c context.Context) error {
+					return mgr.Install(c, p.pkg)
+				})
+				if err != nil {
+					spinner.Error(fmt.Sprintf("%s: %s", p.spec, err.Error()))
+					result.Failed = append(result.Failed, p.spec)
+					result.Errors = append(result.Errors, fmt.Errorf("%s: %w", p.spec, err))
+					continue
+				}
+				spinner.Success(fmt.Sprintf("installed %s", p.spec))
+				result.Installed = append(result.Installed, p.spec)
 			}
-			spinner.Success(fmt.Sprintf("installed %s", p.spec))
-			result.Installed = append(result.Installed, p.spec)
 		}
 	}
 
