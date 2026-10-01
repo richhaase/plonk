@@ -14,6 +14,7 @@ import (
 
 // FileSystem abstracts file operations for testing
 type FileSystem interface {
+	ResolvePath(path string) (string, error)
 	ReadFile(path string) ([]byte, error)
 	WriteFile(path string, data []byte, perm os.FileMode) error
 	Stat(path string) (os.FileInfo, error)
@@ -43,6 +44,28 @@ func NewRootedOSFileSystem(configDir, homeDir string) RootedOSFileSystem {
 	return RootedOSFileSystem{
 		configDir: filepath.Clean(configDir),
 		homeDir:   filepath.Clean(homeDir),
+	}
+}
+
+// ResolvePath identifies aliases for policy checks. All content operations still
+// use os.Root; resolving a path never grants access outside the managed roots.
+func (f RootedOSFileSystem) ResolvePath(path string) (string, error) {
+	if _, _, err := f.rootPath(path); err != nil {
+		return "", err
+	}
+	var missing []string
+	for current := filepath.Clean(path); ; current = filepath.Dir(current) {
+		resolved, err := filepath.EvalSymlinks(current)
+		if err == nil {
+			for i := len(missing) - 1; i >= 0; i-- {
+				resolved = filepath.Join(resolved, missing[i])
+			}
+			return resolved, nil
+		}
+		if !os.IsNotExist(err) || filepath.Dir(current) == current {
+			return "", err
+		}
+		missing = append(missing, filepath.Base(current))
 	}
 }
 
@@ -205,6 +228,10 @@ func NewMemoryFS() *MemoryFS {
 		Dirs:       make(map[string]bool),
 		ChmodCalls: make(map[string]os.FileMode),
 	}
+}
+
+func (m *MemoryFS) ResolvePath(path string) (string, error) {
+	return filepath.Clean(path), nil
 }
 
 func (m *MemoryFS) ReadFile(path string) ([]byte, error) {

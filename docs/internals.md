@@ -159,7 +159,7 @@ Files ending in `.tmpl` are rendered before deployment or comparison. The shared
 - **`toTarget()`**: Strips `.tmpl` before adding the dot prefix, so `gitconfig.tmpl` targets `~/.gitconfig`.
 - **Conflict detection**: `List()` builds a target-path map and errors if two sources (e.g., `gitconfig` and `gitconfig.tmpl`) resolve to the same target.
 - **`diagnostics/health.go`**: Parses templates through the shared package and reports unresolved locators with provider-owned remediation hints, never resolved values.
-- **`commands/diff.go`**: Uses a redacted render for templates containing Keychain directives. `[REDACTED_SECRET]`, not a plaintext secret, is written to temporary diff files or passed to an external diff tool.
+- **`commands/diff.go`**: Uses a masked source render for templates containing Keychain directives and redacts the entire deployed side. No attempt is made to infer secret locations from template line or column positions after arbitrary target edits.
 
 ### Secret boundary
 

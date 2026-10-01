@@ -24,7 +24,8 @@ var diffCmd = &cobra.Command{
 	Short:   "Show differences for drifted dotfiles",
 	Long: `Show differences between source and deployed dotfiles that have drifted.
 
-With no arguments, shows diffs for all drifted dotfiles.
+With no arguments, shows content and configured permission differences.
+For Keychain templates the deployed side is entirely hidden; the source is masked.
 With a file argument, shows diff for that specific file only.
 
 Examples:
@@ -46,10 +47,17 @@ func runDiff(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("cannot determine home directory: %w", err)
 	}
 	configDir := config.GetDefaultConfigDirectory()
-	cfg := config.LoadWithDefaults(configDir)
+	cfg, err := config.Load(configDir)
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
 
-	// Get drifted dotfiles from reconciliation
-	driftedFiles, err := getDriftedDotfileStatuses(cfg, configDir, homeDir)
+	// Inspect the same explicit permission policy used by apply and status.
+	dm, err := dotfiles.NewConfiguredManager(configDir, homeDir, cfg)
+	if err != nil {
+		return err
+	}
+	driftedFiles, err := driftedStatuses(dm)
 	if err != nil {
 		return fmt.Errorf("failed to get drifted files: %w", err)
 	}
@@ -74,12 +82,27 @@ func runDiff(cmd *cobra.Command, args []string) error {
 		diffTool = "git diff --no-index"
 	}
 
-	// Create DotfileManager for rendering templates
-	dm := dotfiles.NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
-
 	// Execute diff for each drifted file
 	var diffErrors []string
 	for _, status := range driftedFiles {
+		actual, desired, modeDrift, err := dm.PermissionDrift(status.Dotfile)
+		if err != nil {
+			diffErrors = append(diffErrors, status.Name)
+			output.PrintAction("error", status.Target, err.Error())
+			continue
+		}
+		if modeDrift {
+			output.PrintAction("drifted", status.Target, fmt.Sprintf("permissions %04o -> %04o; run plonk apply to reconcile", actual, desired))
+		}
+		contentDrift, err := dm.IsDrifted(status.Dotfile)
+		if err != nil {
+			diffErrors = append(diffErrors, status.Name)
+			output.PrintAction("error", status.Target, err.Error())
+			continue
+		}
+		if !contentDrift {
+			continue
+		}
 		sourcePath := status.Source
 		destPath := status.Target
 		var cleanupPaths []string
@@ -192,7 +215,12 @@ func removeTempFile(path string) {
 // Files that failed reconciliation are reported to stderr so users know
 // why certain files are absent from the diff output.
 func getDriftedDotfileStatuses(cfg *config.Config, configDir, homeDir string) ([]dotfiles.DotfileStatus, error) {
+	// Reverse sync concerns content only; permission policy belongs to apply.
 	dm := dotfiles.NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
+	return driftedStatuses(dm)
+}
+
+func driftedStatuses(dm *dotfiles.DotfileManager) ([]dotfiles.DotfileStatus, error) {
 	statuses, err := dm.Reconcile()
 	if err != nil {
 		return nil, err

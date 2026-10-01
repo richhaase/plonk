@@ -24,8 +24,14 @@ func NewBrewSimple() *BrewSimple {
 
 // IsInstalled checks if a package is installed via brew
 func (b *BrewSimple) IsInstalled(ctx context.Context, name string) (bool, error) {
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
 
 	// Load installed list on first call
 	if b.installed == nil {
@@ -60,18 +66,18 @@ func (b *BrewSimple) loadInstalled(ctx context.Context) error {
 		}
 	}
 
-	// Get casks — failure is non-fatal (cask support may be unavailable, e.g., on Linux)
+	// An inventory failure is not evidence that a cask is absent. In
+	// particular, force removal must retain tracking if this check fails.
 	cmd = exec.CommandContext(ctx, "brew", "list", "--cask", "-1")
 	output, err = cmd.Output()
-	if err == nil {
-		for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
-			if line != "" {
-				installed[line] = true
-			}
+	if err != nil {
+		return fmt.Errorf("failed to list brew casks: %w", err)
+	}
+	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
+		if line != "" {
+			installed[line] = true
 		}
 	}
-
-	// Set cache with whatever we loaded (formulas always, casks if available)
 	b.installed = installed
 	return nil
 }

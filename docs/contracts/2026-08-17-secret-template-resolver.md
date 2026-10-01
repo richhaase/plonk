@@ -64,7 +64,7 @@ Enable Plonk templates (`.tmpl`) to resolve sensitive credentials directly from 
 
 - **AC5: Secret-Safe Diff and Drift Inspection**
   - `plonk status` checks drift using in-memory rendered comparison without writing plaintext secret files to disk outside target `$HOME`.
-  - `plonk diff` detects secret-bearing directives and redacts secret values with `[REDACTED_SECRET]` before piping content to external diff tools or temporary diff files.
+  - `plonk diff` detects secret-bearing directives, renders the source with masked directives, and replaces the entire deployed side with `[REDACTED_SECRET]` before passing content to external diff tools or temporary files. Hiding deployed context is intentional: rotated secrets and arbitrary target edits cannot be safely aligned to source positions.
   - An optional `--show-secrets` flag may be added in the future, but safe masked diffing is the strict default.
 
 - **AC6: Verification & Test Suite Integrity**

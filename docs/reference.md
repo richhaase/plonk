@@ -4,7 +4,7 @@ Complete CLI and configuration reference.
 
 ## Migration Notes
 
-- **Current development**: `track` and `untrack` are removed. Use `add manager:package` (install if missing, then track) and `rm manager:package` (untrack). `rm -f` also uninstalls packages or deletes deployed files.
+- **v0.34**: `track` and `untrack` are removed. Use `add manager:package` (install if missing, then track) and `rm manager:package` (untrack). `rm -f` also uninstalls packages or deletes deployed files.
 - **v0.33**: `status` shows actionable items by default; use `--all` for the complete inventory.
 - **v0.31**: Templates support macOS Keychain directives (`{{keychain:service/account}}`) and mask Keychain-derived values in `plonk diff`.
 - **v0.30**: `dotfiles.rules` can set an explicit deploy mode, such as `"0600"`, for an individual dotfile.
@@ -12,7 +12,7 @@ Complete CLI and configuration reference.
 - **v0.27**: `plonk push` and `plonk pull` synchronize your dotfiles repository.
 - `install`, `uninstall`, and `upgrade` were removed in v0.26; package operations use `add`, `rm`, and `apply`.
 - Supported package managers: `brew`, `cargo`, `go`, `pnpm`, `uv`.
-- Lock files use `version: 3`; older v2 files migrate automatically.
+- Lock files use `version: 3`; older v2 files are read in memory by inspection and apply, and migrate on the next package `add` or `rm` mutation. Dry runs never persist a migration.
 
 ## Output conventions
 
@@ -46,8 +46,10 @@ plonk add --dry-run uv:ruff     # Preview without installing or tracking
 plonk add -y                   # Sync drifted files back to $PLONK_DIR
 ```
 
-`--sync-drifted` (`-y`) accepts no file or package arguments. Use explicit file
-paths (`./` or `/`) to disambiguate filenames containing a colon.
+Recursive adds preflight every file before copying. Hard-linked source files are rejected because their other names can alias rendered secrets or configuration files; use an independent copy when needed. A template-owned target, including a relative symlink to it, is rejected; edit its template instead. The configuration directory and aliases into it are excluded from recursive adds, even when adding `~/.config`. Existing self-copies cannot deploy back into `$PLONK_DIR`.
+
+`--sync-drifted` (`-y`) copies content drift only; configured permission drift is corrected with `apply`. It accepts no file or package arguments. Use explicit file
+paths (`./` or `/`) to disambiguate filenames containing a colon. Explicit `./` and `../` paths are relative to the current directory and must identify dotfiles under `$HOME`.
 
 ### plonk rm
 
@@ -62,6 +64,8 @@ plonk rm -f ~/.vimrc brew:ripgrep       # Delete/uninstall and stop managing
 plonk rm --dry-run -f go:golang.org/x/tools/gopls
 ```
 
+Explicit `./` and `../` paths are relative to the current directory. Bare managed names remain home-relative shorthand. Dry-run output shows the resolved source and deployed target.
+
 Forced file removal accepts individual files, including template targets; it does
 not recursively delete directories. An already absent deployed file or package
 can still be removed from management. Plain package removal also accepts legacy
@@ -74,6 +78,7 @@ directory (default `~/go/bin`) after verifying that its build metadata matches
 the requested import path. Import paths ending in a major version such as `/v2`
 use the preceding component as the executable name, matching Go. It leaves
 downloaded modules and caches intact.
+A failed or canceled package inventory check leaves the package tracked; absence must be established before skipping an uninstall.
 Other managers use their normal uninstall commands; `-f` does not bypass the
 manager's dependency checks or request extra cleanup.
 
@@ -142,7 +147,7 @@ plonk diff                     # All drifted
 plonk diff ~/.zshrc            # Specific file
 ```
 
-Uses `git diff` by default, or `diff_tool` from config.
+Uses `git diff` by default, or `diff_tool` from config. Explicit permission changes are shown separately, including when contents match. For Keychain templates, the source shows masked directives and the entire deployed side is hidden; this also protects rotated values and arbitrarily edited text.
 
 ### plonk clone
 
@@ -230,7 +235,7 @@ plonk completion powershell
 
 Configuration file: `$PLONK_DIR/plonk.yaml` (default: `~/.config/plonk/plonk.yaml`)
 
-All settings are optional. Plonk uses sensible defaults.
+All settings are optional. A missing configuration uses defaults. An invalid or unreadable existing configuration blocks add, rm, apply, clone setup, pull, and auto-commit instead of discarding configured safeguards. `doctor`, `config show`, and `config edit` remain available for diagnosis and repair.
 
 ### Settings
 
@@ -356,7 +361,7 @@ Plonk reads Keychain items; it never stores or changes them.
 - `plonk doctor` checks directives and reports their locator plus a provider-specific remediation hint; it never reports a resolved value.
 - A plain file and a `.tmpl` file must not target the same destination (e.g., `gitconfig` and `gitconfig.tmpl` cannot coexist).
 - `plonk status` compares rendered content in memory.
-- For templates containing Keychain directives, `plonk diff` masks resolved values as `[REDACTED_SECRET]` before writing temp files or invoking the configured external diff tool.
+- For templates containing Keychain directives, `plonk diff` masks source directives and replaces the entire deployed side with `[REDACTED_SECRET]` before writing temp files or invoking the configured external diff tool. This deliberately hides deployed non-secret context too, because edited layouts and rotated secrets cannot be mapped safely back to template positions.
 - `plonk rm gitconfig` recognizes and removes the `gitconfig.tmpl` source file.
 - Keychain directives are supported only on macOS. On other operating systems Plonk reports the provider as unavailable.
 

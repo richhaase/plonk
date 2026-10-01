@@ -12,6 +12,7 @@ import (
 )
 
 func TestNormalizePath(t *testing.T) {
+	t.Setenv("USER", "plonk-test")
 	// Save original HOME
 	originalHome := os.Getenv("HOME")
 	defer os.Setenv("HOME", originalHome)

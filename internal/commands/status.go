@@ -57,10 +57,16 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	configDir := config.GetDefaultConfigDirectory()
 
 	// Load configuration for dotfile reconciliation.
-	cfg := config.LoadWithDefaults(configDir)
+	cfg, err := config.Load(configDir)
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
 
 	// Create DotfileManager and reconcile directly
-	dm := dotfiles.NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
+	dm, err := dotfiles.NewConfiguredManager(configDir, homeDir, cfg)
+	if err != nil {
+		return err
+	}
 	statuses, err := dm.Reconcile()
 	if err != nil {
 		return err
@@ -108,7 +114,7 @@ func getPackageStatus(ctx context.Context, configDir string) (packageStatus, err
 	}
 
 	lockSvc := lock.NewLockV3Service(configDir)
-	lockFile, err := lockSvc.Read()
+	lockFile, err := lockSvc.ReadOnly()
 	if err != nil {
 		return result, fmt.Errorf("failed to read lock file: %w", err)
 	}

@@ -77,7 +77,7 @@ type lockFileSummary struct {
 // parseLockFileSummary reads and parses lock file data once for use by multiple checks.
 func parseLockFileSummary(configDir string) lockFileSummary {
 	lockService := lock.NewLockV3Service(configDir)
-	lockFile, err := lockService.Read()
+	lockFile, err := lockService.ReadOnly()
 	if err != nil {
 		return lockFileSummary{err: err}
 	}

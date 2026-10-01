@@ -81,7 +81,7 @@ func resolveDotfilePath(path, homeDir string) string {
 	if err != nil {
 		return filepath.Join(homeDir, path)
 	}
-	if strings.HasPrefix(absPath, homeDir+string(os.PathSeparator)) || absPath == homeDir {
+	if path == "." || path == ".." || strings.HasPrefix(path, "./") || strings.HasPrefix(path, "../") || strings.HasPrefix(absPath, homeDir+string(os.PathSeparator)) || absPath == homeDir {
 		return absPath
 	}
 	return filepath.Join(homeDir, path)
@@ -123,9 +123,16 @@ func resolveDotfileNameForRemoval(path, homeDir string) string {
 		} else {
 			absPath = filepath.Join(homeDir, path)
 		}
+	} else if path == "." || path == ".." || strings.HasPrefix(path, "./") || strings.HasPrefix(path, "../") {
+		// An explicit relative path is always relative to cwd, just as in add
+		// and apply. Returning an invalid name on Getwd failure fails safely.
+		var err error
+		absPath, err = filepath.Abs(path)
+		if err != nil {
+			return ""
+		}
 	} else {
-		// For removal, always resolve relative to home (not cwd)
-		// because we're finding which managed dotfile to remove
+		// Bare managed names remain home-relative for existing shorthand.
 		absPath = filepath.Join(homeDir, path)
 	}
 
@@ -133,6 +140,13 @@ func resolveDotfileNameForRemoval(path, homeDir string) string {
 	rel, err := filepath.Rel(homeDir, absPath)
 	if err != nil {
 		return path
+	}
+
+	// Explicit paths name deployed dotfiles, not bare configuration names.
+	// Never turn ./vimrc or /home/user/vimrc into the unrelated ~/.vimrc.
+	explicit := filepath.IsAbs(path) || strings.HasPrefix(path, "~/") || path == "~" || path == "." || path == ".." || strings.HasPrefix(path, "./") || strings.HasPrefix(path, "../")
+	if explicit && rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator)) && !strings.HasPrefix(rel, ".") {
+		return ""
 	}
 
 	// Strip leading dot from first path component (e.g., ".zshrc" -> "zshrc")

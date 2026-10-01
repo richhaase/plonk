@@ -376,3 +376,27 @@ func TestCommitMessage(t *testing.T) {
 		}
 	}
 }
+
+func TestAutoCommitDoesNotDiscardInvalidPolicy(t *testing.T) {
+	dir := initTestRepo(t)
+	if err := os.WriteFile(filepath.Join(dir, "plonk.yaml"), []byte("git:\n  auto_commit: false\noperation_timeout: nope\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	AutoCommit(context.Background(), dir, "add", nil)
+	cmd := exec.Command("git", "-C", dir, "log", "-1", "--format=%s")
+	out, err := cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(string(out)) != "initial" {
+		t.Fatalf("invalid config was auto-committed: %s", out)
+	}
+	cmd = exec.Command("git", "-C", dir, "diff", "--cached", "--name-only")
+	out, err = cmd.Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out) != 0 {
+		t.Fatalf("invalid config was staged: %s", out)
+	}
+}

@@ -29,7 +29,7 @@ const PerPackageTimeout = 10 * time.Minute
 // SimpleApply installs all tracked packages that are missing
 func SimpleApply(ctx context.Context, configDir string, dryRun bool) (*SimpleApplyResult, error) {
 	lockSvc := lock.NewLockV3Service(configDir)
-	lockFile, err := lockSvc.Read()
+	lockFile, err := lockSvc.ReadOnly()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read lock file: %w", err)
 	}

@@ -92,7 +92,10 @@ func CloneAndSetup(ctx context.Context, gitRepo string, cfg Config) error {
 
 // SetupFromClonedRepo performs post-clone setup: detect managers, install, and apply
 func SetupFromClonedRepo(ctx context.Context, plonkDir string, hasConfig bool) error {
-	repoCfg := config.LoadWithDefaults(plonkDir)
+	repoCfg, err := config.Load(plonkDir)
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
 
 	// Detect required managers from lock file
 	output.StageUpdate("Package managers")
@@ -206,7 +209,7 @@ ignore_patterns:`
 // DetectRequiredManagers reads a lock file and returns unique package managers
 func DetectRequiredManagers(lockPath string) ([]string, error) {
 	lockService := lock.NewLockV3Service(filepath.Dir(lockPath))
-	lockFile, err := lockService.Read()
+	lockFile, err := lockService.ReadOnly()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read lock file: %w", err)
 	}

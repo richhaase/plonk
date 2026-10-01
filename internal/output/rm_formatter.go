@@ -72,6 +72,9 @@ func (f DotfileRemovalFormatter) TableOutput() string {
 		if source, ok := r.Metadata["source"].(string); ok && (r.Status == "removed" || r.Status == "would-remove") {
 			detail += "\n  source: " + source
 		}
+		if target, ok := r.Metadata["destination"].(string); ok && target != "" && (r.Status == "removed" || r.Status == "would-remove") {
+			detail += "\n  target: " + target
+		}
 		WriteAction(&w, r.Status, r.Name, detail, false)
 	}
 	if len(d.Results) > 1 {

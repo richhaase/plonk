@@ -14,7 +14,11 @@ import (
 // Reads config from disk, checks if auto-commit is enabled, and commits if appropriate.
 // Errors are warnings, never fatal.
 func AutoCommit(ctx context.Context, configDir string, command string, args []string) {
-	cfg := config.LoadWithDefaults(configDir)
+	cfg, err := config.Load(configDir)
+	if err != nil {
+		output.PrintAction("warn", "Auto-commit", "configuration is invalid; changes not committed: "+err.Error())
+		return
+	}
 	if !cfg.AutoCommitEnabled() {
 		return
 	}

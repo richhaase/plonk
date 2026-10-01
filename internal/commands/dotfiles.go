@@ -46,10 +46,16 @@ func runDotfiles(cmd *cobra.Command, args []string) error {
 	remoteSync := getRemoteSyncStatus(ctx, configDir)
 
 	// Load configuration
-	cfg := config.LoadWithDefaults(configDir)
+	cfg, err := config.Load(configDir)
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
 
 	// Create DotfileManager and reconcile directly
-	dm := dotfiles.NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)
+	dm, err := dotfiles.NewConfiguredManager(configDir, homeDir, cfg)
+	if err != nil {
+		return err
+	}
 	statuses, err := dm.Reconcile()
 	if err != nil {
 		return err

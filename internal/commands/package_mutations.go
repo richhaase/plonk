@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/richhaase/plonk/internal/config"
 	"github.com/richhaase/plonk/internal/gitops"
 	"github.com/richhaase/plonk/internal/lock"
 	"github.com/richhaase/plonk/internal/output"
@@ -37,6 +38,9 @@ func parseRemovalSpec(spec string) (manager, pkg string, err error) {
 }
 
 func mutatePackages(ctx context.Context, configDir string, specs []string, add, force, dryRun bool) error {
+	if _, err := config.Load(configDir); err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
 	svc := lock.NewLockV3Service(configDir)
 	changed, failed := false, 0
 	command := "rm"
@@ -98,6 +102,9 @@ func mutatePackages(ctx context.Context, configDir string, specs []string, add, 
 				}
 				output.PrintAction(plan, spec, detail)
 				continue
+			}
+			if err := ctx.Err(); err != nil {
+				return err
 			}
 			if add {
 				current.AddPackage(manager, pkg)
