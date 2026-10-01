@@ -25,7 +25,9 @@ also delete the deployed file or uninstall the package before removing it from
 management. Failed removals stay managed. Unmanaged items are skipped.
 
 Files and packages can be mixed. Explicit file paths (./ or /) disambiguate names
-containing a colon. File removal stays under $HOME and $PLONK_DIR.
+containing a colon. Explicit ./ and ../ paths are relative to the current directory;
+bare managed names are home-relative shorthand. File removal stays under $HOME
+and $PLONK_DIR.
 
 Examples:
   plonk rm ~/.vimrc brew:ripgrep         # Stop managing; keep installed items
@@ -75,8 +77,11 @@ func runRmFiles(cmd *cobra.Command, args []string) error {
 	}
 	configDir := config.GetDefaultConfigDirectory()
 
-	// Load config using LoadWithDefaults for consistent zero-config behavior
-	cfg := config.LoadWithDefaults(configDir)
+	// Missing configuration uses defaults; invalid configuration blocks mutation.
+	cfg, err := config.Load(configDir)
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
 
 	// Create DotfileManager directly
 	dm := dotfiles.NewDotfileManager(configDir, homeDir, cfg.IgnorePatterns)

@@ -26,7 +26,8 @@ Files and packages can be mixed in one invocation. Use an explicit path (./ or /
 for filenames containing a colon. Package managers must already be available.
 
 File paths must stay under $HOME. Directories are added recursively with configured
-ignore patterns. Templates should be edited directly rather than overwritten.
+ignore patterns. The configuration subtree is excluded. All files are checked
+before copying; template-owned targets must be edited through their templates.
 
 Examples:
   plonk add ~/.zshrc brew:ripgrep
@@ -85,7 +86,10 @@ func runAddFiles(cmd *cobra.Command, args []string) error {
 	configDir := config.GetDefaultConfigDirectory()
 
 	// Load config for ignore patterns with defaults
-	cfg := config.LoadWithDefaults(configDir)
+	cfg, err := config.Load(configDir)
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
 
 	// Handle sync-drifted flag
 	if syncDrifted {

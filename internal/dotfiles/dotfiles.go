@@ -163,6 +163,9 @@ func (m *DotfileManager) Add(targetPath string) error {
 
 // addFile adds a single file
 func (m *DotfileManager) addFile(absTarget string) error {
+	if err := m.validateAddFile(absTarget); err != nil {
+		return err
+	}
 	relPath := m.toSource(absTarget)
 	destPath := filepath.Join(m.configDir, relPath)
 
@@ -192,29 +195,102 @@ func (m *DotfileManager) addFile(absTarget string) error {
 	return nil
 }
 
-// addDirectory recursively adds all files in a directory
+// addDirectory validates the complete file set before copying any of it. The
+// dry-run validator uses the same plan, including template and self-copy guards.
 func (m *DotfileManager) addDirectory(absTarget string) error {
-	return m.walkDir(absTarget, func(path string, isDir bool) error {
-		// Get path relative to the target directory being added (preserves dots)
+	paths, err := m.planDirectoryAdd(absTarget)
+	if err != nil {
+		return err
+	}
+	for _, path := range paths {
+		if err := m.addFile(path); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (m *DotfileManager) planDirectoryAdd(absTarget string) ([]string, error) {
+	var paths []string
+	err := m.walkDir(absTarget, func(path string, isDir bool) error {
+		// A directory can contain PLONK_DIR (typically ~/.config/plonk).
+		// Never copy that subtree, even through a parent directory alias.
+		if m.isConfigPath(path) {
+			if isDir {
+				return errSkipDir
+			}
+			return nil
+		}
 		relToTarget, err := filepath.Rel(absTarget, path)
 		if err != nil {
 			return err
 		}
-
-		// Check ignore patterns (with dots preserved)
 		if m.shouldIgnoreWithDot(relToTarget, isDir) {
 			if isDir {
-				return errSkipDir // Skip entire directory
+				return errSkipDir
 			}
-			return nil // Skip file
+			return nil
 		}
-
 		if isDir {
-			return nil // Continue into non-ignored directory
+			return nil
 		}
-
-		return m.addFile(path)
+		if err := m.validateAddFile(path); err != nil {
+			return err
+		}
+		paths = append(paths, path)
+		return nil
 	})
+	return paths, err
+}
+
+func (m *DotfileManager) validateAddFile(path string) error {
+	info, err := m.fs.Stat(path)
+	if err != nil {
+		return err
+	}
+	if info.Mode().IsRegular() && hasMultipleLinks(info) {
+		return fmt.Errorf("cannot safely add hard-linked file: %s; use an independent copy", path)
+	}
+	if err := m.rejectPathUnderConfigDir(path); err != nil {
+		return err
+	}
+	name := m.toSource(path)
+	if name == "plonk.yaml" || name == "plonk.lock" || strings.HasPrefix(name, ".") {
+		return fmt.Errorf("cannot add internal configuration file: %s", name)
+	}
+	if err := m.rejectTemplateTarget(name); err != nil {
+		return err
+	}
+	// A relative file symlink can point at a rendered template target under a
+	// different name. Validate its resolved identity as well as its input name.
+	resolved, err := m.fs.ResolvePath(path)
+	if err != nil {
+		return err
+	}
+	home, err := m.fs.ResolvePath(m.homeDir)
+	if err != nil {
+		return err
+	}
+	rel, err := filepath.Rel(home, resolved)
+	if err != nil || relEscapes(rel) {
+		return fmt.Errorf("path %s resolves outside home directory", path)
+	}
+	return m.rejectTemplateTarget(m.toSource(filepath.Join(m.homeDir, rel)))
+}
+
+func (m *DotfileManager) rejectTemplateTarget(name string) error {
+	// Check even if an erroneous plain counterpart already exists: adding it
+	// again must never refresh plaintext that is owned by a template.
+	if !isTemplate(name) {
+		_, err := m.fs.Stat(filepath.Join(m.configDir, name+templateExtension))
+		if err == nil {
+			return fmt.Errorf("%s is managed as a template (%s.tmpl); edit the template instead", name, name)
+		}
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("cannot inspect template counterpart for %s: %w", name, err)
+		}
+	}
+	return nil
 }
 
 // Remove deletes a file or directory from $PLONK_DIR
@@ -276,6 +352,9 @@ func (m *DotfileManager) ValidateRemove(name string) error {
 func (m *DotfileManager) Deploy(name string) error {
 	sourcePath := filepath.Join(m.configDir, name)
 	targetPath := m.toTarget(name)
+	if m.isConfigPath(targetPath) {
+		return fmt.Errorf("cannot deploy into config directory: %s", targetPath)
+	}
 
 	// Get source file info to preserve permissions
 	info, err := m.fs.Stat(sourcePath)
@@ -436,19 +515,30 @@ func (m *DotfileManager) validatePathUnderConfigDir(absPath string) error {
 
 // rejectPathUnderConfigDir returns an error if the path is under $PLONK_DIR
 func (m *DotfileManager) rejectPathUnderConfigDir(absPath string) error {
-	cleanPath := filepath.Clean(absPath)
-	cleanConfig := filepath.Clean(m.configDir)
-
-	rel, err := filepath.Rel(cleanConfig, cleanPath)
-	if err != nil {
-		return nil // Different drives, not under configDir
-	}
-
-	if !relEscapes(rel) {
+	if m.isConfigPath(absPath) {
 		return fmt.Errorf("cannot add files from config directory %s", m.configDir)
 	}
-
 	return nil
+}
+
+// isConfigPath checks lexical and resolved containment, including file aliases.
+// Content reads and writes remain confined by the rooted filesystem.
+func (m *DotfileManager) isConfigPath(path string) bool {
+	within := func(root, candidate string) bool {
+		root, rootErr := filepath.Abs(root)
+		candidate, candidateErr := filepath.Abs(candidate)
+		if rootErr != nil || candidateErr != nil {
+			return false
+		}
+		rel, err := filepath.Rel(root, candidate)
+		return err == nil && !relEscapes(rel)
+	}
+	if within(filepath.Clean(m.configDir), filepath.Clean(path)) {
+		return true
+	}
+	root, rootErr := m.fs.ResolvePath(m.configDir)
+	resolved, err := m.fs.ResolvePath(path)
+	return rootErr == nil && err == nil && within(root, resolved)
 }
 
 // requireDotPrefix ensures the first path component under $HOME starts with a dot.
@@ -571,6 +661,20 @@ func (m *DotfileManager) SetDeployModes(modes map[string]os.FileMode) {
 	m.deployModes = modes
 }
 
+// PermissionDrift reports a difference from an explicitly configured mode.
+func (m *DotfileManager) PermissionDrift(d Dotfile) (actual, desired os.FileMode, drifted bool, err error) {
+	desired, configured := m.deployModes[d.Name]
+	if !configured {
+		return 0, 0, false, nil
+	}
+	info, err := m.fs.Stat(d.Target)
+	if err != nil {
+		return 0, desired, false, err
+	}
+	actual = info.Mode().Perm()
+	return actual, desired, actual != desired, nil
+}
+
 // RenderSource reads a source file and renders it if it's a template.
 // Returns the rendered content suitable for diffing against the deployed target.
 func (m *DotfileManager) RenderSource(name string) ([]byte, error) {
@@ -619,12 +723,11 @@ func (m *DotfileManager) HasSecrets(name string) (bool, error) {
 	return false, nil
 }
 
-// RenderForDiff renders a secret-bearing template's source and target both masked,
-// so diff output never contains resolved secret values. The caller still holds the
-// resolved secrets in memory only.
+// RenderForDiff never passes deployed secret-bearing content to a diff tool.
+// Arbitrary edits and rotated secrets cannot be mapped safely back to template
+// columns. Keep the source's non-secret structure, but redact the entire target.
 func (m *DotfileManager) RenderForDiff(name string, target []byte) ([]byte, []byte, error) {
-	sourcePath := filepath.Join(m.configDir, name)
-	content, err := m.fs.ReadFile(sourcePath)
+	content, err := m.fs.ReadFile(filepath.Join(m.configDir, name))
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read source: %w", err)
 	}
@@ -632,60 +735,16 @@ func (m *DotfileManager) RenderForDiff(name string, target []byte) ([]byte, []by
 	if err != nil {
 		return nil, nil, err
 	}
-	rendered, secrets, err := m.renderer.RenderWithSecrets(context.Background(), content, template.RenderOptions{})
+	source, err := m.renderer.Render(context.Background(), content, template.RenderOptions{MaskSecrets: true})
 	if err != nil {
 		return nil, nil, err
 	}
-	src := maskSecretValues(rendered, secrets)
-	dst := maskTargetSecretRegions(content, target, directives, secrets)
-	return src, dst, nil
-}
-
-func maskSecretValues(content []byte, secrets []string) []byte {
-	out := content
-	for _, s := range secrets {
-		if s == "" {
-			continue
-		}
-		out = bytes.ReplaceAll(out, []byte(s), []byte(template.RedactedMarker))
-	}
-	return out
-}
-
-// maskTargetSecretRegions hides the target's secret-bearing regions by line/column
-// alignment with the source template. This masks even stale secret values that were
-// deployed earlier and can no longer be resolved, so a diff never leaks them.
-func maskTargetSecretRegions(content, target []byte, directives []template.Directive, secrets []string) []byte {
-	if len(directives) == 0 {
-		return target
-	}
-	sourceLines := bytes.Split(content, []byte("\n"))
-	targetLines := bytes.Split(target, []byte("\n"))
-	if len(targetLines) != len(sourceLines) {
-		return maskSecretValues(target, secrets)
-	}
-
-	out := make([][]byte, len(targetLines))
-	for i, l := range targetLines {
-		out[i] = append([]byte(nil), l...)
-	}
-	for _, d := range directives {
-		if !template.IsSecretDirective(d) {
-			continue
-		}
-		lineIdx := bytes.Count(content[:d.Start], []byte("\n"))
-		lineStart := bytes.LastIndexByte(content[:d.Start], '\n') + 1
-		col := d.Start - lineStart
-		if lineIdx >= len(out) {
-			continue
-		}
-		line := out[lineIdx]
-		if col < len(line) {
-			masked := append(append([]byte(nil), line[:col]...), []byte(template.RedactedMarker)...)
-			out[lineIdx] = masked
+	for _, directive := range directives {
+		if template.IsSecretDirective(directive) {
+			return source, []byte(template.RedactedMarker + "\n"), nil
 		}
 	}
-	return bytes.Join(out, []byte("\n"))
+	return source, target, nil
 }
 
 // ValidateAdd checks if a path can be added without actually adding it
@@ -712,12 +771,16 @@ func (m *DotfileManager) ValidateAdd(targetPath string) error {
 	}
 
 	// Verify target exists
-	if _, err := m.fs.Stat(absTarget); err != nil {
+	info, err := m.fs.Stat(absTarget)
+	if err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("%s does not exist", absTarget)
 		}
 		return fmt.Errorf("cannot access %s: %w", absTarget, err)
 	}
-
-	return nil
+	if info.IsDir() {
+		_, err := m.planDirectoryAdd(absTarget)
+		return err
+	}
+	return m.validateAddFile(absTarget)
 }

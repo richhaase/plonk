@@ -149,3 +149,36 @@ func TestDotfileManager_IsDrifted_KeychainInMemory(t *testing.T) {
 		t.Error("IsDrifted() = false, want true when target differs")
 	}
 }
+
+func TestRenderForDiffRedactsEntireSecretTarget(t *testing.T) {
+	for _, tc := range []struct{ name, source, target string }{
+		{"trailing newline and rotation", `{"key":"{{keychain:svc/acct}}"}`, "{\"key\":\"OLD_DUMMY_VALUE\"}\n"},
+		{"shorter environment expansion", `{{env:PREFIX}}={{keychain:svc/acct}}`, "x=NEW_DUMMY_VALUE"},
+		{"inserted line", "key={{keychain:svc/acct}}\nhost=example", "extra\nkey=OLD_DUMMY_VALUE\nhost=example"},
+		{"reordered lines", "key={{keychain:svc/acct}}\nhost=example", "host=example\nkey=OLD_DUMMY_VALUE"},
+		{"multiline value", "key={{keychain:svc/acct}}", "key=OLD_DUMMY_VALUE\nSECOND_DUMMY_LINE"},
+		{"short target", "password={{keychain:svc/acct}}", "DUMMY"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fs := NewMemoryFS()
+			fs.Dirs["/config"] = true
+			fs.Files["/config/auth.tmpl"] = []byte(tc.source)
+			m := NewDotfileManagerWithFS("/config", "/home", nil, fs)
+			// No Keychain lookup is needed to render a safe diff.
+			m.SetResolvers(template.NewEnvResolverFromLookup(func(string) (string, bool) { return "x", true }))
+			source, target, err := m.RenderForDiff("auth.tmpl", []byte(tc.target))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(target) != template.RedactedMarker+"\n" {
+				t.Fatalf("deployed side was not completely redacted: %q", target)
+			}
+			if strings.Contains(string(source), "DUMMY") {
+				t.Fatalf("source contains dummy value: %q", source)
+			}
+			if !strings.Contains(string(source), template.RedactedMarker) {
+				t.Fatalf("source lacks redaction marker: %q", source)
+			}
+		})
+	}
+}

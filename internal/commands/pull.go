@@ -55,13 +55,17 @@ func runPull(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no remote configured for %s", configDir)
 	}
 
+	cfg, err := config.Load(configDir)
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
+
 	// Check for dirty state — commit or refuse depending on config
 	dirty, err := client.IsDirty(ctx)
 	if err != nil {
 		return err
 	}
 	if dirty {
-		cfg := config.LoadWithDefaults(configDir)
 		if !cfg.AutoCommitEnabled() {
 			return fmt.Errorf("uncommitted changes in %s; commit manually or enable git.auto_commit", configDir)
 		}
@@ -86,7 +90,10 @@ func runPull(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("cannot determine home directory: %w", err)
 		}
-		cfg := config.LoadWithDefaults(configDir)
+		cfg, err := config.Load(configDir)
+		if err != nil {
+			return fmt.Errorf("failed to load pulled configuration: %w", err)
+		}
 
 		result, err := orchestrator.Apply(ctx, orchestrator.Options{
 			Config:    cfg,

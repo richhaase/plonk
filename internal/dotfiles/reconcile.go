@@ -4,6 +4,7 @@
 package dotfiles
 
 import (
+	"fmt"
 	"os"
 )
 
@@ -38,6 +39,9 @@ func (m *DotfileManager) Reconcile() ([]DotfileStatus, error) {
 
 // getState determines the sync state of a single dotfile
 func (m *DotfileManager) getState(d Dotfile) (SyncState, error) {
+	if m.isConfigPath(d.Target) {
+		return SyncStateError, fmt.Errorf("cannot deploy into config directory: %s", d.Target)
+	}
 	// Check if target exists
 	info, err := m.fs.Stat(d.Target)
 	if err != nil {

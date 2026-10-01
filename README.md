@@ -117,7 +117,7 @@ dotfiles:
 - Missing or inaccessible directives make `apply` fail before that file is written; `plonk doctor` identifies the locator and offers remediation without printing secret values.
 - Keychain directives require macOS. On other platforms Plonk reports the provider as unavailable.
 - A plain file and `.tmpl` file cannot target the same destination.
-- `plonk status` compares rendered content in memory. `plonk diff` masks Keychain-derived values as `[REDACTED_SECRET]` before invoking an external diff tool.
+- `plonk status` compares rendered content in memory. `plonk diff` masks Keychain directives in the source and hides the entire deployed side as `[REDACTED_SECRET]`. Arbitrary edits or rotated values cannot be safely located in deployed text.
 - Never run `plonk add` on an existing secret-bearing file. Create a `.tmpl` with a Keychain directive instead.
 
 ## How It Works
@@ -154,7 +154,7 @@ diff tool. Keychain templates require macOS.
 
 ## Configuration
 
-Plonk works without configuration. If needed, create `~/.config/plonk/plonk.yaml`:
+Plonk works without configuration. An invalid existing configuration blocks changes rather than dropping permission, ignore, or auto-commit settings. Use `plonk doctor` to diagnose it and `plonk config edit` to repair it. If needed, create `~/.config/plonk/plonk.yaml`:
 
 ```yaml
 git:
